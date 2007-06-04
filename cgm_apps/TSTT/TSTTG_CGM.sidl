@@ -1,0 +1,23 @@
+import TSTTB;
+import TSTTG;
+
+package TSTTG_CGM version 0.001 {
+	class CgmGeom implements-all
+		TSTTB.EntTag,
+		TSTTB.ArrTag,
+		TSTTB.SetTag,
+		TSTTB.SetRelation,
+		TSTTB.SetBoolOps,
+		TSTTG.CoreQuery,
+		TSTTG.Topology,
+		TSTTG.Shape, 
+		TSTTG.Parametric,
+		TSTTG.Tolerance,
+		TSTTG.Iterators,
+		TSTTG.Construct,
+		TSTTG.Primitives, 
+            	TSTTG.Transforms,
+		TSTTG.Booleans
+		{ }
+}
+

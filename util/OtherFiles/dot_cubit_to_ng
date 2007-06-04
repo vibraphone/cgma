@@ -1,0 +1,16 @@
+#!/bin/csh
+
+if (-e $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}) then
+  echo " " >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "#" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# These additions were added automatically" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# to set up a NO_GRAPHICS version compile" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'GRAPHICS_OPTION = -DNO_GRAPHICS' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+else
+  cat $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}_base >>! $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo " " >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "#" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# These additions were added automatically" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# to set up a NO_GRAPHICS version compile" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'GRAPHICS_OPTION = -DNO_GRAPHICS' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+endif

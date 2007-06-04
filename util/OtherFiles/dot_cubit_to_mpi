@@ -1,0 +1,20 @@
+#!/bin/csh
+
+if (-e $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}) then
+  echo " " >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "#" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# These additions were added automatically" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# to set up an MPI version compile" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'COMM_OPTION = -DMPI_COMMUNICATIONS_ENABLED' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'COMM_INCLUDE_OPTION = -I$(MPI_INCLUDE_DIR)' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'MPI_LIBS = $(MPI_LIB_PATH) $(MPI_LIB_LIST)' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+else
+  cat $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}_base >>! $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo " " >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "#" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# These additions were added automatically" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo "# to set up an MPI version compile" >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'COMM_OPTION = -DMPI_COMMUNICATIONS_ENABLED' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'COMM_INCLUDE_OPTION = -I$(MPI_INCLUDE_DIR)' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+  echo 'MPI_LIBS = $(MPI_LIB_PATH) $(MPI_LIB_LIST)' >> $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
+endif

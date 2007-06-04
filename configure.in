@@ -1,0 +1,124 @@
+################################################################################
+#                           Standard Stuff
+################################################################################
+AC_INIT(CGM, 10.0b)
+AC_CONFIG_AUX_DIR(./config_aux)
+AC_CANONICAL_SYSTEM
+AM_INIT_AUTOMAKE(CGM,10.0b)
+AC_DISABLE_SHARED
+
+SNL_CHECK_COMPILERS
+AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
+AC_PROG_LIBTOOL
+LIBS="-lm"
+AC_PROG_LIBTOOL
+AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN="-DLITTLE_ENDIAN=BYTE_ORDER"] )
+AC_SUBST(LITTLE_ENDIAN)
+
+
+
+################################################################################
+#                              MPI OPTIONS
+################################################################################
+
+if test "x$WITH_MPI" != "xno"; then
+  CXXFLAGS="$CXXFLAGS -DUSE_MPI"
+  CGM_PARALLEL_INCLUDE='-I${CGM_DIR}/geom/parallel'
+  CGM_PARALLEL_LIB='-L${CGM_DIR}/geom/parallel -lcubit_parallel'
+  CGM_PARALLEL_LIB_FILE='${CGM_LIBDIR}/libcubit_parallel.a'
+fi
+AM_CONDITIONAL(USE_MPI, [test "xno" != "x$WITH_MPI"])
+AC_SUBST(CGM_PARALLEL_INCLUDE)
+AC_SUBST(CGM_PARALLEL_LIB)
+AC_SUBST(CGM_PARALLEL_LIB_FILE)
+
+################################################################################
+#                           CGM-specific Checks
+################################################################################
+
+SNL_CANT_USE_STD
+SNL_TEMPLATE_DEFS_INCLUDED
+AC_SUBST(CANT_USE_STD)
+AC_SUBST(CANT_USE_STD_IO)
+AC_SUBST(TEMPLATE_DEFS_INCLUDED)
+AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
+
+
+
+################################################################################
+#                           ACIS OPTIONS
+################################################################################
+ACIS_BASE_LIBS='-lSpaAVis -lSpaAWarp -lSpaASurf -lSpaALops -lSpaABlend -lSpaACIS -lSpaBase'
+ACIS_STEP_LIBS='-lacisstep -lxstep'
+ACIS_IGES_LIBS='-lacisiges -lxiges'
+CGM_ACIS_LIBS='-lcubit_ACIS'
+
+AC_ARG_WITH( ACIS, 
+             AC_HELP_STRING([--with-ACIS=DIR],[Build with ACIS support, specify directory where ACIS is installed.]),
+             [ACIS_DIR=$withval],[ACIS_DIR=no] )
+AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-ACIS-system=SYS], 
+          [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
+             [ACIS_SYSTEM=$withval],[ACIS_SYSTEM=] )
+AC_ARG_WITH( ACIS-version, AC_HELP_STRING([--with-ACIS-version=INT],
+[Specify ACIS version as an integer value (100*major+10*minor+point), default is to autodetect.]),
+[if ! test "$withval" -gt "600"; then
+  AC_MSG_ERROR("ACIS-version must be an integer greater than 600.")
+ fi
+ ACIS_VERSION=$withval],
+[ACIS_VERSION=0])
+if test "x$ACIS_DIR" == "x"; then 
+  ACIS_DIR=no; 
+fi          
+if test "$ACIS_DIR" == "no"; then
+  ACIS_LIB_DIR=".";
+fi
+if test "$ACIS_DIR" != "no"; then
+  if test "$ACIS_DIR" == "yes"; then ACIS_DIR=.; fi
+  SNL_ACIS_ENV
+  
+  SNL_ACIS_TRANSLATOR
+  if test x$ACIS_STEP_TRANSLATOR != x; then
+    ACIS_LIBS="$ACIS_LIBS $ACIS_STEP_LIBS"
+    ACIS_XLIBS="$ACIS_XLATE_LIBS"
+  fi
+  if test x$ACIS_IGES_TRANSLATOR != x; then
+    ACIS_LIBS="$ACIS_LIBS $ACIS_IGES_LIBS"
+    ACIS_XLIBS="$ACIS_XLATE_LIBS"
+  fi
+  ACIS_LIBS="$CGM_ACIS_LIBS $ACIS_LIBS $ACIS_XLIBS $ACIS_BASE_LIBS"
+  ACIS_HEALER="-DACIS_HEALER"
+  ACIS_INCLUDES="-I$ACIS_DIR/include"
+  ACIS_DEFS='$(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS'
+fi
+AC_SUBST(ACIS_DEFS)
+AC_SUBST(ACIS_DIR)
+AC_SUBST(ACIS_LIB_DIR)
+AC_SUBST(ACIS_INCLUDES)
+AC_SUBST(ACIS_LIBS)
+AC_SUBST(ACIS_HEALER)
+AC_SUBST(ACIS_VERSION)
+AC_SUBST(ACIS_PLATFORM)
+AC_SUBST(ACIS_STEP_TRANSLATOR)
+AC_SUBST(ACIS_IGES_TRANSLATOR)
+AM_CONDITIONAL(build_ACIS, test x$ACIS_DIR != xno)
+
+
+
+################################################################################
+#                           Output Files
+################################################################################
+AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
+AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
+                    [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
+AC_CONFIG_FILES(Makefile 
+           util/Makefile
+           geom/Makefile
+           geom/ACIS/Makefile
+           geom/Cholla/Makefile
+           geom/facet/Makefile
+           geom/facetbool/Makefile
+           geom/parallel/Makefile
+           geom/virtual/Makefile 
+           cgm.make)
+
+AC_OUTPUT

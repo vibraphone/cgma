@@ -1,0 +1,14 @@
+touch $1/make.dependencies
+touch $1/df/make.dependencies
+touch $1/geom/make.dependencies
+touch $1/geom/ACIS/make.dependencies
+touch $1/geom/facet/make.dependencies
+touch $1/geom/facetbool/make.dependencies
+touch $1/geom/Cholla/make.dependencies
+touch $1/geom/virtual/make.dependencies
+touch $1/util/make.dependencies
+touch $1/mdb/make.dependencies
+touch $1/util/OtherFiles/cubit.myown
+# This file touches the make.dependencies file in the cubit directory and
+# the other source subdirectories, to ensure that the file exists. 
+# The make.dependencies file is included by the makefile.

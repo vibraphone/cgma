@@ -1,0 +1,59 @@
+This test reads in a geometry file (two bricks overlapping a bit by a
+corner), tests them for intersection, imprints and merges them.  The
+warnings occur because of the overlap, which results in surfaces with
+normals in the same direction being merged (which indicates
+overlapping geometry).
+
+The output of this test should look something like this:
+
+$ ./mergechk merge.sat
+=======================================
+Read 2 ACIS Entities from the input file
+
+
+Constructed 2 Volumes: 1, 2
+=======================================
+Created volume(s): 3
+=======================================
+Overlaps found:
+   Vertices: 8
+   Edges: 12
+   Faces: 6
+   Volumes: 1
+=======================================
+Group imprint finished.
+Updated volume(s): 1, 2
+=======================================
+Imprinting resulted in the following numbers of new entities:
+   12 vertices.
+   18 edges.
+   6 faces.
+=======================================
+
+...Merging all features in the model
+
+...Merging all Surfaces in the model
+WARNING: Merging Surface 13 (surface 13) and Surface 28 (surface 28): Volume 3 (volume 3) and Volume 2 (volume 2) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 13 and 28 consolidated
+WARNING: Merging Surface 14 (surface 14) and Surface 29 (surface 29): Volume 3 (volume 3) and Volume 2 (volume 2) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 14 and 29 consolidated
+WARNING: Merging Surface 15 (surface 15) and Surface 25 (surface 25): Volume 3 (volume 3) and Volume 2 (volume 2) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 15 and 25 consolidated
+WARNING: Merging Surface 16 (surface 16) and Surface 23 (surface 23): Volume 3 (volume 3) and Volume 1 (volume 1) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 16 and 23 consolidated
+WARNING: Merging Surface 17 (surface 17) and Surface 22 (surface 22): Volume 3 (volume 3) and Volume 1 (volume 1) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 17 and 22 consolidated
+WARNING: Merging Surface 18 (surface 18) and Surface 20 (surface 20): Volume 3 (volume 3) and Volume 1 (volume 1) appear to be on the same side of the surfaces.  This may indicate bad geometry.
+Surface 18 and 20 consolidated
+Consolidated 6 pairs of surfaces
+
+...Merging all Curves in the model
+Consolidated 0 pair of curves
+
+...Merging all Vertices in the model
+Consolidated 0 pairs of vertices
+=======================================
+There were 12 unmerged surfaces; their ids are:
+2 to 4, 7, 11, 12, 19, 21, 24, 26, 27, 30
+=======================================
+$

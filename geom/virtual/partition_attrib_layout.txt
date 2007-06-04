@@ -1,0 +1,145 @@
+Split entities:
+
+  Attribute name: PARTITION_GEOM
+                count range  label description
+  Integer Data:  (1)  [1,n]        ID in SubEntitySet 
+                 (1)  [0,2]        geometric dimension 
+                 (1)  [0,inf) p    number of points 
+                 (1)  [0,inf) f    point connectivity list (facets) length 
+                 (1)  [0,inf) t    topological connectivity (children) length
+                 (f)  [0,p)        facet connectivity
+                 (t)               child ids (sign = sense)
+                 (2*p)[0,inf)      facet point owners
+  Double Data:  (3*p)              point coordinates
+  
+  Example Point: (id = 3, located at origin)
+
+    Integer Data: {3, 0, 1, 0, 0}
+                   |  |  |  |  |
+                   |  |  |  |  +-- no topological children
+                   |  |  |  +----- no facets
+                   |  |  +-------- one position in double list
+                   |  +----------- point has dimension 0
+                   +-------------- id
+
+    Double Data:  {0.0, 0.0, 0.0}
+                   |    |    |
+                   |    |    +---- z
+                   |    +--------- y
+                   +-------------- x
+             
+  Example Curve: (id = 4, length 1 along x-axis from origin)
+  
+    Integer Data: {4, 1, 2, 0, 4, 0, 3, 4231423, 5}
+                   |  |  |  |  |  |  |    |      |
+                   |  |  |  |  |  |  |    |      +-- end vertex id
+                   |  |  |  |  |  |  |    +--------- end vertex subentity set
+                   |  |  |  |  |  |  +-- start vertex id
+                   |  |  |  |  |  +----- start vertex subentity set (0 == this)
+                   |  |  |  |  +-------- two topological children (vertices)
+                   |  |  |  +----------- no facets
+                   |  |  +-------------- two positions (one segment)
+                   |  +----------------- curves have dimension 1
+                   +-------------------- id
+    
+    Double Data:  {0.0, 0.0, 0.0, 1.0, 0.0, 0.0}
+                   |    |    |    |    |    |
+                   |    |    |    |    |    +---- z2
+                   |    |    |    |    +--------- y2
+                   |    |    |    +-------------- x2
+                   |    |    +------------------- z1
+                   |    +------------------------ y1
+                   +----------------------------- x1
+             
+  Example Curve: (id = 12, point curve)
+  
+    Integer Data: {12, 1, 0, 0, 4, 0, 13, 0, 13}
+                    |  |  |  |  |  |   |  |  |
+                    |  |  |  |  |  |   |  |  +- end vertex id
+                    |  |  |  |  |  |   |  +---- end veretx SubEntitySet
+                    |  |  |  |  |  |   +------- start vertex id
+                    |  |  |  |  |  +----------- start veretx SubEntitySet
+                    |  |  |  |  +-------------- two topological children (vertices)
+                    |  |  |  +----------------- no facets
+                    |  |  +-------------------- NO positions for point-curve
+                    |  +----------------------- curves have dimension 1
+                    +-------------------------- id
+    
+    Double Data:  {}
+    
+  Example Surface: (id = 1, face at x = 5 for axis-aligned origin-centered cube)
+  
+    Integer Data: {1, 2, 4, 6, 9, ..., ..., ...}
+                   |  |  |  |  |  |    |    |
+                   |  |  |  |  |  |    |    +- facet point owners
+                   |  |  |  |  |  |    +------ child curves (4 values)
+                   |  |  |  |  |  +----------- facet connectivity (6 values)
+                   |  |  |  |  +-------------- one loop w/ four child curves
+                   |  |  |  +----------------- connectivity for two facets
+                   |  |  +-------------------- four facet points
+                   |  +----------------------- surfaces have dimension 2
+                   +-------------------------- id
+
+    Facet Connectivity: {0, 1, 2, 0, 2, 3} - indices into point list
+                         -------  -------
+                            |        |
+                            |        +---- facet 1
+                            +------------- facet 0
+
+    Curve Connectivity: {4, 0, -2, 0, 7, 0, 8, 0, -9}
+                            -----  ----  ----  -----
+                         |    |     |     |      |
+                         |    |     |     |      +-- curve 9, reverse sense
+                         |    |     |     +--------- curve 8, forward sense
+                         |    |     +--------------- curve 7, forward sense
+                         |    +--------------------- curve 2, reverse sense
+                         +----------------------- loop containing four curves
+
+    Facet Point Owners: {0, 1, 0, 7, 0, 9}
+                         ----- ----- ----
+                           |     |     |
+                           |     |     +--- curve 9
+                           |     +--------- point 7
+                           +--------------- surface 1 (this surface)
+
+    Double Data:  {5, -5, 5, 5, 5, -5, 5, 5, 5, 5, -5, 5} - point coordinates
+                   --------  --------  -------  --------
+                      |         |         |        |
+                      |         |         |        +------- point 3
+                      |         |         +---------------- point 2
+                      |         +-------------------------- point 1
+                      +------------------------------------ point 0
+                      
+SubEntities (regions of a real entity split by split geometry)
+
+  Attribute name: PARTITION_GEOM
+                count range  label description
+  Integer Data:  (1)  [1,n]        ID in SubEntitySet 
+                 (1)  [0,inf) t    topological connectivity (children)
+                 (t)               child ids (sign = sense)
+  
+  Notes - dimension is same as entity the attrib exists on
+        - connectivity same as for split geometry 
+           (volume/shell arrangement analogous to surf/loop)
+
+Attributes on partition geometry:
+  - Attribute is placed on real geometry underlying subentity set
+  - Attribute is renamed PARTITION_ATTRIB
+  - Real attribute name is placed LAST on string data list
+  - SubEntitySet ID for partition geometry is placed LAST on int data list
+
+SubEntitySet IDs and bounding geometry
+  - A SubEntitySet is the collection of all subregions of a 
+    partitioned real geometry entity and all lower-dimension 
+    split geometry internal to the real geometry
+  - It does not include geometry on the boundary of the real entity
+  - All entities in a SubEntitySet are assigned incrementing IDs
+  - Each SubEntitySet can be assigned a unique ID
+  - All partition geometry can be referred to by a the tuple
+    <SubEntitySetID,EntityId>
+ 
+  Attibute Name: PARTITION_UID
+  Integer Data: (1) unique id
+
+
+     

@@ -1,0 +1,60 @@
+#==================================================================
+#
+# To build CGM applications, do the following:
+#
+# 0. include this file in your makefile (using 'include config.make')
+# 1. Insert '${CGM_INCLUDES}' (w/o quotes) in your compile command, e.g.
+#      ${CXX} ${CGM_INCLUDES} -c mysource.cpp
+# 2. Insert '${CGM_LIBS_LINK}' (w/o quotes) on your link line
+#
+# That's it! No need to look at the code below, unless you're curious.
+#
+#==================================================================
+
+CANT_USE_STD           = @CANT_USE_STD@
+CANT_USE_STD_IO        = @CANT_USE_STD_IO@
+TEMPLATE_DEFS_INCLUDED = @TEMPLATE_DEFS_INCLUDED@
+
+ACIS_DEFS            = @ACIS_DEFS@
+ACIS_DIR             = @ACIS_DIR@
+ACIS_LIB_DIR         = @ACIS_LIB_DIR@
+ACIS_VERSION         = @ACIS_VERSION@
+ACIS_HEALER          = @ACIS_HEALER@
+ACIS_PLATFORM        = @ACIS_PLATFORM@
+ACIS_STEP_TRANSLATOR = @ACIS_STEP_TRANSLATOR@
+ACIS_IGES_TRANSLATOR = @ACIS_IGES_TRANSLATOR@
+ACIS_LIBS            = @ACIS_LIBS@
+ACIS_INCLUDES        = @ACIS_INCLUDES@
+
+CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
+CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
+CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
+# These get redefined by a makefile target during *install*
+# by appending correct values to the end of the file.
+CGM_LIBDIR = @abs_builddir@/.libs
+CGM_INCLUDEDIR = @abs_srcdir@
+
+CGM_CXX = @CXX@
+CGM_CC = @CC@
+CGM_CXXFLAGS = @CXXFLAGS@ @CANT_USE_STD@ @CANT_USE_STD_IO@ @TEMPLATE_DEFS_INCLUDED@ ${ACIS_DEFS}
+CGM_CFLAGS = @CFLAGS@
+CGM_LDFLAGS = @LDFLAGS@
+
+CGM_INCLUDES = -I$(CGM_DIR)/util -I$(CGM_DIR)/geom -I$(CGM_DIR)/geom/ACIS $(CGM_PARALLEL_INCLUDE) -I$(CGM_INCLUDEDIR) ${ACIS_INCLUDES}
+
+CGM_LIBS_LINK = ${LDFLAGS} \
+	-L$(CGM_DIR)/geom/virtual -L$(CGM_DIR)/geom/facetbool -L$(CGM_DIR)/geom/facet \
+	-L$(CGM_DIR)/geom/Cholla -L$(CGM_DIR)/geom/ACIS -L$(CGM_DIR)/geom -L$(CGM_DIR)/util \
+	-L${ACIS_LIB_DIR} \
+	-L$(CGM_LIBDIR) \
+	${ACIS_LIBS} -lcubit_virtual -lcubit_facet -lcubit_facetbool -lcholla ${ACIS_LIBS} -lcubit_geom -lcubit_util \
+	${CGM_PARALLEL_LIB}
+
+CGM_LIBS_FILES = \
+       $(CGM_LIBDIR)/libcubit_virtual.a \
+       $(CGM_LIBDIR)/libcubit_facetbool.a \
+       $(CGM_LIBDIR)/libcubit_facet.a \
+       $(CGM_LIBDIR)/libcholla.a \
+       $(CGM_LIBDIR)/libcubit_geom.a \
+       $(CGM_LIBDIR)/libcubit_util.a \
+       ${CGM_PARALLEL_LIB_FILE}

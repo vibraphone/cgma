@@ -1,0 +1,36 @@
+This directory contains dummy header files and an example program
+showing how to compile ACIS-enabled applications using the ACIS
+libraries from a CUBIT distribution.  To build your own application,
+use the included Makefile as a guide or simply substitute your own
+source files in this Makefile for the main_cubit_acis and snippet
+files referenced here.
+
+Before building your application, download CGM and go through the
+configure/make process (see README.CONFIGURE in the CGM distribution
+for instructions).  After building CGM, make sure to do a 'make
+install', which will write the CGM header files and libraries into
+'include' and 'lib' directories under the directory you gave to the
+'prefix' argument to configure.
+
+This procedure has been tested under Linux (RHEL 4.0) and verified to
+work.  It's probably not difficult to make work on other platforms, if
+it doesn't work already there.  It probably requires a little more
+effort to get this to work on Windows, which hasn't been done yet.  If
+you do that, and can send the resulting configuration files to
+cubit-dev@sandia.gov, we'll try and incorporate them into the next
+release of CGM.
+
+In your application, instantiate CGM and ACIS as you normally would,
+following the directions in the CGM User's Guide.  However, instead of
+including the AcisQueryEngine.hpp and AcisModifyEngine.hpp headers
+from the CGM ACIS source, instead include NoAcisQueryEngine.hpp and
+NoAcisModifyEngine.hpp files from this directory.  These files contain
+dummy declarations of the AcisQuery/ModifyEngine classes without
+including any ACIS source.
+
+Also, if you modify this Makefile or copy its link rule into your own
+Makefile, make sure NOT to link the libcubit_xxx libraries into your
+application.  This will result in two versions of the functions in CGM
+being found, and we've observed problems when this happens.  The
+libcubiti referenced in the link command in Makefile should contain
+the necessary functions to build your CGM application.
