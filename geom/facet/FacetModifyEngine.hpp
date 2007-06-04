@@ -395,10 +395,10 @@ public:
                              const CubitVector& keep_vector,
                              bool keep_old = false );
   
-  virtual CubitStatus create_body_from_surfs(DLIList<Surface*> &ref_face_list,
-    BodySM *&new_body,
-    bool keep_old = false,
-    bool heal = false) const;
+  virtual CubitStatus create_solid_bodies_from_surfs(DLIList<Surface*> &ref_face_list,
+                                                     DLIList<BodySM*> &new_bodies,
+                                                     bool keep_old = false,
+                                                     bool heal = false) const;
   
   virtual Curve* create_arc_three( Point* ref_vertex1, 
                                    Point* ref_vertex2,

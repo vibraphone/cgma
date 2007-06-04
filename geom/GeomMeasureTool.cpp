@@ -1175,20 +1175,89 @@ void GeomMeasureTool::merged_unmerged_surface_ratio(DLIList <RefVolume*> &ref_vo
     ratio = (double) ((double)merged_surfaces / (double)unmerged_surfaces);
 }
 
-void GeomMeasureTool::report_intersected_bodies(DLIList <RefVolume*> &volume_list,
-                                                DLIList <Body*> &intersection_list)
+void GeomMeasureTool::report_intersected_volumes(DLIList <RefVolume*> &ref_vols,
+                                                 DLIList <RefVolume*> &intersection_list)
 {
-  DLIList <Body*> bodies;
-  get_bodies_from_list( volume_list, bodies);
-  report_intersected_bodies( bodies, intersection_list);
+  DLIList <RefVolume*> results;
+  RefVolume *curr_vol, *curr_vol_2;
+  int i, j;
+  ProgressTool *progress_ptr = NULL;
+  char title[29];
+  int total_volumes = ref_vols.size();
+  if (total_volumes > 5)
+  {
+    strcpy(title, "Overlapping Volumes Progress");
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, title, NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+  double curr_percent = 0.0;
+
+  for( i = 0; i < ref_vols.size(); i++ )
+  {
+    curr_vol = ref_vols.next(i);
+
+    //is this body a multi-volume-body?
+    Body *single_volume_body = curr_vol->body();
+    DLIList<RefVolume*> body_vols;
+    single_volume_body->ref_volumes( body_vols );
+    if( body_vols.size() > 1 )
+      single_volume_body = NULL;
+      
+    for( j = (i + 1); j < ref_vols.size(); j++ )
+    {
+      RefVolume *curr_vol2 = ref_vols.next(j);
+      if ( CubitMessage::instance()->Interrupt() )
+      {
+          //interrpt.  We need to exit.
+        if ( progress_ptr != NULL )
+        {
+          progress_ptr->end();
+        }
+          //just leave what has been calculated...
+        return;
+      }
+
+      Body *single_volume_body2 = curr_vol2->body();
+      DLIList<RefVolume*> body_vols2;
+      single_volume_body2->ref_volumes( body_vols2 );
+      if( body_vols2.size() > 1 )
+        single_volume_body2 = NULL;
+
+      //update the progress..
+      if ( progress_ptr != NULL )
+      {
+        curr_percent = ((double)(i+1))/((double)(total_volumes));
+        progress_ptr->percent(curr_percent);
+      }
+    
+      //if both are single-volume-bodies
+      if( single_volume_body && single_volume_body2 )
+      {
+        if( GeometryQueryTool::instance()->bodies_overlap( single_volume_body,
+                                                       single_volume_body2 ) )
+        {
+          intersection_list.append( curr_vol );
+          intersection_list.append( curr_vol2 );
+        }
+      }
+      else if( GeometryQueryTool::instance()->volumes_overlap( curr_vol, curr_vol2 ) )
+      {
+       intersection_list.append( curr_vol );
+       intersection_list.append( curr_vol2 );
+      }
+    }
+  }
   
+  if ( progress_ptr != NULL )
+  {
+    progress_ptr->end();
+  }
 }
 
 void GeomMeasureTool::report_intersected_bodies(DLIList <Body*> &ref_bodies,
                                                 DLIList <Body*> &intersection_list)
 {
-  
-  DLIList <Body*> results;
   Body *curr_body, *curr_body_2;
   int ii, jj;
   ProgressTool *progress_ptr = NULL;
@@ -1211,7 +1280,6 @@ void GeomMeasureTool::report_intersected_bodies(DLIList <Body*> &ref_bodies,
     for( jj = (ii + 1); jj < ref_bodies.size(); jj++ )
     {
       curr_body_2 = ref_bodies.next(jj);
-      results.clean_out();
       if ( CubitMessage::instance()->Interrupt() )
       {
           //interrpt.  We need to exit.
@@ -1224,11 +1292,10 @@ void GeomMeasureTool::report_intersected_bodies(DLIList <Body*> &ref_bodies,
       }
 
       if (GeometryQueryTool::instance()->bodies_overlap(curr_body,
-                                                         curr_body_2) )
+                                                        curr_body_2) )
       {
         intersection_list.append(curr_body);
         intersection_list.append(curr_body_2);
-        GeometryQueryTool::instance()->delete_Body(results);
       }
     }
        //update the progress..
@@ -1837,6 +1904,130 @@ void GeomMeasureTool::print_volume_measure_summary(DLIList <RefVolume*> &ref_vol
   return;
 
 }
+
+// Find all of the surfaces in the given volumes that have narrow regions.
+void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_vols,
+                                          double tol,
+                                          DLIList <RefFace*> &surfs_with_narrow_regions)
+{
+  int i, j;
+  double tol_sq = tol*tol;
+  for(i=ref_vols.size(); i--;)
+  {
+    RefVolume *cur_vol = ref_vols.get_and_step();
+    DLIList<RefFace*> vol_faces;
+    cur_vol->ref_faces(vol_faces);
+    for(j=vol_faces.size(); j--;)
+    {
+      RefFace *cur_face = vol_faces.get_and_step();
+      if(has_narrow_region(cur_face, tol, tol_sq))
+      {
+        surfs_with_narrow_regions.append_unique(cur_face);
+      }
+    }
+  }
+}
+
+// Checks to see if at the given position the two edges are close together and 
+// have the same tangent.
+int GeomMeasureTool::is_narrow_region_at_point(RefEdge *e1,
+                                               const CubitVector &pt_on_e1,
+                                               RefEdge *e2,
+                                               const double &tol_sq)
+{
+  int ret = 0;
+  CubitVector closest, tan_1, tan_2;
+  e2->closest_point_trimmed(pt_on_e1, closest);
+  double dist = (pt_on_e1-closest).length_squared();
+  if(dist < tol_sq)
+  {
+    e1->tangent(pt_on_e1, tan_1);
+    e2->tangent(closest, tan_2);
+    tan_1.normalize();
+    tan_2.normalize();
+    if(fabs(tan_1 % tan_2) > .9)
+      ret = 1;
+  }
+  return ret;
+}
+
+// Checks to see if the face has a narrow region in it.  A narrow
+// region here is defined as a region where two of the edges on the
+// face come close enough to each other that a narrow region is 
+// formed.
+int GeomMeasureTool::has_narrow_region(RefFace* face, const double &tol,
+                                       const double &tol_sq)
+{
+  int i, j, k;
+  int ret = 0;
+  double small_step = 5.0*tol, step;
+  RefEdge *edge1, *edge2;
+  CubitVector closest1, closest2, closest3;
+  CubitVector p3, p2, p1, tan11, tan21, step_pos;
+  RefVertex *cur_e1_vert;
+
+  // Loop through all of the edges in the face and compare each
+  // one with every other edge in the face.
+  DLIList<RefEdge*> edges;
+  face->ref_edges(edges);
+  while(edges.size() > 1 && !ret)
+  {
+    // Remove the current edge each time so that we aren't
+    // doing redundant comparisons.
+    RefEdge *cur_edge = edges.extract();
+
+    // Compare this edge with the remaining edges on the face.
+    for(k=edges.size(); k && !ret; k--)
+    {
+      RefEdge *other_edge = edges.get_and_step();
+
+      // Loop through twice to compare each edge with
+      // the other.  One edge will be used as the source
+      // edge and points from the source edge will be 
+      // compared with points on the target edge.
+      for(i=0; i<2 && !ret; i++)
+      {
+        if(i==0)
+        {
+          edge1 = cur_edge;
+          edge2 = other_edge;
+        }
+        else
+        {
+          edge1 = other_edge;
+          edge2 = cur_edge;
+        }
+
+        DLIList<RefVertex*> e1_verts;
+        edge1->ref_vertices(e1_verts);
+        for(j=e1_verts.size(); j && !ret; j--)
+        {
+          cur_e1_vert = e1_verts.get_and_step();
+          p1 = cur_e1_vert->coordinates();
+
+          // In trying to determine whether the face has a narrow region
+          // we will simply look for one point on the source edge that is
+          // close to the target edge and then step away from it a little
+          // and check another point.  This is working from the ends of
+          // the source edge which will not catch every case but should 
+          // catch most of the cases.
+          if(is_narrow_region_at_point(edge1, p1, edge2, tol_sq))
+          {
+            step = small_step;
+            if(cur_e1_vert == edge1->end_vertex())
+              step *= -1.0;
+            edge1->point_from_arc_length(p1, step, p2);
+            if(is_narrow_region_at_point(edge1, p2, edge2, tol_sq))
+              ret = 1;
+          }
+        }
+      }
+    }
+  }
+
+  return ret;
+}
+
 void GeomMeasureTool::find_small_curves( DLIList <RefVolume*> &ref_vols,
                                          double tol,
                                          DLIList <RefEdge*> &small_curves,

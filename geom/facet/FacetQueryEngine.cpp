@@ -1748,7 +1748,7 @@ CubitStatus FacetQueryEngine::import_solid_model(
                                                  CubitBoolean free_surfaces)
 {
   errno = 0;
-  FILE *file_ptr = fopen(file_name, "r");
+  FILE *file_ptr = fopen(file_name, "rb");
   if (!file_ptr)
   {
     PRINT_ERROR("Cannot open file: %s (%s)\n", file_name, strerror(errno) );
@@ -4756,6 +4756,9 @@ CubitStatus FacetQueryEngine::reflect( GeometryEntity* , const CubitVector&  )
   return CUBIT_FAILURE;
 }
 
+
+
+
 //===============================================================================
 // Function   : bodies_overlap
 // Member Type: PUBLIC
@@ -4786,6 +4789,13 @@ bool intersection_found;
   if ( status == CUBIT_FAILURE ) return CUBIT_FALSE;
   else return CUBIT_TRUE;
     */
+}
+
+CubitBoolean FacetQueryEngine::volumes_overlap (Lump * /*lump_ptr_1*/,
+                                                Lump * /*lump_ptr_2*/ ) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine overlap for Facet-based geometry.\n");
+  return CUBIT_FALSE;
 }
 
 //EOF

@@ -200,7 +200,7 @@ int CubitPlane::intersect(const CubitPlane &plane_2,
   else if (dir2.y() > dir2.x() && dir2.y() > CUBIT_RESABS)
   {
       // then get a point on the XZ plane
-    invdet = 1.0 / vector.y();
+    invdet = -1.0 / vector.y();
     
       // solve < pl1.x * origin.x + pl1.z * origin.z = -pl1.w >
       //       < plane2n.x * origin.x + plane2n.z * origin.z = -plane2n.w >

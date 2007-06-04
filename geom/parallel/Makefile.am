@@ -27,6 +27,7 @@ libcubit_parallel_la_SOURCES = \
     AcisMemFile.cpp \
     CABodies.cpp \
     CGMMemFile.cpp \
+    ParallelGeomTool.cpp \
     ProcData.cpp \
     TDParallel.cpp
 
@@ -37,6 +38,7 @@ libcubit_parallel_la_include_HEADERS = \
     AcisMemFile.hpp \
     CABodies.cpp \
     CGMMemFile.hpp \
+    ParallelGeomTool.hpp \
     ProcData.hpp \
     TDParallel.hpp
 

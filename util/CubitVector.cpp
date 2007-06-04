@@ -475,3 +475,14 @@ void CubitVector::next_point( const CubitVector &direction,
   return;
 }
 
+//- Project this vector onto the plane specified by the input plane normal
+void CubitVector::project_to_plane( const CubitVector &planenormal )
+{
+    // Cross the vector with the normal to get a vector on the plane
+    CubitVector planevec = planenormal * (*this);
+
+    // Cross the vector on the plane with the normal to get the 
+    // projection of the vector on the plane
+    *this = planevec * planenormal;
+}
+

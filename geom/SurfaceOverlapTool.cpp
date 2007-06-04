@@ -30,7 +30,6 @@
 #include "AbstractTree.hpp"
 
 #include "GMem.hpp"
-#include "GfxDebug.hpp"
 #include "SettingHandler.hpp"
 
 #define NO_FACETS_FOR_ABSTRACTTREE 10

@@ -68,6 +68,7 @@ SET(GEOM_SRCS
     GeometryQueryTool.cpp
     GeometryUtil.cpp
     GeomMeasureTool.cpp
+    GfxPreview.cpp
     GroupingEntity.cpp
     GSaveOpen.cpp
     Loop.cpp

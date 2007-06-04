@@ -374,10 +374,19 @@ SettingHolder* SettingHandler::get_setting_holder(CubitString name)
 	return (*(mSettingsList.find(name))).second;
 }
 
-void SettingHandler::get_settings_list(std::map<CubitString, SettingHolder*> &list)
+void SettingHandler::get_settings_list(std::vector< std::pair<CubitString, SettingHolder*> > &list)
 {
-  // return a copy of the settings list
-  list = mSettingsList;
+  // return a list of the settings
+  std::map<CubitString, SettingHolder*>::iterator iter = mSettingsList.begin();
+  while(iter != mSettingsList.end())
+  {
+    std::pair<CubitString, SettingHolder*>  tmp_pair;
+    CubitString key = (*iter).first;
+    tmp_pair.first = key;
+    tmp_pair.second = (*iter).second;
+    list.push_back( (tmp_pair) );
+    iter++;
+  }
 }
 
 

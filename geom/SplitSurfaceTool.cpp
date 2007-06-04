@@ -38,6 +38,7 @@
 #include "DLIList.hpp"
 #include "TDSplitSurface.hpp"
 #include "GfxDebug.hpp"
+#include "GfxPreview.hpp"
 #include "Cubit2DPoint.hpp"
 #include "GMem.hpp"
 #include "SettingHandler.hpp"
@@ -333,7 +334,7 @@ SplitSurfaceTool::draw_points( DLIList<CubitVector*> &pnt_list, int color,
 
   if( flush )
   {
-    GfxDebug::flush();
+    GfxPreview::flush();
   }
 
   return CUBIT_SUCCESS;
@@ -342,10 +343,10 @@ SplitSurfaceTool::draw_points( DLIList<CubitVector*> &pnt_list, int color,
 CubitStatus
 SplitSurfaceTool::draw_point( CubitVector &pnt, int color, int flush )
 {
-  GfxDebug::draw_point( pnt, color );
+  GfxPreview::draw_point( pnt, color );
   if( flush )
   {
-    GfxDebug::flush();
+    GfxPreview::flush();
   }
   return CUBIT_SUCCESS;
 }
@@ -693,7 +694,7 @@ SplitSurfaceTool::calculate_split_curves( DLIList<RefFace*> &ref_face_list,
         create_ref_edges( *curve_list_ptr );
 
         // This just draws each curve as we go, same as preview does
-        GfxDebug::flush();
+        GfxPreview::flush();
       }
     }
   }
@@ -5403,13 +5404,17 @@ SplitSurfaceTool::draw_preview( DLIList<Curve*> &curve_list, int color )
   int i;
   Curve *curve_ptr;
   curve_list.reset();  
+
+  // clear any old previews first
+  GfxPreview::clear();
+
   for( i=curve_list.size(); i--; )
   {
     curve_ptr = curve_list.get_and_step();
     draw_preview( curve_ptr, CUBIT_FALSE, color );
   }
 
-  GfxDebug::flush();
+  GfxPreview::flush();
 
   return CUBIT_SUCCESS;
 }
@@ -5421,6 +5426,9 @@ SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
   int num_points;
   CubitStatus result;
   GMem g_mem;
+
+  // clear any old previews first
+  GfxPreview::clear();
   
   // get the graphics 
   result = curve_ptr->get_geometry_query_engine()->
@@ -5432,9 +5440,9 @@ SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
   }
   
   // Draw the polyline
-  GfxDebug::draw_polyline( g_mem.point_list(), g_mem.pointListCount, color );
+  GfxPreview::draw_polyline( g_mem.point_list(), g_mem.pointListCount, color );
   if( flush )
-    GfxDebug::flush();
+    GfxPreview::flush();
 
   return CUBIT_SUCCESS;
 }
@@ -5700,7 +5708,7 @@ SplitSurfaceTool::check_points_straight( Surface *surf_ptr,
     check_pnt.set( start_pnt.x() + .25 * (end_pnt.x() - start_pnt.x()),
                    start_pnt.y() + .25 * (end_pnt.y() - start_pnt.y()),
                    start_pnt.z() + .25 * (end_pnt.z() - start_pnt.z()) );
-    if( is_point_on_surface( surf_ptr, check_pnt, GEOMETRY_RESABS ) == CUBIT_FALSE )
+    if( is_point_on_surface( surf_ptr, check_pnt, GEOMETRY_RESABS ) == CUBIT_FALSE ) 
       return CUBIT_FALSE;
 
     check_pnt.set( start_pnt.x() + .5 * (end_pnt.x() - start_pnt.x()),

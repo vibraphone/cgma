@@ -244,7 +244,7 @@ CubitMessage::CubitMessage()
     MessageFlag(173, "Enable Quad-Coarsening Pinch inside corners"),
     MessageFlag(174, "Enable Quad-Coarsening Pinch outside corners"),
     MessageFlag(175, "Disable creation of crashbackup.cub during crash"),
-    MessageFlag(176, "Disable UCP Curve Smoothing"),
+    MessageFlag(176, "Enable UCP database checking"),
     MessageFlag(177, "Enable Unconstrained Plastering Debug Drawing")
 
       // IMPORTANT!!!

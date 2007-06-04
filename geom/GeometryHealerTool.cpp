@@ -294,8 +294,15 @@ CubitStatus GeometryHealerTool::auto_heal_bodies( DLIList<Body*> &body_list,
 
    GeometryHealerEngine* GHEPtr = get_engine(body_list.get());
    if (GHEPtr)
-      return GHEPtr->auto_heal_bodies(body_list, new_body_list, bad_geometry,
+   {
+      CubitStatus healer_status = GHEPtr->auto_heal_bodies(body_list, new_body_list, bad_geometry,
                                       rebuild, keep_old, make_tolerant, logfile_ptr);
+
+      if( healer_status == CUBIT_SUCCESS )
+        CubitObserver::notify_static_observers(NULL, HEALER_COMPLETED);
+
+      return healer_status;
+   }
    else
       PRINT_ERROR( "Bodies are of a geometry engine without a healer\n"
                    "         and cannot be healed.\n");

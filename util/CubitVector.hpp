@@ -102,6 +102,9 @@ public:
   void rotate(double angle, double );
     //- transform function.
     //- transform  (x,y) to (r,theta) to (r,theta+angle) to (x',y')
+
+  void project_to_plane( const CubitVector &planenormal );
+    //- project this vector onto a plane.
   
   void reflect_about_xaxis(double dummy, double );
     //- dummy argument to make it a transform function
@@ -211,6 +214,9 @@ public:
   
   CubitVector operator-() const;
     //- unary negation.
+
+  double operator[](int i) const;
+    //- return the ith value of the vector (x, y, z)
   
   friend CubitVector operator~(const CubitVector &vec);
     //- normalize. Returns a new vector which is a copy of {vec},
@@ -470,6 +476,14 @@ inline CubitVector operator~(const CubitVector &vec)
 inline CubitVector CubitVector::operator-() const
 {
   return CubitVector(-xVal, -yVal, -zVal);
+}
+
+inline double CubitVector::operator[](int i) const
+{
+  assert(i > -1 && i < 3);
+  if      (i == 0) return xVal;
+  else if (i == 1) return yVal;
+  else             return zVal;
 }
 
 inline CubitVector operator+(const CubitVector &vector1,

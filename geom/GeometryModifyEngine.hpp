@@ -711,9 +711,9 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- is not free, the curve is automatically copied before trimming (so
       //- a new curve results).
 
-      virtual CubitStatus create_body_from_surfs( 
+      virtual CubitStatus create_solid_bodies_from_surfs( 
                                       DLIList<Surface*> &ref_face_list, 
-                                      BodySM *&new_body,
+                                      DLIList<BodySM*> &new_bodies,
                                       bool keep_old = false,
                                       bool heal = true) const = 0;
       //- Creates a single body from a set of faces.  The faces can only be attached

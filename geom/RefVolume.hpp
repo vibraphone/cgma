@@ -123,6 +123,7 @@ public :
   virtual CubitString measure_label();
 
   CubitStatus mass_properties( CubitVector &centroid, double &volume );
+  int validate();
 
 protected:
 

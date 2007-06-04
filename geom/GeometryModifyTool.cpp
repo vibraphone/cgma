@@ -5847,8 +5847,8 @@ CubitStatus GeometryModifyTool::regularize_body(Body *body_ptr,
 }
 
 CubitStatus
-GeometryModifyTool::create_body_from_surfs( DLIList<RefFace*> &ref_face_list,
-                                            Body *&new_body,
+GeometryModifyTool::create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_list,
+                                            DLIList<Body*> &new_bodies,
                                             CubitBoolean keep_old,
                                             CubitBoolean heal ) const
 {
@@ -5894,16 +5894,17 @@ GeometryModifyTool::create_body_from_surfs( DLIList<RefFace*> &ref_face_list,
   }
 
   DLIList<ModelEntity*> query_output, query_input(ref_face_list.size());
-  DLIList<Body*> body_list, new_body_list(1);
-  DLIList<BodySM*> body_sm_list(1);
+  DLIList<Body*> body_list;
+  
 
   CAST_LIST_TO_PARENT(ref_face_list, query_input);
   ModelQueryEngine::instance()->
     query_model( query_input, DagType::body_type(), query_output );
   CAST_LIST( query_output, body_list, Body );
 
+  int i;
   DLIList<RefFace*> free_face_list;
-  for (int i = ref_face_list.size(); i--; )
+  for ( i=ref_face_list.size(); i--; )
   {
     RefFace* ref_face = ref_face_list.get_and_step();
     query_output.clean_out();
@@ -5913,12 +5914,13 @@ GeometryModifyTool::create_body_from_surfs( DLIList<RefFace*> &ref_face_list,
       free_face_list.append(ref_face);
   }
 
-  BodySM* new_sm = 0;
-  CubitStatus stat = gme->create_body_from_surfs( surface_list, new_sm, keep_old, heal );
-  if (new_sm)
-    body_sm_list.append(new_sm);
+  DLIList<BodySM*> new_bodies_sm;
+  CubitStatus stat = gme->create_solid_bodies_from_surfs( surface_list, new_bodies_sm, keep_old, heal );
+  DLIList<BodySM*> body_sm_list;
+  for ( i=new_bodies_sm.size(); i--; )
+    body_sm_list.append( new_bodies_sm.get_and_step() );
 
-  if (!finish_sm_op( body_list, body_sm_list, new_body_list))
+  if (!finish_sm_op( body_list, body_sm_list, new_bodies))
     stat = CUBIT_FAILURE;
 
   DLIList<int> id_list (free_face_list.size());
@@ -5936,7 +5938,7 @@ GeometryModifyTool::create_body_from_surfs( DLIList<RefFace*> &ref_face_list,
   if (id_list.size())
     CubitUtil::list_entity_ids( "Destroyed surface(s) ", id_list );
 
-  new_body = new_body_list.size() ? new_body_list.get() : 0;
+  //new_body = new_body_list.size() ? new_body_list.get() : 0;
   return stat;
 }
 
@@ -8700,6 +8702,12 @@ CubitStatus GeometryModifyTool::create_skin_surface( DLIList<RefEdge*>& ref_edge
   DLIList<TopologyEntity*> entity_list;
   CAST_LIST_TO_PARENT( ref_edges, entity_list );
 
+  if (ref_edges.size() < 2)
+  {
+     PRINT_ERROR("Must specify at least 2 curves to create a skinned surface.\n");
+     return CUBIT_FAILURE;
+  }
+
   GeometryModifyEngine* GME_ptr =
     common_modify_engine( entity_list, bridge_list );
   if(! GME_ptr )
@@ -8862,7 +8870,10 @@ void GeometryModifyTool::remove_dead_entity_names( RefEntity* entity ) const
   entity->get_child_ref_entities(children);
   children.last();
   for (int i = children.size(); i--; )
+  {
+    //PRINT_INFO("Removing dead entity on %s %d\n", children.get()->class_name(), children.get()->id() );
     remove_dead_entity_names( children.step_and_get() );
+  }
 }
 
 //-------------------------------------------------------------------------
@@ -9018,6 +9029,16 @@ CubitStatus GeometryModifyTool::remove_curve_slivers( DLIList<Body*> &bodies,
     return CUBIT_FAILURE;
 
   return status;
+}
+
+void GeometryModifyTool::determine_solutions_for_eliminating_small_surface(RefFace *face,
+                                                                           DLIList<CubitString> &display_strings,
+                                                                           DLIList<CubitString> &command_strings)
+{
+  // Build strings for potential composite solutions.
+  // Build strings for potential remove_face solutions.
+  // Build strings for potential remove_topology solutions.
+  // Build strings for potential regularize solutions.
 }
 
 

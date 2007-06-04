@@ -30,6 +30,7 @@ class GMem;
 class TopologyBridge;
 class GeometryEntity;
 class BodySM;
+class Lump; 
 class Surface;
 class Curve;
 class Point;
@@ -309,6 +310,8 @@ public:
 
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1,
                                        BodySM *body_ptr_2 ) const = 0;
+
+  virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const = 0; 
 
    protected:
 

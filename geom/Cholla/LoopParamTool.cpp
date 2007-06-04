@@ -59,7 +59,8 @@ CubitStatus LoopParamTool::set_up_space()
 // Author: Shiraj Khan
 // Date: 1/21/2003
 //===================================================================================
-CubitStatus LoopParamTool::new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> &loops_cubit_points)
+CubitStatus LoopParamTool::new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> &loops_cubit_points,
+                                                CubitVector* normal)
 {
 	
   int ii;
@@ -131,7 +132,13 @@ CubitStatus LoopParamTool::new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> 
     //(vec1) crossproduct (vec2)
     // where vec1 and vec2 are the vectors originating from a common point( center of mass of a plane) and  
     // lying on the plane.
-  if ( determinant_aa == 0.0 )
+  if(normal){
+    a = normal->x();
+    b = normal->y();
+    c = normal->z();
+    d = -(a*Xc + b*Yc + c*Zc );
+  }
+  else if ( determinant_aa == 0.0 )
   {
     sub_loops_cubit_points = loops_cubit_points.get_and_step();
     point1 = sub_loops_cubit_points->get_and_step();
@@ -536,154 +543,135 @@ CubitStatus LoopParamTool::transform_loopspoints_to_uv( DLIList<DLIList<CubitPoi
 CubitStatus LoopParamTool::check_selfintersecting_coincident_edges(DLIList<DLIList<CubitPoint *>*> 
                                                                    &loops_bounding_points)
 {
-  int ii, jj, kk, ll;
-  DLIList<CubitPoint *> *sub_loops_bounding_points1, *sub_loops_bounding_points2;
-  CubitPoint *start_point1, *end_point1, *start_point2, *end_point2;
-  CubitVector uv1, uv2, uv3, uv4;
-  CubitVector u, v, w;
-  double s,t;
-  int flag = 1;
+    //This function checks each line segment against every other line segment
+    //to see if they intersect or overlap.  Each line will be described
+    //by the following equations:
+    //
+    // Pa = P1 + ua( P2 - P1 )
+    // Pb = P3 + ub( P4 - P3 )
+    //
+    //Setting the Pa equal to Pb and solving for ua and ub you will get two
+    //equation.  Both will have the common denominator:
+    //
+    // denom = ( (uv4.y() - uv3.y()) * (uv2.x() - uv1.x() ) -
+    //         (uv4.x() - uv3.x()) * (uv2.y() - uv1.y() ) )
+    //
+    //And the numerators will be:
+    //
+    // numer_a = ( (uv4.x() - uv3.x()) * (uv1.y() - uv3.y() ) -
+    //          (uv4.y() - uv3.y()) * (uv1.x() - uv3.x() ) )
+    //      
+    // numer_b = ( (uv2.x() - uv1.x()) * (uv1.y() - uv3.y() ) -
+    //           (uv2.y() - uv1.y()) * (uv1.x() - uv3.x() ) )
+    //
+    //ua and ub then become:
+    //
+    // ua = numer_a / denom
+    // ub = numer_b / denom
+    //
+    //If the lines are parallel then denom will be zero.  If they are
+    //also coincedent then the numerators will also be zero.  For the
+    //segments to intersect ua and ub need to both be between 0
+    //and 1.
   
+  int ii, jj, kk, ll;
   
   for ( ii = 0; ii < loops_bounding_points.size(); ii++ )
   {
-    sub_loops_bounding_points1 = loops_bounding_points.next(ii);
+    DLIList<CubitPoint*>* sub_loops_bounding_points1 = loops_bounding_points.next(ii);
     for( jj = 0; jj < sub_loops_bounding_points1->size(); jj++ )
     {
-		  
-      start_point1 = sub_loops_bounding_points1->next(jj);//
+      CubitPoint* start_point1 = sub_loops_bounding_points1->next(jj);
+      CubitPoint* end_point1 = NULL;
       if ( jj == sub_loops_bounding_points1->size()-1 )
          end_point1 = sub_loops_bounding_points1->next(0);
       else
          end_point1 = sub_loops_bounding_points1->next(jj+1);
-      uv1 = start_point1->coordinates();
-      uv2 = end_point1->coordinates();
-		  
-      if ( (uv1.x() > EPSILON_LOWER) && (uv1.x() < EPSILON_UPPER) )
-         uv1.x(0.0);
-      if ( (uv1.y() > EPSILON_LOWER) && (uv1.y() < EPSILON_UPPER) )
-         uv1.y(0.0);
-      if ( (uv1.z() > EPSILON_LOWER) && (uv1.z() < EPSILON_UPPER) )
-        uv1.z(0.0);
-      if ( (uv2.x() > EPSILON_LOWER) && (uv2.x() < EPSILON_UPPER) )
-        uv2.x(0.0);
-      if ( (uv2.y() > EPSILON_LOWER) && (uv2.y() < EPSILON_UPPER) )
-        uv2.y(0.0);
-      if ( (uv2.z() > EPSILON_LOWER) && (uv2.z() < EPSILON_UPPER) )
-        uv2.z(0.0);
+      CubitVector uv1 = start_point1->coordinates();
+      CubitVector uv2 = end_point1->coordinates();
 
-      for ( kk = 0; kk < loops_bounding_points.size(); kk++ )
+        //Start with the current loop in the list.  The previous
+        //lists have already been checked against this list.
+      for ( kk = ii; kk < loops_bounding_points.size(); kk++ )
       {
-        sub_loops_bounding_points2 = loops_bounding_points.next(kk);
+        DLIList<CubitPoint*>* sub_loops_bounding_points2 = loops_bounding_points.next(kk);
         for ( ll = 0; ll < sub_loops_bounding_points2->size(); ll++ )
         {
-          start_point2 = sub_loops_bounding_points2->next(ll);//
+          CubitPoint* start_point2 = sub_loops_bounding_points2->next(ll);
+          CubitPoint* end_point2 = NULL;
           if ( ll == sub_loops_bounding_points2->size()-1 )
             end_point2 = sub_loops_bounding_points2->next(0);
           else
             end_point2 = sub_loops_bounding_points2->next(ll+1);
-          uv3 = start_point2->coordinates();
-          uv4 = end_point2->coordinates();
+          CubitVector uv3 = start_point2->coordinates();
+          CubitVector uv4 = end_point2->coordinates();
 
           if ( start_point1 == end_point2 || start_point1== start_point2 ||
                end_point1 == start_point2 || end_point1 == end_point2 )
             continue;
           
-          if ( (uv3.x() > EPSILON_LOWER) && (uv3.x() < EPSILON_UPPER) )
-            uv3.x(0.0);
-          if ( (uv3.y() > EPSILON_LOWER) && (uv3.y() < EPSILON_UPPER) )
-            uv3.y(0.0);
-          if ( (uv3.z() > EPSILON_LOWER) && (uv3.z() < EPSILON_UPPER) )
-            uv3.z(0.0);
-          if ( (uv4.x() > EPSILON_LOWER) && (uv4.x() < EPSILON_UPPER) )
-            uv4.x(0.0);
-          if ( (uv4.y() > EPSILON_LOWER) && (uv4.y() < EPSILON_UPPER) )
-            uv4.y(0.0);
-          if ( (uv4.z() > EPSILON_LOWER) && (uv4.z() < EPSILON_UPPER) )
-            uv4.z(0.0);
-          
           if ( (uv1 == uv3) && (uv2 == uv4) )
             continue;
           
-				  
-            // If condition to check that both points (uv3 and uv4 )lie on
-            //the straight line through uv1 and uv2
-          if ( (uv3.y()*(uv2.x()-uv1.x()) ==
-                ((uv2.y()-uv1.y()) * uv3.x()+ uv1.y()*uv2.x()-uv1.x()*uv2.y()) ) &&
-               (uv4.y()*(uv2.x()-uv1.x()) ==
-                ((uv2.y()-uv1.y()) * uv4.x()+ uv1.y()*uv2.x()-uv1.x()*uv2.y())) )
+          double denom = ( (uv4.y() - uv3.y()) * (uv2.x() - uv1.x() ) -
+                           (uv4.x() - uv3.x()) * (uv2.y() - uv1.y() ) );
+          
+          double numer_a = ( (uv4.x() - uv3.x()) * (uv1.y() - uv3.y() ) -
+                             (uv4.y() - uv3.y()) * (uv1.x() - uv3.x() ) );
+          
+          double numer_b = ( (uv2.x() - uv1.x()) * (uv1.y() - uv3.y() ) -
+                             (uv2.y() - uv1.y()) * (uv1.x() - uv3.x() ) );
+          
+          if( denom < CUBIT_RESABS && denom > -CUBIT_RESABS )
           {
-            
-              // This condition to check that one of the 2 points (uv3 and uv4)
-              //lie between uv1 and uv2 or two edges exactly overlapping
-            if ( ( (( uv3.x() > uv1.x()) && (uv3.x() < uv2.x())) ||
-                   (( uv3.x() > uv2.x()) && (uv3.x() < uv1.x())) ) ||
-                 ( (( uv4.x() > uv1.x()) && (uv4.x() < uv2.x())) ||
-                   (( uv4.x() > uv2.x()) && (uv4.x() < uv1.x())) ) ||
-                 ( (( uv3.y() > uv1.y()) && (uv3.y() < uv2.y())) ||
-                   (( uv3.y() > uv2.y()) && (uv3.y() < uv1.y())) ) ||
-                 ( (( uv4.y() > uv1.y()) && (uv4.y() < uv2.y())) ||
-                   (( uv4.y() > uv2.y()) && (uv4.y() < uv1.y())) ) ||
-                 (( uv1 == uv3 ) && ( uv2 == uv4 )) ||
-                 (( uv1 == uv4 ) && ( uv2 == uv3 )) )
+              //The lines are parallel.  Check the numerators to
+              //see if they are coincident.
+            if( numer_a < CUBIT_RESABS && numer_a > -CUBIT_RESABS &&
+                numer_b < CUBIT_RESABS && numer_b > -CUBIT_RESABS )
             {
-              PRINT_ERROR("Can't mesh due to coincident edges \n\n\n");
-              flag = 0;
-              break;
+                //The lines are coincident.  Now see if the segments
+                //over lap.
+              double ua;
+              double ub;
+              if( (uv2.x() - uv1.x()) < CUBIT_RESABS &&
+                  (uv2.x() - uv1.x()) > -CUBIT_RESABS )
+              {
+                ua = (uv3.y() - uv1.y() ) / ( uv2.y() - uv1.y() );
+                ub = (uv4.y() - uv1.y() ) / ( uv2.y() - uv1.y() );
+              }
+              else
+              {
+                ua = (uv3.x() - uv1.x() ) / ( uv2.x() - uv1.x() );
+                ub = (uv4.x() - uv1.x() ) / ( uv2.x() - uv1.x() );
+              }
+                  
+              if( ua > CUBIT_RESABS && ua < (1.0 - CUBIT_RESABS ) ||
+                  ub > CUBIT_RESABS && ub < (1.0 - CUBIT_RESABS ))
+              {
+                  //The segments overlap.
+                PRINT_ERROR("Can't mesh due to coincident edges \n\n\n");
+                return CUBIT_FAILURE;
+              }
             }
           }
-          
-          u = uv2 - uv1;
-          v = uv4 - uv3;
-          w = uv1 - uv3;
-          s = v.x()*u.y()-v.y()*u.x();
-          t = u.x()*v.y()-u.y()*v.x();
-          if ( s < CUBIT_RESABS && s > -CUBIT_RESABS)
-            s = CUBIT_DBL_MAX;
           else
-            s = ( v.y()*w.x()-v.x()*w.y() )/( s );
-          if ( t < CUBIT_RESABS && t > -CUBIT_RESABS)
-            t = CUBIT_DBL_MAX;
-          else
-            t = ( u.x()*w.y()-u.y()*w.x() )/( t );
+          {
+            double ua = numer_a / denom;
+            double ub = numer_b / denom;
 
-            //this condition to check whether two segments intersect
-          if ( (s > (0.0+CUBIT_RESABS) && s < (1.0-CUBIT_RESABS)) &&
-               (t > (0.0+CUBIT_RESABS) && t < (1.0-CUBIT_RESABS)))
-          {
-            PRINT_ERROR("1. Can't mesh due to self intersecting edges \n\n\n");
-            flag = 0;
-            break;
-          }
-          else if( (double_equal(s, 0.0) || double_equal( s,1.0) ) && 
-                   ((t > (0.0+CUBIT_RESABS)) && (t < (1.0-CUBIT_RESABS))))
-          {
-            PRINT_ERROR("2. Can't mesh due to self intersecting edges \n\n\n");
-              flag = 0;
-              break;
-          }
-          else if ( (double_equal(t,0.0) || double_equal(t,1.0) ) && 
-                    ((s > (0.0+CUBIT_RESABS)) && (s < (1.0-CUBIT_RESABS))))
-          {
-            PRINT_ERROR("3. Can't mesh due to self intersecting edges, t = %f, s = %f \n\n\n", t,s);
-            flag = 0;
-            break;
+            if( ( (ua > CUBIT_RESABS && ua < (1.0-CUBIT_RESABS)) &&
+                  (ub > CUBIT_RESABS && ub < (1.0-CUBIT_RESABS))) )
+            {
+              PRINT_ERROR("Can't mesh due to self intersecting edges \n\n\n");
+              return CUBIT_FAILURE;
+            }
           }
         }//end of for ( ll )
-        if ( flag == 0 ) break;
       }// end of for ( kk )
-      if ( flag == 0 ) break;
     }//end of for ( jj )
-    if ( flag == 0 ) break;
   }// end of for ( ii )
 
-    //if the self-intersecting and coincident edges are there then return CUBIT_FAILURE
-    // else return CUBIT_SUCCESS
-  if ( flag == 0 )
-    return CUBIT_FAILURE;
-  else 
-    return CUBIT_SUCCESS;
-  
+  return CUBIT_SUCCESS;
 }
 
 bool LoopParamTool::double_equal(double val, double equal_to)

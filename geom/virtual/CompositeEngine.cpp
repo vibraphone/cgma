@@ -4789,8 +4789,9 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
     surfaces += temp_surfaces;
     lumps += temp_lumps;
   }
-  
-    // assert that lists do not contain duplicates
+
+ 
+  // assert that lists do not contain duplicates
   //assert( (i = points.size(),   points.uniquify_ordered(),   i == points.size()  ) );
   //assert( (i = curves.size(),   curves.uniquify_ordered(),   i == curves.size()  ) );  
   points.uniquify_ordered(); // can have duplicates in some non-manifold cases
@@ -4864,7 +4865,6 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
     // entity.  need to remove the duplicates.
   imported_geom.uniquify_unordered();
 */
-  
     // that's all folks
   return result;
 } 

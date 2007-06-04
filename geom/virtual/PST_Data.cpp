@@ -960,11 +960,13 @@ void PST_Edge::make_facets(
     {
       PST_Face* new_face 
         = PST_Edge::create_face( ptlist[i1], ptlist[i2], ptlist[i3] );
-      if( new_face )
+      if( new_face ){
         face_list.append(new_face);
-      else
+        new_face->sequence = i;
+      }
+      else{
         fail_count++;
-      new_face->sequence = i;
+      }
     }
   }
    
@@ -975,11 +977,14 @@ void PST_Edge::make_facets(
   delete [] ptindex_list;
   delete [] ptlist;
   
-  PST_Edge::edges( face_list, edge_list );
-  validate( edge_list, true );
-  bool debug1 = false;
-  if (debug1)
-    debug_draw_edges( edge_list, CUBIT_BLUE, CUBIT_RED, true );
+  if(fail_count == 0)
+  {
+    PST_Edge::edges( face_list, edge_list );
+    validate( edge_list, true );
+    bool debug1 = false;
+    if (debug1)
+      debug_draw_edges( edge_list, CUBIT_BLUE, CUBIT_RED, true );
+  }
 }
 
 int PST_Point::validate(CubitBoolean print)

@@ -554,45 +554,6 @@ int GeometryQueryTool::fire_ray(Body* body,
   return rval ;
 }
 
-CubitStatus GeometryQueryTool::import_temp_geom_file(FILE* file_ptr,
-						     const char* file_type )
-{
-    // reset the attribImporteds flags to facilitate attribute reporting
-//  CubitAttrib::clear_attrib_importeds();
-
-    // Use the default MQE to import a list of ToplogyBridges from the file.
-  gqeList.reset();
-  DLIList<TopologyBridge*> bridge_list;
-  GeometryQueryEngine *gqe;
-
-  int i;
-  CubitStatus status = CUBIT_FAILURE;
-  for(i=gqeList.size(); i--; )
-  {
-    gqe = gqeList.get_and_step();
-    status = gqe->import_temp_geom_file( file_ptr, "dummy",file_type, bridge_list );
-    if( status == CUBIT_SUCCESS ) //done...get out
-      break;
-  }
-
-  if( bridge_list.size() == 0 )
-    return status;
-
-
-  for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
-    (*itor)->import_geometry(bridge_list);
-
-  DLIList<RefEntity*> dummy_list;
-  status = construct_refentities(bridge_list, &dummy_list);
-
-    // report attribs imported
-//  CubitAttrib::report_attrib_importeds();
-
-    // now return
-  return status;
-}
-
-
 //-------------------------------------------------------------------------
 // Purpose       : Reads in geometry in geometry and creates
 //                 the necessary Reference entities associated with the
@@ -5240,10 +5201,10 @@ void GeometryQueryTool::ige_remove_modified(DLIList<TopologyBridge*>& geometry_l
   for (itor = igeSet.begin(); itor != igeSet.end(); ++itor)
     (*itor)->clean_out_deactivated_geometry();
 }
+
 CubitBoolean GeometryQueryTool::bodies_overlap( Body *body_ptr_1,
                                                 Body *body_ptr_2 )
 {
-
   BodySM *body1 = body_ptr_1->get_body_sm_ptr();
   BodySM *body2 = body_ptr_2->get_body_sm_ptr();
 
@@ -5260,4 +5221,25 @@ CubitBoolean GeometryQueryTool::bodies_overlap( Body *body_ptr_1,
   }
   else
     return body_ptr_1->get_geometry_query_engine()->bodies_overlap( body1, body2 );
+}
+
+CubitBoolean GeometryQueryTool::volumes_overlap( RefVolume *volume_1, 
+                                                 RefVolume *volume_2 ) 
+{
+  Lump *lump1 = volume_1->get_lump_ptr();
+  Lump *lump2 = volume_2->get_lump_ptr();
+
+  if( is_intermediate_geometry( volume_1 ) )
+    return volume_1->get_geometry_query_engine()->volumes_overlap( lump1, lump2 ); 
+  else if( is_intermediate_geometry( volume_2 ) )
+    return volume_2->get_geometry_query_engine()->volumes_overlap( lump2, lump1 );
+  else if( volume_1->get_geometry_query_engine() !=
+           volume_2->get_geometry_query_engine() )
+  {
+    PRINT_ERROR("Volumes must be of the same type (ACIS, SolidWorks, etc) to\n"
+                "find if they overlap.\n");
+    return CUBIT_FALSE;
+  }
+  else
+    return volume_1->get_geometry_query_engine()->volumes_overlap( lump1, lump2 );
 }

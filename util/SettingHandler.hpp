@@ -11,6 +11,7 @@
 #include "CubitDefines.h"
 #include "SettingHolder.hpp"
 #include <map>
+#include <vector>
 #include "CubitUtilConfigure.h"
 
 
@@ -31,7 +32,7 @@ public:
 #ifdef BOYD15
   int num_settings();
 #endif
-  void get_settings_list(std::map<CubitString, SettingHolder*> &list);
+  void get_settings_list( std::vector< std::pair<CubitString, SettingHolder*> > &list);
 
   void print_settings(); // Output all settings using PRINT_INFO
   void save_settings(const char *filename); //Save settings into a file specified by the user

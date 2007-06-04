@@ -294,6 +294,7 @@ const char * modeler_type()
                                  DLIList<TopologyBridge*>& surf_list)  ;
 
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1, BodySM *body_ptr_2 ) const;
+  virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const;
 
 protected:
   

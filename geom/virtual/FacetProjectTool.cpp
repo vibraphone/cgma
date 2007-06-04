@@ -70,29 +70,36 @@ CubitStatus FacetProjectTool::project(
     // make the PST edges and faces from the coordinates and connections.
   PST_Edge::make_facets( coordinates, connections, GEOMETRY_RESABS, facet_edges );
   DLIList<PST_Face*> faces;
-  PST_Edge::faces( facet_edges, faces );
-  populate_data(faces);
 
-    // Order the orignal points by sequence number.  New points
-    // will be appended in order.
-  pointList.sort(&sequence_compare_pts);
-      
-    // Do the work
-  CubitBoolean point_changed;
-  do_projection(segments, point_changed, tolerance_length);
-  
-    // fill in segmentPoints
-  assert (segPoints.size() == segments.size());
-  segmentPoints.resize( segPoints.size() );
-  segPoints.reset();
   CubitStatus success = CUBIT_SUCCESS;
-  for ( i = 0; i < segPoints.size(); i++ )
+  if(facet_edges.size() > 0)
   {
-    PST_Point* pt = segPoints.get_and_step();
-    segmentPoints[i] = pt ? pt->sequence : -1;
-    if (point_changed)
-      success = CUBIT_FAILURE;
+
+    PST_Edge::faces( facet_edges, faces );
+    populate_data(faces);
+
+      // Order the orignal points by sequence number.  New points
+      // will be appended in order.
+    pointList.sort(&sequence_compare_pts);
+        
+      // Do the work
+    CubitBoolean point_changed;
+    do_projection(segments, point_changed, tolerance_length);
+    
+      // fill in segmentPoints
+    assert (segPoints.size() == segments.size());
+    segmentPoints.resize( segPoints.size() );
+    segPoints.reset();
+    for ( i = 0; i < segPoints.size(); i++ )
+    {
+      PST_Point* pt = segPoints.get_and_step();
+      segmentPoints[i] = pt ? pt->sequence : -1;
+      if (point_changed)
+        success = CUBIT_FAILURE;
+    }
   }
+  else
+    success = CUBIT_FAILURE;
   
   if (!success)
   {

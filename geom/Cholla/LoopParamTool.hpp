@@ -45,7 +45,8 @@ public:
     ///The calling code is reponsible for removing and deleting the memory of the TDVectors.
     ///
 		                                        
-  CubitStatus new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> &loop_cubit_points);
+  CubitStatus new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> &loop_cubit_points,
+                                   CubitVector* normal = NULL);
     ///
     ///This function must be called first for this tool.  This sets up the plane and
     ///the transformation to the XY plane.

@@ -451,7 +451,7 @@ UnsignedInt32 CCubitFile::CreateModel(EModelType xeModelType, HModel& xintModel)
     
     // Initialize the new model's table entry.
     mpaWriteModels[mWriteContents.mintNumModels].mintModelHandle =
-        xintModel = mintNextModelID++;
+        xintModel;// = mintNextModelID++;
     mpaWriteModels[mWriteContents.mintNumModels].mintModelOffset = 0;
     mpaWriteModels[mWriteContents.mintNumModels].mintModelLength = 0;
     mpaWriteModels[mWriteContents.mintNumModels].mintModelType = xeModelType;

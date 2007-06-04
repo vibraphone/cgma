@@ -1860,6 +1860,32 @@ CubitStatus VirtualQueryEngine::reflect  ( GeometryEntity* ent,
   return CUBIT_FAILURE;
 }
 
+//Function should only be called on volumes of multi-volume bodies
+CubitBoolean VirtualQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
+{
+  PartitionLump* partition_lump1 = dynamic_cast<PartitionLump*>(lump1);
+  PartitionLump* partition_lump2 = dynamic_cast<PartitionLump*>(lump2);
+
+  Lump *tmp_lump1 = lump1; 
+  if( partition_lump1 )
+    tmp_lump1 = partition_lump1->real_lump();
+
+  Lump *tmp_lump2 = lump2; 
+  if( partition_lump2 )
+    tmp_lump2 = partition_lump2->real_lump();
+
+  GeometryQueryEngine *gqe = tmp_lump1->get_geometry_query_engine();
+  if( gqe != tmp_lump2->get_geometry_query_engine() )
+  {
+    PRINT_ERROR("Volumes must be of the same type (ACIS, SolidWorks, etc) to\n"
+                "find if they overlap.\n");
+    return CUBIT_FALSE;
+  }
+
+  return gqe->volumes_overlap( tmp_lump1, tmp_lump2 );
+}
+
+
 CubitBoolean VirtualQueryEngine::bodies_overlap (BodySM *body_ptr_1, BodySM *body_ptr_2 ) const
 {
   PartitionBody* partition_body1 = dynamic_cast<PartitionBody*>(body_ptr_1);

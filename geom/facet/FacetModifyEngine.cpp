@@ -2350,14 +2350,14 @@ Curve* FacetModifyEngine::trim_curve( Curve* /*trim_curve*/,
 }
 
 //===============================================================================
-// Function   : create_body_from_surfs
+// Function   : create_solid_bodies_from_surfs
 // Member Type: PUBLIC
 // Description: 
 // Author     : Steve Owen
 // Date       : 9/11/03
 //===============================================================================
-CubitStatus FacetModifyEngine::create_body_from_surfs(DLIList<Surface*> & ref_face_list,
-                                                      BodySM *& new_body,
+CubitStatus FacetModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> & ref_face_list,
+                                                      DLIList<BodySM*> &new_bodies,
                                                       bool keep_old,
                                                       bool heal) const
 {
@@ -2427,6 +2427,7 @@ CubitStatus FacetModifyEngine::create_body_from_surfs(DLIList<Surface*> & ref_fa
                                                surface_list,
                                                file_format );
 
+  BodySM *new_body = NULL;
   if (rv == CUBIT_SUCCESS)
   {
     surf_ptr = surface_list.get();
@@ -2459,6 +2460,9 @@ CubitStatus FacetModifyEngine::create_body_from_surfs(DLIList<Surface*> & ref_fa
   {
     new_body = NULL;
   }
+
+  if( new_body  )
+    new_bodies.append( new_body );
 
   return CUBIT_SUCCESS;
 }

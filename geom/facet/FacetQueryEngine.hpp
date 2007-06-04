@@ -484,6 +484,8 @@ CubitStatus create_facet_bounding_box(
                                    DLIList<FacetSurface*>& output_patch );
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1,
                                        BodySM *body_ptr_2 ) const;
+  virtual CubitBoolean volumes_overlap (Lump *lump_ptr_1,
+                                        Lump *lump_ptr_2 ) const;
   //R CubitBoolean
   //R- CUBIT_TRUE if the two bodies overlap, CUBIT_FALSE if they don't
   //R- overlap.  If the bodies are touching the function

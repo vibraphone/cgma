@@ -5,7 +5,7 @@
 //- Created: January 26, 2003
 
 #include "SurfaceOverlapFacet.hpp"
-#include "GfxDebug.hpp"
+#include "GfxPreview.hpp"
 
 AnalyticGeometryTool* SurfaceOverlapFacet::agt = AnalyticGeometryTool::instance();
 
@@ -98,9 +98,9 @@ void SurfaceOverlapFacet::draw( int color )
                                     t.e1.y + t.b.y, 
                                     t.e1.z + t.b.z );    
 
-  GfxDebug::draw_line( point1, point2, color );
-  GfxDebug::draw_line( point2, point3, color );
-  GfxDebug::draw_line( point1, point3, color );
+  GfxPreview::draw_line( point1, point2, color );
+  GfxPreview::draw_line( point2, point3, color );
+  GfxPreview::draw_line( point1, point3, color );
   return;
 }
 

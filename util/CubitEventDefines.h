@@ -34,6 +34,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                     * was changed.  Used for virtual topology. */
                  GEOMETRY_MODIFIED,
                    /* The geometry of a RefEntity was altered. */
+                 HEALER_COMPLETED,
+                   /* Notifies that the healer completed */
                  NEW_ENTITY_UNMERGED,
                    /*A surface, curve, or vertex was unmerged. */
                  DAG_NODE_DESTRUCTED,

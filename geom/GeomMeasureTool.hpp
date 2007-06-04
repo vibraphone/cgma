@@ -48,6 +48,12 @@ public:
 class CUBIT_GEOM_EXPORT GeomMeasureTool
 {
 private:
+  static int is_narrow_region_at_point(RefEdge *e1,
+                                      const CubitVector &pt_on_e1,
+                                      RefEdge *e2,
+                                      const double &tol_sq);
+  static int has_narrow_region(RefFace* face, const double &tol,
+                                       const double &tol_sq);
   static void get_edges_from_list(DLIList <RefEntity*> &entity_list,
                                   DLIList <RefEdge*> &ref_edges );
   static void get_faces_from_list(DLIList <RefEntity*> &entity_list,
@@ -278,8 +284,8 @@ private:
                                             int &merged, int &unmerged,
                                             double &ratio);
 
-  static void report_intersected_bodies(DLIList <RefVolume*> &volume_list,
-                                        DLIList <Body*> &intersection_list);
+  static void report_intersected_volumes(DLIList <RefVolume*> &volume_list,
+                                        DLIList <RefVolume*> &intersection_list);
   
   static void report_intersected_bodies(DLIList <Body*> &ref_bodies,
                                         DLIList <Body*> &intersection_list);
@@ -359,6 +365,13 @@ private:
                                  double tol,
                                  DLIList <RefEdge*> &small_curves,
                                  DLIList <double> &small_lengths);
+    ///
+    /// Finds the curves with lengths less than the given tol.
+    ///
+
+  static void find_surfs_with_narrow_regions( DLIList <RefVolume*> &ref_vols,
+                                 double tol,
+                                 DLIList <RefFace*> &surfs_with_narrow_regions);
     ///
     /// Finds the curves with lengths less than the given tol.
     ///

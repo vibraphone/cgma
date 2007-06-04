@@ -468,19 +468,31 @@ namespace
 
     // If the path is not writeable, use the current directory instead
     DWORD atts = GetFileAttributes(temp_path);
+#if _MSC_VER > 1200 // after VC6.0
     if (atts == INVALID_FILE_ATTRIBUTES ||      // File doesn't exist
         (atts & FILE_ATTRIBUTE_DIRECTORY) == 0 || // File isn't a directory
         atts & FILE_ATTRIBUTE_READONLY)         // File is read only
+#else
+    if ((atts & FILE_ATTRIBUTE_DIRECTORY) == 0 || // File isn't a directory
+        atts & FILE_ATTRIBUTE_READONLY)         // File is read only
+#endif
     {
       if (DEBUG_FLAG(141))
       {
         PRINT_DEBUG_141("\nUsing cwd because ");
+#if _MSC_VER > 1200
         if (atts == INVALID_FILE_ATTRIBUTES)
           PRINT_DEBUG_141("directory doesn't exist: %s\n", temp_path);
         else if ((atts & FILE_ATTRIBUTE_DIRECTORY) == 0)
           PRINT_DEBUG_141("file isn't a directory: %s\n", temp_path);
         else if (atts & FILE_ATTRIBUTE_READONLY)         
           PRINT_DEBUG_141("directory is read only: %s\n", temp_path);
+#else
+        if ((atts & FILE_ATTRIBUTE_DIRECTORY) == 0)
+          PRINT_DEBUG_141("file isn't a directory: %s\n", temp_path);
+        else if (atts & FILE_ATTRIBUTE_READONLY)         
+          PRINT_DEBUG_141("directory is read only: %s\n", temp_path);
+#endif
       }
       temp_path[0] = '.';
       temp_path[1] = '\0';

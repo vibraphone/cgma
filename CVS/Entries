@@ -1,11 +1,9 @@
-D/geom////
-D/util////
-D/cgm_apps////
-/CMakeLists.txt/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/LICENSE.CGM/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/Makefile.am/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/README.CGM/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/README.CONFIGURE/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/acsite.m4/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/cgm.make.in/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
-/configure.in/1.1.1.1/Thu Dec 21 18:30:29 2006//Tversion10_2
+/CMakeLists.txt/1.2/Wed Mar 16 20:09:57 2005//
+/LICENSE.CGM/1.2/Mon Mar 21 19:11:49 2005//
+/Makefile.am/1.7/Wed Sep 13 15:08:25 2006//
+/README.CGM/1.5/Sat Jan 14 00:44:51 2006//
+/README.CONFIGURE/1.2/Fri Oct 21 23:00:21 2005//
+/acsite.m4/1.10/Mon May 22 17:47:06 2006//
+/cgm.make.in/1.2/Fri Oct  6 16:07:32 2006//
+/configure.in/1.14/Tue Sep 12 23:17:03 2006//
+D/config_aux////

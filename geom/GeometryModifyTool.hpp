@@ -756,6 +756,10 @@ public :
 
   static RefEntity* get_copy_entity() { return copyingEntity; }
   static void set_copy_entity( RefEntity *ent) { copyingEntity = ent; }
+   
+  void determine_solutions_for_eliminating_small_surface(RefFace *face,
+                                     DLIList<CubitString> &display_strings,
+                                     DLIList<CubitString> &command_strings);
 
   ///< <HR><H3>Topology/geometry creation functions</H3>
 
@@ -1217,8 +1221,8 @@ public :
                                    double leg2,
                                    Body *&new_body );
 
-  CubitStatus create_body_from_surfs( DLIList<RefFace*> &ref_face_list,
-                                      Body *&new_body,
+  CubitStatus create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_list,
+                                      DLIList<Body*> &new_bodies,
                                       CubitBoolean keep_old = CUBIT_FALSE,
                                       CubitBoolean heal = CUBIT_TRUE ) const;
   /**<  Creates a body out of the surfaces in the ref_face_list.  The surfaces

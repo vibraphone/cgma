@@ -367,3 +367,28 @@ CubitBoolean RefVolume::is_sheet()
   return CUBIT_TRUE;
 }
   
+int RefVolume::validate()
+{
+     //- This function determines whether the entity is valid.
+     //- Several types of checks can be done, 
+   int error = 0;
+
+     // Perform general RefEntity checks (measure > 0)
+   error += RefEntity::validate();
+
+     // Pass through to surface and add in its validation
+   Lump *lump = this->get_lump_ptr();
+
+     // check surface ptr
+   if (lump != NULL) {
+        // Check underlying surface
+	   DLIList <TopologyEntity*> bad_entities;
+      error += lump->validate(entity_name(), bad_entities);
+   } else {
+      PRINT_WARNING("\tWARNING: Null underlying volume for %s, (%s %d)\n",
+                    entity_name().c_str(), class_name(), id());
+      error++;
+   }
+   return error;
+}
+

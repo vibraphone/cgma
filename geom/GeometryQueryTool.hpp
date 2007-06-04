@@ -255,9 +255,6 @@ public :
     *
     */
 
-  CubitStatus import_temp_geom_file(FILE* file_ptr,
-                                    const char* file_type );
-
   CubitStatus import_solid_model(const char* file_name,
                                  const char* file_type,
                                  const char* logfile_name = NULL,
@@ -705,6 +702,7 @@ public :
                          bool check_to_transform = true);
   CubitStatus restore_transform( Body* body );
 
+  CubitBoolean volumes_overlap( RefVolume *volume_1, RefVolume *volume_2);
   CubitBoolean bodies_overlap( Body *body_ptr_1, Body *body_ptr_2 );
 
     //R CubitBoolean

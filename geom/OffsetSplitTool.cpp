@@ -23,7 +23,7 @@
 #include "GeometryQueryTool.hpp"
 #include "CubitUtil.hpp"
 #include "DLIList.hpp"
-#include "GfxDebug.hpp"
+#include "GfxPreview.hpp"
 #include "GMem.hpp"
 #include "Curve.hpp"
 #include "BodySM.hpp"
@@ -361,6 +361,9 @@ CubitStatus OffsetSplitTool::draw_preview(
     DLIList<Curve*> &curve_list,
     int color )
 {
+    // clear any previous previews
+    GfxPreview::clear();
+
     int i;
     Curve *curve_ptr;
     curve_list.reset();
@@ -370,7 +373,7 @@ CubitStatus OffsetSplitTool::draw_preview(
         draw_preview( curve_ptr, CUBIT_FALSE, color );
     }
 
-    GfxDebug::flush();
+    GfxPreview::flush();
 
     return CUBIT_SUCCESS;
 }
@@ -384,6 +387,9 @@ CubitStatus OffsetSplitTool::draw_preview(
     CubitStatus result;
     GMem g_mem;
 
+    // clear any previous previews
+    GfxPreview::clear();
+
     // get the graphics
     result = curve_ptr->get_geometry_query_engine()->
         get_graphics( curve_ptr, num_points, &g_mem );
@@ -394,9 +400,9 @@ CubitStatus OffsetSplitTool::draw_preview(
     }
 
     // Draw the polyline
-    GfxDebug::draw_polyline( g_mem.point_list(), g_mem.pointListCount, color );
+    GfxPreview::draw_polyline( g_mem.point_list(), g_mem.pointListCount, color );
     if( flush )
-        GfxDebug::flush();
+        GfxPreview::flush();
 
     return CUBIT_SUCCESS;
 }

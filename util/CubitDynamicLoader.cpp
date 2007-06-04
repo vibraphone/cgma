@@ -48,6 +48,10 @@ CubitBoolean CubitDynamicLoader::library_exists(const char* library)
     }
   }
   
+  // one more final attempt
+  if (stat(library, &buf))
+    return CUBIT_TRUE;
+
   return CUBIT_FALSE;
 }
 
