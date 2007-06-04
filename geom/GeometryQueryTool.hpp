@@ -353,6 +353,11 @@ public :
     *  if error
     */
 
+  int fire_ray(RefFace *face,
+               const CubitVector ray_point,
+               const CubitVector unit,
+               DLIList<double>& ray_params);
+  
   static void geom_debug( DLIList<TopologyEntity*> );
   /**<  Temporary debug tool -- Steve Jankovich
     */

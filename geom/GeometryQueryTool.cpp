@@ -554,6 +554,24 @@ int GeometryQueryTool::fire_ray(Body* body,
   return rval ;
 }
 
+int GeometryQueryTool::fire_ray(RefFace *face,
+                                const CubitVector ray_point,
+                                const CubitVector unit,
+                                DLIList<double>& ray_params)
+{
+  Surface *surf = face->get_surface_ptr();
+  if (surf == NULL)
+  {
+    PRINT_ERROR("Face %d is invalid -- no attached Surface.\n", face->id());
+    return 0;
+  }
+
+  CubitStatus success = surf->fire_ray(ray_point,
+                                       unit,
+                                       ray_params);
+  return success;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Reads in geometry in geometry and creates
 //                 the necessary Reference entities associated with the

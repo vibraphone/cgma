@@ -60,6 +60,7 @@
 #include "interval.hxx"
 #include "getbox.hxx"
 #include "faceutil.hxx"
+#include "raytest.hxx"
 #endif
 // ********** END ACIS INCLUDES            **********
 
@@ -1519,6 +1520,34 @@ int SurfaceACIS::number_of_LOOPs()
   }
   
   return number_of_LOOPs;
+}
+
+CubitStatus SurfaceACIS::fire_ray(const CubitVector &ray_point,
+                                  const CubitVector &unit,
+                                  DLIList<double>& ray_params) const
+{
+   ray_params.clean_out();
+     
+     // fire a ray at the specified surface, returning the hits and
+     // the parameters along the ray; return non-zero if error
+   
+   SPAposition pos(ray_point[0], ray_point[1], ray_point[2]);
+   
+  SPAunit_vector vector(unit[0], unit[1], unit[2]);
+  hit *temp_hit;
+  ray this_ray(pos, vector, GEOMETRY_RESABS, 2);
+  hit *hit_list = raytest_face(this_ray, get_FACE_ptr());
+  hit *orig_hit_list = hit_list;
+  if ( hit_list != NULL ){
+    while (hit_list != NULL) {
+      ray_params.append(hit_list->ray_param);
+      temp_hit = hit_list->next;
+      delete hit_list;
+      hit_list = temp_hit;
+    }
+  }
+
+  return CUBIT_SUCCESS;
 }
 
 // ********** END PRIVATE FUNCTIONS        **********

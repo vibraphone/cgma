@@ -407,6 +407,9 @@ public :
 
   virtual CubitSense get_shell_sense( ShellSM* shell_ptr ) const;
   
+  virtual CubitStatus fire_ray(const CubitVector &ray_point,
+                               const CubitVector &unit,
+                               DLIList<double>& ray_params) const;
   
 protected: 
   
