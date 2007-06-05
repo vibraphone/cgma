@@ -6,7 +6,10 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 INCLUDES = -I$(top_srcdir)/util -I$(top_srcdir)/geom
 
 # The name of the library to build
-lib_LTLIBRARIES = libcholla.la
+lib_LTLIBRARIES = 
+if BUILD_CGM
+  lib_LTLIBRARIES += libcholla.la
+endif
 
 # The directory where headers will be installed
 libcholla_la_includedir = $(includedir)

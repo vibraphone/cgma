@@ -38,6 +38,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@BUILD_CGM_TRUE@am__append_1 = libcubit_facetbool.la
 subdir = geom/facetbool
 DIST_COMMON = $(libcubit_facetbool_la_include_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -62,6 +63,7 @@ am_libcubit_facetbool_la_OBJECTS = FBClassify.lo FBDataUtil.lo \
 	FBImprint.lo FBIntersect.lo FBPolyhedron.lo FBRetriangulate.lo \
 	FBTiler.lo IntegerHash.lo KdTree.lo
 libcubit_facetbool_la_OBJECTS = $(am_libcubit_facetbool_la_OBJECTS)
+@BUILD_CGM_TRUE@am_libcubit_facetbool_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/./config_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -99,16 +101,24 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CGM_FALSE = @BUILD_CGM_FALSE@
+BUILD_CGM_TRUE = @BUILD_CGM_TRUE@
 CANT_USE_STD = @CANT_USE_STD@
 CANT_USE_STD_IO = @CANT_USE_STD_IO@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CGM_LIB_FILES = @CGM_LIB_FILES@
+CGM_LIB_LINK = @CGM_LIB_LINK@
+CGM_LIB_LTFLAGS = @CGM_LIB_LTFLAGS@
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_FILE = @CUBIT_FILE@
+CUBIT_LINK = @CUBIT_LINK@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -220,7 +230,7 @@ INCLUDES = -I$(top_srcdir)/util \
 
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_facetbool.la
+lib_LTLIBRARIES = $(am__append_1)
 
 # The directory where headers will be installed
 libcubit_facetbool_la_includedir = $(includedir)
@@ -314,7 +324,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libcubit_facetbool.la: $(libcubit_facetbool_la_OBJECTS) $(libcubit_facetbool_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libcubit_facetbool_la_LDFLAGS) $(libcubit_facetbool_la_OBJECTS) $(libcubit_facetbool_la_LIBADD) $(LIBS)
+	$(CXXLINK) $(am_libcubit_facetbool_la_rpath) $(libcubit_facetbool_la_LDFLAGS) $(libcubit_facetbool_la_OBJECTS) $(libcubit_facetbool_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

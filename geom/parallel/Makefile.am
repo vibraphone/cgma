@@ -17,7 +17,10 @@ INCLUDES = -I$(top_srcdir)/util \
            $(MPI_INCLUDE)
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_parallel.la
+lib_LTLIBRARIES = 
+if BUILD_CGM
+  lib_LTLIBRARIES += libcubit_parallel.la
+endif
 
 # The directory where headers will be installed
 libcubit_parallel_la_includedir = $(includedir)

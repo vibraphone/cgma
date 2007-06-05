@@ -38,6 +38,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@BUILD_CGM_TRUE@am__append_1 = libcubit_parallel.la
 subdir = geom/parallel
 DIST_COMMON = $(libcubit_parallel_la_include_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -59,8 +60,9 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libcubit_parallel_la_LIBADD =
 am_libcubit_parallel_la_OBJECTS = AcisMemFile.lo CABodies.lo \
-	CGMMemFile.lo ProcData.lo TDParallel.lo
+	CGMMemFile.lo ParallelGeomTool.lo ProcData.lo TDParallel.lo
 libcubit_parallel_la_OBJECTS = $(am_libcubit_parallel_la_OBJECTS)
+@BUILD_CGM_TRUE@am_libcubit_parallel_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/./config_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -98,16 +100,24 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CGM_FALSE = @BUILD_CGM_FALSE@
+BUILD_CGM_TRUE = @BUILD_CGM_TRUE@
 CANT_USE_STD = @CANT_USE_STD@
 CANT_USE_STD_IO = @CANT_USE_STD_IO@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CGM_LIB_FILES = @CGM_LIB_FILES@
+CGM_LIB_LINK = @CGM_LIB_LINK@
+CGM_LIB_LTFLAGS = @CGM_LIB_LTFLAGS@
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_FILE = @CUBIT_FILE@
+CUBIT_LINK = @CUBIT_LINK@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -227,7 +237,7 @@ INCLUDES = -I$(top_srcdir)/util \
 
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_parallel.la
+lib_LTLIBRARIES = $(am__append_1)
 
 # The directory where headers will be installed
 libcubit_parallel_la_includedir = $(includedir)
@@ -237,6 +247,7 @@ libcubit_parallel_la_SOURCES = \
     AcisMemFile.cpp \
     CABodies.cpp \
     CGMMemFile.cpp \
+    ParallelGeomTool.cpp \
     ProcData.cpp \
     TDParallel.cpp
 
@@ -248,6 +259,7 @@ libcubit_parallel_la_include_HEADERS = \
     AcisMemFile.hpp \
     CABodies.cpp \
     CGMMemFile.hpp \
+    ParallelGeomTool.hpp \
     ProcData.hpp \
     TDParallel.hpp
 
@@ -312,7 +324,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libcubit_parallel.la: $(libcubit_parallel_la_OBJECTS) $(libcubit_parallel_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libcubit_parallel_la_LDFLAGS) $(libcubit_parallel_la_OBJECTS) $(libcubit_parallel_la_LIBADD) $(LIBS)
+	$(CXXLINK) $(am_libcubit_parallel_la_rpath) $(libcubit_parallel_la_LDFLAGS) $(libcubit_parallel_la_OBJECTS) $(libcubit_parallel_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -323,6 +335,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AcisMemFile.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CABodies.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CGMMemFile.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ParallelGeomTool.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ProcData.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TDParallel.Plo@am__quote@
 

@@ -44,6 +44,62 @@ AC_SUBST(TEMPLATE_DEFS_INCLUDED)
 AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
 
 
+################################################################################
+#                         Use Cubit shared libraries
+################################################################################
+CGM_LIB_LINK='$(CGM_LIB_LINK_INTERNAL)'
+CGM_LIB_FILES='$(CGM_LIB_FILES_INTERNAL)'
+CGM_LIB_LTFLAGS=
+CUBIT_LINK=no
+CUBIT_FILE=no
+CUBIT_BIN_DIR=no
+
+AC_ARG_WITH( CUBIT,
+             AC_HELP_STRING([--with-CUBIT=<dir>],[Use CGM from CUBIT shared library]),
+             [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
+if test "x$CUBIT_DIR" == "xyes"; then
+  AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
+elif test "x$CUBIT_DIR" != "xno"; then
+  CUBIT_BIN_DIR="$CUBIT_DIR/bin"
+  cat >conftest.cc <<EOCUBITCT
+class AcisQueryEngine { public: static AcisQueryEngine* instance_; };
+int main() {
+  AcisQueryEngine::instance_ = 0;
+  return 0;
+}
+EOCUBITCT
+  pattern=["${CUBIT_BIN_DIR}/*cubiti[0-9][0-9].*"]
+  for file in $pattern; do
+    AC_MSG_CHECKING([for AcisQueryEngine::instance_ in $file])
+    num=[`expr X"$file" : X".*cubiti\([0-9][0-9]\)\..*"`]
+    if ./libtool --mode=link $CXX $LDFLAGS -L$CUBIT_BIN_DIR -R$CUBIT_BIN_DIR -lcubiti$num conftest.cc -o conftest >&5 2>&5; then
+      CUBIT_LINK="-L\$(CUBIT_BIN_DIR) -lcubiti$num"
+      CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
+      CUBIT_FILE="\$(CUBIT_BIN_DIR)/$CUBIT_FILE"
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+    fi
+  done
+  rm -f conftest.cc
+  
+  if test "x$CUBIT_LINK" = "xno"; then
+    AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
+  fi
+  CGM_LIB_LINK='$(CUBIT_LINK)'
+  CGM_LIB_FILES='$(CUBIT_FILE)'
+  CGM_LIB_LTFLAGS='-R$(CUBIT_BIN_DIR)'
+fi
+
+AC_SUBST(CUBIT_FILE)
+AC_SUBST(CUBIT_LINK)
+AC_SUBST(CUBIT_BIN_DIR)
+AC_SUBST(CGM_LIB_LINK)
+AC_SUBST(CGM_LIB_FILES)
+AC_SUBST(CGM_LIB_LTFLAGS)
+
+AM_CONDITIONAL(BUILD_CGM,[test x"$CUBIT_DIR" == x"no"])
+
 
 ################################################################################
 #                           ACIS OPTIONS
@@ -54,7 +110,7 @@ ACIS_IGES_LIBS='-lacisiges -lxiges'
 CGM_ACIS_LIBS='-lcubit_ACIS'
 
 AC_ARG_WITH( ACIS, 
-             AC_HELP_STRING([--with-ACIS=DIR],[Build with ACIS support, specify directory where ACIS is installed.]),
+             AC_HELP_STRING([--with-ACIS=<dir>],[Build with ACIS support, specify directory where ACIS is installed.]),
              [ACIS_DIR=$withval],[ACIS_DIR=no] )
 AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-ACIS-system=SYS], 
           [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
@@ -73,6 +129,10 @@ if test "$ACIS_DIR" == "no"; then
   ACIS_LIB_DIR=".";
 fi
 if test "$ACIS_DIR" != "no"; then
+  if test "x$CUBIT_DIR" != "xno"; then
+    AC_MSG_ERROR("Conflicting options:  Cannot specifiy both --with-ACIS and --with-CUBIT")
+  fi
+
   if test "$ACIS_DIR" == "yes"; then ACIS_DIR=.; fi
   SNL_ACIS_ENV
   

@@ -5,7 +5,10 @@ AUTOMAKE_OPTIONS = foreign
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_util.la
+lib_LTLIBRARIES = 
+if BUILD_CGM
+  lib_LTLIBRARIES += libcubit_util.la
+endif
 
 # The directory where headers will be installed
 libcubit_util_la_includedir = $(includedir)

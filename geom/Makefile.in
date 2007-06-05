@@ -40,6 +40,7 @@ host_triplet = @host@
 target_triplet = @target@
 @build_ACIS_TRUE@am__append_1 = ACIS
 @build_parallel_TRUE@am__append_2 = parallel
+@BUILD_CGM_TRUE@am__append_3 = libcubit_geom.la
 subdir = geom
 DIST_COMMON = $(libcubit_geom_la_include_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -89,6 +90,7 @@ am_libcubit_geom_la_OBJECTS = AllocMemManagersGeom.lo \
 	TDSourceFeature.lo TDSplitSurface.lo TDSurfaceOverlap.lo \
 	TDUniqueId.lo TopologyBridge.lo TopologyEntity.lo
 libcubit_geom_la_OBJECTS = $(am_libcubit_geom_la_OBJECTS)
+@BUILD_CGM_TRUE@am_libcubit_geom_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/./config_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -133,16 +135,24 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CGM_FALSE = @BUILD_CGM_FALSE@
+BUILD_CGM_TRUE = @BUILD_CGM_TRUE@
 CANT_USE_STD = @CANT_USE_STD@
 CANT_USE_STD_IO = @CANT_USE_STD_IO@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CGM_LIB_FILES = @CGM_LIB_FILES@
+CGM_LIB_LINK = @CGM_LIB_LINK@
+CGM_LIB_LTFLAGS = @CGM_LIB_LTFLAGS@
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_FILE = @CUBIT_FILE@
+CUBIT_LINK = @CUBIT_LINK@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -258,7 +268,7 @@ SUBDIRS = Cholla facet facetbool virtual $(am__append_1) \
 INCLUDES = -I$(top_srcdir)/util -I.
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_geom.la
+lib_LTLIBRARIES = $(am__append_3)
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
@@ -528,7 +538,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libcubit_geom.la: $(libcubit_geom_la_OBJECTS) $(libcubit_geom_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libcubit_geom_la_LDFLAGS) $(libcubit_geom_la_OBJECTS) $(libcubit_geom_la_LIBADD) $(LIBS)
+	$(CXXLINK) $(am_libcubit_geom_la_rpath) $(libcubit_geom_la_LDFLAGS) $(libcubit_geom_la_OBJECTS) $(libcubit_geom_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -38,15 +38,16 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@BUILD_CGM_TRUE@am__append_1 = libcubit_virtual.la
 
 # If template defs are included, then the template definitions
 # need to be installed with the headers.  Otherwise they need
 # to be compiled.
-@INCLUDE_TEMPLATE_DEFS_TRUE@am__append_1 = \
+@INCLUDE_TEMPLATE_DEFS_TRUE@am__append_2 = \
 @INCLUDE_TEMPLATE_DEFS_TRUE@    VGArray.cpp \
 @INCLUDE_TEMPLATE_DEFS_TRUE@    VGLoopTool.cpp 
 
-@INCLUDE_TEMPLATE_DEFS_FALSE@am__append_2 = \
+@INCLUDE_TEMPLATE_DEFS_FALSE@am__append_3 = \
 @INCLUDE_TEMPLATE_DEFS_FALSE@    VGArray.cpp \
 @INCLUDE_TEMPLATE_DEFS_FALSE@    VGLoopTool.cpp 
 
@@ -109,6 +110,7 @@ am_libcubit_virtual_la_OBJECTS = AllocMemManagersVirtual.lo \
 	TDVGFacetOwner.lo TDVGFacetSplit.lo VirtualQueryEngine.lo \
 	VirtualImprintTool.lo $(am__objects_1)
 libcubit_virtual_la_OBJECTS = $(am_libcubit_virtual_la_OBJECTS)
+@BUILD_CGM_TRUE@am_libcubit_virtual_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/./config_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -166,16 +168,24 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_CGM_FALSE = @BUILD_CGM_FALSE@
+BUILD_CGM_TRUE = @BUILD_CGM_TRUE@
 CANT_USE_STD = @CANT_USE_STD@
 CANT_USE_STD_IO = @CANT_USE_STD_IO@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CGM_LIB_FILES = @CGM_LIB_FILES@
+CGM_LIB_LINK = @CGM_LIB_LINK@
+CGM_LIB_LTFLAGS = @CGM_LIB_LTFLAGS@
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_FILE = @CUBIT_FILE@
+CUBIT_LINK = @CUBIT_LINK@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
@@ -289,7 +299,7 @@ INCLUDES = -I$(top_srcdir)/util \
 
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_virtual.la
+lib_LTLIBRARIES = $(am__append_1)
 
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
@@ -313,7 +323,7 @@ libcubit_virtual_la_SOURCES = AllocMemManagersVirtual.cpp \
 	PartSurfFacetTool.cpp PST_Data.cpp SegmentedCurve.cpp \
 	SubCurve.cpp SubEntitySet.cpp SubSurface.cpp \
 	TDVGFacetOwner.cpp TDVGFacetSplit.cpp VirtualQueryEngine.cpp \
-	VirtualImprintTool.cpp $(am__append_2)
+	VirtualImprintTool.cpp $(am__append_3)
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
@@ -336,7 +346,7 @@ libcubit_virtual_la_include_HEADERS = CACompositeVG.hpp \
 	SplitSurfaceVirtual.hpp SubCurve.hpp SubEntitySet.hpp \
 	SubSurface.hpp TDVGFacetOwner.hpp TDVGFacetSplit.hpp \
 	VGArray.hpp VGDefines.h VGLoopTool.hpp VirtualImprintTool.hpp \
-	VirtualQueryEngine.hpp $(am__append_1)
+	VirtualQueryEngine.hpp $(am__append_2)
 all: all-am
 
 .SUFFIXES:
@@ -398,7 +408,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libcubit_virtual.la: $(libcubit_virtual_la_OBJECTS) $(libcubit_virtual_la_DEPENDENCIES) 
-	$(CXXLINK) -rpath $(libdir) $(libcubit_virtual_la_LDFLAGS) $(libcubit_virtual_la_OBJECTS) $(libcubit_virtual_la_LIBADD) $(LIBS)
+	$(CXXLINK) $(am_libcubit_virtual_la_rpath) $(libcubit_virtual_la_LDFLAGS) $(libcubit_virtual_la_OBJECTS) $(libcubit_virtual_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
