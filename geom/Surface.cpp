@@ -137,3 +137,11 @@ void Surface::are_positions_on( DLIList<CubitVector *> &test_position_list,
     *is_on = is_position_on( *test_position );
   }
 }
+
+CubitStatus Surface::fire_ray(const CubitVector &,
+                              const CubitVector &,
+                              DLIList<double>&) const
+{
+  return CUBIT_FAILURE;
+}
+

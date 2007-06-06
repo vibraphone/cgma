@@ -77,18 +77,19 @@ am_libcubit_geom_la_OBJECTS = AllocMemManagersGeom.lo \
 	GeometryHealerEngine.lo GeometryHealerTool.lo \
 	GeometryModifyEngine.lo GeometryModifyTool.lo \
 	GeometryQueryEngine.lo GeometryQueryTool.lo GeometryUtil.lo \
-	GeomMeasureTool.lo GroupingEntity.lo GSaveOpen.lo Loop.lo \
-	LoopSM.lo Lump.lo LumpSM.lo MedialTool2D.lo MedialTool3D.lo \
-	MergeToolAssistant.lo MergeTool.lo MidPlaneTool.lo \
-	ModelEntity.lo ModelQueryEngine.lo OffsetSplitTool.lo \
-	OldUnmergeCode.lo Point.lo PointSM.lo RefCollection.lo \
-	RefEdge.lo RefEntity.lo RefEntityFactory.lo RefEntityName.lo \
-	RefFace.lo RefGroup.lo RefVertex.lo RefVolume.lo \
-	SenseEntity.lo Shell.lo ShellSM.lo SphereEvaluator.lo \
-	SplitSurfaceTool.lo Surface.lo SurfaceOverlapFacet.lo \
-	SurfaceOverlapTool.lo SurfParamTool.lo SurfaceSM.lo TDCAGE.lo \
-	TDSourceFeature.lo TDSplitSurface.lo TDSurfaceOverlap.lo \
-	TDUniqueId.lo TopologyBridge.lo TopologyEntity.lo
+	GeomMeasureTool.lo GfxPreview.lo GroupingEntity.lo \
+	GSaveOpen.lo Loop.lo LoopSM.lo Lump.lo LumpSM.lo \
+	MedialTool2D.lo MedialTool3D.lo MergeToolAssistant.lo \
+	MergeTool.lo MidPlaneTool.lo ModelEntity.lo \
+	ModelQueryEngine.lo OffsetSplitTool.lo OldUnmergeCode.lo \
+	Point.lo PointSM.lo RefCollection.lo RefEdge.lo RefEntity.lo \
+	RefEntityFactory.lo RefEntityName.lo RefFace.lo RefGroup.lo \
+	RefVertex.lo RefVolume.lo SenseEntity.lo Shell.lo ShellSM.lo \
+	SphereEvaluator.lo SplitSurfaceTool.lo Surface.lo \
+	SurfaceOverlapFacet.lo SurfaceOverlapTool.lo SurfParamTool.lo \
+	SurfaceSM.lo TDCAGE.lo TDSourceFeature.lo TDSplitSurface.lo \
+	TDSurfaceOverlap.lo TDUniqueId.lo TopologyBridge.lo \
+	TopologyEntity.lo
 libcubit_geom_la_OBJECTS = $(am_libcubit_geom_la_OBJECTS)
 @BUILD_CGM_TRUE@am_libcubit_geom_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
@@ -325,6 +326,7 @@ libcubit_geom_la_SOURCES = \
     GeometryQueryTool.cpp \
     GeometryUtil.cpp \
     GeomMeasureTool.cpp \
+    GfxPreview.cpp \
     GroupingEntity.cpp \
     GSaveOpen.cpp \
     Loop.cpp \
@@ -429,6 +431,7 @@ libcubit_geom_la_include_HEADERS = \
   GeometryQueryEngine.hpp \
   GeometryQueryTool.hpp \
   GeometryUtil.hpp \
+  GfxPreview.hpp \
   GroupingEntity.hpp \
   IntermediateGeomEngine.hpp \
   Loop.hpp \
@@ -597,6 +600,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GeometryQueryEngine.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GeometryQueryTool.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GeometryUtil.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GfxPreview.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GroupingEntity.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Loop.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LoopSM.Plo@am__quote@

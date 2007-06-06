@@ -76,6 +76,7 @@ libcubit_geom_la_SOURCES = \
     GeometryQueryTool.cpp \
     GeometryUtil.cpp \
     GeomMeasureTool.cpp \
+    GfxPreview.cpp \
     GroupingEntity.cpp \
     GSaveOpen.cpp \
     Loop.cpp \
@@ -179,6 +180,7 @@ libcubit_geom_la_include_HEADERS = \
   GeometryQueryEngine.hpp \
   GeometryQueryTool.hpp \
   GeometryUtil.hpp \
+  GfxPreview.hpp \
   GroupingEntity.hpp \
   IntermediateGeomEngine.hpp \
   Loop.hpp \

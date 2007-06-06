@@ -328,6 +328,10 @@ BWC*/
       //virtual void reverse_sense() = 0;
       //- Switch the sense of this Surface wrt the RefFace that owns it.
 
+  virtual CubitStatus fire_ray(const CubitVector &ray_point,
+                               const CubitVector &unit,
+                               DLIList<double>& ray_params) const;
+  
    protected: 
 
    private:
