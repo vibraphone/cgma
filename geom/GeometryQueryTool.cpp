@@ -79,7 +79,7 @@ GeometryQueryTool* GeometryQueryTool::instance_ = 0;
 CubitBoolean GeometryQueryTool::useFacetBBox = CUBIT_FALSE;
 
 const int GeometryQueryTool::CGM_MAJOR_VERSION = 10;
-const int GeometryQueryTool::CGM_MINOR_VERSION = 0;
+const int GeometryQueryTool::CGM_MINOR_VERSION = 2;
 
 #ifndef CAT
   // Keep checking bounding box and use internal surf check for Sandia
