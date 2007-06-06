@@ -38,7 +38,6 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-@BUILD_CGM_TRUE@am__append_1 = libcubit_ACIS.la
 subdir = geom/ACIS
 DIST_COMMON = $(libcubit_ACIS_la_include_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -63,12 +62,12 @@ am_libcubit_ACIS_la_OBJECTS = AcisBridge.lo AcisEdgeTool.lo \
 	AcisFacetManager.lo AcisFeatureEngine.lo AcisHealerTool.lo \
 	AcisModifyEngine.lo AcisQueryEngine.lo AcisSurfaceTool.lo \
 	AcisToolUtil.lo AcisTweakTool.lo AcisDrawTool.lo \
-	attrib_cubit_owner.lo attrib_gtc.lo attrib_gtc_name.lo \
-	attrib_snl.lo attrib_snl_simple.lo BodyACIS.lo CoEdgeACIS.lo \
-	CurveACIS.lo LoopACIS.lo LumpACIS.lo PointACIS.lo ShellACIS.lo \
-	SurfaceACIS.lo
+	attrib_cubit_owner.lo attrib_snl.lo attrib_snl_simple.lo \
+	BodyACIS.lo CoEdgeACIS.lo CurveACIS.lo LoopACIS.lo LumpACIS.lo \
+	PointACIS.lo ShellACIS.lo SurfaceACIS.lo \
+	attrib_edge_parametric_length.lo attrib_gtc.lo attrib_mark.lo \
+	attrib_name.lo
 libcubit_ACIS_la_OBJECTS = $(am_libcubit_ACIS_la_OBJECTS)
-@BUILD_CGM_TRUE@am_libcubit_ACIS_la_rpath = -rpath $(libdir)
 DEFAULT_INCLUDES = -I. -I$(srcdir)
 depcomp = $(SHELL) $(top_srcdir)/./config_aux/depcomp
 am__depfiles_maybe = depfiles
@@ -113,15 +112,16 @@ CANT_USE_STD_IO = @CANT_USE_STD_IO@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
-CGM_LIB_FILES = @CGM_LIB_FILES@
-CGM_LIB_LINK = @CGM_LIB_LINK@
-CGM_LIB_LTFLAGS = @CGM_LIB_LTFLAGS@
+CGM_LIBS_FILES = @CGM_LIBS_FILES@
+CGM_LIBS_LINK = @CGM_LIBS_LINK@
+CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_CGM = @CUBIT_CGM@
 CUBIT_FILE = @CUBIT_FILE@
 CUBIT_LINK = @CUBIT_LINK@
 CXX = @CXX@
@@ -131,10 +131,10 @@ CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 
 # Override default defines with the ones we want from the configure script
-DEFS = $(CANT_USE_STD) $(CANT_USE_STD_IO) $(TEMPLATE_DEFS_INCLUDED) \
+DEFS = $(TEMPLATE_DEFS_INCLUDED) \
        $(LITTLE_ENDIAN) $(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) \
        -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) \
-       -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS
+       -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS -DACIS_VER=$(ACIS_VERSION)
 
 DEPDIR = @DEPDIR@
 ECHO = @ECHO@
@@ -236,11 +236,12 @@ target_vendor = @target_vendor@
 AUTOMAKE_OPTIONS = foreign
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
+           -I$(srcdir)/gtcAttrib/incl \
            -I$(ACIS_DIR)/include
 
 
 # The name of the library to build
-lib_LTLIBRARIES = $(am__append_1)
+lib_LTLIBRARIES = libcubit_ACIS.la
 
 # The directory where headers will be installed
 libcubit_ACIS_la_includedir = $(includedir)
@@ -259,8 +260,6 @@ libcubit_ACIS_la_SOURCES = \
     AcisTweakTool.cpp \
     AcisDrawTool.cpp \
     attrib_cubit_owner.cpp \
-    attrib_gtc.cpp \
-    attrib_gtc_name.cpp \
     attrib_snl.cpp \
     attrib_snl_simple.cpp \
     BodyACIS.cpp \
@@ -270,7 +269,11 @@ libcubit_ACIS_la_SOURCES = \
     LumpACIS.cpp \
     PointACIS.cpp \
     ShellACIS.cpp \
-    SurfaceACIS.cpp 
+    SurfaceACIS.cpp \
+    gtcAttrib/src/attrib_edge_parametric_length.C \
+    gtcAttrib/src/attrib_gtc.C \
+    gtcAttrib/src/attrib_mark.C \
+    gtcAttrib/src/attrib_name.C
 
 
 # Headers to be installed.  If any file in this list should
@@ -297,16 +300,20 @@ libcubit_ACIS_la_include_HEADERS = \
     ShellACIS.hpp \
     SurfaceACIS.hpp \
     attrib_cubit_owner.hpp \
-    attrib_gtc.hpp \
-    attrib_gtc_name.hpp \
     attrib_snl.hpp \
     attrib_snl_simple.hpp \
-    decl_none.h
+    decl_none.h \
+    gtcAttrib/incl/attrib_edge_parametric_length.h \
+    gtcAttrib/incl/attrib_gtc.h \
+    gtcAttrib/incl/attrib_gtc_export.h \
+    gtcAttrib/incl/attrib_mark.h \
+    gtcAttrib/incl/attrib_name.h \
+    gtcAttrib/incl/gtcAttrib_exConst.h
 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cpp .lo .o .obj
+.SUFFIXES: .C .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -364,7 +371,7 @@ clean-libLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libcubit_ACIS.la: $(libcubit_ACIS_la_OBJECTS) $(libcubit_ACIS_la_DEPENDENCIES) 
-	$(CXXLINK) $(am_libcubit_ACIS_la_rpath) $(libcubit_ACIS_la_LDFLAGS) $(libcubit_ACIS_la_OBJECTS) $(libcubit_ACIS_la_LIBADD) $(LIBS)
+	$(CXXLINK) -rpath $(libdir) $(libcubit_ACIS_la_LDFLAGS) $(libcubit_ACIS_la_OBJECTS) $(libcubit_ACIS_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -392,10 +399,61 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ShellACIS.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SurfaceACIS.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_cubit_owner.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_edge_parametric_length.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_gtc.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_gtc_name.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_mark.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_name.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_snl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/attrib_snl_simple.Plo@am__quote@
+
+.C.o:
+@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
+
+.C.obj:
+@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ `$(CYGPATH_W) '$<'`; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.C.lo:
+@am__fastdepCXX_TRUE@	if $(LTCXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Plo"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
+
+attrib_edge_parametric_length.lo: gtcAttrib/src/attrib_edge_parametric_length.C
+@am__fastdepCXX_TRUE@	if $(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT attrib_edge_parametric_length.lo -MD -MP -MF "$(DEPDIR)/attrib_edge_parametric_length.Tpo" -c -o attrib_edge_parametric_length.lo `test -f 'gtcAttrib/src/attrib_edge_parametric_length.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_edge_parametric_length.C; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/attrib_edge_parametric_length.Tpo" "$(DEPDIR)/attrib_edge_parametric_length.Plo"; else rm -f "$(DEPDIR)/attrib_edge_parametric_length.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gtcAttrib/src/attrib_edge_parametric_length.C' object='attrib_edge_parametric_length.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o attrib_edge_parametric_length.lo `test -f 'gtcAttrib/src/attrib_edge_parametric_length.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_edge_parametric_length.C
+
+attrib_gtc.lo: gtcAttrib/src/attrib_gtc.C
+@am__fastdepCXX_TRUE@	if $(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT attrib_gtc.lo -MD -MP -MF "$(DEPDIR)/attrib_gtc.Tpo" -c -o attrib_gtc.lo `test -f 'gtcAttrib/src/attrib_gtc.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_gtc.C; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/attrib_gtc.Tpo" "$(DEPDIR)/attrib_gtc.Plo"; else rm -f "$(DEPDIR)/attrib_gtc.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gtcAttrib/src/attrib_gtc.C' object='attrib_gtc.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o attrib_gtc.lo `test -f 'gtcAttrib/src/attrib_gtc.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_gtc.C
+
+attrib_mark.lo: gtcAttrib/src/attrib_mark.C
+@am__fastdepCXX_TRUE@	if $(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT attrib_mark.lo -MD -MP -MF "$(DEPDIR)/attrib_mark.Tpo" -c -o attrib_mark.lo `test -f 'gtcAttrib/src/attrib_mark.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_mark.C; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/attrib_mark.Tpo" "$(DEPDIR)/attrib_mark.Plo"; else rm -f "$(DEPDIR)/attrib_mark.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gtcAttrib/src/attrib_mark.C' object='attrib_mark.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o attrib_mark.lo `test -f 'gtcAttrib/src/attrib_mark.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_mark.C
+
+attrib_name.lo: gtcAttrib/src/attrib_name.C
+@am__fastdepCXX_TRUE@	if $(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT attrib_name.lo -MD -MP -MF "$(DEPDIR)/attrib_name.Tpo" -c -o attrib_name.lo `test -f 'gtcAttrib/src/attrib_name.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_name.C; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/attrib_name.Tpo" "$(DEPDIR)/attrib_name.Plo"; else rm -f "$(DEPDIR)/attrib_name.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='gtcAttrib/src/attrib_name.C' object='attrib_name.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o attrib_name.lo `test -f 'gtcAttrib/src/attrib_name.C' || echo '$(srcdir)/'`gtcAttrib/src/attrib_name.C
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -494,6 +552,7 @@ distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
 distdir: $(DISTFILES)
+	$(mkdir_p) $(distdir)/gtcAttrib/incl
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

@@ -1,0 +1,63 @@
+#-*-Makefile-*-
+
+ARCH = linux
+
+INSTALLPATH = /apps/usr3/tce/install/gto2acis/bin/Linux
+
+CCC = /usr/bin/g++32
+# CCC = /etc/gcc2.95.3/bin/g++
+
+DEFINES = -D$(AARCH) -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 \
+	-DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 \
+	-DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_LIMITS_H=1 \
+	-DHAVE_UNISTD_H=1 -DHAVE_DYNAMIC_CAST= -DHAVE_CONST_CAST= \
+	-DHAVE_STATIC_CAST= -DHAVE_REINTERPRET_CAST= -DHAVE_NAMESPACES= \
+	-DHAVE_STD= -DHAVE_STRING= -DNEED_TYPENAME= -DHAVE_BOOL= -DHAVE_TEMPLATES= \
+	-DHAVE_TEMPLATES_AS_TEMPLATE_ARGUMENTS= -DHAVE_STL= -Wno-deprecated
+
+#CFLAG  = -DNO_FREE_LISTS -features=rtti -template=wholeclass -ptr$(OBJECT_DIR) 
+# UCXXFLAG  = -gstabs+ -Wno-comment 
+UCXXFLAG  = -ggdb -Wno-comment 
+# UCXXFLAG  = -g -Wno-comment -pg
+# -Weffc++
+# -Wreturn-type -Wunused -Werror
+# +w -xwe
+CXXFLAG = $(DEFINES) $(ACIS_DEFINES)
+#CXXFLAG = -template=wholeclass -ptr$(OBJECT_DIR) $(DEFINES)
+
+# LIB_UCXXFLAG  = -O3 -finline-limit=800 -fexceptions -march=pentium -fexpensive-optimizations -fasynchronous-unwind-tables -fnon-call-exceptions
+LIB_UCXXFLAG  = -O3 -finline-limit=600 -fexceptions -march=pentium -fexpensive-optimizations -fasynchronous-unwind-tables -fnon-call-exceptions
+# LIB_UCXXFLAG  = -ggdb -Wno-comment
+
+ARCHIVER = ar
+LIBFLAGS =  -rc
+# LIBFLAGS = -xar -o
+
+# SHARED_UCFLAG = -O3 -finline-limit=800 -fexceptions -march=pentium -fexpensive-optimizations -fasynchronous-unwind-tables -fnon-call-exceptions -fpic
+# SHARED_UCFLAG = -O3 -finline-limit=600 -fexceptions -march=pentium -fexpensive-optimizations -fasynchronous-unwind-tables -fnon-call-exceptions -fpic
+SHARED_UCFLAG = -ggdb -fpic
+
+SHARED_ARCHIVER = $(CCC)
+SHARED_LFLAGS = -shared -ggdb -Wl,-h,lib$(LIB_NAME)$(VERSION).so -o
+
+STL_HOME = ./
+# STL_HOME = $(HOME)/gto/stl
+
+ARCH_DEPEND = 
+
+# ARCH_CLEAN = $(OBJECT_DIR)/Templates.DB $(SHARED_OBJECT_DIR)/Templates.DB .sb
+ARCH_CLEAN = ./Linux_cache $(OBJECT_DIR)/Linux_cache $(SHARED_OBJECT_DIR)/Linux_cache
+
+LINK_FLAGS = 
+
+STATIC_LINK = -Wl,-Bstatic
+
+DYNAMIC_LINK = -Wl,-Bdynamic
+
+ACIS_DYNAMIC_PATH = -L$(ACIS_SHARED_LIB_DIR) -L$(LUX_ACIS_SHARED_LIB_DIR)
+
+ECHO = echo -e
+
+PLATFORM = pc
+OS_VERSION = linux-gnu
+COMPILER_STRING = gcc version 3.2.3 20030502 (Red Hat Linux 3.2.3-52)

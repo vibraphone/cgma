@@ -2,20 +2,18 @@
 AUTOMAKE_OPTIONS = foreign
 
 # Override default defines with the ones we want from the configure script
-DEFS = $(CANT_USE_STD) $(CANT_USE_STD_IO) $(TEMPLATE_DEFS_INCLUDED) \
+DEFS = $(TEMPLATE_DEFS_INCLUDED) \
        $(LITTLE_ENDIAN) $(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) \
        -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) \
-       -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS
+       -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS -DACIS_VER=$(ACIS_VERSION)
 LIBS := -L$(ACIS_LIB_DIR) $(ACIS_LIBS) $(LIBS)
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
+           -I$(srcdir)/gtcAttrib/incl \
            -I$(ACIS_DIR)/include
 
 # The name of the library to build
-lib_LTLIBRARIES = 
-if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_ACIS.la
-endif
+lib_LTLIBRARIES = libcubit_ACIS.la
 
 # The directory where headers will be installed
 libcubit_ACIS_la_includedir = $(includedir)
@@ -34,8 +32,6 @@ libcubit_ACIS_la_SOURCES = \
     AcisTweakTool.cpp \
     AcisDrawTool.cpp \
     attrib_cubit_owner.cpp \
-    attrib_gtc.cpp \
-    attrib_gtc_name.cpp \
     attrib_snl.cpp \
     attrib_snl_simple.cpp \
     BodyACIS.cpp \
@@ -45,7 +41,11 @@ libcubit_ACIS_la_SOURCES = \
     LumpACIS.cpp \
     PointACIS.cpp \
     ShellACIS.cpp \
-    SurfaceACIS.cpp 
+    SurfaceACIS.cpp \
+    gtcAttrib/src/attrib_edge_parametric_length.C \
+    gtcAttrib/src/attrib_gtc.C \
+    gtcAttrib/src/attrib_mark.C \
+    gtcAttrib/src/attrib_name.C
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
@@ -71,9 +71,13 @@ libcubit_ACIS_la_include_HEADERS = \
     ShellACIS.hpp \
     SurfaceACIS.hpp \
     attrib_cubit_owner.hpp \
-    attrib_gtc.hpp \
-    attrib_gtc_name.hpp \
     attrib_snl.hpp \
     attrib_snl_simple.hpp \
-    decl_none.h
+    decl_none.h \
+    gtcAttrib/incl/attrib_edge_parametric_length.h \
+    gtcAttrib/incl/attrib_gtc.h \
+    gtcAttrib/incl/attrib_gtc_export.h \
+    gtcAttrib/incl/attrib_mark.h \
+    gtcAttrib/incl/attrib_name.h \
+    gtcAttrib/incl/gtcAttrib_exConst.h
   
