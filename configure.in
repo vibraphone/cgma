@@ -2,7 +2,6 @@
 #                           Standard Stuff
 ################################################################################
 AC_INIT(CGM, 10.2)
-AC_CONFIG_AUX_DIR(./config_aux)
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE(CGM,10.2)
 AC_DISABLE_SHARED
