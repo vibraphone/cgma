@@ -1,4 +1,5 @@
 #include "CGMA_ACIS.h"
+#include <new>
 
 class AcisModifyEngine 
 {
@@ -15,16 +16,23 @@ public:
   static AcisQueryEngine *instance_;
 };
 
+
 class dummym
 {
   char dummyvar[4096];
 };
 
+
 int CGMA_initialize_ACIS()
 {
-  have_initialized_acis = true;
-  AcisQueryEngine ::instance_ = new (new dummym) AcisQueryEngine;
-  AcisModifyEngine::instance_ = new (new dummym) AcisModifyEngine;
+  if (!AcisQueryEngine::instance_) {
+    AcisQueryEngine::instance_ = reinterpret_cast<AcisQueryEngine*>(new dummym);
+    new (AcisQueryEngine::instance_) AcisQueryEngine;
+  }
+  if (!AcisModifyEngine::instance_) {
+    AcisModifyEngine::instance_ = reinterpret_cast<AcisModifyEngine*>(new dummym);
+    new (AcisModifyEngine::instance_) AcisModifyEngine;
+  }
   return 0;
 }
 
