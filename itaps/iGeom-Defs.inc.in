@@ -1,0 +1,45 @@
+ACIS_LIB_DIR         = @ACIS_LIB_DIR@
+ACIS_LIBS            = @ACIS_LIBS@
+
+CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
+
+CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
+	$(CGM_LDFLAGS) \
+	-L${ACIS_LIB_DIR} \
+	-L$(CGM_LIBDIR) \
+	${ACIS_LIBS} -lcubit_virtual -lcubit_facet -lcubit_facetbool -lcholla ${ACIS_LIBS} -lcubit_geom -lcubit_util \
+	${CGM_PARALLEL_LIB}
+
+CUBIT_BIN_DIR = @CUBIT_BIN_DIR@
+CUBIT_LINK = @CUBIT_LINK@
+CUBIT_FILE = @CUBIT_FILE@
+
+CGM_LIBS_LINK = @CGM_LIBS_LINK@
+CGM_LIBS_FILES = @CGM_LIBS_FILES@
+CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
+
+IGEOM_CBIND_INCLUDES = -I$(IGEOM_SRCDIR) -I(IGEOM_BLDDIR)
+
+IGEOM_CBIND_LIBS_LINK = $(IGEOM_LDFLAGS) \
+                        -L${IGEOM_LIBDIR} -liGeom_CGMA \
+                        $(CGM_LIBS_LINK)
+
+# These get redefined by a makefile target during *install*
+# by appending correct values to the end of the file.
+IGEOM_SRCDIR = @abs_srcdir@
+IGEOM_BLDDIR = @abs_builddir@
+IGEOM_LIBDIR = @abs_builddir@/.libs
+CGM_LDFLAGS = -L$(abs_topbuilddir)/geom/virtual/.libs \
+              -L$(abs_topbuilddir)/geom/virtual \
+              -L$(abs_topbuilddir)/geom/facetbool/.libs \
+              -L$(abs_topbuilddir)/geom/facetbool \
+              -L$(abs_topbuilddir)/geom/facet/.libs \
+              -L$(abs_topbuilddir)/geom/facet \
+              -L$(abs_topbuilddir)/geom/Cholla/.libs \
+              -L$(abs_topbuilddir)/geom/Cholla \
+              -L$(abs_topbuilddir)/geom/ACIS/.libs \
+              -L$(abs_topbuilddir)/geom/ACIS \
+              -L$(abs_topbuilddir)/geom/.libs \
+              -L$(abs_topbuilddir)/geom \
+              -L$(abs_topbuilddir)/util/.libs \
+              -L$(abs_topbuilddir)/util \

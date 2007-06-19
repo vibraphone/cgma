@@ -89,6 +89,7 @@ EOCUBITCT
   CGM_LIBS_FILES='$(CUBIT_FILE)'
   CGM_LIBS_LTFLAGS='-R$(CUBIT_BIN_DIR)'
   CUBIT_CGM="-DCUBIT_CGM"
+  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
 fi
 
 AC_SUBST(CUBIT_FILE)
@@ -150,6 +151,7 @@ if test "$ACIS_DIR" != "no"; then
   ACIS_HEALER="-DACIS_HEALER"
   ACIS_INCLUDES="-I$ACIS_DIR/include"
   ACIS_DEFS='$(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS'
+  AC_DEFINE( HAVE_ACIS )
 fi
 AC_SUBST(ACIS_DEFS)
 AC_SUBST(ACIS_DIR)
@@ -180,6 +182,8 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
-           cgm.make)
+           cgm.make
+           itaps/Makefile
+           itaps/iGeom-Defs.inc)
 
 AC_OUTPUT
