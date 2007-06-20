@@ -25,14 +25,10 @@ class dummym
 
 int CGMA_initialize_ACIS()
 {
-  if (!AcisQueryEngine::instance_) {
-    AcisQueryEngine::instance_ = reinterpret_cast<AcisQueryEngine*>(new dummym);
-    new (AcisQueryEngine::instance_) AcisQueryEngine;
-  }
-  if (!AcisModifyEngine::instance_) {
-    AcisModifyEngine::instance_ = reinterpret_cast<AcisModifyEngine*>(new dummym);
-    new (AcisModifyEngine::instance_) AcisModifyEngine;
-  }
+  if (!AcisQueryEngine::instance_)
+    AcisQueryEngine::instance_ = new (reinterpret_cast<AcisQueryEngine*>(new dummym)) AcisQueryEngine;
+  if (!AcisModifyEngine::instance_)
+    AcisModifyEngine::instance_ = new (reinterpret_cast<AcisQueryEngine*>(new dummym)) AcisModifyEngine;
   return 0;
 }
 
