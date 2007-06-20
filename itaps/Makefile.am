@@ -1,8 +1,26 @@
 AUTOMAKE_OPTIONS = foreign
 
-DEFS = $(TEMPLATE_DEFS_INCLUDED) 
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF)
 
 lib_LTLIBRARIES = libigeom_cgma.la
+
+if build_ACIS
+  TEST_ACISLIBS = $(top_builddir)/geom/ACIS/libcubit_ACIS.la
+else
+  TEST_ACISLIBS =
+endif
+
+if BUILD_CGM
+  TEST_XLIBS = $(TEST_ACISLIBS) \
+               $(top_builddir)/geom/facet/libcubit_facet.la \
+               $(top_builddir)/geom/facetbool/libcubit_facetbool.la \
+               $(top_builddir)/geom/libcubit_geom.la \
+               $(top_builddir)/util/libcubit_util.la
+  TEST_XLDFLAGS = -R$(ACIS_LIB_DIR)
+else
+  TEST_XLDFLAGS = -L$(CUBIT_BIND_DIR) -R$(CUBIT_BIN_DIR) 
+  TEST_XLIBS = $(CUBIT_LINK)
+endif
 
 libigeom_cgma_la_includedir = $(includedir)
 
@@ -32,7 +50,14 @@ libigeom_cgma_la_include_HEADERS = \
 	iBase.h \
 	iGeom.h 
 
-check: example_test
+TESTS = testgeom
+
+check_PROGRAMS = $(TESTS)
+
+testgeom_SOURCES = testgeom.cc
+testgeom_LDFLAGS = $(TEST_XLDFLAGS)
+testgeom_LDADD = libigeom_cgma.la $(TEST_XLIBS)
+
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 
