@@ -155,6 +155,9 @@ static bool match_option( const std::string& opt,
 static void
 iGeom_load_cub_geometry(const char *name, int* err) ;
 
+static iBase_ErrorType 
+process_attribs(iGeom_Instance instance) ;
+
 static void
 iGeom_get_adjacent_entities( const RefEntity *from, 
                              const int to_dim,
@@ -221,6 +224,14 @@ static bool iGeom_is_face_degenerate( RefFace* face );
 
 extern "C" {
 
+void iGeom_getDescription( iGeom_Instance geom,
+                           char* descr,
+                           int* err,
+                           int descr_len )
+{
+  iGeom_getLastError( *err, descr, descr_len );
+}
+
 void iGeom_newGeom( const char* ,
                     iGeom_Instance* instance_out,
                     int* err,
@@ -260,55 +271,6 @@ iGeom_dtor(iGeom_Instance instance, int* err)
   CGMApp::instance()->shutdown();
 
   RETURN(iBase_SUCCESS);
-}
-
-// user defined static methods: (none)
-
-iBase_ErrorType 
-process_attribs(iGeom_Instance instance) 
-{
-    // go through all entities, checking for remaining simple attribs
-  DLIList<RefEntity*> ref_list;
-  DLIList<CubitSimpleAttrib*> csa_list;
-  const char *type_names[] = {"vertex", "curve", "surface", "volume", "body"};
-  iBase_ErrorType result = iBase_SUCCESS;
-
-  for (int dim = 0; dim < 5; dim++) {
-    ref_list.clean_out();
-    CubitStatus status = gqt->ref_entity_list(type_names[dim], ref_list, false);
-    if (CUBIT_SUCCESS != status) return iBase_FAILURE;
-    
-    for (int i = ref_list.size(); i > 0; i--) {
-      csa_list.clean_out();
-
-        // get all the csa's still on this entity
-      RefEntity *this_ent = ref_list.get_and_step();
-      TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
-      topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
-
-      for (int csa = csa_list.size(); csa > 0; csa--) {
-        // see if there's a tag for this csa already
-        CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
-        const char *tag_name = csa_ptr->character_type().c_str();
-        int tag = TM->getTagHandle(tag_name);
-        if (tag < 0) continue;
-        else if (0 == tag) {
-            // don't have a tag handle for this yet - make one
-          result = TM->create_csa_tag(tag_name, &tag);
-          if (iBase_SUCCESS != result || 0 == tag) return iBase_FAILURE;
-        }
-        
-          // now set the tag
-        iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, csa_ptr);
-        if (iBase_SUCCESS != tmp_result) result = tmp_result;
-    
-          // now destroy this csa
-        delete csa_ptr;
-      }
-    }
-  }
-
-  return iBase_SUCCESS;
 }
   
 // user defined non-static methods:
@@ -426,6 +388,13 @@ void iGeom_save (iGeom_Instance instance,
 
   RETURN(iBase_SUCCESS);
 }
+
+void iGeom_getRootSet( iGeom_Instance, iBase_EntitySetHandle* root, int* err )
+{
+  *root = NULL;
+  RETURN(iBase_SUCCESS);
+}
+
 
 /**
  * Initialize an iterator over gentities of a specified dimension.
@@ -6253,4 +6222,51 @@ iGeom_is_face_degenerate( RefFace* face )
   CubitBoolean b1 = face->is_singular_in_U(param);
   CubitBoolean b2 = face->is_singular_in_V(param);
   return b1 || b2;
+}
+
+static iBase_ErrorType 
+process_attribs(iGeom_Instance instance) 
+{
+    // go through all entities, checking for remaining simple attribs
+  DLIList<RefEntity*> ref_list;
+  DLIList<CubitSimpleAttrib*> csa_list;
+  const char *type_names[] = {"vertex", "curve", "surface", "volume", "body"};
+  iBase_ErrorType result = iBase_SUCCESS;
+
+  for (int dim = 0; dim < 5; dim++) {
+    ref_list.clean_out();
+    CubitStatus status = gqt->ref_entity_list(type_names[dim], ref_list, false);
+    if (CUBIT_SUCCESS != status) return iBase_FAILURE;
+    
+    for (int i = ref_list.size(); i > 0; i--) {
+      csa_list.clean_out();
+
+        // get all the csa's still on this entity
+      RefEntity *this_ent = ref_list.get_and_step();
+      TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
+      topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
+
+      for (int csa = csa_list.size(); csa > 0; csa--) {
+        // see if there's a tag for this csa already
+        CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
+        const char *tag_name = csa_ptr->character_type().c_str();
+        int tag = TM->getTagHandle(tag_name);
+        if (tag < 0) continue;
+        else if (0 == tag) {
+            // don't have a tag handle for this yet - make one
+          result = TM->create_csa_tag(tag_name, &tag);
+          if (iBase_SUCCESS != result || 0 == tag) return iBase_FAILURE;
+        }
+        
+          // now set the tag
+        iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, csa_ptr);
+        if (iBase_SUCCESS != tmp_result) result = tmp_result;
+    
+          // now destroy this csa
+        delete csa_ptr;
+      }
+    }
+  }
+
+  return iBase_SUCCESS;
 }
