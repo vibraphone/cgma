@@ -2816,7 +2816,7 @@ void
 iGeom_getArrBoundBox (iGeom_Instance instance,
                       /*in*/ const iBase_EntityHandle *gentity_handles,
                       int gentity_handles_size,
-                      /*in*/ int storage_order,
+                      /*inout*/ int* storage_order,
                       /*out*/ double **min_corner,
                       int *min_corner_allocated,
                       int *min_corner_size,
@@ -2830,12 +2830,12 @@ iGeom_getArrBoundBox (iGeom_Instance instance,
   CHECK_SIZE(*max_corner, double, 3*gentity_handles_size);
   
   size_t step, init;
-  if (storage_order == iBase_BLOCKED) {
+  if (*storage_order == iBase_BLOCKED) {
     step = 1;
     init = gentity_handles_size;
   }
   else {
-    storage_order = iBase_INTERLEAVED;
+    *storage_order = iBase_INTERLEAVED;
     step = 3;
     init = 1;
   }
@@ -2896,7 +2896,7 @@ void
 iGeom_getVtxArrCoords (iGeom_Instance instance,
                        /*in*/ const iBase_EntityHandle *gentity_handles,
                        int gentity_handles_size,
-                       /*in*/ int storage_order,
+                       /*inout*/ int* storage_order,
                        /*out*/ double **coordinates,
                        int *coordinates_allocated,
                        int *coordinates_size,
@@ -2912,14 +2912,14 @@ iGeom_getVtxArrCoords (iGeom_Instance instance,
 
   double *x, *y, *z;
   size_t step;
-  if (storage_order == iBase_BLOCKED) {
+  if (*storage_order == iBase_BLOCKED) {
     x = *coordinates;
     y = x + gentity_handles_size;
     z = y + gentity_handles_size;
     step = 1;
   }
   else {
-    storage_order = iBase_INTERLEAVED;
+    *storage_order = iBase_INTERLEAVED;
     x = *coordinates;
     y = x + 1;
     z = x + 2;
@@ -4354,7 +4354,7 @@ void
 iGeom_getArrUVRange (iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
-                     /*in*/ int storage_order,
+                     /*in*/ int* storage_order,
                      /*out*/ double **uv_min,
                      int *uv_min_allocated,
                      int *uv_min_size,
@@ -4367,12 +4367,12 @@ iGeom_getArrUVRange (iGeom_Instance instance,
   CHECK_SIZE(*uv_max, double, 2*gentity_handles_size);
   
   size_t init, step;
-  if (storage_order == iBase_BLOCKED) {
+  if (*storage_order == iBase_BLOCKED) {
     init = gentity_handles_size;
     step = 1;
   }
   else {
-    storage_order = iBase_INTERLEAVED;
+    *storage_order = iBase_INTERLEAVED;
     init = 1;
     step = 2;
   }
