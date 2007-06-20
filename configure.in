@@ -127,13 +127,16 @@ AC_ARG_WITH( ACIS-version, AC_HELP_STRING([--with-ACIS-version=INT],
 if test "x$ACIS_DIR" == "x"; then 
   ACIS_DIR=no; 
 fi          
-if test "$ACIS_DIR" == "no"; then
+if test "x$ACIS_DIR" == "xno"; then
   ACIS_LIB_DIR=".";
 fi
-if test "$ACIS_DIR" != "no"; then
+if test "x$ACIS_DIR" != "xno"; then
   if test "x$CUBIT_DIR" != "xno"; then
     AC_MSG_ERROR("Conflicting options:  Cannot specifiy both --with-ACIS and --with-CUBIT")
   fi
+
+  AC_CHECK_FILE( [${srcdir}/geom/ACIS/AcisQueryEngine.hpp], [],
+                 [AC_MSG_ERROR([ACIS source not present.  Checkout ACIS_SRC and move to ACIS])] )
 
   if test "$ACIS_DIR" == "yes"; then ACIS_DIR=.; fi
   SNL_ACIS_ENV
