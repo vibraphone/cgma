@@ -21,7 +21,7 @@ CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
 IGEOM_CBIND_INCLUDES = -I$(IGEOM_SRCDIR) -I(IGEOM_BLDDIR)
 
 IGEOM_CBIND_LIBS_LINK = $(IGEOM_LDFLAGS) \
-                        -L${IGEOM_LIBDIR} -liGeom_CGMA \
+                        -L${IGEOM_LIBDIR} -liGeom \
                         $(CGM_LIBS_LINK)
 
 # These get redefined by a makefile target during *install*

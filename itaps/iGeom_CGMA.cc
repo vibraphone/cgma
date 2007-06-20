@@ -73,7 +73,7 @@ const bool debug = false;
     if (NULL == array) {ERROR(iBase_MEMORY_ALLOCATION_FAILED, \
           "Couldn't allocate array."); }\
   }
-#define TAG_HANDLE(handle) reinterpret_cast<size_t>(handle)
+#define TAG_HANDLE(handle) reinterpret_cast<long>(handle)
 
 #define ENTITY_HANDLE(handle) reinterpret_cast<RefEntity*>(handle)
 #define SET_HANDLE(handle) reinterpret_cast<RefGroup*>(handle)
@@ -88,7 +88,7 @@ const bool debug = false;
 #define SET_HANDLE_ARRAY_PTR(array) reinterpret_cast<RefGroup***>(array)
 
 #define CAST_TO_VOID(ptr) reinterpret_cast<void*>(ptr)
-#define TAG_HANDLE_ARRAY_INOUT(a) reinterpret_cast<int**>(a), a ## _allocated, a ## _size
+#define TAG_HANDLE_ARRAY_INOUT(a) reinterpret_cast<long**>(a), a ## _allocated, a ## _size
 
 #define TM reinterpret_cast<CGMTagManager*>(instance)
 
@@ -1086,7 +1086,7 @@ iGeom_createTag (iGeom_Instance instance,
                  int* err,
                  int tag_name_len)
 {
-  int new_tag;
+  long new_tag;
   int this_size = tag_size;
   switch (tag_type) {
     case iBase_INTEGER:
@@ -6250,7 +6250,7 @@ process_attribs(iGeom_Instance instance)
         // see if there's a tag for this csa already
         CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
         const char *tag_name = csa_ptr->character_type().c_str();
-        int tag = TM->getTagHandle(tag_name);
+        long tag = TM->getTagHandle(tag_name);
         if (tag < 0) continue;
         else if (0 == tag) {
             // don't have a tag handle for this yet - make one

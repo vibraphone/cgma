@@ -150,7 +150,7 @@ CGMTagManager::~CGMTagManager()
 
 }
 
-int CGMTagManager::pc_tag(const bool create_if_missing) 
+long CGMTagManager::pc_tag(const bool create_if_missing) 
 {
   if (0 == pcTag && create_if_missing) {
     pcTag = getTagHandle("__cgm_parent_child_tag");
@@ -173,7 +173,7 @@ void CSATagData::reset()
   if (0 != stringData) free(stringData);
 }
   
-iBase_ErrorType CGMTagManager::create_csa_tag(const char *tag_name, int *tag_handle) 
+iBase_ErrorType CGMTagManager::create_csa_tag(const char *tag_name, long *tag_handle) 
 {
     // make a special tag type to hold csa data from CGM; this tag holds, in this order:
     // a) dbl_data (double*), dbl_data_size (int)
@@ -192,7 +192,7 @@ iBase_ErrorType CGMTagManager::create_csa_tag(const char *tag_name, int *tag_han
 }
 
 iBase_ErrorType CGMTagManager::set_csa_tag(RefEntity *this_ent,
-                                           int tag_handle,
+                                           long tag_handle,
                                            CubitSimpleAttrib *csa_ptr) 
 {
   CSATagData this_data;
@@ -247,10 +247,10 @@ iBase_ErrorType CGMTagManager::createTag (/*in*/ const char *tag_name,
                                           /*in*/ const int tag_length,
                                           /*in*/ const int tag_type,
                                           /*in*/ char* default_value,
-                                          /*out*/ int *tag_handle)
+                                          /*out*/ long *tag_handle)
 {
   std::string tmp_name(tag_name);
-  std::map<std::string,int>::iterator mit = tagNameMap.find(tmp_name);
+  std::map<std::string,long>::iterator mit = tagNameMap.find(tmp_name);
   if (mit != tagNameMap.end()) {
     *tag_handle = mit->second;
     iGeom_setLastError( iBase_TAG_ALREADY_EXISTS );
@@ -272,7 +272,7 @@ iBase_ErrorType CGMTagManager::createTag (/*in*/ const char *tag_name,
 }
 
 
-iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const int tag_handle,
+iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const long tag_handle,
                                            /*in*/ const bool forced)
 {
   if (!forced) {
@@ -288,14 +288,14 @@ iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const int tag_handle,
   RETURN(iBase_SUCCESS);
 }
 
-const char *CGMTagManager::getTagName (/*in*/ const int tag_handle)
+const char *CGMTagManager::getTagName (/*in*/ const long tag_handle)
 {
   iGeom_clearLastError();
   return (tag_handle >= 0 ? tagInfo[tag_handle].tagName.c_str() : 
           presetTagInfo[-tag_handle].tagName.c_str());
 }
 
-int CGMTagManager::getTagSize (/*in*/ const int tag_handle)
+int CGMTagManager::getTagSize (/*in*/ const long tag_handle)
 {
   iGeom_clearLastError();
   return (tag_handle >= 0 ? 
@@ -303,9 +303,9 @@ int CGMTagManager::getTagSize (/*in*/ const int tag_handle)
           presetTagInfo[-tag_handle].tagLength);
 }
 
-int CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
+long CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
 {
-  std::map<std::string,int>::iterator it =
+  std::map<std::string,long>::iterator it =
     tagNameMap.find(std::string(tag_name));
   if (it != tagNameMap.end()) {
       iGeom_clearLastError();
@@ -318,7 +318,7 @@ int CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
   }
 }
 
-int CGMTagManager::getTagType (/*in*/ const int tag_handle) 
+int CGMTagManager::getTagType (/*in*/ const long tag_handle) 
 {
   iGeom_clearLastError();
   return (tag_handle >= 0 ? 
@@ -327,7 +327,7 @@ int CGMTagManager::getTagType (/*in*/ const int tag_handle)
 }
 
 iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_handles),
-                                           /*in*/ const int tag_handle,
+                                           /*in*/ const long tag_handle,
                                            /*inout*/ ARRAY_INOUT_DECL(char, tag_value))
 {
   TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
@@ -382,7 +382,7 @@ iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_hand
 }
 
 iBase_ErrorType CGMTagManager::setArrData (/*in*/ ARRAY_IN_DECL(RefEntity*, entity_handles),
-                                           /*in*/ const int tag_handle,
+                                           /*in*/ const long tag_handle,
                                            /*in*/ const char *tag_values, const int tag_values_size)
 {
   TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
@@ -418,7 +418,7 @@ iBase_ErrorType CGMTagManager::setArrData (/*in*/ ARRAY_IN_DECL(RefEntity*, enti
 }
 
 iBase_ErrorType CGMTagManager::rmvArrTag (/*in*/ ARRAY_IN_DECL(RefEntity*, entity_handles),
-                                          /*in*/ const int tag_handle)
+                                          /*in*/ const long tag_handle)
 {
   for (int i = 0; i < entity_handles_size; i++) {
     CATag *catag = get_catag((entity_handles[i] == NULL ? 
@@ -430,7 +430,7 @@ iBase_ErrorType CGMTagManager::rmvArrTag (/*in*/ ARRAY_IN_DECL(RefEntity*, entit
 }
 
 iBase_ErrorType CGMTagManager::getAllTags (/*in*/ const RefEntity* entity_handle,
-                                           /*inout*/ ARRAY_INOUT_DECL(int, tag_handles))
+                                           /*inout*/ ARRAY_INOUT_DECL(long, tag_handles))
 {
   int i = 0, uid = 0, tag_size;
   char *uid_ptr = (char*) &uid;
@@ -445,13 +445,13 @@ iBase_ErrorType CGMTagManager::getAllTags (/*in*/ const RefEntity* entity_handle
   if (NULL != catag) {
       // need to check whether entity has a uid
     num_tags += catag->tagData.size();
-    CHECK_SIZE(*tag_handles, int, num_tags, iBase_FAILURE);
+    CHECK_SIZE(*tag_handles, long, num_tags, iBase_FAILURE);
     for (std::map<int,void*>::iterator tag_it = catag->tagData.begin();
          tag_it != catag->tagData.end(); tag_it++)
       (*tag_handles)[i++] = (*tag_it).first;
   }
   else {
-    CHECK_SIZE(*tag_handles, int, num_tags, iBase_FAILURE);
+    CHECK_SIZE(*tag_handles, long, num_tags, iBase_FAILURE);
   }
   (*tag_handles)[i++] = -1;
   (*tag_handles)[i++] = -2;
@@ -483,7 +483,7 @@ RefGroup *CGMTagManager::interface_group(const bool create_if_missing)
 }
   
 iBase_ErrorType CGMTagManager::setPresetTagData(RefEntity *entity, 
-                                                const int tag_handle, 
+                                                const long tag_handle, 
                                                 const char *tag_value, 
                                                 const int tag_size) 
 {
@@ -516,7 +516,7 @@ iBase_ErrorType CGMTagManager::setPresetTagData(RefEntity *entity,
 }
         
 bool CGMTagManager::getPresetTagData(const RefEntity *entity, 
-                                     const int tag_handle, 
+                                     const long tag_handle, 
                                      char *tag_value, 
                                      int &tag_size) 
 {
@@ -681,7 +681,7 @@ CubitSimpleAttrib* CATag::cubit_simple_attrib()
     // for each tag:
   for (std::map<int, void*>::iterator 
          mit = tagData.begin(); mit != tagData.end(); mit++) {
-    int tag_handle = (*mit).first;
+    long tag_handle = (*mit).first;
     CGMTagManager::TagInfo *tinfo = (tag_handle > 0 ? 
                                      &(myManager->tagInfo[tag_handle]) :
                                      &(myManager->presetTagInfo[-tag_handle]));
@@ -727,10 +727,10 @@ void CATag::add_csa_data(CubitSimpleAttrib *csa_ptr)
   for (int i = 0; i < num_attribs; i++) {
 
       // map the attrib name to a tag
-    std::map<std::string,int>::iterator pos =
+    std::map<std::string,long>::iterator pos =
       myManager->tagNameMap.find(std::string(csa_ptr->string_data_list()->get()->c_str()));
 
-    int thandle = 0;
+    long thandle = 0;
     
     if (pos == myManager->tagNameMap.end()) {
         // tag doesn't exist - create one
@@ -741,7 +741,7 @@ void CATag::add_csa_data(CubitSimpleAttrib *csa_ptr)
     else thandle = (*pos).second;
 
     
-    int tag_handle = thandle;
+    long tag_handle = thandle;
 
       // copy the ints to a temporary space we can get a ptr to...
     int int_length = *(csa_ptr->int_data_list()->get_and_step());
@@ -767,7 +767,7 @@ void CATag::print()
   }
 }
 
-iBase_ErrorType CATag::get_tag_data(int tag_handle, void *tag_data) 
+iBase_ErrorType CATag::get_tag_data(long tag_handle, void *tag_data) 
 {
   assert(NULL != tag_data);
 
@@ -793,7 +793,7 @@ iBase_ErrorType CATag::get_tag_data(int tag_handle, void *tag_data)
   RETURN(iBase_SUCCESS);
 }
   
-iBase_ErrorType CATag::set_tag_data(int tag_handle, const void *tag_data, 
+iBase_ErrorType CATag::set_tag_data(long tag_handle, const void *tag_data, 
                                      const bool can_shallow_copy)
 {
   CGMTagManager::TagInfo *tinfo = (tag_handle >= 0 ? 
@@ -824,7 +824,7 @@ iBase_ErrorType CATag::set_tag_data(int tag_handle, const void *tag_data,
   RETURN(iBase_SUCCESS);
 }
 
-void CATag::remove_tag(int tag_handle)
+void CATag::remove_tag(long tag_handle)
 {
   tagData.erase(tag_handle);
 }

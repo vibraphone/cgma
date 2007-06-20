@@ -66,33 +66,33 @@ public:
                              /*in*/ const int tag_size,
                              /*in*/ const int tag_type,
                              /*in*/ char* default_value,
-                             /*out*/ int *tag_handle);
+                             /*out*/ long *tag_handle);
 
-  iBase_ErrorType destroyTag (/*in*/ const int tag_handle,
+  iBase_ErrorType destroyTag (/*in*/ const long tag_handle,
                               /*in*/ const bool forced);
 
-  const char *getTagName (/*in*/ const int tag_handle);
+  const char *getTagName (/*in*/ const long tag_handle);
 
-  int getTagSize (/*in*/ const int tag_handle);
+  int getTagSize (/*in*/ const long tag_handle);
 
-  int getTagHandle (/*in*/ const char *tag_name);
+  long getTagHandle (/*in*/ const char *tag_name);
 
-  int getTagType (/*in*/ const int tag_handle);
+  int getTagType (/*in*/ const long tag_handle);
 
   iBase_ErrorType getArrData ( ARRAY_IN_DECL(RefEntity*, entity_handles),
-                              /*in*/ const int tag_handle,
+                              /*in*/ const long tag_handle,
                               /*inout*/ ARRAY_INOUT_DECL(char, tag_value));
 
   iBase_ErrorType setArrData (/*in*/ ARRAY_IN_DECL(RefEntity*, entity_handles),
-                              /*in*/ const int tag_handle,
+                              /*in*/ const long tag_handle,
                               /*in*/ const char *tag_values,
                               const int tag_values_size);
 
   iBase_ErrorType rmvArrTag (/*in*/ ARRAY_IN_DECL(RefEntity*, entity_handles),
-                             /*in*/ const int tag_handle);
+                             /*in*/ const long tag_handle);
 
   iBase_ErrorType getAllTags (/*in*/ const RefEntity* entity_handle,
-                              /*inout*/ ARRAY_INOUT_DECL(int, tag_handles));
+                              /*inout*/ ARRAY_INOUT_DECL(long, tag_handles));
 
   std::vector<RefGroup*> *pc_list(RefEntity *gentity, int list_no, 
                                   const bool create_if_missing);
@@ -104,10 +104,10 @@ public:
   void get_pc_groups(RefGroup *this_grp, const int p_or_c, const int num_hops,
                      std::vector<RefGroup *> &group_ptrs);
 
-  iBase_ErrorType create_csa_tag(const char *tag_name, int *tag_handle);
+  iBase_ErrorType create_csa_tag(const char *tag_name, long *tag_handle);
   
   iBase_ErrorType set_csa_tag(RefEntity *this_ent,
-                              int tag_handle,
+                              long tag_handle,
                               CubitSimpleAttrib *csa_ptr);
   
   static inline CGMTagManager& instance()
@@ -120,24 +120,24 @@ private:
   CGMTagManager();
 
   int CATag_att_type;
-  int pcTag;
+  long pcTag;
   std::vector<TagInfo> tagInfo;
   std::vector<TagInfo> presetTagInfo;
-  std::map<std::string, int> tagNameMap;
+  std::map<std::string, long> tagNameMap;
   static const char *CATag_NAME;
   static const char *CATag_NAME_INTERNAL;
   RefGroup *interfaceGroup;
 
-  bool getPresetTagData(const RefEntity *entity, const int tag_num, 
+  bool getPresetTagData(const RefEntity *entity, const long tag_num, 
                         char *tag_value, int &tag_size);
 
-  iBase_ErrorType setPresetTagData(RefEntity *entity, const int tag_num, 
+  iBase_ErrorType setPresetTagData(RefEntity *entity, const long tag_num, 
                                    const char *tag_value, const int tag_size);
   
   CATag *get_catag(RefEntity *ent, 
                    const bool create_if_missing = false);
 
-  int pc_tag(const bool create_if_missing = false);
+  long pc_tag(const bool create_if_missing = false);
   
   RefGroup *interface_group(const bool create_if_missing = true);
   
@@ -185,12 +185,12 @@ public:
 
   void print();
 
-  iBase_ErrorType get_tag_data(int tag_num, void *tag_data);
+  iBase_ErrorType get_tag_data(long tag_num, void *tag_data);
   
-  iBase_ErrorType set_tag_data(int tag_num, const void *tag_data,
+  iBase_ErrorType set_tag_data(long tag_num, const void *tag_data,
                                const bool can_shallow_copy = false);
 
-  void remove_tag(int tag_num);
+  void remove_tag(long tag_num);
 };
 
 #endif

@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = foreign
 
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF)
 
-lib_LTLIBRARIES = libigeom_cgma.la
+lib_LTLIBRARIES = libiGeom.la
 
 if build_ACIS
   TEST_ACISLIBS = $(top_builddir)/geom/ACIS/libcubit_ACIS.la
@@ -22,7 +22,7 @@ else
   TEST_XLIBS = $(CUBIT_LINK)
 endif
 
-libigeom_cgma_la_includedir = $(includedir)
+libiGeom_la_includedir = $(includedir)
 
 if build_ACIS
   ACIS_SRCS = CGMA_ACIS.cc
@@ -37,7 +37,7 @@ INCLUDES = -I$(top_srcdir)/util \
            $(ACIS_CGM_INCLUDES ) \
            -I.
 
-libigeom_cgma_la_SOURCES = \
+libiGeom_la_SOURCES = \
         CATag.hpp \
 	CATag.cpp \
 	iGeom_CGMA.cc \
@@ -46,7 +46,7 @@ libigeom_cgma_la_SOURCES = \
 	CGMA_ACIS.h \
 	$(ACIS_SRCS)
 
-libigeom_cgma_la_include_HEADERS = \
+libiGeom_la_include_HEADERS = \
 	iBase.h \
 	iGeom.h 
 
@@ -56,7 +56,7 @@ check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
 testgeom_LDFLAGS = $(TEST_XLDFLAGS)
-testgeom_LDADD = libigeom_cgma.la $(TEST_XLIBS)
+testgeom_LDADD = libiGeom.la $(TEST_XLIBS)
 
 
 # Automake doesn't seem to have a directory defined for

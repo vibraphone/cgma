@@ -1,9 +1,9 @@
 ################################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(CGM, 10.2)
+AC_INIT(CGMA, 10.2)
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(CGM,10.2)
+AM_INIT_AUTOMAKE(CGMA,10.2)
 AC_DISABLE_SHARED
 
 SNL_CHECK_COMPILERS
