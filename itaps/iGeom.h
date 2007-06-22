@@ -744,17 +744,6 @@ void iGeom_getArrTgntU( iGeom_Instance,
                         int* tangents_size,
                         int* err );
 
-void iGeom_getArrNrmlUV( iGeom_Instance,
-                         iBase_EntityHandle const* edge_handles,
-                         int edge_handles_size,
-                         int storage_order,
-                         double const* parameters,
-                         int parameters_size,
-                         double** tangents,
-                         int* tangents_allocated,
-                         int* tangents_size,
-                         int* err );
-
 void iGeom_getEnt1stDrvt( iGeom_Instance,
                           iBase_EntityHandle entity_handle,
                           double u,
