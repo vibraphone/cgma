@@ -6,7 +6,7 @@
 #endif
 
 #include "iBase.h"
-/*#include "iGeom_Fmangle.h"*/
+#include "iGeom_protos.h"
 
 #ifdef __cplusplus
 extern "C" {

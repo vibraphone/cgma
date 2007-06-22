@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE(CGMA,10.2)
 AC_DISABLE_SHARED
 
 SNL_CHECK_COMPILERS
+AC_PROG_FC
 AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
 AC_PROG_LIBTOOL
 LIBS="-lm"
@@ -14,6 +15,13 @@ AC_PROG_LIBTOOL
 AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN] )
 AC_SUBST(LITTLE_ENDIAN)
 
+
+################################################################################
+#                Fortran Stuff for ITAPS C bindings
+################################################################################
+if test "x" != "x$FC"; then
+  AC_FC_WRAPPERS
+fi
 
 
 ################################################################################
@@ -181,6 +189,8 @@ AM_CONDITIONAL(build_ACIS, test x$ACIS_DIR != xno)
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
+AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_HEADERS(itaps/iGeom_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
            geom/Makefile
