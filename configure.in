@@ -9,11 +9,13 @@ AC_DISABLE_SHARED
 SNL_CHECK_COMPILERS
 AC_PROG_FC
 AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
+AC_PROG_FC
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_LIBTOOL
-AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN] )
+AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
 AC_SUBST(LITTLE_ENDIAN)
+AC_FC_WRAPPERS
 
 
 ################################################################################
@@ -181,6 +183,30 @@ AC_SUBST(ACIS_IGES_TRANSLATOR)
 AC_SUBST(HAVE_ACIS_DEF)
 AM_CONDITIONAL(build_ACIS, test x$ACIS_DIR != xno)
 
+################################################################################
+#                           iGeom Babel
+################################################################################
+AC_ARG_WITH(babel, 
+[AC_HELP_STRING([--with-babel=DIR], [Specify directory containing babel])],
+[BABEL_DIR=$withval
+ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-babel=\"${withval}\""
+ ], [BABEL_DIR=no])
+case "x$BABEL_DIR" in
+  xno)
+    BABEL_DIR=
+    USE_BABEL=no
+    ;;
+  xyes|x)
+    BABEL_DIR=/usr/local
+    AC_CHECK_FILE([${BABEL_DIR}/bin/babel], [USE_BABEL=yes], [USE_BABEL=no])
+    ;;
+  *)
+    AC_CHECK_FILE([${BABEL_DIR}/bin/babel], [USE_BABEL=yes], [USE_BABEL=no])
+    ;;
+esac
+AC_SUBST(BABEL_DIR)
+AC_SUBST(USE_BABEL)
+AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 
 
 ################################################################################
@@ -190,7 +216,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
 AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_HEADERS(itaps/iGeom_FCDefs.h)
+AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
            geom/Makefile
@@ -202,6 +228,9 @@ AC_CONFIG_FILES(Makefile
            geom/virtual/Makefile 
            cgm.make
            itaps/Makefile
-           itaps/iGeom-Defs.inc)
+           itaps/iGeom-Defs.inc
+	   itaps/SIDL/Makefile
+	   itaps/SIDL/iGeom-SIDL-Defs.inc
+	   )
 
 AC_OUTPUT
