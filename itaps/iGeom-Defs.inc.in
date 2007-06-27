@@ -18,17 +18,18 @@ CGM_LIBS_LINK = @CGM_LIBS_LINK@
 CGM_LIBS_FILES = @CGM_LIBS_FILES@
 CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
 
-IGEOM_CBIND_INCLUDES = -I$(IGEOM_SRCDIR) -I$(IGEOM_BLDDIR)
+iGeom_INCLUDES = -I$(iGeom_SRCDIR) -I$(iGeom_BLDDIR)
 
-IGEOM_CBIND_LIBS_LINK = $(IGEOM_LDFLAGS) \
-                        -L${IGEOM_LIBDIR} -liGeom \
-                        $(CGM_LIBS_LINK)
+iGeom_LIBS = $(iGeom_LDFLAGS) \
+             -L${iGeom_LIBDIR} -liGeom \
+             $(CGM_LIBS_LINK)
 
 # These get redefined by a makefile target during *install*
 # by appending correct values to the end of the file.
-IGEOM_SRCDIR = @abs_srcdir@
-IGEOM_BLDDIR = @abs_builddir@
-IGEOM_LIBDIR = @abs_builddir@/.libs
+iGeom_SRCDIR = @abs_srcdir@
+iGeom_BLDDIR = @abs_builddir@
+iGeom_DIR = @abs_builddir@
+iGeom_LIBDIR = @abs_builddir@/.libs
 CGM_LDFLAGS = -L$(abs_topbuilddir)/geom/virtual/.libs \
               -L$(abs_topbuilddir)/geom/virtual \
               -L$(abs_topbuilddir)/geom/facetbool/.libs \

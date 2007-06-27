@@ -1,0 +1,18 @@
+iGeom_DIR = @abs_srcdir@/..
+
+include ${iGeom_DIR}/iGeom-Defs.inc
+
+iGeom_SIDLINCLUDEDIR = @abs_srcdir@
+iGeom_SIDLLIBDIR = @abs_builddir@
+
+iGeom_SIDL_INCLUDES = \
+      -I${iGeom_SIDLINCLUDEDIR} -I${iGeom_SIDLINCLUDEDIR} -I${iGeom_SIDLINCLUDEDIR}/bserver \
+       -I${iGeom_SIDLINCLUDEDIR}/gserver -I@BABEL_DIR@/include ${iGeom_INCLUDES} 
+
+iGeom_SIDL_LIBS = \
+      -L${iGeom_SIDLLIBDIR} -liGeomserver -L@BABEL_DIR@/lib -lsidl \
+      -Wl,-rpath,${iGeom_SIDLLIBDIR} -Wl,-rpath,${iGeom_SIDLLIBDIR} -Wl,-rpath,@BABEL_DIR@/lib ${iGeom_LIBS}
+
+iGeom_SIDL_FILES = \
+      ${iGeom_SIDLLIBDIR}/libiGeomserver.so
+

@@ -2,6 +2,14 @@ AUTOMAKE_OPTIONS = foreign
 
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF)
 
+if USE_BABEL
+  babel_DIR = SIDL
+else
+  babel_DIR = 
+endif 
+
+SUBDIRS = . $(babel_DIR)
+
 lib_LTLIBRARIES = libiGeom.la
 
 if build_ACIS
@@ -48,7 +56,8 @@ libiGeom_la_SOURCES = \
 
 libiGeom_la_include_HEADERS = \
 	iBase.h \
-	iGeom.h 
+	iGeom.h \
+	iBase_FCDefs.h
 
 TESTS = testgeom
 
@@ -72,9 +81,10 @@ cfg_DATA = iGeom-Defs.inc
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
 install-data-hook:
-	echo "IGEOM_SRCDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "IGEOM_BLDDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "IGEOM_LIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "iGeom_SRCDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "iGeom_BLDDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "iGeom_DIR=${DESTDIR}${cfgdir}/.." >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "iGeom_LIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "CGM_LDFLAGS=-L${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "CGM_INCLUDEDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 
