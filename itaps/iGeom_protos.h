@@ -1,4 +1,4 @@
-#include "iGeom_FCDefs.h"
+#include "iBase_FCDefs.h"
 #ifdef FC_FUNC_
 
 #define iGeom_unite FC_FUNC_(igeom_unite, IGEOM_UNITE)
