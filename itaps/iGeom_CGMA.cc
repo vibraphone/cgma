@@ -265,7 +265,7 @@ iGeom_dtor(iGeom_Instance instance, int* err)
   if (NULL == TM) 
     ERROR(iBase_INVALID_ARGUMENT, "NUll Instance");
   
-  delete TM;
+    // delete TM;
   
     // shut down CGM
   CGMApp::instance()->shutdown();
