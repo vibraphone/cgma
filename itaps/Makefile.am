@@ -3,12 +3,12 @@ AUTOMAKE_OPTIONS = foreign
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF)
 
 if USE_BABEL
-  babel_DIR = SIDL
+  SIDL_DIR = SIDL
 else
-  babel_DIR = 
+  SIDL_DIR = 
 endif 
 
-SUBDIRS = . $(babel_DIR)
+SUBDIRS = . $(SIDL_DIR)
 
 lib_LTLIBRARIES = libiGeom.la
 
