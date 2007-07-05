@@ -70,6 +70,29 @@ AC_ARG_WITH( CUBIT,
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
 elif test "x$CUBIT_DIR" != "xno"; then
+  if ! test -d "$CUBIT_DIR"; then
+    AC_MSG_ERROR([$CUBIT_DIR: not a directory.])
+  fi
+  CUBIT_LDFLAGS=
+  CUBIT_LTFLAGS=
+  CUBIT_LIBS=no
+  if test -d "$CUBIT_DIR/bin"; then
+    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/bin"
+    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/bin"
+    if test -d "$CUBIT_DIR/bin/lib"; then
+      CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/bin/lib"
+      CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/bin/lib"
+    fi
+  fi
+  if test -d "$CUBIT_DIR/lib"; then
+    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/lib"
+    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/lib"
+  fi
+  if test -d "$CUBIT_DIR/libs"; then
+    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/libs"
+    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/libs"
+  fi
+
   CUBIT_BIN_DIR="$CUBIT_DIR/bin"
   cat >conftest.cc <<EOCUBITCT
 class AcisQueryEngine { public: static AcisQueryEngine* instance_; };
@@ -82,10 +105,10 @@ EOCUBITCT
   for file in $pattern; do
     AC_MSG_CHECKING([for AcisQueryEngine::instance_ in $file])
     num=[`expr X"$file" : X".*cubiti\([0-9][0-9]\)\..*"`]
-    if ./libtool --mode=link $CXX $LDFLAGS -L$CUBIT_BIN_DIR -R$CUBIT_BIN_DIR -lcubiti$num conftest.cc -o conftest >&5 2>&5; then
-      CUBIT_LINK="-L\$(CUBIT_BIN_DIR) -lcubiti$num"
-      CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
-      CUBIT_FILE="\$(CUBIT_BIN_DIR)/$CUBIT_FILE"
+    if ./libtool --mode=link $CXX $LDFLAGS $CUBIT_LDFLAGS $CUBIT_LTFLAGS -lcubiti$num conftest.cc -o conftest >&5 2>&5; then
+      CUBIT_LIBS="-lcubiti$num"
+      CUBIT_FILE=`expr x"$file" : x"$CUBIT_DIR/bin/\(.*\)"`
+      CUBIT_FILE="${CUBIT_DIR}/bin/$CUBIT_FILE"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
@@ -93,21 +116,22 @@ EOCUBITCT
   done
   rm -f conftest.cc
   
-  if test "x$CUBIT_LINK" = "xno"; then
+  if test "x$CUBIT_LIBS" = "xno"; then
     AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
   fi
-  CGM_LIBS_LINK='$(CUBIT_LINK)'
+  CGM_LIBS_LINK='$(CUBIT_LDFLAGS) $(CUBIT_LIBS)'
   CGM_LIBS_FILES='$(CUBIT_FILE)'
-  CGM_LIBS_LTFLAGS='-R$(CUBIT_BIN_DIR)'
+  CGM_LIBS_LTFLAGS='$(CUBIT_LTFLAGS)'
   CUBIT_CGM="-DCUBIT_CGM"
 dnl  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
   HAVE_ACIS_DEF=-DHAVE_ACIS
 fi
 
+AC_SUBST(CUBIT_LDFLAGS)
+AC_SUBST(CUBIT_LTFLAGS)
+AC_SUBST(CUBIT_LIBS)
 AC_SUBST(CUBIT_FILE)
 AC_SUBST(CUBIT_CGM)
-AC_SUBST(CUBIT_LINK)
-AC_SUBST(CUBIT_BIN_DIR)
 AC_SUBST(CGM_LIBS_LINK)
 AC_SUBST(CGM_LIBS_FILES)
 AC_SUBST(CGM_LIBS_LTFLAGS)
