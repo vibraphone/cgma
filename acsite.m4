@@ -1,4 +1,15 @@
 #######################################################################################
+# Get libtool configuration variable
+# Arguments:
+#  libtool config tag (e.g CXX)
+#  libtool variable name
+#  variable in which to store result
+#######################################################################################
+AC_DEFUN( [ITAPS_LIBTOOL_VAR], [
+  $3=`./libtool --tag=$1 --config | sed -e 's/^$2=//p' -e 'd' | tr -d '"\n'`
+])
+
+#######################################################################################
 # Implement checks for C and C++ compilers, with all corresponding options
 #
 # Sets the following variables:
@@ -16,7 +27,7 @@ AC_DEFUN([SNL_CHECK_COMPILERS], [
   # because those macros will modify them, and we want
   # the original user values, not the autoconf defaults.
 USER_CXXFLAGS="$CXXFLAGS"
-USER_CCFLAGS="$CFLAGS"
+USER_CFLAGS="$CFLAGS"
 
   # Check for Parallel
   # Need to check this early so we can look for the correct compiler
@@ -24,8 +35,8 @@ AC_ARG_WITH( [mpi], AC_HELP_STRING([[--with-mpi(=DIR)]], [Enable parallel suppor
              [WITH_MPI=$withval],[WITH_MPI=no] )
 case "x$WITH_MPI" in
   xno)
-    CC_LIST="cc gcc cl egcs"
-    CXX_LIST="CC aCC cxx xlC_r xlC pgCC c++ g++ gpp cc++ cl FCC KCC RCC"
+    CC_LIST="cc gcc cl egcs pgcc"
+    CXX_LIST="CC aCC cxx xlC_r xlC c++ g++ pgCC gpp cc++ cl FCC KCC RCC"
     ;;
   xyes)
     CC_LIST="mpicc mpcc"
@@ -43,7 +54,7 @@ case "x$WITH_MPI" in
       CC_LIST="$CC"
     fi
     if test -z "$CXX";then
-      for prog in mpicxx mpiCC mpCC; do
+      for prog in mpicxx mpiCC mpCC mpicxx; do
         if test -x ${WITH_MPI}/bin/$prog; then
           CXX="${WITH_MPI}/bin/$prog"
           CXX_LIST="$prog"
@@ -268,7 +279,9 @@ AC_DEFUN([SNL_CHECK_HDF5],[
   # CLI option for linking zlib
 AC_ARG_WITH(zlib,
   [AC_HELP_STRING([--with-zlib=DIR],[HDF5 requires zlib, and zlib can be found at...])],
-  [WITH_ZLIB=$withval],[WITH_ZLIB=])
+  [WITH_ZLIB=$withval
+  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-zlib=\"${withval}\""
+  ],[WITH_ZLIB=])
 case "x$WITH_ZLIB" in
   xyes|xno|x)
     ;;
@@ -288,7 +301,9 @@ fi
   # CLI option for linking szip
 AC_ARG_WITH(szip,
   [AC_HELP_STRING([--with-szip=DIR],[HDF5 requires szip, and szip an be found at...])],
-  [WITH_SZIP=$withval],[WITH_SZIP=])
+  [WITH_SZIP=$withval
+  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-szip=\"${withval}\""
+  ],[WITH_SZIP=])
 case "x$WITH_SZIP" in
   xyes|xno|x)
     ;;
@@ -308,7 +323,9 @@ fi
   # CLI option for extra HDF5 link flags
 AC_ARG_WITH([--with-hdf5-ldflags],[AC_HELP_STRING([--with-hdf5-ldflags=...],
  [Extra LDFLAGS required for HDF5 library (e.g. parallel IO lib)])],
- [HDF5_LDFLAGS="$withval"],[HDF5_LDFLAGS=])
+ [HDF5_LDFLAGS="$withval"
+ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-hdf5-ldflags=\"${withval}\""
+],[HDF5_LDFLAGS=])
 case "x$HDF5_LDFLAGS" in
   xno)
     AC_MSG_ERROR("Invalid argument: --without-hdf5-ldflags")
@@ -324,7 +341,9 @@ AC_MSG_CHECKING([if HDF5 support is enabled])
 AC_ARG_WITH(hdf5, 
 [AC_HELP_STRING([--with-hdf5=DIR], [Specify HDF5 library to use for native file format])
 AC_HELP_STRING([--without-hdf5], [Disable support for native HDF5 file format])],
-[HDF5_ARG=$withval], [HDF5_ARG=yes])
+[HDF5_ARG=$withval
+ DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-hdf5=\"${withval}\""
+], [HDF5_ARG=yes])
 if test "xno" = "x$HDF5_ARG"; then
   AC_MSG_RESULT([no])
 else
@@ -332,21 +351,20 @@ else
 fi
 
  # if HDF5 support is not disabled, check to make sure we have HDF5
+HAVE_HDF5=no
 if test "xno" != "x$HDF5_ARG"; then
+  HAVE_HDF5=yes
     # Check for IBM parallel IO library
   if test "x$WITH_MPI" != "xno"; then
     AC_CHECK_LIB([gpfs],[gpfs_stat],[LIBS="-lgpfs $LIBS"])
   fi
 
-    # Add flag to defines
-  LIBS="$HDF5_LDFLAGS $LIBS"
-
     # if a path is specified, update LIBS and INCLUDES accordingly
   if test "xyes" != "x$HDF5_ARG"; then
     if test -d "${HDF5_ARG}/lib"; then
-      LIBS="$LIBS -L${HDF5_ARG}/lib"
+      HDF5_LDFLAGS="$HDF5_LDFLAGS -L${HDF5_ARG}/lib"
     elif test -d "${HDF5_ARG}"; then
-      LIBS="$LIBS -L${HDF5_ARG}"
+      HDF5_LDFLAGS="$HDF5_LDFLAGS -L${HDF5_ARG}"
     else
       AC_MSG_ERROR("$HDF5_ARG is not a directory.")
     fi
@@ -357,10 +375,14 @@ if test "xno" != "x$HDF5_ARG"; then
     fi
   fi
   
+    # Add flag to defines
+  old_LIBS="$LIBS"
+  LIBS="$LIBS $HDF5_LDFLAGS"
+  
     # check for libraries and headers
   old_CPPFLAGS="$CPPFLAGS"
   CPPFLAGS="$CPPFLAGS $INCLUDES"
-  AC_CHECK_HEADERS( [hdf5.h], [], [AC_MSG_ERROR("HDF5 header not found")] )
+  AC_CHECK_HEADERS( [hdf5.h], [], [HAVE_HDF5=no] )
   CPPFLAGS="$old_CPPFLAGSS"
   
   HAVE_LIB_HDF5=no
@@ -368,30 +390,33 @@ if test "xno" != "x$HDF5_ARG"; then
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_ZLIB = yes; then
       unset ac_cv_lib_hdf5_H5Fopen
-      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; LIBS="-lz $LIBS"], [], [-lz] )
+      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; old_LIBS="-lz $old_LIBS"], [], [-lz] )
     fi
   fi
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_SZIP = yes; then
       unset ac_cv_lib_hdf5_H5Fopen
-      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; LIBS="-lsz $LIBS"], [], [-lsz] )
+      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; old_LIBS="-lsz $old_LIBS"], [], [-lsz] )
     fi
   fi
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_SZIP = yes; then
       if test $HAVE_ZLIB = yes; then
         unset ac_cv_lib_hdf5_H5Fopen
-        AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; LIBS="-lsz -lz $LIBS"], [], [-lz -lsz] )
+        AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; old_LIBS="-lsz -lz $old_LIBS"], [], [-lz -lsz] )
       fi
     fi
   fi
-  if test HAVE_LIB_HDF5 = no; then
-    AC_MSG_ERROR([Could not find HDF5 library (-lhdf5)])
+  if test "x$HAVE_LIB_HDF5" = "xno"; then
+    AC_MSG_WARN([Could not find HDF5 library (-lhdf5)])
+    HAVE_HDF5=no
   fi
-  LIBS="-lhdf5 $LIBS"
-  HAVE_HDF5=yes
-else
-  HAVE_HDF5=no
+  
+  if test "x$HAVE_HDF5" = "xyes"; then
+    LIBS="$HDF5_LDFLAGS -lhdf5 $old_LIBS"
+  else
+    LIBS="$old_LIBS"
+  fi
 fi
 
 
@@ -411,7 +436,10 @@ AC_MSG_CHECKING([if NetCDF support is enabled])
 AC_ARG_WITH(netcdf, 
 [AC_HELP_STRING([--with-netcdf=DIR], [Specify NetCDF library to use for ExodusII file format])
 AC_HELP_STRING([--without-netcdf], [Disable support for ExodusII file format])],
-[NETCDF_ARG=$withval], [NETCDF_ARG=yes])
+[NETCDF_ARG=$withval
+DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-netcdf=\"${withval}\""
+]
+, [NETCDF_ARG=yes])
 if test "xno" = "x$NETCDF_ARG"; then
   AC_MSG_RESULT([no])
 else
@@ -419,7 +447,9 @@ else
 fi
 
  # if NetCDF support is not disabled
+HAVE_NETCDF=no
 if test "xno" != "x$NETCDF_ARG"; then
+  HAVE_NETCDF=yes
     # Add flag to defines
   DEFINES="$DEFINES -DNETCDF_FILE"
 
@@ -455,8 +485,10 @@ if test "xno" != "x$NETCDF_ARG"; then
   CPPFLAGS="$CPPFLAGS $INCLUDES"
   old_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS $INCLUDES"
+  old_LIBS="$LIBS"
+  
    # Check for C library
-  AC_CHECK_HEADERS( [netcdf.h], [], [AC_MSG_ERROR([[NetCDF header not found.]])] )
+  AC_CHECK_HEADERS( [netcdf.h], [], [AC_MSG_WARN([[NetCDF header not found.]]); HAVE_NETCDF=no] )
   AC_MSG_CHECKING([for netcdf.hh])
   AC_LANG_SAVE
   AC_LANG_CPLUSPLUS
@@ -468,7 +500,8 @@ if test "xno" != "x$NETCDF_ARG"; then
  #include "netcdf.hh"], [], [HAVE_NETCDF_HH=yes], [NAVE_NETCDF_HH=no])])
   AC_MSG_RESULT([$HAVE_NETCDF_HH])
   if test $HAVE_NETCDF_HH != yes; then
-    AC_MSG_ERROR([NetCDF C++ header not found])
+    AC_MSG_WARN([NetCDF C++ header not found])
+    HAVE_NETCDF=no
   fi
   if test "x$NETCDF_DEF" != "x"; then
   CPPFLAGS="$CPPFLAGS -DSTRSTREAM_H_SPEC=$NETCDF_DEF"
@@ -478,23 +511,55 @@ if test "xno" != "x$NETCDF_ARG"; then
   LIBS="$LIBS -lnetcdf_c++ -lnetcdf"
   AC_TRY_LINK(
     [#include <netcdf.hh>], [NcFile ncf("foo",NcFile::ReadOnly);],
-    [AC_MSG_RESULT([yes])], [AC_MSG_RESULT([no]); AC_MSG_ERROR([NetCDF C++ API not found])] )
+    [AC_MSG_RESULT([yes])], 
+    [AC_MSG_RESULT([no]); 
+     AC_MSG_ERROR([NetCDF C++ API not found])
+     HAVE_NETCDF=no] )
   AC_LANG_RESTORE
   CPPFLAGS="$old_CPPFLAGS"
   CXXFLAGS="$old_CXXFLAGS"
   if test "x$NETCDF_DEF" != "x"; then
     DEFINES="$DEFINES '-DSTRSTREAM_H_SPEC=$NETCDF_DEF'"
   fi
-  
-  HAVE_NETCDF=yes
-else
-  HAVE_NETCDF=no
+  if test "x$HAVE_NETCDF" = "xno"; then
+    AC_MSG_WARN("NetCDF support disabled")
+    LIBS="$old_LIBS"
+  fi
 fi
 
 ]) # SNL_HAVE_NETCDF
 
 
-
+#######################################################################################
+# Check for Boost libraryies
+# Sets HAVE_BOOST to 'yes' or 'no' and adds any user-specified path to INCLUDES
+# Unless user specified --without-boost, will check for any passed headers.
+# For any found headers, -DHAVE_[header] will be added to DEFINES
+#######################################################################################
+AC_DEFUN([SNL_CHECK_BOOST],[
+AC_MSG_CHECKING([if boost library is enabled])
+SNL_BOOST_OPT_HEADER_LIST="$1"
+AC_ARG_WITH(boost, 
+[AC_HELP_STRING([--with-boost=DIR], [Specify directory where boost is installed])
+AC_HELP_STRING([--without-boost], [Disable support for boost libraries])],
+[BOOST_ARG=$withval
+DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-boost=\"${withval}\""
+]
+, [BOOST_ARG=yes])
+if test "xno" = "x$BOOST_ARG"; then
+  AC_MSG_RESULT([no])
+else
+  AC_MSG_RESULT([yes])
+  # If user-specified directory, add to includes
+  if test "xyes" != "x$BOOST_ARG"; then
+    INCLUDES="$INCLUDES -I$BOOST_ARG"
+  fi
+  AC_LANG_SAVE
+  AC_LANG_CPLUSPLUS
+  AC_CHECK_HEADERS( [$SNL_BOOST_OPT_HEADER_LIST],[def=`echo "$ac_header" | $as_tr_cpp`; DEFINES="$DEFINES -DHAVE_$def"] )
+  AC_LANG_RESTORE
+fi
+]) # SNL_CHECK_BOOST
 
 #######################################################################################
 # Macro to set the following variables:
@@ -513,7 +578,7 @@ AC_DEFUN([SNL_ACIS_ENV], [
 
 AC_CHECK_FILE([$ACIS_DIR/include/acis.hxx], [], [AC_MSG_ERROR("Invalid ACIS path")])
  
-if test "x" == "x$ACIS_SYSTEM"; then
+if test "x" = "x$ACIS_SYSTEM"; then
   dir_list="$ACIS_DIR/bin/*"
 else
   dir_list="$ACIS_DIR/bin/$ACIS_SYSTEM"
@@ -671,6 +736,8 @@ else
       SNL_TRY_COMPILER_DEFINE([__INTEL_COMPILER],[cxx_compiler=Intel])
       SNL_TRY_COMPILER_DEFINE([__IBMCPP__],[cxx_compiler=VisualAge])
       SNL_TRY_COMPILER_DEFINE([__DECCXX_VER],[cxx_compiler=Compaq])
+      SNL_TRY_COMPILER_DEFINE([__SUNPRO_CC],[cxx_compiler=SunWorkshop])
+      SNL_TRY_COMPILER_DEFINE([__PGI],[cxx_cmopiler=PortlandGroup])
       ;;
     hpux*)
       SNL_TRY_COMPILER_DEFINE([__HP_aCC],[cxx_compiler=HP])
@@ -682,6 +749,9 @@ else
       SNL_TRY_COMPILER_DEFINE([__BORLANDC__],[cxx_compiler=Borland])
       SNL_TRY_COMPILER_DEFINE([__CYGWIN__],[cxx_compiler=Cygwin])
       SNL_TRY_COMPILER_DEFINE([__MINGW32__],[cxx_compiler=MinGW])
+      ;;
+    *)
+      SNL_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
       ;;
   esac
   AC_LANG_RESTORE
@@ -734,6 +804,10 @@ case "$cxx_compiler:$host_cpu" in
     SNL_CXX_32BIT=-xarch=generic
     SNL_CXX_64BIT=-xarch=generic64
     ;;
+  SunWorkshop:i?86|SunWorkshop:x86_64)
+    SNL_CXX_32BIT=-m32
+    SNL_CXX_64BIT=-m64
+    ;;
   *)
     ;;
 esac
@@ -774,6 +848,8 @@ else
       SNL_TRY_COMPILER_DEFINE([__INTEL_COMPILER],[cc_compiler=Intel])
       SNL_TRY_COMPILER_DEFINE([__IBMC__],[cc_compiler=VisualAge])
       SNL_TRY_COMPILER_DEFINE([__DECC_VER],[cc_compiler=Compaq])
+      SNL_TRY_COMPILER_DEFINE([__SUNPRO_C],[cc_compiler=SunWorkshop])
+      SNL_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
       ;;
     hpux*)
       SNL_TRY_COMPILER_DEFINE([__HP_cc],[cc_compiler=HP])
@@ -786,6 +862,9 @@ else
       SNL_TRY_COMPILER_DEFINE([__TURBOC__],[cc_compiler=TurboC])
       SNL_TRY_COMPILER_DEFINE([__CYGWIN__],[cc_compiler=Cygwin])
       SNL_TRY_COMPILER_DEFINE([__MINGW32__],[cc_compiler=MinGW])
+      ;;
+    *)
+      SNL_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
       ;;
   esac
 fi
@@ -834,6 +913,10 @@ case "$cc_compiler:$host_cpu" in
   SunWorkshop:sparc*)
     SNL_CC_32BIT=-xarch=generic
     SNL_CC_64BIT=-xarch=generic64
+    ;;
+  SunWorkshop:i?86|SunWorkshop:x86_64)
+    SNL_CC_32BIT=-m32
+    SNL_CC_64BIT=-m64
     ;;
   *)
     ;;
