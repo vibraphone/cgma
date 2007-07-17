@@ -45,18 +45,18 @@ CGM_INCLUDES = -I$(CGM_DIR)/util -I$(CGM_DIR)/init -I$(CGM_DIR)/geom -I$(CGM_DIR
 
 CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
 	-L$(CGM_DIR)/geom/virtual/.libs \
-        -L$(CGM_DIR)/geom/facetbool/.libs \ 
+        -L$(CGM_DIR)/geom/facetbool/.libs \
         -L$(CGM_DIR)/geom/facet/.libs \
 	-L$(CGM_DIR)/geom/Cholla/.libs \
         -L$(CGM_DIR)/geom/ACIS/.libs \
-        -L$(CGM_DIR)/geom/.libs 
+        -L$(CGM_DIR)/geom/.libs \
         -L$(CGM_DIR)/util/.libs \
 	-L$(CGM_DIR)/geom/virtual \
-        -L$(CGM_DIR)/geom/facetbool \ 
+        -L$(CGM_DIR)/geom/facetbool \
         -L$(CGM_DIR)/geom/facet \
 	-L$(CGM_DIR)/geom/Cholla \
         -L$(CGM_DIR)/geom/ACIS \
-        -L$(CGM_DIR)/geom 
+        -L$(CGM_DIR)/geom \
         -L$(CGM_DIR)/util \
 	-L${ACIS_LIB_DIR} \
 	-L$(CGM_LIBDIR) \
