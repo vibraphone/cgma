@@ -25,27 +25,24 @@ if BUILD_CGM
                $(top_builddir)/geom/libcubit_geom.la \
                $(top_builddir)/util/libcubit_util.la
   TEST_XLDFLAGS = -R$(ACIS_LIB_DIR)
-  CGM_ACIS_SRCS = 
 else
   TEST_XLDFLAGS = $(CUBIT_LDFLAGS) $(CUBIT_LTFLAGS)
   TEST_XLIBS = $(CUBIT_LIBS)
-# If not building CGM, then have Cubit library w/ ACIS support
-  CGM_ACIS_SRCS = CGMA_ACIS.cc
 endif
 
 if build_ACIS
-  ACIS_SRCS = CGMA_ACIS.cc
   ACIS_CGM_INCLUDES = -I$(top_srcdir)/geom/ACIS
 else
-  ACIS_SRCS = 
   ACIS_CGM_INCLUDES =
 endif
 
 libiGeom_la_includedir = $(includedir)
 
+libiGeom_la_libadd = $(top_builddir)/init/libcgma_init.la $(TEST_XLIBS)
+
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
-           $(ACIS_CGM_INCLUDES ) \
+	   -I$(top_srcdir)/init \
            -I.
 
 libiGeom_la_SOURCES = \
@@ -53,10 +50,7 @@ libiGeom_la_SOURCES = \
 	CATag.cpp \
 	iGeom_CGMA.cc \
 	iGeomError.cc \
-	iGeomError.h \
-	CGMA_ACIS.h \
-	$(ACIS_SRCS) \
-        $(CGM_ACIS_SRCS)
+	iGeomError.h 
 
 libiGeom_la_include_HEADERS = \
 	iBase.h \

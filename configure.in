@@ -250,6 +250,7 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
+           init/Makefile
            cgm.make
            itaps/Makefile
            itaps/iGeom-Defs.inc

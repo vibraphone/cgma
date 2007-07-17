@@ -21,6 +21,7 @@
  * 2007-6-15
  */
 #include "iGeom.h"
+#include "InitCGMA.hpp"
 
 #include <iostream>
 #include <math.h>
@@ -29,11 +30,6 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-
-#ifdef HAVE_ACIS
-# include "CGMA_ACIS.h"
-#endif
-
 
 const bool debug = false;
 
@@ -241,12 +237,8 @@ void iGeom_newGeom( const char* ,
     ERROR(iBase_NOT_SUPPORTED, "No options for iGeom factory have been implemented.");
   }
   
-  CGMApp::instance()->startup( 0, NULL );
-  
-    // assuem for now that we want ACIS
-#ifdef HAVE_ACIS
-  CGMA_initialize_ACIS();
-#endif
+  InitCGMA::initialize_cgma();
+  InitCGMA::initialize_engine("ACIS");
 
 // sometimes can't have following, depending on CGM version
   // CGMApp::instance()->attrib_manager()->silent_flag(true);
