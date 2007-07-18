@@ -31,7 +31,7 @@ CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
 # These get redefined by a makefile target during *install*
 # by appending correct values to the end of the file.
-CGM_LIBDIR = @abs_builddir@/.libs
+CGM_LIBDIR = @abs_builddir@
 CGM_INCLUDEDIR = @abs_srcdir@
 
 CGM_CXX = @CXX@
@@ -41,23 +41,29 @@ CGM_CXXFLAGS = @CXXFLAGS@
 CGM_CFLAGS = @CFLAGS@
 CGM_LDFLAGS = @LDFLAGS@
 
-CGM_INCLUDES = -I$(CGM_DIR)/util -I$(CGM_DIR)/init -I$(CGM_DIR)/geom -I$(CGM_DIR)/geom/ACIS $(CGM_PARALLEL_INCLUDE) -I$(CGM_INCLUDEDIR) ${ACIS_INCLUDES}
+CGM_INCLUDES = -I$(CGM_INCLUDEDIR)/util \
+               -I$(CGM_INCLUDEDIR)/init \
+               -I$(CGM_INCLUDEDIR)/geom \
+               -I$(CGM_INCLUDEDIR)/geom/ACIS \
+               $(CGM_PARALLEL_INCLUDE) \
+               -I$(CGM_INCLUDEDIR) \
+               ${ACIS_INCLUDES}
 
 CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
-	-L$(CGM_DIR)/geom/virtual/.libs \
-        -L$(CGM_DIR)/geom/facetbool/.libs \
-        -L$(CGM_DIR)/geom/facet/.libs \
-	-L$(CGM_DIR)/geom/Cholla/.libs \
-        -L$(CGM_DIR)/geom/ACIS/.libs \
-        -L$(CGM_DIR)/geom/.libs \
-        -L$(CGM_DIR)/util/.libs \
-	-L$(CGM_DIR)/geom/virtual \
-        -L$(CGM_DIR)/geom/facetbool \
-        -L$(CGM_DIR)/geom/facet \
-	-L$(CGM_DIR)/geom/Cholla \
-        -L$(CGM_DIR)/geom/ACIS \
-        -L$(CGM_DIR)/geom \
-        -L$(CGM_DIR)/util \
+	-L$(CGM_LIBDIR)/geom/virtual/.libs \
+        -L$(CGM_LIBDIR)/geom/facetbool/.libs \
+        -L$(CGM_LIBDIR)/geom/facet/.libs \
+	-L$(CGM_LIBDIR)/geom/Cholla/.libs \
+        -L$(CGM_LIBDIR)/geom/ACIS/.libs \
+        -L$(CGM_LIBDIR)/geom/.libs \
+        -L$(CGM_LIBDIR)/util/.libs \
+	-L$(CGM_LIBDIR)/geom/virtual \
+        -L$(CGM_LIBDIR)/geom/facetbool \
+        -L$(CGM_LIBDIR)/geom/facet \
+	-L$(CGM_LIBDIR)/geom/Cholla \
+        -L$(CGM_LIBDIR)/geom/ACIS \
+        -L$(CGM_LIBDIR)/geom \
+        -L$(CGM_LIBDIR)/util \
 	-L${ACIS_LIB_DIR} \
 	-L$(CGM_LIBDIR) \
 	${ACIS_LIBS} \
@@ -84,6 +90,6 @@ CUBIT_LTFLAGS = @CUBIT_LTFLAGS@
 CUBIT_LIBS = @CUBIT_LIBS@
 CUBIT_FILE = @CUBIT_FILE@
 
-CGM_LIBS_LINK = @CGM_LIBS_LINK@  -L$(CGM_DIR)/init -L$(CGM_DIR)/init/.libs -lcgma_init
+CGM_LIBS_LINK = @CGM_LIBS_LINK@  -L$(CGM_LIBDIR)/init -L$(CGM_LIBDIR)/init/.libs -lcgma_init
 CGM_LIBS_FILES = @CGM_LIBS_FILES@ $(CGM_LIBDIR)/libcgma_init.a
 CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
