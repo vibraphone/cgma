@@ -64,8 +64,11 @@ CUBIT_FILE=no
 CUBIT_BIN_DIR=no
 HAVE_ACIS_DEF=
 
+AC_ARG_WITH( cubit,
+             AC_HELP_STRING([--with-cubit=<dir>],[Use CGM from CUBIT shared library]),
+             [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
 AC_ARG_WITH( CUBIT,
-             AC_HELP_STRING([--with-CUBIT=<dir>],[Use CGM from CUBIT shared library]),
+             AC_HELP_STRING([--with-CUBIT=<dir>],[DEPRECATED.  Use --with-cubit (small case)]),
              [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
@@ -146,13 +149,16 @@ ACIS_BASE_LIBS='-lSpaAVis -lSpaAWarp -lSpaASurf -lSpaALops -lSpaABlend -lSpaACIS
 ACIS_STEP_LIBS='-lacisstep -lxstep'
 ACIS_IGES_LIBS='-lacisiges -lxiges'
 
-AC_ARG_WITH( ACIS, 
-             AC_HELP_STRING([--with-ACIS=<dir>],[Build with ACIS support, specify directory where ACIS is installed.]),
+AC_ARG_WITH( acis, 
+             AC_HELP_STRING([--with-acis=<dir>],[Build with ACIS support, specify directory where ACIS is installed.]),
              [ACIS_DIR=$withval],[ACIS_DIR=no] )
-AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-ACIS-system=SYS], 
+AC_ARG_WITH( ACIS, 
+             AC_HELP_STRING([--with-ACIS],[DEPRECATED.  Use --wtih-acis (small case)]),
+             [ACIS_DIR=$withval],[ACIS_DIR=no] )
+AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-acis-system=SYS], 
           [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
              [ACIS_SYSTEM=$withval],[ACIS_SYSTEM=] )
-AC_ARG_WITH( ACIS-version, AC_HELP_STRING([--with-ACIS-version=INT],
+AC_ARG_WITH( acis-version, AC_HELP_STRING([--with-acis-version=INT],
 [Specify ACIS version as an integer value (100*major+10*minor+point), default is to autodetect.]),
 [if ! test "$withval" -gt "600"; then
   AC_MSG_ERROR("ACIS-version must be an integer greater than 600.")
