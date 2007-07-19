@@ -69,7 +69,7 @@ AC_ARG_WITH( cubit,
              [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
 AC_ARG_WITH( CUBIT,
              AC_HELP_STRING([--with-CUBIT=<dir>],[DEPRECATED.  Use --with-cubit (small case)]),
-             [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
+             [CUBIT_DIR="$withval"])
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
 elif test "x$CUBIT_DIR" != "xno"; then
@@ -154,7 +154,7 @@ AC_ARG_WITH( acis,
              [ACIS_DIR=$withval],[ACIS_DIR=no] )
 AC_ARG_WITH( ACIS, 
              AC_HELP_STRING([--with-ACIS],[DEPRECATED.  Use --wtih-acis (small case)]),
-             [ACIS_DIR=$withval],[ACIS_DIR=no] )
+             [ACIS_DIR=$withval] )
 AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-acis-system=SYS], 
           [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
              [ACIS_SYSTEM=$withval],[ACIS_SYSTEM=] )
