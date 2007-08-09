@@ -79,7 +79,7 @@ int main (int argc, char **argv)
   DLIList<Surface*> surf_list;
   CubitStatus result;
   result = fme->build_facet_surface(NULL, f_list, p_list, angle, 4, 
-                                    false, false, surf_list);
+                                    true, false, surf_list);
   
   if ( surf_list.size() == 0 || result != CUBIT_SUCCESS )
   {

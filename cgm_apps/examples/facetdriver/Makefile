@@ -1,5 +1,5 @@
 CGM_DIR = ../../..
-include $(CGM_DIR)/config.make
+include $(CGM_DIR)/lib/cgm.make
 
 ### main rule
 
