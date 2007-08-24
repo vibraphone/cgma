@@ -1286,6 +1286,13 @@ BodySM* FacetModifyEngine::copy_body ( BodySM* /*bodyPtr*/) const
   return (BodySM*) NULL;
 }
 
+CubitStatus FacetModifyEngine::stitch_surfs(
+		      DLIList<BodySM*>& surf_bodies,
+		      BodySM*& stitched_body) const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_SUCCESS;
+}
 //===============================================================================
 // Function   : subtract
 // Member Type: PUBLIC
@@ -1775,7 +1782,9 @@ CubitStatus FacetModifyEngine:: sweep_translational(
   double /*draft_angle*/,
   int /*draft_type*/,
   bool /*switchside*/,
-  bool /*rigid*/) const
+  bool /*rigid*/,
+  Surface * /*stop_face*/,
+  BodySM  *stop_body )const 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1795,7 +1804,9 @@ CubitStatus FacetModifyEngine:: sweep_perpendicular(
   double /*draft_angle*/,
   int /*draft_type*/,
   bool /*switchside*/,
-  bool /*rigid*/) const
+  bool /*rigid*/,
+  Surface* stop_surf,
+  BodySM  *stop_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1819,7 +1830,9 @@ CubitStatus FacetModifyEngine:: sweep_rotational(
   int /*draft_type*/,
   bool /*switchside*/,
   bool /*make_solid*/,
-  bool /*rigid*/) const
+  bool /*rigid*/, 
+  Surface * /*stop_face*/,
+  BodySM  *stop_body) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1838,7 +1851,9 @@ CubitStatus FacetModifyEngine::sweep_along_curve(
   DLIList<Curve*>& /*ref_edge_list*/,
   double /*draft_angle*/,
   int /*draft_type*/,
-  bool /*rigid*/) const
+  bool /*rigid*/,
+  Surface * /*stop_face*/,
+  BodySM  *stop_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1858,7 +1873,8 @@ CubitStatus FacetModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v2,
                               const CubitVector &v3,
                               DLIList<BodySM*>& results_list,
-                              bool imprint ) const
+                              bool imprint
+                              ) const
 {
 
   MODIFY_CHECK_RETURN_FAILURE;
@@ -1978,10 +1994,11 @@ BodySM *body_sm;
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================
-CubitStatus    FacetModifyEngine::webcut(DLIList<BodySM*>& /*webcut_body_list*/,
-                                 BodySM const* /*tool_body*/,
-                                 DLIList<BodySM*>& /*results_list*/,
-                                 bool /*imprint*/ ) const
+CubitStatus  FacetModifyEngine::webcut(
+             DLIList<BodySM*>& /*webcut_body_list*/,
+             BodySM const* /*tool_body*/,
+             DLIList<BodySM*>& /*results_list*/,
+             bool /*imprint*/ )const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2131,17 +2148,18 @@ CubitVector bodies_center, my_center, diagonal, my_axis;
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_brick( 
-                                      DLIList<BodySM*>& /*webcut_body_list*/, 
-                                      const CubitVector &/*center*/,
-                                      const CubitVector* /*axes[3]*/, 
-                                      const CubitVector &/*extension*/,
-                                      DLIList<BodySM*> &/*results_list*/,
-                                      bool /*imprint*/ )
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
+
+//CubitStatus FacetModifyEngine::webcut_with_brick( 
+//                                      DLIList<BodySM*>& /*webcut_body_list*/, 
+//                                      const CubitVector &/*center*/,
+//                                      const CubitVector* /*axes[3]*/, 
+//                                      const CubitVector &/*extension*/,
+//                                      DLIList<BodySM*> &/*results_list*/,
+//                                      bool /*imprint*/ )
+//{
+//  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+//  return CUBIT_FAILURE;
+//}
 
 //===============================================================================
 // Function   : webcut_with_planar_sheet

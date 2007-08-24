@@ -5032,7 +5032,7 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
 
    push_vg_attributes_before_modify(body_sm_list);
 
-   CubitStatus stat = gme->webcut_with_sheet (
+   CubitStatus stat = gme->webcut (
        body_sm_list, tool_sm, new_sms, imprint  );
 
    restore_vg_after_modify(new_sms, original_body_list);

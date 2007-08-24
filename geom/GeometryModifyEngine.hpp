@@ -150,6 +150,15 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- specific modeling engine.  For example, if the engine is 
     //- AcisGeometryEngine, then a SurfaceACIS is created.
   
+  virtual CubitStatus stitch_surfs( 
+			DLIList<BodySM*> &surf_bodies,
+                        BodySM *& stitched_Body )const= 0;
+   //I List of surface_bodys you want stitched together
+   //IO If stitching of FACEs is successful, stitched_Body is resultant BodySM.
+   //   Means that all surfaces could be stitched together, forming a single BODY,
+   //   but not a single FACE.
+   //returns CUBIT_SUCCESS if stitching was successful, other return FAILURE
+
   virtual Lump* make_Lump( DLIList<Surface*>& surface_list ) const = 0;
     //R Lump*
     //R- Pointer to a newly created Lump object.
@@ -244,7 +253,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- Returns the ID of the new Body or CUBIT_FAILURE
 
       virtual BodySM* cylinder( double hi, double r1, double r2, 
-                              double r3 ) const = 0 ;
+                                double r3) const = 0;
       //- Creates an ACIS frustum and assigns it to a Body $
       //- {hi} input height $
       //- {r1} input radius in x-direction at base $
@@ -458,7 +467,9 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                       double draft_angle,
                                       int draft_type,
                                       bool switchside,
-                                      bool rigid) const = 0;
+                                      bool rigid,
+                                      Surface* stop_surf = NULL,
+                                      BodySM*  stop_body = NULL) const = 0;
       
       virtual CubitStatus  sweep_perpendicular(
                                       DLIList<GeometryEntity*>& ref_ent_list,
@@ -467,7 +478,9 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                       double draft_angle,
                                       int draft_type,
                                       bool switchside,
-                                      bool rigid) const = 0;
+                                      bool rigid,
+                                      Surface* stop_surf = NULL,
+                                      BodySM*  stop_body = NULL ) const = 0;
       
       virtual CubitStatus  sweep_rotational(
                                    DLIList<GeometryEntity*>& ref_ent_list,
@@ -480,7 +493,9 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                    int draft_type = 0,
                                    bool switchside = false,
                                    bool make_solid = false,
-                                   bool rigid = false ) const = 0;
+                                   bool rigid = false,
+                                   Surface *stop_surf = NULL,
+                                   BodySM*  stop_body = NULL ) const = 0;
         
       virtual CubitStatus sweep_along_curve( 
                                    DLIList<GeometryEntity*>& ref_ent_list,
@@ -488,18 +503,22 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                    DLIList<Curve*>& ref_edge_list,
                                    double draft_angle = 0.0,
                                    int draft_type = 0,
-                                   bool rigid = false ) const= 0;
+                                   bool rigid = false,
+                                   Surface *stop_surf = NULL,
+                                   BodySM*  stop_body = NULL  ) const= 0;
      
 
       virtual CubitStatus scale( BodySM *&body, const CubitVector& factors ) = 0;
 
       //HEADER- Webcut-related functions
-      virtual CubitStatus webcut( DLIList<BodySM*>& webcut_body_list, 
-                                  const CubitVector &v1,
-                                  const CubitVector &v2,
-                                  const CubitVector &v3,
-                                  DLIList<BodySM*>& results_list,
-                                  bool imprint = false ) const = 0;
+      virtual CubitStatus webcut( 
+              DLIList<BodySM*>& webcut_body_list, 
+              const CubitVector &v1,
+              const CubitVector &v2,
+              const CubitVector &v3,
+              DLIList<BodySM*>& results_list,
+              bool imprint = false             
+ ) const = 0;
       //R int
       //R- Number of bodies that were webcut ( >= 0 )
       //I webcut_body_list
@@ -516,10 +535,12 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- The newly created bodies are merged and imprinted depeding on 
       //- the respective flags.
 
-      virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list, 
-                                 BodySM const* tool_body,
-                                 DLIList<BodySM*>& results_list,
-                                 bool imprint = false ) const = 0 ;
+      virtual CubitStatus webcut(
+                    DLIList<BodySM*>& webcut_body_list, 
+                    BodySM const* tool_body,
+                    DLIList<BodySM*>& results_list,
+                    bool imprint = false
+                    ) const = 0 ;
       //R int       
       //R- Number of bodies that were webcut ( >= 0 )
       //I webcut_body_list
@@ -548,10 +569,12 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- I- Bodies to be webcut, plane to define cuts, and imprint merge flags.
       //- This is an experimental function, hooked to the GUI for making
       //- bodies one to one sweeps.
+      /*
       virtual CubitStatus webcut_with_sheet(DLIList<BodySM*>& webcut_body_list,
                                             BodySM *sheet_body,
                                             DLIList<BodySM*> &new_bodies,
                                             bool imprint = false) = 0;
+      */
       //- webcuts a body using a sheet body.
       //- It splits the sheet into two single sided bodies.
       //- it then subtracts this with the webcut body.
@@ -564,7 +587,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                             Surface *extend_from,
                                             DLIList<BodySM*> &new_bodies,
                                             int &num_cut,
-                                            bool imprint = false ) = 0;
+                                            bool imprint = false );
       //- creates a surface by extending one from the given surface then
       //- webcuts using the this sheet.(see webcut_with_sheet.
  
@@ -579,7 +602,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                             Surface *stop_surf, 
                             Curve *curve_to_sweep_along, 
                             DLIList<BodySM*> &results_list,
-                            CubitBoolean imprint = false) = 0;
+                            CubitBoolean imprint = false);
 
       virtual CubitStatus webcut_with_sweep_curves(
                             DLIList<BodySM*> &blank_bodies,
@@ -589,7 +612,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                             Surface *stop_surf, 
                             Curve *curve_to_sweep_along, 
                             DLIList<BodySM*> &results_list,
-                            CubitBoolean imprint = false) = 0;
+                            CubitBoolean imprint = false) ;
 
       virtual CubitStatus webcut_with_sweep_curves_rotated(
                             DLIList<BodySM*> &blank_bodies,
@@ -599,7 +622,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                             double angle,
                             Surface *stop_surf, 
                             DLIList<BodySM*> &results_list,
-                            CubitBoolean imprint = false) = 0;
+                            CubitBoolean imprint = false) ;
 
       virtual CubitStatus webcut_with_sweep_surfaces_rotated(
                             DLIList<BodySM*> &blank_bodies,
@@ -610,24 +633,24 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                             Surface *stop_surf, 
                             bool up_to_next, 
                             DLIList<BodySM*> &results_list,
-                            CubitBoolean imprint = false) = 0;
+                            CubitBoolean imprint = false);
 
       virtual CubitStatus webcut_with_cylinder( 
-                                        DLIList<BodySM*> &webcut_body_list,                                        
+                                        DLIList<BodySM*> &webcut_body_list,  
                                         double radius,
                                         const CubitVector &axis,
                                         const CubitVector &center,
                                         DLIList<BodySM*>& results_list,
-                                        bool imprint = false) = 0;
+                                        bool imprint = false) ;
       //- webcuts a body using a cylinder give the input parameters.
 
-      virtual CubitStatus webcut_with_brick( 
+      CubitStatus webcut_with_brick( 
                                      DLIList<BodySM*>& webcut_body_list, 
                                      const CubitVector &center, 
                                      const CubitVector axes[3], 
                                      const CubitVector &extension,
                                      DLIList<BodySM*> &results_list,
-                                     bool imprint = false ) = 0;
+                                     bool imprint = false ); 
       /**<  Webcuts the bodies in the list with a cutting brick.
         *  The brick is created by the given parameters - center of
         *  brick, xyz axes, and extension.  Extension is 1/2 width,
@@ -638,12 +661,12 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
         */
 
       virtual CubitStatus webcut_with_planar_sheet( 
-                                            DLIList<BodySM*>& webcut_body_list, 
+                                            DLIList<BodySM*>& webcut_body_list,
                                             const CubitVector &center, 
                                             const CubitVector axes[2],
                                             double width, double height,
                                             DLIList<BodySM*> &results_list,
-                                            bool imprint = false ) = 0;
+                                            bool imprint = false );
       /**<  Webcuts the bodies in the list with a cutting planar sheet.
         *  The sheet is created by the given parameters - center of
         *  sheet, xy axes, and width and height. Sheet creation is done 
@@ -654,7 +677,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                          DLIList<BodySM*> &webcut_body_list,
                                          DLIList<Curve*> &ref_edge_list,
                                          DLIList<BodySM*>& results_list,
-                                         bool imprint = false) = 0;
+                                         bool imprint = false) ;
       //- webcuts a body list using a temp sheet body created from the curve loop
 
 

@@ -139,6 +139,10 @@ public:
   
   virtual BodySM* copy_body ( BodySM* bodyPtr) const ;
   
+  virtual CubitStatus stitch_surfs(
+		      DLIList<BodySM*>& surf_bodies,
+		      BodySM*& stitched_body)const;
+
   virtual CubitStatus subtract(DLIList<BodySM*> &tool_body_list,
     DLIList<BodySM*> &from_bodies,
     DLIList<BodySM*> &new_bodies,
@@ -225,7 +229,9 @@ public:
     double draft_angle,
     int draft_type,
     bool switchside,
-    bool rigid) const;
+    bool rigid,
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL) const;
   
   virtual CubitStatus  sweep_perpendicular(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -234,7 +240,9 @@ public:
     double draft_angle,
     int draft_type,
     bool switchside,
-    bool rigid) const;
+    bool rigid,
+    Surface* stop_surf = NULL,
+    BodySM  *stop_body = NULL ) const;
   
   virtual CubitStatus  sweep_rotational(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -247,7 +255,9 @@ public:
     int draft_type = 0,
     bool switchside = CUBIT_FALSE,
     bool make_solid = CUBIT_FALSE,
-    bool rigid = CUBIT_FALSE ) const;
+    bool rigid = CUBIT_FALSE , 
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL) const;
   
   virtual CubitStatus sweep_along_curve(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -255,9 +265,10 @@ public:
     DLIList<Curve*>& ref_edge_list,
     double draft_angle = 0.0,
     int draft_type = 0,
-    bool rigid = CUBIT_FALSE ) const;
+    bool rigid = CUBIT_FALSE,
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL ) const;
  
-
     virtual CubitStatus webcut_with_sweep_surfaces(
                           DLIList<BodySM*> &blank_bodies,
                           DLIList<Surface*> &surfaces,
@@ -308,12 +319,13 @@ public:
     const CubitVector &v2,
     const CubitVector &v3,
     DLIList<BodySM*>& results_list,
-    bool imprint = false ) const;
+    bool imprint = false 
+    ) const;
   
   virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list,
     BodySM const* tool_body,
     DLIList<BodySM*>& results_list,
-    bool imprint = false ) const;
+    bool imprint = false)const;
   
   virtual CubitStatus webcut_across_translate( DLIList<BodySM*>& body_list,
     Surface* plane_surf1,
@@ -340,12 +352,13 @@ public:
     DLIList<BodySM*>& results_list,
     bool imprint = false );
   
-  virtual CubitStatus webcut_with_brick( DLIList<BodySM*>& webcut_body_list, 
+/*  virtual CubitStatus webcut_with_brick( DLIList<BodySM*>& webcut_body_list, 
     const CubitVector &center,
     const CubitVector axes[3], 
     const CubitVector &extension,
     DLIList<BodySM*> &results_list,
     bool imprint = false );
+*/
   
   virtual CubitStatus webcut_with_planar_sheet( DLIList<BodySM*>& webcut_body_list,
     const CubitVector &center,
