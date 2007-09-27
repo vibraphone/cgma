@@ -1594,6 +1594,32 @@ private :
     *   only be called after webcutting. (Checks sepAfterWebcut flag.)
     */
 
+  CubitStatus webcut_w_cylinder(
+                                DLIList<BodySM*> &webcut_body_list,
+                                double radius,
+                                const CubitVector &axis,
+                                const CubitVector &center,
+                                DLIList<BodySM*>& results_list,
+                                bool imprint = false) ;
+  //- webcuts a body using a cylinder given the input parameters.
+
+  CubitStatus prepare_surface_sweep(
+                              DLIList<BodySM*> &blank_bodies,
+                              DLIList<Surface*> &surfaces,
+                              const CubitVector& sweep_vector,
+                              bool sweep_perp,
+                              bool through_all,
+                              bool outward,
+                              bool up_to_next,
+                              Surface *stop_surf,
+                              Curve *curve_to_sweep_along,
+                              BodySM* &cutting_tool_ptr ,
+                              const CubitVector* point = NULL,
+                              double *angle = NULL);
+  // prepare for webcut with swept_surfaces. if point and angle is known,
+  // do surface sweep rotated; or if curve_to_sweep_along is known, do
+  // sweep along curve; then if sweep_perp is true, do perpendicular sweep
+  // of the surfaces; lastly do sweep along vector.
   bool contains_intermediate_geom(DLIList<Body*>& list) const;
   bool contains_intermediate_geom(DLIList<TopologyBridge*>& list) const;
   bool contains_composites(DLIList<TopologyBridge*>& bridge_list ) const;

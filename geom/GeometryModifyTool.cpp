@@ -1837,7 +1837,7 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
   {
     push_vg_attributes_before_modify(engine_body_sms);
 
-    CubitStatus status = gme->webcut_with_cylinder(engine_body_sms, radius, axis,
+    CubitStatus status = webcut_w_cylinder( engine_body_sms, radius, axis,
               center, result_sm_list, imprint );
 
     restore_vg_after_modify(result_sm_list, engine_bodies);
@@ -1859,6 +1859,101 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
   do_attribute_cleanup();
 
   return rval;
+}
+
+CubitStatus GeometryModifyTool::webcut_w_cylinder(
+                                        DLIList<BodySM*> &webcut_body_list,
+                                        double radius,
+                                        const CubitVector &axis,
+                                        const CubitVector &center,
+                                        DLIList<BodySM*>& results_list,
+                                        bool imprint )
+{
+  GeometryModifyEngine* gme = 0;
+  gme = get_engine(webcut_body_list.get()); 
+  assert(gme);
+
+  double max_size =  0.;
+  //lets find the distance to the center for each body and take
+  //the max.
+  double curr;
+  CubitVector cent_bod;
+  CubitBox bounding_box;
+  BodySM *body_ptr;
+  bounding_box = webcut_body_list[0]->bounding_box();
+  cent_bod =  bounding_box.center();
+  cent_bod = cent_bod - center;
+  curr = cent_bod.length();
+  if ( curr > max_size )
+     max_size = curr;
+
+
+  for ( int ii = webcut_body_list.size()-1; ii > 0; ii-- )
+    {
+      body_ptr = webcut_body_list[ii];
+      bounding_box |= body_ptr->bounding_box();
+      cent_bod = body_ptr->bounding_box().center();
+      cent_bod = cent_bod - center;
+      curr = cent_bod.length();
+      if ( curr > max_size )
+        max_size = curr;
+    }
+
+  curr = bounding_box.diagonal().length();
+
+  if ( curr > max_size )
+     max_size = curr;
+
+  double height = 0.0;
+  if ( center.x() > max_size )
+    {
+      height = 500.0 * center.x();
+    }
+  else if ( center.y() > max_size )
+    {
+      height = 500.0 * center.y();
+    }
+  else if ( center.z() > max_size )
+    {
+      height = 500.0 * center.z();
+    }
+  else
+    {
+      height = 500.0 * max_size;
+    }
+
+  //lets make certain we have a valid height..
+  if ( height < GEOMETRY_RESABS )
+    {
+      height = 500.0;
+    }
+
+  BodySM *cutting_tool_ptr = gme->cylinder( height, radius, radius, radius );
+
+  if( cutting_tool_ptr == NULL )
+    return CUBIT_FAILURE;
+
+  //transform the cyclinder to cernter and axis
+  // The current frustum is centered on the z axis.
+  CubitVector axis2(0., 0., 1.0 );
+  //now find the normal to the current axis and axis we want to be
+  //at. This normal is where we will rotate about.
+  CubitVector normal_axis = axis2 * axis;
+  if ( normal_axis.length() > CUBIT_RESABS )
+    {
+       //angle in degrees.
+       double angle = normal_axis.vector_angle( axis2, axis );
+       gme->get_gqe()->rotate(cutting_tool_ptr, normal_axis, angle);
+    }
+  gme->get_gqe()->translate(cutting_tool_ptr, center);
+
+  CubitStatus stat =
+    gme->webcut(webcut_body_list, cutting_tool_ptr, results_list, imprint) ;
+
+  // Delete the BodySM that was created to be used as a tool
+  gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
+
+  return stat;
 }
 
 void GeometryModifyTool::do_attribute_setup(void)
@@ -2002,19 +2097,48 @@ CubitStatus GeometryModifyTool::webcut_with_curve_loop(
    assert(webcut_sm_list.size() == webcut_body_list.size());
    assert(curve_list.size() == refedge_list.size());
 
+   GeometryType surface_type = PLANE_SURFACE_TYPE;
+   CubitStatus stat;
+
+   //make copies of the curves.
+   DLIList<Curve*> copied_curves;
+   Curve* temp_curve = NULL;
+   for (int i = curve_list.size(); i--;)
+     {
+       temp_curve = gme->make_Curve(curve_list.get_and_step());
+       if(temp_curve != NULL)
+         copied_curves.append(temp_curve);
+     }
+
+   //make a face out of the curves
+   Surface * surf = gme->make_Surface(surface_type, copied_curves, NULL, false );
+   if (surf == NULL)
+     {
+       PRINT_ERROR("webcut tool surface is not created from acis.\n");
+       return CUBIT_FAILURE;
+     }
+
+
+   //get cutting tool BodySM.
+   BodySM* cutting_tool_ptr = gme->make_BodySM(surf);
+   assert(cutting_tool_ptr );
+
    do_attribute_setup();
    push_vg_attributes_before_modify(webcut_sm_list);
 
-   CubitStatus result_val = gme->webcut_with_curve_loop(
-                     webcut_sm_list, curve_list, result_sm_list, imprint) ;
+   stat = gme->webcut(
+                     webcut_sm_list, cutting_tool_ptr, result_sm_list, imprint) ;
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
    restore_vg_after_modify(result_sm_list, original_body_list);
 
-   result_val = finish_webcut( webcut_body_list, result_sm_list, CUBIT_FALSE,
-                               result_val, results_list );
+   stat = finish_webcut( webcut_body_list, result_sm_list, CUBIT_FALSE,
+                               stat, results_list );
    do_attribute_cleanup();
 
-   return result_val;
+   return stat;
 }
 
 //-------------------------------------------------------------------------
@@ -2809,7 +2933,7 @@ CubitStatus GeometryModifyTool::sweep_target(CubitPlane ref_plane,
 			Curve *facet_curve;
 			facet_curve=edge_list[ii]->get_curve_ptr();
 			int num_points;
-			int color = 2;
+			//int color = 2;
 			CubitStatus response;
 			GMem g_mem;
 
@@ -3115,7 +3239,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
 				Curve *facet_curve;
 				facet_curve=surf_edge_list[ii]->get_curve_ptr();
 				int num_points;
-				int color = 2;
+				//int color = 2;
 				CubitStatus response;
 				GMem g_mem;
 
@@ -3436,7 +3560,10 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
                    width, height, depth );
       return CUBIT_FAILURE ;
    }
-
+   
+   BodySM *cutting_tool_ptr = NULL;
+   CubitBoolean is_sheet_body = CUBIT_FALSE;
+   CubitVector p1, p2, p3, p4;
    int wz = width < GEOMETRY_RESABS;
    int hz = height < GEOMETRY_RESABS;
    int dz = depth < GEOMETRY_RESABS;
@@ -3452,6 +3579,7 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
       }
 
       // Make a sheet body instead of a cuboid
+      is_sheet_body = CUBIT_TRUE;
       CubitVector sheet_axes[2];
       if( wz )
       {
@@ -3471,8 +3599,13 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
          sheet_axes[1] = axes[1];
       }
 
-      return webcut_with_planar_sheet (webcut_body_list, center, sheet_axes,
-                          width, height, results_list, imprint, merge);
+      // Create the planar sheet to cut with
+      // Get the corners of the sheet
+      center.next_point( axes[0], width/2.0, p1 );
+      p1.next_point( axes[1], -height/2.0, p1 );
+      p1.next_point( axes[1], height, p2 );
+      p2.next_point( axes[0], -width, p3 );
+      p3.next_point( axes[1], -height, p4 );
    }
 
    if (!okay_to_modify( webcut_body_list, "WEBCUT" ))
@@ -3493,8 +3626,19 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
    {
       push_vg_attributes_before_modify(engine_body_sms);
 
-      CubitStatus status = gme->webcut_with_brick (
-        engine_body_sms, center, axes, extension, result_sm_list, imprint );
+      // Create the brick to cut with
+      if (is_sheet_body)
+	cutting_tool_ptr = gme->planar_sheet(p1,p2,p3,p4);
+      else
+        cutting_tool_ptr = gme->brick( center, axes, extension );
+      if( cutting_tool_ptr == NULL )
+         return CUBIT_FAILURE;
+
+      CubitStatus status = gme->webcut (
+        engine_body_sms, cutting_tool_ptr, result_sm_list, imprint );
+
+      // Delete the BodySM that was created to be used as a tool
+      gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
       restore_vg_after_modify(result_sm_list, engine_bodies);
 
@@ -3545,8 +3689,25 @@ CubitStatus GeometryModifyTool::webcut_with_planar_sheet(
    {
       push_vg_attributes_before_modify(engine_body_sms);
 
-      CubitStatus status = gme->webcut_with_planar_sheet (
-        engine_body_sms, center, axes, width, height, result_sm_list, imprint );
+      // Create the planar sheet to cut with
+      CubitVector p1, p2, p3, p4;
+
+      // Get the corners of the sheet
+      center.next_point( axes[0], width/2.0, p1 );
+      p1.next_point( axes[1], -height/2.0, p1 );
+      p1.next_point( axes[1], height, p2 );
+      p2.next_point( axes[0], -width, p3 );
+      p3.next_point( axes[1], -height, p4 );
+
+      BodySM *cutting_tool_ptr = gme->planar_sheet(p1,p2,p3,p4);
+      if( cutting_tool_ptr == NULL )
+         return CUBIT_FAILURE;
+
+      CubitStatus status = gme->webcut (
+        engine_body_sms, cutting_tool_ptr, result_sm_list, imprint );
+ 
+      // Delete the BodySM that was created to be used as a tool
+      gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
       restore_vg_after_modify(result_sm_list, engine_bodies);
 
@@ -4281,8 +4442,8 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
                                          DLIList<Body*> &new_body_list,
                                          CubitBoolean keep_old )
 {
-   if (get_group_imprint() == CUBIT_FALSE)
-     return imprint_singly( from_body_list, new_body_list, keep_old );
+   //if (get_group_imprint() == CUBIT_FALSE)
+   //  return imprint_singly( from_body_list, new_body_list, keep_old );
 
      // Check the GeometryEngine for each of the Body's; check to
      // make sure they're all the same
@@ -4429,7 +4590,7 @@ CubitStatus GeometryModifyTool::scale( Body *&body,
 }
 
 
-
+/**********************************************************************************
 CubitStatus GeometryModifyTool::imprint_singly( DLIList<Body*> &from_body_list,
                                                 DLIList<Body*> &new_body_list,
                                                 CubitBoolean keep_old )
@@ -4599,7 +4760,7 @@ CubitStatus GeometryModifyTool::imprint_singly( DLIList<Body*> &from_body_list,
 
    return CUBIT_SUCCESS;
 }
-
+*******************************************************************************/
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
                                          DLIList<RefEdge*> &ref_edge_list,
@@ -4828,8 +4989,6 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
    CubitStatus status = gePtr1->imprint( body_sm_list, vector_list,
                                          new_sm_list, keep_old_body, &new_tbs,
                                             &att_tbs );
-
-   int i, j;
 
    if(process_composites)
    {
@@ -5072,14 +5231,31 @@ CubitStatus GeometryModifyTool::webcut_with_extended_surf( DLIList<Body*> &webcu
       return CUBIT_FAILURE;
    }
 
+   //make the extended face
+   Surface * surf = gme->make_Surface(surf_ptr, true);
+   if (surf == NULL)
+     {
+       PRINT_ERROR("webcut tool surface is not created from acis.\n");
+       return CUBIT_FAILURE;
+     }
+ 
+   //get cutting tool BodySM.
+   BodySM* cutting_tool_ptr = surf->bodysm();
+   assert(cutting_tool_ptr );
+
    do_attribute_setup();
 
    push_vg_attributes_before_modify(body_sm_list);
 
    //change sjs@cat 1/27/04
-   CubitStatus stat = gme->webcut_with_extended_surf ( //gmeList.get()->webcut_with_extended_surf (
-       body_sm_list, surf_ptr, new_sms, num_cut, imprint  );
+   
+   CubitStatus stat = gme->webcut ( //gmeList.get()->webcut_with_extended_surf (
+       body_sm_list, cutting_tool_ptr, new_sms, imprint  );
 
+   num_cut = new_sms.size();
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
    restore_vg_after_modify(new_sms, original_body_list);
 
    CubitStatus ret = finish_webcut(webcut_body_list, new_sms, false, stat, new_bodies );
@@ -5132,13 +5308,22 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
      stop_surface = stop_surf->get_surface_ptr();
    }
 
+   BodySM* cutting_tool_ptr = NULL;
+   CubitStatus stat = prepare_surface_sweep(body_sm_list,surfaces_to_sweep,
+                           sweep_axis,false,false,false,
+                           up_to_next,stop_surface, NULL, cutting_tool_ptr, &point, &angle);
+   if(stat == CUBIT_FAILURE )
+        return stat;
+
    do_attribute_setup();
 
    push_vg_attributes_before_modify(body_sm_list);
 
-   CubitStatus stat = gme->webcut_with_sweep_surfaces_rotated(
-       body_sm_list, surfaces_to_sweep, point, sweep_axis, angle,
-       stop_surface, up_to_next, new_sms, imprint );
+   stat = gme->webcut(
+       body_sm_list, cutting_tool_ptr, new_sms, imprint );
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
    restore_vg_after_modify(new_sms, original_body_list);
 
@@ -5193,12 +5378,42 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves_rotated(
      stop_surface = stop_surf->get_surface_ptr();
    }
 
+   //sweep the curves.
+   DLIList<GeometryEntity*> ref_ent_list;
+   for(int i = 0; i < curves_to_sweep.size(); i++)
+     ref_ent_list.append((GeometryEntity*)(curves_to_sweep.get_and_step())); 
+
+   DLIList<BodySM*> swept_bodies;
+   CubitStatus stat = gme->sweep_rotational(ref_ent_list,swept_bodies,point,
+                                      sweep_axis,angle,0, 0.0, 0,false,false,
+                                      false,stop_surface);
+   if(stat == CUBIT_FAILURE  && swept_bodies.size() == 0)
+     return stat;
+
+   //stitch faces together
+   BodySM* cutting_tool_ptr = NULL;
+   stat = gme->stitch_surfs(swept_bodies, cutting_tool_ptr);
+
+   if(stat == CUBIT_FAILURE)
+     {
+       //delete all swept faces
+       for(int i = 0; i < swept_bodies.size(); i++)
+         gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
+       return stat;
+     }
+
    do_attribute_setup();
    push_vg_attributes_before_modify(body_sm_list);
 
-   CubitStatus stat = gme->webcut_with_sweep_curves_rotated(
-       body_sm_list, curves_to_sweep, point, sweep_axis, angle,
-       stop_surface, new_sms, imprint);
+   stat = gme->webcut(
+       body_sm_list, cutting_tool_ptr, new_sms, imprint);
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
+
+   //delete all swept faces
+   for(int i = 0; i < swept_bodies.size(); i++)
+      gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
 
    restore_vg_after_modify(new_sms, original_body_list);
 
@@ -5258,6 +5473,22 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
      stop_surface = stop_surf->get_surface_ptr();
    }
 
+   CubitVector tmp_sweep_vector = sweep_vector;
+   //get model bbox info...will scale sweep vector by its diagonal
+   //so that we go far enough
+   if( through_all || stop_surf )
+     {
+       CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+       tmp_sweep_vector.normalize();
+       tmp_sweep_vector*=(2*bounding_box.diagonal().length());
+     }
+
+   DLIList<GeometryEntity*> ref_ent_list;
+   for(int i = 0; i < curves_to_sweep.size(); i++)
+     ref_ent_list.append((GeometryEntity*)(curves_to_sweep.get_and_step()));
+   DLIList<BodySM*> swept_bodies;
+   CubitStatus stat;
+
    Curve *curve_to_sweep_along = NULL;
    if( edge_to_sweep_along )
    {
@@ -5271,14 +5502,48 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
      }
 
      curve_to_sweep_along = edge_to_sweep_along->get_curve_ptr();
+     DLIList<Curve*> curves_to_sweep_along;
+     curves_to_sweep_along.append(curve_to_sweep_along);
+     stat = gme->sweep_along_curve(ref_ent_list, swept_bodies,
+                              curves_to_sweep_along,0.0,0,false,stop_surface);
+
+     if (!stat && swept_bodies.size() == 0)
+       return stat;
+   }
+
+   else
+   {
+     stat = gme->sweep_translational(ref_ent_list, swept_bodies,
+                            tmp_sweep_vector,0.0,0, false, false, stop_surface);
+
+     if (!stat && swept_bodies.size() == 0)
+       return stat;
+   }
+
+   //stitch faces together
+   BodySM* cutting_tool_ptr = NULL;
+   stat = gme->stitch_surfs(swept_bodies, cutting_tool_ptr);
+
+   if(stat == CUBIT_FAILURE)
+   {
+       //delete all swept faces
+       for(int i = 0; i < swept_bodies.size(); i++)
+         gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
+       return stat;
    }
 
    do_attribute_setup();
    push_vg_attributes_before_modify(body_sm_list);
 
-   CubitStatus stat = gme->webcut_with_sweep_curves(
-       body_sm_list, curves_to_sweep, sweep_vector, through_all,
-       stop_surface, curve_to_sweep_along, new_sms, imprint );
+   stat = gme->webcut(
+       body_sm_list, cutting_tool_ptr, new_sms, imprint );
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
+
+   //delete all swept faces
+   for(int i = 0; i < swept_bodies.size(); i++)
+      gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
 
    restore_vg_after_modify(new_sms, original_body_list);
 
@@ -5356,9 +5621,18 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
    do_attribute_setup();
    push_vg_attributes_before_modify(body_sm_list);
 
-   CubitStatus stat = gme->webcut_with_sweep_surfaces(
+   BodySM* cutting_tool_ptr = NULL;
+   CubitStatus stat = prepare_surface_sweep(
       body_sm_list, surfaces_to_sweep, sweep_vector, sweep_perp, through_all, outward,
-      up_to_next, stop_surface, curve_to_sweep_along, new_sms, imprint );
+      up_to_next, stop_surface, curve_to_sweep_along, cutting_tool_ptr );
+   if (stat == CUBIT_FAILURE)
+     return stat;
+
+   stat = gme->webcut(
+       body_sm_list, cutting_tool_ptr, new_sms, imprint );
+
+   // Delete the BodySM that was created to be used as a tool
+   gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
    restore_vg_after_modify(new_sms, original_body_list);
 
@@ -5517,7 +5791,7 @@ CubitStatus GeometryModifyTool::split_periodic(Body *body_ptr,
    BodySM* body_sm = body_ptr->get_body_sm_ptr();
    GeometryModifyEngine* gme = get_engine(body_sm);
    if (!gme) {
-      PRINT_ERROR("Volume does not have a modify engine.\n", body_ptr->id());
+      PRINT_ERROR("Volume %d does not have a modify engine.\n", body_ptr->id());
       return CUBIT_FAILURE;
    }
 
@@ -6787,7 +7061,7 @@ CubitStatus GeometryModifyTool::get_mid_plane( RefFace *ref_face1,
 {
   if( ref_face1 == ref_face2 )
   {
-    PRINT_ERROR("Cannot create midplane between the same surface.\n",
+    PRINT_ERROR("Cannot create midplane between the same surface.\n"
                 "       Surface %d was entered twice\n",  ref_face1->id() ); 
     return CUBIT_FAILURE;
   }
@@ -7054,7 +7328,7 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
 {
   if( ref_face1 == ref_face2 )
   {
-    PRINT_ERROR("Cannot create midplane between the same surface.\n",
+    PRINT_ERROR("Cannot create midplane between the same surface.\n"
                 "       Surface %d was entered twice\n",  ref_face1->id() ); 
     return CUBIT_FAILURE;
   }
@@ -7099,7 +7373,7 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
       PRINT_ERROR( "In GeometryModifyTool::get_mid_surface\n"
 		   "       Surfaces %d and %d do not have the same underlying geometry modeling engine.\n"
 		   "       For midsurface calculations, they must be the same\n",
-		   ref_face1->id(), ref_face2 );
+		   ref_face1->id(), ref_face2->id() );
       return CUBIT_FAILURE;
     }
 
@@ -8180,7 +8454,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
               if(TopologyEntity* t = m->topology_entity())
               {
                 entities_to_update.append(CAST_TO(t, RefEntity));
-                RefEntity *ref_ent = CAST_TO(t, RefEntity );
+                //RefEntity *ref_ent = CAST_TO(t, RefEntity );
               }
             }
           }
@@ -9041,4 +9315,140 @@ void GeometryModifyTool::determine_solutions_for_eliminating_small_surface(RefFa
   // Build strings for potential regularize solutions.
 }
 
+CubitStatus GeometryModifyTool::prepare_surface_sweep(
+                              DLIList<BodySM*> &blank_bodies,
+                              DLIList<Surface*> &surfaces,
+                              const CubitVector& sweep_vector,
+                              bool sweep_perp,
+                              bool through_all,
+                              bool outward,
+                              bool up_to_next,
+                              Surface *stop_surf,
+                              Curve *curve_to_sweep_along,
+                              BodySM* &cutting_tool_ptr ,
+                              const CubitVector* point,
+                              double *angle)
+{
+  GeometryModifyEngine* gme = get_engine(blank_bodies.get());
 
+  if(surfaces.size() == 0 )
+    return CUBIT_FAILURE;
+
+  DLIList<GeometryEntity*> ref_ent_list;
+  Surface * temp_face = NULL;
+  for(int i = 0; i < surfaces.size(); i++)
+    {
+      //copy the faces before sweep
+      temp_face = gme->make_Surface(surfaces.get_and_step());
+      if (temp_face)
+        ref_ent_list.append((GeometryEntity*)temp_face);
+    }
+
+  BodySM* to_body = NULL;
+  CubitStatus stat = CUBIT_SUCCESS;
+  if(up_to_next && blank_bodies.size() > 1) //unite all bland_bodies
+    {
+       DLIList<BodySM*> newBodies;
+       DLIList<BodySM*> copied_bodies;
+       for(int i = 0; i < blank_bodies.size(); i++)
+         copied_bodies.append(gme->copy_body(blank_bodies.get_and_step()));
+
+       stat = gme->unite(copied_bodies, newBodies);
+       if(stat == CUBIT_FAILURE)
+         {
+           PRINT_ERROR("Cannot use 'up_to_next' option with specified geometry\n");
+           PRINT_INFO("Try the 'stop surface <id>' option instead\n");
+           return stat;
+         }
+       to_body = newBodies.get();
+    }
+
+  else if(up_to_next && blank_bodies.size() == 1)
+    to_body = gme->copy_body(blank_bodies.get());
+
+  DLIList<BodySM*> swept_bodies;
+  if (point && angle) //sweep_surface_rotated
+    stat = gme->sweep_rotational(ref_ent_list,swept_bodies,*point,
+                           sweep_vector, *angle,0, 0.0,0,false,false,
+                           false,stop_surf, to_body);  
+	
+  else
+  {
+    CubitVector tmp_sweep_vector = sweep_vector;
+
+    //get model bbox info...will scale sweep vector by its diagonal
+    //so that we go far enough
+    if( through_all || stop_surf || up_to_next)
+    {
+      CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+      tmp_sweep_vector.normalize();
+      tmp_sweep_vector*=(2*bounding_box.diagonal().length());
+    }
+    
+    //see if we're sweeping along a specified curve
+    if( curve_to_sweep_along )
+      {
+        DLIList<Curve*> curves_to_sweep_along;
+        curves_to_sweep_along.append(curve_to_sweep_along);
+        stat = gme->sweep_along_curve(ref_ent_list, swept_bodies,
+                                 curves_to_sweep_along, 0.0,0,false,stop_surf,
+                                 to_body);
+      }
+
+    else if (sweep_perp )
+      stat = gme->sweep_perpendicular(ref_ent_list, swept_bodies,
+                                 tmp_sweep_vector.length(),0.0,0,outward,false,
+                                 stop_surf, to_body);
+    else
+      stat = gme->sweep_translational(ref_ent_list, swept_bodies,
+                                 tmp_sweep_vector,0.0,0, false, false, stop_surf,
+                                 to_body);
+  }
+
+  if(stat == CUBIT_FAILURE && swept_bodies.size() == 0)
+    {
+       //delete copied faces
+       GeometryEntity * temp_entity = NULL;
+       for(int i = ref_ent_list.size();i--;)
+         {
+            temp_entity = ref_ent_list.get_and_step();
+            if (temp_entity)
+              gme->get_gqe()->delete_solid_model_entities( (Surface*)temp_entity);
+         }
+
+       return stat;
+    }
+
+  //if there are more than 1, unite them all
+  DLIList<BodySM*>  newBodies;
+  if (swept_bodies.size() > 1)
+     stat = gme->unite(swept_bodies, newBodies);
+  else
+     newBodies = swept_bodies;
+
+  if(stat == CUBIT_FAILURE || newBodies.size()!= 1)
+    {
+       PRINT_ERROR("webcut tool body is not created from acis.\n");
+       //delete the swept_bodies
+       BodySM* tmp_body = NULL;
+       for (int i = swept_bodies.size(); i--;)
+         {
+           tmp_body= swept_bodies.get_and_step();
+           if (tmp_body)
+             gme->get_gqe()->delete_solid_model_entities(tmp_body);
+         }
+
+       //delete copied faces
+       GeometryEntity * temp_entity = NULL;
+       for(int i = ref_ent_list.size();i--;)
+         {
+            temp_entity = ref_ent_list.get_and_step();
+            if (temp_entity)
+              gme->get_gqe()->delete_solid_model_entities( (Surface*)temp_entity);
+         }
+       return CUBIT_FAILURE;
+    }
+  
+    cutting_tool_ptr = newBodies.get();
+    return stat;
+}
