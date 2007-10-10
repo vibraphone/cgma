@@ -25,7 +25,7 @@
 #include "CubitDefines.h"
 #include "ShellSM.hpp"
 
-#include <TopoDS_Shell.hxx>
+#include "TopoDS_Shell.hxx"
 
 class OCCBody;
 class OCCLump;

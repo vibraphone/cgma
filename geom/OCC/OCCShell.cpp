@@ -14,7 +14,7 @@
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <stddef.h>
 // ********** END STANDARD INCLUDES        **********
-
+#include "config.h"
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CastTo.hpp"
 #include "CubitUtil.hpp"
@@ -377,7 +377,8 @@ CubitPointContainment OCCShell::point_containment( const CubitVector &input_poin
     return CUBIT_PNT_BOUNDARY;
 
   //find the closest facet on that surface to input_point
-  CubitFacet *closest_facet = closest_surf->get_eval_tool()->closest_facet( closest_location );
+  CubitFacet *closest_facet ; 
+  //= closest_surf->get_eval_tool()->closest_facet( closest_location );
 
   //get the coordinates of the closest point 
   CubitPoint *pt1, *pt2;
@@ -463,7 +464,7 @@ CubitBoolean OCCShell::is_sheet()
   for (i = mySurfs.size(); i--; )
   {
     OCCSurface* surf = dynamic_cast<OCCSurface*>(mySurfs.next(i));
-    surf->tris(facet_list);
+    //surf->tris(facet_list);
   }
     //should be unique... doesn't hurt anything if it isn't
   //facet_list.uniquify_ordered();

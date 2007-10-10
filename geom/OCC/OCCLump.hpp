@@ -20,8 +20,8 @@
 #include "CubitDefines.h"
 #include "Lump.hpp"
 #include "OCCAttribSet.hpp"
-
-#include <TopoDS_Solid.hxx>
+#include <stdio.h>
+#include "TopoDS_Solid.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********

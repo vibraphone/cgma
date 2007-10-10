@@ -32,7 +32,7 @@ using std::type_info;
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
 
-#include <TopTools_DataMapOfShapeInteger.hxx>
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include <map>
 // ********** END CUBIT INCLUDES              **********
 
@@ -188,8 +188,9 @@ public:
                                           int& number_points,
                                           int& number_facets,
                                           GMem* gMem,
-                                          unsigned short normal_tolerance,
-                                          double distance_tolerance) const;
+                                          unsigned short normal_tolerance = 15,
+                                          double distance_tolerance = 0,
+                                          double longest_edge = 0) const;
   virtual CubitStatus get_graphics( Curve* curve_ptr,
                                     int& num_points,
                                     GMem* gMem = NULL,
@@ -497,6 +498,7 @@ CubitStatus create_facet_bounding_box(
 
   static TopologyBridge* occ_to_cgm(TopoDS_Shape shape);
   
+  virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 protected:
   
   OCCQueryEngine();

@@ -13,7 +13,7 @@
 //-------------------------------------------------------------------------
 
 // ********** BEGIN OCC INCLUDES           **********
-
+#include "config.h"
 #include "OCCSurface.hpp"
 #include "RefFace.hpp"
 #include "OCCQueryEngine.hpp"
@@ -34,7 +34,7 @@
 #include "CubitSimpleAttrib.hpp"
 #include "CubitVector.hpp"
 #include "GeometryDefines.h"
-
+#include "CubitEvaluator.hpp"
 #include "CubitUtil.hpp"
 #include "CastTo.hpp"
 #include "RefVolume.hpp"
@@ -1116,14 +1116,14 @@ void OCCSurface::disconnect_all_loops()
   }
   myLoops.clean_out();
 }
-
+/*
 void OCCSurface::add_transformation( CubitTransformMatrix &tfmat )
 {
   assert(0);
     if ( myEvaluator )
         myEvaluator->add_transformation( tfmat );
 }
-
+*/
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

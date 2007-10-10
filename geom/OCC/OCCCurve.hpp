@@ -22,7 +22,7 @@
 #include "CubitDefines.h"
 #include "Curve.hpp"
 #include "OCCAttribSet.hpp"
-#include <TopoDS_Edge.hxx>
+#include "TopoDS_Edge.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********

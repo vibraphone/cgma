@@ -11,8 +11,8 @@
 //
 //-------------------------------------------------------------------------
 
-#ifndef FACET_BODY_HPP
-#define FACET_BODY_HPP
+#ifndef OCC_BODY_HPP
+#define OCC_BODY_HPP
 
 // ********** BEGIN STANDARD INCLUDES      **********
 // ********** END STANDARD INCLUDES        **********
@@ -47,8 +47,8 @@ class OCCBody : public BodySM
 public:
   
   OCCBody(TopoDS_Shape *theShape);
-  OCCBody(DLIList<Lump*> &myLumps);
-    //- Constructor with a pointer to a ACIS BODY.
+  OCCBody(DLIList<Lump*>& my_lumps);
+
   virtual ~OCCBody() ;
     //- The destructor.
 

@@ -137,9 +137,14 @@ public:
   
   virtual BodySM* copy_body ( BodySM* bodyPtr) const ;
   
+  virtual CubitStatus stitch_surfs(
+                      DLIList<BodySM*>& surf_bodies,
+                      BodySM*& stitched_body)const;
+
   virtual CubitStatus subtract(DLIList<BodySM*> &tool_body_list,
     DLIList<BodySM*> &from_bodies,
     DLIList<BodySM*> &new_bodies,
+    bool imprint = false,
     bool keep_old = false) const;
   
   virtual CubitStatus imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
@@ -148,7 +153,9 @@ public:
   
   virtual CubitStatus imprint(DLIList<BodySM*> &from_body_list,
     DLIList<BodySM*> &new_from_body_list,
-    bool keep_old) const;
+    bool keep_old,
+    DLIList<TopologyBridge*> *new_tbs = NULL,
+    DLIList<TopologyBridge*> *att_tbs = NULL) const; 
   
   virtual CubitStatus imprint( DLIList<BodySM*> &body_list,
     DLIList<Curve*> &ref_edge_list,
@@ -169,7 +176,9 @@ public:
   virtual CubitStatus imprint( DLIList<BodySM*> &body_list,
     DLIList<CubitVector*> &vector_list,
     DLIList<BodySM*>& new_body_list,
-    bool keep_old_body ) const;
+    bool keep_old_body,
+    DLIList<TopologyBridge*> *new_tbs = NULL,
+    DLIList<TopologyBridge*> *att_tbs = NULL ) const;
   
   virtual CubitStatus imprint_projected_edges( DLIList<Surface*> &ref_face_list,
     DLIList<Curve*> &ref_edge_list,
@@ -219,7 +228,9 @@ public:
     double draft_angle,
     int draft_type,
     bool switchside,
-    bool rigid) const;
+    bool rigid,
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL) const;
   
   virtual CubitStatus  sweep_perpendicular(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -228,7 +239,9 @@ public:
     double draft_angle,
     int draft_type,
     bool switchside,
-    bool rigid) const;
+    bool rigid,
+    Surface* stop_surf = NULL,
+    BodySM  *stop_body = NULL) const;
   
   virtual CubitStatus  sweep_rotational(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -241,7 +254,9 @@ public:
     int draft_type = 0,
     bool switchside = CUBIT_FALSE,
     bool make_solid = CUBIT_FALSE,
-    bool rigid = CUBIT_FALSE ) const;
+    bool rigid = CUBIT_FALSE,
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL ) const;
   
   virtual CubitStatus sweep_along_curve(
     DLIList<GeometryEntity*>& ref_ent_list,
@@ -249,7 +264,9 @@ public:
     DLIList<Curve*>& ref_edge_list,
     double draft_angle = 0.0,
     int draft_type = 0,
-    bool rigid = CUBIT_FALSE ) const;
+    bool rigid = CUBIT_FALSE,
+    Surface *stop_surf = NULL,
+    BodySM  *stop_body = NULL ) const;
  
 
     virtual CubitStatus webcut_with_sweep_surfaces(
@@ -389,8 +406,8 @@ public:
                              const CubitVector& keep_vector,
                              bool keep_old = false );
   
-  virtual CubitStatus create_body_from_surfs(DLIList<Surface*> &ref_face_list,
-    BodySM *&new_body,
+  virtual CubitStatus create_solid_bodies_from_surfs(DLIList<Surface*> &ref_face_list,
+    DLIList<BodySM*> &new_bodies,
     bool keep_old = false,
     bool heal = false) const;
   
@@ -447,6 +464,20 @@ public:
     BodySM *body_to_trim_to,
     BodySM *&midplane_body ) const;
 
+  virtual CubitStatus get_spheric_mid_surface( Surface *surface_ptr1,
+                                               Surface *surface_ptr2,
+                                               BodySM *body_to_trim_to,
+                                               BodySM *&midsurface_body ) const;
+
+  virtual CubitStatus get_conic_mid_surface( Surface *surface_ptr1,
+                                               Surface *surface_ptr2,
+                                               BodySM *body_to_trim_to,
+                                               BodySM *&midsurface_body ) const;
+
+  virtual CubitStatus get_toric_mid_surface( Surface *surface_ptr1,
+                                               Surface *surface_ptr2,
+                                               BodySM *body_to_trim_to,
+                                               BodySM *&midsurface_body ) const;  
   virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, 
                                      double left_offset,
                                      DLIList<BodySM*> &new_bodysm_list,
@@ -504,21 +535,24 @@ public:
   virtual CubitStatus tweak_move( DLIList<Surface*> &surface_list,
                                   const CubitVector &delta,
                                   DLIList<BodySM*> &new_bodysm_list,
-                                  CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                  CubitBoolean keep_old_body = CUBIT_FALSE,
+                                  CubitBoolean preview = CUBIT_FALSE  ) const;
   /**<  Tweak specified faces of a volume or volumes along a vector.
     */
 
   virtual CubitStatus tweak_move( DLIList<Curve*> &curve_list,
                                   const CubitVector &delta,
                                   DLIList<BodySM*> &new_bodysm_list,
-                                  CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                  CubitBoolean keep_old_body = CUBIT_FALSE,
+                                   CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified curves of a sheet body along a vector.
     */
 
   virtual CubitStatus tweak_offset( DLIList<Surface*> &surface_list,
                                     double offset_distance,
                                     DLIList<BodySM*> &new_bodysm_list,
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified faces of a volume or volumes by offsetting those faces
     *   by the offset distance.
     */
@@ -526,7 +560,8 @@ public:
   virtual CubitStatus tweak_offset( DLIList<Curve*> &curve_list,
                                     double offset_distance,
                                     DLIList<BodySM*> &new_bodysm_list,
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified curves of a sheet body or bodies by offsetting those
     *   curves by the offset distance.
     */
@@ -535,44 +570,53 @@ public:
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean extend_adjoining = CUBIT_TRUE,
                                     CubitBoolean keep_surface = CUBIT_FALSE,
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Remove surfaces from a body or bodies and then extend the adjoining
     *   surfaces to fill the gap or remove the hole.
     */
 
   virtual CubitStatus tweak_remove( DLIList<Curve*> &curve_list,
                                     DLIList<BodySM*> &new_bodysm_list, 
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Remove curves from a sheet body or bodies and then extend the remaining
     *   curves to fill the gap.  If an internal loop of curves is removed the
     *   hole is removed.
     */
 
   virtual CubitStatus tweak_target( DLIList<Surface*> &surface_list,
-                                    Surface *target_surf_ptr,
+                                    DLIList<Surface*> &target_surfs,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean reverse_flg = CUBIT_FALSE,
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified faces of a volume or volumes up to a target surface.
     */
 
   virtual CubitStatus tweak_target( DLIList<Curve*> &curve_list,
-                                    Surface *target_surf_ptr, 
+                                    DLIList<Surface*> &target_surfs, 
                                     DLIList<BodySM*> &new_bodysm_list, 
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean /*reverse_flg*/,
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified edges of a surface or set of surfaces (in sheet
     *   bodies) up to a target surface.  This essentially extends or
     *   trims the attached surfaces of the sheet body.
     */
 
   virtual CubitStatus tweak_target( DLIList<Curve*> &curve_list,
-                                    Curve *target_curve_ptr, 
+                                    DLIList<Curve*> &target_curves, 
                                     DLIList<BodySM*> &new_bodysm_list, 
-                                    CubitBoolean keep_old_body = CUBIT_FALSE ) const;
+                                    CubitBoolean reverse_flg = CUBIT_FALSE,
+                                    CubitBoolean keep_old_body = CUBIT_FALSE,
+                                    CubitBoolean preview = CUBIT_FALSE ) const;
   /**<  Tweak specified edges of a sheet body or bodies up to a target curve 
     *   that is part of a sheet body.  The target is a surface created by
     *   thickening the owning surface of the target curve.
     */
+
+  virtual CubitStatus remove_curve_slivers( BodySM *body, double lengthlimit ) const;
 
   virtual CubitStatus create_net_surface( DLIList<Surface*>& ref_face_list, BodySM *& new_body,
                                           DLIList<DLIList<CubitVector*>*> &vec_lists_u, 
@@ -618,211 +662,15 @@ public:
                                            Surface *ref_face1, double leg1, Surface *ref_face2, double leg2,
                                            BodySM *&new_body ) const;
 
-  //--------------------------------------------------------------
-   //- Methods for building specific facet-based geometry entities
-   //--------------------------------------------------------------
-  CubitStatus make_facet_point( CubitPoint *thePoint,
-                                Point *&new_point_ptr );
-  CubitStatus make_facet_point( CubitVector &location,
-                                Point *&new_point_ptr );
-    //- create a new facet point
-
-  CubitStatus make_facet_curve( Point *start_ptr,
-                                Point *end_ptr,
-                                Curve *&new_curve_ptr,
-                                CurveFacetEvalTool *eval_tool_ptr = NULL);
-  CubitStatus make_facet_curve( Point *start_ptr,
-                                Point *end_ptr,
-                                DLIList<CubitFacetEdge*> &edge_list,
-                                DLIList<CubitPoint*> &point_list,
-                                Curve *&new_curve_ptr,
-                                CurveFacetEvalTool *eval_tool_ptr = NULL);
-   //- create a new facet curve 
-
-  CubitStatus make_facet_coedge( Curve *curv_ptr,
-                                 CubitSense sense,
-                                 CoEdgeSM *&new_coedge_ptr );
-   //- create a new facet coedge
-
-  CubitStatus make_facet_loop( DLIList<CoEdgeSM*> &coedge_list,
-                               LoopSM *&new_loop_ptr );
-   //- create a new facet loop
-
-  CubitStatus make_facet_surface(const CubitEvaluatorData *eval_data,
-                                 DLIList<CubitFacet*> &facet_list,
-                                 DLIList<CubitPoint*> &point_list,
-                                 DLIList<LoopSM*> &my_loops,
-                                 int interp_order,
-                                 double min_dot,
-                                 Surface *&new_surface_ptr,
-                                 CubitBoolean use_point_addresses = CUBIT_TRUE,
-                                 FacetEvalTool *eval_tool_ptr = NULL);
-    //-creates a new OCCSurface given the points and facet list.
-
-  CubitStatus make_facet_surface(DLIList<CubitQuadFacet*> &facet_list,
-                                 DLIList<CubitPoint*> &point_list,
-                                 DLIList<LoopSM*> &my_loops,
-                                 int interp_order,
-                                 double min_dot,
-                                 Surface *&new_surface_ptr);
-    //-creates a new OCCSurface given the points and quad facet list.
-
-  CubitStatus make_facet_shell(DLIList<Surface*> &surface_list,
-                               ShellSM *&new_shell_ptr);
-    //-creates a new shell, given the list of surfaces.
-
-  CubitStatus make_facet_lump(DLIList<ShellSM*> &shell_list,
-                              Lump*& new_lump_ptr);
-    //-creates a new lump, given the list of shells.
-
-  CubitStatus make_facet_body(DLIList<Lump*> &lump_list,
-                              BodySM *&new_body_ptr);
-    //-creates a new body, given the list of lump.
-
-  CubitStatus build_facet_surface( const CubitEvaluatorData **eval_data,
-                                   DLIList<CubitFacet *> &facet_list,
-                                   DLIList<CubitPoint *> &point_list,
-                                   double feature_angle,
-                                   int interp_order,
-                                   CubitBoolean smooth_non_manifold,
-                                   CubitBoolean split_surfaces,
-                                   DLIList<Surface *> &surface_list);
-  CubitStatus build_facet_surface( DLIList<CubitQuadFacet *> &qfacet_list,
-                                   DLIList<CubitFacet *> &tfacet_list,
-                                   DLIList<CubitPoint *> &point_list,
-                                   double feature_angle,
-                                   int interp_order,
-                                   CubitBoolean smooth_non_manifold,
-                                   CubitBoolean split_surfaces,
-                                   DLIList<Surface *> &surface_list);
-  CubitStatus build_facet_surface( DLIList<CubitQuadFacet *> &facet_list,
-                                   DLIList<CubitPoint *> &point_list,
-                                   double feature_angle,
-                                   int interp_order,
-                                   CubitBoolean smooth_non_manifold,
-                                   CubitBoolean split_surfaces,
-                                   DLIList<Surface *> &surface_list);
-    //- creates one or more new OCCSurfaces with all of its lower
-    //- order entities.  Use an optional feature_angle to break
-    //- surface
-
-  CubitStatus smooth_facets( RefFace *ref_face_ptr, int niter, CubitBoolean free_laplacian );
-    //- attempt to clean up facets by smoothing the points on the surface
-  CubitStatus create_shell_offset( BodySM *bodysm_ptr, BodySM *&new_bodysm, double offset );
-    // create a shell offset from body
-  CubitStatus improve_facets( RefFace *ref_face_ptr );
-    // improve the facets by local swaps
-
-  CubitStatus build_cholla_surfaces( DLIList<CubitFacet *> facet_list,
-                                     DLIList<CubitPoint *> point_list,
-                                     double feature_angle,
-                                     int interp_order,
-                                     CubitBoolean smooth_non_manifold,
-                                     CubitBoolean split_surfaces,
-                                     ChollaEngine *&cholla_ptr );
-
-/*  virtual CubitStatus finish_facet_Body(
-    GeometryType surface_type,
-    const CubitEvaluatorData *eval_data,
-    DLIList <CubitFacet *>facet_list,
-    DLIList <CubitPoint *>point_list,
-    double feature_angle,
-    int interp_order,
-    CubitBoolean smooth_non_manifold, 
-    CubitBoolean split_surfaces,
-    BodySM *&body_ptr) const;
-*/
-  virtual CubitStatus finish_facet_Body( ChollaEngine *&cholla_ptr,
-                                         const CubitEvaluatorData **eval_data,
-                                         double feature_angle,
-                                         int interp_order,
-                                         BodySM *&bodysm_ptr) const;
-
-  void set_sphere_eval_data( ChollaEngine *cholla_ptr,
-                             double radius,
-                             CubitEvaluatorData **&eval_data ) const;
-
-  void set_cylinder_eval_data( ChollaEngine *cholla_ptr,
-                               double height,
-                               double base_radius_xdir,
-                               double base_radius_ydir,
-                               double top_radius,
-                               CubitEvaluatorData **&eval_data ) const;
-
-  // non-virtual specific functions for building facet-based geometry
-  // from Cholla geometry
-
-  CubitStatus build_cholla_geometry(
-    const CubitEvaluatorData **eval_data,
-    DLIList<ChollaSurface*> &cholla_surface_list,
-    DLIList<ChollaCurve*> &cholla_curve_list,
-    DLIList<ChollaPoint*> &cholla_point_list,
-    CubitBoolean use_feature_angle, 
-    double feature_angle, 
-    int interp_order,
-    DLIList<Surface *> &surface_list);
-    // build the CUBIT geometry based on the Cholla entity class lists
-
-  CubitStatus build_cholla_point_geometry(
-    DLIList<ChollaPoint*> &cholla_point_list );
-    // From the cholla point list, create geometric points for each
-
-  CubitStatus build_cholla_curve_geometry(
-    DLIList<ChollaCurve*> &cholla_curve_list );
-    // From the cholla curve list, create geometric curves for each
-
-  CubitStatus build_cholla_surface_geometry(
-    const CubitEvaluatorData **eval_data,
-    DLIList<ChollaSurface*> &cholla_surface_list,
-    int interp_order,
-    double min_dot,
-    DLIList<Surface *> &surface_list);
-    // From the facet surface list, create geometric surface,
-    // loops and coedges for each surface in the list  
-
     CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
-                                  DLIList<BodySM*> &new_bodies ) const; 
+                                  DLIList<BodySM*> &new_bodies,
+                                  DLIList<TopologyBridge*>*,
+                                  DLIList<TopologyBridge*>* ) const; 
   
 protected:
      
 private:
   
-  CubitStatus build_cholla_loop_geometry(
-    DLIList<ChollaCurve*> &cholla_curve_list,
-    ChollaSurface *chsurf_ptr,
-    DLIList<LoopSM*> &loop_list,
-    int &ncurves,
-    int debug_draw = 0 );
-    // From the cholla curve list of a surface, create geometric loops 
- 
-  void fillinedge( 
-    int *edge, 
-    int numpointsonanedge, 
-    double radius, 
-#ifdef CANT_USE_STD
-    vector<CubitPoint *>& points) const;
-#else
-    std::vector<CubitPoint *>& points) const;
-#endif
-    //!  Put points on this edge of a triangle being refined.
-    
-  void refinetriangle(
-    int level, 
-    int numpointsonanedge, 
-    int *iedge1, 
-    int *iedge2, 
-    int *iedge3,
-    int isign1, 
-    int isign2, 
-    int isign3, 
-    double radius, 
-#ifdef CANT_USE_STD
-    vector<CubitPoint *>& points,
-#else
-    std::vector<CubitPoint *>& points,
-#endif
-    DLIList<CubitFacet *>& facet_list) const;    
-    //! add internal points and make connections for this triangle
 } ;
 
 #endif

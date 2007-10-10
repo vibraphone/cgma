@@ -12,8 +12,7 @@
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <assert.h>
 // ********** END STANDARD INCLUDES        **********
-
-
+#include "config.h"
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "OCCQueryEngine.hpp"
 #include "OCCLump.hpp"
@@ -214,7 +213,7 @@ double OCCLump::measure()
         PRINT_ERROR("Facet lump has surfaces that aren't facets?");
         return 1;
       }
-      facet_surface->get_my_facets(bounding_facets, bounding_points);
+      //facet_surface->get_my_facets(bounding_facets, bounding_points);
     }
   }
   double volume, curr_facet_area, summation = 0.0;
@@ -398,7 +397,7 @@ CubitStatus OCCLump::mass_properties( CubitVector& centroid, double& volume )
     {
       surf_facets.clean_out();
       junk.clean_out();
-      surf->get_my_facets( surf_facets, junk );
+      //surf->get_my_facets( surf_facets, junk );
       facets += surf_facets;
       
       for (int j = surf_facets.size(); j--; )

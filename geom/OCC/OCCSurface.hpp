@@ -22,7 +22,7 @@
 // ********** BEGIN OCC INCLUDES          **********
 
 #include "OCCAttribSet.hpp"
-#include <TopoDS_Face.hxx>
+#include "TopoDS_Face.hxx"
 
 // ********** END OCC INCLUDES          **********
 
@@ -52,7 +52,7 @@ class OCCPoint;
 //// class CubitFacet;
 //// class CubitPoint;
 //// class CubitTransformMatrix;
-//// class CubitEvaluator;
+class CubitEvaluator;
 //// class CubitEvaluatorData;
 //// class SphereEvaluatorData;
 //// class CylinderEvaluatorData;

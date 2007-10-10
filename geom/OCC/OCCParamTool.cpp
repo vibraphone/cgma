@@ -6,6 +6,7 @@
 //
 //===================================================================================
 
+#include "config.h"
 
 #include "OCCParamTool.hpp"
 #include "CastTo.hpp"
@@ -203,7 +204,7 @@ CubitStatus OCCParamTool::transform_to_uv(CubitVector &xyz_location, CubitVector
 	double compare_tol;
 
 	// find best compare_tol
-	fetool = CAST_TO(refSurf, OCCSurface)->get_eval_tool();
+	//fetool = CAST_TO(refSurf, OCCSurface)->get_eval_tool();
 	compare_tol = 1e-3*(fetool->bounding_box().diagonal().length());
 
 	// locate point
@@ -333,8 +334,8 @@ locate_point_in_uv(OCCSurface *surf, CubitVector &the_point, CubitFacet *&tri_pt
 	CubitStatus rv = CUBIT_SUCCESS;
 
 	DLIList<CubitFacet *> facet_list;
-	int tool_id = surf->get_eval_tool()->tool_id();
-	surf->get_eval_tool()->get_facets(facet_list);
+	int tool_id /*= surf->get_eval_tool()->tool_id()*/;
+	//surf->get_eval_tool()->get_facets(facet_list);
 	tri_ptr = facet_list.get();
 
 	// loop until we find something
@@ -397,7 +398,7 @@ exhaustive_locate_point_in_uv(OCCSurface *surf, CubitVector &the_point, CubitFac
 	CubitStatus rv = CUBIT_SUCCESS;
 
 	DLIList<CubitFacet *> facet_list;
-	surf->get_eval_tool()->get_facets(facet_list);
+	//surf->get_eval_tool()->get_facets(facet_list);
 
 	// loop until we find something
 
