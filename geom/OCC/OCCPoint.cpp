@@ -21,7 +21,8 @@
 #include "OCCPoint.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CastTo.hpp"
-
+#include "OCCAttribSet.hpp"
+#include "CubitSimpleAttrib.hpp"
 #include "BRep_Tool.hxx"
 
 // ********** END CUBIT INCLUDES           **********
@@ -40,9 +41,10 @@
 //
 // Creation Date : 10/08/07
 //-------------------------------------------------------------------------
-OCCPoint::OCCPoint( CubitVector &location )
+OCCPoint::OCCPoint( const CubitVector &location )
 {
-  myPoint = gp_Pnt( location.x(), location.y(), location.z());
+  gp_Pnt pt = gp_Pnt( location.x(), location.y(), location.z());
+  myPoint = BRepBuilderAPI_MakeVertex(pt);
 }
 
 //-------------------------------------------------------------------------
@@ -71,7 +73,7 @@ OCCPoint::~OCCPoint()
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
 void OCCPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { /*attribSet.append_attribute(csa); */}
+  { attribSet.append_attribute(csa); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 
@@ -85,7 +87,7 @@ void OCCPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
 void OCCPoint::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { /*attribSet.remove_attribute(csa);*/ }
+  { attribSet.remove_attribute(csa); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove all simple 
@@ -100,7 +102,7 @@ void OCCPoint::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
 void OCCPoint::remove_all_simple_attribute_virt()
-  { /*attribSet.remove_all_attributes();*/ }
+  { attribSet.remove_all_attributes(); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to get the  
@@ -115,35 +117,31 @@ void OCCPoint::remove_all_simple_attribute_virt()
 //-------------------------------------------------------------------------
 CubitStatus OCCPoint::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                csa_list)
-  { /*return attribSet.get_attributes(csa_list);*/
-    return CUBIT_SUCCESS; 
+  { return attribSet.get_attributes(csa_list);
   }
 
 CubitStatus OCCPoint::get_simple_attribute(const CubitString& name,
                                      DLIList<CubitSimpleAttrib*>& csa_list )
-  { /*return attribSet.get_attributes( name, csa_list );*/
-     return CUBIT_SUCCESS; 
+  { return attribSet.get_attributes( name, csa_list );
   }
 
 CubitStatus OCCPoint::save_attribs( FILE *file_ptr )
-  { //return attribSet.save_attributes(file_ptr); 
-    return CUBIT_SUCCESS;
+  { return attribSet.save_attributes(file_ptr); 
   }
 
 CubitStatus OCCPoint::restore_attribs( FILE *file_ptr, unsigned int endian )
-  { //return attribSet.restore_attributes(file_ptr, endian); 
-    return CUBIT_SUCCESS; 
+  { return attribSet.restore_attributes(file_ptr, endian); 
   }
 
 
-gp_Pnt OCCPoint::get_gp()const
+TopoDS_Vertex OCCPoint::get_pnt()const
 {
   return myPoint;
 }
 
-void OCCPoint::set_gp(const gp_Pnt gp_point)
+void OCCPoint::set_pnt( TopoDS_Vertex &v_point)
 {
-  myPoint = gp_point;
+  myPoint = v_point;
 }
 //-------------------------------------------------------------------------
 // Purpose       : Returns the coordinates of this Point. 
@@ -156,33 +154,27 @@ void OCCPoint::set_gp(const gp_Pnt gp_point)
 //-------------------------------------------------------------------------
 CubitVector OCCPoint::coordinates() const
 {
-  CubitVector p(myPoint.X(), myPoint.Y(), myPoint.Z());
+  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
+  CubitVector p(pt.X(), pt.Y(), pt.Z());
   return p;
-}
-
-void OCCPoint::set_coord(CubitVector &location )
-{
-  myPoint.SetCoord(location.x(), location.y(), location.z());
-}
-
-void OCCPoint::set_coord(double x, double y, double z)
-{
-  myPoint.SetCoord(x, y, z);
 }
 
 CubitBoolean OCCPoint::is_equal(const OCCPoint & other, double Tol)
 {
-  return myPoint.IsEqual(other.get_gp(), Tol);
-}
-
+  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
+  return pt.IsEqual(BRep_Tool::Pnt(other.get_pnt()), Tol);
+}   
+  
 double OCCPoint::distance(const OCCPoint & other)
 {
-  return myPoint.Distance(other.get_gp());
+  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
+  return pt.Distance(BRep_Tool::Pnt(other.get_pnt()));
 }
 
 double OCCPoint::SquareDistance (const OCCPoint & other)
 {
-  return myPoint.SquareDistance(other.get_gp());
+  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
+  return pt.SquareDistance(BRep_Tool::Pnt(other.get_pnt()));
 }
 //-------------------------------------------------------------------------
 // Purpose       : Get geometry modeling engine: AcisGeometryEngine

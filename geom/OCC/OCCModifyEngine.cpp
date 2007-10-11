@@ -99,11 +99,8 @@ OCCModifyEngine::~OCCModifyEngine()
 //===============================================================================
 Point* OCCModifyEngine::make_Point( CubitVector const& point) const
 {
-  gp_Pnt pt(point.x(), point.y(), point.z());
-
-  OCCPoint *occ_pt = new OCCPoint(pt);
+  OCCPoint *occ_pt = new OCCPoint(point);
   return  CAST_TO(occ_pt, Point);
-
 }
 
 //===============================================================================

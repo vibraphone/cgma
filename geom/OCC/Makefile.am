@@ -27,6 +27,7 @@ libcubit_OCC_la_includedir = $(includedir)
 
 # The non-template sources
 libcubit_OCC_la_SOURCES = \
+    OCCAttrib.cpp \
     OCCAttribSet.cpp \
     OCCBody.cpp \
     OCCCoEdge.cpp \

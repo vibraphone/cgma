@@ -28,11 +28,11 @@ using std::type_info;
 // ********** END STANDARD INCLUDES           **********
 
 // ********** BEGIN CUBIT INCLUDES            **********
-
+#include "config.h"
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
 
-#include "TopTools_DataMapOfShapeInteger.hxx"
+#include <TopTools_DataMapOfShapeInteger.hxx>
 #include <map>
 // ********** END CUBIT INCLUDES              **********
 
