@@ -43,6 +43,11 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "BRepBuilderAPI_Transform.hxx"
+#include "gp_Ax1.hxx"
+#include "Bnd_Box.hxx"
+#include "BRepBndLib.hxx"
+
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
@@ -52,11 +57,9 @@
 OCCBody::OCCBody(TopoDS_Shape *theShape)
 {
   myTopoDSShape = theShape;
+  update_bounding_box();
 }
-OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
-{
-  myLumps += my_lumps;
-}
+
 OCCBody::~OCCBody() 
 {
     //Not sure what to do..
@@ -110,7 +113,7 @@ CubitBoolean OCCBody::can_be_deleted( DLIList <Body*> &body_list )
 { 
   CubitBoolean delete_ok = CUBIT_TRUE; 
   DLIList<OCCSurface *>surf_list; 
-  get_surfaces(surf_list); 
+  //get_surfaces(surf_list); 
   int ii; 
   for (ii=0; ii<surf_list.size() && delete_ok; ii++) 
   { 
@@ -230,7 +233,7 @@ CubitStatus OCCBody::scale(double scale_factor_x,
   // scale the facetcurve
 
   DLIList<OCCCurve *> curve_list;
-  get_curves(curve_list); 
+  //get_curves(curve_list); 
   Curve *curv_ptr;
   for (int ii=0; ii<curve_list.size(); ii++)
   {
@@ -279,18 +282,49 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
                                 double reflect_axis_y,
                                 double reflect_axis_z )
 {
-  CubitTransformMatrix reflectmat;
-  CubitVector reflect_vector( reflect_axis_x, 
-                              reflect_axis_y, 
-                              reflect_axis_z );
-  reflectmat.reflect( reflect_vector );
+  gp_Pnt aOrigin(0,0,0);
+  gp_Dir aDir(reflect_axis_x, reflect_axis_y,reflect_axis_z); 
+  gp_Ax1 anAxis(aOrigin, aDir);
 
-  CubitStatus stat = transform( reflectmat, CUBIT_TRUE );
+  gp_Trsf aTrsf;
+  aTrsf.SetMirror(anAxis);
 
-  if (stat == CUBIT_SUCCESS)
-    myTransforms.reflect( reflect_vector );
+  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
+  update_bounding_box();
+  return CUBIT_SUCCESS;
+}
 
-  return stat;
+//----------------------------------------------------------------
+// Function: update_bounding_box
+// Description: calculate for bounding box of this OCCBody
+//
+// Author: janehu
+//----------------------------------------------------------------
+void OCCBody::update_bounding_box() 
+{
+  Bnd_Box box;
+  const TopoDS_Shape shape=*myTopoDSShape;
+  //calculate the bounding box
+  BRepBndLib::Add(shape, box);
+  double min[3], max[3];
+  
+  //get values
+  box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+
+  //update boundingbox.
+  CubitBox cBox(min, max);
+  boundingbox = cBox;
+}
+
+//----------------------------------------------------------------
+// Function: get_bounding_box
+// Description: get the  bounding box of this OCCBody
+//
+// Author: janehu
+//----------------------------------------------------------------
+CubitBox OCCBody::get_bounding_box()
+{
+  return boundingbox ;
 }
 
 //----------------------------------------------------------------
@@ -338,111 +372,6 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
 	  lumps.append_unique(lump);
   }
 }
-
-void OCCBody::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
-  int ii;
-  for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *lump = OCCQueryEngine::occ_to_cgm(M(ii));
-	  result_list.append_unique(dynamic_cast<OCCLump*>(lump));
-  }
-}
-
-void OCCBody::get_shells( DLIList<OCCShell*>& result_list )
-{
-  DLIList<OCCLump*> lump_list;
-  get_lumps( lump_list );
-  lump_list.reset();
-  for ( int i = 0; i < lump_list.size(); i++ )
-    lump_list.next(i)->get_shells( result_list );
-}
-
-void OCCBody::get_surfaces( DLIList<OCCSurface*>& result_list )
-{
-  DLIList<OCCShell*> shell_list;
-  DLIList<OCCSurface*> tmp_list;
-  get_shells(shell_list);
-  shell_list.reset();
-  for ( int i = 0; i < shell_list.size(); i++ )
-  {
-    tmp_list.clean_out();
-    shell_list.next(i)->get_surfaces( tmp_list );
-    result_list.merge_unique( tmp_list );
-  }
-}
-
-void OCCBody::get_loops( DLIList<OCCLoop*>& result_list )
-{
-  DLIList<OCCSurface*> surface_list;
-  get_surfaces( surface_list );
-  surface_list.reset();
-  for ( int i = 0; i < surface_list.size(); i++ )
-    surface_list.next(i)->get_loops( result_list );
-}
-
-void OCCBody::get_coedges( DLIList<OCCCoEdge*>& result_list )
-{
-  DLIList<OCCSurface*> surface_list;
-  get_surfaces( surface_list );
-  surface_list.reset();
-  for ( int i = 0; i < surface_list.size(); i++ )
-    surface_list.next(i)->get_coedges( result_list );
-}
-
-void OCCBody::get_curves( DLIList<OCCCurve*>& result_list )
-{
-  DLIList<OCCCoEdge*> coedge_list;
-  get_coedges( coedge_list );
-  coedge_list.reset();
-  for ( int i = coedge_list.size(); i--; )
-  {
-    OCCCoEdge* coedge = coedge_list.get_and_step();
-    OCCCurve* curve = dynamic_cast<OCCCurve*>(coedge->curve());
-    if (curve)
-      result_list.append_unique(curve);
-  }
-}
-
-void OCCBody::get_points( DLIList<OCCPoint*>& result_list )
-{
-  DLIList<OCCCurve*> curve_list;
-  get_curves( curve_list );
-  curve_list.reset();
-  for ( int i = curve_list.size(); i--; )
-  {
-    OCCCurve* curve = curve_list.get_and_step();
-    OCCPoint* point = dynamic_cast<OCCPoint*>(curve->start_point());
-    if (point)
-      result_list.append_unique(point);
-    point = dynamic_cast<OCCPoint*>(curve->end_point());
-    if (point)
-      result_list.append_unique(point);
-  }
-}
-
-void OCCBody::add_lump( OCCLump *lump_to_add )
-{
-  Lump* lump = dynamic_cast<Lump*>(lump_to_add);
-  if (lump)
-  {
-    lump_to_add->add_body(this);
-    myLumps.append( lump );
-  }
-}
-
-void OCCBody::remove_lump( OCCLump *lump_to_remove )
-{
-  OCCLump* lump = dynamic_cast<OCCLump*>(lump_to_remove);
-  if (lump)
-  {
-    assert(lump_to_remove->get_body() == this);
-    lump_to_remove->remove_body();
-    myLumps.remove( lump );
-  }
-}
-
 
 //-------------------------------------------------------------------------
 // Purpose       : Tear down topology

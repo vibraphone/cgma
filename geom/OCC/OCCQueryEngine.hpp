@@ -15,8 +15,8 @@
 //
 //-------------------------------------------------------------------------
 
-#ifndef FACET_GEOMETRY_ENGINE_HPP
-#define FACET_GEOMETRY_ENGINE_HPP
+#ifndef OCC_GEOMETRY_ENGINE_HPP
+#define OCC_GEOMETRY_ENGINE_HPP
 
 // ********** BEGIN STANDARD INCLUDES         **********
 
@@ -80,32 +80,12 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 
-class RefEntity;
-class RefVertex;
-class RefEdge;
-class RefFace;
-class Loop;
-class CubitFacet;
-class CubitQuadFacet;
-class CubitFacetEdge;
-class CubitPoint;
-class FacetEntity;
-class CurveFacetEvalTool;
-class FacetEvalTool;
-
 // ********** END FORWARD DECLARATIONS        **********
 
 // ********** BEGIN MACRO DEFINITIONS         **********
 // ********** END MACRO DEFINITIONS           **********
 
 // ********** BEGIN ENUM DEFINITIONS          **********
-typedef enum {
-  CUBIT_FACET_FILE,
-  AVS_FILE,
-  CHOLLA_FILE,
-  FROM_FACET_LIST, 
-  STL_FILE
-} FacetFileFormat;
 
 // ********** END ENUM DEFINITIONS            **********
 
@@ -150,39 +130,6 @@ public:
 
   CubitBoolean can_delete_bodies(DLIList<Body*>body_list);
   
-  virtual Point* make_Point( GeometryType point_type,
-                             CubitVector const& point) const ;
-  virtual Curve* make_Curve(Curve *) const;
-  virtual Curve* make_Curve( Point const* ,
-                             Point const* ,
-                             RefFace* ,
-                             CubitVector * ) const;
-  virtual Curve* make_Curve( GeometryType ,
-                             Point const* ,
-                             Point const* ,
-                             DLIList<CubitVector*>& ,
-                             RefFace*  ) const;
-  virtual Curve* make_Curve( GeometryType ,
-                             Point const* ,
-                             Point const* ,
-                             CubitVector const* ,
-                             CubitSense ) const;
-  virtual Surface* make_Surface( Surface *,
-                                 DLIList<Loop*> &,
-                                 CubitBoolean  ) const;
-
-
-  virtual Surface* make_Surface( GeometryType , 
-                                 DLIList<Curve*>& ,
-                                 DLIList<Loop*> &,
-                                 Surface *) const ;
-  virtual Lump* make_Lump( GeometryType , 
-                           DLIList<Surface*>&  ) const ;
-  virtual BodySM* make_BodySM( Surface * ) const;
-    virtual BodySM* make_BodySM( DLIList<Lump*>&  ) const ;
-
-  Body* copy_body( Body *body_ptr );
-
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                           int& number_triangles,
                                           int& number_points,
@@ -239,10 +186,6 @@ public:
                                          DLIList<CubitVector*>& ,
                                          CubitBoolean,
                                          CubitBoolean );
-  virtual CubitStatus get_intersections( Curve* ref_edge1, Curve* ref_edge2,
-                                         DLIList<CubitVector*>& intersection_list,
-                                         double offset, 
-                                         CubitBoolean ext_first = CUBIT_TRUE );
   virtual CubitStatus get_intersections( Curve* ref_edge, Surface* ref_face,
                                         DLIList<CubitVector*>& intersection_list,
                                         CubitBoolean bounded = CUBIT_FALSE );
@@ -332,134 +275,8 @@ public:
   virtual CubitStatus set_str_option( const char* opt_name, const char* val );
     //- Set solid modeler options
 
-  static CubitStatus make_facets( int *conn, int nfacets,
-                                  DLIList<CubitQuadFacet *> &facet_list );
-  static CubitStatus make_facets( int *conn, int nfacets,
-                                  DLIList<CubitFacet *> &facet_list );
-    //- create facets from a list of points and connectivity
-
-#ifdef BOYD14
-  static CubitStatus check_facets( DLIList<CubitPoint*>&point_list, DLIList<CubitFacet*> &facet_list );
-    //- check integrity of facets
-#endif
-
   CubitStatus ensure_is_ascii_stl_file(FILE * fp, CubitBoolean &is_ascii);
   //- returns true in is_ascii if fp points to an ascii stl file
-
-  CubitStatus read_facets_stl_tolerance(   
-                                              DLIList<CubitFacet *> &tfacet_list,
-                                              DLIList<CubitPoint *> &point_list,
-                                              const char * file_name,
-                                              int &npoints, 
-                                              int &ntri,
-                                              long& seek_address,
-                                              double tolerance);
-  //- read facets from an stl file and combine vertices within tolerance distance
-
-    CubitStatus read_facets_stl(   
-                                              DLIList<CubitFacet *> &tfacet_list,
-                                              DLIList<CubitPoint *> &point_list,
-                                              const char * file_name,
-                                              int &npoints, 
-                                              int &ntri,
-                                              long& seek_address);
-  //- read facets from an stl file
-  
-  CubitStatus import_facets( const char *file_name, 
-                             CubitBoolean use_feature_angle, 
-                             double feature_angle,
-                             double tolerance,
-                             int interp_order,
-                             CubitBoolean smooth_non_manifold,
-                             CubitBoolean split_surfaces,
-                             CubitBoolean stitch,
-                             CubitBoolean improve,
-                             DLIList <CubitQuadFacet *>&quad_facet_list,
-                             DLIList <CubitFacet *> &tri_facet_list,
-                             DLIList<Surface *> &surface_list,
-                             FacetFileFormat file_format = CUBIT_FACET_FILE );
-    //- import facets from a file and create a geometry model
-
-  static CubitStatus read_facets( const char * file_name,
-                                  int *&conn,
-                                  int &npoints, 
-                                  int &nquad, int &ntri, 
-                                  FacetFileFormat file_format = CUBIT_FACET_FILE );
-#ifdef BOYD14
-  static CubitStatus read_vtk_facets( const char * file_name,
-                                  double *&points,
-                                  int *&conn,
-                                  int &npoints, 
-                                  int &tri );
-  static CubitStatus read_obj_facets( const char * file_name,
-                                  double *&points,
-                                  int *&conn,
-                                  int &npoints, 
-                                  int &tri );
-#endif
-  static CubitStatus read_cholla_file( const char *file_name, 
-                                       double &feature_angle,
-                                       DLIList<CubitPoint *> &point_list, 
-                                       DLIList<CubitFacet *> &facet_list);
-    //- read points and facets from a file
-
-  CubitBoolean is_close(CubitVector &this_point,
-                        DLIList<CubitFacet *>&facet_list,
-                        CubitFacet *&lastFacet,
-                        double tol);
-    //- determine if one of the facets in the list is within a
-    //- certain distance of the point.
-
-#ifdef BOYD14
-  CubitStatus make_sph( DLIList <CubitPoint *>&point_list,
-                        DLIList <CubitFacet *>&facet_list,
-                        double size, char *filename);
-#endif
-  static CubitStatus export_facets(DLIList<CubitFacet*> &facet_list,
-                                  char *filename);
-    //-  export a list of facets to a facet file for debugging purposes
-
-  CubitStatus gather_all_facet_entities( DLIList<OCCBody*> &facet_bodies,
-                                         DLIList<OCCLump*> &facet_lumps,
-                                         DLIList<OCCShell*> &facet_shells,
-                                         DLIList<OCCSurface*> &facet_surfaces,
-                                         DLIList<OCCLoop*> &facet_loops,
-                                         DLIList<OCCCoEdge*> &facet_coedges,
-                                         DLIList<OCCCurve*> &facet_curves,
-                                         DLIList<OCCPoint*> &facet_points );
-
-  CubitStatus save_facets( FILE *fp, DLIList<OCCSurface*> facet_surfaces,
-                                     DLIList<OCCCurve*>   facet_curves, 
-                                     DLIList<OCCPoint*>   facet_points ); 
-
-  CubitStatus save_eval_tools( FILE *fp, DLIList<OCCSurface*> facet_surfaces,
-                                         DLIList<OCCCurve*> facet_curves );
-
-  CubitStatus dump_facets( FILE *fp,
-                           DLIList<CubitFacet *> &facet_list,
-                           DLIList<CubitFacetEdge *> &edge_list, 
-                           DLIList<CubitPoint *> &point_list );
-  CubitStatus gather_facets( DLIList<OCCSurface *> facet_surfaces,
-                             DLIList<OCCCurve *> facet_curves,
-                             DLIList<OCCPoint *> facet_points,
-                             DLIList<CubitFacet *> &facet_list,
-                             DLIList<CubitFacetEdge *> &edge_list, 
-                             DLIList<CubitPoint *> &point_list );
-    //- functions for saving the facet geometry representation to a cubit file
-  
-  CubitStatus restore_eval_tools( FILE *fp,
-                                  unsigned int endian, 
-                                  int num_facets,
-                                  int num_edges,
-                                  int num_points,
-                                  CubitFacet **facets,     
-                                  CubitFacetEdge **edges,     
-                                  CubitPoint **points,
-                                  int &num_cfet,
-                                  int &num_fet,
-                                  CurveFacetEvalTool **&cfeval_tools,
-                                  FacetEvalTool **&feval_tools );
-    //- restore facets from CUB file
 
 CubitStatus create_super_facet_bounding_box(
                                 DLIList<BodySM*>& body_list,
@@ -515,32 +332,7 @@ private:
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 
-  CubitStatus restore_topology( FILE *file_ptr, 
-                                unsigned int endian, 
-                                int num_points,
-                                CubitPoint **points_array,
-                                int num_cfet,
-                                CurveFacetEvalTool **cfev_array,
-                                int num_fet,
-                                FacetEvalTool **fev_array,
-                                DLIList<TopologyBridge*> &imported_entities );
 
-  CubitStatus restore_facets( FILE *file_ptr,
-                              unsigned int endian, 
-                              int &num_facets,
-                              int &num_edges,
-                              int &num_points,
-                              CubitPoint**&points_array,
-                              int &num_cfet,
-                              int &num_fet,
-                              CurveFacetEvalTool **&cfet_array,
-                              FacetEvalTool **&fet_array);
-
-  CubitStatus read_facets( FILE *fp, 
-                           unsigned int endian, 
-                           int &num_facets, int &num_edges, int &num_points, 
-                           CubitFacet **&facets, CubitFacetEdge **&edges,     
-                           CubitPoint **&points );
 
   CubitStatus populate_topology_bridge_solid(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
   CubitStatus populate_topology_bridge_shell(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
@@ -554,16 +346,6 @@ private:
   static DLIList<TopologyBridge*>* CGMList;
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class
-
-  static CubitStatus init_hash_points( int num_points );
-  static CubitStatus add_hash_point( CubitPoint *point_ptr );
-  static CubitPoint *get_hash_point( int id );
-  static void delete_hash_points( );
-  static int get_hash_key( int id );
-  static CubitStatus get_all_hash_points(DLIList<CubitPoint *> &point_list);
-  static int hashPointSize;
-  static DLIList<CubitPoint *> *hashPointArray;
-    //- hash table functions used for reading the facet file
 
   static const int OCCQE_MAJOR_VERSION;
   static const int OCCQE_MINOR_VERSION;

@@ -75,7 +75,7 @@ public:
   
   virtual Curve* make_Curve( Point const* point1_ptr,
     Point const* point2_ptr,
-    Surface* ref_face_ptr,
+    Surface* ref_face_ptr = NULL,
     const CubitVector *third_point = NULL) const;
   //- Create a curve exactly on the give ref_face.
   //- Make sure the points are on the underlying surface.

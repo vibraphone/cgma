@@ -51,18 +51,6 @@ class OCCCurve : public Curve
 public :
   
   OCCCurve( TopoDS_Edge *theEdge );
-  OCCCurve( CurveFacetEvalTool *curve_facet_tool,
-              Point *fp0, Point *fp1,
-              DLIList<CoEdgeSM*> &coedgelist );
-    //I- curve_facet_eval_tool_ptr pointer
-    //I- A pointer to the set of facet edges that define this curve.
-  
-  OCCCurve( CurveFacetEvalTool *curve_facet_tool,
-              Point *fp0, Point *fp1,
-              CubitSense sense );
-    //I- curve_facet_eval_tool_ptr pointer
-    //I- start and end points 
-    //I- Sense of curve 
   
   virtual ~OCCCurve() ;
     //- The destructor
@@ -343,14 +331,6 @@ public :
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  void add_loop( LoopSM *loop_ptr )
-    { myLoops.append_unique( loop_ptr ); }
-    //- associate this curve with a coedge
-
-  void add_coedge( CoEdgeSM *coedge_ptr )
-    { myCoEdges.append_unique( coedge_ptr ); }
-    //- associate this curve with a coedge
-
   void get_facets(DLIList<CubitFacetEdge*>& facet_list);
     //- Gets the list of facets describing this curve.
   void get_points(DLIList<CubitPoint*>& point_list);
@@ -359,13 +339,8 @@ public :
   void reset_length();
     //- update the length of the facet curve
 
-  CurveFacetEvalTool *get_eval_tool()
-    { return curveFacetEvalTool; }
-    //- return the curve evaluation tool
-
-  void set_eval_tool( CurveFacetEvalTool *eval_tool)
-    { curveFacetEvalTool = eval_tool; } 
-    //- set the curve evaluation tool
+  TopoDS_Edge get_TopoDS_Edge( )
+    { return *myTopoDSEdge; } 
 
   Point *start_point()
     { assert(0);return myStartPoint; }
@@ -378,7 +353,6 @@ public :
   void remove_start_point() { myStartPoint = 0; }
   void remove_end_point() { myEndPoint = 0; }
   
-  bool has_parent_coedge() { return myCoEdges.size() > 0; }
 
 protected: 
   
@@ -406,12 +380,9 @@ private:
   
   friend void run_test_function();
 
-  CurveFacetEvalTool *curveFacetEvalTool;
   TopoDS_Edge *myTopoDSEdge;
-  DLIList<LoopSM*> myLoops;
   Point *myStartPoint;
   Point *myEndPoint;
-  DLIList<CoEdgeSM*> myCoEdges;
   int myId;
   bool periodic;
 };

@@ -22,6 +22,7 @@
 #include "BodySM.hpp"
 #include "CubitTransformMatrix.hpp"
 #include "OCCAttribSet.hpp"
+#include "CubitBox.hpp"
 
 #include <TopoDS_CompSolid.hxx>
 // ********** END CUBIT INCLUDES           **********
@@ -107,6 +108,12 @@ public:
     //- Copies this OCCBody object (including the ACIS BODY that it
     //- contains) and returns a pointer to a new OCCBody object.
   
+  void update_bounding_box();
+    // calculate bounding box.
+
+  CubitBox get_bounding_box();
+    // return bounding box.
+
   virtual CubitStatus move(double , double , double );
     //R CubitStatus
     //R- CUBIT_SUCCESS/FAILURE
@@ -172,23 +179,10 @@ public:
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-#endif
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
   
   void disconnect_all_lumps();
-  void add_lump( OCCLump *lump_to_add );
-  void remove_lump( OCCLump *lump_to_remove );
 
   virtual CubitStatus mass_properties( CubitVector& result, double& volume );
   
@@ -211,7 +205,7 @@ private:
   TopoDS_Shape *myTopoDSShape;
 };
 
-
+  CubitBox boundingbox;
 
 #endif
 

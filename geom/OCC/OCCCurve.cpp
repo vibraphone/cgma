@@ -24,8 +24,6 @@
 #include "GeometryDefines.h"
 #include "OCCCurve.hpp"
 #include "OCCAttrib.hpp"
-#include "FacetEvalTool.hpp"
-#include "CurveFacetEvalTool.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CoEdgeSM.hpp"
@@ -50,6 +48,12 @@
 #include <BRepLProp_CLProps.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
+#include "GeomLProp_CurveTool.hxx"
+//#include "TopOpeBRep_ShapeIntersector.hxx"
+//#include "TopOpeBRep_Point2d.hxx"
+//#include "TopOpeBRep_EdgesIntersector.hxx"
+//#include "TopOpeBRepTool_ShapeTool.hxx"
+//#include "BRepPrimAPI_MakePrism.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -73,45 +77,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 {
   myTopoDSEdge = theEdge;
 }
-OCCCurve::OCCCurve(CurveFacetEvalTool *curve_facet_tool,
-                       Point *start_ptr, Point *end_ptr,
-                       DLIList<CoEdgeSM*> &coedge_list )
-                       : sense_(CUBIT_FORWARD)
-{
-  assert(0);
-  static int counter = 0;
-  myId = counter++;
-    // Calculate a bounding box if there isn't one already
-  curveFacetEvalTool = curve_facet_tool; 
-  myStartPoint = start_ptr;
-  myEndPoint = end_ptr;
-  myCoEdges += coedge_list;
-  periodic = start_ptr == end_ptr;
-}
 
-//-------------------------------------------------------------------------
-// Purpose       : Another constructor
-//
-// Special Notes : Implemented for save/restore
-//
-// Creator:      : Corey Ernst 
-//
-// Creation Date : 02/03/03
-//-------------------------------------------------------------------------
-OCCCurve::OCCCurve(CurveFacetEvalTool *curve_facet_tool,
-                       Point *start_ptr, Point *end_ptr,
-                       CubitSense sense )
-{
-  assert(0);
-  static int counter = 0;
-  myId = counter++;
-    // Calculate a bounding box if there isn't one already
-  curveFacetEvalTool = curve_facet_tool; 
-  myStartPoint = start_ptr;
-  myEndPoint = end_ptr;
-  periodic = start_ptr == end_ptr;
-  sense_ = sense;
-}
 //-------------------------------------------------------------------------
 // Purpose       : The destructor. 
 //
@@ -307,6 +273,7 @@ CubitBoolean OCCCurve::get_param_range( double& lower_bound,
   return CUBIT_TRUE;
 }
 
+
 //------------------------------------------------------------------
 // Purpose:        Finds the extrema along this Curve. 
 //
@@ -324,49 +291,19 @@ CubitStatus OCCCurve::get_interior_extrema(
 {
   // Danilov: try to use GeomAPI_ExtremaCurveCurve
   assert(0);
-  // Need curveFacetEvalTool to get point list
-  if( ! curveFacetEvalTool ) 
-    return CUBIT_FAILURE;
   
-  // Get list of points defining this curve
-  DLIList<CubitPoint*> point_list;
-  get_points( point_list );
-  
-  // If there are only 2 points, then the curve is a line and there
-  // are no interior extrema
-  if( point_list.size() < 3 )
+  //get the Geom_Curve of the OCCCurve
+  Standard_Real first;
+  Standard_Real last;
+  Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
+
+  //only when the curve's second derivative is computable, does it possibly
+  //have interior_extrema
+  if(1 == GeomLProp_CurveTool::Continuity(myCurve))
     return CUBIT_SUCCESS;
-  
+ 
   // Return sense is whatever the sense of this curve is.
   return_sense = sense_;
-  
-  // Get a vector between the first two points
-  point_list.reset();
-  CubitVector prev_pt = point_list.get_and_step()->coordinates();
-  CubitVector curr_pt = point_list.get_and_step()->coordinates();
-  CubitVector prev_vct = curr_pt - prev_pt;
-  CubitVector next_vct;
-  
-  for( int i = point_list.size(); i > 2; i-- )
-  {
-    // Get a vector between the next two points
-    next_vct = point_list.get()->coordinates() - curr_pt;
-    
-    // In CurveACIS::get_interior_extrema, the extrema seem to
-    // be evaluated with respect to the principle axes, so do
-    // the same here.  The extrema are points at which the
-    // derivitive in the specified direction (principle axis)
-    // is zero.  So look for a sign change in the slope across
-    // a point wrt each principle direction.
-    if( (prev_vct.x() * next_vct.x() < 0.) ||  // x extrema
-        (prev_vct.y() * next_vct.y() < 0.) ||  // y extrema
-        (prev_vct.z() * next_vct.z() < 0.)  )  // z extrema
-      interior_points.append( new CubitVector( curr_pt ) );
-    
-    // Advance to next point.
-    prev_vct = next_vct;
-    curr_pt = point_list.get_and_step()->coordinates();
-  }
   
   return CUBIT_SUCCESS;
 }
@@ -560,6 +497,21 @@ CubitBoolean OCCCurve::is_position_on( const CubitVector &test_position )
 //-------------------------------------------------------------------------
 GeometryType OCCCurve::geometry_type()
 {
+  BRepAdaptor_Curve acurve(*myTopoDSEdge);
+  if (acurve.GetType() == GeomAbs_BezierCurve)
+     return BEZIER_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_BSplineCurve)
+     return SPLINE_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_Line)
+     return STRAIGHT_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_Parabola)
+     return PARABOLA_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_Hyperbola)
+     return HYPERBOLA_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_Circle)
+      return ARC_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_Ellipse)
+     return ELLIPSE_CURVE_TYPE;
   return UNDEFINED_CURVE_TYPE;
 }
 
@@ -593,6 +545,10 @@ CubitStatus OCCCurve::get_point_direction( CubitVector& point,
 CubitStatus OCCCurve::get_center_radius( CubitVector& center, 
                                            double& radius )
 {
+  if( geometry_type() != ELLIPSE_CURVE_TYPE &&
+      geometry_type() != ARC_CURVE_TYPE )
+    return CUBIT_FAILURE;
+  
   center = center;
   radius = radius;
   PRINT_DEBUG_122("OCCCurve::get_center_radius currently not implemented.\n");
@@ -703,7 +659,7 @@ void OCCCurve::points(DLIList<Point*> &points)
 
 
 void OCCCurve::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { CAST_LIST_TO_PARENT( myCoEdges, parents ); }
+  { /*CAST_LIST_TO_PARENT( myCoEdges, parents ); */}
 void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children ) 
 {
 	TopTools_IndexedMapOfShape M;
@@ -746,95 +702,8 @@ CubitBoolean OCCCurve::G1_discontinuous(
       double param, CubitVector* mtan, CubitVector* ptan )
 { 
   assert(0);
-  DLIList<CubitPoint*> point_list;
-  curveFacetEvalTool->get_points( point_list );
-  CubitVector position;
-  position_from_u( param, position );
-  point_list.reset();
-  CubitPoint* prev = point_list.get_and_step();
-  for( int i = point_list.size(); i > 2; i--)
-  {
-    CubitPoint* point = point_list.get_and_step();
-    if( (point->coordinates() - position).length_squared() < 
-        (GEOMETRY_RESABS*GEOMETRY_RESABS) )
-    {
-      if( mtan )
-      {
-        *mtan = point->coordinates() - prev->coordinates();
-      }
-      if( ptan )
-      {
-        *ptan = point_list.get()->coordinates() - point->coordinates();
-      }
-      return CUBIT_TRUE;
-    }
-  }
   return CUBIT_FALSE;
 }
-
-//-------------------------------------------------------------------------
-// Purpose       : retreive the facet edge list for this curve
-//
-// Special Notes :
-//
-// Creator       : Steve J. Owen
-//
-// Creation Date : 12/10/00
-//-------------------------------------------------------------------------
-void OCCCurve::get_facets(DLIList<CubitFacetEdge*>& facet_list)
-{
-  if (curveFacetEvalTool)
-  {
-    curveFacetEvalTool->get_facets(facet_list);
-  }
-  else
-  {
-    PRINT_ERROR("curve facet evaluation tool not defined for OCCCurve\n");
-  }
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : retreive the facet point list for this curve
-//
-// Special Notes :
-//
-// Creator       : Steve J. Owen
-//
-// Creation Date : 12/10/00
-//-------------------------------------------------------------------------
-void OCCCurve::get_points(DLIList<CubitPoint*>& point_list)
-{
-  if (curveFacetEvalTool)
-  {
-    curveFacetEvalTool->get_points(point_list);
-  }
-  else
-  {
-    PRINT_ERROR("curve facet evaluation tool not defined for OCCCurve\n");
-  }
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : set the facetLength in the CurveFacetEvalTool
-//
-// Special Notes :
-//
-// Creator       : Steve J. Owen
-//
-// Creation Date : 03/19/02
-//-------------------------------------------------------------------------
-void OCCCurve::reset_length()
-{
-  if (curveFacetEvalTool)
-  {
-    curveFacetEvalTool->set_length();
-  }
-  else
-  {
-    PRINT_ERROR("curve facet evaluation tool not defined for OCCCurve\n");
-  }
-}
-
 
 void OCCCurve::get_lumps( DLIList<OCCLump*>& result_list )
 {
@@ -894,14 +763,6 @@ void OCCCurve::get_loops( DLIList<OCCLoop*>& result_list )
   }
 }
 
-void OCCCurve::get_coedges( DLIList<OCCCoEdge*>& result_list )
-{
-  myCoEdges.reset();
-  for ( int i = 0; i < myCoEdges.size(); i++ )
-    if ( OCCCoEdge* coedge = dynamic_cast<OCCCoEdge*>(myCoEdges.next(i)) )
-      result_list.append(coedge);
-}
-
 void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
@@ -958,39 +819,7 @@ CubitPointContainment OCCCurve::point_containment( const CubitVector &/*point*/ 
 {
    return CUBIT_PNT_UNKNOWN;
 }
-CubitPointContainment OCCCurve::point_containment( double /*u_param*/, 
-                                                       double /*v_param*/ )
-{
-  return CUBIT_PNT_UNKNOWN; 
-}
-CubitPointContainment OCCCurve::point_containment( CubitVector &/*point*/, 
-                                                       double /*u_param*/,
-                                                       double /*v_param*/ )
-{
-   return CUBIT_PNT_UNKNOWN;
-}
 
-//-------------------------------------------------------------------------
-// Purpose       : Tear down topology
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-CubitStatus OCCCurve::disconnect_coedge( OCCCoEdge* coedge )
-{
-  assert(0);
-  if (!myCoEdges.move_to(coedge))
-    return CUBIT_FAILURE;
-  myCoEdges.remove();
-
-  assert(coedge->curve() == this);
-  coedge->remove_curve();
-  
-  return CUBIT_SUCCESS;
-}
 
 // ********** END PRIVATE FUNCTIONS        **********
 
