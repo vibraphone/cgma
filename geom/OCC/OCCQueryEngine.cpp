@@ -341,8 +341,9 @@ CubitStatus OCCQueryEngine::get_intersections( Curve* curve1,
   }
 
   //currently, there's no effect on 'closest' argument or bounded.
-  BRepExtrema_DistShapeShape distShapeShape(occ_curve1->get_TopoDS_Edge(),
-                                            occ_curve2->get_TopoDS_Edge());
+  BRepExtrema_DistShapeShape distShapeShape(
+                                            *(occ_curve1->get_TopoDS_Edge()),
+                                            *(occ_curve2->get_TopoDS_Edge()));
 
   distShapeShape.Perform();
   if (!distShapeShape.IsDone())
@@ -351,7 +352,7 @@ CubitStatus OCCQueryEngine::get_intersections( Curve* curve1,
      return CUBIT_FAILURE;
   }
   
-  if (distShapeShape.Value() < 1e-6)
+  if (distShapeShape.Value() < get_sme_resabs_tolerance())
   {
      int numPnt = distShapeShape.NbSolution();
      for (int i = 1; i <= numPnt; i++)
@@ -386,8 +387,8 @@ OCCQueryEngine::get_intersections( Curve* curve, Surface* surface,
   }
    
   //currently, there's no effect on 'closest' argument or bounded.
-  BRepExtrema_DistShapeShape distShapeShape(occ_curve->get_TopoDS_Edge(),
-                                            occ_surface->get_TopoDS_Face());
+  BRepExtrema_DistShapeShape distShapeShape(*(occ_curve->get_TopoDS_Edge()),
+                                            *(occ_surface->get_TopoDS_Face()));
 
   distShapeShape.Perform();
   if (!distShapeShape.IsDone())
@@ -396,7 +397,7 @@ OCCQueryEngine::get_intersections( Curve* curve, Surface* surface,
      return CUBIT_FAILURE;
   }
   
-  if (distShapeShape.Value() < 1e-6)
+  if (distShapeShape.Value() < get_sme_resabs_tolerance())
   {
      int numPnt = distShapeShape.NbSolution();
      for (int i = 1; i <= numPnt; i++)
@@ -430,19 +431,114 @@ OCCQueryEngine::entity_extrema( DLIList<GeometryEntity*> &,
 
 //================================================================================
 // Description: Find distance between two entities and closest positions.
-// Author     :
-// Date       :
+// Author     : Jane Hu
+// Date       : 10/19/07
 //================================================================================
 CubitStatus
-OCCQueryEngine::entity_entity_distance( GeometryEntity *,
-                                          GeometryEntity *,
-                                          CubitVector &, CubitVector &,
-                                          double & )
+OCCQueryEngine::entity_entity_distance( GeometryEntity *entity1,
+                                          GeometryEntity *entity2,
+                                          CubitVector &pos1, CubitVector &pos2,
+                                          double &distance )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape1;
+  TopoDS_Shape * shape2;
+  if ((shape1 = get_TopoDS_Shape_of_entity(entity1)) == NULL)
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  if( (shape2 = get_TopoDS_Shape_of_entity( entity2 )) == NULL )
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n");
+    return CUBIT_FAILURE;
+  }
+
+  BRepExtrema_DistShapeShape distShapeShape(*shape1, *shape2);
+  distShapeShape.Perform();
+  
+  if (!distShapeShape.IsDone())
+  {
+    PRINT_ERROR( "problem occured getting distance between OCC entities.\n"
+      "       Aborting.\n");
+    return CUBIT_FAILURE;
+  }
+
+  distance = distShapeShape.Value();
+  gp_Pnt pnt1 = distShapeShape.PointOnShape1(1);
+  gp_Pnt pnt2 = distShapeShape.PointOnShape2(2);
+  pos1 = CubitVector(pnt1.X(), pnt1.Y(), pnt1.Z());
+  pos2 = CubitVector(pnt2.X(), pnt2.Y(), pnt2.Z());
+  return CUBIT_SUCCESS;
 }
 
+TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_ptr)
+{
+  if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
+  {
+    TopoDS_Shape* theShape = body_ptr->get_TopoDS_Shape();
+    if (!theShape)
+    {
+      PRINT_ERROR("OCCBody without TopoDS_Shape at %s:%d.\n", __FILE__, __LINE__ );
+      return NULL;
+    }
+    return theShape;
+  }
+
+  else if (OCCLump * lump_ptr = CAST_TO( entity_ptr,OCCLump))
+  {
+    TopoDS_Solid * theSolid = lump_ptr->get_TopoDS_Solid();
+    if(theSolid)
+      return (TopoDS_Shape*) theSolid; 
+    else
+    {
+      PRINT_ERROR("OCCLump without TopoDS_Solid at %s:%d.\n", __FILE__, __LINE__ );
+      return NULL;
+    }
+  }
+
+  else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
+  {
+    TopoDS_Face *theFace = surface_ptr->get_TopoDS_Face();
+    if(!theFace)
+    {
+      PRINT_ERROR("OCCSurface without TopoDS_Face at %s:%d.\n", __FILE__, __LINE__ );
+      return NULL;
+    }
+
+    return (TopoDS_Shape*) theFace;
+  }
+
+  else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
+  {
+    TopoDS_Edge *theEdge = curve_ptr->get_TopoDS_Edge();
+    if (!theEdge)
+    {
+      PRINT_ERROR("OCCCurve without TopoDS_Edge at %s:%d.\n", __FILE__, __LINE__ );
+      return NULL;
+    }
+
+    return (TopoDS_Shape*) theEdge;
+  }
+
+  else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
+  {
+    TopoDS_Vertex *thePoint = point_ptr->get_TopoDS_Vertex(); 
+    if (!thePoint)
+    {
+      PRINT_ERROR("OCCPoint without TopoDS_Point at %s:%d.\n", __FILE__, __LINE__ );
+      return NULL;
+    }
+
+    return (TopoDS_Shape*) thePoint;
+  }
+  
+  PRINT_ERROR("Non-OCC TopologyBridge at %s:%d.\n", __FILE__, __LINE__ );
+  return NULL;
+
+}
 //===========================================================================
 //Function Name: save_temp_geom_file
 //Member Type:  PUBLIC

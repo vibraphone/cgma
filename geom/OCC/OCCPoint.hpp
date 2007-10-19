@@ -35,7 +35,7 @@ class OCCPoint : public Point
 {
 private:
 
-  TopoDS_Vertex myPoint;
+  TopoDS_Vertex *myTopoDSVertex;
  
   OCCAttribSet attribSet;
 
@@ -47,13 +47,13 @@ public :
     //I- DLIList<Curve*> curves
     //I- curves attaced to point
 
-  OCCPoint(TopoDS_Vertex& thePoint ):myPoint(thePoint){};
+  OCCPoint(TopoDS_Vertex* thePoint ):myTopoDSVertex(thePoint){};
     //I- gp_Pnt *thePoint
     //I- pointer to the TopoDS_Vertex associated with OCCPoint
     //I- DLIList<Curve*> curves
     //I- curves attaced to point
 
-  OCCPoint(gp_Pnt& thePoint ):myPoint(BRepBuilderAPI_MakeVertex(thePoint)){};
+  OCCPoint(gp_Pnt& thePoint );
     //I- gp_Pnt *thePoint
     //I- pointer to the TopoDS_Vertex associated with OCCPoint
     //I- DLIList<Curve*> curves
@@ -62,9 +62,7 @@ public :
   virtual ~OCCPoint();
     //- The destructor
 
-  TopoDS_Vertex get_pnt()const;
-  void set_pnt( TopoDS_Vertex& gp_pnt);
-  // - get/set the gp_Pnt associated with this object
+  TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
 
 #ifdef BOYD14
   OCCPoint *copy();
@@ -116,10 +114,10 @@ public :
     //R- Contains the coordinate values {x y z} of this Point
     //- Returns the spatial coordinates of this Point.
   
-  CubitBoolean is_equal(const OCCPoint & other, double Tol);
+  CubitBoolean is_equal( OCCPoint & other, double Tol);
 
-  double distance(const OCCPoint & other);
-  double SquareDistance (const OCCPoint & other);
+  double distance( OCCPoint & other);
+  double SquareDistance ( OCCPoint & other);
 
   virtual CubitBox bounding_box() const ;
     // see comments in GeometryEntity.hpp

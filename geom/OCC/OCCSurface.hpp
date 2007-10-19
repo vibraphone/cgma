@@ -340,7 +340,7 @@ public :
     //- Determines the u and v derivitives from the given parameter
     //- values.
   
-  TopoDS_Face get_TopoDS_Face(){return *myTopoDSFace;}
+  TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
 
   virtual CubitBoolean is_parametric();
     //R CubitBoolean

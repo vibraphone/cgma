@@ -339,8 +339,8 @@ public :
   void reset_length();
     //- update the length of the facet curve
 
-  TopoDS_Edge get_TopoDS_Edge( )
-    { return *myTopoDSEdge; } 
+  TopoDS_Edge *get_TopoDS_Edge( )
+    { return myTopoDSEdge; } 
 
   Point *start_point()
     { assert(0);return myStartPoint; }

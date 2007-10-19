@@ -44,7 +44,23 @@
 OCCPoint::OCCPoint( const CubitVector &location )
 {
   gp_Pnt pt = gp_Pnt( location.x(), location.y(), location.z());
-  myPoint = BRepBuilderAPI_MakeVertex(pt);
+  TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
+  myTopoDSVertex = new TopoDS_Vertex(theVertex);
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : The constructor with a gp_Pnt point
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 10/19/07
+//-------------------------------------------------------------------------
+OCCPoint::OCCPoint( gp_Pnt& thePoint )
+{
+  TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(thePoint);
+  myTopoDSVertex = new TopoDS_Vertex(theVertex);
 }
 
 //-------------------------------------------------------------------------
@@ -133,16 +149,6 @@ CubitStatus OCCPoint::restore_attribs( FILE *file_ptr, unsigned int endian )
   { return attribSet.restore_attributes(file_ptr, endian); 
   }
 
-
-TopoDS_Vertex OCCPoint::get_pnt()const
-{
-  return myPoint;
-}
-
-void OCCPoint::set_pnt( TopoDS_Vertex &v_point)
-{
-  myPoint = v_point;
-}
 //-------------------------------------------------------------------------
 // Purpose       : Returns the coordinates of this Point. 
 //
@@ -154,27 +160,29 @@ void OCCPoint::set_pnt( TopoDS_Vertex &v_point)
 //-------------------------------------------------------------------------
 CubitVector OCCPoint::coordinates() const
 {
-  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
+  gp_Pnt pt = BRep_Tool::Pnt(*myTopoDSVertex);
   CubitVector p(pt.X(), pt.Y(), pt.Z());
   return p;
 }
 
-CubitBoolean OCCPoint::is_equal(const OCCPoint & other, double Tol)
+CubitBoolean OCCPoint::is_equal(OCCPoint & other, double Tol)
 {
-  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
-  return pt.IsEqual(BRep_Tool::Pnt(other.get_pnt()), Tol);
+  gp_Pnt pt = BRep_Tool::Pnt(*myTopoDSVertex);
+  TopoDS_Vertex otherVertex = *(other.get_TopoDS_Vertex());
+  const gp_Pnt otherPnt = BRep_Tool::Pnt(otherVertex);
+  return pt.IsEqual(otherPnt, Tol);
 }   
   
-double OCCPoint::distance(const OCCPoint & other)
+double OCCPoint::distance(OCCPoint & other)
 {
-  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
-  return pt.Distance(BRep_Tool::Pnt(other.get_pnt()));
+  gp_Pnt pt = BRep_Tool::Pnt(*myTopoDSVertex);
+  return pt.Distance(BRep_Tool::Pnt(*(other.get_TopoDS_Vertex())));
 }
 
-double OCCPoint::SquareDistance (const OCCPoint & other)
+double OCCPoint::SquareDistance (OCCPoint & other)
 {
-  gp_Pnt pt = BRep_Tool::Pnt(myPoint);
-  return pt.SquareDistance(BRep_Tool::Pnt(other.get_pnt()));
+  gp_Pnt pt = BRep_Tool::Pnt(*myTopoDSVertex);
+  return pt.SquareDistance(BRep_Tool::Pnt(*(other.get_TopoDS_Vertex())));
 }
 //-------------------------------------------------------------------------
 // Purpose       : Get geometry modeling engine: AcisGeometryEngine

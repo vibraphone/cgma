@@ -108,6 +108,7 @@ public:
   const char* modeler_type()
      { return "OCC"; }
 
+  TopoDS_Shape *get_TopoDS_Shape_of_entity( TopologyBridge * entity);
   int get_major_version();
 
   int get_minor_version();

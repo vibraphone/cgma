@@ -62,6 +62,8 @@ public:
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
+  TopoDS_Shape *get_TopoDS_Shape() {return myTopoDSShape; }
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
