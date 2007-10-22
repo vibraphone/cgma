@@ -16,6 +16,8 @@
 #include "config.h"
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
+#include "Geom_Surface.hxx"
+#include "Geom_Curve.hxx"
 #include "OCCQueryEngine.hpp"
 #include "OCCModifyEngine.hpp"
 #include "TopologyEntity.hpp"
@@ -243,33 +245,126 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
 }
 
 //================================================================================
-// Description:
-// Author     :
-// Date       :
+// Description: Given surface and number of point on u and v parametric
+//              direction, find the 3-d point locations
+// Author     : Jane Hu
+// Date       : 10/22/07
 //================================================================================
-CubitStatus OCCQueryEngine::get_isoparametric_points(Surface* ,
+CubitStatus OCCQueryEngine::get_isoparametric_points(Surface* surface,
                                                      int &nu, int &nv,
-                                                     GMem*&) const
+                                                     GMem*& g_mem) const
 {
-  nu = nv = 0;
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+  TopoDS_Face* Tops_face = occ_surface->get_TopoDS_Face();
+  TopoDS_Face the_face;
+  if (Tops_face == NULL)
+  {
+    PRINT_ERROR("This surface is not OCCSurface.");
+    return CUBIT_FAILURE;
+  }
+
+  the_face = *Tops_face;
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
+
+  assert (nu > 1 && nv > 1);
+  double u1, u2, v1, v2;
+  HGeom_surface->Bounds(u1, u2, v1, v2); 
+  double interval1  = (u2 - u1)/(nu-1);
+  double interval2 = (v2 - v1)/(nv-1);
+  
+  g_mem = new GMem[nu];
+  //nu and nv must be given to calculate the points.
+  for (int i = 0; i < nu; i++)
+  {
+     Handle_Geom_Curve HGeom_curve = HGeom_surface->UIso(u1 + i * interval1); 
+     g_mem[i].allocate_polylines(nv-1);
+     for (int j = 0; j <  nv; j++)
+     {
+        gp_Pnt pnt = HGeom_curve->Value(v1 + j * interval2);
+        g_mem[i].point_list()[j].x = pnt.X();
+        g_mem[i].point_list()[j].y = pnt.Y();
+        g_mem[i].point_list()[j].z = pnt.Z();
+     }
+     g_mem[i].pointListCount = nv;
+
+  }
+  return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::get_u_isoparametric_points(Surface* ,
-                                                            double, int&,
-                                                            GMem*&) const
+CubitStatus OCCQueryEngine::get_u_isoparametric_points(Surface* surface,
+                                                       double v, int&n,
+                                                       GMem*& g_mem) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+  TopoDS_Face* Tops_face = occ_surface->get_TopoDS_Face();
+  TopoDS_Face the_face;
+  if (Tops_face == NULL)
+  {
+    PRINT_ERROR("This surface is not OCCSurface.");
+    return CUBIT_FAILURE;
+  }
+
+  the_face = *Tops_face;
+
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
+
+  //n must be given to calculate the points.
+  assert (n > 1);
+  double u1, u2, v1, v2;
+  HGeom_surface->Bounds(u1, u2, v1, v2);
+  double interval = (u2 - u1)/(n -1); 
+  
+  Handle_Geom_Curve HGeom_curve = HGeom_surface->VIso(v);
+  g_mem = new GMem;
+  g_mem->allocate_polylines(n-1);
+  for (int j = 0; j < n; j++)
+  {
+      gp_Pnt pnt = HGeom_curve->Value(u1 + j * interval);
+      g_mem->point_list()[j].x = pnt.X();
+      g_mem->point_list()[j].y = pnt.Y();
+      g_mem->point_list()[j].z = pnt.Z();
+   }
+   g_mem->pointListCount = n;
+
+   return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::get_v_isoparametric_points(Surface* ,
-                                                            double, int&,
-                                                            GMem*&) const
+CubitStatus OCCQueryEngine::get_v_isoparametric_points(Surface* surface,
+                                                       double u, int&n,
+                                                       GMem*&g_mem) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+  TopoDS_Face* Tops_face = occ_surface->get_TopoDS_Face();
+  TopoDS_Face the_face;
+  if (Tops_face == NULL)
+  {
+    PRINT_ERROR("This surface is not OCCSurface.");
+    return CUBIT_FAILURE;
+  }
+
+  the_face = *Tops_face;
+
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
+
+  //n must be given to calculate the points.
+  assert (n > 1);
+  double u1, u2, v1, v2;
+  HGeom_surface->Bounds(u1, u2, v1, v2);
+  double interval = (v2 - v1)/(n -1);
+
+  Handle_Geom_Curve HGeom_curve = HGeom_surface->UIso(u);
+  g_mem = new GMem;
+  g_mem->allocate_polylines(n-1);
+  for (int j = 0; j < n; j++)
+  {
+      gp_Pnt pnt = HGeom_curve->Value(v1 + j * interval);
+      g_mem->point_list()[j].x = pnt.X();
+      g_mem->point_list()[j].y = pnt.Y();
+      g_mem->point_list()[j].z = pnt.Z();
+   }
+   g_mem->pointListCount = n;
+
+   return CUBIT_SUCCESS;
 }
 
 //================================================================================
@@ -1087,8 +1182,8 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                         const char* file_type,
                                         DLIList<TopologyBridge*> &bridge_list )
 {
-  //make sure that file_type == "FACET"
-  if( !strcmp( file_type,"FACET") )
+  //make sure that file_type == "OCC"
+  if( !strcmp( file_type,"OCC") )
     return import_solid_model( file_ptr, file_type, bridge_list );
   else
     return CUBIT_FAILURE;
