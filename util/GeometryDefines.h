@@ -34,6 +34,7 @@ const double GEOMETRY_RESABS = 1.0E-6;
 enum SolidModelerType 
 { 
    NOT_A_SOLID_MODELER,
+   OCC,
    ACIS,
    PROE_GEOM,                  /* Normal Pro/E model */
    PROE_FEM_MESH_SOLID,        /* Pro/Mesh models... */
@@ -67,6 +68,8 @@ enum GeometryType
   SPLINE_CURVE_TYPE,
   STRAIGHT_CURVE_TYPE,
   POINT_CURVE_TYPE,
+  BEZIER_CURVE_TYPE,   //OCC curve types 
+  HYPERBOLA_CURVE_TYPE,
   UNDEFINED_CURVE_TYPE,
   
     /* Surface types */

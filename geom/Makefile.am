@@ -11,6 +11,9 @@ endif
 if build_parallel
   SUBDIRS += parallel
 endif
+if WITH_OCC
+  SUBDIRS += OCC
+endif
 
 # Override default defines with the ones we want from the configure script
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)

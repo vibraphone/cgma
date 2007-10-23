@@ -240,6 +240,58 @@ AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 
 
 ################################################################################
+#                           OCC Options 
+################################################################################
+# Add --with-occ option to configure script
+AC_ARG_WITH( occ,
+             [AC_HELP_STRING([--with-occ=<dir>],[OpenCascade shared library directory])],
+             [occ_DIR="$withval"],
+             [occ_DIR=no] )
+
+# if user specified option (other than --without-occ)
+if test "x$occ_DIR" != "xno"; then
+
+  # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
+  if test "x$occ_DIR" = "x"; then
+    OCC_INC_FLAG=
+    OCC_LIB_FLAG=
+  else
+    uname=`uname`
+    OCC_INC_FLAG="-I${occ_DIR}/ros/inc"
+# -I/usr/include/c++/4.2 -I/usr/include/c++/4.2/tr1"
+    OCC_LIB_FLAG="-L${occ_DIR}/ros/${uname}/lib"
+  fi
+
+  # Check of OCC is present and working
+
+  # Save old value of these variables and update working ones
+  old_CPPFLAGS="$CPPFLAGS"
+  old_LDFLAGS="$LDFLAGS"
+  CPPFLAGS="$CPPFLAGS ${OCC_INC_FLAG}"
+  LDFLAGS="$LDFLAGS ${OCC_LIB_FLAG}"
+
+  # Check if OCC has Stadard_Version.hxx
+  AC_CHECK_HEADER( [Standard_Version.hxx], [],
+                 [AC_MSG_ERROR([OpenCascade config error:Standard_Version.hxx not found])] )
+
+  # Check if libTKernel.so contains function 'create_mailbox'
+  AC_CHECK_LIB( [TKernel], [create_mailbox],,
+                [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])])
+
+  # Restore original values of variables
+  CPPFLAGS="$old_CPPFLAGS"
+  LDFLAGS="$old_LDFLAGS"
+fi
+
+# Export these variables as variables in Makefiles
+AC_SUBST(OCC_INC_FLAG)
+AC_SUBST(OCC_LIB_FLAG)
+
+# Allow "if WITH_OCC" in Makefile.am
+AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )
+
+
+################################################################################
 #                           Output Files
 ################################################################################
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
@@ -254,6 +306,7 @@ AC_CONFIG_FILES(Makefile
            geom/Cholla/Makefile
            geom/facet/Makefile
            geom/facetbool/Makefile
+           geom/OCC/Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
            init/Makefile

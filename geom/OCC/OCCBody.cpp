@@ -158,19 +158,17 @@ CubitBoolean OCCBody::can_be_deleted( DLIList <Body*> &body_list )
 // Function: move
 // Description: translate the body and its child entities
 //
-// Author: sjowen
+// Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::move(double dx, double dy, double dz)
 {
-  CubitTransformMatrix tfmat;
-  tfmat.translate( dx, dy, dz );
+  gp_Vec aVec(dx, dy, dz);
+  gp_Trsf aTrsf;
+  aTrsf.SetTranslation(aVec);
 
-  CubitStatus stat = transform( tfmat, CUBIT_FALSE );
-
-  if (stat == CUBIT_SUCCESS)
-    myTransforms.translate( dx, dy, dz );
-
-  return stat;
+  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  update_bounding_box();
+  return CUBIT_SUCCESS;
 }
 
 
@@ -178,22 +176,22 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
 // Function: rotate
 // Description: rotate the body and its child entities
 //
-// Author: sjowen
+// Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::rotate( double x, double y, double z, 
-                               double angle_in_degrees )
+                               double angle )//in radians
 {
+  gp_Pnt aOrigin(0,0,0);
+  gp_Dir aDir(x, y, z);
+  gp_Ax1 anAxis(aOrigin, aDir);
 
-  CubitTransformMatrix rotmat;
-  CubitVector axis( x, y, z );
-  rotmat.rotate( angle_in_degrees, axis );
+  //a is angular value of rotation in radians
+  gp_Trsf aTrsf;
+  aTrsf.SetRotation(anAxis, angle);
 
-  CubitStatus stat = transform( rotmat, CUBIT_TRUE );
-
-  if (stat == CUBIT_SUCCESS)
-    myTransforms.rotate( angle_in_degrees, axis );
-
-  return stat;
+  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  update_bounding_box();
+  return CUBIT_SUCCESS;
 }
 
 //----------------------------------------------------------------
@@ -201,51 +199,30 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
 // Description: scale the body and its child entities
 //              use a constant scale factor
 //
-// Author: sjowen
+// Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::scale(double scale_factor )
 {
-  return scale(scale_factor,scale_factor,scale_factor);
+  gp_Trsf aTrsf;
+  aTrsf.SetScaleFactor(scale_factor);
+
+  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  update_bounding_box();
+  return CUBIT_SUCCESS;  
 }
 
 //----------------------------------------------------------------
 // Function: scale
 // Description: scale the body and its child entities
 //
-// Author: sjowen
+// Author: 
 //----------------------------------------------------------------
 CubitStatus OCCBody::scale(double scale_factor_x,
                              double scale_factor_y,
                              double scale_factor_z )
 {
-  CubitTransformMatrix scalemat;
-  scalemat.scale_about_origin( scale_factor_x, 
-                               scale_factor_y, 
-                               scale_factor_z );
-
-  CubitStatus stat = transform( scalemat, CUBIT_FALSE );
-
-  if (stat == CUBIT_SUCCESS)
-    myTransforms.scale_about_origin( scale_factor_x, 
-                                     scale_factor_y, 
-                                     scale_factor_z );
-
-  // scale the facetcurve
-
-  DLIList<OCCCurve *> curve_list;
-  //get_curves(curve_list); 
-  Curve *curv_ptr;
-  for (int ii=0; ii<curve_list.size(); ii++)
-  {
-    curv_ptr = curve_list.get_and_step();
-    OCCCurve *fcurve = CAST_TO( curv_ptr, OCCCurve );
-    if (fcurve)
-    {
-      fcurve->reset_length();
-    }
-  }
-
-  return stat;
+  PRINT_ERROR("non-uniform scaling is not performed on OCC bodies");
+  return CUBIT_FAILURE;
 }
 
 //----------------------------------------------------------------
@@ -276,7 +253,7 @@ CubitStatus OCCBody::restore()
 // Function: reflect
 // Description: reflect the body about a exis
 //
-// Author: sjowen
+// Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::reflect( double reflect_axis_x,
                                 double reflect_axis_y,

@@ -16,8 +16,10 @@
 #include "config.h"
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
+#include "gp_Ax1.hxx"
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
 #include "OCCQueryEngine.hpp"
 #include "OCCModifyEngine.hpp"
 #include "TopologyEntity.hpp"
@@ -196,7 +198,7 @@ const type_info& OCCQueryEngine::entity_type_info() const
 // Date       : 9/7/01
 //================================================================================
 CubitStatus OCCQueryEngine::reflect( BodySM *bodysm,
-                                       const CubitVector& axis)
+                                     const CubitVector& axis)
 {
   OCCBody *body = CAST_TO(bodysm, OCCBody);
   if (!body)
@@ -1829,7 +1831,7 @@ CubitStatus OCCQueryEngine::create_facet_bounding_box(
   return status;
 }
 
-const char* fqe_xform_err = "Transform not implemented for facet geometry.\n";
+const char* fqe_xform_err = "Transform not implemented for OCC geometry.\n";
 CubitStatus OCCQueryEngine::restore_transform( BodySM* body )
 {
   OCCBody* facetbod = dynamic_cast<OCCBody*>(body);
@@ -1837,8 +1839,8 @@ CubitStatus OCCQueryEngine::restore_transform( BodySM* body )
 }
 CubitStatus OCCQueryEngine::translate( BodySM* body, const CubitVector& d )
 {
-  OCCBody* facetbod = dynamic_cast<OCCBody*>(body);
-  return facetbod ? facetbod->move( d.x(), d.y(), d.z() ) : CUBIT_FAILURE;
+  OCCBody* theBody = dynamic_cast<OCCBody*>(body);
+  return theBody ? theBody->move( d.x(), d.y(), d.z() ) : CUBIT_FAILURE;
 }
 CubitStatus OCCQueryEngine::rotate( BodySM* body, const CubitVector& v, double a )
 {
@@ -1856,38 +1858,108 @@ CubitStatus OCCQueryEngine::scale( BodySM* body, const CubitVector& f )
   return facetbod ? facetbod->scale( f.x(), f.y(), f.z() ) : CUBIT_FAILURE;
 }
 
-CubitStatus OCCQueryEngine::translate( GeometryEntity* , const CubitVector&  )
+//-------------------------------------------------------------------------
+// Purpose       : Transform a Solid, Surface, Curve, or Vertex
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 10/23/07
+//-------------------------------------------------------------------------
+CubitStatus OCCQueryEngine::translate( GeometryEntity* entity,
+                                       const CubitVector& v )
 {
-  PRINT_ERROR(fqe_xform_err);
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape;
+  if ((shape = get_TopoDS_Shape_of_entity(entity)) == NULL)
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  gp_Vec aVec(v.x(), v.y(),v.z());
+  gp_Trsf aTrsf;  
+  aTrsf.SetTranslation(aVec);
+
+  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  return CUBIT_SUCCESS;
 }
-CubitStatus OCCQueryEngine::rotate( GeometryEntity* , const CubitVector& , double  )
+
+//a is angular value of rotation in radians
+CubitStatus OCCQueryEngine::rotate( GeometryEntity* entity,
+                                    const CubitVector& v, double a )
 {
-  PRINT_ERROR(fqe_xform_err);
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape;
+  if ((shape = get_TopoDS_Shape_of_entity(entity)) == NULL)
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  gp_Pnt aOrigin(0,0,0);
+  gp_Dir aDir(v.x(), v.y(), v.z());
+  gp_Ax1 anAxis(aOrigin, aDir);
+
+  //a is angular value of rotation in radians 
+  gp_Trsf aTrsf;
+  aTrsf.SetRotation(anAxis, a);
+
+  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  return CUBIT_SUCCESS;
 }
-CubitStatus OCCQueryEngine::scale( GeometryEntity* , double  )
+
+CubitStatus OCCQueryEngine::scale( GeometryEntity* entity, double f )
 {
-  PRINT_ERROR(fqe_xform_err);
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape;
+  if ((shape = get_TopoDS_Shape_of_entity(entity)) == NULL)
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  gp_Trsf aTrsf;
+  aTrsf.SetScaleFactor(f);
+
+  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  return CUBIT_SUCCESS;
 }
+
 CubitStatus OCCQueryEngine::scale( GeometryEntity* , const CubitVector&  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("non-uniform scaling is not performed on OCC bodies");
   return CUBIT_FAILURE;
 }
-CubitStatus OCCQueryEngine::reflect( GeometryEntity* , const CubitVector&  )
+CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity, 
+                                     const CubitVector&  v)
 {
-  PRINT_ERROR(fqe_xform_err);
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape;
+  if ((shape = get_TopoDS_Shape_of_entity(entity)) == NULL)
+  {
+    PRINT_ERROR( "problem occured getting OCC entity.\n"
+      "       Aborting.\n" );
+    return CUBIT_FAILURE;
+  }
+ 
+  gp_Pnt aOrigin(0,0,0);
+  gp_Dir aDir(v.x(), v.y(), v.z());
+  gp_Ax1 anAxis(aOrigin, aDir);
+
+  gp_Trsf aTrsf;
+  aTrsf.SetMirror(anAxis);
+
+  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
 // Function   : bodies_overlap
 // Member Type: PUBLIC
-// Description: determine if facet-based bodies overlap
-// Author     : John Fowler
-// Date       : 10/02
+// Description: determine if OCC-based bodies overlap
+// Author     : 
+// Date       : 10/07
 //===============================================================================
 CubitBoolean OCCQueryEngine::bodies_overlap (BodySM * body_ptr_1,
                                                 BodySM * body_ptr_2 ) const
