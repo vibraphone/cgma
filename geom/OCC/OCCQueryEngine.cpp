@@ -17,6 +17,7 @@
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
 #include "gp_Ax1.hxx"
+#include "gp_Ax2.hxx"
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
@@ -88,6 +89,7 @@
 //#include "BRepPrimAPI_MakePrism.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
+#include "BRepAlgoAPI_Section.hxx"
 using namespace NCubitFile;
 
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
@@ -1932,6 +1934,8 @@ CubitStatus OCCQueryEngine::scale( GeometryEntity* , const CubitVector&  )
   PRINT_ERROR("non-uniform scaling is not performed on OCC bodies");
   return CUBIT_FAILURE;
 }
+
+// like ACIS, here v is the normal of symmetric plane.
 CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity, 
                                      const CubitVector&  v)
 {
@@ -1945,10 +1949,10 @@ CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity,
  
   gp_Pnt aOrigin(0,0,0);
   gp_Dir aDir(v.x(), v.y(), v.z());
-  gp_Ax1 anAxis(aOrigin, aDir);
+  gp_Ax2 anAx2(aOrigin, aDir);
 
   gp_Trsf aTrsf;
-  aTrsf.SetMirror(anAxis);
+  aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
   return CUBIT_SUCCESS;
@@ -1962,14 +1966,80 @@ CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity,
 // Date       : 10/07
 //===============================================================================
 CubitBoolean OCCQueryEngine::bodies_overlap (BodySM * body_ptr_1,
-                                                BodySM * body_ptr_2 ) const
+                                             BodySM * body_ptr_2 ) const
 {
+  OCCBody *occ_body1 = CAST_TO(body_ptr_1, OCCBody);
+  if (!occ_body1)
+  {
+    PRINT_ERROR("Can't calculate intersection of non-OCC bodies.");
+    return CUBIT_FALSE;
+  }
+ 
+  OCCBody *occ_body2 = CAST_TO(body_ptr_2, OCCBody);
+  if (!occ_body2)
+  {
+    PRINT_ERROR("Can't calculate intersection of non-OCC bodies.");
+    return CUBIT_FALSE;
+  }
 
-   return CUBIT_TRUE;
+  CubitBox box_1 = occ_body1->get_bounding_box();
+  CubitBox box_2 = occ_body2->get_bounding_box();
+  if ( !box_1.overlap( GEOMETRY_RESABS, box_2 ) )
+    return CUBIT_FALSE;
+
+  TopoDS_Shape *shape1 = occ_body1->get_TopoDS_Shape();
+  TopoDS_Shape *shape2 = occ_body2->get_TopoDS_Shape(); 
+  
+  //BRepAlgoAPI_Section calculates intersection between faces only.
+  TopExp_Explorer Ex1, Ex2;
+  for (Ex1.Init(*shape1, TopAbs_FACE); Ex1.More(); Ex1.Next())
+  {
+    for (Ex2.Init(*shape2, TopAbs_FACE); Ex2.More(); Ex2.Next())
+    {
+        BRepAlgoAPI_Section section(Ex1.Current(), Ex2.Current());
+        if (section.HasGenerated())
+          return CUBIT_TRUE;
+    }
+  }
+  return CUBIT_FALSE;
 }
 
 CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
 {
+  OCCLump *occ_lump1 = CAST_TO(lump1, OCCLump);
+  if (!occ_lump1)
+  {
+    PRINT_ERROR("Can't calculate intersection of non-OCC solids.");
+    return CUBIT_FALSE;
+  }
+
+  OCCLump *occ_lump2 = CAST_TO(lump2, OCCLump);
+  if (!occ_lump2)
+  {
+    PRINT_ERROR("Can't calculate intersection of non-OCC solids.");
+    return CUBIT_FALSE;
+  }
+
+  CubitBox box_1 = occ_lump1->bounding_box();
+  CubitBox box_2 = occ_lump2->bounding_box();
+  if ( !box_1.overlap( GEOMETRY_RESABS, box_2 ) )
+    return CUBIT_FALSE;
+
+  TopoDS_Shape *shape1 = (TopoDS_Shape*)(occ_lump1->get_TopoDS_Solid());
+  TopoDS_Shape *shape2 = (TopoDS_Shape*)(occ_lump2->get_TopoDS_Solid());
+  
+  //BRepAlgoAPI_Section calculates intersection between faces only.
+  TopExp_Explorer Ex1, Ex2;
+  for (Ex1.Init(*shape1, TopAbs_FACE); Ex1.More(); Ex1.Next())  
+  {
+    for (Ex2.Init(*shape2, TopAbs_FACE); Ex2.More(); Ex2.Next()) 
+    {
+        BRepAlgoAPI_Section section(Ex1.Current(), Ex2.Current());
+        if (section.HasGenerated())
+  	  return CUBIT_TRUE;
+    }
+  }
+  return CUBIT_FALSE;
 }
 
 //EOF

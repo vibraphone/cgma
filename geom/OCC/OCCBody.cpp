@@ -45,6 +45,7 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
 #include "gp_Ax1.hxx"
+#include "gp_Ax2.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
 
@@ -261,10 +262,10 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 {
   gp_Pnt aOrigin(0,0,0);
   gp_Dir aDir(reflect_axis_x, reflect_axis_y,reflect_axis_z); 
-  gp_Ax1 anAxis(aOrigin, aDir);
+  gp_Ax2 anAx2(aOrigin, aDir);
 
   gp_Trsf aTrsf;
-  aTrsf.SetMirror(anAxis);
+  aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
   update_bounding_box();
