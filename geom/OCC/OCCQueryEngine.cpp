@@ -21,8 +21,13 @@
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "TColgp_Array1OfPnt.hxx"
+#include "Poly_Array1OfTriangle.hxx"
+#include "Poly_Triangle.hxx"
+#include "Handle_Poly_Triangulation.hxx"
 #include "OCCQueryEngine.hpp"
 #include "OCCModifyEngine.hpp"
+#include "Poly_Triangulation.hxx"
 #include "TopologyEntity.hpp"
 #include "TopologyBridge.hpp"
 #include "RefEntity.hpp"
@@ -221,14 +226,68 @@ CubitStatus OCCQueryEngine::reflect( BodySM *bodysm,
 // Date       :
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
-                                                     int& number_triangles,
-                                                     int& number_points,
-                                                     int& number_facets,
-                                                     GMem* gMem,
-                                                     unsigned short ,
-                                                     double,
-                                                     double ) const
+                                          int& number_triangles,
+                                          int& number_points,
+                                          int& number_facets,
+                                          GMem* g_mem,
+                                          unsigned short normal_tolerance,
+                                          double distance_tolerance,
+                                          double max_edge_length) const
 {
+    // Because this may be unnecessarily called twice,
+    // say there is one triangle.
+  if (!g_mem)
+  {
+    number_triangles = 1;
+    number_points = 3;
+    number_facets = 4;
+    return CUBIT_SUCCESS;
+  }
+
+  OCCSurface *occ_surface_ptr = CAST_TO(surface_ptr, OCCSurface);
+  TopoDS_Face * Topo_Face = occ_surface_ptr->get_TopoDS_Face();
+  if (!Topo_Face)
+    return CUBIT_FAILURE;
+
+  TopLoc_Location L;
+  Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*Topo_Face, L);
+
+  //if necessary, the face tolerance can be returned. now, no use.
+  //double tol = BRep_Tool::Tolerance(*Topo_Face);   
+
+  number_points = facets->NbNodes();
+  number_triangles = facets->NbTriangles();
+  assert(number_points == 3 * number_triangles);
+  number_facets = 4 * number_triangles; 
+  
+  TColgp_Array1OfPnt points(0, number_points-1);
+  points.Assign(facets->Nodes());
+  GPoint *gPnts= new GPoint[number_points];
+  for (int i = 0; i < number_points; i ++)
+  {
+     gp_Pnt gp_pnt = points.Value(i);
+     GPoint gPnt;
+     gPnt.x = gp_pnt.X();
+     gPnt.y = gp_pnt.Y();
+     gPnt.z = gp_pnt.Z();
+     gPnts[i] = gPnt;
+  }
+  g_mem->replace_point_list( gPnts, number_points, number_points);
+
+  Poly_Array1OfTriangle triangles(0, number_facets-1);
+  triangles.Assign( facets->Triangles() );
+  int *facetList =  new int[number_facets];
+  for (int i = 0; i < triangles.Length(); i++)
+  {
+     Poly_Triangle triangle = triangles.Value( i );
+     int N1, N2, N3;
+     triangle.Get(N1, N2, N3); 
+     facetList[4 * i] = 3;
+     facetList[4 * i + 1] = N1;
+     facetList[4 * i + 2] = N2;
+     facetList[4 * i + 3] = N3;
+  } 
+  g_mem->replace_facet_list( facetList, number_facets, number_facets); 
   return CUBIT_SUCCESS;
 }
 
@@ -243,7 +302,7 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
                                             double /*tolerance*/ ) const
 {
   //  get the OCCCurve.
-  //OCCCurve *facet_curv_ptr = CAST_TO(curve_ptr,OCCCurve);
+  OCCCurve *occ_curv_ptr = CAST_TO(curve_ptr,OCCCurve);
 
   return CUBIT_SUCCESS;
 }
@@ -1992,13 +2051,19 @@ CubitBoolean OCCQueryEngine::bodies_overlap (BodySM * body_ptr_1,
   
   //BRepAlgoAPI_Section calculates intersection between faces only.
   TopExp_Explorer Ex1, Ex2;
-  for (Ex1.Init(*shape1, TopAbs_FACE); Ex1.More(); Ex1.Next())
+  for (Ex1.Init(*shape1, TopAbs_SOLID); Ex1.More(); Ex1.Next())
   {
-    for (Ex2.Init(*shape2, TopAbs_FACE); Ex2.More(); Ex2.Next())
+    TopoDS_Solid *posolid1 =  new TopoDS_Solid;
+    *posolid1 = TopoDS::Solid(Ex1.Current());
+    OCCLump * lump1 = new OCCLump(posolid1); 
+    for (Ex2.Init(*shape2, TopAbs_SOLID); Ex2.More(); Ex2.Next())
     {
-        BRepAlgoAPI_Section section(Ex1.Current(), Ex2.Current());
-        if (section.HasGenerated())
-          return CUBIT_TRUE;
+       TopoDS_Solid *posolid2 =  new TopoDS_Solid;
+       *posolid2 = TopoDS::Solid(Ex2.Current());
+       OCCLump * lump2 = new OCCLump(posolid2);
+       CubitBoolean is_overlap = volumes_overlap(lump1, lump2);
+       if(is_overlap)
+	 return CUBIT_TRUE;
     }
   }
   return CUBIT_FALSE;

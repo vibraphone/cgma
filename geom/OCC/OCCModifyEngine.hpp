@@ -12,8 +12,8 @@
 // Owner         : John Fowler
 //-------------------------------------------------------------------------
 
-#ifndef FACET_MODIFY_ENGINE_HPP
-#define FACET_MODIFY_ENGINE_HPP
+#ifndef OCC_MODIFY_ENGINE_HPP
+#define OCC_MODIFY_ENGINE_HPP
 
 #include "GeometryModifyEngine.hpp"
 #include <vector>
