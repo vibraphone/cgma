@@ -25,6 +25,8 @@
 #include "Poly_Array1OfTriangle.hxx"
 #include "Poly_Triangle.hxx"
 #include "Handle_Poly_Triangulation.hxx"
+#include "Poly_Polygon3D.hxx"
+#include "Handle_Poly_Polygon3D.hxx"
 #include "OCCQueryEngine.hpp"
 #include "OCCModifyEngine.hpp"
 #include "Poly_Triangulation.hxx"
@@ -221,9 +223,13 @@ CubitStatus OCCQueryEngine::reflect( BodySM *bodysm,
 
 
 //================================================================================
-// Description:
-// Author     :
-// Date       :
+// Description:  This function queries OCC for the necessary facets
+//               information needed in facetting a RefFace.  This
+//               information is stored and output in gMem.  The
+//               number of triangles, points and facets are also
+//               output.
+// Author     :  Jane Hu
+// Date       :  10/25/07
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
                                           int& number_triangles,
@@ -260,10 +266,32 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   assert(number_points == 3 * number_triangles);
   number_facets = 4 * number_triangles; 
   
-  TColgp_Array1OfPnt points(0, number_points-1);
+  Poly_Array1OfTriangle triangles(0, number_facets-1);
+  triangles.Assign( facets->Triangles() );
+  int *facetList =  new int[number_facets];
+  //needs to test that N1, N2, N3 index are starting from 0 to number_points-1
+  //otherwise needs to update either facetList or gPnts to make consistent.
+  //It's possible also that N's starting from 1.
+  int minN = 0;
+  for (int i = 0; i < triangles.Length(); i++)
+  {
+     Poly_Triangle triangle = triangles.Value( i );
+     int N1, N2, N3;
+     triangle.Get(N1, N2, N3); 
+     facetList[4 * i] = 3;
+     facetList[4 * i + 1] = N1;
+     minN = (minN < N1 ? minN : N1);
+     facetList[4 * i + 2] = N2;
+     minN = (minN < N2 ? minN : N2);
+     facetList[4 * i + 3] = N3;
+     minN = (minN < N3 ? minN : N3);
+  } 
+  g_mem->replace_facet_list( facetList, number_facets, number_facets); 
+
+  TColgp_Array1OfPnt points(minN, minN + number_points-1);
   points.Assign(facets->Nodes());
-  GPoint *gPnts= new GPoint[number_points];
-  for (int i = 0; i < number_points; i ++)
+  GPoint *gPnts= new GPoint[number_points + minN];
+  for (int i = minN; i < number_points + minN; i ++)
   {
      gp_Pnt gp_pnt = points.Value(i);
      GPoint gPnt;
@@ -272,38 +300,54 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
      gPnt.z = gp_pnt.Z();
      gPnts[i] = gPnt;
   }
-  g_mem->replace_point_list( gPnts, number_points, number_points);
+  g_mem->replace_point_list( gPnts, number_points, number_points + minN);
 
-  Poly_Array1OfTriangle triangles(0, number_facets-1);
-  triangles.Assign( facets->Triangles() );
-  int *facetList =  new int[number_facets];
-  for (int i = 0; i < triangles.Length(); i++)
-  {
-     Poly_Triangle triangle = triangles.Value( i );
-     int N1, N2, N3;
-     triangle.Get(N1, N2, N3); 
-     facetList[4 * i] = 3;
-     facetList[4 * i + 1] = N1;
-     facetList[4 * i + 2] = N2;
-     facetList[4 * i + 3] = N3;
-  } 
-  g_mem->replace_facet_list( facetList, number_facets, number_facets); 
   return CUBIT_SUCCESS;
 }
 
 //================================================================================
-// Description:
-// Author     :
-// Date       :
+// Description: This function queries OCC for the edge information
+//              needed in facetting a RefEdge.  This information is
+//              stored and output in g_mem.
+// Author     : Jane Hu
+// Date       : 10/26/07
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
-                                            int& num_points,
-                                            GMem* gMem,
-                                            double /*tolerance*/ ) const
+                                          int& num_points,
+                                          GMem* gMem,
+                                          double /*tolerance*/ ) const
 {
   //  get the OCCCurve.
-  OCCCurve *occ_curv_ptr = CAST_TO(curve_ptr,OCCCurve);
+  OCCCurve *occ_curve_ptr = CAST_TO(curve_ptr,OCCCurve);
+  assert (gMem);
 
+    
+  TopoDS_Edge * Topo_Edge = occ_curve_ptr->get_TopoDS_Edge();
+  if (!Topo_Edge)
+    return CUBIT_FAILURE;
+
+  TopLoc_Location L;
+  Handle_Poly_Polygon3D facets = BRep_Tool::Polygon3D(*Topo_Edge, L);
+
+  num_points = facets->NbNodes();
+  TColgp_Array1OfPnt points(0, num_points-1);
+  points.Assign(facets->Nodes());
+
+  //! Note: If the polygon is closed, the point of closure is 
+  //! repeated at the end of its table of nodes. Thus, on a closed 
+  //! triangle the function NbNodes returns 4. 
+  GPoint *gPnts= new GPoint[num_points];
+  for (int i = 0; i < num_points ; i ++)
+  {
+     gp_Pnt gp_pnt = points.Value(i);
+     GPoint gPnt;
+     gPnt.x = gp_pnt.X();
+     gPnt.y = gp_pnt.Y();
+     gPnt.z = gp_pnt.Z();
+     gPnts[i] = gPnt;
+  }
+  gMem->replace_point_list( gPnts, num_points, num_points );
+ 
   return CUBIT_SUCCESS;
 }
 
