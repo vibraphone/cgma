@@ -180,6 +180,9 @@ public :
     //-    delete these CubitVectors (or in the case of RefEdge, to make sure
     //-    that *it's* calling code knows that it should delete the CubitVectors)!
   
+  CubitStatus get_interior_extrema_in_direction(DLIList<CubitVector*>&,
+ 						CubitVector);
+
   virtual CubitStatus closest_point( CubitVector const& location, 
                                      CubitVector& closest_location,
                                      CubitVector* tangent_ptr = NULL,

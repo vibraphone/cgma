@@ -49,6 +49,9 @@
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
 #include "GeomLProp_CurveTool.hxx"
+#include "GeomAPI_ExtremaCurveCurve.hxx"
+#include "Geom_Line.hxx"
+#include "GC_MakeLine.hxx"
 //#include "TopOpeBRep_ShapeIntersector.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
 //#include "TopOpeBRep_EdgesIntersector.hxx"
@@ -290,24 +293,48 @@ CubitStatus OCCCurve::get_interior_extrema(
   CubitSense& return_sense )
 {
   // Danilov: try to use GeomAPI_ExtremaCurveCurve
+  // Will do 3 primary directions seperately. 
   assert(0);
   
+  CubitVector x(1.0, 0.0, 0.0);
+  get_interior_extrema_in_direction(interior_points, x);
+  CubitVector y(0.0, 1.0, 0.0);
+  get_interior_extrema_in_direction(interior_points, y);
+  CubitVector z(0.0, 0.0, 1.0);
+  get_interior_extrema_in_direction(interior_points, z );
+ 
+  // Return sense is whatever the sense of this curve is.
+  TopAbs_Orientation sense = myTopoDSEdge->Orientation();
+  return_sense = (sense == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+ 
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus OCCCurve::get_interior_extrema_in_direction(
+		 	DLIList<CubitVector*>& interior_points,
+			CubitVector dir)
+{
+  //Create a straight line.
+  gp_Pnt origin(0.0, 0.0, 0.0);
+  gp_Dir adir(dir.x(), dir.y(), dir.z());
+  Handle(Geom_Line) line = GC_MakeLine(origin, adir);
+
   //get the Geom_Curve of the OCCCurve
   Standard_Real first;
   Standard_Real last;
   Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
-
-  //only when the curve's second derivative is computable, does it possibly
-  //have interior_extrema
-  if(1 == GeomLProp_CurveTool::Continuity(myCurve))
-    return CUBIT_SUCCESS;
- 
-  // Return sense is whatever the sense of this curve is.
-  return_sense = sense_;
   
+  GeomAPI_ExtremaCurveCurve extrema(myCurve, line);
+  int nPnt = extrema.NbExtrema();
+  for (int i = 1; i <= nPnt ; i++)
+  {
+    gp_Pnt P1, P2;
+    extrema.Points(i, P1, P2);
+    CubitVector* v = new CubitVector(P1.X(), P1.Y(), P1.Z());
+    interior_points.append(v);
+  }
   return CUBIT_SUCCESS;
-}
-
+}  
 //-------------------------------------------------------------------------
 // Purpose       : This function computes the point on the curve closest 
 //                 to the input location.  Optionally, it can also compute

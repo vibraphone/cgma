@@ -616,18 +616,20 @@ OCCQueryEngine::get_intersections( Curve* curve, Surface* surface,
 
 //================================================================================
 // Description: Find extrema position on an entity list
-// Author     :
-// Date       :
+// Author     : Jane Hu
+// Date       : 10/30/07
 //================================================================================
 CubitStatus
-OCCQueryEngine::entity_extrema( DLIList<GeometryEntity*> &,
-                                  const CubitVector *,
-                                  const CubitVector *,
-                                  const CubitVector *,
-                                  CubitVector &,
-                                  GeometryEntity *& )
+OCCQueryEngine::entity_extrema( DLIList<GeometryEntity*> &ref_entity_list,
+                                  const CubitVector *dir1,
+                                  const CubitVector *dir2,
+                                  const CubitVector *dir3,
+                                  CubitVector &extrema,
+                                  GeometryEntity *&extrema_entity_ptr )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  //in Acis, the api_entity_extrema is used to calculate "possible 
+  //self-intersecting sweeping and to align lofting sections"
+  PRINT_ERROR("There's no such call in OCC correponding to Acis call."); 
   return CUBIT_FAILURE;
 }
 
