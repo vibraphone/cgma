@@ -104,56 +104,6 @@ BodySM* OCCBody::copy()
 {
   return (BodySM*)NULL;
 }
-//---------------------------------------------------------------- 
-// Function: can_be_deleted 
-// Description: determine if the body can be deleted 
-// 
-// Author: sjowen 
-//---------------------------------------------------------------- 
-CubitBoolean OCCBody::can_be_deleted( DLIList <Body*> &body_list ) 
-{ 
-  CubitBoolean delete_ok = CUBIT_TRUE; 
-  DLIList<OCCSurface *>surf_list; 
-  //get_surfaces(surf_list); 
-  int ii; 
-  for (ii=0; ii<surf_list.size() && delete_ok; ii++) 
-  { 
-    OCCSurface *surf_ptr = surf_list.get_and_step(); 
-    DLIList<OCCBody*>my_body_list; 
-    surf_ptr->get_bodies(my_body_list); 
-    int jj; 
-    if (my_body_list.size() >= 2) 
-    { 
-      for (jj=0; jj<my_body_list.size() && delete_ok; jj++) 
-      { 
-        BodySM *my_body_ptr = my_body_list.get_and_step(); 
-        if (my_body_ptr != this) 
-        { 
-          int kk; 
-          int found = 0; 
-          for (kk=0; kk<body_list.size() && !found; kk++) 
-          { 
-            Body *body_ptr = body_list.get_and_step(); 
-            OCCBody* fbody_ptr = CAST_TO(body_ptr->get_body_sm_ptr(), OCCBody); 
-            if (fbody_ptr) 
-            { 
-              if (my_body_ptr == fbody_ptr) 
-                found = 1; 
-            } 
-          } 
-          if (!found) 
-          { 
-            delete_ok = CUBIT_FALSE; 
-            PRINT_ERROR("Body cannot be deleted because it is merged with adjacent Body\n"); 
-            PRINT_INFO("    Mesh Based Geometry entities cannot be unmerged.\n" 
-              "    Try using the no_merge option when importing the mesh\n"); 
-          } 
-        } 
-      } 
-    } 
-  } 
-  return delete_ok; 
-} 
     
 //----------------------------------------------------------------
 // Function: move

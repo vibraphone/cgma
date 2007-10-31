@@ -129,8 +129,6 @@ public:
     //R- This  is not a solid modeling engine.
 //HEADER- Functions for importing and exporting solid models.
 
-  CubitBoolean can_delete_bodies(DLIList<Body*>body_list);
-  
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                           int& number_triangles,
                                           int& number_points,

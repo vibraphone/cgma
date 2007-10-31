@@ -48,6 +48,7 @@
 #include <BRepLProp_CLProps.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
+#include "TopExp_Explorer.hxx"
 #include "GeomLProp_CurveTool.hxx"
 #include "GeomAPI_ExtremaCurveCurve.hxx"
 #include "Geom_Line.hxx"
@@ -296,13 +297,57 @@ CubitStatus OCCCurve::get_interior_extrema(
   // Will do 3 primary directions seperately. 
   assert(0);
   
+  DLIList<CubitVector*> point_list;
   CubitVector x(1.0, 0.0, 0.0);
-  get_interior_extrema_in_direction(interior_points, x);
+  get_interior_extrema_in_direction(point_list, x);
   CubitVector y(0.0, 1.0, 0.0);
-  get_interior_extrema_in_direction(interior_points, y);
+  get_interior_extrema_in_direction(point_list, y);
   CubitVector z(0.0, 0.0, 1.0);
-  get_interior_extrema_in_direction(interior_points, z );
- 
+  get_interior_extrema_in_direction(point_list, z );
+
+  //like ACIS, return only points that aren't at an endpoint and are not 
+  //close to previous point
+  const double epsilon = 30.* GEOMETRY_RESABS;
+  const double epsilon_squared = epsilon*epsilon;
+
+  //get both vertices' coordinates.
+  CubitVector endpoints[2];
+  int i = 0;
+  TopExp_Explorer aVertexExp(*myTopoDSEdge, TopAbs_VERTEX);
+  while(aVertexExp.More())
+  {
+     TopoDS_Vertex v = TopoDS::Vertex(aVertexExp.Current());
+     gp_Pnt p = BRep_Tool::Pnt(v);
+     endpoints[i].x(p.X());
+     endpoints[i].y(p.Y());
+     endpoints[i].z(p.Z());  
+     i++;
+     aVertexExp.Next();
+  } 
+
+  //compare to see if the Points in point_list are interior and far apart
+  int j;
+  CubitVector* cubit_position = NULL;
+  CubitVector * temp_position = NULL;
+  point_list.sort();
+  point_list.reset();
+  for (j = point_list.size(); j--; )
+  {
+     temp_position = point_list.get_and_step();
+     // save if not equal to an endpoint, or prior point
+     if (temp_position->distance_between_squared(endpoints[0]) > epsilon_squared
+        &&
+        temp_position->distance_between_squared(endpoints[1]) > epsilon_squared)
+     {
+        if (!cubit_position ||
+            temp_position->distance_between_squared(*cubit_position) > epsilon_squared)
+        {
+          cubit_position = temp_position ;
+          interior_points.append( cubit_position );
+        } // If point isn't close to previous point
+     } // If point isn't at an endpoint
+  } // for each point
+
   // Return sense is whatever the sense of this curve is.
   TopAbs_Orientation sense = myTopoDSEdge->Orientation();
   return_sense = (sense == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);

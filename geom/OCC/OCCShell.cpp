@@ -266,8 +266,8 @@ void OCCShell::disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect )
     if( mySurfs.move_to( dynamic_cast<Surface*>(surface) ) )
       mySurfs.change_to(NULL);
 
-    if (surface)
-      surface->remove_shell(this);
+    //if (surface)
+     // surface->remove_shell(this);
   }
   mySurfs.remove_all_with_value( NULL );
 }
@@ -289,8 +289,8 @@ void OCCShell::disconnect_all_surfaces()
   {
     Surface* sm_ptr = mySurfs.get_and_step();
     OCCSurface* surface = dynamic_cast<OCCSurface*>(sm_ptr);
-    if (surface)
-      surface->remove_shell(this);
+    //if (surface)
+     // surface->remove_shell(this);
   }
   mySurfs.clean_out();
 }

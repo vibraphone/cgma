@@ -98,124 +98,10 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 
 }
 
-//// OCCSurface::OCCSurface(FacetEvalTool *facet_tool,
-////                           DLIList<ShellSM*> &shellsms,
-////                           DLIList<LoopSM*> &loopsms)
-//// {
-////  assert(0);
-////    // Calculate a bounding box if there isn't one already
-////  facetEvalTool = facet_tool;
-////    //sense_ = CUBIT_FORWARD;
-////  myShells += shellsms;
-////  myLoops += loopsms;
-////  myShellSense = CUBIT_UNKNOWN;
-////  myEvaluator = NULL;
-//// }
-
-//// //-------------------------------------------------------------------------
-//// // Purpose       : The constructor with a pointer to the FacetEvalTool. 
-//// //
-//// // Special Notes : Used for save/restore
-//// //
-//// //-------------------------------------------------------------------------
-//// OCCSurface::OCCSurface( const SphereEvaluatorData *sphere_data,
-////                             FacetEvalTool *facet_tool,
-////                             DLIList<ShellSM*> &shellsms,
-////                             DLIList<LoopSM*> &loopsms )
-//// {
-////   assert(0);
-////   facetEvalTool = facet_tool;
-////     //sense_ = CUBIT_FORWARD;
-////   myShells += shellsms;
-////   myLoops += loopsms;
-////   myShellSense = CUBIT_UNKNOWN;
-//// 
-////   myEvaluator = new SphereEvaluator( sphere_data );
-//// }
-//// //-------------------------------------------------------------------------
-//// // Purpose       : The constructor with a pointer to the FacetEvalTool. 
-//// //
-//// // Special Notes : Used for save/restore
-//// //
-//// //-------------------------------------------------------------------------
-//// OCCSurface::OCCSurface( const CylinderEvaluatorData *cylinder_data,
-////                             FacetEvalTool *facet_tool,
-////                             DLIList<ShellSM*> &shellsms,
-////                             DLIList<LoopSM*> &loopsms )
-//// {
-////   assert(0);
-////   facetEvalTool = facet_tool;
-////     //sense_ = CUBIT_FORWARD;
-////   myShells += shellsms;
-////   myLoops += loopsms;
-////   myShellSense = CUBIT_UNKNOWN;
-//// 
-////   myEvaluator = new CylinderEvaluator( cylinder_data );
-//// }
-
-//// //-------------------------------------------------------------------------
-//// // Purpose       : The constructor with a pointer to the FacetEvalTool. 
-//// //
-//// // Special Notes : Used for save/restore
-//// //
-//// //-------------------------------------------------------------------------
-//// OCCSurface::OCCSurface(FacetEvalTool *facet_tool,
-////                            CubitSense sense,
-////                            CubitSense shell_sense0,
-////                            CubitBoolean use_facets,
-////                            DLIList<LoopSM*> &loopsms)
-//// {
-////   assert(0);
-////     // Calculate a bounding box if there isn't one already
-////   facetEvalTool = facet_tool;
-////     //sense_ = CUBIT_FORWARD;
-////   myLoops += loopsms;
-////   myShellSense = shell_sense0;
-////   myEvaluator = NULL;
-//// }
-//// //-------------------------------------------------------------------------
-//// // Purpose       : The default destructor. 
-//// //
-//// // Special Notes :
-//// //
-//// //-------------------------------------------------------------------------
 
 OCCSurface::~OCCSurface() 
 {
-  ////  if ( facetEvalTool )
-  //// {
-  ////  delete facetEvalTool;
-  //// }
 }
-
-
-//-------------------------------------------------------------------------
-// Purpose       : get the interpolation order of the FacetEvalTool 
-//
-// Special Notes :
-//
-//-------------------------------------------------------------------------
-//// int OCCSurface::interp_order() 
-//// {
-////   assert(0);
-////   assert(facetEvalTool != NULL);
-////  
-////  return facetEvalTool->interp_order();
-//// }
-
-//-------------------------------------------------------------------------
-// Purpose       : get the min dot of the FacetEvalTool 
-//
-// Special Notes :
-//
-//-------------------------------------------------------------------------
-//// double OCCSurface::min_dot() 
-//// {
-////  assert(0);
-////  assert(facetEvalTool != NULL);
-////  
-////  return facetEvalTool->get_min_dot();
-////}
 
 
 //-------------------------------------------------------------------------
@@ -267,6 +153,7 @@ void OCCSurface::remove_all_simple_attribute_virt()
 CubitStatus OCCSurface::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                  csa_list)
   { return attribSet.get_attributes(csa_list); }
+
 CubitStatus OCCSurface::get_simple_attribute(const CubitString& name,
                                         DLIList<CubitSimpleAttrib*>& csa_list )
   { return attribSet.get_attributes( name, csa_list ); }
@@ -661,16 +548,6 @@ double OCCSurface::measure()
 }
 
 //// //-------------------------------------------------------------------------
-//// // Purpose       : Updates the (cached) area of the Surface so that if 
-//// //                 measure() is called, the correct value is returned.
-//// //-------------------------------------------------------------------------
-//// void OCCSurface::update_measurement() 
-//// {
-////  assert(0);
-////  facetEvalTool->calculate_area();
-//// }
-
-//// //-------------------------------------------------------------------------
 //// // Purpose       : Returns whether the facet surface is completely flat
 //// //
 //// //-------------------------------------------------------------------------
@@ -710,16 +587,6 @@ double OCCSurface::measure()
 ////         return CUBIT_TRUE;
 ////     }
 ////     return CUBIT_FALSE;
-//// }
-
-//// const CubitEvaluatorData *OCCSurface::evaluator_data( void )
-//// {
-////   assert(0);
-////     if ( myEvaluator )
-////     {
-////         return myEvaluator->evaluator_data();
-////     }
-////     return NULL;
 //// }
 
 //-------------------------------------------------------------------------
@@ -1065,65 +932,6 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 }
 
 
-//-------------------------------------------------------------------------
-// Purpose       : Remove Shell from shell list
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-CubitStatus OCCSurface::remove_shell(OCCShell* shell)
-{
-  assert(0);
-    // Something strange here -- A DLIList of Shells and a 
-    // two-element array for senses?  Try to keep the senses
-    // intact anyway...
-  myShells.reset();
-  if (myShells.get() == shell)
-    myShellSense = CUBIT_UNKNOWN;
-  
-  if (!myShells.move_to(shell))
-    return CUBIT_FAILURE;
-  
-  myShells.remove();
-  return CUBIT_SUCCESS;
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : Tear down topology
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-void OCCSurface::disconnect_all_loops()
-{
-  assert(0);
-  myLoops.reset();
-  for (int i = myLoops.size(); i--; )
-  {
-    LoopSM* sm_ptr = myLoops.get_and_step();
-    OCCLoop* loop = dynamic_cast<OCCLoop*>(sm_ptr);
-    if (loop)
-    {
-      assert(loop->get_surface() == this);
-      loop->remove_surface();
-    }
-  }
-  myLoops.clean_out();
-}
-/*
-void OCCSurface::add_transformation( CubitTransformMatrix &tfmat )
-{
-  assert(0);
-    if ( myEvaluator )
-        myEvaluator->add_transformation( tfmat );
-}
-*/
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

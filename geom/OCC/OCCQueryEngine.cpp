@@ -142,28 +142,6 @@ OCCQueryEngine::~OCCQueryEngine()
   instance_ = NULL;
 }
 
-//================================================================================
-// Description:  can_delete_bodies
-// Author     : sjowen
-// Date       : 4/25/02
-//================================================================================
-CubitBoolean OCCQueryEngine::can_delete_bodies(DLIList<Body*>body_list)
-{
-  CubitBoolean delete_ok = CUBIT_TRUE;
-  int ii;
-  for (ii=0; ii<body_list.size() && delete_ok; ii++)
-  {
-    Body *body_ptr = body_list.get_and_step();
-    // Extract the BODY from Body
-    OCCBody* fbody_ptr = CAST_TO(body_ptr->get_body_sm_ptr(), OCCBody);
-    if (fbody_ptr)
-    {
-      delete_ok = fbody_ptr->can_be_deleted(body_list);
-    }
-  }
-  return delete_ok;
-}
-
 int OCCQueryEngine::get_major_version()
 {
   return OCCQE_MAJOR_VERSION;
@@ -1390,7 +1368,7 @@ CubitStatus OCCQueryEngine::populate_topology_bridge_face(TopoDS_Shape aShape, D
 		} else {
 			surface = (OCCSurface*)(*CGMList)[OCCMap->Find(*poface)];
 		}
-		surface->add_shell((OCCShell*)(*CGMList)[OCCMap->Find(aShape)]);
+		//surface->add_shell((OCCShell*)(*CGMList)[OCCMap->Find(aShape)]);
 	}
 	return CUBIT_SUCCESS;
 }
@@ -1594,9 +1572,9 @@ void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&BodyList) cons
 //
 // Special Notes :
 //
-// Creator       : Jason Kraftcheck
+// Creator       : Jane Hu
 //
-// Creation Date : 09/29/03
+// Creation Date : 10/29/07
 //-------------------------------------------------------------------------
 CubitStatus
 OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
@@ -1605,40 +1583,15 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   if (!fbody)
     return CUBIT_FAILURE;
 
-  DLIList<OCCShell*> shells;
-  DLIList<OCCSurface*> surfaces;
+  TopoDS_Shape* shape = fbody->get_TopoDS_Shape();
 
-  /*
-  fbody->disconnect_all_lumps();
-  delete fbody;
+  // Remove the links between OCC and Cubit
+  //  unhook_ENTITY_from_VGI(shape);
 
-  for (int i = lumps.size(); i--; )
-  {
-    OCCLump* lump = lumps.get_and_step();
+  if (!shape)
+    return CUBIT_FAILURE;
 
-    shells.clean_out();
-    lump->get_shells(shells);
-    lump->disconnect_all_shells();
-    delete lump;
-
-    for (int j = shells.size(); j--; )
-    {
-      OCCShell* shell = shells.get_and_step();
-
-      surfaces.clean_out();
-      shell->get_surfaces(surfaces);
-      shell->disconnect_all_surfaces();
-      delete shell;
-
-      for (int k = surfaces.size(); k--; )
-      {
-        OCCSurface* surface = surfaces.get_and_step();
-        if (!surface->has_parent_shell())
-          delete_solid_model_entities(surface);
-      }
-    }
-  }
-  */
+  delete shape;
   return CUBIT_SUCCESS;
 }
 
@@ -1647,9 +1600,9 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 //
 // Special Notes :
 //
-// Creator       : Jason Kraftcheck
+// Creator       : Jane Hu
 //
-// Creation Date : 09/29/03
+// Creation Date : 10/29/07
 //-------------------------------------------------------------------------
 CubitStatus
 OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
@@ -1658,37 +1611,15 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
   if (!fsurf || fsurf->has_parent_shell())
     return CUBIT_FAILURE;
 
-  DLIList<OCCLoop*> loops;
-  DLIList<OCCCoEdge*> coedges;
+  TopoDS_Face* face = fsurf->get_TopoDS_Face();
 
-  fsurf->get_loops(loops);
-  fsurf->disconnect_all_loops();
-  delete fsurf;
+  // Remove the links between OCC and Cubit
+  //  unhook_ENTITY_from_VGI(face);
 
-  for (int i = loops.size(); i--; )
-  {
-    OCCLoop* loop = loops.get_and_step();
+  if(!face)
+     return CUBIT_FAILURE;
 
-    coedges.clean_out();
-    loop->get_coedges(coedges);
-    loop->disconnect_all_coedges();
-    delete loop;
-
-    for (int j = coedges.size(); j--; )
-    {
-      OCCCoEdge* coedge = coedges.get_and_step();
-      OCCCurve* curve = dynamic_cast<OCCCurve*>(coedge->curve());
-      if (curve)
-      {
-        curve->disconnect_coedge(coedge);
-        //if (!curve->has_parent_coedge())
-          delete_solid_model_entities(curve);
-      }
-
-      delete coedge;
-    }
-  }
-
+  delete face;
   return CUBIT_SUCCESS;
 }
 

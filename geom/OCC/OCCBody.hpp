@@ -53,8 +53,6 @@ public:
   virtual ~OCCBody() ;
     //- The destructor.
 
-  CubitBoolean can_be_deleted( DLIList <Body*> &body_list );
-  
   virtual GeometryQueryEngine* get_geometry_query_engine() const;
     //R GeometryQueryEngine*
     //R- A pointer to the geometric modeling engine associated with

@@ -99,14 +99,7 @@ public :
   virtual ~OCCSurface() ;
     //- The destructor
    
-  void add_shell(ShellSM *shell_ptr)    //// Not in SurfaceACIS
-    {myShells.append(shell_ptr);}
-    
-  CubitStatus remove_shell(OCCShell* shell_ptr);  //// Not in SurfaceACIS
-  
-  void disconnect_all_loops();   //// Not in SurfaceACIS
-  
-  inline bool has_parent_shell() { return myShells.size() > 0; }  //// Not in SurfaceACIS
+  bool has_parent_shell() ;   //// Not in SurfaceACIS
       
     //CubitSense get_relative_surface_sense();
     //- Return the relative surface sense. (see below)
