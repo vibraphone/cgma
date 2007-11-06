@@ -277,12 +277,9 @@ public:
   CubitStatus ensure_is_ascii_stl_file(FILE * fp, CubitBoolean &is_ascii);
   //- returns true in is_ascii if fp points to an ascii stl file
 
-CubitStatus create_super_facet_bounding_box(
+  CubitStatus create_super_bounding_box(
                                 DLIList<BodySM*>& body_list,
                                 CubitBox& super_box );
-CubitStatus create_facet_bounding_box(
-                                BodySM* bodySM,
-                                CubitBox& bbox );
 
   CubitStatus restore_transform( BodySM* body );
 
@@ -315,6 +312,14 @@ CubitStatus create_facet_bounding_box(
   static TopologyBridge* occ_to_cgm(TopoDS_Shape shape);
   
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
+
+  CubitStatus populate_topology_bridge_solid(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
+  CubitStatus populate_topology_bridge_shell(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
+  CubitStatus populate_topology_bridge_face(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
+  CubitStatus populate_topology_bridge_wire(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
+  CubitStatus populate_topology_bridge_edge(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
+  Point* populate_topology_bridge_vertex(TopoDS_Shape aShape);
+
 protected:
   
   OCCQueryEngine();
@@ -332,17 +337,11 @@ private:
                               DLIList<OCCPoint*> &facet_points );
 
 
-
-  CubitStatus populate_topology_bridge_solid(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_shell(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_face(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_wire(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_edge(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_vertex(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities, Curve *curve);
-
   static TopTools_DataMapOfShapeInteger* OCCMap;
+  static std::map<int, TopologyBridge*>* OccToCGM;
   static TopTools_DataMapOfShapeInteger* OCCMapr;
   static DLIList<TopologyBridge*>* CGMList;
+  static int iTotalTBCreated ;
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class
 

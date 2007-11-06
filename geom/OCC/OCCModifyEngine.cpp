@@ -15,6 +15,8 @@
 //-------------------------------------------------------------------------
 #include "config.h"
 #include "gp_Pnt.hxx"
+#include "TopoDS_Shape.hxx"
+#include "TopologyBridge.hpp"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
@@ -94,13 +96,16 @@ OCCModifyEngine::~OCCModifyEngine()
 // Function   : make_Point
 // Member Type: PUBLIC
 // Description: make a geometric entity point
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu 
+// Date       : 10/07
 //===============================================================================
 Point* OCCModifyEngine::make_Point( CubitVector const& point) const
 {
-  OCCPoint *occ_pt = new OCCPoint(point);
-  return  CAST_TO(occ_pt, Point);
+  gp_Pnt pt = gp_Pnt( point.x(), point.y(), point.z());
+  TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
+
+  // Create a new PointACIS object
+  return OCCQueryEngine::instance()->populate_topology_bridge_vertex( theVertex );
 }
 
 //===============================================================================

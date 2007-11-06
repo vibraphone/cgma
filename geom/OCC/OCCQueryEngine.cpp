@@ -97,6 +97,8 @@
 //#include "TopOpeBRep_Point2d.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
 #include "BRepAlgoAPI_Section.hxx"
+#include "BRepBuilderAPI_MakeEdge.hxx"
+#include "gp_Lin.hxx"
 using namespace NCubitFile;
 
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
@@ -109,6 +111,9 @@ TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMap = new TopTools_DataMapOfS
 TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMapr = new TopTools_DataMapOfShapeInteger;
 DLIList<TopologyBridge*> *OCCQueryEngine::CGMList = new DLIList<TopologyBridge*>;
 
+std::map<int, TopologyBridge*>* OccToCGM = new std::map<int, TopologyBridge*>;
+typedef std::map<int, TopologyBridge*>::value_type valType;
+int iTotalTBCreated = 0;
 //================================================================================
 // Description:
 // Author     :
@@ -525,7 +530,7 @@ CubitStatus OCCQueryEngine::get_intersections( Curve* curve1,
                                             *(occ_curve1->get_TopoDS_Edge()),
                                             *(occ_curve2->get_TopoDS_Edge()));
 
-  distShapeShape.Perform();
+  //distShapeShape.Perform();
   if (!distShapeShape.IsDone())
   {
      PRINT_ERROR("Cannot calculate the intersection points for the input curves.\n");
@@ -570,7 +575,7 @@ OCCQueryEngine::get_intersections( Curve* curve, Surface* surface,
   BRepExtrema_DistShapeShape distShapeShape(*(occ_curve->get_TopoDS_Edge()),
                                             *(occ_surface->get_TopoDS_Face()));
 
-  distShapeShape.Perform();
+  //distShapeShape.Perform();
   if (!distShapeShape.IsDone())
   {
      PRINT_ERROR("Cannot calculate the intersection points for the input curve and surface.\n");
@@ -639,7 +644,7 @@ OCCQueryEngine::entity_entity_distance( GeometryEntity *entity1,
   }
 
   BRepExtrema_DistShapeShape distShapeShape(*shape1, *shape2);
-  distShapeShape.Perform();
+  //distShapeShape.Perform();
   
   if (!distShapeShape.IsDone())
   {
@@ -1426,7 +1431,7 @@ CubitStatus OCCQueryEngine::populate_topology_bridge_edge(TopoDS_Shape aShape, D
 			CGMList->append(coedge);
 //			CGMList->append(curve);
 			Map->Bind(*poedge, CGMList->where_is_item(coedge));
-			populate_topology_bridge_vertex(*poedge, imported_entities, curve);
+			//populate_topology_bridge_vertex(*poedge, imported_entities, curve);
 		} else {
 			coedge = (OCCCoEdge*)(*CGMList)[Map->Find(*poedge)];
 		}
@@ -1435,35 +1440,40 @@ CubitStatus OCCQueryEngine::populate_topology_bridge_edge(TopoDS_Shape aShape, D
 	return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_vertex(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities, Curve *curve)
+Point* OCCQueryEngine::populate_topology_bridge_vertex(TopoDS_Shape aShape)
 {
+	OCCPoint *point;
 	TopExp_Explorer Ex;
 	for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next()) {
 		TopoDS_Vertex *povertex = new TopoDS_Vertex;
 		*povertex = TopoDS::Vertex(Ex.Current());
-		OCCPoint *point;
-		if (!OCCMap->IsBound(*povertex)) {
-			printf("Adding vertex\n");
-                        gp_Pnt pt = BRep_Tool::Pnt(*povertex);
-			point = new OCCPoint(pt);
-			CGMList->append(point);
-//			imported_entities.append(point);
-			OCCMap->Bind(*povertex, CGMList->where_is_item(point));
-		} else {
-			point = (OCCPoint*)(*CGMList)[OCCMap->Find(*povertex)];
+		if (!OCCMap->IsBound(*povertex)) 
+                {
+	 	  printf("Adding vertex\n");
+                  iTotalTBCreated++;
+	 	  point = new OCCPoint(povertex);
+		  CGMList->append(point);
+//		  imported_entities.append(point);
+		  OCCMap->Bind(*povertex, iTotalTBCreated);
+                  OccToCGM->insert(valType(iTotalTBCreated,
+                                          (TopologyBridge*)point));
+		} 
+                else {
+                  int i = OCCMap->Find(*povertex);
+	 	  point = (OCCPoint*)(OccToCGM->find(i))->second;
 		}
 	}
-	return CUBIT_SUCCESS;
+	return point;
 }
 
 TopologyBridge* OCCQueryEngine::occ_to_cgm(TopoDS_Shape shape)
 {
-	
-	if ((shape.ShapeType() != TopAbs_EDGE) || (shape.Orientation() == TopAbs_FORWARD)) return (*CGMList)[OCCMap->Find(shape)];
-	else return (*CGMList)[OCCMapr->Find(shape)];
-/*	if (OCCMap->IsBound(shape))*/ return (*CGMList)[OCCMap->Find(shape)];
-//	else return (*CGMList)[(*OCCMapt)[shape]];
-}
+       if(!OCCMap->IsBound(shape))
+	 return (TopologyBridge*) NULL;
+
+       int k = OCCMap->Find(shape);
+       return (OccToCGM->find(k))->second;
+}	
 
 CubitStatus OCCQueryEngine::import_solid_model(FILE *file_ptr,
                                                  const char* /*file_type*/,
@@ -1585,13 +1595,27 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 
   TopoDS_Shape* shape = fbody->get_TopoDS_Shape();
 
-  // Remove the links between OCC and Cubit
-  //  unhook_ENTITY_from_VGI(shape);
-
   if (!shape)
     return CUBIT_FAILURE;
 
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*shape))
+  {
+    k = OCCMap->Find(*shape);
+    
+    if(!OCCMap->UnBind(*shape))
+      PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+
+    if(!OccToCGM->erase(k))
+      PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+  }
+  // Remove the links between OCC and Cubit
+  //  unhook_ENTITY_from_VGI(shape);
+
   delete shape;
+  delete bodysm;
+
   return CUBIT_SUCCESS;
 }
 
@@ -1608,18 +1632,32 @@ CubitStatus
 OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
 {
   OCCSurface* fsurf = dynamic_cast<OCCSurface*>(surface);
-  if (!fsurf || fsurf->has_parent_shell())
+  if (!fsurf)
     return CUBIT_FAILURE;
 
   TopoDS_Face* face = fsurf->get_TopoDS_Face();
 
-  // Remove the links between OCC and Cubit
-  //  unhook_ENTITY_from_VGI(face);
-
   if(!face)
      return CUBIT_FAILURE;
 
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*face))
+  {
+    k = OCCMap->Find(*face);
+
+    if(!OCCMap->UnBind(*face))
+      PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+
+    if(!OccToCGM->erase(k))
+      PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+  }
+
+  // Remove the links between OCC and Cubit
+  //  unhook_ENTITY_from_VGI(face);
+
   delete face;
+  delete surface;
   return CUBIT_SUCCESS;
 }
 
@@ -1636,29 +1674,30 @@ CubitStatus
 OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
 {
   OCCCurve* fcurve = dynamic_cast<OCCCurve*>(curve);
-  //if (!fcurve || fcurve->has_parent_coedge())
-  //  return CUBIT_FAILURE;
+  if (!fcurve )
+    return CUBIT_FAILURE;
 
-  OCCPoint* start = dynamic_cast<OCCPoint*>(fcurve->start_point());
-  OCCPoint*   end = dynamic_cast<OCCPoint*>(fcurve->end_point()  );
-
-  if (start == end )
-      end = NULL;
-
-  if (start)
+  TopoDS_Edge * edge = fcurve->get_TopoDS_Edge();
+  if (!edge)
+    return CUBIT_FAILURE;
+ 
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*edge))
   {
-    //start->disconnect_curve(fcurve);
-    //if (!start->has_parent_curve())
-    //  delete_solid_model_entities(start);
+    k = OCCMap->Find(*edge);
+
+    if(!OCCMap->UnBind(*edge))
+      PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
+
+    if(!OccToCGM->erase(k))
+      PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
   }
 
-  if (end)
-  {
-    //end->disconnect_curve(fcurve);
-    //if (!end->has_parent_curve())
-    //  delete_solid_model_entities(end);
-  }
+  // Remove the links between OCC and Cubit
+  //unhook_ENTITY_from_VGI(edge);
 
+  delete edge;
   delete curve;
   return CUBIT_SUCCESS;
 }
@@ -1675,35 +1714,96 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
 CubitStatus
 OCCQueryEngine::delete_solid_model_entities( Point* point ) const
 {
-  //OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
+  OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
+  if (!fpoint)
+    return CUBIT_FAILURE;
 
+  TopoDS_Vertex *vertex = fpoint->get_TopoDS_Vertex();
+  if (!vertex)
+    return CUBIT_FAILURE;
+
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*vertex))
+  {
+    k = OCCMap->Find(*vertex);
+
+    if(!OCCMap->UnBind(*vertex))
+      PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
+
+    if(!OccToCGM->erase(k))
+      PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
+  }
+
+  // Remove the links between OCC and Cubit
+  //unhook_ENTITY_from_VGI(vertex);
+
+  delete vertex;
   delete point;
   return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::fire_ray(BodySM *,
-                                          const CubitVector &,
-                                          const CubitVector &,
-                                          DLIList<double>&,
-                                          DLIList<GeometryEntity*> *) const
+CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
+                                     const CubitVector &start,
+                                     const CubitVector &unit,
+                                     DLIList<double>& ray_parms,
+                                    DLIList<GeometryEntity*> *entity_list) const
 {
-  PRINT_ERROR("OCCQueryEngine::fire_ray not yet implemented.\n");
-  return CUBIT_FAILURE;
-}
+  CubitStatus status = CUBIT_SUCCESS;
+
   //- fire a ray at the specified body, returning the entities hit and
   //- the parameters along the ray; return CUBIT_FAILURE if error
+  // - line body intersection. 
+  gp_Pnt p(start.x(), start.y(), start.z());
+  gp_Dir dir(unit.x(), unit.y(), unit.z());
+  gp_Lin L(p, dir);
+  TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(L); 
+  
+  OCCBody *occBody = CAST_TO(body, OCCBody);
+  if (occBody == NULL)
+  {
+     PRINT_ERROR("Option not supported for non-occ based geometry.\n");
+     return CUBIT_FAILURE;
+  }
 
+  BRepExtrema_DistShapeShape distShapeShape(edge,
+					*(occBody->get_TopoDS_Shape()));
+  //distShapeShape.Perform();
+  if (!distShapeShape.IsDone())
+  {
+     PRINT_ERROR("Cannot calculate the intersection points for the input body.\n");
+     return CUBIT_FAILURE;
+  }
+
+   if (distShapeShape.Value() < get_sme_resabs_tolerance())
+  {
+     int numPnt = distShapeShape.NbSolution();
+     for (int i = 1; i <= numPnt; i++)
+     {
+       double para;
+       distShapeShape.ParOnEdgeS1(i , para);
+       ray_parms.append(para);
+
+       TopoDS_Shape shape = distShapeShape.SupportOnShape2(i);
+       int k = OCCMap->Find(shape);
+       std::map<int,TopologyBridge*>::iterator it = OccToCGM->find(k);
+       TopologyBridge* tb = (*it).second;
+       entity_list->append((GeometryEntity*)tb);
+     }
+  } 
+  return status;
+}
 double OCCQueryEngine::get_sme_resabs_tolerance() const
 {
-  PRINT_ERROR("OCCQueryEngine::get_sme_resabs_tolerance not yet implemented.\n");
-  return CUBIT_FAILURE;
+  PRINT_WARNING("OCC doesn't have its standard linear tolerance.\n");
+  return 1e-6; 
 }
 // Gets solid modeler's resolution absolute tolerance
 
 double OCCQueryEngine::set_sme_resabs_tolerance( double )
 {
   PRINT_ERROR("OCCQueryEngine::set_sme_resabs_tolerance not yet implemented.\n");
-  return CUBIT_FAILURE;
+  return 0.0;
 }
 
 CubitStatus OCCQueryEngine::set_int_option( const char* , int )
@@ -1817,7 +1917,7 @@ CubitStatus OCCQueryEngine::ensure_is_ascii_stl_file(FILE * fp, CubitBoolean &is
 //Author: jdfowle
 //Date: 12/15/03
 //=============================================================================
-CubitStatus OCCQueryEngine::create_super_facet_bounding_box(
+CubitStatus OCCQueryEngine::create_super_bounding_box(
                                 DLIList<BodySM*>& body_list,
                                 CubitBox& super_box )
 {
@@ -1828,44 +1928,10 @@ CubitStatus status = CUBIT_SUCCESS;
   body_list.reset();
   for ( i = 0; i < body_list.size(); i++ ) {
     bodySM = body_list.get_and_step();  
-    create_facet_bounding_box(bodySM,super_box);
+    OCCBody* occBody = CAST_TO(bodySM, OCCBody);
+    super_box |= occBody->get_bounding_box();
   }
 
-  return status;
-}
-
-//=============================================================================
-//Function:   create_facet_bounding_box(PUBLIC)
-//Description: Find the bounding box of a BodySM
-//Author: jdfowle
-//Date: 12/15/03
-//=============================================================================
-CubitStatus OCCQueryEngine::create_facet_bounding_box(
-                                BodySM* bodySM,
-                                CubitBox& bbox )
-{
-  OCCBody *fbody_ptr;
-  int j;
-  DLIList<OCCSurface*> facet_surf_list;
-  DLIList<CubitFacet*> facet_list;
-  DLIList<CubitPoint*> point_list;
-  OCCSurface *facet_surface;
-  CubitBox surf_bbox, total_box;
-  CubitStatus status = CUBIT_FAILURE;
-
-    fbody_ptr = dynamic_cast<OCCBody *>(bodySM);
-    //fbody_ptr->get_surfaces(facet_surf_list);
-    for ( j = 0; j < facet_surf_list.size(); j++ ) {
-      facet_surface = facet_surf_list.get_and_step();
-      facet_list.clean_out();
-      point_list.clean_out();
-      //facet_surface->get_my_facets(facet_list,point_list);
-      //status = FacetDataUtil::get_bbox_of_points(point_list,surf_bbox);
-      if ( j == 0 ) total_box = surf_bbox;
-      else 
-        total_box |= surf_bbox;
-    }
-  bbox |= total_box;  
   return status;
 }
 
