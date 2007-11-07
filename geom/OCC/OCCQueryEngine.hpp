@@ -32,7 +32,6 @@ using std::type_info;
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
 
-#include <TopTools_DataMapOfShapeInteger.hxx>
 #include <map>
 // ********** END CUBIT INCLUDES              **********
 
@@ -79,7 +78,15 @@ class OCCBody;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
-
+ 
+class TopTools_DataMapOfShapeInteger;
+class TopoDS_Vertex;
+class TopoDS_Edge;
+class TopoDS_Shape;
+class TopoDS_Wire;
+class TopoDS_Face;
+class TopoDS_Solid;
+class TopoDS_Shell;
 // ********** END FORWARD DECLARATIONS        **********
 
 // ********** BEGIN MACRO DEFINITIONS         **********
@@ -313,18 +320,20 @@ public:
   
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
-  CubitStatus populate_topology_bridge_solid(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_shell(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_face(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_wire(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  CubitStatus populate_topology_bridge_edge(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities);
-  Point* populate_topology_bridge_vertex(TopoDS_Shape aShape);
+  BodySM* populate_topology_bridge(TopoDS_Shape aShape);
+  Lump* populate_topology_bridge(TopoDS_Solid aShape);
+  Surface* populate_topology_bridge(TopoDS_Face aShape);
+  Curve* populate_topology_bridge(TopoDS_Edge aShape);
+  Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
 protected:
   
   OCCQueryEngine();
   
 private:
+
+  OCCLoop* populate_topology_bridge(TopoDS_Wire aShape);  
+  OCCShell* populate_topology_bridge(TopoDS_Shell aShape);
 
   CubitStatus write_topology( FILE *file_ptr, 
                               DLIList<OCCBody*> &facet_bodies,

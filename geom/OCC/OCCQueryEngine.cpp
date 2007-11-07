@@ -95,6 +95,7 @@
 //#include "TopOpeBRepTool_ShapeTool.hxx"
 //#include "BRepPrimAPI_MakePrism.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
 #include "BRepAlgoAPI_Section.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
@@ -1302,166 +1303,168 @@ CubitStatus OCCQueryEngine::import_solid_model(
 //  CGMList->append(body);
   imported_entities.append(body);
 //  OCCMap->Bind(*aShape, CGMList->where_is_item(body));
-  populate_topology_bridge_solid(*aShape, imported_entities);
+  populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_solid(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities)
+BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
 {
-	TopExp_Explorer Ex;
-	for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next()) {
-		TopoDS_Solid *posolid =  new TopoDS_Solid;
- 		*posolid = TopoDS::Solid(Ex.Current());
-		OCCLump *lump;
-		if (!OCCMap->IsBound(*posolid)) {
-			printf("Adding solid\n");
-			lump = new OCCLump(posolid);
-			CGMList->append(lump);
-//			imported_entities.append(lump);
-			OCCMap->Bind(*posolid, CGMList->where_is_item(lump));
-			populate_topology_bridge_shell(*posolid, imported_entities);
-		} else {
-			lump = (OCCLump*)((*CGMList)[OCCMap->Find(*posolid)]);
-		}
-	}
-	return CUBIT_SUCCESS;
+        TopoDS_Shape *poshape =  new TopoDS_Shape;
+        *poshape = aShape;
+        BodySM *body;
+        if (!OCCMap->IsBound(*poshape))
+        {
+                printf("Adding Shape\n");
+                iTotalTBCreated++;
+                body = new OCCBody(poshape);
+//              CGMList->append(lump);
+//              imported_entities.append(lump);
+                OCCMap->Bind(*poshape, iTotalTBCreated);
+                OccToCGM->insert(valType(iTotalTBCreated,
+                                (TopologyBridge*)body));
+        }
+        else
+        {
+                int k = OCCMap->Find(*poshape);
+                body = (OCCBody*)(OccToCGM->find(k))->second;
+        }
+        TopExp_Explorer Ex;
+
+        for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+        return body;
 }
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_shell(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities)
+Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
 {
+	TopoDS_Solid *posolid =  new TopoDS_Solid;
+ 	*posolid = aShape;
+	OCCLump *lump;
+	if (!OCCMap->IsBound(*posolid))
+ 	{
+		printf("Adding solid\n");
+                iTotalTBCreated++;
+		lump = new OCCLump(posolid);
+//		CGMList->append(lump);
+//		imported_entities.append(lump);
+		OCCMap->Bind(*posolid, iTotalTBCreated);
+                OccToCGM->insert(valType(iTotalTBCreated,
+				(TopologyBridge*)lump));
+	}
+	else 
+	{
+		int k = OCCMap->Find(*posolid);
+		lump = (OCCLump*)(OccToCGM->find(k))->second;
+	}
 	TopExp_Explorer Ex;
-	for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next()) {
-		TopoDS_Shell *poshell = new TopoDS_Shell;
-		*poshell = TopoDS::Shell(Ex.Current());
-		OCCShell *shell;
-		if (!OCCMap->IsBound(*poshell)) {
-			printf("Adding shell\n");
-			shell = new OCCShell(poshell);
-			CGMList->append(shell);
+        for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Shell(Ex.Current()));
+	return lump;
+}
+
+OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
+{
+	TopoDS_Shell *poshell = new TopoDS_Shell;
+	*poshell = aShape;
+	OCCShell *shell = new OCCShell(poshell);
+//			CGMList->append(shell);
 //			imported_entities.append(shell);
-			OCCMap->Bind(*poshell, CGMList->where_is_item(shell));
-			populate_topology_bridge_face(*poshell, imported_entities);
-		} else {
-			shell = (OCCShell*)(*CGMList)[OCCMap->Find(*poshell)];
-		}
-		shell->add_lump((OCCLump*)(*CGMList)[OCCMap->Find(aShape)]);
-	}
-	return CUBIT_SUCCESS;
+	TopExp_Explorer Ex;
+        for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
+           populate_topology_bridge(TopoDS::Face(Ex.Current()));
+	return shell;
 }
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_face(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities)
+Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
 {
-	TopExp_Explorer Ex;
-	for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next()) {
-		TopoDS_Face *poface = new TopoDS_Face;
-		*poface = TopoDS::Face(Ex.Current());
-		OCCSurface *surface;
-		if (!OCCMap->IsBound(*poface)) {
-			printf("Adding face\n");
-/*			BRepAdaptor_Surface asurface(*poface);
-			Bnd_Box aBox;
-			double min[3], max[3];
-			BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
-			aBox.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
-			printf(".  .  .  box: %lf %lf %lf, %lf %lf %lf\n", min[0], min[1], min[2], max[0], max[1], max[2]);*/
-
-			surface = new OCCSurface(poface);
-			CGMList->append(surface);
+	TopoDS_Face *poface = new TopoDS_Face;
+	*poface = aShape;
+	OCCSurface *surface;
+	if (!OCCMap->IsBound(*poface))
+  	{
+		printf("Adding face\n");
+        	iTotalTBCreated++;
+		surface = new OCCSurface(poface);
+//		CGMList->append(surface);
 //			imported_entities.append(surface);
-			OCCMap->Bind(*poface, CGMList->where_is_item(surface));
-			populate_topology_bridge_wire(*poface, imported_entities);
-		} else {
-			surface = (OCCSurface*)(*CGMList)[OCCMap->Find(*poface)];
-		}
-		//surface->add_shell((OCCShell*)(*CGMList)[OCCMap->Find(aShape)]);
-	}
-	return CUBIT_SUCCESS;
-}
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_wire(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities)
-{
+		OCCMap->Bind(*poface, iTotalTBCreated);
+  		OccToCGM->insert(valType(iTotalTBCreated,
+				(TopologyBridge*)surface));
+	} 
+	else 
+	{
+                int k = OCCMap->Find(*poface);
+		surface = (OCCSurface*)(OccToCGM->find(k))->second;
+	}
 	TopExp_Explorer Ex;
-	for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next()) {
-		TopoDS_Wire *powire = new TopoDS_Wire;
-		*powire = TopoDS::Wire(Ex.Current());
-		OCCLoop *loop;
-		if (!OCCMap->IsBound(*powire)) {
-			printf("Adding wire\n");
-			loop = new OCCLoop(powire);
-			CGMList->append(loop);
-//			imported_entities.append(loop);
-			OCCMap->Bind(*powire, CGMList->where_is_item(loop));
-			populate_topology_bridge_edge(*powire, imported_entities);
-		} else {
-			loop = (OCCLoop*)(*CGMList)[OCCMap->Find(*powire)];
-		}
-		loop->add_surface((OCCSurface*)(*CGMList)[OCCMap->Find(aShape)]);
-	}
-	return CUBIT_SUCCESS;
+        for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
+	 	populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+	return surface;
 }
 
-CubitStatus OCCQueryEngine::populate_topology_bridge_edge(TopoDS_Shape aShape, DLIList<TopologyBridge*> &imported_entities)
+OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
 {
+	TopoDS_Wire *powire = new TopoDS_Wire;
+	*powire = aShape;
+	OCCLoop *loop = new OCCLoop(powire);
 	TopExp_Explorer Ex;
-	TopTools_DataMapOfShapeInteger *Map, *Mapr;
-	for (Ex.Init(aShape, TopAbs_EDGE); Ex.More(); Ex.Next()) {
-		TopoDS_Edge *poedge = new TopoDS_Edge;
-		*poedge = TopoDS::Edge(Ex.Current());
-		Curve *curve;
-		OCCCoEdge *coedge;
-		TopoDS_Shape test = *poedge;
-		if (poedge->Orientation() == TopAbs_FORWARD) {
-			Map = OCCMap;
-			Mapr = OCCMapr;
-		} else if (poedge->Orientation() == TopAbs_REVERSED) {
-			Map = OCCMapr;
-			Mapr = OCCMap;
-		} else {
-			printf("Oooooop!\n");
-		}
-		if (!Mapr->IsBound(*poedge)) {
-			printf("Adding edge\n");
-			curve = new OCCCurve(poedge);
-		} else {
-			curve = ((OCCCoEdge*)(*CGMList)[Mapr->Find(*poedge)])->curve();
-		}
-		if (!Map->IsBound(*poedge)) {
-			printf("Adding coedge\n");
-			coedge = new OCCCoEdge(poedge, curve);
-			CGMList->append(coedge);
-//			CGMList->append(curve);
-			Map->Bind(*poedge, CGMList->where_is_item(coedge));
-			//populate_topology_bridge_vertex(*poedge, imported_entities, curve);
-		} else {
-			coedge = (OCCCoEdge*)(*CGMList)[Map->Find(*poedge)];
-		}
-		coedge->add_loop((OCCLoop*)occ_to_cgm(aShape));
-	}
-	return CUBIT_SUCCESS;
+        for (Ex.Init(aShape, TopAbs_EDGE); Ex.More(); Ex.Next())         
+           populate_topology_bridge(TopoDS::Edge(Ex.Current())); 
+	return loop;
 }
 
-Point* OCCQueryEngine::populate_topology_bridge_vertex(TopoDS_Shape aShape)
+Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
+{
+        Curve *curve;
+        OCCCoEdge *coedge;
+        TopoDS_Edge *poedge = new TopoDS_Edge;
+	*poedge = aShape;
+	if (!OCCMap->IsBound(*poedge)) 
+        {
+		printf("Adding coedge\n");
+                iTotalTBCreated++;
+                curve = new OCCCurve(poedge);
+		coedge = new OCCCoEdge(poedge, curve);
+//		CGMList->append(coedge);
+//		CGMList->append(curve);
+		OCCMap->Bind(*poedge, iTotalTBCreated);
+                OccToCGM->insert(valType(iTotalTBCreated,
+				(TopologyBridge*)coedge));
+	}
+        else 
+        {
+                int i = OCCMap->Find(*poedge);
+                coedge = (OCCCoEdge*)(OccToCGM->find(i))->second;
+                curve = coedge->curve();
+	}
+
+        TopExp_Explorer Ex;
+        for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
+          populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
+	return curve;
+}
+
+Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
 {
 	OCCPoint *point;
-	TopExp_Explorer Ex;
-	for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next()) {
-		TopoDS_Vertex *povertex = new TopoDS_Vertex;
-		*povertex = TopoDS::Vertex(Ex.Current());
-		if (!OCCMap->IsBound(*povertex)) 
-                {
-	 	  printf("Adding vertex\n");
-                  iTotalTBCreated++;
-	 	  point = new OCCPoint(povertex);
-		  CGMList->append(point);
-//		  imported_entities.append(point);
-		  OCCMap->Bind(*povertex, iTotalTBCreated);
-                  OccToCGM->insert(valType(iTotalTBCreated,
-                                          (TopologyBridge*)point));
-		} 
-                else {
-                  int i = OCCMap->Find(*povertex);
-	 	  point = (OCCPoint*)(OccToCGM->find(i))->second;
-		}
+	TopoDS_Vertex *povertex = new TopoDS_Vertex;
+	*povertex = aShape;
+	if (!OCCMap->IsBound(*povertex)) 
+        {
+ 	  printf("Adding vertex\n");
+          iTotalTBCreated++;
+ 	  point = new OCCPoint(povertex);
+//	  CGMList->append(point);
+//	  imported_entities.append(point);
+	  OCCMap->Bind(*povertex, iTotalTBCreated);
+          OccToCGM->insert(valType(iTotalTBCreated,
+                          (TopologyBridge*)point));
+	} 
+        else 
+	{
+          int i = OCCMap->Find(*povertex);
+ 	  point = (OCCPoint*)(OccToCGM->find(i))->second;
 	}
 	return point;
 }

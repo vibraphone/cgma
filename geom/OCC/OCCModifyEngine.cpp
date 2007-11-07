@@ -105,7 +105,7 @@ Point* OCCModifyEngine::make_Point( CubitVector const& point) const
   TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
 
   // Create a new PointACIS object
-  return OCCQueryEngine::instance()->populate_topology_bridge_vertex( theVertex );
+  return OCCQueryEngine::instance()->populate_topology_bridge( theVertex );
 }
 
 //===============================================================================
