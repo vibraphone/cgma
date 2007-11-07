@@ -55,7 +55,8 @@ libiGeom_la_SOURCES = \
 libiGeom_la_include_HEADERS = \
 	iBase.h \
 	iGeom.h \
-	iBase_FCDefs.h
+	iBase_FCDefs.h \
+	iGeom_protos.h 
 
 TESTS = testgeom
 
