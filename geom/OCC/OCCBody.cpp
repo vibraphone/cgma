@@ -61,6 +61,11 @@ OCCBody::OCCBody(TopoDS_Shape *theShape)
   update_bounding_box();
 }
 
+OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
+{
+  myLumps += my_lumps;
+}
+
 OCCBody::~OCCBody() 
 {
     //Not sure what to do..
@@ -231,16 +236,24 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 void OCCBody::update_bounding_box() 
 {
   Bnd_Box box;
-  const TopoDS_Shape shape=*myTopoDSShape;
-  //calculate the bounding box
-  BRepBndLib::Add(shape, box);
-  double min[3], max[3];
+  if (myTopoDSShape)
+  {
+    const TopoDS_Shape shape=*myTopoDSShape;
+    //calculate the bounding box
+    BRepBndLib::Add(shape, box);
+    double min[3], max[3];
   
-  //get values
-  box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+    //get values
+    box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
 
-  //update boundingbox.
-  CubitBox cBox(min, max);
+    //update boundingbox.
+    CubitBox cBox(min, max);
+    boundingbox = cBox;
+    return;
+  }
+  CubitBox cBox;
+  for(int i = myLumps.size();i > 0; i--)
+    cBox |= myLumps.get_and_step()->bounding_box();  
   boundingbox = cBox;
 }
 

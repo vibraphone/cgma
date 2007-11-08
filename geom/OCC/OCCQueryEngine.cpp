@@ -1307,59 +1307,55 @@ CubitStatus OCCQueryEngine::import_solid_model(
   return CUBIT_SUCCESS;
 }
 
-BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
+void OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
 {
-        TopoDS_Shape *poshape =  new TopoDS_Shape;
-        *poshape = aShape;
-        BodySM *body;
-        if (!OCCMap->IsBound(*poshape))
-        {
-                printf("Adding Shape\n");
-                iTotalTBCreated++;
-                body = new OCCBody(poshape);
-//              CGMList->append(lump);
-//              imported_entities.append(lump);
-                OCCMap->Bind(*poshape, iTotalTBCreated);
-                OccToCGM->insert(valType(iTotalTBCreated,
-                                (TopologyBridge*)body));
-        }
-        else
-        {
-                int k = OCCMap->Find(*poshape);
-                body = (OCCBody*)(OccToCGM->find(k))->second;
-        }
+        // suitable to popolate for a TopoDS_CompSolid or TopoDS_Compound shape.
         TopExp_Explorer Ex;
-
         for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Solid(Ex.Current()));
-        return body;
+		populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+
+	for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Shell(Ex.Current()));
+
+        for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Face(Ex.Current()));
+
+	for (Ex.Init(aShape, TopAbs_WIRE, TopAbs_FACE); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+
+	for (Ex.Init(aShape, TopAbs_EDGE, TopAbs_WIRE); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Edge(Ex.Current()));
+
+	for (Ex.Init(aShape, TopAbs_VERTEX, TopAbs_EDGE); Ex.More(); Ex.Next())
+                populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
 }
 
-Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
+BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
 {
+	//one OCCBody corresponds one OCCLump
 	TopoDS_Solid *posolid =  new TopoDS_Solid;
  	*posolid = aShape;
 	OCCLump *lump;
+        OCCBody *body;
 	if (!OCCMap->IsBound(*posolid))
  	{
 		printf("Adding solid\n");
                 iTotalTBCreated++;
 		lump = new OCCLump(posolid);
-//		CGMList->append(lump);
-//		imported_entities.append(lump);
+		body = new OCCBody(posolid);
 		OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
-				(TopologyBridge*)lump));
+				(TopologyBridge*)body));
 	}
 	else 
 	{
 		int k = OCCMap->Find(*posolid);
-		lump = (OCCLump*)(OccToCGM->find(k))->second;
+		body = (OCCBody*)(OccToCGM->find(k))->second;
 	}
 	TopExp_Explorer Ex;
         for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
                 populate_topology_bridge(TopoDS::Shell(Ex.Current()));
-	return lump;
+	return body;
 }
 
 OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
