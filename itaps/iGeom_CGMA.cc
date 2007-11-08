@@ -388,6 +388,19 @@ void iGeom_getRootSet( iGeom_Instance, iBase_EntitySetHandle* root, int* err )
 }
 
 
+void iGeom_getBoundBox( iGeom_Instance,
+                        double* min_x,
+                        double* min_y,
+                        double* min_z,
+                        double* max_x,
+                        double* max_y,
+                        double* max_z,
+                        int* err ) 
+{
+  *err = CUBIT_FAILURE;
+}
+
+
 /**
  * Initialize an iterator over gentities of a specified dimension.
  * @param gentity_dimension Dimension of gentities to be iterated over
