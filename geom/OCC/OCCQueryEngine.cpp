@@ -115,6 +115,7 @@ DLIList<TopologyBridge*> *OCCQueryEngine::CGMList = new DLIList<TopologyBridge*>
 std::map<int, TopologyBridge*>* OccToCGM = new std::map<int, TopologyBridge*>;
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int iTotalTBCreated = 0;
+CubitBoolean PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
 // Author     :
@@ -745,9 +746,9 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
 {
   int size_before = ref_entity_list.size();
   CubitString temp_filename(file_name);
-  temp_filename += ".mbg";
+  temp_filename += ".occ";
 
-  if( export_solid_model( ref_entity_list, temp_filename.c_str(), "FACET",
+  if( export_solid_model( ref_entity_list, temp_filename.c_str(), "OCC",
                           cubit_version ) == CUBIT_FAILURE )
   {
     PRINT_ERROR( "Error occured while trying to save temporary MESH_BASED_GEOMETRY file\n");
@@ -759,7 +760,7 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
   if( size_before > size_after )
   {
     created_file +=  temp_filename;
-    created_file_type += "FACET";
+    created_file_type += "OCC";
   }
   return CUBIT_SUCCESS;
 }
@@ -778,9 +779,12 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
                                                      const CubitString &,
                                                      const char*)
 {
-  if( strcmp( file_type, "FACET" ) )
-    return CUBIT_SUCCESS;
-
+  if( strcmp( file_type, "OCC" ) != 0 )
+  {
+     //PRINT_ERROR("The specified file type, %s, is not supported!\n", filetype );
+     return CUBIT_FAILURE;
+  }
+ 
   DLIList<OCCBody*>    facet_bodies;
   DLIList<OCCLump*>    facet_lumps;
   DLIList<OCCShell*>   facet_shells;
@@ -1299,35 +1303,35 @@ CubitStatus OCCQueryEngine::import_solid_model(
   BRep_Builder aBuilder;
   Standard_Boolean result = BRepTools::Read(*aShape, (char*) file_name, aBuilder);
   if (result==0) return CUBIT_FAILURE;
-  OCCBody *body = new OCCBody(aShape);
-//  CGMList->append(body);
-  imported_entities.append(body);
-//  OCCMap->Bind(*aShape, CGMList->where_is_item(body));
-  populate_topology_bridge(*aShape);
+  PRINT_RESULT = print_results;
+  
+  imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
 
-void OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
+DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
 {
+	DLIList<TopologyBridge*> tblist;
         // suitable to popolate for a TopoDS_CompSolid or TopoDS_Compound shape.
         TopExp_Explorer Ex;
         for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
-		populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+ 	  tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current())));
 
 	for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Shell(Ex.Current()));
+          tblist.append(populate_topology_bridge(TopoDS::Shell(Ex.Current())));
 
         for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Face(Ex.Current()));
+          tblist.append(populate_topology_bridge(TopoDS::Face(Ex.Current())));
 
 	for (Ex.Init(aShape, TopAbs_WIRE, TopAbs_FACE); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+          tblist.append(populate_topology_bridge(TopoDS::Wire(Ex.Current())));
 
 	for (Ex.Init(aShape, TopAbs_EDGE, TopAbs_WIRE); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Edge(Ex.Current()));
+          tblist.append(populate_topology_bridge(TopoDS::Edge(Ex.Current())));
 
 	for (Ex.Init(aShape, TopAbs_VERTEX, TopAbs_EDGE); Ex.More(); Ex.Next())
-                populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
+          tblist.append(populate_topology_bridge(TopoDS::Vertex(Ex.Current())));
+	return tblist;
 }
 
 BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
@@ -1339,7 +1343,8 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
         OCCBody *body;
 	if (!OCCMap->IsBound(*posolid))
  	{
-		printf("Adding solid\n");
+		if(PRINT_RESULT)
+			PRINT_INFO("Adding solid\n");
                 iTotalTBCreated++;
 		lump = new OCCLump(posolid);
 		body = new OCCBody(posolid);
@@ -1378,7 +1383,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
 	OCCSurface *surface;
 	if (!OCCMap->IsBound(*poface))
   	{
-		printf("Adding face\n");
+		if(PRINT_RESULT)
+                        PRINT_INFO("Adding face.\n");
         	iTotalTBCreated++;
 		surface = new OCCSurface(poface);
 //		CGMList->append(surface);
@@ -1418,7 +1424,8 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
 	*poedge = aShape;
 	if (!OCCMap->IsBound(*poedge)) 
         {
-		printf("Adding coedge\n");
+		if(PRINT_RESULT)
+                        PRINT_INFO("Adding edge.\n");
                 iTotalTBCreated++;
                 curve = new OCCCurve(poedge);
 		coedge = new OCCCoEdge(poedge, curve);
@@ -1448,7 +1455,8 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
 	*povertex = aShape;
 	if (!OCCMap->IsBound(*povertex)) 
         {
- 	  printf("Adding vertex\n");
+ 	  if(PRINT_RESULT)
+                        PRINT_INFO("Adding vertex\n");
           iTotalTBCreated++;
  	  point = new OCCPoint(povertex);
 //	  CGMList->append(point);

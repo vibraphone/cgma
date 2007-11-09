@@ -320,7 +320,7 @@ public:
   
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
-  void populate_topology_bridge(TopoDS_Shape aShape);
+  DLIList<TopologyBridge*> populate_topology_bridge(TopoDS_Shape aShape);
   BodySM* populate_topology_bridge(TopoDS_Solid aShape);
   Surface* populate_topology_bridge(TopoDS_Face aShape);
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
@@ -352,6 +352,7 @@ private:
   static DLIList<TopologyBridge*>* CGMList;
   static int iTotalTBCreated ;
   static OCCQueryEngine* instance_;
+  static CubitBoolean PRINT_RESULTS;
     //- static pointer to unique instance of this class
 
   static const int OCCQE_MAJOR_VERSION;
