@@ -337,11 +337,7 @@ private:
 
   CubitStatus write_topology( FILE *file_ptr, 
                               DLIList<OCCBody*> &facet_bodies,
-                              DLIList<OCCLump*> &facet_lumps,
-                              DLIList<OCCShell*> &facet_shells,
                               DLIList<OCCSurface*> &facet_surfaces,
-                              DLIList<OCCLoop*> &facet_loops,
-                              DLIList<OCCCoEdge*> &facet_coedges,
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 

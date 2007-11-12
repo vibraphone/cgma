@@ -79,6 +79,7 @@
 #include <BRepTools.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
+#include "TopoDS_Compound.hxx"
 #include <TopoDS_CompSolid.hxx>
 #include <TopoDS_Solid.hxx>
 #include <TopoDS_Shell.hxx>
@@ -751,7 +752,7 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
   if( export_solid_model( ref_entity_list, temp_filename.c_str(), "OCC",
                           cubit_version ) == CUBIT_FAILURE )
   {
-    PRINT_ERROR( "Error occured while trying to save temporary MESH_BASED_GEOMETRY file\n");
+    PRINT_ERROR( "Error occured while trying to save temporary OCC_BASED_GEOMETRY file\n");
     return CUBIT_FAILURE;
   }
 
@@ -785,14 +786,10 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
      return CUBIT_FAILURE;
   }
  
-  DLIList<OCCBody*>    facet_bodies;
-  DLIList<OCCLump*>    facet_lumps;
-  DLIList<OCCShell*>   facet_shells;
-  DLIList<OCCSurface*> facet_surfaces;
-  DLIList<OCCLoop*>    facet_loops;
-  DLIList<OCCCoEdge*>  facet_coedges;
-  DLIList<OCCCurve*>   facet_curves;
-  DLIList<OCCPoint*>   facet_points;
+  DLIList<OCCBody*>    OCC_bodies;
+  DLIList<OCCSurface*> OCC_surfaces;
+  DLIList<OCCCurve*>   OCC_curves;
+  DLIList<OCCPoint*>   OCC_points;
 
   DLIList<TopologyBridge*> ref_entities_handled;
 
@@ -806,19 +803,21 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
     //if it is a Vertex
     if( OCCPoint* pt = CAST_TO( ref_entity_ptr, OCCPoint) )
-      facet_points.append( pt );
+      OCC_points.append( pt );
+
     //if it is a Curve
     else if( OCCCurve* curve = CAST_TO( ref_entity_ptr, OCCCurve) )
-      facet_curves.append( curve );
-    /*
+      OCC_curves.append( curve );
+    
     //if it is a Surface -- I don't think you can ever have a free surface
     //without it being a Body
     else if( OCCSurface* surf = CAST_TO( ref_entity_ptr, OCCSurface) )
-      facet_surfaces.append( surf );
-   */
+      OCC_surfaces.append( surf );
+   
     //if it is a Body
     else if( OCCBody* body = CAST_TO( ref_entity_ptr, OCCBody ) )
-      facet_bodies.append( body );
+      OCC_bodies.append( body );
+
     else
       handled = CUBIT_FALSE;
 
@@ -833,12 +832,14 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
   ref_entity_list.remove_all_with_value(NULL);
 
-  int free_body_count = facet_bodies.size();
-  int free_curve_count = facet_curves.size();
-  int free_point_count = facet_points.size();
+  int free_body_count = OCC_bodies.size();
+  int free_curve_count = OCC_curves.size();
+  int free_point_count = OCC_points.size();
+  int free_surface_count = OCC_surfaces.size();
 
   //if nothing to write out...return
-  if( free_body_count == 0 && free_curve_count == 0 && free_point_count == 0)
+  if( free_body_count == 0 && free_surface_count == 0 && 
+      free_curve_count == 0 && free_point_count == 0)
     return CUBIT_SUCCESS;
 
   //get file pointer
@@ -847,9 +848,9 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   //create a wrapper object for writing
   CIOWrapper file_writer( file_ptr );
 
-  // write out file type "MESHED_BASED_GEOMETRY"
+  // write out file type "OCC_BASED_GEOMETRY"
   file_writer.BeginWriteBlock(0);
-  file_writer.Write( "MESH_BASED_GEOMETRY", 19 );
+  file_writer.Write( "OCC_BASED_GEOMETRY", 19 );
 
   // write out Endian value
   UnsignedInt32 endian_value = CCubitFile::mintNativeEndian;
@@ -862,17 +863,15 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
   //save the facets (geometry info )
   CubitStatus status;
-  if( status == CUBIT_FAILURE ) return CUBIT_FAILURE;
 
   //write out topology and attributes
   status = write_topology( file_ptr,
-                           facet_bodies, facet_lumps,
-                           facet_shells, facet_surfaces,
-                           facet_loops, facet_coedges,
-                           facet_curves, facet_points );
+                           OCC_bodies, OCC_surfaces,
+                           OCC_curves, OCC_points );
   if( status == CUBIT_FAILURE ) return CUBIT_FAILURE;
 
-  if( free_body_count || free_curve_count || free_point_count )
+  if( free_body_count || free_surface_count || 
+      free_curve_count || free_point_count )
       PRINT_INFO( "\nExported:" );
 
    int flg = 0;
@@ -883,392 +882,87 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
       if( DEBUG_FLAG( 153 ) )
       {
         if( free_body_count == 1 )
-           PRINT_INFO( "%4d Facet Body\n", free_body_count );
+           PRINT_INFO( "%4d OCC Body\n", free_body_count );
         else
-           PRINT_INFO( "%4d Facet Bodies\n", free_body_count );
+           PRINT_INFO( "%4d OCC Bodies\n", free_body_count );
       }
-      
-      if( facet_lumps.size() == 1 )
-         PRINT_INFO( "%4d Facet Volume\n", facet_lumps.size() );
-      else
-         PRINT_INFO( "%4d Facet Volumes\n", facet_lumps.size() );
    }
+
+   if( free_surface_count )
+   {
+      if( flg )PRINT_INFO( "         " );else flg=1;
+      if( free_surface_count == 1 )
+         PRINT_INFO( "%4d OCC Surface\n", free_surface_count );
+      else
+         PRINT_INFO( "%4d OCC Surface\n", free_surface_count );
+   }
+
    if( free_curve_count )
    {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_curve_count == 1 )
-         PRINT_INFO( "%4d Facet Curve\n", free_curve_count );
+         PRINT_INFO( "%4d OCC Curve\n", free_curve_count );
       else
-         PRINT_INFO( "%4d Facet Curves\n", free_curve_count );
+         PRINT_INFO( "%4d OCC Curves\n", free_curve_count );
    }
+
    if( free_point_count )
    {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_point_count == 1 )
-         PRINT_INFO( "%4d Facet Point\n", free_point_count );
+         PRINT_INFO( "%4d OCC Point\n", free_point_count );
       else
-         PRINT_INFO( "%4d Facet Points\n", free_point_count );
+         PRINT_INFO( "%4d OCC Points\n", free_point_count );
    }
    PRINT_INFO( "\n" );
 
+   fclose( file_ptr );
 
-
-  fclose( file_ptr );
-
-  return CUBIT_SUCCESS;
+   return CUBIT_SUCCESS;
 }
 
 CubitStatus
 OCCQueryEngine::write_topology( FILE *file_ptr,
-                                  DLIList<OCCBody*> &facet_bodies,
-                                  DLIList<OCCLump*> &facet_lumps,
-                                  DLIList<OCCShell*> &facet_shells,
-                                  DLIList<OCCSurface*> &facet_surfaces,
-                                  DLIList<OCCLoop*> &facet_loops,
-                                  DLIList<OCCCoEdge*> &facet_coedges,
-                                  DLIList<OCCCurve*> &facet_curves,
-                                  DLIList<OCCPoint*> &facet_points )
+                                  DLIList<OCCBody*> &OCC_bodies,
+                                  DLIList<OCCSurface*> &OCC_surfaces,
+                                  DLIList<OCCCurve*> &OCC_curves,
+                                  DLIList<OCCPoint*> &OCC_points )
 {
 
   int i;
+  //Create a compound shape to export
+  BRep_Builder B;
+  TopoDS_Compound Co;
+  B.MakeCompound(Co);
 
-  //create a wrapper object for writing
-  CIOWrapper file_writer( file_ptr );
-
-  //-----------------write OCCPoints--------------
-  UnsignedInt32 size = facet_points.size();
-  //write out number of OCCPoints
-  file_writer.Write( &size, 1 );
-  facet_points.reset();
-  for( i=0; i<facet_points.size(); i++)
+  //Add every shape to the compound
+  for (i = 0; i < OCC_bodies.size(); i++)
   {
-    OCCPoint *curr_point = facet_points.get_and_step();
-
-    //file_writer.Write( reinterpret_cast<UnsignedInt32*>(&id), 1 );
-    if( curr_point->save_attribs(file_ptr) == CUBIT_FAILURE )
-      return CUBIT_FAILURE;
+     TopoDS_Shape *shape = OCC_bodies.get_and_step()->get_TopoDS_Shape();
+     B.Add(Co, *shape);
   }
 
-  //-----------------write FacetCurves--------------
-  size = facet_curves.size();
-  //write out number of FacetCurves
-  file_writer.Write( &size, 1 );
-  facet_curves.reset();
-  for( i=0; i<facet_curves.size(); i++)
+  for (i = 0; i < OCC_surfaces.size(); i++)
   {
-    OCCCurve *curr_curve = facet_curves.get_and_step();
-    Point *s_point, *e_point;
-    s_point = curr_curve->start_point();
-    e_point = curr_curve->end_point();
-
-    int data_to_write[4];
-
-    // get start&end points implicit ids
-    OCCPoint *temp_point = NULL;
-    temp_point = CAST_TO( s_point, OCCPoint );
-    if( !temp_point ) assert(0);
-    int found;
-    found = facet_points.where_is_item( temp_point );
-    if( found == -1)
-      assert(0);
-    data_to_write[0] = found;
-
-    temp_point = CAST_TO( e_point, OCCPoint );
-    if( !temp_point ) assert(0);
-    found = facet_points.where_is_item( temp_point );
-    if( found == -1)
-      PRINT_ERROR("Problem saving Facet Curves\n");
-    data_to_write[1] = found;
-
-    //convert Sense info to integer
-    if( curr_curve->get_sense() == CUBIT_UNKNOWN )
-      data_to_write[2] = -1;
-    else
-      data_to_write[2] = (curr_curve->get_sense() == CUBIT_REVERSED) ? 1 : 0;
-
-    //write the data
-    file_writer.Write( reinterpret_cast<UnsignedInt32*>(data_to_write), 4 );
-
-    if( curr_curve->save_attribs(file_ptr) == CUBIT_FAILURE )
-      return CUBIT_FAILURE;
+     TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
+     B.Add(Co, *face);
   }
 
-  //-----------------write FacetCoedges--------------
-  size = facet_coedges.size();
-  // write out number of FacetCurves
-  file_writer.Write( &size, 1 );
-  facet_coedges.reset();
-  for( i=0; i<facet_coedges.size(); i++)
+  for (i = 0; i < OCC_curves.size(); i++)
   {
-    OCCCoEdge *curr_coedge = facet_coedges.get_and_step();
-    Curve *curve_sm;
-    curve_sm = curr_coedge->curve();
-
-    OCCCurve *temp_curve = NULL;
-    temp_curve = CAST_TO( curve_sm, OCCCurve );
-
-    int data_to_write[2];
-
-    // get implicit id of this curve
-    int found;
-    found = facet_curves.where_is_item( temp_curve );
-    if( found == -1)
-      PRINT_ERROR("Problem saving Facet CoEdges\n");
-    data_to_write[0] = found;
-
-    // convert sense info to integer
-    if( curr_coedge->get_sense() == CUBIT_UNKNOWN )
-      data_to_write[1] = -1;
-    else
-      data_to_write[1] = (curr_coedge->get_sense() == CUBIT_REVERSED) ? 1 : 0;
-
-    // write out the data
-    file_writer.Write( reinterpret_cast<UnsignedInt32*>(data_to_write), 2 );
-
+     TopoDS_Edge *edge = OCC_curves.get_and_step()->get_TopoDS_Edge();
+     B.Add(Co, *edge);
   }
 
-  //-----------------write OCCLoops--------------
-  size = facet_loops.size();
-  // write out number of OCCLoops
-  file_writer.Write( &size, 1 );
-  facet_loops.reset();
-  for( i=0; i<facet_loops.size(); i++)
+  for (i = 0; i < OCC_points.size(); i++)
   {
-    OCCLoop *curr_loop = facet_loops.get_and_step();
-    DLIList<OCCCoEdge*> coedge_list;
-    curr_loop->get_coedges( coedge_list );
-
-    // get number of coedges in this loop
-    UnsignedInt32 *data_to_write;
-    size = coedge_list.size();
-    data_to_write = new UnsignedInt32[ size + 1 ];
-    data_to_write[0] = size;
-
-    UnsignedInt32 j;
-    // get implicit ids of coedges
-    coedge_list.reset();
-    for( j=1; j<size+1; j++)
-    {
-      OCCCoEdge *temp_coedge = coedge_list.get_and_step();
-      int found;
-      found = facet_coedges.where_is_item( temp_coedge );
-      if( found == -1)
-        PRINT_ERROR("Problem saving Facet Loops\n");
-      data_to_write[j] = found;
-    }
-
-    // write out the data
-    file_writer.Write( data_to_write, size + 1);
-    delete [] data_to_write;
+     TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
+     B.Add(Co, *vertex);
   }
 
-  //-----------------write OCCSurfaces--------------
-  size = facet_surfaces.size();
-  // write out number of OCCSurfaces
-  file_writer.Write( &size, 1 );
-  facet_surfaces.reset();
-  for( i=0; i<facet_surfaces.size(); i++)
-  {
-    OCCSurface *curr_surface = facet_surfaces.get_and_step();
-
-    DLIList<OCCLoop*> loop_list;
-    curr_surface->get_loops( loop_list );
-
-    int num_loops = loop_list.size();
-    int data_to_write[6];
-
-    // convert sense info to integer
-    // if( curr_surface->get_relative_surface_sense() == CUBIT_UNKNOWN )
-//       data_to_write[0] = -1;
-//     else
-//       data_to_write[0] = (curr_surface->get_relative_surface_sense() == CUBIT_REVERSED) ? 1 : 0;
-    data_to_write[0]=0;
-    // get "useFacets"
-    data_to_write[1] = 1;
-
-    // get output id of FacetEvalTool
-    //data_to_write[2] = curr_surface->get_eval_tool()->get_output_id();
-
-    // get Shell Sense stuff
-    CubitSense sense0;
-    
-    curr_surface->get_shell_sense( sense0 );
-    if( sense0 == CUBIT_UNKNOWN )
-      data_to_write[3] = -1;
-    else
-      data_to_write[3] = (sense0 == CUBIT_REVERSED) ? 1 : 0;
-
-//    if( sense1 == CUBIT_UNKNOWN )
-      data_to_write[4] = -1;
-//    else
-//      data_to_write[4] = (sense1 == CUBIT_REVERSED) ? 1 : 0;
-
-    // get number of loops
-    data_to_write[5] = num_loops;
-
-    file_writer.Write( reinterpret_cast<UnsignedInt32*>(data_to_write), 6 );
-
-    // get implicit ids of loops
-    if( num_loops > 0 )
-    {
-      int *loop_ids = new int[num_loops];
-      int j;
-      loop_list.reset();
-      for( j=0; j<num_loops; j++)
-      {
-       OCCLoop *temp_loop = loop_list.get_and_step();
-       int found;
-       found = facet_loops.where_is_item( temp_loop );
-       if( found == -1 )
-         PRINT_ERROR("Problem saving Facet Surfaces\n");
-       loop_ids[j] = found;
-      }
-
-      // write out data
-      file_writer.Write( reinterpret_cast<UnsignedInt32*>(loop_ids), num_loops );
-      delete [] loop_ids;
-    }
-
-    if( curr_surface->save_attribs(file_ptr) == CUBIT_FAILURE )
-      return CUBIT_FAILURE;
-  }
-
-  //-----------------write OCCShells--------------
-  size = facet_shells.size();
-  // write out number of OCCShells
-  file_writer.Write( &size, 1 );
-  facet_shells.reset();
-  for( i=0; i<facet_shells.size(); i++)
-  {
-    OCCShell *curr_shell= facet_shells.get_and_step(); //number of surfaces
-    DLIList<OCCSurface*> temp_facet_surf_list;
-    curr_shell->get_surfaces( temp_facet_surf_list );
-
-    // get number of surfaces in this shell
-    UnsignedInt32 *data_to_write;
-    int num_surfs = temp_facet_surf_list.size();
-    data_to_write = new UnsignedInt32[ num_surfs + 1];
-    data_to_write[0] = num_surfs;
-
-    // get implicit ids of surfaces
-    int j;
-    temp_facet_surf_list.reset();
-    for( j=1; j<num_surfs+1; j++)
-    {
-      OCCSurface *temp_facet_surface = temp_facet_surf_list.get_and_step();
-      int found;
-      found = facet_surfaces.where_is_item( temp_facet_surface );
-      if( found == -1 )
-        PRINT_ERROR("Problem saving Facet Shells\n");
-      data_to_write[j] = found;
-    }
-
-    // write the data
-    file_writer.Write( data_to_write, num_surfs + 1 );
-    delete [] data_to_write;
-  }
-
-  //-----------------write OCCLumps--------------
-  size = facet_lumps.size();
-  // write out number of OCCLumps
-  file_writer.Write( &size, 1 );
-  facet_lumps.reset();
-  for( i=0; i<facet_lumps.size(); i++)
-  {
-    OCCLump *curr_lump = facet_lumps.get_and_step();
-
-    DLIList<OCCShell*> temp_facet_shell_list;
-    curr_lump->get_shells( temp_facet_shell_list );
-
-    // get number of shells in this lump
-    UnsignedInt32 *data_to_write;
-    int num_shells= temp_facet_shell_list.size();
-    data_to_write = new UnsignedInt32[ num_shells+ 1];
-    data_to_write[0] = num_shells;
-
-    //get implicit ides of the lumps in this shell
-    int j;
-    temp_facet_shell_list.reset();
-    for( j=1; j<num_shells+1; j++)
-    {
-      OCCShell *temp_facet_shell = temp_facet_shell_list.get_and_step();
-      int found;
-      found = facet_shells.where_is_item( temp_facet_shell );
-      if( found == -1 )
-        PRINT_ERROR("Problem saving Facet Lumps\n");
-      data_to_write[j] = found;
-    }
-
-    //write the data
-    file_writer.Write( data_to_write, num_shells + 1 );
-    delete [] data_to_write;
-    if( curr_lump->save_attribs(file_ptr) == CUBIT_FAILURE )
-      return CUBIT_FAILURE;
-  }
-
-  //-----------------write FacetBodies--------------
-  size = facet_bodies.size();
-  // write out number of FacetBodies
-  file_writer.Write( &size, 1 );
-  facet_bodies.reset();
-  for( i=0; i<facet_bodies.size(); i++)
-  {
-    OCCBody *curr_body = facet_bodies.get_and_step();
-
-    DLIList<OCCLump*> temp_facet_lump_list;
-
-    // get the number of lumps in this body
-    UnsignedInt32 *data_to_write;
-    int num_lumps = temp_facet_lump_list.size();
-    data_to_write = new UnsignedInt32[ num_lumps + 1];
-    data_to_write[0] = num_lumps;
-
-    // get the implicit ids of the lumps in this body
-    int j;
-    temp_facet_lump_list.reset();
-    for( j=1; j<num_lumps+1; j++)
-    {
-      OCCLump *temp_facet_lump = temp_facet_lump_list.get_and_step();
-      int found;
-      found = facet_lumps.where_is_item( temp_facet_lump );
-      if( found == -1 )
-        PRINT_ERROR("Problem saving Facet Bodies\n");
-      data_to_write[j] = found;
-    }
-
-    // write the data
-    file_writer.Write( data_to_write, num_lumps + 1 );
-    delete [] data_to_write;
-
-    // write the transformation matrix of this body
-    CubitTransformMatrix trans_matrix;
-    curr_body->get_transforms( trans_matrix );
-
-    UnsignedInt32 num_rows  = trans_matrix.num_rows();
-    UnsignedInt32 num_cols  = trans_matrix.num_cols();
-    UnsignedInt32 rows_and_cols[2];
-    rows_and_cols[0] = num_rows;
-    rows_and_cols[1] = num_cols;
-
-    file_writer.Write( rows_and_cols, 2 );
-
-    double *trans_matrix_array;
-    trans_matrix_array = new double[ num_rows*num_cols ];
-
-    //fill up the array row-by-row
-    unsigned u, k = 0;
-    for(u=0; u<num_rows; u++)
-    {
-      for(k=0; k<num_cols; k++)
-        trans_matrix_array[(u*num_cols)+k] = trans_matrix.get(u,k);
-    }
-
-    file_writer.Write( trans_matrix_array, u*k );
-    delete [] trans_matrix_array;
-    if( curr_body->save_attribs(file_ptr) == CUBIT_FAILURE )
-      return CUBIT_FAILURE;
-  }
-
+  if(!BRepTools::Write(Co, (char *) file_ptr))
+    return CUBIT_FAILURE;
+ 
   return CUBIT_SUCCESS;
 }
 
