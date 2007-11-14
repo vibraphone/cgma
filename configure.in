@@ -9,13 +9,11 @@ AC_DISABLE_SHARED
 SNL_CHECK_COMPILERS
 AC_PROG_FC
 AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
-AC_PROG_FC
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_LIBTOOL
 AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
 AC_SUBST(LITTLE_ENDIAN)
-AC_FC_WRAPPERS
 
 
 ################################################################################
@@ -243,6 +241,7 @@ AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 #                           OCC Options 
 ################################################################################
 # Add --with-occ option to configure script
+
 AC_ARG_WITH( occ,
              [AC_HELP_STRING([--with-occ=<dir>],[OpenCascade shared library directory])],
              [occ_DIR="$withval"],
@@ -250,6 +249,7 @@ AC_ARG_WITH( occ,
 
 # if user specified option (other than --without-occ)
 if test "x$occ_DIR" != "xno"; then
+  OCC_LIBS="-lPTKernel -lTKMath -lTKTopTest -lTKXSBase -lTKAdvTools -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKPShape -lTKShapeSchema -lTKTopAlgo -lBinLPlugin -lBinPlugin -lBinXCAFPlugin -lFWOSPlugin -lmscmd -lPTKernel -lStdLPlugin -lStdPlugin -ltcl -lTKAdvTools -lTKBinL -lTKBin -lTKBinXCAF -lTKCAF -lTKCDF -lTKCDLFront -lTKCPPClient -lTKCPPExt -lTKCPPIntExt -lTKCPPJini -lTKCSFDBSchema -lTKDCAF -lTKDraw -lTKHLR -lTKIDLFront -lTKIGES -lTKjcas -lTKLCAF -lTKMesh -lTKMeshVS -lTKOpenGl -lTKPCAF -lTKPLCAF -lTKPLCAF -lTKPrim -lTKPShape -lTKService -ltk -lTKStdLSchema -lTKStdSchema -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTCPPExt -lTKTopAlgo -lTKV2d -lTKV3d -lTKViewerTest -lTKVRML -lTKWOK -lTKWOKTcl -lTKXCAFSchema -lTKXCAF -lTKXDEDRAW -lTKXDEIGES -lTKXDESTEP -lTKXmlL -lTKXml -lTKXmlXCAF -lTKXSBase -lTKXSDRAW -lwokcmd -lwokdeliverysteps -lwokdfltsteps -lwokobjssteps -lwokorbixsteps -lwoksteps -lwoktoolscmd -lwokutilscmd -lXCAFPlugin -lXmlLPlugin -lXmlPlugin -lXmlXCAFPlugin"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
@@ -270,6 +270,11 @@ if test "x$occ_DIR" != "xno"; then
   CPPFLAGS="$CPPFLAGS ${OCC_INC_FLAG}"
   LDFLAGS="$LDFLAGS ${OCC_LIB_FLAG}"
 
+  # Check if 64-bit
+  AC_MSG_CHECKING([if platform is 64-bit (-D_OCC64)])
+  AC_TRY_COMPILE([],[int array[6-(int)sizeof(void*)];],[AC_MSG_RESULT(no)],
+                 [AC_MSG_RESULT(yes); OCC_INC_FLAG="$OCC_INC_FLAG -D_OCC64"])
+
   # Check if OCC has Stadard_Version.hxx
   AC_CHECK_HEADER( [Standard_Version.hxx], [],
                  [AC_MSG_ERROR([OpenCascade config error:Standard_Version.hxx not found])] )
@@ -286,6 +291,7 @@ fi
 # Export these variables as variables in Makefiles
 AC_SUBST(OCC_INC_FLAG)
 AC_SUBST(OCC_LIB_FLAG)
+AC_SUBST(OCC_LIBS)
 
 # Allow "if WITH_OCC" in Makefile.am
 AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )
