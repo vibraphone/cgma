@@ -4,7 +4,7 @@ vpath = gserver bserver
 VPATH = gserver bserver 
 
 LD_FLAGS_PIC = -fpic -shared
-SERVER_HDRS := iBase_ArrTag_IOR.h iBase_CreationStatus_IOR.h iBase_EntSet_IOR.h    \
+SERVER_HDRS = iBase_ArrTag_IOR.h iBase_CreationStatus_IOR.h iBase_EntSet_IOR.h    \
   iBase_EntTag_IOR.h iBase_EntityType_IOR.h iBase_ErrorActions_IOR.h          \
   iBase_ErrorType_IOR.h iBase_IOR.h iBase_SetBoolOps_IOR.h  \
   iBase_SetRelation_IOR.h iBase_SetTag_IOR.h iBase_StorageOrder_IOR.h         \
@@ -120,19 +120,19 @@ clean_all: clean
 	-rm -rf F77client Cclient repo
 	cd mserver; rm -f ${SERVER_HDRS} ${SERVER_SRCS}
 
-%.o : %.cxx
+.cxx.o:
 	$(CXX) $(CXX_FLAGS) ${iGeom_SIDL_INCLUDES} -o $@ -c $<
 
-%.o : %.cpp
+.cpp.o:
 	$(CXX) $(CXX_FLAGS) ${iGeom_SIDL_INCLUDES} -o $@ -c $<
 
-%.o : %.cc
+.cc.o:
 	$(CXX) $(CXX_FLAGS) ${iGeom_SIDL_INCLUDES} -o $@ -c $<
 
-%.o : %.c
+.c.o:
 	$(CC) $(CC_FLAGS) ${iGeom_SIDL_INCLUDES} -o $@ -c $<
 
-%.o : %.f
+.f.o:
 	$(FC) $(FC_FLAGS) ${iGeom_SIDL_INCLUDES} -o $@ -c $<
 
 # Automake doesn't seem to have a directory defined for
