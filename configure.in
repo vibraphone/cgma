@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #                           Standard Stuff
 ################################################################################
 AC_INIT(CGMA, 10.2.2)
@@ -249,7 +249,7 @@ AC_ARG_WITH( occ,
 
 # if user specified option (other than --without-occ)
 if test "x$occ_DIR" != "xno"; then
-  OCC_LIBS="-lPTKernel -lTKMath -lTKTopTest -lTKXSBase -lTKAdvTools -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKPShape -lTKShapeSchema -lTKTopAlgo -lBinLPlugin -lBinPlugin -lBinXCAFPlugin -lFWOSPlugin -lmscmd -lPTKernel -lStdLPlugin -lStdPlugin -ltcl -lTKAdvTools -lTKBinL -lTKBin -lTKBinXCAF -lTKCAF -lTKCDF -lTKCDLFront -lTKCPPClient -lTKCPPExt -lTKCPPIntExt -lTKCPPJini -lTKCSFDBSchema -lTKDCAF -lTKDraw -lTKHLR -lTKIDLFront -lTKIGES -lTKjcas -lTKLCAF -lTKMesh -lTKMeshVS -lTKOpenGl -lTKPCAF -lTKPLCAF -lTKPLCAF -lTKPrim -lTKPShape -lTKService -ltk -lTKStdLSchema -lTKStdSchema -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTCPPExt -lTKTopAlgo -lTKV2d -lTKV3d -lTKViewerTest -lTKVRML -lTKWOK -lTKWOKTcl -lTKXCAFSchema -lTKXCAF -lTKXDEDRAW -lTKXDEIGES -lTKXDESTEP -lTKXmlL -lTKXml -lTKXmlXCAF -lTKXSBase -lTKXSDRAW -lwokcmd -lwokdeliverysteps -lwokdfltsteps -lwokobjssteps -lwokorbixsteps -lwoksteps -lwoktoolscmd -lwokutilscmd -lXCAFPlugin -lXmlLPlugin -lXmlPlugin -lXmlXCAFPlugin"
+  OCC_LIBS="-lPTKernel -lTKMath -lTKTopTest -lTKXSBase -lTKAdvTools -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKPShape -lTKShapeSchema -lTKTopAlgo -lBinLPlugin -lBinPlugin -lBinXCAFPlugin -lFWOSPlugin -lmscmd -lPTKernel -lStdLPlugin -lStdPlugin -lTKAdvTools -lTKBinL -lTKBin -lTKBinXCAF -lTKCAF -lTKCDF -lTKCDLFront -lTKCPPClient -lTKCPPExt -lTKCPPIntExt -lTKCPPJini -lTKCSFDBSchema -lTKDCAF -lTKDraw -lTKHLR -lTKIDLFront -lTKIGES -lTKjcas -lTKLCAF -lTKMesh -lTKMeshVS -lTKOpenGl -lTKPCAF -lTKPLCAF -lTKPLCAF -lTKPrim -lTKPShape -lTKService -lTKStdLSchema -lTKStdSchema -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTCPPExt -lTKTopAlgo -lTKV2d -lTKV3d -lTKViewerTest -lTKVRML -lTKWOK -lTKWOKTcl -lTKXCAFSchema -lTKXCAF -lTKXDEDRAW -lTKXDEIGES -lTKXDESTEP -lTKXmlL -lTKXml -lTKXmlXCAF -lTKXSBase -lTKXSDRAW -lwokcmd -lwokdeliverysteps -lwokdfltsteps -lwokobjssteps -lwokorbixsteps -lwoksteps -lwoktoolscmd -lwokutilscmd -lXCAFPlugin -lXmlLPlugin -lXmlPlugin -lXmlXCAFPlugin"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
@@ -280,8 +280,10 @@ if test "x$occ_DIR" != "xno"; then
                  [AC_MSG_ERROR([OpenCascade config error:Standard_Version.hxx not found])] )
 
   # Check if libTKernel.so contains function 'create_mailbox'
+  old_LIBS="$LIBS"
   AC_CHECK_LIB( [TKernel], [create_mailbox],,
                 [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])])
+  LIBS="$old_LIBS"
 
   # Restore original values of variables
   CPPFLAGS="$old_CPPFLAGS"
@@ -321,6 +323,7 @@ AC_CONFIG_FILES(Makefile
            itaps/iGeom-Defs.inc
 	   itaps/SIDL/Makefile
 	   itaps/SIDL/iGeom-SIDL-Defs.inc
+           test/Makefile
 	   )
 
 AC_OUTPUT
