@@ -335,7 +335,7 @@ private:
   OCCLoop* populate_topology_bridge(TopoDS_Wire aShape);  
   OCCShell* populate_topology_bridge(TopoDS_Shell aShape);
 
-  CubitStatus write_topology( FILE *file_ptr, 
+  CubitStatus write_topology( const char* file_name, 
                               DLIList<OCCBody*> &facet_bodies,
                               DLIList<OCCSurface*> &facet_surfaces,
                               DLIList<OCCCurve*> &facet_curves,

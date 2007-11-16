@@ -55,7 +55,6 @@ private:
   static OCCModifyEngine* instance_;
   
 public:
-  
   static inline OCCModifyEngine* instance()
   {
     if( !instance_ )

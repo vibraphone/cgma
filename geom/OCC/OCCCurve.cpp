@@ -590,19 +590,35 @@ GeometryType OCCCurve::geometry_type()
 //-------------------------------------------------------------------------
 // Purpose       : Return direction of point on curve
 //
-// Special Notes : not currently implemented
+// Special Notes : Finds the underlying line's origin and direction unit vector
 //
-// Creator       : Steve Owen
+// Creator       : Jane Hu
 //
-// Creation Date : 07/14/00
+// Creation Date : 11/14/07
 //-------------------------------------------------------------------------
 CubitStatus OCCCurve::get_point_direction( CubitVector& point, 
-                                             CubitVector& direction )
+                                           CubitVector& direction )
 {
-  point = point;
-  direction = direction;
-  PRINT_DEBUG_122("OCCCurve::get_point_direction currently not implemented.\n");
-  return CUBIT_FAILURE;
+  if (geometry_type() != STRAIGHT_CURVE_TYPE)
+    return CUBIT_FAILURE;
+
+  //get the underlying geometry curve
+  double first,last;
+  Handle(Geom_Curve) gCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
+
+  //get the origin and direction of the underlying curve
+  Handle(Geom_Line) gLine = Handle(Geom_Line)::DownCast(gCurve);
+  gp_Ax1 axis = gLine->Position();
+  gp_Pnt loc = axis.Location();
+  gp_Dir dir = axis.Direction();
+  point.set(loc.X(), loc.Y(), loc.Z());
+
+  //Based on the TopoDS_Edge's orientation, give the unit vector.
+  if (myTopoDSEdge->Orientation() == TopAbs_FORWARD)
+    direction.set(dir.X(), dir.Y(), dir.Z());
+  else if(myTopoDSEdge->Orientation() == TopAbs_REVERSED)
+    direction.set(-dir.X(), -dir.Y(), -dir.Z());
+  
 }
 
 //-------------------------------------------------------------------------
@@ -731,7 +747,7 @@ void OCCCurve::points(DLIList<Point*> &points)
 
 
 void OCCCurve::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { /*CAST_LIST_TO_PARENT( myCoEdges, parents ); */}
+  { CAST_LIST_TO_PARENT( myCoEdges, parents ); }
 void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children ) 
 {
 	TopTools_IndexedMapOfShape M;
@@ -764,16 +780,33 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
 //-------------------------------------------------------------------------
 // Purpose       : Check for G1 discontinuity
 //
-// Special Notes : not implemented
+// Special Notes : returns tangency discontinuity all along the Curve
+//		   at the param, only returns minus tangent = plus tangent
+//		   when it's C1 continuity.
 //
-// Creator       : Steve Owen
+// Creator       : Jane Hu
 //
-// Creation Date : 07/14/00
+// Creation Date : 11/14/07
 //-------------------------------------------------------------------------
 CubitBoolean OCCCurve::G1_discontinuous( 
       double param, CubitVector* mtan, CubitVector* ptan )
 { 
-  assert(0);
+  CubitBoolean is_discon = CUBIT_TRUE;
+  double first, last;
+  Handle(Geom_Curve) gCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
+
+  if (gCurve->Continuity() < GeomAbs_G1)
+     return is_discon;
+
+  assert(first <= param <= last );
+  
+  gp_Pnt P;
+  gp_Vec V1;
+  gCurve->D1(param, P, V1);
+  
+  mtan = new CubitVector(V1.X(), V1.Y(),V1.Z());
+  ptan = new CubitVector(*mtan);
+     
   return CUBIT_FALSE;
 }
 
@@ -835,6 +868,14 @@ void OCCCurve::get_loops( DLIList<OCCLoop*>& result_list )
   }
 }
 
+void OCCCurve::get_coedges( DLIList<OCCCoEdge*>& result_list )
+{
+  myCoEdges.reset();
+  for ( int i = 0; i < myCoEdges.size(); i++ )
+    if ( OCCCoEdge* coedge = dynamic_cast<OCCCoEdge*>(myCoEdges.next(i)) )
+      result_list.append(coedge);
+}
+
 void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
@@ -891,7 +932,39 @@ CubitPointContainment OCCCurve::point_containment( const CubitVector &/*point*/ 
 {
    return CUBIT_PNT_UNKNOWN;
 }
+CubitPointContainment OCCCurve::point_containment( double /*u_param*/, 
+                                                       double /*v_param*/ )
+{
+  return CUBIT_PNT_UNKNOWN; 
+}
+CubitPointContainment OCCCurve::point_containment( CubitVector &/*point*/, 
+                                                       double /*u_param*/,
+                                                       double /*v_param*/ )
+{
+   return CUBIT_PNT_UNKNOWN;
+}
 
+//-------------------------------------------------------------------------
+// Purpose       : Tear down topology
+//
+// Special Notes : 
+//
+// Creator       : Jason Kraftcheck
+//
+// Creation Date : 09/29/03
+//-------------------------------------------------------------------------
+CubitStatus OCCCurve::disconnect_coedge( OCCCoEdge* coedge )
+{
+  assert(0);
+  if (!myCoEdges.move_to(coedge))
+    return CUBIT_FAILURE;
+  myCoEdges.remove();
+
+  assert(coedge->curve() == this);
+  coedge->remove_curve();
+  
+  return CUBIT_SUCCESS;
+}
 
 // ********** END PRIVATE FUNCTIONS        **********
 

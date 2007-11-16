@@ -12,8 +12,8 @@
 // Owner         : Steven J. Owen
 //-------------------------------------------------------------------------
 
-#ifndef CURVE_FACET_HPP
-#define CURVE_FACET_HPP
+#ifndef CURVE_OCC_HPP
+#define CURVE_OCC_HPP
 
 // ********** BEGIN STANDARD INCLUDES      **********
 // ********** END STANDARD INCLUDES        **********
@@ -345,6 +345,14 @@ public :
   TopoDS_Edge *get_TopoDS_Edge( )
     { return myTopoDSEdge; } 
 
+  void add_loop( LoopSM *loop_ptr )
+    { myLoops.append_unique( loop_ptr ); }
+    //- associate this curve with a coedge
+
+  void add_coedge( CoEdgeSM *coedge_ptr )
+    { myCoEdges.append_unique( coedge_ptr ); }
+    //- associate this curve with a coedge
+
   Point *start_point()
     { assert(0);return myStartPoint; }
   Point *end_point()
@@ -356,6 +364,7 @@ public :
   void remove_start_point() { myStartPoint = 0; }
   void remove_end_point() { myEndPoint = 0; }
   
+  bool has_parent_coedge() { return myCoEdges.size() > 0; }
 
 protected: 
   
@@ -384,8 +393,10 @@ private:
   friend void run_test_function();
 
   TopoDS_Edge *myTopoDSEdge;
+  DLIList<LoopSM*> myLoops;
   Point *myStartPoint;
   Point *myEndPoint;
+  DLIList<CoEdgeSM*> myCoEdges;
   int myId;
   bool periodic;
 };

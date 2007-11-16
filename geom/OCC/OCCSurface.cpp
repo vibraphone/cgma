@@ -931,7 +931,6 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
   }
 }
 
-
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********
@@ -939,8 +938,8 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 
 // ********** BEGIN PRIVATE FUNCTIONS      **********
 
-//// void  OCCSurface::reverse_sense()
-//// {
+void  OCCSurface::reverse_sense()
+{
 ////   assert(0);
 ////   facetEvalTool->reverse_facets();
 ////   myLoops.reset();
@@ -966,7 +965,7 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 ////   //sense_ = CubitUtil::opposite_sense( sense_ );
 ////   myShellSense = CubitUtil::opposite_sense( myShellSense );
 ////   //myShellSense[1] = CubitUtil::opposite_sense( myShellSense[1] );
-//// }
+}
 
 // ********** END PRIVATE FUNCTIONS        **********
 

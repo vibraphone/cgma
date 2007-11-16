@@ -106,16 +106,16 @@ using namespace NCubitFile;
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
 const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
-const int OCCQueryEngine::OCCQE_MINOR_VERSION = 1;
+const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
 const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 
 TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMap = new TopTools_DataMapOfShapeInteger;
 TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMapr = new TopTools_DataMapOfShapeInteger;
 DLIList<TopologyBridge*> *OCCQueryEngine::CGMList = new DLIList<TopologyBridge*>;
 
-std::map<int, TopologyBridge*>* OccToCGM = new std::map<int, TopologyBridge*>;
+std::map<int, TopologyBridge*>* OCCQueryEngine::OccToCGM = new std::map<int, TopologyBridge*>;
 typedef std::map<int, TopologyBridge*>::value_type valType;
-int iTotalTBCreated = 0;
+int OCCQueryEngine::iTotalTBCreated = 0;
 CubitBoolean PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
@@ -770,8 +770,8 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
 //Function Name:export_solid_model
 //Member Type:  PUBLIC
 //Description:  function called for save/restore to save temporary FACET file
-//Author:       Corey Ernst
-//Date:         1/18/2003
+//Author:       Jane Hu
+//Date:         11/16/2007
 //===========================================================================
 
 CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
@@ -842,30 +842,11 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
       free_curve_count == 0 && free_point_count == 0)
     return CUBIT_SUCCESS;
 
-  //get file pointer
-  FILE *file_ptr = fopen( file_name, "wb" );
-
-  //create a wrapper object for writing
-  CIOWrapper file_writer( file_ptr );
-
-  // write out file type "OCC_BASED_GEOMETRY"
-  file_writer.BeginWriteBlock(0);
-  file_writer.Write( "OCC_BASED_GEOMETRY", 19 );
-
-  // write out Endian value
-  UnsignedInt32 endian_value = CCubitFile::mintNativeEndian;
-  file_writer.Write( &endian_value, 1 );
-
-  // write out version #
-  UnsignedInt32 version = 1;
-  file_writer.Write( &version, 1 );
-
-
   //save the facets (geometry info )
   CubitStatus status;
 
   //write out topology and attributes
-  status = write_topology( file_ptr,
+  status = write_topology( file_name,
                            OCC_bodies, OCC_surfaces,
                            OCC_curves, OCC_points );
   if( status == CUBIT_FAILURE ) return CUBIT_FAILURE;
@@ -916,17 +897,15 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
    }
    PRINT_INFO( "\n" );
 
-   fclose( file_ptr );
-
    return CUBIT_SUCCESS;
 }
 
 CubitStatus
-OCCQueryEngine::write_topology( FILE *file_ptr,
-                                  DLIList<OCCBody*> &OCC_bodies,
-                                  DLIList<OCCSurface*> &OCC_surfaces,
-                                  DLIList<OCCCurve*> &OCC_curves,
-                                  DLIList<OCCPoint*> &OCC_points )
+OCCQueryEngine::write_topology( const char* file_name,
+                                DLIList<OCCBody*> &OCC_bodies,
+                                DLIList<OCCSurface*> &OCC_surfaces,
+                                DLIList<OCCCurve*> &OCC_curves,
+                                DLIList<OCCPoint*> &OCC_points )
 {
 
   int i;
@@ -959,8 +938,11 @@ OCCQueryEngine::write_topology( FILE *file_ptr,
      TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
      B.Add(Co, *vertex);
   }
-
-  if(!BRepTools::Write(Co, (char *) file_ptr))
+ 
+  char* file = new char[sizeof(file_name)];
+  strcpy(file, file_name);
+  
+  if(!BRepTools::Write(Co, file))
     return CUBIT_FAILURE;
  
   return CUBIT_SUCCESS;
@@ -969,13 +951,13 @@ OCCQueryEngine::write_topology( FILE *file_ptr,
 
 CubitStatus
 OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
-                                        const char* /*file_name*/,
-                                        const char* file_type,
-                                        DLIList<TopologyBridge*> &bridge_list )
+                                      const char* file_name,
+                                      const char* file_type,
+                                      DLIList<TopologyBridge*> &bridge_list )
 {
   //make sure that file_type == "OCC"
   if( !strcmp( file_type,"OCC") )
-    return import_solid_model( file_ptr, file_type, bridge_list );
+    return import_solid_model( file_name, file_type, bridge_list );
   else
     return CUBIT_FAILURE;
 }

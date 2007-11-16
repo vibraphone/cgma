@@ -203,9 +203,10 @@ private:
   OCCAttribSet attribSet;
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
   TopoDS_Shape *myTopoDSShape;
-};
 
   CubitBox boundingbox;
+};
+
 
 #endif
 
