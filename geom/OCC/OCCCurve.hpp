@@ -213,7 +213,6 @@ public :
     //- *owning RefEdge*, regardless of the positive direction of the
     //- underlying solid model entities.
   
-#ifdef BOYD14
   void get_tangent( CubitVector const& location, 
                     CubitVector& tangent);
     //- this function returns the tangent vector at the given location
@@ -221,7 +220,6 @@ public :
   void get_curvature( CubitVector const& location, 
                       CubitVector& curvature);
     //- this function returns the curvature vector at the given location
-#endif
   
   virtual CubitStatus position_from_u (double u_value,
                                        CubitVector& output_position);
@@ -318,53 +316,14 @@ public :
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
   
-#ifdef BOYD14
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-#endif
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-#ifdef BOYD14
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-#endif
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  void get_facets(DLIList<CubitFacetEdge*>& facet_list);
-    //- Gets the list of facets describing this curve.
-  void get_points(DLIList<CubitPoint*>& point_list);
+  void get_points(DLIList<OCCPoint*>& point_list);
     //- Gets the list of points describing this curve.
-
-  void reset_length();
-    //- update the length of the facet curve
 
   TopoDS_Edge *get_TopoDS_Edge( )
     { return myTopoDSEdge; } 
-
-  void add_loop( LoopSM *loop_ptr )
-    { myLoops.append_unique( loop_ptr ); }
-    //- associate this curve with a coedge
-
-  void add_coedge( CoEdgeSM *coedge_ptr )
-    { myCoEdges.append_unique( coedge_ptr ); }
-    //- associate this curve with a coedge
-
-  Point *start_point()
-    { assert(0);return myStartPoint; }
-  Point *end_point()
-    { assert(0);return myEndPoint; }
-  CubitSense get_sense() { return sense_; }
-
-  CubitStatus disconnect_coedge( OCCCoEdge* coedge );
-  
-  void remove_start_point() { myStartPoint = 0; }
-  void remove_end_point() { myEndPoint = 0; }
-  
-  bool has_parent_coedge() { return myCoEdges.size() > 0; }
 
 protected: 
   
@@ -393,10 +352,6 @@ private:
   friend void run_test_function();
 
   TopoDS_Edge *myTopoDSEdge;
-  DLIList<LoopSM*> myLoops;
-  Point *myStartPoint;
-  Point *myEndPoint;
-  DLIList<CoEdgeSM*> myCoEdges;
   int myId;
   bool periodic;
 };

@@ -52,7 +52,11 @@
 #include "GeomLProp_CurveTool.hxx"
 #include "GeomAPI_ExtremaCurveCurve.hxx"
 #include "Geom_Line.hxx"
+#include "Geom_Circle.hxx"
+#include "Geom_Ellipse.hxx"
 #include "GC_MakeLine.hxx"
+#include "gp_Circ.hxx"
+#include "gp_Elips.hxx"
 //#include "TopOpeBRep_ShapeIntersector.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
 //#include "TopOpeBRep_EdgesIntersector.hxx"
@@ -269,7 +273,7 @@ CubitBoolean OCCCurve::is_periodic(double& period)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------
 CubitBoolean OCCCurve::get_param_range( double& lower_bound,
-                                          double& upper_bound )
+                                        double& upper_bound )
 {
   BRepAdaptor_Curve acurve(*myTopoDSEdge);
   lower_bound = acurve.FirstParameter();
@@ -636,11 +640,29 @@ CubitStatus OCCCurve::get_center_radius( CubitVector& center,
   if( geometry_type() != ELLIPSE_CURVE_TYPE &&
       geometry_type() != ARC_CURVE_TYPE )
     return CUBIT_FAILURE;
-  
-  center = center;
-  radius = radius;
-  PRINT_DEBUG_122("OCCCurve::get_center_radius currently not implemented.\n");
-  return CUBIT_FAILURE;
+ 
+  //get the Geom_Curve of the OCCCurve
+  Standard_Real first;
+  Standard_Real last;
+  Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last); 
+
+  if (Handle(Geom_Circle) gCircle = Handle(Geom_Circle)::DownCast(myCurve))
+  {
+     radius = gCircle->Radius();
+     gp_Circ gp_circ = gCircle->Circ();
+     gp_Pnt  gp_p = gp_circ.Location();
+     center.set(gp_p.X(), gp_p.Y(), gp_p.Z());
+  }
+
+  else //ellipse
+  {
+     Handle(Geom_Ellipse) gEllipse = Handle(Geom_Ellipse)::DownCast(myCurve);
+     radius = gEllipse->MajorRadius();
+     gp_Elips gp_ellip = gEllipse->Elips();
+     gp_Pnt  gp_p = gp_ellip.Location();
+     center.set(gp_p.X(), gp_p.Y(), gp_p.Z());
+  }
+  return CUBIT_SUCCESS;
 }
 
 //-------------------------------------------------------------------------
@@ -677,77 +699,10 @@ double OCCCurve::end_param()
    return end;
 }
 
-/*
-void OCCCurve::bodysms(DLIList<BodySM*> &bodies)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->bodysms(bodies);
-  }
-}
-
-void OCCCurve::lumps(DLIList<Lump*> &lumps)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->lumps(lumps);
-  }
-}
-
-void OCCCurve::shellsms(DLIList<ShellSM*> &shellsms)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->shellsms(shellsms);
-  }
-}
-
-void OCCCurve::surfaces(DLIList<Surface*> &surfaces)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->surfaces(surfaces);
-  }
-}
-
-void OCCCurve::loopsms(DLIList<LoopSM*> &loopsms)
-{
-  int ii; 
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->loopsms(loopsms);
-  }
-}
-
-
-void OCCCurve::coedgesms(DLIList<CoEdgeSM*> &coedgesms)
-{
-  int ii; 
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    coedgesms.append_unique( myCoEdges.get_and_step() );
-  } 
-}
-
-void OCCCurve::curves(DLIList<Curve*> &curves)
-{
-  curves.append_unique( this );
-}
-
-void OCCCurve::points(DLIList<Point*> &points)
-{
-  points.append_unique( myStartPoint );
-  points.append_unique( myEndPoint );
-}
-*/
-
 
 void OCCCurve::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { CAST_LIST_TO_PARENT( myCoEdges, parents ); }
+  {/* CAST_LIST_TO_PARENT( myCoEdges, parents );*/ }
+
 void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children ) 
 {
 	TopTools_IndexedMapOfShape M;
@@ -773,7 +728,7 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
 		}
 	}
 }
-  
+ 
 
 
 
@@ -810,72 +765,6 @@ CubitBoolean OCCCurve::G1_discontinuous(
   return CUBIT_FALSE;
 }
 
-void OCCCurve::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  DLIList<OCCShell*> shell_list;
-  get_shells( shell_list );
-  shell_list.reset();
-  for ( int i = shell_list.size(); i--; )
-  {
-    OCCShell* shell = shell_list.get_and_step();
-    shell->get_lumps( result_list );
-    OCCLump* lump = dynamic_cast<OCCLump*>(shell->get_lump());
-    if (lump)
-      result_list.append_unique(lump);
-  }
-}
-
-void OCCCurve::get_shells( DLIList<OCCShell*>& result_list )
-{
-  DLIList<OCCSurface*> surface_list;
-  DLIList<OCCShell*> temp_list;
-  get_surfaces( surface_list );
-  surface_list.reset();
-  for ( int i = surface_list.size(); i--; )
-  {
-    OCCSurface* surface = surface_list.get_and_step();
-    temp_list.clean_out();
-    surface->get_shells( temp_list );
-    result_list.merge_unique( temp_list );
-  }
-}
-
-void OCCCurve::get_surfaces( DLIList<OCCSurface*>& result_list )
-{
-  DLIList<OCCLoop*> loop_list;
-  get_loops( loop_list );
-  loop_list.reset();
-  for ( int i = loop_list.size(); i--; )
-  {
-    OCCLoop* loop = loop_list.get_and_step();
-    OCCSurface* surface = dynamic_cast<OCCSurface*>(loop->get_surface());
-    if (surface)
-      result_list.append_unique(surface);
-  }
-}
-
-void OCCCurve::get_loops( DLIList<OCCLoop*>& result_list )
-{
-  DLIList<OCCCoEdge*> coedge_list;
-  get_coedges( coedge_list );
-  coedge_list.reset();
-  for ( int i = coedge_list.size(); i--; )
-  {
-    OCCCoEdge* coedge = coedge_list.get_and_step();
-    OCCLoop* loop = dynamic_cast<OCCLoop*>(coedge->get_loop());
-    if (loop)
-      result_list.append_unique(loop);
-  }
-}
-
-void OCCCurve::get_coedges( DLIList<OCCCoEdge*>& result_list )
-{
-  myCoEdges.reset();
-  for ( int i = 0; i < myCoEdges.size(); i++ )
-    if ( OCCCoEdge* coedge = dynamic_cast<OCCCoEdge*>(myCoEdges.next(i)) )
-      result_list.append(coedge);
-}
-
 void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
@@ -887,6 +776,33 @@ void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
   }
 }
 
+void OCCCurve::get_tangent( CubitVector const& location,
+                            CubitVector& tangent)
+{
+    double u = u_from_position(location);
+    Standard_Real first;
+    Standard_Real last;
+    Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
+ 
+    gp_Pnt p;
+    gp_Vec tan;
+    GeomLProp_CurveTool::D1(myCurve, u , p, tan) ;
+    tangent.set(tan.X(), tan.Y(), tan.Z());
+} 
+
+void OCCCurve::get_curvature( CubitVector const& location,
+                              CubitVector& curvature)
+{  
+    double u = u_from_position(location);
+    Standard_Real first;
+    Standard_Real last;
+    Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*myTopoDSEdge, first, last);
+
+    gp_Pnt p;
+    gp_Vec tan, cur;
+    GeomLProp_CurveTool::D2(myCurve, u , p, tan, cur) ;
+    curvature.set(cur.X(), cur.Y(), cur.Z()); 
+}
 
 // ********** END PUBLIC FUNCTIONS         **********
 
@@ -928,42 +844,11 @@ void OCCCurve::adjust_periodic_parameter(double& param)
       param -= period;
   }
 }
-CubitPointContainment OCCCurve::point_containment( const CubitVector &/*point*/ )
-{
-   return CUBIT_PNT_UNKNOWN;
-}
-CubitPointContainment OCCCurve::point_containment( double /*u_param*/, 
-                                                       double /*v_param*/ )
-{
-  return CUBIT_PNT_UNKNOWN; 
-}
-CubitPointContainment OCCCurve::point_containment( CubitVector &/*point*/, 
-                                                       double /*u_param*/,
-                                                       double /*v_param*/ )
-{
-   return CUBIT_PNT_UNKNOWN;
-}
 
-//-------------------------------------------------------------------------
-// Purpose       : Tear down topology
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-CubitStatus OCCCurve::disconnect_coedge( OCCCoEdge* coedge )
+CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 {
-  assert(0);
-  if (!myCoEdges.move_to(coedge))
-    return CUBIT_FAILURE;
-  myCoEdges.remove();
-
-  assert(coedge->curve() == this);
-  coedge->remove_curve();
-  
-  return CUBIT_SUCCESS;
+   
+   return CUBIT_PNT_UNKNOWN;
 }
 
 // ********** END PRIVATE FUNCTIONS        **********
