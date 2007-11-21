@@ -55,7 +55,7 @@
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-OCCBody::OCCBody(TopoDS_Shape *theShape)
+OCCBody::OCCBody(TopoDS_CompSolid *theShape)
 {
   myTopoDSShape = theShape;
   update_bounding_box();

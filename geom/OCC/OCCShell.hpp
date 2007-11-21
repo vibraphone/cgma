@@ -5,15 +5,15 @@
 //
 // Special Notes :
 //
-// Creator       : Xuechen Liu
+// Creator       : Jane Hu
 //
-// Creation Date : 08/06/96
+// Creation Date : 11/16/07
 //
-// Owner         : Malcolm J. Panthaki
+// Owner         : 
 //-------------------------------------------------------------------------
 
-#ifndef FACET_SHELL_HPP
-#define FACET_SHELL_HPP
+#ifndef OCC_SHELL_HPP
+#define OCC_SHELL_HPP
 
 // ********** BEGIN STANDARD INCLUDES      **********
 // ********** END STANDARD INCLUDES        **********
@@ -42,17 +42,12 @@ class OCCShell : public ShellSM
 public:
   
   OCCShell(TopoDS_Shell *theShell);
-  OCCShell(Lump* my_lump,
-             DLIList<Surface*> &my_surfs );
-    //- Constructor with lists of attached lumps and surfaces.
-  
-  OCCShell( DLIList<Surface*> &my_surfs );
-    //- Constructor with lists of attached surfaces.
-  
+  OCCShell(DLIList<OCCSurface *> surfaces);  
+
   virtual ~OCCShell() ;
     //- Destructor.
-  void add_lump(Lump* lump_ptr);
-      
+
+  virtual CubitBox bounding_box() const;
   
   virtual GeometryQueryEngine* 
   get_geometry_query_engine() const;
@@ -102,52 +97,13 @@ public:
     //- such operations on its entities. If it cannot, then "names"
     //- of VGI entities will not propagate.
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-#endif
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-#ifdef BOYD14
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-#endif
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-#ifdef BOYD14
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-#endif
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-#endif
-
-  void get_parents_virt( DLIList<TopologyBridge*>& parents );
-  void get_children_virt( DLIList<TopologyBridge*>& children );
-  
-  inline Lump* get_lump() const { return myLump; }
-  
-  inline void remove_lump() { myLump = 0; }
- 
-  void disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect );
-  void disconnect_all_surfaces();
-  
-  void reverse(); // invert sense of each surface as used in this shell.
-  void reverse_surfaces(); //Actually flip the surface... do not change sense.
-
   CubitPointContainment point_containment( const CubitVector &point );
   
-    //determine whether this is a sheet shell or not.
-    // This function may have problems with certain non-manifold geometries
-    // It is looking for facets that aren't attached to another facet for
-    // one or more of its edges.
-    // NOTE (mbrewer): this can probably be improved by going to the
-    // curves and checking for the number of co-edges on each curve.
-  CubitBoolean is_sheet();
-
 protected: 
   
 private:
   TopoDS_Shell *myTopoDSShell;
-  Lump* myLump;
-  DLIList<Surface*> mySurfs;
+  DLIList <OCCSurface *> occ_surfaces;
 };
 
 

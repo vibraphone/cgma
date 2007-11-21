@@ -64,11 +64,6 @@ public :
 
   TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
 
-#ifdef BOYD14
-  OCCPoint *copy();
-    // make a new copy of this point and return it
-#endif
-      
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I

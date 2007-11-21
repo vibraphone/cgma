@@ -38,44 +38,12 @@
 
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
-//-------------------------------------------------------------------------
-// Purpose       : A constructor with a pointer to a Facet CoEdge.
-//
-// Special Notes :
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-OCCCoEdge::OCCCoEdge( TopoDS_Edge *theEdge, Curve *curv_ptr )
-{
-  myTopoDSEdge = theEdge;
-  myCurve = curv_ptr;
-}
 
-OCCCoEdge::OCCCoEdge( Curve *curv_ptr, LoopSM *loop_ptr, CubitSense sense )
+OCCCoEdge::OCCCoEdge( TopoDS_Edge* edge, Curve *curv_ptr, 
+	  	      LoopSM *loop_ptr, CubitSense sense )
+	 	    : myTopoDSEdge(edge), myCurve(curv_ptr), 
+ 	  	      myLoop(loop_ptr),edgeSense(sense)
 {
-  assert(0);
-  myCurve = curv_ptr;
-  myLoop = loop_ptr;
-  edgeSense = sense; 
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : A constructor with a pointer to a Facet CoEdge.
-//
-// Special Notes : Constructor used for save/restore
-//
-// Creator       : Corey Ernst 
-//
-// Creation Date : 02/03/03
-//-------------------------------------------------------------------------
-OCCCoEdge::OCCCoEdge( Curve *curv_ptr, CubitSense sense )
-{
-  assert(0);
-  myCurve = curv_ptr;
-  myLoop = NULL; 
-  edgeSense = sense; 
 }
 
 //-------------------------------------------------------------------------
@@ -89,6 +57,9 @@ OCCCoEdge::OCCCoEdge( Curve *curv_ptr, CubitSense sense )
 //-------------------------------------------------------------------------
 OCCCoEdge::~OCCCoEdge()
 {
+  myTopoDSEdge = (TopoDS_Edge*) NULL;
+  myCurve = (Curve *) NULL;
+  myLoop = (LoopSM *)NULL;
 }
 
 //-------------------------------------------------------------------------
@@ -181,96 +152,9 @@ CubitStatus OCCCoEdge::get_simple_attribute(const CubitString&,
   { return CUBIT_FAILURE; }
 
 
-CubitSense OCCCoEdge::sense()
-{
-  TopAbs_Orientation d = myTopoDSEdge->Orientation();
-  if (d == TopAbs_FORWARD) return CUBIT_FORWARD;
-  else if (d == TopAbs_REVERSED) return CUBIT_REVERSED;
-  else {
-	  printf("Check Orientation");
-	  return CUBIT_UNKNOWN;
-  }
-}
-/*
-void OCCCoEdge::bodysms(DLIList<BodySM*> &bodies)
-{
-  myLoop->bodysms(bodies);
-}
-
-void OCCCoEdge::lumps(DLIList<Lump*> &lumps)
-{
-  myLoop->lumps(lumps);
-}
-
-void OCCCoEdge::shellsms(DLIList<ShellSM*> &shellsms)
-{
-  myLoop->shellsms(shellsms);
-}
-
-void OCCCoEdge::surfaces(DLIList<Surface*> &surfaces)
-{
-  myLoop->surfaces( surfaces );
-}
-
-void OCCCoEdge::loopsms(DLIList<LoopSM*> &loopsms)
-{
-  loopsms.append_unique( myLoop );
-}
-
-void OCCCoEdge::coedgesms(DLIList<CoEdgeSM*> &coedgesms)
-{
-  coedgesms.append_unique( this );
-}
-
-void OCCCoEdge::curves(DLIList<Curve*> &curves)
-{
-  curves.append_unique( myCurve );
-}
-
-void OCCCoEdge::points(DLIList<Point*> &points)
-{
-  myCurve->points( points );
-}
-*/
-
-void OCCCoEdge::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { parents.append( myLoop ); }
-
-void OCCCoEdge::get_children_virt( DLIList<TopologyBridge*>& children )
-  { children.append( myCurve ); }
-
 void OCCCoEdge::reverse_sense()
 {
   edgeSense = CubitUtil::opposite_sense( edgeSense );
-}
-
-
-void OCCCoEdge::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  DLIList<OCCShell*> shell_list;
-  get_shells( shell_list );
-  shell_list.reset();
-  for ( int i = shell_list.size(); i--; )
-  {
-    OCCShell* shell = shell_list.get_and_step();
-    shell->get_lumps( result_list );
-    OCCLump* lump = dynamic_cast<OCCLump*>(shell->get_lump());
-    if (lump)
-      result_list.append_unique(lump);
-  }
-}
-
-void OCCCoEdge::get_shells( DLIList<OCCShell*>& result_list )
-{
-  if ( OCCLoop* loop = dynamic_cast<OCCLoop*>(myLoop) )
-    if ( OCCSurface* surf = dynamic_cast<OCCSurface*>(loop->get_surface()) )
-      surf->get_shells( result_list );
-}
-
-void OCCCoEdge::get_curves( DLIList<OCCCurve*>& result_list )
-{
-  if (OCCCurve* curve = dynamic_cast<OCCCurve*>(myCurve))
-    result_list.append(curve);
 }
 
 

@@ -32,12 +32,10 @@ class Body;
 class TopologyEntity;
 class CubitString;
 class OCCAttrib;
-
 class OCCLump;
 class OCCShell;
 class OCCSurface;
 class OCCLoop;
-class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 
@@ -47,7 +45,7 @@ class OCCBody : public BodySM
 {
 public:
   
-  OCCBody(TopoDS_Shape *theShape);
+  OCCBody(TopoDS_CompSolid *theShape);
   OCCBody(DLIList<Lump*>& my_lumps);
 
   virtual ~OCCBody() ;
@@ -60,7 +58,7 @@ public:
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-  TopoDS_Shape *get_TopoDS_Shape() {return myTopoDSShape; }
+  TopoDS_CompSolid *get_TopoDS_Shape() {return myTopoDSShape; }
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
@@ -150,14 +148,6 @@ public:
     //- Restore the ACIS BODY by replacing the transformation matrix 
     //- associated with it with a unit matrix
   
-#ifdef BOYD14
-  CubitStatus reverse() ;
-    //R CubitStatus
-    //R- CUBIT_SUCCESS/CUBIT_FAILURE
-    //I BODYPtr
-    //- Reverse the face orientations on this body
-#endif
-
   CubitStatus get_transforms( CubitTransformMatrix &tfm );
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
@@ -202,7 +192,7 @@ private:
     //List of the attached lumps for the traversal functions.
   OCCAttribSet attribSet;
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
-  TopoDS_Shape *myTopoDSShape;
+  TopoDS_CompSolid *myTopoDSShape;
 
   CubitBox boundingbox;
 };

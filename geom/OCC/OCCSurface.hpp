@@ -5,7 +5,7 @@
 //
 // Special Notes :
 //
-// Creator       : Alexander Danilov
+// Creator       : Jane Hu  
 //
 // Creation Date : 
 //
@@ -38,7 +38,6 @@ class TopologyEntity;
 class RefVolume;
 class RefFace;
 class RefVolume;
-//// class FacetEvalTool;
 class OCCShell;
 class OCCAttrib;
 
@@ -48,14 +47,7 @@ class OCCLoop;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
-//// class CubitFacetEdge;
-//// class CubitFacet;
-//// class CubitPoint;
 //// class CubitTransformMatrix;
-class CubitEvaluator;
-//// class CubitEvaluatorData;
-//// class SphereEvaluatorData;
-//// class CylinderEvaluatorData;
 
 class OCCSurface : public Surface
 {
@@ -64,46 +56,9 @@ public :
   
   OCCSurface(TopoDS_Face *theFace);
 
-  ////  OCCSurface(FacetEvalTool *facet_eval_tool_ptr,
-  ////             DLIList<ShellSM*> &shellsms,DLIList<LoopSM*> &loopsms );
-  ////  //I- facet_eval_tool pointer
-  ////  //I- A pointer to the set of facets that define this surface.
- 
-  //// OCCSurface(FacetEvalTool *facet_eval_tool_ptr,
-  ////             CubitSense sense,
-  ////             CubitSense shell_sense0,
-  ////             CubitBoolean use_facets,
-  ////             DLIList<LoopSM*> &loopsms );
-
-
-  ////  OCCSurface( const CylinderEvaluatorData *cylinder_data,
-  ////              FacetEvalTool *facet_tool,
-  ////              DLIList<ShellSM*> &shellsms,
-  ////              DLIList<LoopSM*> &loopsms );
-  //// //-  Constructor used to create a faceted surface representing a cylinder.
-  //// //I-  eval_data - radius, base, etc. of cylinder.
-  //// //I-  facet_eval_tool_ptr - evaluator to evaluate directly on facets.
-  //// //I-  shellsms - the shells in this facet model
-  //// //I-  loopsms - the loops in this facet model.
-
-  //// OCCSurface( const SphereEvaluatorData *eval_data,
-  ////               FacetEvalTool *facet_eval_tool_ptr,
-  ////               DLIList<ShellSM*> &shellsms,
-  ////               DLIList<LoopSM*> &loopsms );
-  //// //-  Constructor used to create a faceted surface representing a sphere.
-  //// //I-  eval_data - radius, center, etc. of sphere.
-  //// //I-  facet_eval_tool_ptr - evaluator to evaluate directly on facets.
-  //// //I-  shellsms - the shells in this facet model
-  //// //I-  loopsms - the loops in this facet model.
-   
   virtual ~OCCSurface() ;
     //- The destructor
    
-  bool has_parent_shell() ;   //// Not in SurfaceACIS
-      
-    //CubitSense get_relative_surface_sense();
-    //- Return the relative surface sense. (see below)
-
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
@@ -387,22 +342,6 @@ public :
   virtual CubitPointContainment point_containment( const CubitVector &point );
   virtual CubitPointContainment point_containment( double u, double v );
 
-  //// In SurfaceACIS, commented out here!!
-//  virtual CubitPointContainment point_containment( const CubitVector &point, 
-//                                                   double u, double v );
-    //R CubitPointContainment - is the point outside, inside or on the boundary?
-    //R- CUBIT_PNT_OUTSIDE, CUBIT_PNT_INSIDE, CUBIT_PNT_BOUNDARY, 
-    //   CUBIT_PNT_UNKNOWN
-    //I CubitVector
-    //I- position to check, known to be on the Surface
-    //I double
-    //I- u coordinate, if known (significantly faster, if this is known - however
-    //                           if not known let the function figure it out)
-    //I double
-    //I- v coordinate, if known (significantly faster, if this is known - however
-    //                           if not known let the function figure it out)
-    // NOTE: POINT MUST LIE ON THE SURFACE FOR THIS FUNCTION TO WORK PROPERLY.
-  
   GeometryType geometry_type();
     //R GeometryType (enum)
     //R- The enumerated type of the geometric representation
@@ -415,9 +354,6 @@ public :
     //- Returns volume for Lump, area for Surface, length for Curve and 
     //- 1.0 for Point
 
-  ////  void update_measurement();
-  ////    //Make sure we don't retain an out-dated measurement.
-  
   virtual CubitSense get_geometry_sense();
     //- Return the relative surface sense. (see below)
   
@@ -433,59 +369,12 @@ public :
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
   
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-#ifdef BOYD14
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-#endif
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-#endif
-
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
-
-  ////  CubitStatus get_my_facets(DLIList<CubitFacet*>& facet_list,
-  ////                          DLIList<CubitPoint*>& point_list);
-  ////  //- Gets the list of facets describing this surface.
-  //// void tris(DLIList<CubitFacet*> &facet_list);
-  //// void get_my_points(DLIList<CubitPoint*>& point_list);
-  ////  //- Gets the list of points describing this surface.
-  //// void get_my_facetedges(DLIList<CubitFacetEdge*>& edge_list);
-  ////  //- Gets the list of points describing this surface.
-  //// FacetEvalTool *get_eval_tool()
-  ////   { return facetEvalTool; }
-  //// const FacetEvalTool *get_eval_tool() const
-  ////   { return facetEvalTool; }
-  ////   //- return the facet evaluation tool for this surface
-    
-  CubitSense get_shell_sense( ShellSM *facet_shell ) const;
-    // return the sense with respect to the given shell
-  
-  void get_shell_sense( CubitSense &sense0 ); 
-    // return senses 
-    
-  void set_shell_sense( OCCShell *facet_shell, 
-                        CubitSense thesense );
-    // set the sense of the surface with respect to the shell
-
-  ////  CubitStatus copy_facets(DLIList<CubitFacet*>&copy_facet_list,
-  ////                        DLIList<CubitPoint*>&copy_point_list);
-  ////  // create a copy of the points and facets
-
-  //// int interp_order();
-  //// double min_dot();
 
   CubitBoolean is_flat();     //// Not in SurfaceACIS
   CubitBoolean is_spherical(); //// Not in SurfaceACIS
   CubitBoolean is_conical();  //// Not in SurfaceACIS
-
-  ////  const CubitEvaluatorData *evaluator_data();
-  ////  void add_transformation( CubitTransformMatrix &tfmat );
 
 protected: 
 
@@ -501,21 +390,8 @@ private:
     //- Not only does the RefFace have a sense wrt its Surface, but each
     //- Facet FACE has a sense wrt its underlying "surface" object.
 
-  //sjowen FacetEvalTool *facetEvalTool;
-  ////  FacetEvalTool *facetEvalTool;
-    //For topology traversals we need to have connections to the
-    //entitities connected to this surface.  From these we can get the rest.
-
-  DLIList<LoopSM*> myLoops;
-  DLIList<ShellSM*> myShells;
-
   OCCAttribSet attribSet;
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
-
-  // the sense of the surface with respect to the shells in the myShells list
-  CubitSense myShellSense;
-
-  CubitEvaluator *myEvaluator;
 
   TopoDS_Face *myTopoDSFace;
 

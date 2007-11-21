@@ -12,8 +12,8 @@
 // Owner         : Steven J. Owen
 //-------------------------------------------------------------------------
 
-#ifndef FACETCOEDGE_HPP
-#define FACETCOEDGE_HPP
+#ifndef OCCCOEDGE_HPP
+#define OCCCOEDGE_HPP
 
 // ********** BEGIN STANDARD INCLUDES      **********
 // ********** END STANDARD INCLUDES        **********
@@ -43,12 +43,9 @@ class OCCCoEdge : public CoEdgeSM
 {
 public:
   
-  OCCCoEdge(TopoDS_Edge *theEdge, Curve *curv_ptr);
-  OCCCoEdge(Curve *curv_ptr, LoopSM *loop_ptr, CubitSense sense);
+  OCCCoEdge(TopoDS_Edge *theEdge,
+	    Curve *curv_ptr, LoopSM *loop_ptr, CubitSense sense);
     //- A constructor
-  //
-  OCCCoEdge(Curve *curv_ptr, CubitSense sense);
-    //- A constructor (for save/restore)
   
   virtual ~OCCCoEdge() ;
     //- The destructor
@@ -101,47 +98,24 @@ public:
     //- such operations on its entities. If it cannot, then "names"
     //- of VGI entities will not propagate.
   
-  CubitSense sense();
+  inline CubitSense sense(){return edgeSense;}
     //- returns the sense of the underlying coedge wrt the underlying edge
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-#endif
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-#ifdef BOYD14
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-#endif
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-
-  void get_parents_virt( DLIList<TopologyBridge*>& parents );
-  void get_children_virt( DLIList<TopologyBridge*>& children );
-
-  void add_loop( LoopSM *loop_ptr )
+  inline void add_loop( LoopSM *loop_ptr )
     { myLoop = loop_ptr; }
     //- set the loop pointer that this coedge is asociated
 
-#ifdef BOYD14
-  void set_sense( CubitSense sense );
-    //- set the sense of the coedge wrt the surface loop
-#endif
-  CubitSense get_sense()
-    {return edgeSense;}
-    //- get the sense of the coedge wrt the surface loop
   void reverse_sense();
 
-  Curve *curve()
+  inline Curve *curve()
     {return myCurve;}
     //- get the curve associated with this coedge
     
   inline LoopSM* get_loop() const { return myLoop; }
-  
-  inline void remove_loop() { myLoop = 0; }
-  inline void remove_curve() { myCurve = 0; }
 
+  inline TopoDS_Edge * get_TopoDS_Edge(){return myTopoDSEdge;}
+  void remove_loop() {myLoop = (LoopSM*) NULL;}
+  
 protected: 
   
 private:

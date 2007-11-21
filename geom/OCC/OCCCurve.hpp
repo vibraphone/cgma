@@ -27,14 +27,8 @@
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class TopologyEntity;
-class CurveFacetEvalTool;
-class FacetEvalTool;
 class OCCAttrib;
-class CurveFacetEvalTool;
 class Point;
-class CubitPoint;
-class CubitFacetEdge;
-class CubitFacetEdge;
 
 class OCCBody;
 class OCCLump;
@@ -294,9 +288,6 @@ public :
                                          CubitVector* plus_tangent = NULL );
   
   virtual CubitPointContainment point_containment( const CubitVector &point );
-  virtual CubitPointContainment point_containment( double u, double v );
-  virtual CubitPointContainment point_containment( CubitVector &point, 
-                                                   double u, double v );
     //R CubitPointContainment - is the point outside, inside or on the boundary?
     //R- CUBIT_PNT_OUTSIDE, CUBIT_PNT_INSIDE, CUBIT_PNT_BOUNDARY, 
     //   CUBIT_PNT_UNKNOWN
@@ -352,7 +343,6 @@ private:
   friend void run_test_function();
 
   TopoDS_Edge *myTopoDSEdge;
-  int myId;
   bool periodic;
 };
 

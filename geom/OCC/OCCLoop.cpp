@@ -28,6 +28,8 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "TopExp_Explorer.hxx"
+#include "TopoDS.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -45,23 +47,6 @@ OCCLoop::OCCLoop( TopoDS_Wire *theWire )
 {
   myTopoDSWire = theWire;
 }
-OCCLoop::OCCLoop( Surface *surf_ptr,
-                      DLIList<CoEdgeSM*> &coedge_list )
-{
-  mySurface = surf_ptr;
-  myCoEdges += coedge_list;
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : The constructor with coedges.
-//
-// Special Notes :
-//
-//-------------------------------------------------------------------------
-OCCLoop::OCCLoop( DLIList<CoEdgeSM*> &coedge_list )
-{
-  myCoEdges += coedge_list;
-}
 
 //-------------------------------------------------------------------------
 // Purpose       : The default destructor.
@@ -71,6 +56,19 @@ OCCLoop::OCCLoop( DLIList<CoEdgeSM*> &coedge_list )
 //-------------------------------------------------------------------------
 OCCLoop::~OCCLoop()
 {
+  myCoEdgeList.reset();
+  for (int i = myCoEdgeList.size(); i--; )
+  {
+    OCCCoEdge* coedge = myCoEdgeList.get_and_step();
+    if (coedge)
+    {
+      assert(coedge->get_loop() == this);
+      delete coedge;
+    }
+  }
+
+  myTopoDSWire =  (TopoDS_Wire *) NULL;
+  myCoEdgeList.clean_out();
 }
 
 //-------------------------------------------------------------------------
@@ -145,7 +143,12 @@ CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
 CubitBox OCCLoop::bounding_box() const
 {
    CubitBox box;
-   PRINT_ERROR("OCCLoop::bounding_box not implemented\n");
+   for (int i = myCoEdgeList.size(); i > 0; i--)
+   {
+      DLIList<OCCCoEdge*> coedges = myCoEdgeList;
+      OCCCoEdge* coedge = coedges.get_and_step();
+      box |= coedge->curve()->bounding_box();
+   }
    return box;
 }
 
@@ -160,143 +163,5 @@ GeometryQueryEngine* OCCLoop::get_geometry_query_engine() const
    return OCCQueryEngine::instance();
 }                
 
-/*
-void OCCLoop::bodysms(DLIList<BodySM*> &bodies)
-{
-  mySurface->bodysms(bodies);
-}
-
-void OCCLoop::lumps(DLIList<Lump*> &lumps)
-{
-  mySurface->lumps(lumps);
-}
-
-void OCCLoop::shellsms(DLIList<ShellSM*> &shellsms)
-{
-  mySurface->shellsms(shellsms);
-}
-
-void OCCLoop::surfaces(DLIList<Surface*> &surfaces)
-{
-  surfaces.append_unique( mySurface );
-}
-
-void OCCLoop::loopsms(DLIList<LoopSM*> &loopsms)
-{
-  loopsms.append_unique( this );
-}
-void OCCLoop::coedgesms(DLIList<CoEdgeSM*> &coedgesms)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    coedgesms.append_unique(myCoEdges.get_and_step());
-  }
-}
-
-void OCCLoop::curves(DLIList<Curve*> &curves)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->curves(curves);
-  }
-}
-void OCCLoop::points(DLIList<Point*> &points)
-{
-  int ii;
-  for ( ii = myCoEdges.size(); ii > 0; ii-- )
-  {
-    myCoEdges.get_and_step()->points(points);
-  }
-}
-*/
-
-
-void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { parents.append( mySurface ); }
-void OCCLoop::get_children_virt( DLIList<TopologyBridge*>& children )
-{
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSWire, TopAbs_EDGE, M);
-  int ii;
-  for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *curve = OCCQueryEngine::occ_to_cgm(M(ii));
-	  children.append_unique(curve);
-  }
-}
-
-
-void OCCLoop::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  DLIList<OCCShell*> shell_list;
-  get_shells( shell_list );
-  shell_list.reset();
-  for ( int i = shell_list.size(); i--; )
-  {
-    OCCShell* shell = shell_list.get_and_step();
-    shell->get_lumps( result_list );
-    OCCLump* lump = dynamic_cast<OCCLump*>(shell->get_lump());
-    if (lump)
-      result_list.append_unique(lump);
-  }
-}
-
-void OCCLoop::get_shells( DLIList<OCCShell*>& result_list )
-{
-  if ( OCCSurface* surf = dynamic_cast<OCCSurface*>(mySurface) )
-    surf->get_shells( result_list );
-}
-
-void OCCLoop::get_coedges( DLIList<OCCCoEdge*>& result_list )
-{
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSWire, TopAbs_EDGE, M);
-  int ii;
-  for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *curve = OCCQueryEngine::occ_to_cgm(M(ii));
-	  result_list.append_unique(dynamic_cast<OCCCoEdge*>(curve));
-  }
-}
-
-void OCCLoop::get_curves( DLIList<OCCCurve*>& result_list )
-{
-  DLIList<OCCCoEdge*> coedge_list;
-  get_coedges( coedge_list );
-  coedge_list.reset();
-  for ( int i = coedge_list.size(); i--; )
-  {
-    OCCCoEdge* coedge = coedge_list.get_and_step();
-    OCCCurve* curve = dynamic_cast<OCCCurve*>(coedge->curve());
-    if (curve)
-      result_list.append_unique(curve);
-  }
-}
-
-
-//-------------------------------------------------------------------------
-// Purpose       : Tear down topology
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-void OCCLoop::disconnect_all_coedges()
-{
-  myCoEdges.reset();
-  for (int i = myCoEdges.size(); i--; )
-  {
-    CoEdgeSM* sm_ptr = myCoEdges.get_and_step();
-    OCCCoEdge* coedge = dynamic_cast<OCCCoEdge*>(sm_ptr);
-    if (coedge)
-    {
-      assert(coedge->get_loop() == this);
-      coedge->remove_loop();
-    }
-  }
-  myCoEdges.clean_out();
-}
 
 
