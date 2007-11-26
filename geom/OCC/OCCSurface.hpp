@@ -134,6 +134,7 @@ public :
       CubitVector* closest_location = NULL,
       CubitVector* unit_normal = NULL );
 
+  virtual CubitSense get_shell_sense(ShellSM*) const;
 
   virtual CubitStatus closest_point(  
     CubitVector const& location, 
@@ -289,6 +290,12 @@ public :
     //- values.
   
   TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
+
+  void get_loops(DLIList<OCCLoop*>&);
+
+  void get_coedges(DLIList<OCCCoEdge*>&);
+
+  void get_curves(DLIList<OCCCurve*>&); 
 
   virtual CubitBoolean is_parametric();
     //R CubitBoolean

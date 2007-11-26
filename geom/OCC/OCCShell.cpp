@@ -54,27 +54,13 @@
 //-------------------------------------------------------------------------
 OCCShell::OCCShell(TopoDS_Shell *theShell)
 {
-  myLump = NULL;
   myTopoDSShell = theShell;
 }
-OCCShell::OCCShell(Lump* my_lump,
-                       DLIList<Surface*> &my_surfs )
+OCCShell::OCCShell( DLIList<Surface*> my_surfs )
 {
-  myLump = my_lump;
   mySurfs += my_surfs;
 }
 
-//-------------------------------------------------------------------------
-// Purpose       : A constructor with list of surfaces.
-//
-// Special Notes : For use with save/restore
-//
-//-------------------------------------------------------------------------
-OCCShell::OCCShell( DLIList<Surface*> &my_surfs )
-{
-  myLump = NULL; 
-  mySurfs += my_surfs;
-}
 //-------------------------------------------------------------------------
 // Purpose       : The destructor.
 //
@@ -114,73 +100,20 @@ CubitStatus OCCShell::get_simple_attribute(const CubitString&,
                                               DLIList<CubitSimpleAttrib*>&)
   { return CUBIT_FAILURE; }
 
-/*
-void OCCShell::bodysms(DLIList<BodySM*> &bodies) 
+
+void OCCShell::add_surfaces(DLIList<Surface*> surfaces)
 {
-  if (myLump)
-    myLump->bodysms(bodies);
+    mySurfs = surfaces;
 }
 
-void OCCShell::lumps(DLIList<Lump*> &lumps)
+void OCCShell::add_surface(Surface* surface)
 {
-    lumps.append_unique(myLump);
+  mySurfs.append(surface); 
 }
 
-void OCCShell::shellsms(DLIList<ShellSM*> &shellsms)
+DLIList<Surface*> OCCShell::surfaces()
 {
-  shellsms.append_unique(this);
-}
-
-void OCCShell::surfaces(DLIList<Surface*> &surfaces)
-{
-  int ii;
-  for ( ii = mySurfs.size(); ii > 0; ii-- )
-  {
-    surfaces.append_unique(mySurfs.get_and_step());
-  }
-}
-
-void OCCShell::loopsms(DLIList<LoopSM*> &loopsms)
-{
-  int ii;
-  for ( ii = mySurfs.size(); ii > 0; ii-- )
-  {
-    mySurfs.get_and_step()->loopsms(loopsms);
-  }
-}
-
-void OCCShell::curves(DLIList<Curve*> &curves)
-{
-  int ii;
-  for ( ii = mySurfs.size(); ii > 0; ii-- )
-  {
-    mySurfs.get_and_step()->curves(curves);
-  }
-}
-
-void OCCShell::coedgesms(DLIList<CoEdgeSM*> &coedgesms)
-{
-  int ii;
-  for ( ii = mySurfs.size(); ii > 0; ii-- )
-  {
-    mySurfs.get_and_step()->coedgesms(coedgesms);
-  }
-}
-
-void OCCShell::points(DLIList<Point*> &points)
-{
-  int ii;
-  for ( ii = mySurfs.size(); ii > 0; ii-- )
-  {
-    mySurfs.get_and_step()->points(points);
-  }
-}
-*/
-
-void OCCShell::add_lump(Lump* lump_ptr)
-{
-  assert(NULL == myLump);
-  myLump = lump_ptr;
+  return mySurfs;
 }
 
 
@@ -194,7 +127,8 @@ void OCCShell::add_lump(Lump* lump_ptr)
 // Creation Date : 
 //-------------------------------------------------------------------------
 void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { parents.append(myLump); }
+  { /*parents.append(myLump);*/ }
+
 void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 {
   TopTools_IndexedMapOfShape M;
@@ -206,14 +140,6 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
   }
 }
 
-
-void OCCShell::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  OCCLump* lump = dynamic_cast<OCCLump*>(myLump);
-  if (lump)
-    result_list.append(lump);
-}
-
 void OCCShell::get_surfaces( DLIList<OCCSurface*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
@@ -222,30 +148,6 @@ void OCCShell::get_surfaces( DLIList<OCCSurface*>& result_list )
   for (ii=1; ii<=M.Extent(); ii++) {
 	  TopologyBridge *surface = OCCQueryEngine::occ_to_cgm(M(ii));
 	  result_list.append_unique(dynamic_cast<OCCSurface*>(surface));
-  }
-}
-
-
-void OCCShell::get_coedges( DLIList<OCCCoEdge*>& result_list )
-{
-  DLIList<OCCSurface*> surface_list;
-  get_surfaces( surface_list );
-  surface_list.reset();
-  for ( int i = 0; i < surface_list.size(); i++ )
-    surface_list.next(i)->get_coedges( result_list );
-}
-
-void OCCShell::get_curves( DLIList<OCCCurve*>& result_list )
-{
-  DLIList<OCCCoEdge*> coedge_list;
-  get_coedges( coedge_list );
-  coedge_list.reset();
-  for ( int i = coedge_list.size(); i--; )
-  {
-    OCCCoEdge* coedge = coedge_list.get_and_step();
-    OCCCurve* curve = dynamic_cast<OCCCurve*>(coedge->curve());
-    if (curve)
-      result_list.append_unique(curve);
   }
 }
 
@@ -265,9 +167,6 @@ void OCCShell::disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect )
     OCCSurface* surface = surfs_to_disconnect.get_and_step();
     if( mySurfs.move_to( dynamic_cast<Surface*>(surface) ) )
       mySurfs.change_to(NULL);
-
-    //if (surface)
-     // surface->remove_shell(this);
   }
   mySurfs.remove_all_with_value( NULL );
 }
@@ -284,54 +183,9 @@ void OCCShell::disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect )
 //-------------------------------------------------------------------------
 void OCCShell::disconnect_all_surfaces()
 {
-  mySurfs.reset();
-  for (int i = mySurfs.size(); i--; )
-  {
-    Surface* sm_ptr = mySurfs.get_and_step();
-    OCCSurface* surface = dynamic_cast<OCCSurface*>(sm_ptr);
-    //if (surface)
-     // surface->remove_shell(this);
-  }
   mySurfs.clean_out();
 }
 
-//-------------------------------------------------------------------------
-// Purpose       : Flip surface-use sense
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 05/26/04
-//-------------------------------------------------------------------------
-void OCCShell::reverse()
-{
-  for (int i = mySurfs.size(); i--; )
-  {
-    OCCSurface* surf = dynamic_cast<OCCSurface*>(mySurfs.next(i));
-    CubitSense sense = surf->get_shell_sense( this );
-    assert( CUBIT_UNKNOWN != sense );
-    surf->set_shell_sense( this, CubitUtil::opposite_sense( sense ) );
-  }
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : Actually flip the underlying surfaces
-//
-// Special Notes : 
-//
-// Creator       : Michael Brewer
-//
-// Creation Date : 03/22/05
-//-------------------------------------------------------------------------
-void OCCShell::reverse_surfaces()
-{
-  for (int i = mySurfs.size(); i--; )
-  {
-    OCCSurface* surf = dynamic_cast<OCCSurface*>(mySurfs.next(i));
-    surf->reverse_sense();
-  }
-}
 //-------------------------------------------------------------------------
 // Purpose       : Determines if point is contained within shell 
 //
@@ -454,45 +308,6 @@ CubitPointContainment OCCShell::point_containment( const CubitVector &input_poin
   else
     return CUBIT_PNT_INSIDE;
 }
-
-//Determine whether this shell is a sheet (ie, closed or not)
-CubitBoolean OCCShell::is_sheet()
-{
-    //get a list of all the facets in the sheet
-  DLIList<CubitFacet*> facet_list;
-  int i;
-  for (i = mySurfs.size(); i--; )
-  {
-    OCCSurface* surf = dynamic_cast<OCCSurface*>(mySurfs.next(i));
-    //surf->tris(facet_list);
-  }
-    //should be unique... doesn't hurt anything if it isn't
-  //facet_list.uniquify_ordered();
-  CubitFacet* this_facet;
-  CubitPoint* node_1;
-  CubitPoint* node_2;
-  CubitPoint* node_3;
-    //if any of the facets don't have another facet across a given
-    // edge... this is a sheet shell because it isn't closed.
-  for (i = facet_list.size(); i--; ){
-    this_facet=facet_list.get_and_step();
-    if(!this_facet){
-      PRINT_ERROR("Unexpected NULL pointer.");
-      return CUBIT_TRUE;
-    }
-    this_facet->tri_nodes(node_1,node_2,node_3);
-    if(!this_facet->shared_facet( node_1, node_2 ) ||
-       !this_facet->shared_facet( node_1, node_3 ) ||
-       !this_facet->shared_facet( node_2, node_3 ) ){
-      return CUBIT_TRUE;
-    }
-  }
-    //otherwise we made it through without finding a gap so it is close...
-    // thus not a sheet.
-  return CUBIT_FALSE;
-}
-
-       
 
 // ********** END PUBLIC FUNCTIONS         **********
 

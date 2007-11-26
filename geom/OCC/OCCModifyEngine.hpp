@@ -21,16 +21,6 @@
 class Point;
 class TopologyBridge;
 class TopologyEntity;
-class ChollaSurface;
-class ChollaCurve;
-class ChollaPoint;
-class ChollaEngine;
-class CurveFacetEvalTool;
-class FacetEvalTool;
-class CubitPoint;
-class CubitFacet;
-class CubitFacetEdge;
-class CubitQuadFacet;
 class Point;
 class CoEdgeSM;
 class ShellSM;
@@ -38,9 +28,6 @@ class OCCBody;
 class Body;
 class RefFace;
 class OCCSurface;
-class CubitEvaluatorData;
-class SphereEvaluatorData;
-class CylinderEvaluatorData;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {

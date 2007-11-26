@@ -137,21 +137,6 @@ public:
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
   
-  void get_bodies  ( DLIList<OCCBody   *>& bodies   );
-#ifdef BOYD14
-  void get_lumps   ( DLIList<OCCLump   *>& lumps    );
-#endif
-  void get_shells  ( DLIList<OCCShell  *>& shells   );
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-#ifdef BOYD14
-  void get_loops   ( DLIList<OCCLoop   *>& loops    );
-#endif
-  void get_coedges ( DLIList<OCCCoEdge *>& coedges  );
-  void get_curves  ( DLIList<OCCCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<OCCPoint  *>& points   );
-#endif
-
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
 
@@ -159,17 +144,9 @@ public:
     
   inline void remove_body() {myBodyPtr = 0;}
  
-  void add_shell( OCCShell *shell ); 
-  void remove_shell( OCCShell *shell ); 
-
-  void disconnect_all_shells();
-  
   CubitStatus mass_properties( CubitVector& centroid, double& volume );
 
   CubitPointContainment point_containment( const CubitVector &point );
-
-    //is this lump a sheet
-  CubitBoolean is_sheet( );
 
 protected: 
   

@@ -48,7 +48,9 @@
 #include "gp_Ax2.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
-
+#include "TopExp_Explorer.hxx"
+#include "BRep_Builder.hxx"
+#include "TopoDS.hxx"
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
@@ -58,12 +60,31 @@
 OCCBody::OCCBody(TopoDS_CompSolid *theShape)
 {
   myTopoDSShape = theShape;
+  TopExp_Explorer Ex;
+  for (Ex.Init(*theShape, TopAbs_SOLID); Ex.More(); Ex.Next())
+  {
+     TopoDS_Solid *posolid = new TopoDS_Solid;
+     *posolid = TopoDS::Solid(Ex.Current());
+     OCCLump *lump = new OCCLump(posolid);
+     myLumps.append(lump);
+  }
+  
   update_bounding_box();
 }
 
 OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 {
   myLumps += my_lumps;
+  BRep_Builder B;
+  TopoDS_CompSolid Co;
+  B.MakeCompSolid(Co);
+  for(int i = 0; i < myLumps.size(); i ++)
+  {
+     TopoDS_Solid * solid = CAST_TO(myLumps.get_and_step(), OCCLump)->get_TopoDS_Solid();
+     B.Add(Co, *solid);
+  }
+  myTopoDSShape = new TopoDS_CompSolid(Co);
+  update_bounding_box();
 }
 
 OCCBody::~OCCBody() 
@@ -235,26 +256,10 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //----------------------------------------------------------------
 void OCCBody::update_bounding_box() 
 {
-  Bnd_Box box;
-  if (myTopoDSShape)
-  {
-    const TopoDS_Shape shape=*myTopoDSShape;
-    //calculate the bounding box
-    BRepBndLib::Add(shape, box);
-    double min[3], max[3];
-  
-    //get values
-    box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
-
-    //update boundingbox.
-    CubitBox cBox(min, max);
-    boundingbox = cBox;
-    return;
-  }
-  CubitBox cBox;
-  for(int i = myLumps.size();i > 0; i--)
-    cBox |= myLumps.get_and_step()->bounding_box();  
-  boundingbox = cBox;
+  CubitVector v(0, 0, 0);
+  boundingbox.reset(v,v);
+  for (int i = 0; i < myLumps.size(); i++)
+    boundingbox |= myLumps.get_and_step()->bounding_box();
 }
 
 //----------------------------------------------------------------

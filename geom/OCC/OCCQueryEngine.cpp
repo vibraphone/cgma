@@ -21,6 +21,7 @@
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepTools_WireExplorer.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "Poly_Array1OfTriangle.hxx"
 #include "Poly_Triangle.hxx"
@@ -626,9 +627,9 @@ OCCQueryEngine::entity_extrema( DLIList<GeometryEntity*> &ref_entity_list,
 //================================================================================
 CubitStatus
 OCCQueryEngine::entity_entity_distance( GeometryEntity *entity1,
-                                          GeometryEntity *entity2,
-                                          CubitVector &pos1, CubitVector &pos2,
-                                          double &distance )
+                                        GeometryEntity *entity2,
+                                        CubitVector &pos1, CubitVector &pos2,
+                                        double &distance )
 {
   TopoDS_Shape * shape1;
   TopoDS_Shape * shape2;
@@ -1023,7 +1024,9 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
 			PRINT_INFO("Adding solids.\n");
                 iTotalTBCreated++;
 		lump = new OCCLump(posolid);
-		body = new OCCBody(posolid);
+                DLIList<Lump*> lumps;
+		lumps.append(lump);
+		body = new OCCBody(lumps);
 		OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
 				(TopologyBridge*)body));
@@ -1049,7 +1052,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
                 if(PRINT_RESULT)
                         PRINT_INFO("Adding shells.\n");
                 iTotalTBCreated++;
-		shell = = new OCCShell(poshell)
+		shell = new OCCShell(poshell);
                 OCCMap->Bind(*poshell, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
                                 (TopologyBridge*)shell));
@@ -1057,12 +1060,17 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
         else
         {
                 int k = OCCMap->Find(*poshell);
-                shell = (OCCBody*)(OccToCGM->find(k))->second;
+                shell = (OCCShell*)(OccToCGM->find(k))->second;
         }
 
 	TopExp_Explorer Ex;
+        DLIList<Surface *> surfaces;
         for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
-           populate_topology_bridge(TopoDS::Face(Ex.Current()));
+	{
+           Surface* face = populate_topology_bridge(TopoDS::Face(Ex.Current()));
+	   surfaces.append(face);
+	}
+	shell->add_surfaces(surfaces); 
 	return shell;
 }
 
@@ -1119,9 +1127,10 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
 	for (Ex.Init(aShape); Ex.More(); Ex.Next())
  	{
 	   Curve* curve = populate_topology_bridge(Ex.Current()) ;
-           TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
-  	   OCCCoEdge * coedge = new OCCCoEdge(edge, curve, powire, 
- 	   (Ex.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSE));
+           OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
+           TopoDS_Edge *edge = occ_curve->get_TopoDS_Edge( );
+  	   OCCCoEdge * coedge = new OCCCoEdge(edge, curve, loop, 
+ 	   (Ex.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
 	   coedges.append(coedge);
 	}
 	loop->add_coedges(coedges);

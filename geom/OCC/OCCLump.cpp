@@ -37,7 +37,8 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
-
+#include "Bnd_Box.hxx"
+#include "BRepBndLib.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -147,23 +148,18 @@ CubitStatus OCCLump::restore_attribs( FILE *file_ptr, unsigned int endian )
 //-------------------------------------------------------------------------
 CubitBox OCCLump::bounding_box() const 
 {
-  CubitBox my_box, temp_box;
-  DLIList<OCCSurface*> surfaces;
-  int ii;
-  const_cast<OCCLump*>(this)->get_surfaces(surfaces);
-  if (surfaces.size() > 0)
-  {
-    Surface* surface = surfaces.get_and_step();
-    my_box = surface->bounding_box();
-    for ( ii = surfaces.size(); ii > 1; ii-- )
-    {
-      surface = surfaces.get_and_step();
-      temp_box = surface->bounding_box();
-        //unite the boxes..
-      my_box |= temp_box;
-    }
-  }
-  return my_box;
+  Bnd_Box box;
+  const TopoDS_Shape shape=*myTopoDSSolid;
+  //calculate the bounding box
+  BRepBndLib::Add(shape, box);
+  double min[3], max[3];
+
+  //get values
+  box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+
+  //update boundingbox.
+  CubitBox cBox(min, max);
+  return cBox;
 }
 
 //-------------------------------------------------------------------------
@@ -194,11 +190,6 @@ double OCCLump::measure()
   DLIList<OCCSurface*> surfaces;
   Surface *curr_surface;
   OCCSurface *facet_surface;
-    //if this is a sheet body... return 0.0
-  
-    //Body *tmp_body = CAST_TO(myBodyPtr->topology_entity(), Body);
-  if( is_sheet() ) 
-    return 0.0;
   
   int ii;
   get_surfaces(surfaces);

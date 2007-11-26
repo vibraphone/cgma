@@ -134,6 +134,20 @@ CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
                                               DLIList<CubitSimpleAttrib*>&)
   { return CUBIT_FAILURE; }
 
+void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
+  { /*parents.append( mySurface )*/; }
+
+void OCCLoop::get_children_virt( DLIList<TopologyBridge*>& children )
+{
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(*myTopoDSWire, TopAbs_EDGE, M);
+  int ii;
+  for (ii=1; ii<=M.Extent(); ii++) {
+          TopologyBridge *curve = OCCQueryEngine::occ_to_cgm(M(ii));
+          children.append_unique(curve);
+  }
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : compute bounding box of loop
 //

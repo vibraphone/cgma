@@ -101,6 +101,8 @@ public :
     //- such operations on its entities. If it cannot, then "names"
     //- of VGI entities will not propagate.
  
+    virtual void get_parents_virt(DLIList<TopologyBridge*>&);
+    virtual void get_children_virt(DLIList<TopologyBridge*>&);
 protected: 
 
 private:

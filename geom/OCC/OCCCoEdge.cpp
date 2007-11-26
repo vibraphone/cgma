@@ -151,11 +151,12 @@ CubitStatus OCCCoEdge::get_simple_attribute(const CubitString&,
                                               DLIList<CubitSimpleAttrib*>&)
   { return CUBIT_FAILURE; }
 
+void OCCCoEdge::get_parents_virt( DLIList<TopologyBridge*>& parents )
+  { parents.append( myLoop ); }
 
-void OCCCoEdge::reverse_sense()
-{
-  edgeSense = CubitUtil::opposite_sense( edgeSense );
-}
+void OCCCoEdge::get_children_virt( DLIList<TopologyBridge*>& children )
+  { children.append( myCurve ); }
+
 
 
 // ********** END PUBLIC FUNCTIONS         **********

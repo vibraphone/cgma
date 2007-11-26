@@ -34,7 +34,6 @@
 #include "CubitSimpleAttrib.hpp"
 #include "CubitVector.hpp"
 #include "GeometryDefines.h"
-#include "CubitEvaluator.hpp"
 #include "CubitUtil.hpp"
 #include "CastTo.hpp"
 #include "RefVolume.hpp"
@@ -45,15 +44,9 @@
 #include "LoopSM.hpp"
 #include "CubitPointData.hpp"
 
-////// #include "FacetEvalTool.hpp"
-////// #include "CubitFacetData.hpp"
-////// #include "CubitFacetEdge.hpp"
 
 // ********** END CUBIT INCLUDES           **********
 
-//// #include "CubitEvaluator.hpp"
-//// #include "SphereEvaluator.hpp"
-//// #include "CylinderEvaluator.hpp"
 
 // ********** BEGIN OpenCascade INCLUDES   **********
 
@@ -408,8 +401,6 @@ CubitBoolean OCCSurface::is_periodic_in_V( double& period )
 CubitBoolean OCCSurface::is_singular_in_U( double )
 {
   assert(0);
-  if ( myEvaluator )
-      return myEvaluator->is_singular_in_U();
 
   //PRINT_ERROR("OCCSurface::is_singular_in_U not implemented yet\n");
   return CUBIT_FALSE;
@@ -422,8 +413,6 @@ CubitBoolean OCCSurface::is_singular_in_U( double )
 CubitBoolean OCCSurface::is_singular_in_V( double )
 {
   assert(0);
-  if ( myEvaluator )
-      return myEvaluator->is_singular_in_V();
 
   //PRINT_ERROR("OCCSurface::is_singular_in_V not implemented yet\n");
   return CUBIT_FALSE;
@@ -512,31 +501,6 @@ CubitBoolean OCCSurface::get_param_range_V( double& lower_bound,
 }
 
 //-------------------------------------------------------------------------
-// Purpose       : Returns a surface type ID
-//
-//-------------------------------------------------------------------------
-GeometryType OCCSurface::geometry_type()
-{
-  return UNDEFINED_SURFACE_TYPE;
-/*    if ( is_flat() )
-    {
-        return PLANE_SURFACE_TYPE;
-    }
-    else if ( is_spherical() )
-    {
-        return SPHERE_SURFACE_TYPE;
-    }
-    else if ( is_conical() )
-    {
-        return CONE_SURFACE_TYPE;
-    }
-    else
-    {
-        return UNDEFINED_SURFACE_TYPE;
-    }*/
-}
-
-//-------------------------------------------------------------------------
 // Purpose       : Returns the area of the Surface
 //
 //-------------------------------------------------------------------------
@@ -546,48 +510,6 @@ double OCCSurface::measure()
   BRepGProp::SurfaceProperties(*myTopoDSFace, myProps);
   return myProps.Mass();
 }
-
-//// //-------------------------------------------------------------------------
-//// // Purpose       : Returns whether the facet surface is completely flat
-//// //
-//// //-------------------------------------------------------------------------
-//// CubitBoolean OCCSurface::is_flat() 
-//// {
-////   assert(0);
-////   // Danilov: try to use BRepAdaptor_Surface::GetType
-////   return (facetEvalTool->is_flat() == 1) ? CUBIT_TRUE : CUBIT_FALSE; 
-//// }
-
-//// //-------------------------------------------------------------------------
-//// // Purpose       : Returns whether the facet surface is spherical
-//// //
-//// //-------------------------------------------------------------------------
-//// CubitBoolean OCCSurface::is_spherical()
-//// {
-////   assert(0);
-////   // Danilov: try to use BRepAdaptor_Surface::GetType
-////     if ( myEvaluator && myEvaluator->ask_type() == SPHERE_SURFACE_TYPE )
-////     {
-////         return CUBIT_TRUE;
-////     }
-////     return CUBIT_FALSE;
-//// }
-//// 
-
-//// //-------------------------------------------------------------------------
-//// // Purpose       : Returns whether the facet surface is spherical
-//// //
-//// //-------------------------------------------------------------------------
-//// CubitBoolean OCCSurface::is_conical()
-//// {
-////   assert(0);
-////   // Danilov: try to use BRepAdaptor_Surface::GetType
-////     if ( myEvaluator && myEvaluator->ask_type() == CONE_SURFACE_TYPE )
-////     {
-////         return CUBIT_TRUE;
-////     }
-////     return CUBIT_FALSE;
-//// }
 
 //-------------------------------------------------------------------------
 // Purpose       : This function tests the passed in position to see if
@@ -628,89 +550,17 @@ CubitPointContainment OCCSurface::point_containment( double /*u_param*/,
 
 CubitSense OCCSurface::get_geometry_sense()
 {
-  assert(0);
-  CubitSense sense = CUBIT_FORWARD; //get_relative_surface_sense();
-  return sense;
-}
-
-// CubitSense OCCSurface::get_relative_surface_sense()
-// {
-//     //not sure if this is right for the facet surface...
-//   return sense_;
-// }
-
-/*
-
-void OCCSurface::bodysms(DLIList<BodySM*> &bodies) 
-{
-  int ii;
-  for ( ii = myShells.size(); ii > 0; ii-- )
-  {
-    myShells.get_and_step()->bodysms(bodies);
+  TopAbs_Orientation d = myTopoDSFace->Orientation();
+  if (d == TopAbs_FORWARD) return CUBIT_FORWARD;
+  else if (d == TopAbs_REVERSED) return CUBIT_REVERSED;
+  else {
+          printf("Check Orientation (surface)");
+          return CUBIT_UNKNOWN;
   }
 }
-
-void OCCSurface::lumps(DLIList<Lump*> &lumps)
-{
-  int ii;
-  for ( ii = myShells.size(); ii > 0; ii-- )
-  {
-    myShells.get_and_step()->lumps(lumps);
-  }
-}
-
-void OCCSurface::shellsms(DLIList<ShellSM*> &shellsms)
-{
-  int ii;
-  for ( ii = myShells.size(); ii > 0; ii-- )
-  {
-    shellsms.append_unique(myShells.get_and_step());
-  }
-}
-
-void OCCSurface::surfaces(DLIList<Surface*> &surfaces)
-{
-  surfaces.append_unique(this);
-}
-
-void OCCSurface::loopsms(DLIList<LoopSM*> &loopsms)
-{
-  int ii;
-  for ( ii = myLoops.size(); ii > 0; ii-- )
-  {
-    loopsms.append_unique(myLoops.get_and_step());
-  }
-}
-void OCCSurface::coedgesms(DLIList<CoEdgeSM*> &coedgesms)
-{
-  int ii;
-  for ( ii = myLoops.size(); ii > 0; ii-- )
-  {
-    myLoops.get_and_step()->coedgesms(coedgesms);
-  }
-}
-
-void OCCSurface::curves(DLIList<Curve*> &curves)
-{
-  int ii;
-  for ( ii = myLoops.size(); ii > 0; ii-- )
-  {
-    myLoops.get_and_step()->curves(curves);
-  }
-}
-void OCCSurface::points(DLIList<Point*> &points)
-{
-  int ii;
-  for ( ii = myLoops.size(); ii > 0; ii-- )
-  {
-    myLoops.get_and_step()->points(points);
-  }
-}
-*/
-
 
 void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { CAST_LIST_TO_PARENT( myShells, parents ); }
+  { /*CAST_LIST_TO_PARENT( myShells, parents );*/ }
 
 void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
 {
@@ -723,177 +573,10 @@ void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
   }
 }
 
-
-//// CubitStatus OCCSurface::get_my_facets(DLIList<CubitFacet*> &facet_list,
-////                                         DLIList<CubitPoint*>& point_list)
-//// {
-////   facetEvalTool->get_facets(facet_list);
-////   facetEvalTool->get_points(point_list);
-////   return CUBIT_SUCCESS;
-//// }
-
-//// void OCCSurface::tris(DLIList<CubitFacet *> &facet_list)
-//// {
-//// 	facetEvalTool->get_facets(facet_list);
-//// }
-
-//// void OCCSurface::get_my_points(DLIList<CubitPoint*> &point_list)
-//// {
-////   facetEvalTool->get_points(point_list);
-//// }
-
-//// void OCCSurface::get_my_facetedges(DLIList<CubitFacetEdge*> &edge_list)
-//// {
-////  facetEvalTool->get_edges(edge_list);
-//// }
-
-void OCCSurface::get_shell_sense( CubitSense &sense0)
-{
-  TopAbs_Orientation d = myTopoDSFace->Orientation();
-  if (d == TopAbs_FORWARD) sense0 = CUBIT_FORWARD;
-  else if (d == TopAbs_REVERSED) sense0 = CUBIT_REVERSED;
-  else {
-	  printf("Check Orientation (surface)");
-	  sense0 = CUBIT_UNKNOWN;
-  }
-}
-
-
 // return the sense with respect to the given shell
 CubitSense OCCSurface::get_shell_sense( ShellSM* shell_ptr ) const
 {
-  TopAbs_Orientation d = myTopoDSFace->Orientation();
-  if (d == TopAbs_FORWARD) return CUBIT_FORWARD;
-  else if (d == TopAbs_REVERSED) return CUBIT_REVERSED;
-  else {
-	  printf("Check Orientation (surface)");
-	  return CUBIT_UNKNOWN;
-  }
-}
-
-// set the sense of the surface with respect to the shell
-void OCCSurface::set_shell_sense( OCCShell *facet_shell, 
-                                    CubitSense thesense )
-{
-  assert(0);
-//    if(thesense == CUBIT_REVERSED){
-//        PRINT_INFO("should not do this.");
-//    }
-  int idx = myShells.get_index();
-  if(idx > 0){
-    PRINT_ERROR("Multiple shells attached to a single surface.\n");
-    return;
-  }
-  ShellSM *shell_ptr = (ShellSM *)facet_shell;
-  ShellSM *ashell = myShells.get();
-  if (ashell == shell_ptr)
-  {
-    myShellSense = thesense;
-  }
-//   else
-//   {
-//     myShells.step();
-//     idx = myShells.get_index();
-//     ashell = myShells.get();
-//     if (ashell == shell_ptr)
-//     {
-//       myShellSense[idx] = thesense;
-//     }
-//   }
-}
-
-//// //----------------------------------------------------------------
-//// // Function: copy_facets
-//// // Description: copy the points and facets
-//// //
-//// // Author: sjowen
-//// //----------------------------------------------------------------
-//// CubitStatus OCCSurface::copy_facets(DLIList<CubitFacet*>&copy_facet_list,
-////                                       DLIList<CubitPoint*>&copy_point_list)
-//// {
-////   assert(0);
-////   if (!facetEvalTool)
-////   {
-////     PRINT_ERROR("Couldn't copy facets.");
-////     return CUBIT_FAILURE;
-////   }
-////   int ii;
-////   DLIList<CubitFacet*>facet_list;
-////   DLIList<CubitPoint*>point_list;
-////   facetEvalTool->get_facets( facet_list );
-////   facetEvalTool->get_points( point_list );
-////   CubitPoint **point_array = new CubitPoint* [point_list.size()];
-//// 
-////   //- copy the points
-//// 
-////   point_list.reset();
-////   CubitPoint *new_point, *the_point;
-////   for(ii=0; ii<point_list.size(); ii++)
-////   {
-////     the_point = point_list.get_and_step();
-////     new_point = new CubitPointData( the_point->coordinates() );
-////     the_point->marked( ii );
-////     copy_point_list.append( new_point );
-////     point_array[ii] = new_point;
-////   }
-//// 
-////   //- copy the facets
-//// 
-////   int jj, idx;
-////   CubitFacet *new_facet, *the_facet;
-////   CubitPoint *points[3];
-////   for (ii=0; ii<facet_list.size(); ii++)
-////   {
-////     the_facet = facet_list.get_and_step();
-////     for (jj=0; jj<3; jj++)
-////     {
-////       idx = the_facet->point(jj)->marked();
-////       points[jj] = point_array[idx];
-////     }
-////     new_facet = new CubitFacetData( points[0], points[1], points[2] );
-////     copy_facet_list.append( new_facet );
-////   }
-//// 
-////   delete [] point_array;
-//// 
-////   return CUBIT_SUCCESS;
-//// }
-
-void OCCSurface::get_bodies( DLIList<OCCBody*>& result_list )
-{
-  DLIList<OCCLump*> lump_list;
-  get_lumps( lump_list );
-  lump_list.reset();
-  for ( int i = lump_list.size(); i--; )
-  {
-    OCCLump* lump = lump_list.get_and_step();
-    OCCBody* body = dynamic_cast<OCCBody*>(lump->get_body());
-    if (body)
-      result_list.append_unique(body);
-  }
-}
-
-void OCCSurface::get_lumps( DLIList<OCCLump*>& result_list )
-{
-  DLIList<OCCShell*> shell_list;
-  get_shells( shell_list );
-  shell_list.reset();
-  for ( int i = shell_list.size(); i--; )
-  {
-    OCCShell* shell = shell_list.get_and_step();
-    shell->get_lumps( result_list );
-    OCCLump* lump = dynamic_cast<OCCLump*>(shell->get_lump());
-    if (lump)
-      result_list.append_unique(lump);
-  }
-}
-
-void OCCSurface::get_shells( DLIList<OCCShell*>& result_list )
-{
-  myShells.reset();
-  for ( int i = 0; i < myShells.size(); i++ )
-    if ( OCCShell* shell = dynamic_cast<OCCShell*>(myShells.next(i)) )
-      result_list.append(shell);
+  return CUBIT_FORWARD;
 }
 
 
@@ -914,7 +597,7 @@ void OCCSurface::get_coedges( DLIList<OCCCoEdge*>& result_list )
   get_loops( loop_list );
   loop_list.reset();
   for ( int i = 0; i < loop_list.size(); i++ )
-    loop_list.next(i)->get_coedges( result_list );
+    result_list += loop_list.next(i)->coedges( );
 }
 
 void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
@@ -938,34 +621,6 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 
 // ********** BEGIN PRIVATE FUNCTIONS      **********
 
-void  OCCSurface::reverse_sense()
-{
-////   assert(0);
-////   facetEvalTool->reverse_facets();
-////   myLoops.reset();
-////   int i,j;
-////   OCCLoop* this_loop;
-////   LoopSM* this_loop_sm;
-////   DLIList<OCCCoEdge *> this_coedge_list;
-////   for(i=0;i<myLoops.size();i++){
-////     this_loop_sm= myLoops.get_and_step();
-////     this_loop = dynamic_cast<OCCLoop*>(this_loop_sm);
-////     if(!this_loop){
-////       PRINT_ERROR("Unexpected null pointer for loop.\n");
-////       return;
-////     }
-////    this_loop->reverse();
-////    this_coedge_list.clean_out();
-////    this_loop->get_coedges(this_coedge_list);
-////    for(j=0; j<this_coedge_list.size(); j++){
-////      this_coedge_list.get_and_step()->reverse_sense();
-////    }
-////   }
-////   
-////   //sense_ = CubitUtil::opposite_sense( sense_ );
-////   myShellSense = CubitUtil::opposite_sense( myShellSense );
-////   //myShellSense[1] = CubitUtil::opposite_sense( myShellSense[1] );
-}
 
 // ********** END PRIVATE FUNCTIONS        **********
 
