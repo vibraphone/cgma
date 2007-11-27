@@ -137,8 +137,8 @@ public:
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
   
-  void get_parents_virt( DLIList<TopologyBridge*>& parents );
-  void get_children_virt( DLIList<TopologyBridge*>& children );
+  virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
+  virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
   inline BodySM* get_body() const { return myBodyPtr; }
     

@@ -60,16 +60,13 @@
 OCCBody::OCCBody(TopoDS_CompSolid *theShape)
 {
   myTopoDSShape = theShape;
-  TopExp_Explorer Ex;
-  for (Ex.Init(*theShape, TopAbs_SOLID); Ex.More(); Ex.Next())
-  {
-     TopoDS_Solid *posolid = new TopoDS_Solid;
-     *posolid = TopoDS::Solid(Ex.Current());
-     OCCLump *lump = new OCCLump(posolid);
-     myLumps.append(lump);
-  }
   
   update_bounding_box();
+}
+
+void OCCBody::lumps(DLIList<Lump*>& my_lumps)
+{
+  myLumps += my_lumps;
 }
 
 OCCBody::OCCBody(DLIList<Lump*>& my_lumps)

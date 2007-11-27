@@ -39,6 +39,8 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -185,51 +187,11 @@ GeometryQueryEngine*
 //-------------------------------------------------------------------------
 double OCCLump::measure()
 {
-  DLIList<CubitFacet*> bounding_facets;
-  DLIList<CubitPoint*> bounding_points;
-  DLIList<OCCSurface*> surfaces;
-  Surface *curr_surface;
-  OCCSurface *facet_surface;
-  
-  int ii;
-  get_surfaces(surfaces);
-  if (surfaces.size() > 0)
-  { 
-    for ( ii = surfaces.size(); ii > 0; ii-- )
-    {
-      curr_surface = surfaces.get_and_step();
-      facet_surface = CAST_TO(curr_surface, OCCSurface);
-      if ( facet_surface == NULL )
-      {
-        PRINT_ERROR("Facet lump has surfaces that aren't facets?");
-        return 1;
-      }
-      //facet_surface->get_my_facets(bounding_facets, bounding_points);
-    }
-  }
-  double volume, curr_facet_area, summation = 0.0;
-  CubitFacet *curr_facet;
-  CubitVector normal_of_curr_facet, vector_of_point;
-  CubitPoint *point_1, *point_2, *point_3;
-
-  for( int jj = bounding_facets.size(); jj > 0; jj-- )
-  {
-    curr_facet = bounding_facets.get_and_step();
-    curr_facet_area = curr_facet->area();  // Current facet's area
-    
-    normal_of_curr_facet = curr_facet->normal(); // Current facet's normal
-
-    curr_facet->points(point_1, point_2, point_3); // Current facet's points
-
-    vector_of_point = point_1->coordinates(); // One point's vector
-
-    summation += ( double(vector_of_point % normal_of_curr_facet) * curr_facet_area);
-  }
-
-  volume = summation / 3;
-  
-  return volume;
+  GProp_GProps myProps;
+  BRepGProp::VolumeProperties(*myTopoDSSolid, myProps);
+  return myProps.Mass();
 }
+
 void OCCLump::get_parents_virt(DLIList<TopologyBridge*> &bodies) 
 {
   if (myBodyPtr != NULL )

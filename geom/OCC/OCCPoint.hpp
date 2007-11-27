@@ -125,8 +125,8 @@ public :
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-  void get_parents_virt( DLIList<TopologyBridge*>& parents );
-  void get_children_virt( DLIList<TopologyBridge*>& children );
+  virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
+  virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
   CubitStatus save_attribs( FILE *file_ptr );
 

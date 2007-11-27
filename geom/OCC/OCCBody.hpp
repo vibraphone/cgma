@@ -47,6 +47,8 @@ public:
   
   OCCBody(TopoDS_CompSolid *theShape);
   OCCBody(DLIList<Lump*>& my_lumps);
+  void lumps(DLIList<Lump*>& my_lumps); //add lump list to myLumps
+  DLIList<Lump*> lumps(){return myLumps;} 
 
   virtual ~OCCBody() ;
     //- The destructor.
@@ -169,8 +171,8 @@ public:
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
 
-  void get_parents_virt( DLIList<TopologyBridge*>& parents );
-  void get_children_virt( DLIList<TopologyBridge*>& children );
+  virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
+  virtual void get_children_virt( DLIList<TopologyBridge*>& children );
   
   void disconnect_all_lumps();
 

@@ -991,8 +991,11 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
 	DLIList<TopologyBridge*> tblist;
         // suitable to popolate for a TopoDS_CompSolid or TopoDS_Compound shape.
         TopExp_Explorer Ex;
-        for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
- 	  tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current())));
+        for (Ex.Init(aShape, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
+          tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current())));
+
+        for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
+ 	  tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE));
 
 	for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
           tblist.append(populate_topology_bridge(TopoDS::Shell(Ex.Current())));
@@ -1011,7 +1014,39 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
 	return tblist;
 }
 
-BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
+BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
+{
+        TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
+        *posolid = aShape;
+        OCCBody *body;
+        if (!OCCMap->IsBound(*posolid))
+        {
+                if(PRINT_RESULT)
+                        PRINT_INFO("Adding Bodies.\n");
+                iTotalTBCreated++;
+                body = new OCCBody(posolid);
+                OCCMap->Bind(*posolid, iTotalTBCreated);
+                OccToCGM->insert(valType(iTotalTBCreated,
+                                (TopologyBridge*)body));
+        }
+        else
+        {
+                int k = OCCMap->Find(*posolid);
+                body = (OCCBody*)(OccToCGM->find(k))->second;
+        }
+        TopExp_Explorer Ex;
+        DLIList<Lump*> lumps;
+        for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
+        {
+           Lump* lump = populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+  	   lumps.append(lump);
+	}
+	body->lumps(lumps);
+        return body;
+}
+
+Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
+						 CubitBoolean build_body)
 {
 	//one OCCBody corresponds one OCCLump
 	TopoDS_Solid *posolid =  new TopoDS_Solid;
@@ -1024,22 +1059,25 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape)
 			PRINT_INFO("Adding solids.\n");
                 iTotalTBCreated++;
 		lump = new OCCLump(posolid);
-                DLIList<Lump*> lumps;
-		lumps.append(lump);
-		body = new OCCBody(lumps);
+   		if (build_body)
+		{
+                   DLIList<Lump*> lumps;
+		   lumps.append(lump);
+		   body = new OCCBody(lumps);
+		}
 		OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
-				(TopologyBridge*)body));
+				(TopologyBridge*)lump));
 	}
 	else 
 	{
 		int k = OCCMap->Find(*posolid);
-		body = (OCCBody*)(OccToCGM->find(k))->second;
+		lump = (OCCLump*)(OccToCGM->find(k))->second;
 	}
 	TopExp_Explorer Ex;
         for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
                 populate_topology_bridge(TopoDS::Shell(Ex.Current()));
-	return body;
+	return lump;
 }
 
 OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)

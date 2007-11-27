@@ -44,7 +44,6 @@ class Shell;
 class ShellSM;
 class Loop;
 class Chain;
-class CoEdgeSM;
 class LoopSM;
 class RefVolume;
 class RefFace;
@@ -58,10 +57,8 @@ class BodySM;
 
 class GeometryEntity;
 class BodySM;
-class Lump;
 class ShellSM;
 class Surface;
-class LoopSM;
 class Curve;
 class CoEdgeSM;
 class Point;
@@ -87,6 +84,7 @@ class TopoDS_Wire;
 class TopoDS_Face;
 class TopoDS_Solid;
 class TopoDS_Shell;
+class TopoDS_CompSolid;
 // ********** END FORWARD DECLARATIONS        **********
 
 // ********** BEGIN MACRO DEFINITIONS         **********
@@ -321,7 +319,9 @@ public:
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
   DLIList<TopologyBridge*> populate_topology_bridge(TopoDS_Shape aShape);
-  BodySM* populate_topology_bridge(TopoDS_Solid aShape);
+  BodySM* populate_topology_bridge(TopoDS_CompSolid aShape);
+  Lump* populate_topology_bridge(TopoDS_Solid aShape, 
+				   CubitBoolean build_body = CUBIT_FALSE);
   Surface* populate_topology_bridge(TopoDS_Face aShape);
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
