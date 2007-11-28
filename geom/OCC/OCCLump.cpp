@@ -63,14 +63,6 @@ OCCLump::OCCLump(TopoDS_Solid *theSolid)
   myTopoDSSolid = theSolid;
 }
 
-OCCLump::OCCLump(DLIList<ShellSM*> &shells,
-                     BodySM *body_ptr )
-{
-  myBodyPtr = body_ptr;
-  myShells += shells;
-}
-
-
 OCCLump::~OCCLump()
 {}
 
@@ -194,8 +186,7 @@ double OCCLump::measure()
 
 void OCCLump::get_parents_virt(DLIList<TopologyBridge*> &bodies) 
 {
-  if (myBodyPtr != NULL )
-    bodies.append_unique(myBodyPtr);
+  bodies.append(myBodyPtr);
 }
 
 void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)

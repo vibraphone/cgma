@@ -111,13 +111,14 @@ const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
 const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 
 TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMap = new TopTools_DataMapOfShapeInteger;
-TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMapr = new TopTools_DataMapOfShapeInteger;
-DLIList<TopologyBridge*> *OCCQueryEngine::CGMList = new DLIList<TopologyBridge*>;
+DLIList<OCCBody*> *OCCQueryEngine::BodyList = new DLIList<OCCBody*>;
+DLIList<OCCSurface*> *OCCQueryEngine::SurfaceList = new DLIList<OCCSurface*>;
+DLIList<OCCCurve*> *OCCQueryEngine::CurveList = new DLIList<OCCCurve*>;
 
 std::map<int, TopologyBridge*>* OCCQueryEngine::OccToCGM = new std::map<int, TopologyBridge*>;
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
-CubitBoolean PRINT_RESULT = CUBIT_FALSE;
+CubitBoolean OCCQueryEngine::PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
 // Author     :
@@ -1044,6 +1045,7 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
                 OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
                                 (TopologyBridge*)body));
+                BodyList->append(body);
         }
         else
         {
@@ -1080,6 +1082,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
                    DLIList<Lump*> lumps;
 		   lumps.append(lump);
 		   body = new OCCBody(lumps);
+                   BodyList->append(body);
 		}
 		OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
@@ -1143,6 +1146,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
 		OCCMap->Bind(*poface, iTotalTBCreated);
   		OccToCGM->insert(valType(iTotalTBCreated,
 				(TopologyBridge*)surface));
+		SurfaceList->append(surface);
 	} 
 	else 
 	{
@@ -1205,6 +1209,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
 		OCCMap->Bind(*poedge, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
 				(TopologyBridge*)curve));
+		CurveList->append((OCCCurve*)curve);
 	}
         else 
         {
@@ -1250,86 +1255,6 @@ TopologyBridge* OCCQueryEngine::occ_to_cgm(TopoDS_Shape shape)
        return (OccToCGM->find(k))->second;
 }	
 
-CubitStatus OCCQueryEngine::import_solid_model(FILE *file_ptr,
-                                                 const char* /*file_type*/,
-                                                 DLIList<TopologyBridge*> &imported_entities,
-                                                 CubitBoolean ,
-                                                 const char* ,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean )
-
-{
-  CubitPoint **points_array = NULL;
-  CurveFacetEvalTool **cfet_array = NULL;
-  FacetEvalTool **fet_array = NULL;
-
-  //int num_points, num_edges, num_facets;
-  //int num_cfet, num_fet;
-
-  // read in the file type "MESHED_BASED_GEOMETRY"
-  char fileType[19] = {0};
-
-  if( fread( fileType, 1, 19, file_ptr) != 19 )
-  {
-    PRINT_ERROR("Trouble reading in file type for MBG\n");
-    return CUBIT_FAILURE;
-  }
-
-  if( strncmp( fileType, "MESH_BASED_GEOMETRY", 19 ) )
-  {
-    PRINT_ERROR("Not MESH_BASED_GEOMETRY file type\n");
-    return CUBIT_FAILURE;
-  }
-
-  // read in the endian value
-  NCubitFile::CIOWrapper file_reader(file_ptr, 19, 0);
-
-  // read in version #
-  UnsignedInt32 version;
-  file_reader.Read( &version, 1 );
-
-  //Read in points/edges/facets
-  CubitStatus status;
-  /*
-  status = restore_facets( file_ptr, file_reader.get_endian(),
-                           num_points, num_edges,
-                           num_facets, points_array, num_cfet,
-                           num_fet, cfet_array, fet_array );
-  */
-  if( status == CUBIT_FAILURE)
-  {
-    PRINT_ERROR("Problems restore facets\n");
-    return CUBIT_FAILURE;
-  }
-
-  //Restore Topology
-  /*
-  status = restore_topology( file_ptr, file_reader.get_endian(),
-                             num_points, points_array,
-                             num_cfet, cfet_array, num_fet,
-                             fet_array, imported_entities);
-  */
-  if( status == CUBIT_FAILURE)
-  {
-    PRINT_ERROR("Problems restore MDB topology\n");
-    return CUBIT_FAILURE;
-  }
-
-
-  if(cfet_array != NULL)
-    delete [] cfet_array;
-  if(fet_array != NULL)
-    delete [] fet_array;
-  if(points_array != NULL)
-    delete [] points_array;
-
-  return CUBIT_SUCCESS;
-}
-
 //-------------------------------------------------------------------------
 // Purpose       : Deletes all solid model entities associated with the
 //                 Bodies in the input list.
@@ -1340,13 +1265,14 @@ CubitStatus OCCQueryEngine::import_solid_model(FILE *file_ptr,
 //
 // Creation Date : 4/23/01
 //-------------------------------------------------------------------------
-void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&BodyList) const
+void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&bodyList) const
 {
   BodySM* BodyPtr = NULL;
-  for (int i = 0; i < BodyList.size(); i++ )
+  for (int i = 0; i < bodyList.size(); i++ )
   {
-    BodyPtr = BodyList.get_and_step();
+    BodyPtr = bodyList.get_and_step();
     this->delete_solid_model_entities(BodyPtr);
+    BodyList->remove((OCCBody*)BodyPtr);
   }
 
   return;
@@ -1431,6 +1357,7 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
   // Remove the links between OCC and Cubit
   //  unhook_ENTITY_from_VGI(face);
 
+  SurfaceList->remove((OCCSurface*)surface);
   delete face;
   delete surface;
   return CUBIT_SUCCESS;
@@ -1472,6 +1399,7 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
   // Remove the links between OCC and Cubit
   //unhook_ENTITY_from_VGI(edge);
 
+  CurveList->remove((OCCCurve*) curve);
   delete edge;
   delete curve;
   return CUBIT_SUCCESS;

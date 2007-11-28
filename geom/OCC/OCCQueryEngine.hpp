@@ -326,6 +326,12 @@ public:
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
+  static DLIList<OCCBody*> *BodyList ;
+  static DLIList<OCCSurface*> *SurfaceList ;
+  static DLIList<OCCCurve*> *CurveList ;
+  static TopTools_DataMapOfShapeInteger* OCCMap;
+  static std::map<int, TopologyBridge*>* OccToCGM;
+
 protected:
   
   OCCQueryEngine();
@@ -342,13 +348,9 @@ private:
                               DLIList<OCCPoint*> &facet_points );
 
 
-  static TopTools_DataMapOfShapeInteger* OCCMap;
-  static std::map<int, TopologyBridge*>* OccToCGM;
-  static TopTools_DataMapOfShapeInteger* OCCMapr;
-  static DLIList<TopologyBridge*>* CGMList;
   static int iTotalTBCreated ;
   static OCCQueryEngine* instance_;
-  static CubitBoolean PRINT_RESULTS;
+  static CubitBoolean PRINT_RESULT;
     //- static pointer to unique instance of this class
 
   static const int OCCQE_MAJOR_VERSION;

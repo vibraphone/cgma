@@ -47,6 +47,7 @@ public:
   virtual ~OCCShell() ;
     //- Destructor.
 
+  TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
   virtual CubitBox bounding_box() const;
   
   virtual GeometryQueryEngine* 

@@ -39,6 +39,11 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
+#include "TopoDS.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
+
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -55,10 +60,6 @@
 OCCShell::OCCShell(TopoDS_Shell *theShell)
 {
   myTopoDSShell = theShell;
-}
-OCCShell::OCCShell( DLIList<Surface*> my_surfs )
-{
-  mySurfs += my_surfs;
 }
 
 //-------------------------------------------------------------------------
@@ -100,34 +101,40 @@ CubitStatus OCCShell::get_simple_attribute(const CubitString&,
                                               DLIList<CubitSimpleAttrib*>&)
   { return CUBIT_FAILURE; }
 
-
-void OCCShell::add_surfaces(DLIList<Surface*> surfaces)
-{
-    mySurfs = surfaces;
-}
-
-void OCCShell::add_surface(Surface* surface)
-{
-  mySurfs.append(surface); 
-}
-
-DLIList<Surface*> OCCShell::surfaces()
-{
-  return mySurfs;
-}
-
-
 //-------------------------------------------------------------------------
 // Purpose       : Query solid modeler topology
 //
 // Special Notes : 
 //
-// Creator       : Jason Kraftcheck
+// Author        : Jane Hu 
 //
-// Creation Date : 
+// Creation Date : 11/28/07
 //-------------------------------------------------------------------------
 void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { /*parents.append(myLump);*/ }
+{ 
+  OCCBody * body = NULL;
+  DLIList <OCCBody* > *bodies = OCCQueryEngine::BodyList;
+  TopTools_IndexedDataMapOfShapeListOfShape M;
+  for(int i = 0; i <  bodies->size(); i++)
+  {
+     body = bodies->get_and_step();
+     TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
+				   TopAbs_SHELL, TopAbs_SOLID, M);
+     const TopTools_ListOfShape& ListOfShapes = 
+				M.FindFromKey(*(get_TopoDS_Shell()));
+     if (!ListOfShapes.IsEmpty()) 
+     {
+         TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
+         for (;it.More(); it.Next())
+         {
+	   TopoDS_Solid Solid = TopoDS::Solid(it.Value());
+           int k = OCCQueryEngine::OCCMap->Find(Solid);
+	   parents.append((OCCLump*)(OCCQueryEngine::OccToCGM->find(k))->second);
+	 }
+     } 
+  }
+}
+
 
 void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 {
@@ -140,38 +147,6 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
   }
 }
 
-void OCCShell::get_surfaces( DLIList<OCCSurface*>& result_list )
-{
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSShell, TopAbs_FACE, M);
-  int ii;
-  for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *surface = OCCQueryEngine::occ_to_cgm(M(ii));
-	  result_list.append_unique(dynamic_cast<OCCSurface*>(surface));
-  }
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : Disconnect input surfaces from "this" shell 
-//
-// Special Notes : 
-//
-// Creator       : Corey Ernst 
-//
-// Creation Date : 08/31/04
-//-------------------------------------------------------------------------
-void OCCShell::disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect )
-{
-  for (int i = surfs_to_disconnect.size(); i--; )
-  {
-    OCCSurface* surface = surfs_to_disconnect.get_and_step();
-    if( mySurfs.move_to( dynamic_cast<Surface*>(surface) ) )
-      mySurfs.change_to(NULL);
-  }
-  mySurfs.remove_all_with_value( NULL );
-}
-
-
 //-------------------------------------------------------------------------
 // Purpose       : Tear down topology
 //
@@ -183,7 +158,6 @@ void OCCShell::disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect )
 //-------------------------------------------------------------------------
 void OCCShell::disconnect_all_surfaces()
 {
-  mySurfs.clean_out();
 }
 
 //-------------------------------------------------------------------------
