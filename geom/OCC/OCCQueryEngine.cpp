@@ -918,8 +918,24 @@ OCCQueryEngine::write_topology( const char* file_name,
   //Add every shape to the compound
   for (i = 0; i < OCC_bodies.size(); i++)
   {
-     TopoDS_Shape *shape = OCC_bodies.get_and_step()->get_TopoDS_Shape();
-     B.Add(Co, *shape);
+     OCCBody* body = OCC_bodies.get_and_step();
+     TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
+
+     //check if this body is build backwards from lump. if so,
+     //the body and its CompSolid doesn't have bounded relationship
+     //established. In this case, each individual lump of the body 
+     // will be exported as TopoDS_Solid without a CompSolid
+     if(OCCMap->IsBound(*shape))
+       B.Add(Co, *shape);
+     else
+     {   
+        DLIList<Lump*> lumps = body->lumps();
+	for(int i = 0; i < lumps.size(); i++)
+	{
+	  OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
+	  B.Add(Co, *(occ_lump->get_TopoDS_Solid()));
+	}
+     }
   }
 
   for (i = 0; i < OCC_surfaces.size(); i++)
@@ -992,7 +1008,7 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
         // suitable to popolate for a TopoDS_CompSolid or TopoDS_Compound shape.
         TopExp_Explorer Ex;
         for (Ex.Init(aShape, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
-          tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current())));
+          tblist.append(populate_topology_bridge(TopoDS::CompSolid(Ex.Current())));
 
         for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
  	  tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE));
