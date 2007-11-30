@@ -27,7 +27,6 @@
 #include "CubitSimpleAttrib.hpp"
 #include "OCCQueryEngine.hpp"
 #include "DLIList.hpp"
-#include "FacetEvalTool.hpp"
 #include "Surface.hpp"
 #include "OCCSurface.hpp"
 #include "CubitTransformMatrix.hpp"
@@ -37,7 +36,6 @@
 #include "OCCLoop.hpp"
 #include "OCCShell.hpp"
 #include "OCCLump.hpp"
-#include "CubitFacetEdge.hpp"
 #include "OCCModifyEngine.hpp"
 #include "OCCAttrib.hpp"
 
@@ -51,6 +49,8 @@
 #include "TopExp_Explorer.hxx"
 #include "BRep_Builder.hxx"
 #include "TopoDS.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
@@ -86,7 +86,7 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 
 OCCBody::~OCCBody() 
 {
-    //Not sure what to do..
+   disconnect_all_lumps(); 
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
@@ -116,6 +116,10 @@ CubitStatus OCCBody::save_attribs( FILE *file_ptr )
 CubitStatus OCCBody::restore_attribs( FILE *file_ptr, unsigned int endian )
   { return attribSet.restore_attributes( file_ptr, endian ); }
 
+CubitStatus OCCBody::get_transforms( CubitTransformMatrix &tfm )
+{
+  return CUBIT_SUCCESS;
+}
 
 
 //----------------------------------------------------------------
@@ -153,7 +157,7 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
 // Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::rotate( double x, double y, double z, 
-                               double angle )//in radians
+                             double angle )//in radians
 {
   gp_Pnt aOrigin(0,0,0);
   gp_Dir aDir(x, y, z);
@@ -195,32 +199,8 @@ CubitStatus OCCBody::scale(double scale_factor_x,
                              double scale_factor_y,
                              double scale_factor_z )
 {
-  PRINT_ERROR("non-uniform scaling is not performed on OCC bodies");
+  PRINT_ERROR("non-uniform scaling is not supported on OCC bodies");
   return CUBIT_FAILURE;
-}
-
-//----------------------------------------------------------------
-// Function: restore
-// Description: restore the body and its child entities
-//              to its original coordinates using the inverse
-//              transformation matrix
-//
-// Author: sjowen
-//----------------------------------------------------------------
-CubitStatus OCCBody::restore()
-{
-  // invert the transformation matrix and apply to entities 
-  // (assumes an orthogonal matrix (ie. no shear or non-uniform scaling)
-
-  CubitTransformMatrix inverse_mat;
-  inverse_mat = myTransforms.inverse();
-
-  CubitStatus stat = transform( inverse_mat, CUBIT_TRUE );
-
-  if (stat == CUBIT_SUCCESS)
-    myTransforms.set_to_identity();
-
-  return stat;
 }
 
 //----------------------------------------------------------------
@@ -270,32 +250,6 @@ CubitBox OCCBody::get_bounding_box()
   return boundingbox ;
 }
 
-//----------------------------------------------------------------
-// Function: transform
-// Description: transform the body based on a transformation matrix
-//              main function for applying transformations to 
-//              facet-based bodies
-//
-// Author: sjowen
-//----------------------------------------------------------------
-CubitStatus OCCBody::transform( CubitTransformMatrix &tfmat, 
-                                  CubitBoolean is_rotation )
-{
-  return CUBIT_SUCCESS;
-}
-
-CubitStatus OCCBody::get_transforms( CubitTransformMatrix &tfm ) 
-{
-  tfm = myTransforms;
-  return CUBIT_SUCCESS;
-}
-
-CubitStatus OCCBody::set_transforms( CubitTransformMatrix tfm ) 
-{
-  myTransforms = tfm;
-  return CUBIT_SUCCESS;
-}
-
 int OCCBody::validate(const CubitString &, DLIList <TopologyEntity*>&)
 {
   PRINT_ERROR("This option is not available for mesh defined geometry.\n");
@@ -311,7 +265,7 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
   TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *lump = OCCQueryEngine::occ_to_cgm(M(ii));
+	  TopologyBridge *lump = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
 	  lumps.append_unique(lump);
   }
 }
@@ -346,38 +300,19 @@ void OCCBody::disconnect_all_lumps()
 //
 // Special Notes : 
 //
-// Creator       : Jason Kraftcheck
+// Author       : Jane Hu  
 //
-// Creation Date : 05/10/04
+// Creation Date : 11/30/07
 //-------------------------------------------------------------------------
 CubitStatus OCCBody::mass_properties( CubitVector& centroid, 
-                                        double& volume )
+                                      double& volume )
 {
-  centroid.set( 0.0, 0.0, 0.0 );
-  volume = 0.0;
+  GProp_GProps myProps;
+  BRepGProp::VolumeProperties(*myTopoDSShape, myProps);
+  volume = myProps.Mass();
+  gp_Pnt pt = myProps.CentreOfMass(); 
+  centroid.set(pt.X(), pt.Y(), pt.Z());
   
-  DLIList<OCCLump*> lumps (myLumps.size());
-  CAST_LIST( myLumps, lumps, OCCLump );
-  assert( myLumps.size() == lumps.size() );
-  for (int i = lumps.size(); i--; )
-  {
-    CubitVector cent;
-    double vol;
-    if (CUBIT_SUCCESS != lumps.get_and_step()->mass_properties(cent,vol))
-      return CUBIT_FAILURE;
-    centroid += vol*cent;
-    volume += vol;
-  }
-  if (volume > CUBIT_RESABS)
-  {
-    centroid /= volume;
-  }
-  else
-  {
-    centroid.set( 0.0, 0.0, 0.0 );
-    volume = 0.0;
-  }
-
   return CUBIT_SUCCESS;
 }
 
@@ -392,14 +327,14 @@ CubitStatus OCCBody::mass_properties( CubitVector& centroid,
 //-------------------------------------------------------------------------
 CubitPointContainment OCCBody::point_containment( const CubitVector &point )
 {
-  CubitPointContainment pc_value; 
-  OCCLump *facet_lump;
+  CubitPointContainment pc_value;
+  OCCLump *lump;
 
   int i;
   for(i=myLumps.size(); i--;)
   {
-    facet_lump = dynamic_cast<OCCLump*>(myLumps.get_and_step()); 
-    pc_value = facet_lump->point_containment( point );
+    lump = dynamic_cast<OCCLump*>(myLumps.get_and_step()); 
+    pc_value = lump->point_containment( point );
     if( pc_value == CUBIT_PNT_INSIDE )
       return CUBIT_PNT_INSIDE;
     else if( pc_value == CUBIT_PNT_BOUNDARY )

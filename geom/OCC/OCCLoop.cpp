@@ -30,6 +30,9 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "TopExp_Explorer.hxx"
 #include "TopoDS.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -38,7 +41,7 @@
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
 //-------------------------------------------------------------------------
-// Purpose       : The constructor with a pointer to the FacetEvalTool.
+// Purpose       : The constructor with a pointer to the TopoDS_Wire.
 //
 // Special Notes :
 //
@@ -56,18 +59,28 @@ OCCLoop::OCCLoop( TopoDS_Wire *theWire )
 //-------------------------------------------------------------------------
 OCCLoop::~OCCLoop()
 {
+  disconnect_all_curves();
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Tear down topology
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 11/29/07
+//-------------------------------------------------------------------------
+void OCCLoop::disconnect_all_curves()
+{
   myCoEdgeList.reset();
   for (int i = myCoEdgeList.size(); i--; )
   {
     OCCCoEdge* coedge = myCoEdgeList.get_and_step();
-    if (coedge)
-    {
-      assert(coedge->get_loop() == this);
-      delete coedge;
-    }
+    assert(coedge->loop() == this);
+    OCCCurve* curve = CAST_TO(coedge->curve(), OCCCurve);
+    curve->remove_loop(this);
   }
-
-  myTopoDSWire =  (TopoDS_Wire *) NULL;
   myCoEdgeList.clean_out();
 }
 
@@ -135,7 +148,30 @@ CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
   { return CUBIT_FAILURE; }
 
 void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { /*parents.append( mySurface )*/; }
+{
+  OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
+  OCCSurface * surf = NULL;
+  DLIList <OCCSurface* > *surfs = oqe->SurfaceList;
+  TopTools_IndexedDataMapOfShapeListOfShape M;
+  for(int i = 0; i <  surfs->size(); i++)
+  {
+     surf = surfs->get_and_step();
+     TopExp::MapShapesAndAncestors(*(surf->get_TopoDS_Face()),
+                                   TopAbs_WIRE, TopAbs_FACE, M);
+     const TopTools_ListOfShape& ListOfShapes =
+                                M.FindFromKey(*(get_TopoDS_Wire()));
+     if (!ListOfShapes.IsEmpty())
+     {
+         TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
+         for (;it.More(); it.Next())
+         {
+           TopoDS_Face Face = TopoDS::Face(it.Value());
+           int k = oqe->OCCMap->Find(Face);
+           parents.append((OCCSurface*)(oqe->OccToCGM->find(k))->second);
+         }
+     }
+  }
+}
 
 void OCCLoop::get_children_virt( DLIList<TopologyBridge*>& children )
 {
@@ -143,7 +179,7 @@ void OCCLoop::get_children_virt( DLIList<TopologyBridge*>& children )
   TopExp::MapShapes(*myTopoDSWire, TopAbs_EDGE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-          TopologyBridge *curve = OCCQueryEngine::occ_to_cgm(M(ii));
+          TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
           children.append_unique(curve);
   }
 }

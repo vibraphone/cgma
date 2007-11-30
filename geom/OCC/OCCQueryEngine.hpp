@@ -121,6 +121,10 @@ public:
   int get_subminor_version();
 
   CubitString get_engine_version_string();
+
+  //static DLIList<OCCBody*> BodyList ;
+  //static DLIList<OCCSurface*> SurfaceList ;
+  //static DLIList<OCCCurve*> CurveList ;
   
 //HEADER- RTTI and safe casting functions.
   
@@ -133,6 +137,8 @@ public:
     //R CubitBoolean
     //R- This  is not a solid modeling engine.
 //HEADER- Functions for importing and exporting solid models.
+
+  virtual CubitStatus restore_transform( BodySM* body );
 
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                           int& number_triangles,
@@ -253,6 +259,8 @@ private:
                                  CubitBoolean import_curves = CUBIT_TRUE,
                                  CubitBoolean import_vertices = CUBIT_TRUE,
                                  CubitBoolean free_surfaces = CUBIT_TRUE);
+
+  CubitStatus delete_solid_model_entities( Lump* lump ) const;
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
@@ -286,8 +294,6 @@ public:
                                 DLIList<BodySM*>& body_list,
                                 CubitBox& super_box );
 
-  CubitStatus restore_transform( BodySM* body );
-
   CubitStatus translate( BodySM* body, const CubitVector& offset );
   CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle );
   CubitStatus scale    ( BodySM* body, double factor );
@@ -314,7 +320,7 @@ public:
   //-  are overlaping.  The full intersect Boolean is needed to see if
   //-  the bodies actually overlap and don't just touch.
 
-  static TopologyBridge* occ_to_cgm(TopoDS_Shape shape);
+  TopologyBridge* occ_to_cgm(TopoDS_Shape shape);
   
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
@@ -326,11 +332,11 @@ public:
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
-  static DLIList<OCCBody*> *BodyList ;
-  static DLIList<OCCSurface*> *SurfaceList ;
-  static DLIList<OCCCurve*> *CurveList ;
-  static TopTools_DataMapOfShapeInteger* OCCMap;
-  static std::map<int, TopologyBridge*>* OccToCGM;
+  DLIList<OCCBody*> *BodyList ;
+  DLIList<OCCSurface*> *SurfaceList ;
+  DLIList<OCCCurve*> *CurveList ;
+  TopTools_DataMapOfShapeInteger* OCCMap;
+  std::map<int, TopologyBridge*>* OccToCGM;
 
 protected:
   
@@ -347,10 +353,10 @@ private:
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 
+  int iTotalTBCreated ;
+  CubitBoolean *PRINT_RESULT;
 
-  static int iTotalTBCreated ;
   static OCCQueryEngine* instance_;
-  static CubitBoolean PRINT_RESULT;
     //- static pointer to unique instance of this class
 
   static const int OCCQE_MAJOR_VERSION;

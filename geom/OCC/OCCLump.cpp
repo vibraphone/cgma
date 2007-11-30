@@ -41,6 +41,10 @@
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
+#include "BOP_SolidClassifier.hxx"
+#include "TopExp_Explorer.hxx"
+#include "TopoDS.hxx"
+#include "BRep_Tool.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -53,7 +57,7 @@ class RefVolume;
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
 //-------------------------------------------------------------------------
-// Purpose       : The constructor with a pointer to the owning shells and body.
+// Purpose       : The constructor with a pointer to TopoDS_Solid
 //
 // Special Notes :
 //
@@ -195,7 +199,7 @@ void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
   TopExp::MapShapes(*myTopoDSSolid, TopAbs_SHELL, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *shell = OCCQueryEngine::occ_to_cgm(M(ii));
+	  TopologyBridge *shell = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
 	  shellsms.append_unique(shell);
   }
 }
@@ -204,21 +208,26 @@ void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
 
 CubitPointContainment OCCLump::point_containment( const CubitVector &point )
 {
-  CubitPointContainment pc_value; 
-  OCCShell *facet_shell;
+  BOP_SolidClassifier ps;
+  TopoDS_Solid * solid = get_TopoDS_Solid();
+  gp_Pnt pnt(point.x(), point.y(), point.z());
+  
+  //use face tolerance at the tolerence to see if the point is on.
+  TopExp_Explorer Ex;
+  Ex.Init(*solid, TopAbs_FACE, TopAbs_SOLID);
+  TopoDS_Face face = TopoDS::Face(Ex.Current());
+  
+  double dtol = BRep_Tool::Tolerance(face);
+  TopAbs_State state = ps.Classify(*solid, pnt, dtol); 
+  
+  if (state == TopAbs_IN)
+     return CUBIT_PNT_INSIDE;
+  else if (state == TopAbs_OUT)
+     return CUBIT_PNT_OUTSIDE;
+  else if (state == TopAbs_ON)
+     return CUBIT_PNT_BOUNDARY;
 
-  int i;
-  for(i=myShells.size(); i--;)
-  {
-    facet_shell = dynamic_cast<OCCShell*>(myShells.get_and_step()); 
-    pc_value = facet_shell->point_containment( point );
-    if( pc_value == CUBIT_PNT_OUTSIDE )
-      return CUBIT_PNT_OUTSIDE;
-    else if( pc_value == CUBIT_PNT_BOUNDARY )
-      return CUBIT_PNT_BOUNDARY;
-  }
-
-  return CUBIT_PNT_INSIDE;
+  return CUBIT_PNT_UNKNOWN;
   
 }
 

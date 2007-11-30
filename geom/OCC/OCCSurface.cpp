@@ -61,7 +61,9 @@
 #include <BRepLProp_SLProps.hxx>
 #include <BRepGProp.hxx>
 #include <GProp_GProps.hxx>
-
+#include "TopTools_ListIteratorOfListOfShape.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 // ********** END OpenCascade INCLUDES      **********
 
 
@@ -560,7 +562,30 @@ CubitSense OCCSurface::get_geometry_sense()
 }
 
 void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { /*CAST_LIST_TO_PARENT( myShells, parents );*/ }
+{ 
+  OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
+  OCCBody * body = NULL;
+  DLIList <OCCBody* > *bodies = oqe->BodyList;
+  TopTools_IndexedDataMapOfShapeListOfShape M;
+  for(int i = 0; i <  bodies->size(); i++)
+  {
+     body = bodies->get_and_step();
+     TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
+                                   TopAbs_FACE, TopAbs_SHELL, M);
+     const TopTools_ListOfShape& ListOfShapes =
+                                M.FindFromKey(*(get_TopoDS_Face()));
+     if (!ListOfShapes.IsEmpty())
+     {
+         TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
+         for (;it.More(); it.Next())
+         {
+           TopoDS_Shell Shell = TopoDS::Shell(it.Value());
+           int k = oqe->OCCMap->Find(Shell);
+           parents.append((OCCShell*)(oqe->OccToCGM->find(k))->second);
+         }
+     }
+  }
+}
 
 void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
 {
@@ -568,8 +593,8 @@ void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
   TopExp::MapShapes(*myTopoDSFace, TopAbs_WIRE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *loop = OCCQueryEngine::occ_to_cgm(M(ii));
-	  children.append_unique(loop);
+     TopologyBridge *loop = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+     children.append_unique(loop);
   }
 }
 
@@ -586,8 +611,8 @@ void OCCSurface::get_loops( DLIList<OCCLoop*>& result_list )
   TopExp::MapShapes(*myTopoDSFace, TopAbs_WIRE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *loop = OCCQueryEngine::occ_to_cgm(M(ii));
-	  result_list.append_unique(dynamic_cast<OCCLoop*>(loop));
+     TopologyBridge *loop = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+     result_list.append_unique(dynamic_cast<OCCLoop*>(loop));
   }
 }
 

@@ -42,7 +42,6 @@ class OCCShell : public ShellSM
 public:
   
   OCCShell(TopoDS_Shell *theShell);
-  OCCShell(DLIList<Surface *> surfaces);  
 
   virtual ~OCCShell() ;
     //- Destructor.
@@ -98,25 +97,18 @@ public:
     //- such operations on its entities. If it cannot, then "names"
     //- of VGI entities will not propagate.
 
-  CubitPointContainment point_containment( const CubitVector &point );
-  
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  void add_surfaces(DLIList <Surface *> surfaces);
+  void surfaces(DLIList <Surface *> surfaces);
   DLIList <Surface *> surfaces();
-  void add_surface(Surface * surface);
 
-  void get_surfaces( DLIList<OCCSurface*>& surfaces );
-
-  void disconnect_surfaces( DLIList<OCCSurface*> &surfs_to_disconnect );
   void disconnect_all_surfaces();
 
 protected: 
   
 private:
   TopoDS_Shell *myTopoDSShell;
-  DLIList <Surface *> mySurfs;
 };
 
 

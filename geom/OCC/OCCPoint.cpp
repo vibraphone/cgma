@@ -19,11 +19,18 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "config.h"
 #include "OCCPoint.hpp"
+#include "OCCCurve.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CastTo.hpp"
 #include "OCCAttribSet.hpp"
 #include "CubitSimpleAttrib.hpp"
 #include "BRep_Tool.hxx"
+#include "TopExp.hxx"
+#include "TopoDS_Edge.hxx"
+#include "TopoDS.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 
 // ********** END CUBIT INCLUDES           **********
 
@@ -216,7 +223,30 @@ CubitBox OCCPoint::bounding_box() const
 
 
 void OCCPoint::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  {  }
+{
+  OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
+  OCCCurve * curve = NULL;
+  DLIList <OCCCurve* > *curves = oqe->CurveList;
+  TopTools_IndexedDataMapOfShapeListOfShape M;
+  for(int i = 0; i <  curves->size(); i++)
+  {
+     curve = curves->get_and_step();
+     TopExp::MapShapesAndAncestors(*(curve->get_TopoDS_Edge()),
+                                   TopAbs_VERTEX, TopAbs_EDGE, M);
+     const TopTools_ListOfShape& ListOfShapes =
+                                M.FindFromKey(*(get_TopoDS_Vertex()));
+     if (!ListOfShapes.IsEmpty())
+     {
+         TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
+         for (;it.More(); it.Next())
+         {
+           TopoDS_Edge Edge = TopoDS::Edge(it.Value());
+           int k = oqe->OCCMap->Find(Edge);
+           parents.append((OCCPoint*)(oqe->OccToCGM->find(k))->second);
+         }
+     }
+  }
+}
 void OCCPoint::get_children_virt( DLIList<TopologyBridge*>& ) 
   {  }
 

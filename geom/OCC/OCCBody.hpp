@@ -62,6 +62,12 @@ public:
   
   TopoDS_CompSolid *get_TopoDS_Shape() {return myTopoDSShape; }
 
+  virtual CubitStatus get_transforms( CubitTransformMatrix &tfm );
+  //R CubitStatus
+  //R- CUBIT_SUCCESS/CUBIT_FAILURE
+  //I BODYPtr
+  //- return the transformation matrix for this body
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
@@ -144,24 +150,6 @@ public:
   CubitStatus reflect(double,double,double);
     //- reflect about an axis
 
-  virtual CubitStatus restore();
-    //R CubitStatus
-    //R- CUBIT_SUCCESS/FAILURE
-    //- Restore the ACIS BODY by replacing the transformation matrix 
-    //- associated with it with a unit matrix
-  
-  CubitStatus get_transforms( CubitTransformMatrix &tfm );
-    //R CubitStatus
-    //R- CUBIT_SUCCESS/CUBIT_FAILURE
-    //I BODYPtr
-    //- return the transformation matrix for this body
-  
-  CubitStatus set_transforms( CubitTransformMatrix tfm );
-    //R CubitStatus
-    //R- CUBIT_SUCCESS/CUBIT_FAILURE that myTransforms was 
-    // set correctly
-    //I BODYPtr
-
   int validate(const CubitString &, DLIList <TopologyEntity*>&);
     //- does an api_entity_check for the body.
   
@@ -183,13 +171,7 @@ public:
 protected: 
   
 private:
-  CubitStatus transform( CubitTransformMatrix &tfmat, CubitBoolean is_rotation );
-    // main function for applying transforms to facet-based bodies
 
-  void init_edge_flags( DLIList<Surface *>&surf_list, int flag );
-    // set the flags on the facet edges
-
-  CubitTransformMatrix myTransforms;
   DLIList<Lump*> myLumps;
     //List of the attached lumps for the traversal functions.
   OCCAttribSet attribSet;

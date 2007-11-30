@@ -39,9 +39,9 @@
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
 
-OCCCoEdge::OCCCoEdge( TopoDS_Edge* edge, Curve *curv_ptr, 
+OCCCoEdge::OCCCoEdge( Curve *curv_ptr, 
 	  	      LoopSM *loop_ptr, CubitSense sense )
-	 	    : myTopoDSEdge(edge), myCurve(curv_ptr), 
+	 	    : myCurve(curv_ptr), 
  	  	      myLoop(loop_ptr),edgeSense(sense)
 {
 }
@@ -57,106 +57,7 @@ OCCCoEdge::OCCCoEdge( TopoDS_Edge* edge, Curve *curv_ptr,
 //-------------------------------------------------------------------------
 OCCCoEdge::~OCCCoEdge()
 {
-  myTopoDSEdge = (TopoDS_Edge*) NULL;
-  myCurve = (Curve *) NULL;
-  myLoop = (LoopSM *)NULL;
 }
-
-//-------------------------------------------------------------------------
-// Purpose       : Get geometry modeling engine: OCCQueryEngine
-//
-// Special Notes :
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-GeometryQueryEngine* OCCCoEdge::get_geometry_query_engine() const
-{
-  return OCCQueryEngine::instance();
-}  
-
-//-------------------------------------------------------------------------
-// Purpose       : The purpose of this function is to append a
-//                 attribute to the OSME. The name is attached to the 
-//                 underlying solid model entity this one points to.
-//
-//
-// Special Notes : 
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-void OCCCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
-{
-  //PRINT_ERROR("OCCCoEdge::append_simple_attribute_virt not implemented\n");
-  return;
-}
-
-
-//-------------------------------------------------------------------------
-// Purpose       : The purpose of this function is to remove a simple 
-//                 attribute attached to this geometry entity. The name is 
-//                 removed from the underlying BODY this points to.
-//
-// Special Notes : 
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-void OCCCoEdge::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
-{
-  //PRINT_ERROR("OCCCoEdge::remove_simple_attribute_virt not implemented\n");
-  return;
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : The purpose of this function is to remove all simple 
-//                 attributes attached to this geometry entity.  Also
-//                 removes lingering GTC attributes.
-//
-//
-// Special Notes : 
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-void OCCCoEdge::remove_all_simple_attribute_virt()
-{
-  //PRINT_ERROR("OCCCoEdge::remove_all_simple_attribute_virt not implemented\n");
-  return;
-}
-
-//-------------------------------------------------------------------------
-// Purpose       : The purpose of this function is to get the  
-//                 attributes attached to this geometry entity. The name is 
-//                 attached to the underlying BODY this points to.
-//
-// Special Notes : 
-//
-// Creator       : Steve Owen
-//
-// Creation Date : 07/18/00
-//-------------------------------------------------------------------------
-CubitStatus OCCCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
-                                              /*cubit_simple_attrib_list*/)
-{
-  //PRINT_ERROR("OCCCoEdge::get_simple_attribute not implemented\n");
-  return CUBIT_FAILURE;
-}
-CubitStatus OCCCoEdge::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
-  { return CUBIT_FAILURE; }
-
-void OCCCoEdge::get_parents_virt( DLIList<TopologyBridge*>& parents )
-  { parents.append( myLoop ); }
-
-void OCCCoEdge::get_children_virt( DLIList<TopologyBridge*>& children )
-  { children.append( myCurve ); }
-
 
 
 // ********** END PUBLIC FUNCTIONS         **********

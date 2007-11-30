@@ -38,8 +38,6 @@
 #include "Shell.hpp"
 #include "Loop.hpp"
 #include "Chain.hpp"
-#include "CoEdge.hpp"
-#include "CoFace.hpp"
 #include "RefVolume.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
@@ -110,15 +108,17 @@ const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
 const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
 const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 
-TopTools_DataMapOfShapeInteger *OCCQueryEngine::OCCMap = new TopTools_DataMapOfShapeInteger;
-DLIList<OCCBody*> *OCCQueryEngine::BodyList = new DLIList<OCCBody*>;
-DLIList<OCCSurface*> *OCCQueryEngine::SurfaceList = new DLIList<OCCSurface*>;
-DLIList<OCCCurve*> *OCCQueryEngine::CurveList = new DLIList<OCCCurve*>;
+TopTools_DataMapOfShapeInteger *OCCMap = new TopTools_DataMapOfShapeInteger;
 
-std::map<int, TopologyBridge*>* OCCQueryEngine::OccToCGM = new std::map<int, TopologyBridge*>;
+std::map<int, TopologyBridge*>* OccToCGM = new std::map<int, TopologyBridge*>;
+
+DLIList<OCCBody*> *BodyList = new DLIList<OCCBody*>;
+DLIList<OCCSurface*> *SurfaceList = new DLIList<OCCSurface*>;
+DLIList<OCCCurve*> *CurveList = new DLIList<OCCCurve*>;
+
 typedef std::map<int, TopologyBridge*>::value_type valType;
-int OCCQueryEngine::iTotalTBCreated = 0;
-CubitBoolean OCCQueryEngine::PRINT_RESULT = CUBIT_FALSE;
+int iTotalTBCreated = 0;
+CubitBoolean *PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
 // Author     :
@@ -997,7 +997,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
   BRep_Builder aBuilder;
   Standard_Boolean result = BRepTools::Read(*aShape, (char*) file_name, aBuilder);
   if (result==0) return CUBIT_FAILURE;
-  PRINT_RESULT = print_results;
+  *PRINT_RESULT = print_results;
   
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
@@ -1038,9 +1038,9 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
         OCCBody *body;
         if (!OCCMap->IsBound(*posolid))
         {
-                if(PRINT_RESULT)
+                if(*PRINT_RESULT)
                         PRINT_INFO("Adding Bodies.\n");
-                iTotalTBCreated++;
+                (iTotalTBCreated)++;
                 body = new OCCBody(posolid);
                 OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
@@ -1073,7 +1073,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
         OCCBody *body;
 	if (!OCCMap->IsBound(*posolid))
  	{
-		if(PRINT_RESULT)
+		if(*PRINT_RESULT)
 			PRINT_INFO("Adding solids.\n");
                 iTotalTBCreated++;
 		lump = new OCCLump(posolid);
@@ -1106,7 +1106,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
 	OCCShell *shell ;
         if (!OCCMap->IsBound(*poshell))
         {
-                if(PRINT_RESULT)
+                if(*PRINT_RESULT)
                         PRINT_INFO("Adding shells.\n");
                 iTotalTBCreated++;
 		shell = new OCCShell(poshell);
@@ -1121,13 +1121,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
         }
 
 	TopExp_Explorer Ex;
-        DLIList<Surface *> surfaces;
         for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
-	{
-           Surface* face = populate_topology_bridge(TopoDS::Face(Ex.Current()));
-	   surfaces.append(face);
-	}
-	shell->add_surfaces(surfaces); 
+           populate_topology_bridge(TopoDS::Face(Ex.Current()));
 	return shell;
 }
 
@@ -1138,7 +1133,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
 	OCCSurface *surface;
 	if (!OCCMap->IsBound(*poface))
   	{
-		if(PRINT_RESULT)
+		if(*PRINT_RESULT)
                         PRINT_INFO("Adding faces.\n");
         	iTotalTBCreated++;
 		surface = new OCCSurface(poface);
@@ -1155,7 +1150,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
 	}
 	TopExp_Explorer Ex;
         for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
-	 	populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+	  populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+
 	return surface;
 }
 
@@ -1166,7 +1162,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
 	OCCLoop *loop ;
         if (!OCCMap->IsBound(*powire))
         {
-                if(PRINT_RESULT)
+                if(*PRINT_RESULT)
                         PRINT_INFO("Adding loops.\n");
                 iTotalTBCreated++;
         	loop = new OCCLoop(powire);
@@ -1183,15 +1179,16 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
 	BRepTools_WireExplorer Ex;
         DLIList <OCCCoEdge*> coedges;
 	for (Ex.Init(aShape); Ex.More(); Ex.Next())
- 	{
-	   Curve* curve = populate_topology_bridge(Ex.Current()) ;
+        {
+           Curve* curve = populate_topology_bridge(Ex.Current());
            OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
-           TopoDS_Edge *edge = occ_curve->get_TopoDS_Edge( );
-  	   OCCCoEdge * coedge = new OCCCoEdge(edge, curve, loop, 
- 	   (Ex.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
+           OCCCoEdge * coedge = new OCCCoEdge( curve, loop,
+		(Ex.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
 	   coedges.append(coedge);
-	}
-	loop->add_coedges(coedges);
+           occ_curve->add_loop(loop);
+        }
+        loop->coedges(coedges);
+	
 	return loop;
 }
 
@@ -1202,7 +1199,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
 	*poedge = aShape;
 	if (!OCCMap->IsBound(*poedge)) 
         {
-		if(PRINT_RESULT)
+		if(*PRINT_RESULT)
                         PRINT_INFO("Adding edges.\n");
                 iTotalTBCreated++;
                 curve = new OCCCurve(poedge);
@@ -1230,7 +1227,7 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
 	*povertex = aShape;
 	if (!OCCMap->IsBound(*povertex)) 
         {
- 	  if(PRINT_RESULT)
+ 	  if(*PRINT_RESULT)
                         PRINT_INFO("Adding vertices.\n");
           iTotalTBCreated++;
  	  point = new OCCPoint(povertex);
@@ -1272,7 +1269,6 @@ void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&bodyList) cons
   {
     BodyPtr = bodyList.get_and_step();
     this->delete_solid_model_entities(BodyPtr);
-    BodyList->remove((OCCBody*)BodyPtr);
   }
 
   return;
@@ -1290,11 +1286,11 @@ void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&bodyList) cons
 CubitStatus
 OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 {
-  OCCBody* fbody = dynamic_cast<OCCBody*>(bodysm);
-  if (!fbody)
+  OCCBody* occ_body = dynamic_cast<OCCBody*>(bodysm);
+  if (!occ_body)
     return CUBIT_FAILURE;
 
-  TopoDS_Shape* shape = fbody->get_TopoDS_Shape();
+  TopoDS_Shape* shape = occ_body->get_TopoDS_Shape();
 
   if (!shape)
     return CUBIT_FAILURE;
@@ -1308,9 +1304,23 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
     if(!OCCMap->UnBind(*shape))
       PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
 
+    OCCBody* occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
+    BodyList->remove(occ_body_find);
+
     if(!OccToCGM->erase(k))
       PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
   }
+
+  else //check for all lumps for deletion, this body was generated
+  //by its OCCLumps
+  {
+     for(int i =0; i < occ_body->lumps().size(); i++)
+     {
+	Lump* lump = occ_body->lumps().get_and_step();
+        delete_solid_model_entities(lump);
+     }
+  }
+
   // Remove the links between OCC and Cubit
   //  unhook_ENTITY_from_VGI(shape);
 
@@ -1320,6 +1330,48 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   return CUBIT_SUCCESS;
 }
 
+//-------------------------------------------------------------------------
+// Purpose       : Delete a OCClumps and child entities.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 11/29/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::delete_solid_model_entities( Lump* lump ) const
+{
+  OCCLump* occ_lump = dynamic_cast<OCCLump*>(lump);
+  if (!occ_lump)
+    return CUBIT_FAILURE;
+
+  TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
+
+  if(!solid)
+     return CUBIT_FAILURE;
+
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*solid))
+  {
+    k = OCCMap->Find(*solid);
+
+    if(!OCCMap->UnBind(*solid))
+      PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+
+    if(!OccToCGM->erase(k))
+      PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+  }
+
+  // Remove the links between OCC and Cubit
+  //  unhook_ENTITY_from_VGI(face);
+
+  BodyList->remove(CAST_TO(occ_lump->body(), OCCBody));
+  delete solid;
+  delete lump;
+  return CUBIT_SUCCESS;
+} 
 //-------------------------------------------------------------------------
 // Purpose       : Delete a OCCSurface and child entities.
 //
@@ -1350,6 +1402,8 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
     if(!OCCMap->UnBind(*face))
       PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
 
+    SurfaceList->remove((OCCSurface*)(OccToCGM->find(k))->second);
+
     if(!OccToCGM->erase(k))
       PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
   }
@@ -1357,7 +1411,6 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
   // Remove the links between OCC and Cubit
   //  unhook_ENTITY_from_VGI(face);
 
-  SurfaceList->remove((OCCSurface*)surface);
   delete face;
   delete surface;
   return CUBIT_SUCCESS;
@@ -1392,6 +1445,7 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
     if(!OCCMap->UnBind(*edge))
       PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
 
+    CurveList->remove((OCCCurve*)(OccToCGM->find(k))->second);
     if(!OccToCGM->erase(k))
       PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
   }
@@ -1399,7 +1453,6 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
   // Remove the links between OCC and Cubit
   //unhook_ENTITY_from_VGI(edge);
 
-  CurveList->remove((OCCCurve*) curve);
   delete edge;
   delete curve;
   return CUBIT_SUCCESS;
@@ -1639,11 +1692,12 @@ CubitStatus status = CUBIT_SUCCESS;
 }
 
 const char* fqe_xform_err = "Transform not implemented for OCC geometry.\n";
+
 CubitStatus OCCQueryEngine::restore_transform( BodySM* body )
 {
-  OCCBody* facetbod = dynamic_cast<OCCBody*>(body);
-  return facetbod ? facetbod->restore( ) : CUBIT_FAILURE;
+  return CUBIT_FAILURE;
 }
+
 CubitStatus OCCQueryEngine::translate( BodySM* body, const CubitVector& d )
 {
   OCCBody* theBody = dynamic_cast<OCCBody*>(body);

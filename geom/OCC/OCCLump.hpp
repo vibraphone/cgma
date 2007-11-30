@@ -45,12 +45,10 @@ public:
   
   OCCLump(TopoDS_Solid *theSolid);
   
-  OCCLump(DLIList<ShellSM*> &my_shells,
-            BodySM *body_sm_ptr = NULL);
-    //Pass in a list of shells attached to this lump if you have them.
-    //Also pass in the body that this lump belongs to.
   virtual ~OCCLump();
     //- The destructor
+
+  BodySM* body() {return myBodyPtr;}
 
   void add_body(BodySM* new_body)
     {myBodyPtr = new_body;}
@@ -151,7 +149,6 @@ public:
 protected: 
   
 private:
-  DLIList<ShellSM*> myShells;
   BodySM *myBodyPtr;
 
   TopoDS_Solid *myTopoDSSolid;

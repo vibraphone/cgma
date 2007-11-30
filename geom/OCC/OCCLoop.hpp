@@ -37,13 +37,12 @@ class OCCLoop : public LoopSM
 public :
  
   OCCLoop( TopoDS_Wire *theLoop );	
-  inline void add_coedge(OCCCoEdge * coedge) {myCoEdgeList.append(coedge);}
-  void add_coedges(DLIList<OCCCoEdge *> coedges)
-			{myCoEdgeList = coedges;} 
 
-  void remove_coedge(OCCCoEdge * coedge){myCoEdgeList.remove(coedge);}
+  void coedges(DLIList<OCCCoEdge *> coedges) {myCoEdgeList = coedges;}
 
   DLIList<OCCCoEdge*> coedges() {return myCoEdgeList;}
+
+  void disconnect_all_curves();
 
   inline TopoDS_Wire* get_TopoDS_Wire() {return myTopoDSWire;}
 
@@ -107,7 +106,7 @@ protected:
 
 private:
   TopoDS_Wire *myTopoDSWire;
-  DLIList<OCCCoEdge *>myCoEdgeList;
+  DLIList<OCCCoEdge *> myCoEdgeList;
 
 };
 

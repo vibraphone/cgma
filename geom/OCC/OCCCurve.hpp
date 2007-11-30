@@ -49,7 +49,10 @@ public :
   virtual ~OCCCurve() ;
     //- The destructor
 
-    
+  void add_loop(OCCLoop* loop) { myLoopList->append_unique(loop);}   
+  DLIList<OCCLoop*> *loops() {return myLoopList;}
+  void remove_loop(OCCLoop* loop) {myLoopList->remove(loop);}
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
@@ -320,29 +323,13 @@ protected:
   
 private:
   
-  CubitSense get_relative_curve_sense();
-    //R CubitSense
-    //R- Returned sense value
-    //- Returns the sense of the RefEdge with respect to the underlying
-    //- facet curve.
-  
   void adjust_periodic_parameter(double& param);
-  
-  CubitSense sense_;
-    //- The sense of the RefEdge that owns this Curve with respect
-    //- to the positive sense of the first EDGE in EDGEPtrList_.
-    //- When a Curve is first constructed, this value is arbitrarily
-    //- set to CUBIT_FORWARD.
-    //- MJP NOTE:
-    //- Not only does the RefEdge have a sense wrt its Curve, but each
-    //- ACIS EDGE has a sense wrt its underlying "curve" object.
   
   OCCAttribSet attribSet;
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
   
-  friend void run_test_function();
-
   TopoDS_Edge *myTopoDSEdge;
+  DLIList<OCCLoop*> *myLoopList;
   bool periodic;
 };
 
