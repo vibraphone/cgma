@@ -150,9 +150,6 @@ public:
   CubitStatus reflect(double,double,double);
     //- reflect about an axis
 
-  int validate(const CubitString &, DLIList <TopologyEntity*>&);
-    //- does an api_entity_check for the body.
-  
   CubitStatus save_attribs( FILE* file_ptr );
     // Write FactAttribs out to file
 

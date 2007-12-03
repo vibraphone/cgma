@@ -122,10 +122,6 @@ public:
 
   CubitString get_engine_version_string();
 
-  //static DLIList<OCCBody*> BodyList ;
-  //static DLIList<OCCSurface*> SurfaceList ;
-  //static DLIList<OCCCurve*> CurveList ;
-  
 //HEADER- RTTI and safe casting functions.
   
   virtual const type_info& entity_type_info() const ;

@@ -73,7 +73,7 @@
 
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 //-------------------------------------------------------------------------
-// Purpose       : The constructor with a pointer to the FacetEvalTool. 
+// Purpose       : The constructor with a pointer to the TopoDS_Face. 
 //
 // Special Notes :
 //
@@ -81,16 +81,6 @@
 OCCSurface::OCCSurface(TopoDS_Face *theFace)
 {
   myTopoDSFace = theFace;
-
-/*  printf("Yeah!\n");
-  TopoDS_Face face = *myTopoDSFace;
-  BRepAdaptor_Surface asurface(face);
-  Bnd_Box aBox;
-  BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
-  double min[3], max[3];
-  aBox.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
-  printf(".  .  .  box: %lf %lf %lf, %lf %lf %lf\n", min[0], min[1], min[2], max[0], max[1], max[2]);*/
-
 }
 
 
@@ -436,7 +426,7 @@ CubitBoolean OCCSurface::is_closed_in_U()
 CubitBoolean OCCSurface::is_closed_in_V()
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
-  return (asurface.IsUClosed())?CUBIT_TRUE:CUBIT_FALSE;
+  return (asurface.IsVClosed())?CUBIT_TRUE:CUBIT_FALSE;
 }
 
 //-------------------------------------------------------------------------

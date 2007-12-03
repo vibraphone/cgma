@@ -233,10 +233,17 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //----------------------------------------------------------------
 void OCCBody::update_bounding_box() 
 {
-  CubitVector v(0, 0, 0);
-  boundingbox.reset(v,v);
-  for (int i = 0; i < myLumps.size(); i++)
-    boundingbox |= myLumps.get_and_step()->bounding_box();
+     Bnd_Box box;
+     const TopoDS_Shape shape=*myTopoDSShape;
+     //calculate the bounding box
+     BRepBndLib::Add(shape, box);
+     double min[3], max[3];
+
+     //get values
+     box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+
+    //update boundingbox.
+    boundingbox.reset(min, max);
 }
 
 //----------------------------------------------------------------
@@ -248,12 +255,6 @@ void OCCBody::update_bounding_box()
 CubitBox OCCBody::get_bounding_box()
 {
   return boundingbox ;
-}
-
-int OCCBody::validate(const CubitString &, DLIList <TopologyEntity*>&)
-{
-  PRINT_ERROR("This option is not available for mesh defined geometry.\n");
-  return 0;
 }
 
 void OCCBody::get_parents_virt( DLIList<TopologyBridge*>& ) 

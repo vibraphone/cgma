@@ -100,11 +100,6 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  void surfaces(DLIList <Surface *> surfaces);
-  DLIList <Surface *> surfaces();
-
-  void disconnect_all_surfaces();
-
 protected: 
   
 private:

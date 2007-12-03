@@ -28,13 +28,6 @@
 #include "OCCBody.hpp"
 #include "OCCLump.hpp"
 #include "OCCSurface.hpp"
-#include "OCCLoop.hpp"
-#include "OCCCoEdge.hpp"
-#include "OCCCurve.hpp"
-#include "OCCPoint.hpp"
-#include "FacetEvalTool.hpp"
-#include "CubitPoint.hpp"
-#include "CubitFacetEdge.hpp"
 #include "GfxDebug.hpp"
 
 #include <TopExp.hxx>
@@ -43,7 +36,7 @@
 #include "TopoDS.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
-
+#include "TopTools_ListOfShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********

@@ -20,6 +20,7 @@
 #include "gp_Ax2.hxx"
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
+#include "BRepBuilderAPI.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -186,7 +187,7 @@ CubitString OCCQueryEngine::get_engine_version_string()
 //================================================================================
 const type_info& OCCQueryEngine::entity_type_info() const
 {
-   return typeid(*this);
+   return typeid(OCCQueryEngine);
 }
 
 //================================================================================
@@ -471,7 +472,8 @@ CubitStatus OCCQueryEngine::transform_vec_position( CubitVector const& ,
                                                     BodySM *,
                                                     CubitVector & ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  //Nobody is using this function in ACIS yet.
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -670,7 +672,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
   {
-    TopoDS_Shape* theShape = body_ptr->get_TopoDS_Shape();
+    TopoDS_CompSolid* theShape = body_ptr->get_TopoDS_Shape();
     if (!theShape)
     {
       PRINT_ERROR("OCCBody without TopoDS_Shape at %s:%d.\n", __FILE__, __LINE__ );
@@ -811,8 +813,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
     else if( OCCCurve* curve = CAST_TO( ref_entity_ptr, OCCCurve) )
       OCC_curves.append( curve );
     
-    //if it is a Surface -- I don't think you can ever have a free surface
-    //without it being a Body
+    //if it is a surface
     else if( OCCSurface* surf = CAST_TO( ref_entity_ptr, OCCSurface) )
       OCC_surfaces.append( surf );
    
@@ -1058,13 +1059,14 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
         {
            Lump* lump = populate_topology_bridge(TopoDS::Solid(Ex.Current()));
   	   lumps.append(lump);
+           CAST_TO(lump, OCCLump)->add_body(body);
 	}
 	body->lumps(lumps);
         return body;
 }
 
 Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
-						 CubitBoolean build_body)
+		 			       CubitBoolean build_body)
 {
 	//one OCCBody corresponds one OCCLump
 	TopoDS_Solid *posolid =  new TopoDS_Solid;
@@ -1083,6 +1085,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
 		   lumps.append(lump);
 		   body = new OCCBody(lumps);
                    BodyList->append(body);
+                   lump->add_body(body);
 		}
 		OCCMap->Bind(*posolid, iTotalTBCreated);
                 OccToCGM->insert(valType(iTotalTBCreated,
@@ -1551,15 +1554,15 @@ CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
 }
 double OCCQueryEngine::get_sme_resabs_tolerance() const
 {
-  PRINT_WARNING("OCC doesn't have its standard linear tolerance.\n");
-  return 1e-6; 
+  return BRepBuilderAPI::Precision(); 
 }
 // Gets solid modeler's resolution absolute tolerance
 
-double OCCQueryEngine::set_sme_resabs_tolerance( double )
+double OCCQueryEngine::set_sme_resabs_tolerance( double p)
 {
-  PRINT_ERROR("OCCQueryEngine::set_sme_resabs_tolerance not yet implemented.\n");
-  return 0.0;
+  double old_p = get_sme_resabs_tolerance();
+  BRepBuilderAPI::Precision(p);
+  return old_p;
 }
 
 CubitStatus OCCQueryEngine::set_int_option( const char* , int )
@@ -1705,8 +1708,8 @@ CubitStatus OCCQueryEngine::translate( BodySM* body, const CubitVector& d )
 }
 CubitStatus OCCQueryEngine::rotate( BodySM* body, const CubitVector& v, double a )
 {
-  OCCBody* facetbod = dynamic_cast<OCCBody*>(body);
-  return facetbod ? facetbod->rotate( v.x(), v.y(), v.z(), a ) : CUBIT_FAILURE;
+  OCCBody* occ_bod = dynamic_cast<OCCBody*>(body);
+  return occ_bod ? occ_bod->rotate( v.x(), v.y(), v.z(), a ) : CUBIT_FAILURE;
 }
 CubitStatus OCCQueryEngine::scale( BodySM* body, double factor )
 {
