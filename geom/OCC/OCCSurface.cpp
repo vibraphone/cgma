@@ -64,6 +64,7 @@
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
+#include "BRepClass_FaceClassifier.hxx"
 // ********** END OpenCascade INCLUDES      **********
 
 
@@ -314,7 +315,7 @@ CubitStatus OCCSurface::principal_curvatures(
 //-------------------------------------------------------------------------
 CubitVector OCCSurface::position_from_u_v (double u, double v)
 {
-  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  BRepAdaptor_Surface asurface(*myTopoDSFace, Standard_False);
   gp_Pnt p = asurface.Value(u, v);
   return CubitVector (p.X(), p.Y(), p.Z());
 }
@@ -370,7 +371,11 @@ CubitBoolean OCCSurface::is_periodic()
 CubitBoolean OCCSurface::is_periodic_in_U( double& period ) 
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
-  return (asurface.IsUPeriodic())?CUBIT_TRUE:CUBIT_FALSE;
+  if (!asurface.IsUPeriodic())
+     return CUBIT_FALSE;
+
+  period = asurface.UPeriod(); 
+  return CUBIT_TRUE;
 }
 
 //-------------------------------------------------------------------------
@@ -382,19 +387,40 @@ CubitBoolean OCCSurface::is_periodic_in_U( double& period )
 CubitBoolean OCCSurface::is_periodic_in_V( double& period ) 
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
-  return (asurface.IsVPeriodic())?CUBIT_TRUE:CUBIT_FALSE;
+  if (!asurface.IsVPeriodic())
+     return CUBIT_FALSE;
+
+  period = asurface.VPeriod();
+  return CUBIT_TRUE;
 }
 
 //-------------------------------------------------------------------------
 // Purpose       : Determines if the face is singular in the given parameter
-//                 direction.  Not available yet.
+//                 direction. Based on comments in SurfaceACIS: "The
+//		   assumption is made that the u_param is in the
+//		   bounds of the surface. 
 //
 //-------------------------------------------------------------------------
-CubitBoolean OCCSurface::is_singular_in_U( double )
+CubitBoolean OCCSurface::is_singular_in_U( double u_param)
 {
-  assert(0);
+  //from Acis MasterIndex.htm:
+  // singular_u
+  // The only singularity recognized is where every value of the 
+  // nonconstant parameter generates the same object-space point,
+  // and these can only occur at the ends of the parameter range
+  // as returned by the functions above. A plane is nonsingular 
+  // in both directions. 
+  double u_lower, u_upper;
+  get_param_range_U( u_lower, u_upper );
 
-  //PRINT_ERROR("OCCSurface::is_singular_in_U not implemented yet\n");
+  if ( u_param < u_lower - CUBIT_RESABS ||
+       u_param > u_upper + CUBIT_RESABS )
+  {
+    PRINT_ERROR("u parameter is outside parameter bounds.\n");
+    return CUBIT_FALSE;
+  }
+
+  //Currently, haven't found any singularity check in OCC.
   return CUBIT_FALSE;
 }  
 
@@ -402,11 +428,19 @@ CubitBoolean OCCSurface::is_singular_in_U( double )
 // Purpose       : Determines if the face is singular in the given parameter
 //                 direction.  Not available yet.
 //-------------------------------------------------------------------------
-CubitBoolean OCCSurface::is_singular_in_V( double )
+CubitBoolean OCCSurface::is_singular_in_V( double v_param)
 {
-  assert(0);
+  double v_lower, v_upper;
+  get_param_range_V( v_lower, v_upper );
 
-  //PRINT_ERROR("OCCSurface::is_singular_in_V not implemented yet\n");
+  if ( v_param < v_lower - CUBIT_RESABS ||
+       v_param > v_upper + CUBIT_RESABS )
+  {
+    PRINT_ERROR("v parameter is outside parameter bounds.\n");
+    return CUBIT_FALSE;
+  }
+
+  //Currently, haven't found any singularity check in OCC.
   return CUBIT_FALSE;
 }
 
@@ -468,7 +502,7 @@ CubitBoolean OCCSurface::is_parametric()
 // Creation Date : 
 //-------------------------------------------------------------------------
 CubitBoolean OCCSurface::get_param_range_U( double& lower_bound,
-                                             double& upper_bound )
+                                            double& upper_bound )
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   lower_bound = asurface.FirstUParameter();
@@ -484,7 +518,7 @@ CubitBoolean OCCSurface::get_param_range_U( double& lower_bound,
 //
 //-------------------------------------------------------------------------
 CubitBoolean OCCSurface::get_param_range_V( double& lower_bound,
-                                             double& upper_bound )
+                                            double& upper_bound )
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   lower_bound = asurface.FirstVParameter();
@@ -520,25 +554,33 @@ CubitBoolean OCCSurface::is_position_on( CubitVector &test_position )
   return CUBIT_FALSE;
 }
 
-CubitPointContainment OCCSurface::point_containment( const CubitVector &/*point*/ )
+CubitPointContainment OCCSurface::point_containment( const CubitVector &point )
 {
-  assert(0);
+   TopoDS_Face *face = get_TopoDS_Face();
+   gp_Pnt p(point.x(), point.y(), point.z());
+   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+
+   BRepClass_FaceClassifier face_classifier;
+   face_classifier.Perform(*face, p, tol);
+   TopAbs_State state = face_classifier.State();
+   
+   if (state == TopAbs_IN)
+     return CUBIT_PNT_INSIDE;
+   else if (state == TopAbs_OUT)
+     return CUBIT_PNT_OUTSIDE;
+   else if (state == TopAbs_ON)
+     return CUBIT_PNT_BOUNDARY;
+
    return CUBIT_PNT_UNKNOWN;
 }
 
-CubitPointContainment OCCSurface::point_containment( double /*u_param*/, 
-                                                       double /*v_param*/ )
+CubitPointContainment OCCSurface::point_containment( double u_param, 
+                                                     double v_param )
 {
-  assert(0);
-  return CUBIT_PNT_UNKNOWN; 
+  CubitVector point = position_from_u_v(u_param, v_param);
+  return point_containment(point); 
 }
 
-//CubitPointContainment OCCSurface::point_containment( const CubitVector &/*point*/, 
-//                                                       double /*u_param*/,
-//                                                       double /*v_param*/ )
-//{
-//   return CUBIT_PNT_UNKNOWN;
-//}
 
 CubitSense OCCSurface::get_geometry_sense()
 {

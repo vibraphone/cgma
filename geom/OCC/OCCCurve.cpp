@@ -847,8 +847,10 @@ void OCCCurve::adjust_periodic_parameter(double& param)
 
 CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 {
+   if (is_position_on(point) == CUBIT_TRUE)
+     return CUBIT_PNT_ON;
    
-   return CUBIT_PNT_UNKNOWN;
+   return CUBIT_PNT_OFF;
 }
 
 // ********** END PRIVATE FUNCTIONS        **********
