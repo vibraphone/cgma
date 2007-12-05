@@ -39,7 +39,8 @@ libcubit_OCC_la_SOURCES = \
     OCCPoint.cpp \
     OCCQueryEngine.cpp \
     OCCShell.cpp \
-    OCCSurface.cpp 
+    OCCSurface.cpp \
+    OCCDrawTool.cpp
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
@@ -57,5 +58,6 @@ libcubit_OCC_la_include_HEADERS = \
     OCCPoint.hpp \
     OCCQueryEngine.hpp \
     OCCShell.hpp \
-    OCCSurface.hpp 
+    OCCSurface.hpp \
+    OCCDrawTool.hpp
 
