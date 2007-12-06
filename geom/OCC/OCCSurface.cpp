@@ -166,6 +166,46 @@ GeometryQueryEngine*
 }                 
 
 //-------------------------------------------------------------------------
+// Purpose       : Returns a surface type ID -- the values of these are
+//                 determined by OCC.
+//
+// Special Notes : 
+//                 This code is very ACIS-specific and could change with
+//                 new versions of ACIS.  There are #defines for the
+//                 various surface type ID's.  These are defined in the
+//                 header files of each of the specific surface classes
+//                 in ACIS.
+//
+//
+// Creator       : Jane HU
+//
+// Creation Date : 12/06/07
+//-------------------------------------------------------------------------
+GeometryType OCCSurface::geometry_type()
+{
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  if (asurface.GetType() == GeomAbs_BezierSurface)
+     return BEZIER_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_BSplineSurface)
+     return SPLINE_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_Plane)      
+     return PLANE_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_Cylinder ||
+      asurface.GetType() == GeomAbs_Cone)
+     return CONE_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_Sphere)
+     return SPHERE_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_Torus)
+      return TORUS_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_SurfaceOfRevolution)
+     return REVOLUTION_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_SurfaceOfExtrusion)
+     return EXTRUSION_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_OffsetSurface)
+     return OFFSET_SURFACE_TYPE;
+  return UNDEFINED_SURFACE_TYPE;  
+}
+//-------------------------------------------------------------------------
 // Purpose       : Get the bounding box of the object.
 //
 // Special Notes :

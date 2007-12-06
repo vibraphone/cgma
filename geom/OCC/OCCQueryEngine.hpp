@@ -290,6 +290,9 @@ public:
                                 DLIList<BodySM*>& body_list,
                                 CubitBox& super_box );
 
+  CubitStatus update_entity_shape(GeometryEntity* entity_ptr,
+                                  TopoDS_Shape *shape);
+
   CubitStatus translate( BodySM* body, const CubitVector& offset );
   CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle );
   CubitStatus scale    ( BodySM* body, double factor );
@@ -349,8 +352,8 @@ private:
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 
-  int iTotalTBCreated ;
-  CubitBoolean *PRINT_RESULT;
+  static int iTotalTBCreated ;
+  static CubitBoolean PRINT_RESULT;
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class

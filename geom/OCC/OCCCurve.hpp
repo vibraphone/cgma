@@ -318,6 +318,7 @@ public :
 
   TopoDS_Edge *get_TopoDS_Edge( )
     { return myTopoDSEdge; } 
+  void set_TopoDS_Edge(TopoDS_Edge edge){*myTopoDSEdge = edge;}
 
 protected: 
   

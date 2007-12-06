@@ -290,6 +290,7 @@ public :
     //- values.
   
   TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
+  void set_TopoDS_Face(TopoDS_Face face) {*myTopoDSFace = face;}
 
   void get_loops(DLIList<OCCLoop*>&);
 
@@ -363,12 +364,6 @@ public :
 
   virtual CubitSense get_geometry_sense();
     //- Return the relative surface sense. (see below)
-  
-  virtual void reverse_sense();
-    //- Switch the sense of this Surface wrt the RefFace that owns it:
-    //- For Facet, this means switch the sense of the RefFace that
-    //- owns this Surface with respect to the positive sense of the
-    //- first FACE in FACEPtrList_.
   
   CubitStatus save_attribs( FILE* file_ptr );
     // Write FactAttribs out to file

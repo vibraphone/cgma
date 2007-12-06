@@ -63,6 +63,7 @@ public :
     //- The destructor
 
   TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
+  void set_TopoDS_Vertex(TopoDS_Vertex vertex){*myTopoDSVertex = vertex;}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void

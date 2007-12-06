@@ -47,8 +47,8 @@ public:
     //- Destructor.
 
   TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
-  virtual CubitBox bounding_box() const;
-  
+  void set_TopoDS_Shell(TopoDS_Shell shell){*myTopoDSShell = shell;} 
+
   virtual GeometryQueryEngine* 
   get_geometry_query_engine() const;
     //R GeometryQueryEngine*

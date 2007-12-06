@@ -54,6 +54,7 @@ public:
     {myBodyPtr = new_body;}
     
   TopoDS_Solid *get_TopoDS_Solid(){ return myTopoDSSolid; }
+  void set_TopoDS_Solid(TopoDS_Solid solid) {*myTopoDSSolid = solid;}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void

@@ -71,6 +71,27 @@ OCCLump::~OCCLump()
 {}
 
 //-------------------------------------------------------------------------
+// Purpose       : Find centroid
+//
+// Special Notes :
+//
+// Author       : Jane Hu
+//
+// Creation Date : 12/06/07
+//-------------------------------------------------------------------------
+CubitStatus OCCLump::mass_properties( CubitVector& centroid,
+                                      double& volume )
+{
+  GProp_GProps myProps;
+  BRepGProp::VolumeProperties(*myTopoDSSolid, myProps);
+  volume = myProps.Mass();
+  gp_Pnt pt = myProps.CentreOfMass();
+  centroid.set(pt.X(), pt.Y(), pt.Z());
+
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a
 //                 attribute to the GE. The name is attached to the 
 //                 underlying solid model entity this one points to.

@@ -65,26 +65,6 @@ OCCShell::~OCCShell()
 {
 }
 
-
-//-------------------------------------------------------------------------
-// Purpose       : Get the bounding box of the object.
-//
-// Special Notes :
-//
-//-------------------------------------------------------------------------
-CubitBox OCCShell::bounding_box() const
-{
-   CubitBox cBox;
-   DLIList<TopologyBridge*> surfs;
-   get_children_virt(surfs);
-   for(int i = 0; i < surfs.size(); i ++)
-   {
-      OCCSurface* occ_surf = CAST_TO(surfs.get_and_step(), OCCSurface);  
-      cBox |= occ_surf->bounding_box(); 
-   }
-   return cBox;
-}
-
 //-------------------------------------------------------------------------
 // Purpose       : Get geometry modeling engine: OCCQueryEngine
 //

@@ -109,17 +109,9 @@ const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
 const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
 const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 
-TopTools_DataMapOfShapeInteger *OCCMap = new TopTools_DataMapOfShapeInteger;
-
-std::map<int, TopologyBridge*>* OccToCGM = new std::map<int, TopologyBridge*>;
-
-DLIList<OCCBody*> *BodyList = new DLIList<OCCBody*>;
-DLIList<OCCSurface*> *SurfaceList = new DLIList<OCCSurface*>;
-DLIList<OCCCurve*> *CurveList = new DLIList<OCCCurve*>;
-
 typedef std::map<int, TopologyBridge*>::value_type valType;
-int iTotalTBCreated = 0;
-CubitBoolean *PRINT_RESULT = CUBIT_FALSE;
+int OCCQueryEngine::iTotalTBCreated = 0;
+CubitBoolean OCCQueryEngine::PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
 // Author     :
@@ -141,6 +133,12 @@ OCCQueryEngine* OCCQueryEngine::instance()
 OCCQueryEngine::OCCQueryEngine()
 {
   GeometryQueryTool::instance()->add_gqe( this );
+  OCCMap = new TopTools_DataMapOfShapeInteger;
+  OccToCGM = new std::map<int, TopologyBridge*>;
+
+  BodyList = new DLIList<OCCBody*>;
+  SurfaceList = new DLIList<OCCSurface*>;
+  CurveList = new DLIList<OCCCurve*>;
 }
 
 //================================================================================
@@ -998,7 +996,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
   BRep_Builder aBuilder;
   Standard_Boolean result = BRepTools::Read(*aShape, (char*) file_name, aBuilder);
   if (result==0) return CUBIT_FAILURE;
-  *PRINT_RESULT = print_results;
+  PRINT_RESULT = print_results;
   
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
@@ -1039,7 +1037,7 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
   OCCBody *body;
   if (!OCCMap->IsBound(*posolid))
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding Bodies.\n");
       (iTotalTBCreated)++;
       body = new OCCBody(posolid);
@@ -1075,7 +1073,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   OCCBody *body;
   if (!OCCMap->IsBound(*posolid))
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding solids.\n");
       iTotalTBCreated++;
       lump = new OCCLump(posolid);
@@ -1109,7 +1107,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
   OCCShell *shell ;
   if (!OCCMap->IsBound(*poshell))
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding shells.\n");
       iTotalTBCreated++;
       shell = new OCCShell(poshell);
@@ -1136,7 +1134,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
   OCCSurface *surface;
   if (!OCCMap->IsBound(*poface))
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding faces.\n");
       iTotalTBCreated++;
       surface = new OCCSurface(poface);
@@ -1165,7 +1163,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
   OCCLoop *loop ;
   if (!OCCMap->IsBound(*powire))
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding loops.\n");
       iTotalTBCreated++;
       loop = new OCCLoop(powire);
@@ -1202,7 +1200,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
   *poedge = aShape;
   if (!OCCMap->IsBound(*poedge)) 
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding edges.\n");
       iTotalTBCreated++;
       curve = new OCCCurve(poedge);
@@ -1228,9 +1226,9 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
   OCCPoint *point;
   TopoDS_Vertex *povertex = new TopoDS_Vertex;
   *povertex = aShape;
-  if (!OCCMap->IsBound(*povertex)) 
+  if (iTotalTBCreated == 0 || !OCCMap->IsBound(*povertex)) 
     {
-      if(*PRINT_RESULT)
+      if(PRINT_RESULT)
 	PRINT_INFO("Adding vertices.\n");
       iTotalTBCreated++;
       point = new OCCPoint(povertex);
@@ -1746,10 +1744,85 @@ CubitStatus OCCQueryEngine::translate( GeometryEntity* entity,
   gp_Trsf aTrsf;  
   aTrsf.SetTranslation(aVec);
 
-  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  BRepBuilderAPI_Transform aBRepTrsf( aTrsf);
+  aBRepTrsf.Perform(*shape);
+  TopoDS_Shape translated_shape = aBRepTrsf.Shape();
+  
+  update_entity_shape(entity, &translated_shape);
   return CUBIT_SUCCESS;
 }
 
+CubitStatus OCCQueryEngine::update_entity_shape(GeometryEntity* entity_ptr,
+						TopoDS_Shape *shape)
+{
+  if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
+    {
+      TopoDS_CompSolid* theShape = (TopoDS_CompSolid*) shape;
+      if (!theShape)
+        {
+          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
+          return CUBIT_FAILURE;
+        }
+      body_ptr->set_TopoDS_Shape(*theShape);
+      return CUBIT_SUCCESS;
+    }
+
+  else if (OCCLump * lump_ptr = CAST_TO( entity_ptr,OCCLump))
+    {
+      TopoDS_Solid * theSolid = (TopoDS_Solid *) shape;
+      if(theSolid)
+        {
+	  lump_ptr->set_TopoDS_Solid(*theSolid);
+          return CUBIT_SUCCESS;
+        }
+      else
+        {
+          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
+          return CUBIT_FAILURE;
+        }
+    }
+
+  else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
+    {
+      TopoDS_Face *theFace = (TopoDS_Face *)shape;
+      if(!theFace)
+        {
+          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
+          return CUBIT_FAILURE;
+        }
+
+      surface_ptr->set_TopoDS_Face(*theFace);
+      return CUBIT_SUCCESS;
+    }
+
+  else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
+    {
+      TopoDS_Edge *theEdge = (TopoDS_Edge *) shape;
+      if (!theEdge)
+        {
+          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
+          return CUBIT_FAILURE;
+        }
+       curve_ptr->set_TopoDS_Edge(*theEdge); 
+       return CUBIT_SUCCESS;
+    }
+
+  else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
+    {
+      TopoDS_Vertex *thePoint = (TopoDS_Vertex*) shape;
+      if (!thePoint)
+        {           
+          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
+          return CUBIT_FAILURE;
+        }
+
+      point_ptr->set_TopoDS_Vertex(*thePoint);
+      return CUBIT_SUCCESS;
+    }
+
+  PRINT_ERROR("Non-OCC TopologyBridge at %s:%d.\n", __FILE__, __LINE__ );
+  return CUBIT_FAILURE;
+}
 //a is angular value of rotation in radians
 CubitStatus OCCQueryEngine::rotate( GeometryEntity* entity,
                                     const CubitVector& v, double a )
