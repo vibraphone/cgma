@@ -105,12 +105,21 @@ CubitStatus make_Point()
   OCCModifyEngine::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = "./point.occ";
+  char *argv = "./66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
 
+  CubitVector vector(10,10,10);
+  DLIList<RefEntity*> free_entities;
+  gti->get_free_ref_entities(free_entities);
+ 
+  for(int i = 1; i <= free_entities.size(); i++)
+  {
+     RefEntity * entity = free_entities.get_and_step();
+     gti->translate((BasicTopologyEntity*)entity, i*vector); 
+  }
+
   // Read in the geometry from files specified on the command line
-  CubitVector vector(10,10,10); 
   gmti->make_RefVertex(vector,5);
 
   CubitStatus rsl = CUBIT_SUCCESS;
@@ -125,7 +134,6 @@ CubitStatus make_Point()
   //delete all entities
   DLIList<Body*> bodies;
   gti->bodies(bodies);
-  DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
   gti->delete_Body(bodies);
 

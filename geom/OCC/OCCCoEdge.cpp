@@ -59,6 +59,40 @@ OCCCoEdge::~OCCCoEdge()
 {
 }
 
+GeometryQueryEngine*
+OCCCoEdge::get_geometry_query_engine() const
+{
+}
+
+void OCCCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* csattrib_ptr)
+{
+}
+
+void OCCCoEdge::remove_simple_attribute_virt(CubitSimpleAttrib* csattrib_ptr)
+{
+}
+
+void OCCCoEdge::remove_all_simple_attribute_virt()
+{
+}
+
+CubitStatus OCCCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+                                             cubit_simple_attrib_list)
+{
+}
+CubitStatus OCCCoEdge::get_simple_attribute(const CubitString& name,
+                                       DLIList<CubitSimpleAttrib*>& list)
+  {  }
+
+void OCCCoEdge::get_parents_virt( DLIList<TopologyBridge*>& parents )
+{
+  parents.append(loop());
+}
+
+void OCCCoEdge::get_children_virt( DLIList<TopologyBridge*>& children )
+{
+  children.append(curve());
+}
 
 // ********** END PUBLIC FUNCTIONS         **********
 

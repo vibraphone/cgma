@@ -49,9 +49,9 @@ public :
   virtual ~OCCCurve() ;
     //- The destructor
 
-  void add_loop(OCCLoop* loop) { myLoopList->append_unique(loop);}   
-  DLIList<OCCLoop*> *loops() {return myLoopList;}
-  void remove_loop(OCCLoop* loop) {myLoopList->remove(loop);}
+  void add_loop(OCCLoop* loop) { myLoopList.append_unique(loop);}   
+  DLIList<OCCLoop*> loops() {return myLoopList;}
+  void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
@@ -330,7 +330,7 @@ private:
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
   
   TopoDS_Edge *myTopoDSEdge;
-  DLIList<OCCLoop*> *myLoopList;
+  DLIList<OCCLoop*> myLoopList;
   bool periodic;
 };
 

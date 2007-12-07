@@ -80,6 +80,10 @@ enum GeometryType
   TORUS_SURFACE_TYPE,
   BEST_FIT_SURFACE_TYPE,
   FACET_SURFACE_TYPE,
+  BEZIER_SURFACE_TYPE,      //OCC surface type
+  REVOLUTION_SURFACE_TYPE,  //OCC surface type
+  EXTRUSION_SURFACE_TYPE,   //OCC surface type
+  OFFSET_SURFACE_TYPE,      //OCC surface type
   UNDEFINED_SURFACE_TYPE,
   
     /* Lump types */

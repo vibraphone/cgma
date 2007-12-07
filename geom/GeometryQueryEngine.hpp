@@ -299,14 +299,14 @@ public:
   virtual CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle ) = 0;
   virtual CubitStatus scale    ( BodySM* body, double factor ) = 0;
   virtual CubitStatus scale    ( BodySM* body, const CubitVector& factors ) = 0;
-  virtual CubitStatus reflect  ( BodySM* body, const CubitVector& axis ) = 0;
+  virtual CubitStatus reflect  ( BodySM* body, const CubitVector& axis) = 0;
   virtual CubitStatus restore_transform( BodySM* body ) = 0;
 
   virtual CubitStatus translate( GeometryEntity* ent, const CubitVector& offset ) = 0;
   virtual CubitStatus rotate   ( GeometryEntity* ent, const CubitVector& axis, double degrees ) = 0;
   virtual CubitStatus scale    ( GeometryEntity* ent, double factor ) = 0;
   virtual CubitStatus scale    ( GeometryEntity* ent, const CubitVector& factors ) = 0;
-  virtual CubitStatus reflect  ( GeometryEntity* ent, const CubitVector& axis ) = 0;
+  virtual CubitStatus reflect  ( GeometryEntity* ent, const CubitVector& axis) = 0;
 
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1,
                                        BodySM *body_ptr_2 ) const = 0;

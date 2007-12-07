@@ -233,6 +233,9 @@ void OCCPoint::get_parents_virt( DLIList<TopologyBridge*>& parents )
      curve = curves->get_and_step();
      TopExp::MapShapesAndAncestors(*(curve->get_TopoDS_Edge()),
                                    TopAbs_VERTEX, TopAbs_EDGE, M);
+     if (!M.Contains(*(get_TopoDS_Vertex())))
+       continue;
+
      const TopTools_ListOfShape& ListOfShapes =
                                 M.FindFromKey(*(get_TopoDS_Vertex()));
      if (!ListOfShapes.IsEmpty())

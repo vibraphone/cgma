@@ -114,6 +114,9 @@ void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents )
      body = bodies->get_and_step();
      TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
 				   TopAbs_SHELL, TopAbs_SOLID, M);
+     if (!M.Contains(*(get_TopoDS_Shell())))
+	continue;
+
      const TopTools_ListOfShape& ListOfShapes = 
 				M.FindFromKey(*(get_TopoDS_Shell()));
      if (!ListOfShapes.IsEmpty()) 

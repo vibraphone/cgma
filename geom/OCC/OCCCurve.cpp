@@ -97,7 +97,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 //-------------------------------------------------------------------------
 OCCCurve::~OCCCurve() 
 {
-  assert(myLoopList->size() == 0);  
+  assert(myLoopList.size() == 0);  
 }
 
 //-------------------------------------------------------------------------
@@ -701,8 +701,22 @@ double OCCCurve::end_param()
 
 
 void OCCCurve::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
-  { CAST_LIST_TO_PARENT( *myLoopList, parents ); }
-
+{ 
+   for(int i = 0; i < myLoopList.size(); i++) 
+   {
+      DLIList<OCCCoEdge*> coedges = myLoopList.get_and_step()->coedges();
+    
+      for(int j = 0; j < coedges.size(); j++)
+      {
+        OCCCoEdge * coedge = coedges.get_and_step();
+	if(coedge->curve() == this)
+	{
+	  parents.append(coedge);
+          break;
+ 	}
+      }
+   }
+}
 void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children ) 
 {
 	TopTools_IndexedMapOfShape M;

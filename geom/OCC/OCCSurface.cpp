@@ -644,6 +644,9 @@ void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
      body = bodies->get_and_step();
      TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
                                    TopAbs_FACE, TopAbs_SHELL, M);
+     if(!M.Contains(*(get_TopoDS_Face())))
+	continue;
+
      const TopTools_ListOfShape& ListOfShapes =
                                 M.FindFromKey(*(get_TopoDS_Face()));
      if (!ListOfShapes.IsEmpty())

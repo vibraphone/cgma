@@ -1011,7 +1011,11 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
     tblist.append(populate_topology_bridge(TopoDS::CompSolid(Ex.Current())));
 
   for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE));
+  {
+    Lump *lump = 
+    populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE);
+    tblist.append(CAST_TO(lump, OCCLump)->body());
+  }
 
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
     tblist.append(populate_topology_bridge(TopoDS::Shell(Ex.Current())));
@@ -1310,6 +1314,8 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 
       if(!OccToCGM->erase(k))
 	PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+
+      delete bodysm;
     }
 
   else //check for all lumps for deletion, this body was generated
@@ -1320,13 +1326,13 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 	  Lump* lump = occ_body->lumps().get_and_step();
 	  delete_solid_model_entities(lump);
 	}
+      occ_body->lumps().clean_out();
     }
 
   // Remove the links between OCC and Cubit
   //  unhook_ENTITY_from_VGI(shape);
 
   delete shape;
-  delete bodysm;
 
   return CUBIT_SUCCESS;
 }

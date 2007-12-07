@@ -26,6 +26,10 @@ ACIS_IGES_TRANSLATOR = @ACIS_IGES_TRANSLATOR@
 ACIS_LIBS            = @CGM_ACIS_LIBS@ @ACIS_LIBS@
 ACIS_INCLUDES        = @ACIS_INCLUDES@
 
+OCC_INCLUDES	     = @OCC_INC_FLAG@
+OCC_LIB_DIR	     = @OCC_LIB_FLAG@
+OCC_LIBS	     = @OCC_LIBS@
+
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
 CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
@@ -45,9 +49,11 @@ CGM_INCLUDES = -I$(CGM_INCLUDEDIR)/util \
                -I$(CGM_INCLUDEDIR)/init \
                -I$(CGM_INCLUDEDIR)/geom \
                -I$(CGM_INCLUDEDIR)/geom/ACIS \
+               -I$(CGM_INCLUDEDIR)/geom/OCC \
                $(CGM_PARALLEL_INCLUDE) \
                -I$(CGM_INCLUDEDIR) \
-               ${ACIS_INCLUDES}
+               ${ACIS_INCLUDES} \
+               ${OCC_INCLUDES}
 
 CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
 	-L$(CGM_LIBDIR)/geom/virtual/.libs \
@@ -55,6 +61,7 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         -L$(CGM_LIBDIR)/geom/facet/.libs \
 	-L$(CGM_LIBDIR)/geom/Cholla/.libs \
         -L$(CGM_LIBDIR)/geom/ACIS/.libs \
+        -L$(CGM_LIBDIR)/geom/OCC/.libs \
         -L$(CGM_LIBDIR)/geom/.libs \
         -L$(CGM_LIBDIR)/util/.libs \
 	-L$(CGM_LIBDIR)/geom/virtual \
@@ -66,6 +73,7 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         -L$(CGM_LIBDIR)/util \
 	-L${ACIS_LIB_DIR} \
 	-L$(CGM_LIBDIR) \
+        ${OCC_LIB_DIR} \
 	${ACIS_LIBS} \
         -lcubit_virtual \
         -lcubit_facet \
@@ -74,7 +82,9 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         ${ACIS_LIBS} \
         -lcubit_geom \
         -lcubit_util \
-	${CGM_PARALLEL_LIB}
+	${CGM_PARALLEL_LIB} \
+        ${OCC_LIBS} \
+        -lcubit_OCC
 
 CGM_LIBS_FILES_INTERNAL = \
        $(CGM_LIBDIR)/libcubit_virtual.a \
@@ -85,7 +95,8 @@ CGM_LIBS_FILES_INTERNAL = \
        $(CGM_LIBDIR)/libcubit_util.a \
        ${CGM_PARALLEL_LIB_FILE}
 
-CUBIT_LDFLAGS = @CUBIT_LDFLAGS@
+CUBIT_LDFwAGS = @CUBIT_LDFLAGS@
+
 CUBIT_LTFLAGS = @CUBIT_LTFLAGS@
 CUBIT_LIBS = @CUBIT_LIBS@
 CUBIT_FILE = @CUBIT_FILE@

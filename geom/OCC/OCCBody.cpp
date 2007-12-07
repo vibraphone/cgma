@@ -286,7 +286,7 @@ void OCCBody::disconnect_all_lumps()
   for (int i = myLumps.size(); i--; )
   {
     Lump* sm_ptr = myLumps.get_and_step();
-    OCCLump* lump = dynamic_cast<OCCLump*>(sm_ptr);
+    OCCLump* lump = CAST_TO(sm_ptr, OCCLump);
     if (lump)
     {
       assert(lump->get_body() == this);

@@ -158,6 +158,9 @@ void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
      surf = surfs->get_and_step();
      TopExp::MapShapesAndAncestors(*(surf->get_TopoDS_Face()),
                                    TopAbs_WIRE, TopAbs_FACE, M);
+     if (!M.Contains(*(get_TopoDS_Wire())))
+	continue;
+
      const TopTools_ListOfShape& ListOfShapes =
                                 M.FindFromKey(*(get_TopoDS_Wire()));
      if (!ListOfShapes.IsEmpty())
@@ -175,13 +178,7 @@ void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
 
 void OCCLoop::get_children_virt( DLIList<TopologyBridge*>& children )
 {
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSWire, TopAbs_EDGE, M);
-  int ii;
-  for (ii=1; ii<=M.Extent(); ii++) {
-          TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          children.append_unique(curve);
-  }
+  CAST_LIST_TO_PARENT(myCoEdgeList, children);
 }
 
 //-------------------------------------------------------------------------
