@@ -86,7 +86,6 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 
 OCCBody::~OCCBody() 
 {
-   disconnect_all_lumps(); 
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
@@ -271,30 +270,6 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
   }
 }
 
-//-------------------------------------------------------------------------
-// Purpose       : Tear down topology
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 09/29/03
-//-------------------------------------------------------------------------
-void OCCBody::disconnect_all_lumps()
-{
-  myLumps.reset();
-  for (int i = myLumps.size(); i--; )
-  {
-    Lump* sm_ptr = myLumps.get_and_step();
-    OCCLump* lump = CAST_TO(sm_ptr, OCCLump);
-    if (lump)
-    {
-      assert(lump->get_body() == this);
-      lump->remove_body();
-    }
-  }
-  myLumps.clean_out();
-}
 
 //-------------------------------------------------------------------------
 // Purpose       : Find centroid

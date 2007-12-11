@@ -160,8 +160,6 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
   
-  void disconnect_all_lumps();
-
   virtual CubitStatus mass_properties( CubitVector& result, double& volume );
   
   virtual CubitPointContainment point_containment( const CubitVector& pos );

@@ -861,13 +861,10 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   if( free_body_count )
     {
       if( flg )PRINT_INFO( "         " );else flg=1;
-      if( DEBUG_FLAG( 153 ) )
-	{
-	  if( free_body_count == 1 )
-	    PRINT_INFO( "%4d OCC Body\n", free_body_count );
-	  else
-	    PRINT_INFO( "%4d OCC Bodies\n", free_body_count );
-	}
+      if( free_body_count == 1 )
+         PRINT_INFO( "%4d OCC Body\n", free_body_count );
+      else
+         PRINT_INFO( "%4d OCC Bodies\n", free_body_count );
     }
 
   if( free_surface_count )
@@ -933,7 +930,8 @@ OCCQueryEngine::write_topology( const char* file_name,
 	  for(int i = 0; i < lumps.size(); i++)
 	    {
 	      OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
-	      B.Add(Co, *(occ_lump->get_TopoDS_Solid()));
+              TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
+	      B.Add(Co, solid);
 	    }
 	}
     }
@@ -1315,7 +1313,14 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
       if(!OccToCGM->erase(k))
 	PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
 
-      delete bodysm;
+      for (int i = occ_body->lumps().size(); i--; )
+      {
+        Lump* sm_ptr = occ_body->lumps().get_and_step();
+        OCCLump* lump = CAST_TO(sm_ptr, OCCLump);
+        if (lump)
+          lump->remove_body();
+      }
+      occ_body->lumps().clean_out();
     }
 
   else //check for all lumps for deletion, this body was generated
@@ -1333,7 +1338,7 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   //  unhook_ENTITY_from_VGI(shape);
 
   delete shape;
-
+  delete bodysm;
   return CUBIT_SUCCESS;
 }
 

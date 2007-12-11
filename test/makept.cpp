@@ -109,6 +109,14 @@ CubitStatus make_Point()
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
 
+  argv = "./62_shaver1.brep";
+  status = read_geometry(1, &argv);
+  if (status == CUBIT_FAILURE) exit(1);
+
+  argv = "./72_shaver6.brep";
+  status = read_geometry(1, &argv);
+  if (status == CUBIT_FAILURE) exit(1);
+
   CubitVector vector(10,10,10);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
