@@ -256,16 +256,21 @@ private:
                                  CubitBoolean import_vertices = CUBIT_TRUE,
                                  CubitBoolean free_surfaces = CUBIT_TRUE);
 
-  CubitStatus delete_solid_model_entities( Lump* lump ) const;
+  CubitStatus unhook_Lump_from_OCC( Lump* lump ) const;
+  CubitStatus unhook_ShellSM_from_OCC( ShellSM* shell ) const;
+  CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm ) const;
+  CubitStatus unhook_Surface_from_OCC( Surface* surface ) const;
+  CubitStatus unhook_Curve_from_OCC( Curve* curve ) const;
+  CubitStatus unhook_Point_from_OCC( Point* point ) const;
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
     //- the input list. 
       
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
-  virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const;
-  virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const;
-  virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const;
+  virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
+  virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 
+  virtual CubitStatus delete_solid_model_entities( Point* point_ptr)const;
 
   virtual CubitStatus fire_ray(BodySM *body,
                                const CubitVector &ray_point,

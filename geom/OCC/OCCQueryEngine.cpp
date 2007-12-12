@@ -1300,43 +1300,34 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 
   //remove the entry from the map
   int k;
+  OCCBody* occ_body_find = NULL;
   if(OCCMap->IsBound(*shape))
-    {
+  {
       k = OCCMap->Find(*shape);
     
       if(!OCCMap->UnBind(*shape))
 	PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
 
-      OCCBody* occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
-      BodyList->remove(occ_body_find);
+      occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
 
       if(!OccToCGM->erase(k))
 	PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+  } 
 
-      for (int i = occ_body->lumps().size(); i--; )
-      {
-        Lump* sm_ptr = occ_body->lumps().get_and_step();
-        OCCLump* lump = CAST_TO(sm_ptr, OCCLump);
-        if (lump)
-          lump->remove_body();
-      }
-      occ_body->lumps().clean_out();
-    }
+  for(int i =0; i < occ_body->lumps().size(); i++)
+  {
+     Lump* lump = occ_body->lumps().get_and_step();
+     OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+     if (occ_lump)
+       occ_lump->remove_body();
+     unhook_Lump_from_OCC(lump);
+  }
 
-  else //check for all lumps for deletion, this body was generated
-    //by its OCCLumps
-    {
-      for(int i =0; i < occ_body->lumps().size(); i++)
-	{
-	  Lump* lump = occ_body->lumps().get_and_step();
-	  delete_solid_model_entities(lump);
-	}
-      occ_body->lumps().clean_out();
-    }
-
-  // Remove the links between OCC and Cubit
-  //  unhook_ENTITY_from_VGI(shape);
-
+  occ_body->lumps().clean_out();
+  if (occ_body_find)
+     BodyList->remove(occ_body_find);
+  else
+     BodyList->remove(occ_body);
   delete shape;
   delete bodysm;
   return CUBIT_SUCCESS;
@@ -1352,8 +1343,11 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 // Creation Date : 11/29/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( Lump* lump ) const
+OCCQueryEngine::unhook_Lump_from_OCC( Lump* lump ) const
 {
+  if (lump == NULL)
+    return CUBIT_FAILURE;
+
   OCCLump* occ_lump = dynamic_cast<OCCLump*>(lump);
   if (!occ_lump)
     return CUBIT_FAILURE;
@@ -1375,15 +1369,65 @@ OCCQueryEngine::delete_solid_model_entities( Lump* lump ) const
       if(!OccToCGM->erase(k))
 	PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
     }
-
-  // Remove the links between OCC and Cubit
-  //  unhook_ENTITY_from_VGI(face);
-
-  BodyList->remove(CAST_TO(occ_lump->body(), OCCBody));
-  delete solid;
+  
+  DLIList<TopologyBridge*> children;
+  occ_lump->get_children_virt(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     ShellSM* shell = CAST_TO(children.get_and_step(), ShellSM); 
+     unhook_ShellSM_from_OCC(shell);
+  }
+  if (occ_lump->body() != NULL)
+    BodyList->remove(CAST_TO(occ_lump->body(), OCCBody));
   delete lump;
   return CUBIT_SUCCESS;
 } 
+
+//-------------------------------------------------------------------------
+// Purpose       : unhook a ShellSM from its underlining OCC entity.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::unhook_ShellSM_from_OCC( ShellSM* shell ) const
+{
+  OCCShell* occ_shell = dynamic_cast<OCCShell*>(shell);
+  if (!occ_shell)
+    return CUBIT_FAILURE;
+
+  TopoDS_Shell* Shell = occ_shell->get_TopoDS_Shell();
+
+  if(!Shell)
+    return CUBIT_FAILURE;
+
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*Shell))
+    {
+      k = OCCMap->Find(*Shell);
+
+      if(!OCCMap->UnBind(*Shell))
+        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+
+      if(!OccToCGM->erase(k))
+        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+    }
+
+  DLIList<TopologyBridge*> children;
+  occ_shell->get_children_virt(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     Surface* surface = CAST_TO(children.get_and_step(), Surface);
+     unhook_Surface_from_OCC(surface);
+  }
+  delete shell;
+  return CUBIT_SUCCESS;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Delete a OCCSurface and child entities.
 //
@@ -1394,7 +1438,35 @@ OCCQueryEngine::delete_solid_model_entities( Lump* lump ) const
 // Creation Date : 10/29/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
+OCCQueryEngine::delete_solid_model_entities( Surface* surface)const
+{
+  OCCSurface* fsurf = dynamic_cast<OCCSurface*>(surface);
+  if (!fsurf)
+    return CUBIT_FAILURE;
+
+  TopoDS_Face* face = fsurf->get_TopoDS_Face();
+
+  if(!face)
+    return CUBIT_FAILURE;
+
+  unhook_Surface_from_OCC(surface);
+ 
+  delete face;
+  delete surface;
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : unhook a Surface from its underlining OCC entity.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::unhook_Surface_from_OCC( Surface* surface ) const
 {
   OCCSurface* fsurf = dynamic_cast<OCCSurface*>(surface);
   if (!fsurf)
@@ -1412,19 +1484,65 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
       k = OCCMap->Find(*face);
 
       if(!OCCMap->UnBind(*face))
-	PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
 
       SurfaceList->remove((OCCSurface*)(OccToCGM->find(k))->second);
 
       if(!OccToCGM->erase(k))
-	PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
     }
 
-  // Remove the links between OCC and Cubit
-  //  unhook_ENTITY_from_VGI(face);
+  DLIList<TopologyBridge*> children;
+  fsurf->get_children_virt(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     LoopSM* loop = CAST_TO(children.get_and_step(), LoopSM);
+     unhook_LoopSM_from_OCC(loop);
+  }
+}
 
-  delete face;
-  delete surface;
+//-------------------------------------------------------------------------
+// Purpose       : unhook a LoopSM from its underlining OCC entity.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::unhook_LoopSM_from_OCC( LoopSM* loopsm ) const
+{
+  OCCLoop* occ_loop = dynamic_cast<OCCLoop*>(loopsm);
+  if (!occ_loop)
+    return CUBIT_FAILURE;
+
+  TopoDS_Wire* wire = occ_loop->get_TopoDS_Wire();
+
+  if(!wire)
+    return CUBIT_FAILURE;
+
+  //remove the entry from the map
+  int k;
+  if(OCCMap->IsBound(*wire))
+    {
+      k = OCCMap->Find(*wire);
+
+      if(!OCCMap->UnBind(*wire))
+        PRINT_ERROR("The OccLoop and TopoDS_Wire pair is not in the map!");
+
+      if(!OccToCGM->erase(k))
+        PRINT_ERROR("The OccLoop and TopoDS_Wire pair is not in the map!");
+    }
+
+  DLIList<OCCCoEdge*> children;
+  occ_loop->coedges(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     Curve* curve = children.get_and_step()->curve();
+     unhook_Curve_from_OCC(curve);
+  }
+  delete loopsm;
   return CUBIT_SUCCESS;
 }
 
@@ -1438,7 +1556,7 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface ) const
 // Creation Date : 09/29/03
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
+OCCQueryEngine::delete_solid_model_entities( Curve* curve)const
 {
   OCCCurve* fcurve = dynamic_cast<OCCCurve*>(curve);
   if (!fcurve )
@@ -1448,6 +1566,33 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
   if (!edge)
     return CUBIT_FAILURE;
  
+  unhook_Curve_from_OCC(curve);
+
+  delete edge;
+  delete curve;
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : unhook a Curve from its underlining OCC entity.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
+{
+  OCCCurve* fcurve = dynamic_cast<OCCCurve*>(curve);
+  if (!fcurve )
+    return CUBIT_FAILURE;
+
+  TopoDS_Edge * edge = fcurve->get_TopoDS_Edge();
+  if (!edge)
+    return CUBIT_FAILURE;
+
   //remove the entry from the map
   int k;
   if(OCCMap->IsBound(*edge))
@@ -1455,21 +1600,19 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
       k = OCCMap->Find(*edge);
 
       if(!OCCMap->UnBind(*edge))
-	PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
-
+        PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
       CurveList->remove((OCCCurve*)(OccToCGM->find(k))->second);
       if(!OccToCGM->erase(k))
-	PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
-    }
+        PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");    }
 
-  // Remove the links between OCC and Cubit
-  //unhook_ENTITY_from_VGI(edge);
-
-  delete edge;
-  delete curve;
-  return CUBIT_SUCCESS;
+  DLIList<TopologyBridge*> children;
+  fcurve->get_children_virt(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     Point* point = CAST_TO(children.get_and_step(), Point);
+     unhook_Point_from_OCC(point);
+  }
 }
-
 //-------------------------------------------------------------------------
 // Purpose       : Delete a OCCPoint and child entities.
 //
@@ -1480,7 +1623,34 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve ) const
 // Creation Date : 09/29/03
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( Point* point ) const
+OCCQueryEngine::delete_solid_model_entities( Point* point) const
+{
+  OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
+  if (!fpoint)
+    return CUBIT_FAILURE;
+
+  TopoDS_Vertex *vertex = fpoint->get_TopoDS_Vertex();
+  if (!vertex)
+    return CUBIT_FAILURE;
+
+  unhook_Point_from_OCC(point);
+
+  delete vertex;
+  delete point;
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : unhook a Point from its underlining OCC entity.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::unhook_Point_from_OCC( Point* point ) const
 {
   OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
   if (!fpoint)
@@ -1497,18 +1667,11 @@ OCCQueryEngine::delete_solid_model_entities( Point* point ) const
       k = OCCMap->Find(*vertex);
 
       if(!OCCMap->UnBind(*vertex))
-	PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
+        PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
 
       if(!OccToCGM->erase(k))
-	PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
+        PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
     }
-
-  // Remove the links between OCC and Cubit
-  //unhook_ENTITY_from_VGI(vertex);
-
-  delete vertex;
-  delete point;
-  return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
