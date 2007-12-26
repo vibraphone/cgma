@@ -137,6 +137,8 @@ OCCQueryEngine::OCCQueryEngine()
   OccToCGM = new std::map<int, TopologyBridge*>;
 
   BodyList = new DLIList<OCCBody*>;
+  ShellList = new DLIList<OCCShell*>;
+  WireList = new DLIList<OCCLoop*>;
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
 }
@@ -149,6 +151,13 @@ OCCQueryEngine::OCCQueryEngine()
 OCCQueryEngine::~OCCQueryEngine()
 {
   instance_ = NULL;
+  delete OCCMap;
+  delete[] OccToCGM;
+  delete[] BodyList;
+  delete[] ShellList;
+  delete[] WireList;
+  delete[] SurfaceList;
+  delete[] CurveList;
 }
 
 int OCCQueryEngine::get_major_version()
@@ -936,10 +945,24 @@ OCCQueryEngine::write_topology( const char* file_name,
 	}
     }
 
+  //Add standalone shells to export BRep file
+  for (i = 0; i < ShellList->size(); i++)
+    {
+      TopoDS_Shell *shell = ShellList->get_and_step()->get_TopoDS_Shell();
+      B.Add(Co, *shell);
+    }
+
   for (i = 0; i < OCC_surfaces.size(); i++)
     {
       TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
       B.Add(Co, *face);
+    }
+
+  //Add standalone wires to the export BRep file
+  for (i = 0; i < WireList->size(); i++)
+    {
+      TopoDS_Wire *wire = WireList->get_and_step()->get_TopoDS_Wire();
+      B.Add(Co, *wire);
     }
 
   for (i = 0; i < OCC_curves.size(); i++)
@@ -1016,13 +1039,13 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
   }
 
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::Shell(Ex.Current())));
+    populate_topology_bridge(TopoDS::Shell(Ex.Current()), CUBIT_TRUE);
 
   for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
     tblist.append(populate_topology_bridge(TopoDS::Face(Ex.Current())));
 
   for (Ex.Init(aShape, TopAbs_WIRE, TopAbs_FACE); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::Wire(Ex.Current())));
+    populate_topology_bridge(TopoDS::Wire(Ex.Current()), CUBIT_TRUE);
 
   for (Ex.Init(aShape, TopAbs_EDGE, TopAbs_WIRE); Ex.More(); Ex.Next())
     tblist.append(populate_topology_bridge(TopoDS::Edge(Ex.Current())));
@@ -1102,7 +1125,8 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   return lump;
 }
 
-OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
+OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
+						   CubitBoolean standalone)
 {
   TopoDS_Shell *poshell = new TopoDS_Shell;
   *poshell = aShape;
@@ -1116,6 +1140,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape)
       OCCMap->Bind(*poshell, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)shell));
+      if(standalone)
+	ShellList->append(shell);
     }
   else
     {
@@ -1158,7 +1184,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
   return surface;
 }
 
-OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
+OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
+						  CubitBoolean standalone)
 {
   TopoDS_Wire *powire = new TopoDS_Wire;
   *powire = aShape;
@@ -1172,6 +1199,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape)
       OCCMap->Bind(*powire, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)loop));
+      if(standalone)
+	WireList->append(loop);
     }
   else
     {
@@ -1424,6 +1453,7 @@ OCCQueryEngine::unhook_ShellSM_from_OCC( ShellSM* shell ) const
      Surface* surface = CAST_TO(children.get_and_step(), Surface);
      unhook_Surface_from_OCC(surface);
   }
+  ShellList->remove(CAST_TO(shell, OCCShell));
   delete shell;
   return CUBIT_SUCCESS;
 }
@@ -1542,6 +1572,7 @@ OCCQueryEngine::unhook_LoopSM_from_OCC( LoopSM* loopsm ) const
      Curve* curve = children.get_and_step()->curve();
      unhook_Curve_from_OCC(curve);
   }
+  WireList->remove(CAST_TO(loopsm, OCCLoop));
   delete loopsm;
   return CUBIT_SUCCESS;
 }

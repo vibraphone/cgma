@@ -337,7 +337,9 @@ public:
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
   DLIList<OCCBody*> *BodyList ;
+  DLIList<OCCShell*> *ShellList; //standalone shell list
   DLIList<OCCSurface*> *SurfaceList ;
+  DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
@@ -348,8 +350,10 @@ protected:
   
 private:
 
-  OCCLoop* populate_topology_bridge(TopoDS_Wire aShape);  
-  OCCShell* populate_topology_bridge(TopoDS_Shell aShape);
+  OCCLoop* populate_topology_bridge(TopoDS_Wire aShape,
+				    CubitBoolean standalone = CUBIT_FALSE);  
+  OCCShell* populate_topology_bridge(TopoDS_Shell aShape,
+				     CubitBoolean standalone = CUBIT_FALSE );
 
   CubitStatus write_topology( const char* file_name, 
                               DLIList<OCCBody*> &facet_bodies,
