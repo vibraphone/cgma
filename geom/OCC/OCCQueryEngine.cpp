@@ -152,8 +152,8 @@ OCCQueryEngine::~OCCQueryEngine()
 {
   instance_ = NULL;
   delete OCCMap;
-  delete[] OccToCGM;
-  delete[] BodyList;
+  delete OccToCGM;
+  while( BodyList->size() ) delete BodyList->pop();
   delete[] ShellList;
   delete[] WireList;
   delete[] SurfaceList;
@@ -669,7 +669,7 @@ OCCQueryEngine::entity_entity_distance( GeometryEntity *entity1,
 
   distance = distShapeShape.Value();
   gp_Pnt pnt1 = distShapeShape.PointOnShape1(1);
-  gp_Pnt pnt2 = distShapeShape.PointOnShape2(2);
+  gp_Pnt pnt2 = distShapeShape.PointOnShape2(1);
   pos1 = CubitVector(pnt1.X(), pnt1.Y(), pnt1.Z());
   pos2 = CubitVector(pnt2.X(), pnt2.Y(), pnt2.Z());
   return CUBIT_SUCCESS;
