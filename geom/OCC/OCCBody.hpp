@@ -61,7 +61,7 @@ public:
     //- associated with the object.
   
   TopoDS_CompSolid *get_TopoDS_Shape() {return myTopoDSShape; }
-  void set_TopoDS_Shape( TopoDS_CompSolid shape){*myTopoDSShape = shape;}
+  void set_TopoDS_Shape( TopoDS_CompSolid theshape){*myTopoDSShape = theshape;}
 
   virtual CubitStatus get_transforms( CubitTransformMatrix &tfm );
   //R CubitStatus
@@ -175,6 +175,7 @@ private:
   TopoDS_CompSolid *myTopoDSShape;
 
   CubitBox boundingbox;
+  CubitStatus update_OCC_entity( TopoDS_Shape shape); //update the lumps
 };
 
 

@@ -66,6 +66,7 @@ OCCBody::OCCBody(TopoDS_CompSolid *theShape)
 
 void OCCBody::lumps(DLIList<Lump*>& my_lumps)
 {
+  myLumps.clean_out();
   myLumps += my_lumps;
 }
 
@@ -204,13 +205,14 @@ CubitStatus OCCBody::scale(double scale_factor_x,
 
 //----------------------------------------------------------------
 // Function: reflect
-// Description: reflect the body about a exis
+// Description: reflect the body about an plane given the normal
+//              vector.
 //
 // Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCBody::reflect( double reflect_axis_x,
-                                double reflect_axis_y,
-                                double reflect_axis_z )
+                              double reflect_axis_y,
+                              double reflect_axis_z )
 {
   gp_Pnt aOrigin(0,0,0);
   gp_Dir aDir(reflect_axis_x, reflect_axis_y,reflect_axis_z); 
@@ -220,10 +222,36 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
   aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*myTopoDSShape);
+  
+  update_OCC_entity(shape);
   update_bounding_box();
   return CUBIT_SUCCESS;
 }
 
+//----------------------------------------------------------------
+// Function: private function to update the core compsolid and      
+//           for any movement of the body.
+// Note:     input shape must have the same number of CompSolids
+//           as the body's lumps number.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCBody::update_OCC_entity( TopoDS_Shape shape) 
+{
+  TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
+  set_TopoDS_Shape(compsolid);
+
+  //set the lumps
+  DLIList<Lump *> lumps;
+  lumps = this->lumps();
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
+  for (int i = 0; i < lumps.size(); i++)
+  {
+     OCCLump *lump = CAST_TO(lumps.get_and_step(), OCCLump);
+     lump->set_TopoDS_Solid(TopoDS::Solid(M(i)));
+  }
+}
 //----------------------------------------------------------------
 // Function: update_bounding_box
 // Description: calculate for bounding box of this OCCBody
