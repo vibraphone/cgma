@@ -31,7 +31,7 @@
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
-
+#include "BRepBuilderAPI_Transform.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -40,8 +40,8 @@
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
 //-------------------------------------------------------------------------
-// Purpose       : The constructor with a pointer to the location   
-//                 
+// Purpose       : The constructor with a pointer to the location
+//
 // Special Notes :
 //
 // Creator       : Jane Hu
@@ -55,7 +55,7 @@ OCCPoint::OCCPoint( const CubitVector &location )
   myTopoDSVertex = new TopoDS_Vertex(theVertex);
 }
 
-//-------------------------------------------------------------------------
+ //-------------------------------------------------------------------------
 // Purpose       : The constructor with a gp_Pnt point
 //
 // Special Notes :
@@ -252,6 +252,28 @@ void OCCPoint::get_parents_virt( DLIList<TopologyBridge*>& parents )
 }
 void OCCPoint::get_children_virt( DLIList<TopologyBridge*>& ) 
   {  }
+
+//----------------------------------------------------------------
+// Function: to update the core vertex
+//           for any movement of the body/surface/curve/vertex.
+// Author: Jane Hu
+//----------------------------------------------------------------
+void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  if (this->myMarked == CUBIT_TRUE)
+    return;
+
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Vertex());
+  TopoDS_Vertex vertex = TopoDS::Vertex(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSVertex);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSVertex);
+  OCCQueryEngine::instance()->OCCMap->Bind(vertex, k);
+
+  set_myMarked(CUBIT_TRUE);
+  set_TopoDS_Vertex(vertex);
+}
 
 // ********** END PUBLIC FUNCTIONS         **********
 

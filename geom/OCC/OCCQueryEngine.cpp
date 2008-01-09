@@ -91,6 +91,8 @@
 #include <BndLib_AddSurface.hxx>
 #include <Precision.hxx>
 #include <BRepAdaptor_Surface.hxx>
+#include "Standard_Boolean.hxx"
+
 //#include "TopOpeBRep_ShapeIntersector.hxx"
 //#include "BRepAdaptor_Curve.hxx"
 //#include "TopOpeBRepTool_ShapeTool.hxx"

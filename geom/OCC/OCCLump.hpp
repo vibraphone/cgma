@@ -36,6 +36,7 @@ class OCCLoop;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
+class BRepBuilderAPI_Transform;
 
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -146,6 +147,8 @@ public:
   CubitStatus mass_properties( CubitVector& centroid, double& volume );
 
   CubitPointContainment point_containment( const CubitVector &point );
+
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
 
 protected: 
   

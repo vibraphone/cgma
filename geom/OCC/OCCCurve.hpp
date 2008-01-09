@@ -37,6 +37,7 @@ class OCCSurface;
 class OCCLoop;
 class OCCCoEdge;
 class OCCPoint;
+class BRepBuilderAPI_Transform; 
 
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -320,6 +321,8 @@ public :
     { return myTopoDSEdge; } 
   void set_TopoDS_Edge(TopoDS_Edge edge){*myTopoDSEdge = edge;}
 
+  void update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+
 protected: 
   
 private:
@@ -332,6 +335,7 @@ private:
   TopoDS_Edge *myTopoDSEdge;
   DLIList<OCCLoop*> myLoopList;
   bool periodic;
+  CubitBoolean myMarked ;
 };
 
 // ********** BEGIN INLINE FUNCTIONS       **********

@@ -65,6 +65,7 @@
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepClass_FaceClassifier.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
 // ********** END OpenCascade INCLUDES      **********
 
 
@@ -712,6 +713,32 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
     if (curve)
       result_list.append_unique(curve);
   }
+}
+
+//----------------------------------------------------------------
+// Function: to update the core Surface
+//           for any movement of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Face());
+  TopoDS_Face surface = TopoDS::Face(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSFace);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSFace);
+  OCCQueryEngine::instance()->OCCMap->Bind(surface, k);
+
+  //set the loops
+  DLIList<OCCLoop *> loops;
+  this->get_loops(loops);
+  for (int i = 1; i <= loops.size(); i++)
+  {
+     OCCLoop *loop = loops.get_and_step();
+     loop->update_OCC_entity(aBRepTrsf);
+  }
+  set_TopoDS_Face(surface);
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

@@ -37,6 +37,7 @@
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListOfShape.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -142,6 +143,32 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 	  TopologyBridge *surface = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
 	  children.append_unique(surface);
   }
+}
+
+//----------------------------------------------------------------
+// Function: to update the core Shell
+//           for any movement of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Shell());
+  TopoDS_Shell shell = TopoDS::Shell(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSShell);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSShell);
+  OCCQueryEngine::instance()->OCCMap->Bind(shell, k);
+
+  //set the lumps
+  DLIList<TopologyBridge *> surfaces;
+  this->get_children_virt(surfaces);
+  for (int i = 1; i <= surfaces.size(); i++)
+  {
+     OCCSurface *surface = CAST_TO(surfaces.get_and_step(), OCCSurface);
+     surface->update_OCC_entity(aBRepTrsf);
+  }
+  set_TopoDS_Shell(shell);
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

@@ -33,6 +33,8 @@
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
+
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -211,4 +213,27 @@ GeometryQueryEngine* OCCLoop::get_geometry_query_engine() const
 }                
 
 
+//----------------------------------------------------------------
+// Function: to update the core Loop
+//           for any movement of the body/surface.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Wire());
+  TopoDS_Wire loop = TopoDS::Wire(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSWire);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSWire);
+  OCCQueryEngine::instance()->OCCMap->Bind(loop, k);
+
+  //set the curves
+  for (int i = 1; i <= myCoEdgeList.size(); i++)
+  {
+     OCCCurve *curve = CAST_TO(myCoEdgeList.get_and_step()->curve(), OCCCurve);
+     curve->update_OCC_entity(aBRepTrsf);
+  }
+  set_TopoDS_Wire(loop);
+}
 

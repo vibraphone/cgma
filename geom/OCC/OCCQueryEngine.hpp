@@ -343,6 +343,7 @@ public:
   DLIList<OCCCurve*> *CurveList ;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
+  static int iTotalTBCreated ;
 
 protected:
   
@@ -361,7 +362,6 @@ private:
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 
-  static int iTotalTBCreated ;
   static CubitBoolean PRINT_RESULT;
 
   static OCCQueryEngine* instance_;

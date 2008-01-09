@@ -42,6 +42,7 @@
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include "gp_Ax1.hxx"
 #include "gp_Ax2.hxx"
 #include "Bnd_Box.hxx"
@@ -51,6 +52,7 @@
 #include "TopoDS.hxx"
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
+#include "Standard_Boolean.hxx"
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
@@ -145,7 +147,11 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
   aTrsf.SetTranslation(aVec);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+
+  // calculate for bounding box
+  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
+
   return CUBIT_SUCCESS;
 }
 
@@ -168,7 +174,11 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
   aTrsf.SetRotation(anAxis, angle);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+
+  // calculate for bounding box
+  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
+
   return CUBIT_SUCCESS;
 }
 
@@ -185,7 +195,11 @@ CubitStatus OCCBody::scale(double scale_factor )
   aTrsf.SetScaleFactor(scale_factor);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+
+  // calculate for bounding box
+  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
+
   return CUBIT_SUCCESS;  
 }
 
@@ -222,10 +236,11 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
   aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*myTopoDSShape);
-  
-  update_OCC_entity(shape);
+
+  // calculate for bounding box
+  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
+
   return CUBIT_SUCCESS;
 }
 
@@ -236,21 +251,29 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //           as the body's lumps number.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCBody::update_OCC_entity( TopoDS_Shape shape) 
+CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf) 
 {
+  TopoDS_Shape shape = aBRepTrsf.Shape();
   TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
-  set_TopoDS_Shape(compsolid);
+
+  if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )
+  {
+     int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSShape);
+     assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+     OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSShape);
+     OCCQueryEngine::instance()->OCCMap->Bind(shape, k);
+  }
 
   //set the lumps
   DLIList<Lump *> lumps;
   lumps = this->lumps();
-  TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
-  for (int i = 0; i < lumps.size(); i++)
+  for (int i = 1; i <= lumps.size(); i++)
   {
      OCCLump *lump = CAST_TO(lumps.get_and_step(), OCCLump);
-     lump->set_TopoDS_Solid(TopoDS::Solid(M(i)));
+     lump->update_OCC_entity(aBRepTrsf);
   }
+  set_TopoDS_Shape(compsolid);
+  //unset_marks();
 }
 //----------------------------------------------------------------
 // Function: update_bounding_box

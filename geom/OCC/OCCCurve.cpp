@@ -57,6 +57,8 @@
 #include "GC_MakeLine.hxx"
 #include "gp_Circ.hxx"
 #include "gp_Elips.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
 //#include "TopOpeBRep_ShapeIntersector.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
 //#include "TopOpeBRep_EdgesIntersector.hxx"
@@ -84,6 +86,7 @@
 OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 {
   myTopoDSEdge = theEdge;
+  myMarked = CUBIT_FALSE;
 }
 
 //-------------------------------------------------------------------------
@@ -724,7 +727,8 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
 	TopologyBridge *point1, *point2;
 	if (M.Extent()==1) {
 		point1 = OCCQueryEngine::instance()->occ_to_cgm(M(1));
-		children.append_unique(point1);
+                if (point1)
+		  children.append_unique(point1);
 	} else if (M.Extent()==2) {
 		if (  fabs(BRep_Tool::Parameter(TopoDS::Vertex(M(1)), *myTopoDSEdge)-start_param()) > 
 				fabs(BRep_Tool::Parameter(TopoDS::Vertex(M(2)), *myTopoDSEdge)-start_param())  ) {
@@ -734,11 +738,13 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
 			point1 = OCCQueryEngine::instance()->occ_to_cgm(M(1));
 			point2 = OCCQueryEngine::instance()->occ_to_cgm(M(2));
 		}
-		if (point1 == point2) {
+		if (point1 && point1 == point2) {
 			children.append_unique(point1);
 		} else {
-			children.append_unique(point1);
-			children.append_unique(point2);
+                        if (point1)
+			  children.append_unique(point1);
+                        if (point2)
+			  children.append_unique(point2);
 		}
 	}
 }
@@ -865,6 +871,38 @@ CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
      return CUBIT_PNT_ON;
    
    return CUBIT_PNT_OFF;
+}
+
+//----------------------------------------------------------------
+// Function: to update the core Curve
+//           for any movement of the body/surface/curve.
+// Author: Jane Hu
+//----------------------------------------------------------------
+void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  if (myMarked == 1) 
+     return;
+
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Edge());
+  TopoDS_Edge curve = TopoDS::Edge(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSEdge);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSEdge);
+  OCCQueryEngine::instance()->OCCMap->Bind(curve, k);
+
+  //set the vertices
+  DLIList<TopologyBridge*> vertices;
+  get_children_virt(vertices);
+  for (int i = 1; i <= vertices.size(); i++)
+  {
+     TopologyBridge* tb = vertices.get_and_step();
+     OCCPoint *point = CAST_TO(tb, OCCPoint);
+     if (point)
+       point->update_OCC_entity(aBRepTrsf);
+  }
+  myMarked = 1;
+  set_TopoDS_Edge(curve);
 }
 
 // ********** END PRIVATE FUNCTIONS        **********

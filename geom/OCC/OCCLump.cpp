@@ -37,6 +37,8 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "BRepBuilderAPI_Transform.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
@@ -252,4 +254,29 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
   
 }
 
+//----------------------------------------------------------------
+// Function: to update the core Solid
+//           for any movement of the lump.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+{
+  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Solid());
+  TopoDS_Solid solid = TopoDS::Solid(shape);
+
+  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSSolid);
+  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
+  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSSolid);
+  OCCQueryEngine::instance()->OCCMap->Bind(solid, k);
+
+  //set the lumps
+  DLIList<TopologyBridge *> shells;
+  this->get_children_virt(shells);
+  for (int i = 1; i <= shells.size(); i++)
+  {
+     OCCShell *shell = CAST_TO(shells.get_and_step(), OCCShell);
+     shell->update_OCC_entity(aBRepTrsf);
+  }
+  set_TopoDS_Solid(solid);
+}
 

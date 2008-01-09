@@ -38,6 +38,7 @@ class OCCSurface;
 class OCCLoop;
 class OCCCurve;
 class OCCPoint;
+class BRepBuilderAPI_Transform;
 
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -175,7 +176,8 @@ private:
   TopoDS_CompSolid *myTopoDSShape;
 
   CubitBox boundingbox;
-  CubitStatus update_OCC_entity( TopoDS_Shape shape); //update the lumps
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf); 
+  //update the underlining CompSolid
 };
 
 

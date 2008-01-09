@@ -52,11 +52,17 @@ public:
   inline CubitSense sense(){return edgeSense;}
     //- returns the sense of the underlying coedge wrt the underlying edge
 
+  inline void set_sense(CubitSense sense) {edgeSense = sense;}
+
   inline Curve *curve()
     {return myCurve;}
     //- get the curve associated with this coedge
     
+  inline void set_curve(Curve* curve) {myCurve = curve;}
+
   inline LoopSM* loop() const { return myLoop; }
+
+  inline void set_loop(LoopSM * loop) {myLoop = loop;}
 
   virtual GeometryQueryEngine*
   get_geometry_query_engine() const;

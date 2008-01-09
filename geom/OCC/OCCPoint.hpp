@@ -29,6 +29,7 @@
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class CubitSimpleAttrib;
+class BRepBuilderAPI_Transform;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCPoint : public Point
@@ -36,7 +37,7 @@ class OCCPoint : public Point
 private:
 
   TopoDS_Vertex *myTopoDSVertex;
- 
+  CubitBoolean myMarked ; 
   OCCAttribSet attribSet;
 
 public :
@@ -47,11 +48,11 @@ public :
     //I- DLIList<Curve*> curves
     //I- curves attaced to point
 
-  OCCPoint(TopoDS_Vertex* thePoint ):myTopoDSVertex(thePoint){};
-    //I- gp_Pnt *thePoint
-    //I- pointer to the TopoDS_Vertex associated with OCCPoint
-    //I- DLIList<Curve*> curves
-    //I- curves attaced to point
+  OCCPoint(TopoDS_Vertex* thePoint ):myTopoDSVertex(thePoint), myMarked(CUBIT_FALSE){};
+     //I- gp_Pnt *thePoint
+     //I- pointer to the TopoDS_Vertex associated with OCCPoint
+     //I- DLIList<Curve*> curves
+     //I- curves attaced to point
 
   OCCPoint(gp_Pnt& thePoint );
     //I- gp_Pnt *thePoint
@@ -62,6 +63,7 @@ public :
   virtual ~OCCPoint();
     //- The destructor
 
+  void set_myMarked(CubitBoolean marked) {myMarked = marked;}
   TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
   void set_TopoDS_Vertex(TopoDS_Vertex vertex){*myTopoDSVertex = vertex;}
 
@@ -133,6 +135,7 @@ public :
 
   CubitStatus restore_attribs( FILE *file_ptr, unsigned int endian );
 
+  void update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
 };
 
 
