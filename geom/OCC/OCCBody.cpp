@@ -273,7 +273,19 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
      lump->update_OCC_entity(aBRepTrsf);
   }
   set_TopoDS_Shape(compsolid);
-  //unset_marks();
+  
+  //unset marks.
+  DLIList<OCCCurve*> curves;
+  DLIList<OCCPoint*> points;
+  get_all_curves(curves);
+  get_all_points(points);
+
+  for(int i = 0; i < curves.size(); i++)
+    curves.get_and_step()->set_myMarked(CUBIT_FALSE);
+
+  for(int i = 0; i < points.size(); i++)
+    points.get_and_step()->set_myMarked(CUBIT_FALSE);
+
 }
 //----------------------------------------------------------------
 // Function: update_bounding_box
@@ -371,4 +383,72 @@ CubitPointContainment OCCBody::point_containment( const CubitVector &point )
   return CUBIT_PNT_OUTSIDE;
 }
 
+//-------------------------------------------------------------------------
+// Purpose       : return all surfaces in this body. 
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 01/10/08
+//-------------------------------------------------------------------------
+
+void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
+{
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(*myTopoDSShape, TopAbs_FACE, M);
+  int ii;
+  for (ii=1; ii<=M.Extent(); ii++) {
+          TopologyBridge *surface = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+          OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+	  if (occ_surface)
+            surfaces.append_unique(occ_surface);
+  }
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : return all curves in this body.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 01/10/08
+//-------------------------------------------------------------------------
+
+void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
+{
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(*myTopoDSShape, TopAbs_EDGE, M);
+  int ii;
+  for (ii=1; ii<=M.Extent(); ii++) {
+          TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+          OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+          if (occ_curve)
+            curves.append_unique(occ_curve);
+  }
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : return all points in this body.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 01/10/08
+//-------------------------------------------------------------------------
+
+void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
+{
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(*myTopoDSShape, TopAbs_VERTEX, M);
+  int ii;
+  for (ii=1; ii<=M.Extent(); ii++) {
+          TopologyBridge *vertex = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+          OCCPoint* occ_point = CAST_TO(vertex, OCCPoint);
+          if (occ_point)
+            points.append_unique(occ_point);
+  }
+}
 

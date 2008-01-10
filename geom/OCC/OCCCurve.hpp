@@ -50,6 +50,8 @@ public :
   virtual ~OCCCurve() ;
     //- The destructor
 
+  void set_myMarked( CubitBoolean marked) {myMarked = marked;}
+
   void add_loop(OCCLoop* loop) { myLoopList.append_unique(loop);}   
   DLIList<OCCLoop*> loops() {return myLoopList;}
   void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}

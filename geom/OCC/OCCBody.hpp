@@ -161,6 +161,10 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
   
+  void get_all_surfaces(DLIList<OCCSurface*> &surfaces);
+  void get_all_curves(DLIList<OCCCurve*> &curves);
+  void get_all_points(DLIList<OCCPoint*> &points);
+
   virtual CubitStatus mass_properties( CubitVector& result, double& volume );
   
   virtual CubitPointContainment point_containment( const CubitVector& pos );
