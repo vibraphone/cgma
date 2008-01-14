@@ -257,7 +257,7 @@ if test "x$occ_DIR" != "xno"; then
     OCC_LIB_FLAG=
   else
     uname=`uname`
-    OCC_INC_FLAG="-I${occ_DIR}/ros/inc"
+    OCC_INC_FLAG="-I${occ_DIR}/ros/inc -I/usr/include"
 # -I/usr/include/c++/4.2 -I/usr/include/c++/4.2/tr1"
     OCC_LIB_FLAG="-L${occ_DIR}/ros/${uname}/lib"
   fi
@@ -273,7 +273,7 @@ if test "x$occ_DIR" != "xno"; then
   # Check if 64-bit
   AC_MSG_CHECKING([if platform is 64-bit (-D_OCC64)])
   AC_TRY_COMPILE([],[int array[6-(int)sizeof(void*)];],[AC_MSG_RESULT(no)],
-                 [AC_MSG_RESULT(yes); OCC_INC_FLAG="$OCC_INC_FLAG -D_OCC64"])
+                 [AC_MSG_RESULT(yes); OCC_INC_FLAG="$OCC_INC_FLAG -D_OCC64 -DHAVE_IOSTREAM_H -DHAVE_LIMITS_H"])
 
   # Check if OCC has Stadard_Version.hxx
   AC_CHECK_HEADER( [Standard_Version.hxx], [],

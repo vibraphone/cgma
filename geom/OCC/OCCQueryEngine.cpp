@@ -1951,85 +1951,43 @@ CubitStatus OCCQueryEngine::translate( GeometryEntity* entity,
   gp_Trsf aTrsf;  
   aTrsf.SetTranslation(aVec);
 
-  BRepBuilderAPI_Transform aBRepTrsf( aTrsf);
-  aBRepTrsf.Perform(*shape);
-  TopoDS_Shape translated_shape = aBRepTrsf.Shape();
+  BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
   
-  update_entity_shape(entity, &translated_shape);
+  update_entity_shape(entity, aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCQueryEngine::update_entity_shape(GeometryEntity* entity_ptr,
-						TopoDS_Shape *shape)
+						BRepBuilderAPI_Transform& aBRepTrsf)
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
     {
-      TopoDS_CompSolid* theShape = (TopoDS_CompSolid*) shape;
-      if (!theShape)
-        {
-          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
-          return CUBIT_FAILURE;
-        }
-      body_ptr->set_TopoDS_Shape(*theShape);
+      body_ptr->update_OCC_entity(aBRepTrsf);
       return CUBIT_SUCCESS;
-    }
-
-  else if (OCCLump * lump_ptr = CAST_TO( entity_ptr,OCCLump))
-    {
-      TopoDS_Solid * theSolid = (TopoDS_Solid *) shape;
-      if(theSolid)
-        {
-	  lump_ptr->set_TopoDS_Solid(*theSolid);
-          return CUBIT_SUCCESS;
-        }
-      else
-        {
-          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
-          return CUBIT_FAILURE;
-        }
     }
 
   else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
     {
-      TopoDS_Face *theFace = (TopoDS_Face *)shape;
-      if(!theFace)
-        {
-          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
-          return CUBIT_FAILURE;
-        }
-
-      surface_ptr->set_TopoDS_Face(*theFace);
+      surface_ptr->update_OCC_entity(aBRepTrsf);
       return CUBIT_SUCCESS;
     }
 
   else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
     {
-      TopoDS_Edge *theEdge = (TopoDS_Edge *) shape;
-      if (!theEdge)
-        {
-          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
-          return CUBIT_FAILURE;
-        }
-       curve_ptr->set_TopoDS_Edge(*theEdge); 
+       curve_ptr->update_OCC_entity(aBRepTrsf); 
        return CUBIT_SUCCESS;
     }
 
   else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
     {
-      TopoDS_Vertex *thePoint = (TopoDS_Vertex*) shape;
-      if (!thePoint)
-        {           
-          PRINT_ERROR("Entity and TopoDS_Shape don't match.\n" );
-          return CUBIT_FAILURE;
-        }
-
-      point_ptr->set_TopoDS_Vertex(*thePoint);
+      point_ptr->update_OCC_entity(aBRepTrsf);
       return CUBIT_SUCCESS;
     }
 
   PRINT_ERROR("Non-OCC TopologyBridge at %s:%d.\n", __FILE__, __LINE__ );
   return CUBIT_FAILURE;
 }
+
 //a is angular value of rotation in radians
 CubitStatus OCCQueryEngine::rotate( GeometryEntity* entity,
                                     const CubitVector& v, double a )
@@ -2051,6 +2009,7 @@ CubitStatus OCCQueryEngine::rotate( GeometryEntity* entity,
   aTrsf.SetRotation(anAxis, a);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  update_entity_shape(entity, aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
@@ -2068,6 +2027,7 @@ CubitStatus OCCQueryEngine::scale( GeometryEntity* entity, double f )
   aTrsf.SetScaleFactor(f);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  update_entity_shape(entity, aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
@@ -2097,6 +2057,7 @@ CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity,
   aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
+  update_entity_shape(entity, aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 

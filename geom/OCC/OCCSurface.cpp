@@ -227,7 +227,7 @@ CubitBox OCCSurface::bounding_box() const
 CubitStatus OCCSurface::get_point_normal( CubitVector& location,
                                             CubitVector& normal )
 {
-  assert(0);
+  //assert(0);
   return closest_point( location, NULL, &normal );
 }   
 
@@ -252,8 +252,8 @@ CubitStatus OCCSurface::closest_point_uv_guess(
 CubitStatus OCCSurface::closest_point( CubitVector const& location, 
                                          CubitVector* closest_location,
                                          CubitVector* unit_normal_ptr,
-                                         CubitVector* curvature1_ptr,
-                                         CubitVector* curvature2_ptr)
+                                         CubitVector* curvature_1,
+                                         CubitVector* curvature_2)
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   gp_Pnt p(location.x(), location.y(), location.z()), newP(0.0, 0.0, 0.0);
@@ -262,7 +262,7 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
   BRepLProp_SLProps SLP(asurface, 2, Precision::PConfusion());
   Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
-	  for ( i = 1 ; i < ext.NbExt() ; i++ ) {
+	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
 		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
 			  minDist = p.Distance(ext.Point(i).Value());
 			  newP = ext.Point(i).Value();
@@ -270,17 +270,20 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
 			  SLP.SetParameters(u, v);
 		  }
 	  }
-  }
-  *closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
-  if (unit_normal_ptr != NULL) {
-	  gp_Dir normal;
-	  if (SLP.IsNormalDefined()) {
+  
+	if (closest_location != NULL)
+ 	 	*closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
+  	if (unit_normal_ptr != NULL) {
+	  	gp_Dir normal;
+	  	if (SLP.IsNormalDefined()) {
 		  normal = SLP.Normal();
 		  *unit_normal_ptr = CubitVector(normal.X(), normal.Y(), normal.Z()); 
-	  }
-  }
+	  	}
+  	}
   
-  return CUBIT_SUCCESS;
+  	return CUBIT_SUCCESS;
+  }
+  return CUBIT_FAILURE;
 }
 
 //-------------------------------------------------------------------------
@@ -332,7 +335,7 @@ CubitStatus OCCSurface::principal_curvatures(
   BRepLProp_SLProps SLP(asurface, 2, Precision::PConfusion());
   Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
-	  for ( i = 1 ; i < ext.NbExt() ; i++ ) {
+	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
 		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
 			  minDist = p.Distance(ext.Point(i).Value());
 			  newP = ext.Point(i).Value();
@@ -563,6 +566,7 @@ CubitBoolean OCCSurface::get_param_range_V( double& lower_bound,
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   lower_bound = asurface.FirstVParameter();
+
   upper_bound = asurface.LastVParameter();
   return CUBIT_TRUE;
 }
@@ -576,6 +580,19 @@ double OCCSurface::measure()
   GProp_GProps myProps;
   BRepGProp::SurfaceProperties(*myTopoDSFace, myProps);
   return myProps.Mass();
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Returns the center of the Surface mass
+//
+//-------------------------------------------------------------------------
+CubitVector OCCSurface::center_point()
+{
+  GProp_GProps myProps;
+  BRepGProp::SurfaceProperties(*myTopoDSFace, myProps);
+  gp_Pnt pt = myProps.CentreOfMass();
+  CubitVector v(pt.X(),pt.Y(), pt.Z());
+  return v; 
 }
 
 //-------------------------------------------------------------------------

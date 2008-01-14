@@ -364,6 +364,7 @@ public :
     //- Returns volume for Lump, area for Surface, length for Curve and 
     //- 1.0 for Point
 
+  CubitVector center_point();
   virtual CubitSense get_geometry_sense();
     //- Return the relative surface sense. (see below)
   

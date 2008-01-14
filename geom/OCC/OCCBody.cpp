@@ -237,9 +237,8 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 
   BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
 
-  // calculate for bounding box
+  // update underlining OCC entities
   update_OCC_entity(aBRepTrsf);
-  update_bounding_box();
 
   return CUBIT_SUCCESS;
 }
@@ -273,7 +272,9 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
      lump->update_OCC_entity(aBRepTrsf);
   }
   set_TopoDS_Shape(compsolid);
-  
+
+  update_bounding_box(); 
+
   //unset marks.
   DLIList<OCCCurve*> curves;
   DLIList<OCCPoint*> points;

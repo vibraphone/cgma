@@ -1773,7 +1773,6 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
     PRINT_ERROR("Invalid SolidModel topology encountered in "
                 "GeometryQueryTool::make_RefEdge.  Curve %d "
                 "has %d vertices.\n", edge->id(), points.size() );
-    assert( points.size() == 1 || points.size() == 2 );
     if( points.size() == 0 )
       return edge;
   }

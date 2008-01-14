@@ -169,6 +169,8 @@ public:
   
   virtual CubitPointContainment point_containment( const CubitVector& pos );
 
+  //update the underlining CompSolid
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
 protected: 
   
 private:
@@ -180,8 +182,6 @@ private:
   TopoDS_CompSolid *myTopoDSShape;
 
   CubitBox boundingbox;
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf); 
-  //update the underlining CompSolid
 };
 
 

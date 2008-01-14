@@ -8,7 +8,9 @@ INCLUDES = -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/facet \
            -I$(top_srcdir)/geom/Cholla \
 	   -I$(top_srcdir)/geom/OCC \
-           -I$(srcdir)
+	   -I$(srcdir) \
+	   $(OCC_INC_FLAG) \
+	   -I..\$(OCC_INC_FLAG)
 
 TESTS = makept
 if build_ACIS
