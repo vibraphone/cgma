@@ -281,6 +281,13 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
 	  	}
   	}
   
+        gp_Dir MaxD, MinD;
+        if (SLP.IsCurvatureDefined())
+	   SLP.CurvatureDirections(MaxD, MinD);
+        if (curvature_1 != NULL)
+           *curvature_1 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
+        if (curvature_2 != NULL)
+           *curvature_2 = CubitVector(MinD.X(), MinD.Y(), MinD.Z());
   	return CUBIT_SUCCESS;
   }
   return CUBIT_FAILURE;
@@ -344,9 +351,14 @@ CubitStatus OCCSurface::principal_curvatures(
 		  }
 	  }
   }
-  *closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
-  curvature_1 = SLP.MinCurvature();
-  curvature_2 = SLP.MaxCurvature();
+  if (closest_location != NULL)
+    *closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
+
+  if (SLP.IsCurvatureDefined())
+  {
+    curvature_1 = SLP.MinCurvature();
+    curvature_2 = SLP.MaxCurvature();
+  }
   return CUBIT_SUCCESS;
 }
 

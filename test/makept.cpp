@@ -32,6 +32,7 @@
 #include "BodySM.hpp"
 #include "OCCBody.hpp"
 #include "OCCSurface.hpp"
+#include "OCCCurve.hpp"
 
 // forward declare some functions used and defined later
 CubitStatus read_geometry(int, char **);
@@ -141,12 +142,12 @@ CubitStatus make_Point()
   const CubitString cubit_version="10.2";
   const char * filename = "point.occ";
   const char * filetype = "OCC";
-  /*
+  
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
 
-  */
-  //delete all entities
+ 
+  //check for vertex
   DLIList<Body*> bodies;
   gti->bodies(bodies);
   gti->get_free_ref_entities(free_entities);
@@ -155,70 +156,168 @@ CubitStatus make_Point()
   RefVertex* vertex2 = CAST_TO(free_entities.get(),RefVertex);
   CubitBoolean is_equal = gti->
 		about_spatially_equal(vertex1,vertex2);
- 
+  //vertex1,vertex2 are not spatially equal. 
+  
   CubitVector vi, vii;
   double d;
   gti->entity_entity_distance(vertex1,vertex2,vi, vii,d);
+  // distance (d) between vertex1,vertex2
  
+  //check for body
   d = bodies.get()->measure(); 
+  // first body's volume.
+
   vi = bodies.get()->center_point();
+  //first body's bounding box's center point.
   
   CubitBox box = bodies.get()->bounding_box();
+  //first body's bounding box.
 
   gti->entity_entity_distance(gti->get_first_ref_volume(), vertex2,vi, vii,d);
+  //first body and vertex2 's distance(d).
 
   BodySM* body = bodies.get()->get_body_sm_ptr();
   CubitVector axis(10,0,0);
   gti->reflect(bodies, axis);
   vi = bodies.get()->center_point();
+  // After reflection, only x value should change.
+
   gti->scale(bodies.get(),2);
   vi = bodies.get()->center_point();
+  // After scale, center point moved by 2 times 
+
   gti->translate(bodies.get(),axis);
   vi = bodies.get()->center_point();
-  gti->rotate(bodies.get(), axis, 30);
+  // After parellel move, center point moved by x (10)
+
+  gti->rotate(bodies.get(), axis, 3.14/6);
   vi = bodies.get()->center_point();
+  // After rotation, center point changed in y and z value.
+
   OCCBody* occ_body = CAST_TO(body, OCCBody);
   occ_body->mass_properties(vi, d);
-  vi = occ_body->get_bounding_box().center(); 
+  //true center and volume, volume should be 8 times of the original one.
 
-  //check for surfaces
+  vi = occ_body->get_bounding_box().center(); 
+  // bounding box center.
+
+  //check for surface
   DLIList<OCCSurface*> surfaces;
 
   CAST_TO(body, OCCBody)->get_all_surfaces(surfaces);
-  OCCSurface* surface = surfaces.get();
+  OCCSurface* surface = surfaces.step_and_get();
   GeometryType type = surface->geometry_type();
+  // CONE_SURFACE_TYPE
+
   box = surface->bounding_box();
+  // bounding box
+
   vi = surface->center_point();
+  // center point
+
   CubitVector normal;
   surface->get_point_normal(vi, normal);
-  CubitVector* closest_location = new CubitVector;
-  CubitVector* unit_normal_ptr = new CubitVector;
-  CubitVector* curvature1_ptr = new CubitVector;
-  CubitVector* curvature2_ptr = new CubitVector;
-  surface->closest_point(vi, closest_location, unit_normal_ptr, curvature1_ptr,
-                         curvature2_ptr);
+  // surface normal at center point.
+
+  CubitVector closest_location ;
+  CubitVector unit_normal_ptr ;
+  CubitVector curvature1_ptr ;
+  CubitVector curvature2_ptr ; 
+
+  surface->closest_point(vi, &closest_location, &unit_normal_ptr, 
+                         &curvature1_ptr, &curvature2_ptr);
+  // another way to get normal at center point, and found surface
+  // projection location for vi, here curvature1_ptr, &curvature2_ptr
+  // returns nothing.
+
+  double curvature1, curvature2;
+  surface->principal_curvatures(closest_location, curvature1, curvature2);
+  // get principal curvatures at center point.
 
   double u = 0.5;      
-  double v = 0.5;
+  double v = -20000;
   vi = surface->position_from_u_v(u,v);
+  // get location on surface for it's u,v
+
   CubitBoolean periodic = surface->is_periodic();
+  // found if surface is periodic.
+
   double p = 0; //period
   periodic = surface->is_periodic_in_U(p); 
+  // found if surface is periodic in U and its period.
+
   periodic = surface->is_periodic_in_V(p);
-  CubitBoolean sigular = surface->is_singular_in_U(1);
+  // found if surface is periodic in V and its period.
+
   double lower, upper;
   surface->get_param_range_U(lower, upper);
-  sigular = surface->is_singular_in_U(upper); 
-  sigular = surface->is_singular_in_U(lower);
-   
+  // get surface U direction boundaries. here it's (2.48, 3.91)
+
   surface->get_param_range_V(lower, upper);
-  sigular = surface->is_singular_in_V(upper);
-  sigular = surface->is_singular_in_V(lower);
+  // get surface V direction boundaries. here it's (-20010,-19998)
 
   CubitBoolean closed = surface->is_closed_in_U();
-  closed = surface->is_closed_in_V();
+  // check if surface is closed in U direction.
 
-  CubitPointContainment pc = surface->point_containment(1,1);
+  closed = surface->is_closed_in_V();
+  // check if surface is closed in V direction.
+
+  CubitPointContainment pc = surface->point_containment(1,-20000);
+  // this (u,v) location should be outside of the surface.
+
+  CubitPointContainment pc2 = surface->point_containment(3,-20000);
+  // this (u,v) location should be inside of the surface.
+
+  //test for curve
+  DLIList<OCCCurve*> curves;
+  CAST_TO(body, OCCBody)->get_all_curves(curves);
+
+  OCCCurve *curve = curves.step_and_get();
+  type = curve->geometry_type();
+  // ARC_CURVE_TYPE
+
+  box = curve-> bounding_box();
+  // bounding box
+
+  d = curve->measure();
+  // length of the curve.  
+
+  curve->get_param_range(lower,upper);
+  // paremeter range.
+
+  d = curve->length_from_u(lower,upper);
+  // double check whole curve length.
+
+  d = curve->length_from_u(lower/2+upper/2, upper);
+  // half curve length.
+
+  periodic = curve->is_periodic(p);
+  // if curve is periodic and its period (p). here it's not.
+
+  curve->position_from_u(lower/2+upper/2, vi);
+  // middle point.
+
+  CubitVector c_point, tangent, center;
+  double radius;
+  curve->closest_point(vi, c_point);
+  // Closed point on middle point.
+
+  curve->get_tangent(vi, tangent);
+  // tangent at middle point.
+
+  curve->get_point_direction(c_point, tangent);
+  // double check tangent
+
+  curve->get_curvature(c_point, curvature1_ptr);
+  // get mid-point curvature.
+ 
+  curve->get_center_radius(center, radius);
+  // center and radius for arc curves
+
+  pc = curve->point_containment(c_point);
+  // middle point should be on the curve.
+
+  //delete all entities
   gti->delete_Body(bodies);
 
   for (int j = free_entities.size(); j--;)
