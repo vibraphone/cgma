@@ -1,5 +1,3 @@
-include @abs_srcdir@/iGeom-SIDL-Defs.inc
-
 vpath = gserver bserver 
 VPATH = gserver bserver 
 
