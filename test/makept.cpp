@@ -227,8 +227,7 @@ CubitStatus make_Point()
   surface->closest_point(vi, &closest_location, &unit_normal_ptr, 
                          &curvature1_ptr, &curvature2_ptr);
   // another way to get normal at center point, and found surface
-  // projection location for vi, here curvature1_ptr, &curvature2_ptr
-  // returns nothing.
+  // projection location for vi.
 
   double curvature1, curvature2;
   surface->principal_curvatures(closest_location, curvature1, curvature2);
