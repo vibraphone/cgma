@@ -245,8 +245,8 @@ CubitStatus OCCSurface::closest_point_uv_guess(
 //-------------------------------------------------------------------------
 // Purpose       : Computes the closest_point on the surface to the input 
 //                 location.  Optionally, it also computes and returns
-//                 the normal to the surface and the principal curvatures
-//                 at closest_location.
+//                 the normal to the surface at closest_location and the 
+//                 principal curvatures(1-min, 2-max)
 //
 //-------------------------------------------------------------------------
 CubitStatus OCCSurface::closest_point( CubitVector const& location, 
@@ -283,11 +283,13 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
   
         gp_Dir MaxD, MinD;
         if (SLP.IsCurvatureDefined())
+        {
 	   SLP.CurvatureDirections(MaxD, MinD);
-        if (curvature_1 != NULL)
-           *curvature_1 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
-        if (curvature_2 != NULL)
-           *curvature_2 = CubitVector(MinD.X(), MinD.Y(), MinD.Z());
+           if (curvature_1 != NULL)
+              *curvature_1 = CubitVector(MinD.X(), MinD.Y(), MinD.Z());
+           if (curvature_2 != NULL)
+              *curvature_2 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
+        }
   	return CUBIT_SUCCESS;
   }
   return CUBIT_FAILURE;
