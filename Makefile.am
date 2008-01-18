@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = util geom init itaps
+SUBDIRS = util geom init itaps test
 
 if build_ACIS
   ACIS_EXAMPLE_TEST=cd cgm_apps/examples/driverc++; make check-TESTS

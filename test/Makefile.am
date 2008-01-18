@@ -13,13 +13,8 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I..\$(OCC_INC_FLAG)
 
 TESTS = makept
-if build_ACIS
-  TESTS += webcut
-endif
-
 check_PROGRAMS = $(TESTS)
 
-webcut_SOURCES = webcut.cpp
 makept_SOURCES = makept.cpp
 opt_libs=
 LDADD = ../geom/virtual/libcubit_virtual.la \
@@ -30,9 +25,6 @@ LDADD = ../geom/virtual/libcubit_virtual.la \
         ../geom/libcubit_geom.la \
         ../util/libcubit_util.la 
 
-if build_ACIS
-  opt_libs += ../geom/ACIS/libcubit_ACIS.la 
-endif
 if WITH_OCC
   opt_libs += ../geom/OCC/libcubit_OCC.la $(OCC_LIB_FLAG) $(OCC_LIBS)
 endif

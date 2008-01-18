@@ -1486,8 +1486,8 @@ CubitBoolean RefFace::is_planar()
 
 CubitStatus RefFace::get_point_normal( CubitVector& origin, CubitVector& normal )
 {
-   if( is_planar() == CUBIT_FALSE)
-      return CUBIT_FAILURE;
+   //if( is_planar() == CUBIT_FALSE)
+   //   return CUBIT_FAILURE;
 
    Surface* surface_ptr = get_surface_ptr();
 

@@ -310,7 +310,7 @@ void OCCSurface::closest_point_trimmed( CubitVector from_point,
   int i;
   Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
-	  for ( i = 1 ; i < ext.NbExt() ; i++ ) {
+	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
 		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
 			  minDist = p.Distance(ext.Point(i).Value());
 			  newP = ext.Point(i).Value();

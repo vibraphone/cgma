@@ -436,10 +436,9 @@ CubitStatus OCCCurve::closest_point(
 		  *tangent_ptr = CubitVector(tangent.X(), tangent.Y(), tangent.Z()); 
 	  }
   }
-  if (curvature_ptr != NULL) {
-	  double curvature = CLP.Curvature();
-	  // Danilov: confused here
-  }
+  if (curvature_ptr != NULL) 
+     get_curvature( location, *curvature_ptr);
+  
   if (param != NULL) {
 	  *param = newVal;
   }

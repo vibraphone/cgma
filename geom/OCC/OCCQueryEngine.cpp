@@ -782,7 +782,7 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
 //===========================================================================
 //Function Name:export_solid_model
 //Member Type:  PUBLIC
-//Description:  function called for save/restore to save temporary FACET file
+//Description:  function called for save/restore to save temporary Brep file
 //Author:       Jane Hu
 //Date:         11/16/2007
 //===========================================================================
@@ -909,6 +909,14 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   return CUBIT_SUCCESS;
 }
 
+//===========================================================================
+//Function Name:export_solid_model
+//Member Type:  PUBLIC
+//Description:  function called for write out temporary Brep file
+//Author:       Jane Hu
+//Date:         11/16/2007
+//===========================================================================
+
 CubitStatus
 OCCQueryEngine::write_topology( const char* file_name,
                                 DLIList<OCCBody*> &OCC_bodies,
@@ -1002,6 +1010,14 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
     return CUBIT_FAILURE;
 }
 
+//===========================================================================
+//Function Name:import_solid_model
+//Member Type:  PUBLIC
+//Description:  function called for read in temporary Brep file
+//Author:       Jane Hu
+//Date:         11/16/2007
+//===========================================================================
+
 CubitStatus OCCQueryEngine::import_solid_model(
 					       const char* file_name ,
 					       const char* file_type,
@@ -1024,6 +1040,14 @@ CubitStatus OCCQueryEngine::import_solid_model(
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
+
+//===========================================================================
+//Function Name:populate_topology_bridge
+//Member Type:  PUBLIC
+//Description:  function called for populating topology bridge for OCC entity 
+//Author:       Jane Hu
+//Date:         11/16/2007
+//===========================================================================
 
 DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
 {
@@ -1707,6 +1731,16 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point ) const
     }
 }
 
+
+//-------------------------------------------------------------------------
+// Purpose       : fire a ray at the specified body, returning the entities hit.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 12/12/07
+//-------------------------------------------------------------------------
 CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
                                      const CubitVector &start,
                                      const CubitVector &unit,
@@ -2065,7 +2099,7 @@ CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity,
 // Function   : bodies_overlap
 // Member Type: PUBLIC
 // Description: determine if OCC-based bodies overlap
-// Author     : 
+// Author     : Jane Hu 
 // Date       : 10/07
 //===============================================================================
 CubitBoolean OCCQueryEngine::bodies_overlap (BodySM * body_ptr_1,
