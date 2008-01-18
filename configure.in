@@ -272,9 +272,19 @@ if test "x$occ_DIR" != "xno"; then
   # Check if 64-bit
   AC_MSG_CHECKING([if platform is 64-bit (-D_OCC64)])
   AC_TRY_COMPILE([],[int array[6-(int)sizeof(void*)];],[AC_MSG_RESULT(no)],
-                 [AC_MSG_RESULT(yes); OCC_INC_FLAG="$OCC_INC_FLAG -D_OCC64 -DHAVE_IOSTREAM_H -DHAVE_LIMITS_H"])
+                 [AC_MSG_RESULT(yes); OCC_INC_FLAG="$OCC_INC_FLAG -D_OCC64"])
 
-  # Check if OCC has Stadard_Version.hxx
+  # OCC requires some defines
+  AC_LANG_PUSH(C++)
+  AC_CHECK_HEADER([iostream],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_IOSTREAM"])
+  AC_CHECK_HEADER([iostream.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_IOSTREAM_H"])
+  AC_CHECK_HEADER([iomanip],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_IOMANIP"])
+  AC_CHECK_HEADER([iomanip.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_IOMANIP_H"])
+  AC_CHECK_HEADER([fstream],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_FSTREAM"])
+  AC_CHECK_HEADER([fstream.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_FSTREAM_H"])
+  AC_CHECK_HEADER([limits.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_LIMITS_H"])
+
+  # Check for CCC headers Stadard_Version.hxx
   AC_CHECK_HEADER( [Standard_Version.hxx], [],
                  [AC_MSG_ERROR([OpenCascade config error:Standard_Version.hxx not found])] )
 
@@ -283,6 +293,7 @@ if test "x$occ_DIR" != "xno"; then
   AC_CHECK_LIB( [TKernel], [create_mailbox],,
                 [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])])
   LIBS="$old_LIBS"
+  AC_LANG_POP(C++)
 
   # Restore original values of variables
   CPPFLAGS="$old_CPPFLAGS"
