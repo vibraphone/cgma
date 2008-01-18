@@ -1486,6 +1486,9 @@ CubitBoolean RefFace::is_planar()
 
 CubitStatus RefFace::get_point_normal( CubitVector& origin, CubitVector& normal )
 {
+   // non-planar surface can calculate for point normal too. If certain
+   //geometry engine can't provide normal for non-planar surfaces, check 
+   //should be done in the geometry engine level.
    //if( is_planar() == CUBIT_FALSE)
    //   return CUBIT_FAILURE;
 
