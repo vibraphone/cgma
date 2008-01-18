@@ -257,8 +257,7 @@ if test "x$occ_DIR" != "xno"; then
     OCC_LIB_FLAG=
   else
     uname=`uname`
-    OCC_INC_FLAG="-I${occ_DIR}/ros/inc -I/usr/include"
-# -I/usr/include/c++/4.2 -I/usr/include/c++/4.2/tr1"
+    OCC_INC_FLAG="-I${occ_DIR}/ros/inc"
     OCC_LIB_FLAG="-L${occ_DIR}/ros/${uname}/lib"
   fi
 
