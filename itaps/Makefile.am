@@ -22,9 +22,10 @@ if BUILD_CGM
   TEST_XLIBS = $(TEST_ACISLIBS) \
                $(top_builddir)/geom/facet/libcubit_facet.la \
                $(top_builddir)/geom/facetbool/libcubit_facetbool.la \
+               $(top_builddir)/geom/Cholla/libcholla.la \
+               $(top_builddir)/geom/virtual/libcubit_virtual.la \
                $(top_builddir)/geom/libcubit_geom.la \
                $(top_builddir)/util/libcubit_util.la
-  TEST_XLDFLAGS = -R$(ACIS_LIB_DIR)
 else
   TEST_XLDFLAGS = $(CUBIT_LDFLAGS) $(CUBIT_LTFLAGS)
   TEST_XLIBS = $(CUBIT_LIBS)
@@ -63,8 +64,7 @@ TESTS = testgeom
 check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
-testgeom_LDFLAGS = $(TEST_XLDFLAGS)
-testgeom_LDADD = libiGeom.la $(TEST_XLIBS)
+testgeom_LDADD = libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
 
 
 # Automake doesn't seem to have a directory defined for
