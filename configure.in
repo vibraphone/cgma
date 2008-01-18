@@ -249,7 +249,7 @@ AC_ARG_WITH( occ,
 
 # if user specified option (other than --without-occ)
 if test "x$occ_DIR" != "xno"; then
-  OCC_LIBS="-lPTKernel -lTKMath -lTKTopTest -lTKXSBase -lTKAdvTools -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKPShape -lTKShapeSchema -lTKTopAlgo -lBinLPlugin -lBinPlugin -lBinXCAFPlugin -lFWOSPlugin -lmscmd -lPTKernel -lStdLPlugin -lStdPlugin -lTKAdvTools -lTKBinL -lTKBin -lTKBinXCAF -lTKCAF -lTKCDF -lTKCDLFront -lTKCPPClient -lTKCPPExt -lTKCPPIntExt -lTKCPPJini -lTKCSFDBSchema -lTKDCAF -lTKDraw -lTKHLR -lTKIDLFront -lTKIGES -lTKjcas -lTKLCAF -lTKMesh -lTKMeshVS -lTKOpenGl -lTKPCAF -lTKPLCAF -lTKPLCAF -lTKPrim -lTKPShape -lTKService -lTKStdLSchema -lTKStdSchema -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTCPPExt -lTKTopAlgo -lTKV2d -lTKV3d -lTKViewerTest -lTKVRML -lTKWOK -lTKWOKTcl -lTKXCAFSchema -lTKXCAF -lTKXDEDRAW -lTKXDEIGES -lTKXDESTEP -lTKXmlL -lTKXml -lTKXmlXCAF -lTKXSBase -lTKXSDRAW -lwokcmd -lwokdeliverysteps -lwokdfltsteps -lwokobjssteps -lwokorbixsteps -lwoksteps -lwoktoolscmd -lwokutilscmd -lXCAFPlugin -lXmlLPlugin -lXmlPlugin -lXmlXCAFPlugin"
+  OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
