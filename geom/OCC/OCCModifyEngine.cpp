@@ -16,6 +16,7 @@
 #include "config.h"
 #include "gp_Pnt.hxx"
 #include "TopoDS_Shape.hxx"
+#include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
@@ -110,15 +111,29 @@ Point* OCCModifyEngine::make_Point( CubitVector const& point) const
 
 //===============================================================================
 // Function   : make_Curve
+//              This function creates a curve given an existing curve, copy. 
 // Member Type: PUBLIC
 // Description: make a curve
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 01/08
 //===============================================================================
-Curve* OCCModifyEngine::make_Curve(Curve * /*curve_ptr*/) const
+Curve* OCCModifyEngine::make_Curve(Curve * curve_ptr) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Curve*) NULL;
+  OCCCurve* occ_curve = CAST_TO(curve_ptr, OCCCurve);
+  if (!occ_curve)
+  {
+     PRINT_ERROR("Cannot create an OCC curve from the given curve.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (Curve *)NULL;
+  }
+ 
+  TopoDS_Edge *theEdge = occ_curve->get_TopoDS_Edge();  
+ 
+  TopoDS_Shape newShape = theEdge->EmptyCopied();
+ 
+  TopoDS_Edge newEdge = TopoDS::Edge(newShape);
+
+  return OCCQueryEngine::instance()->populate_topology_bridge(newEdge);
 }
 
 //===============================================================================

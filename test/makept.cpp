@@ -149,8 +149,8 @@ CubitStatus make_Point()
   //check for vertex
   DLIList<Body*> bodies;
   gti->bodies(bodies);
-  free_entities.clean_out(); //currently there's bug in that it created
-  //new entities after translating, debug next week.
+  free_entities.clean_out();// get_free_ref_entities directly append
+  //without checking for duplicates, so clean_out first. 
   gti->get_free_ref_entities(free_entities);
  
   RefVertex* vertex1 = CAST_TO(free_entities.get_and_step(),RefVertex);
@@ -280,15 +280,42 @@ CubitStatus make_Point()
   CubitPointContainment pc2 = ref_face->point_containment(3,-20000);
   // this (u,v) location should be inside of the surface.
 
+  DLIList<DLIList<RefEdge*>*> ref_edge_loops;
+  int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
+  DLIList<RefEdge*> *ref_edges1;
+  ref_edges1 = ref_edge_loops.get();
+  RefEdge* edge1 = ref_edges1->get();
+  RefEdge* edge2 = ref_edges1->step_and_get();
+  double angle = edge1->angle_between(edge2, ref_face);
+
   //test for curve
   DLIList<RefEdge *> ref_edges;
   gti->ref_edges(ref_edges);
+
+  //make a new refedge out of existing refedge.
   RefEdge* ref_edge = ref_edges.step_and_get();
+
+  RefEdge* new_edge = gmti->make_RefEdge(ref_edge);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  //translate the new curve by (30,30,30)
+  for(int i = 1; i <= free_entities.size(); i++)
+  {
+     if( i != 3)
+        continue;
+     RefEntity * entity = free_entities.get_and_step();
+     gti->translate((BasicTopologyEntity*)entity, i*vector1);
+  }
+
+  box = new_edge->get_curve_ptr()->bounding_box();
+  // test free curve translation
 
   DLIList<OCCCurve*> curves;
   CAST_TO(body, OCCBody)->get_all_curves(curves);
 
   OCCCurve *curve = curves.step_and_get();
+
   type = curve->geometry_type();
   // ARC_CURVE_TYPE
 
