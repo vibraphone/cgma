@@ -227,8 +227,7 @@ CubitBox OCCSurface::bounding_box() const
 CubitStatus OCCSurface::get_point_normal( CubitVector& location,
                                             CubitVector& normal )
 {
-  //assert(0);
-  return closest_point( location, NULL, &normal );
+  return closest_point( bounding_box().center_point(), &location, &normal );
 }   
 
 CubitStatus OCCSurface::closest_point_uv_guess(  

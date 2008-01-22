@@ -223,7 +223,7 @@ CubitStatus make_Point()
   // center point
 
   CubitVector normal;
-  ref_face->get_point_normal(vi, normal);
+  normal = ref_face->normal_at(vi);
   // surface normal at center point.
 
   CubitVector closest_location ;
