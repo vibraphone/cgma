@@ -324,7 +324,10 @@ public :
   void set_TopoDS_Edge(TopoDS_Edge edge){*myTopoDSEdge = edge;}
 
   void update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
-
+ 
+  Curve* project_curve(Surface* face_ptr,
+                       CubitBoolean closed,
+                       const CubitVector* third_point);
 protected: 
   
 private:

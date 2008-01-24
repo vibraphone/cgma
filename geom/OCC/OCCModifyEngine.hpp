@@ -648,7 +648,7 @@ public:
                                            Surface *ref_face1, double leg1, Surface *ref_face2, double leg2,
                                            BodySM *&new_body ) const;
 
-    CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
+  CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                   DLIList<BodySM*> &new_bodies,
                                   DLIList<TopologyBridge*>*,
                                   DLIList<TopologyBridge*>* ) const; 

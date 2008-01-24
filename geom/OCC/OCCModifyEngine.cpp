@@ -3,15 +3,14 @@
 
 // Filename      : OCCModifyEngine.cpp
 //
-// Purpose       : ModifyEngine for faceted geometry
+// Purpose       : ModifyEngine for OCC geometry
 //
 // Special Notes : Modeled after GeometryModifyEngine and AcisModifyEngine.
 //
-// Creator       : John Fowler
+// Author        : Jane Hu
 //
-// Creation Date : 6/02
+// Creation Date : 1/08
 //
-// Owner         : John Fowler
 //-------------------------------------------------------------------------
 #include "config.h"
 #include "gp_Pnt.hxx"
@@ -139,16 +138,75 @@ Curve* OCCModifyEngine::make_Curve(Curve * curve_ptr) const
 //===============================================================================
 // Function   : make_Curve
 // Member Type: PUBLIC
-// Description: make a curve
-// Author     : John Fowler
-// Date       : 10/02
+// Description: make a curve by projecting a straight line defined by 
+//              point1_ptr, and point2_ptr onto face_ptr, third_point
+//              is used for curves that could be periodic to dertermine
+//              the correct direction.
+// Author     : Jane Hu
+// Date       : 01/08
 //===============================================================================
-Curve* OCCModifyEngine::make_Curve( Point const* /*point1_ptr*/,
-                             Point const* /*point2_ptr*/,
-                             Surface* /*ref_face_ptr*/,
-                             const CubitVector * /*third_point*/) const
+Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
+                             Point const* point2_ptr,
+                             Surface* face_ptr,
+                             const CubitVector * third_point) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  assert (point1_ptr != NULL && point2_ptr != NULL);
+  GeometryType type = STRAIGHT_CURVE_TYPE;
+  CubitBoolean closed = CUBIT_FALSE;
+  DLIList<CubitVector*> mid_points;
+  Curve* curve = NULL;
+  if (point1_ptr != point2_ptr)
+    curve = make_Curve(type, point1_ptr, point2_ptr, mid_points);
+  else //could be a closed shape
+  {
+    if(third_point != NULL && face_ptr != NULL) 
+    {
+       closed = CUBIT_TRUE;
+       //curve = make_Curve(type, point1_ptr, third_point, mid_points);
+    }
+  }
+
+  Curve* new_curve = NULL;
+  if(face_ptr == NULL)
+    return curve;
+ 
+  new_curve = 
+	CAST_TO(curve, OCCCurve)->project_curve(face_ptr, closed, third_point); 
+
+  delete curve;
+  return new_curve;
+}
+
+//===============================================================================
+// Function   : make_Curve
+// Member Type: PUBLIC
+// Description: make a curve
+// Author     : Jane Hu
+// Date       : 01/08
+//===============================================================================
+Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
+                             Point const* point1_ptr,
+                             Point const* point2_ptr,
+                             DLIList<CubitVector*>& vector_list,
+                             Surface* face_ptr) const
+{
+  assert(point1_ptr != NULL && point2_ptr != NULL);
+ /* 
+  OCCPoint const* occ_point1 = CAST_TO(point1_ptr, OCCPoint);
+  OCCPoint const* occ_point2 = CAST_TO(point2_ptr, OCCPoint);
+
+  if (occ_point1 == NULL || occ_point2 == NULL)
+  {
+     PRINT_ERROR("Cannot create an OCC curve from the given points.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (Curve *)NULL;
+  }
+ */   
+  //project all points on the surface
+  if (face_ptr != NULL)
+  {
+  }    
+     
   return (Curve*) NULL;
 }
 
@@ -156,34 +214,28 @@ Curve* OCCModifyEngine::make_Curve( Point const* /*point1_ptr*/,
 // Function   : make_Curve
 // Member Type: PUBLIC
 // Description: make a curve
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu 
+// Date       : 01/08
 //===============================================================================
-Curve* OCCModifyEngine::make_Curve( GeometryType /*curve_type*/,
-                             Point const* /*point1_ptr*/,
-                             Point const* /*point2_ptr*/,
-                             DLIList<CubitVector*>& /*vector_list*/,
-                             Surface* /*ref_face_ptr*/) const
+Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
+                             Point const* point1_ptr,
+                             Point const* point2_ptr,
+                             CubitVector const* intermediate_point_ptr,
+                             CubitSense sense) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Curve*) NULL;
-}
+  assert (point1_ptr != NULL && point2_ptr != NULL);
+  DLIList<CubitVector*> mid_points;
+  CubitVector mid_point = *intermediate_point_ptr;
+  if (intermediate_point_ptr != NULL )
+    mid_points.append(&mid_point);
 
-//===============================================================================
-// Function   : make_Curve
-// Member Type: PUBLIC
-// Description: make a curve
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-Curve* OCCModifyEngine::make_Curve( GeometryType /*curve_type*/,
-                             Point const* /*point1_ptr*/,
-                             Point const* /*point2_ptr*/,
-                             CubitVector const* /*intermediate_point_ptr*/,
-                             CubitSense /*sense*/) const
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Curve*) NULL;
+  Point const* tmp_point = point1_ptr;
+  if (sense == CUBIT_REVERSED)
+  {
+     point1_ptr = point2_ptr;
+     point2_ptr = tmp_point;
+  }   
+  return make_Curve(curve_type, point1_ptr, point2_ptr, mid_points);
 }
 
 //===============================================================================

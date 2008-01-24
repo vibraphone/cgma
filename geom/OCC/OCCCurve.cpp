@@ -48,6 +48,9 @@
 #include <BRepLProp_CLProps.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
+#include "GeomAPI_ProjectPointOnCurve.hxx"
+#include "TopTools_ListOfShape.hxx"
+#include "BRepAlgo_NormalProjection.hxx"
 #include "TopExp_Explorer.hxx"
 #include "GeomLProp_CurveTool.hxx"
 #include "GeomAPI_ExtremaCurveCurve.hxx"
@@ -902,6 +905,115 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
   }
   myMarked = 1;
   set_TopoDS_Edge(curve);
+}
+
+//===============================================================================
+// Function   : project_curve
+// Member Type: PUBLIC
+// Description: project a curve onto a surface, if closed is true,
+//              make sure it projected as two segment, then combine them
+//              into a closed shape, third_point is used to determine
+//              which segment to use if having two projections.
+// Author     : Jane Hu
+// Date       : 01/08
+//===============================================================================
+Curve* OCCCurve::project_curve(Surface* face_ptr, 
+                                      CubitBoolean closed,
+                                      const CubitVector* third_point)
+{
+   TopoDS_Edge* edge = get_TopoDS_Edge();
+   if (edge == NULL)
+   {
+        PRINT_ERROR("Cannot project the curve .\n"
+                 "Possible incompatible geometry engines.\n");
+        return (Curve*) NULL;
+   }
+
+   TopoDS_Face* face = CAST_TO(face_ptr, OCCSurface)->get_TopoDS_Face();
+   if(face == NULL)
+   {
+        PRINT_ERROR("Cannot project the curve to the surface.\n"
+                 "Possible incompatible geometry engines.\n");
+        return (Curve*) NULL;
+   }
+
+   BRepAlgo_NormalProjection aProjection(*face);
+   aProjection.Add(*edge);
+   aProjection.Build();
+   if (!aProjection.IsDone())
+   {
+        PRINT_ERROR("Cannot project the curve to the surface.\n"
+                 "OCC engine failure.\n");
+        return (Curve*) NULL;
+   }
+
+   TopTools_ListOfShape projections;
+   projections = aProjection.Generated(*edge);
+   int num_projection = projections.Extent();
+   if (num_projection == 0)
+   {
+       PRINT_ERROR("Cannot project the curve to the surface.\n");
+       return (Curve*) NULL;
+   }
+
+   else if ( num_projection == 1 )
+   {
+      if(closed == true)
+       PRINT_WARNING("Cannot project the curve to create a closed projection.\n"                 "There is only one projection segment.\n");
+
+      TopoDS_Shape new_shape = aProjection.Projection();//compound shape
+      TopoDS_Edge new_edge = TopoDS::Edge(new_shape);
+      return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+   }
+
+   else if (num_projection == 2)
+   {
+      //If the surface is periodic, so it has 2 projections, we just need to
+      //find the segment to which the third_point is closer.
+      if(closed == CUBIT_FALSE && third_point != NULL)
+      {
+        double d;
+        double first, last;
+        TopoDS_Shape shape = projections.First();
+        TopoDS_Edge edge = TopoDS::Edge(shape);
+        Handle(Geom_Curve) myCurve =
+                        BRep_Tool::Curve(edge,first,last);
+        gp_Pnt P (third_point->x(), third_point->y(), third_point->z());
+        GeomAPI_ProjectPointOnCurve projOncurve(P, myCurve);
+        if (projOncurve.NbPoints() == 0)
+        {
+          PRINT_ERROR("Cannot project the curve to the surface.\n"
+                 "OCC engine failure.\n");
+          return (Curve*) NULL;
+        }
+        d = projOncurve.LowerDistance();
+
+        //Compare with the second solution
+        shape = projections.Last();
+        edge = TopoDS::Edge(shape);
+        myCurve = BRep_Tool::Curve(edge, first, last);
+        GeomAPI_ProjectPointOnCurve projOncurve2(P, myCurve);
+        if (projOncurve2.NbPoints() == 0)
+        {
+           PRINT_ERROR("Cannot project the curve to the surface.\n"
+                 "OCC engine failure.\n");
+          return (Curve*) NULL;
+        }
+
+        double d2 = projOncurve2.LowerDistance();
+        TopoDS_Shape new_shape =
+                d > d2 ? projections.Last() : projections.First() ;
+        TopoDS_Edge new_edge = TopoDS::Edge(new_shape);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+      }
+
+
+      else if (closed == CUBIT_TRUE)
+      {
+        //connect the two segment into a closed shape.
+
+      }
+   }
 }
 
 // ********** END PRIVATE FUNCTIONS        **********
