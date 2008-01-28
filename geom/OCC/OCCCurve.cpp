@@ -48,7 +48,12 @@
 #include <BRepLProp_CLProps.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
+#include "BRepBuilderAPI_MakeEdge.hxx"
+#include "Geom_BezierCurve.hxx"
 #include "GeomAPI_ProjectPointOnCurve.hxx"
+#include "TColgp_Array1OfPnt.hxx"
+#include "GeomAdaptor_Curve.hxx"
+#include "GCPnts_QuasiUniformAbscissa.hxx"
 #include "TopTools_ListOfShape.hxx"
 #include "BRepAlgo_NormalProjection.hxx"
 #include "TopExp_Explorer.hxx"
@@ -968,18 +973,24 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
 
    else if (num_projection == 2)
    {
+      double d;
+      double first, last;
+      TopoDS_Shape shape1 = projections.First();
+      TopoDS_Edge edge1 = TopoDS::Edge(shape1);
+
+      TopoDS_Shape shape2 = projections.Last();
+      TopoDS_Edge edge2 = TopoDS::Edge(shape2);
+
+      Handle(Geom_Curve) myCurve1 =
+                        BRep_Tool::Curve(edge1,first,last);
+
+      Handle(Geom_Curve) myCurve2= BRep_Tool::Curve(edge2, first, last);
       //If the surface is periodic, so it has 2 projections, we just need to
       //find the segment to which the third_point is closer.
       if(closed == CUBIT_FALSE && third_point != NULL)
       {
-        double d;
-        double first, last;
-        TopoDS_Shape shape = projections.First();
-        TopoDS_Edge edge = TopoDS::Edge(shape);
-        Handle(Geom_Curve) myCurve =
-                        BRep_Tool::Curve(edge,first,last);
         gp_Pnt P (third_point->x(), third_point->y(), third_point->z());
-        GeomAPI_ProjectPointOnCurve projOncurve(P, myCurve);
+        GeomAPI_ProjectPointOnCurve projOncurve(P, myCurve1);
         if (projOncurve.NbPoints() == 0)
         {
           PRINT_ERROR("Cannot project the curve to the surface.\n"
@@ -989,10 +1000,7 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         d = projOncurve.LowerDistance();
 
         //Compare with the second solution
-        shape = projections.Last();
-        edge = TopoDS::Edge(shape);
-        myCurve = BRep_Tool::Curve(edge, first, last);
-        GeomAPI_ProjectPointOnCurve projOncurve2(P, myCurve);
+        GeomAPI_ProjectPointOnCurve projOncurve2(P, myCurve2);
         if (projOncurve2.NbPoints() == 0)
         {
            PRINT_ERROR("Cannot project the curve to the surface.\n"
@@ -1010,8 +1018,34 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
 
       else if (closed == CUBIT_TRUE)
       {
-        //connect the two segment into a closed shape.
+        //connect the two segment into a closed shape. Assume both segment
+        // has the same curve type, create Bezier closed curve.
+        GeomAdaptor_Curve acurve1(myCurve1);
+        GeomAdaptor_Curve acurve2(myCurve2);
+        //get 10 points of each curve, combine them to make one Bezier curve
+        int NbPoints = 10;
+        GCPnts_QuasiUniformAbscissa distribution1(acurve1, NbPoints);
+        GCPnts_QuasiUniformAbscissa distribution2(acurve2, NbPoints);
+        TColgp_Array1OfPnt points(1, 2*NbPoints-1);
+        int i = 1;
+        for (i; i <= NbPoints; i++)
+        {
+           double u = distribution1.Parameter(i);
+           gp_Pnt P = myCurve1->Value(u);
+           points.SetValue(i, P);
+        }
 
+        for (int j = NbPoints-1; j >= 1; j--)
+        {
+           double u = distribution2.Parameter(j); 
+           gp_Pnt P = myCurve2->Value(u);
+           points.SetValue(++i,P); 
+        }    
+
+        Geom_BezierCurve BezierCurve(points);
+        Handle(Geom_Curve) curve_ptr(&BezierCurve);
+        TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
       }
    }
 }
