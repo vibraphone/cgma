@@ -169,6 +169,7 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
      surface->update_OCC_entity(aBRepTrsf);
   }
   set_TopoDS_Shell(shell);
+  return CUBIT_SUCCESS;
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

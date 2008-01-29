@@ -68,7 +68,7 @@ enum GeometryType
   SPLINE_CURVE_TYPE,
   STRAIGHT_CURVE_TYPE,
   POINT_CURVE_TYPE,
-  BEZIER_CURVE_TYPE,   //OCC curve types 
+  BSPLINE_CURVE_TYPE,   //OCC curve types 
   HYPERBOLA_CURVE_TYPE,
   UNDEFINED_CURVE_TYPE,
   
@@ -80,7 +80,7 @@ enum GeometryType
   TORUS_SURFACE_TYPE,
   BEST_FIT_SURFACE_TYPE,
   FACET_SURFACE_TYPE,
-  BEZIER_SURFACE_TYPE,      //OCC surface type
+  BSPLINE_SURFACE_TYPE,     //OCC surface type
   REVOLUTION_SURFACE_TYPE,  //OCC surface type
   EXTRUSION_SURFACE_TYPE,   //OCC surface type
   OFFSET_SURFACE_TYPE,      //OCC surface type

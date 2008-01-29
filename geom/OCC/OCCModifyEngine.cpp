@@ -15,6 +15,10 @@
 #include "config.h"
 #include "gp_Pnt.hxx"
 #include "TopoDS_Shape.hxx"
+#include "TColgp_Array1OfPnt.hxx"
+#include "Geom_BezierCurve.hxx"
+#include "BRepBuilderAPI_MakeEdge.hxx"
+#include "BRep_Tool.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "OCCModifyEngine.hpp"
@@ -162,7 +166,13 @@ Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
     if(third_point != NULL && face_ptr != NULL) 
     {
        closed = CUBIT_TRUE;
-       //curve = make_Curve(type, point1_ptr, third_point, mid_points);
+       Point * Pnt = make_Point(*third_point);
+       curve = make_Curve(type, point1_ptr, Pnt, mid_points);
+    }
+    else
+    {
+       PRINT_ERROR("Cannot create an OCC curve from the given duplicated points.\n");
+       return (Curve *)NULL;
     }
   }
 
@@ -180,7 +190,7 @@ Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
 //===============================================================================
 // Function   : make_Curve
 // Member Type: PUBLIC
-// Description: make a curve
+// Description: make a  spline curve by using the points on surface.
 // Author     : Jane Hu
 // Date       : 01/08
 //===============================================================================
@@ -191,9 +201,17 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
                              Surface* face_ptr) const
 {
   assert(point1_ptr != NULL && point2_ptr != NULL);
- /* 
-  OCCPoint const* occ_point1 = CAST_TO(point1_ptr, OCCPoint);
-  OCCPoint const* occ_point2 = CAST_TO(point2_ptr, OCCPoint);
+  
+  if (curve_type != SPLINE_CURVE_TYPE
+      && curve_type != STRAIGHT_CURVE_TYPE)
+  {
+     PRINT_ERROR("Cannot create an OCC curve from the given curve_type.\n"
+                 "Candidates are SPLINE_CURVE_TYPE and STRAIGHT_CURVE_TYPE.\n");
+     return (Curve *)NULL;
+  }
+
+  OCCPoint* occ_point1 = CAST_TO(const_cast<Point*>(point1_ptr), OCCPoint);
+  OCCPoint* occ_point2 = CAST_TO(const_cast<Point*>(point2_ptr), OCCPoint);
 
   if (occ_point1 == NULL || occ_point2 == NULL)
   {
@@ -201,12 +219,66 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
                  "Possible incompatible geometry engines.\n");
      return (Curve *)NULL;
   }
- */   
-  //project all points on the surface
+    
+  //project all points on the surface if possible
+  OCCSurface* occ_face = NULL;
   if (face_ptr != NULL)
+     occ_face = CAST_TO(face_ptr, OCCSurface);
+ 
+  gp_Pnt pt;
+  int size = 2+vector_list.size();
+  TColgp_Array1OfPnt points(1, size);
+  CubitVector* vector = NULL;
+  CubitVector closest_location;
+  for(int i = 1; i <= size; i++)
   {
+     if (i == 1) 
+     {
+       TopoDS_Vertex *point = occ_point1->get_TopoDS_Vertex();
+       pt = BRep_Tool::Pnt(*point);
+       vector = new CubitVector(point1_ptr->coordinates());
+     }
+     else if (i == size)
+     {
+       TopoDS_Vertex *point = occ_point2->get_TopoDS_Vertex();
+       pt = BRep_Tool::Pnt(*point);
+       vector = new CubitVector(point2_ptr->coordinates()); 
+     } 
+     else
+     {
+       vector = vector_list.get_and_step();
+       pt.SetCoord(vector->x(), vector->y(), vector->z());
+     } 
+
+     if (occ_face != NULL)
+     {
+       occ_face->closest_point(*vector, &closest_location);
+       pt.SetCoord(closest_location.x(), closest_location.y(), closest_location.z()) ;  	 
+     }
+
+     points.SetValue(i, pt); 
   }    
      
+  //make curve according to the curve type.
+  if(curve_type == SPLINE_CURVE_TYPE)
+  {
+    Geom_BezierCurve BezierCurve(points);
+    Handle(Geom_Curve) curve_ptr(&BezierCurve);
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
+  }
+
+  else if(curve_type == STRAIGHT_CURVE_TYPE)
+  {
+    TColgp_Array1OfPnt two_points(1,2); 
+    two_points.SetValue(1, points.Value(1));
+    two_points.SetValue(2, points.Value(size));
+    Geom_BezierCurve BezierCurve(two_points);
+    Handle(Geom_Curve) curve_ptr(&BezierCurve);
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
+  }
+
   return (Curve*) NULL;
 }
 

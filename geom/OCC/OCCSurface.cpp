@@ -186,9 +186,9 @@ GeometryType OCCSurface::geometry_type()
 {
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   if (asurface.GetType() == GeomAbs_BezierSurface)
-     return BEZIER_SURFACE_TYPE;
-  if (asurface.GetType() == GeomAbs_BSplineSurface)
      return SPLINE_SURFACE_TYPE;
+  if (asurface.GetType() == GeomAbs_BSplineSurface)
+     return BSPLINE_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_Plane)      
      return PLANE_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_Cylinder ||
@@ -769,6 +769,7 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
      loop->update_OCC_entity(aBRepTrsf);
   }
   set_TopoDS_Face(surface);
+  return CUBIT_SUCCESS;
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

@@ -1540,12 +1540,12 @@ OCCQueryEngine::unhook_Surface_from_OCC( Surface* surface ) const
       k = OCCMap->Find(*face);
 
       if(!OCCMap->UnBind(*face))
-        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+        PRINT_WARNING("The OccSurface and TopoDS_Face pair is not in the map!");
 
       SurfaceList->remove((OCCSurface*)(OccToCGM->find(k))->second);
 
       if(!OccToCGM->erase(k))
-        PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
+        PRINT_WARNING("The OccSurface and TopoDS_Face pair is not in the map!");
     }
 
   DLIList<TopologyBridge*> children;
@@ -1555,6 +1555,7 @@ OCCQueryEngine::unhook_Surface_from_OCC( Surface* surface ) const
      LoopSM* loop = CAST_TO(children.get_and_step(), LoopSM);
      unhook_LoopSM_from_OCC(loop);
   }
+  return CUBIT_SUCCESS;
 }
 
 //-------------------------------------------------------------------------
@@ -1657,10 +1658,11 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
       k = OCCMap->Find(*edge);
 
       if(!OCCMap->UnBind(*edge))
-        PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");
+        PRINT_WARNING("The OccCurve and TopoDS_Edge pair is not in the map!");
       CurveList->remove((OCCCurve*)(OccToCGM->find(k))->second);
       if(!OccToCGM->erase(k))
-        PRINT_ERROR("The OccCurve and TopoDS_Edge pair is not in the map!");    }
+        PRINT_WARNING("The OccCurve and TopoDS_Edge pair is not in the map!");
+    }
 
   DLIList<TopologyBridge*> children;
   fcurve->get_children_virt(children);
@@ -1669,6 +1671,7 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
      Point* point = CAST_TO(children.get_and_step(), Point);
      unhook_Point_from_OCC(point);
   }
+  return CUBIT_SUCCESS;
 }
 //-------------------------------------------------------------------------
 // Purpose       : Delete a OCCPoint and child entities.
@@ -1729,6 +1732,7 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point ) const
       if(!OccToCGM->erase(k))
         PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
     }
+  return CUBIT_SUCCESS;
 }
 
 

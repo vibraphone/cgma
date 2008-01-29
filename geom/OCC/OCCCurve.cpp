@@ -585,9 +585,9 @@ GeometryType OCCCurve::geometry_type()
 {
   BRepAdaptor_Curve acurve(*myTopoDSEdge);
   if (acurve.GetType() == GeomAbs_BezierCurve)
-     return BEZIER_CURVE_TYPE;
-  if (acurve.GetType() == GeomAbs_BSplineCurve)
      return SPLINE_CURVE_TYPE;
+  if (acurve.GetType() == GeomAbs_BSplineCurve)
+     return BSPLINE_CURVE_TYPE;
   if (acurve.GetType() == GeomAbs_Line)
      return STRAIGHT_CURVE_TYPE;
   if (acurve.GetType() == GeomAbs_Parabola)
