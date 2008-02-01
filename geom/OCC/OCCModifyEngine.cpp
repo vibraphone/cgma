@@ -14,13 +14,22 @@
 //-------------------------------------------------------------------------
 #include "config.h"
 #include "gp_Pnt.hxx"
+#include "gp_Ax2.hxx"
+#include "gp_Dir.hxx"
+#include "gp_Hypr.hxx"
+#include "gp_Parab.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TColgp_Array1OfPnt.hxx"
+#include "GC_MakeArcOfCircle.hxx"
+#include "GC_MakeArcOfHyperbola.hxx"
+#include "GC_MakeArcOfParabola.hxx"
+#include "GC_MakeSegment.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRep_Tool.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
+#include "Handle_Geom_TrimmedCurve.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
@@ -292,6 +301,9 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 // For PARABOLA_CURVE_TYPE
 //    intermediate_point_ptr is the tip of the parabola
 //
+// For HYPERBOLA_CURVE_TYPE
+//    intermediate_point_ptr is the center of its two foci
+//
 // For ELLIPSE_CURVE_TYPE
 //    intermediate_point_ptr is the center of the ellipse
 //    sense is used to determine which part of the ellipse is required
@@ -314,13 +326,6 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   if (intermediate_point_ptr != NULL )
     mid_points.append(&mid_point);
 
-  Point const* tmp_point = point1_ptr;
-  if (sense == CUBIT_REVERSED)
-  {
-     point1_ptr = point2_ptr;
-     point2_ptr = tmp_point;
-  }   
-  
   if(curve_type == SPLINE_CURVE_TYPE)
     return make_Curve(curve_type, point1_ptr, point2_ptr, mid_points);
   
@@ -332,76 +337,100 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
   CubitVector v3;
   gp_Pnt pt3;
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+
+  Handle(Geom_TrimmedCurve) curve_ptr;
   if(intermediate_point_ptr != NULL)
   {
     v3 = point1_ptr->coordinates();
-    pt3.SetValue(v3.x(),v3.y(), v3.z());
+    pt3.SetCoord(v3.x(),v3.y(), v3.z());
   }
 
   if (curve_type == STRAIGHT_CURVE_TYPE)
-    Handle(Geom_TrimmedCurve) curve_ptr = GC_MakeSegment(pt1,pt2);
+     curve_ptr = GC_MakeSegment(pt1,pt2);
 
   else if (curve_type == ARC_CURVE_TYPE)
   {
      assert(intermediate_point_ptr != NULL);
-     Handle(Geom_TrimmedCurve) curve_ptr = GC_MakeArcOfCircle(pt1, pt2, pt3);
+     curve_ptr = GC_MakeArcOfCircle(pt1, pt2, pt3);
   }
 
   else if (curve_type == ELLIPSE_CURVE_TYPE)
   {
      assert(intermediate_point_ptr != NULL);
      
-     Handle(Geom_TrimmedCurve) curve_ptr = GC_MakeArcOfEllipse(
+     //curve_ptr = GC_MakeArcOfEllipse(
   }
 
-  else if(curve_type == PARABOLA_CURVE_TYPE)
+  else if(curve_type == PARABOLA_CURVE_TYPE || 
+          curve_type == HYPERBOLA_CURVE_TYPE)
   {
     assert(intermediate_point_ptr != NULL);
-    //find the directrix and focus of this parabola
+
+    //find the directrix and focus of the parabola
+    //or the axis, major radius and minor radius of the hyperbola
     CubitVector width_vec = v2 - v1;
     CubitVector midpoint_vec = (v1 + v2)/2.0;
-    CubitVector height_vec = v3 - midpoint_vec;
-  
-    // Find the focus of this parabola.
-    // Since for a parabola with its peak at the origin, y = (1/(4*a))*x^2,
-    // and since we have restricted this parabola to be symmetric (per the FastQ
-    // method, see the FastQ file getwt.f), we can use the following relationship
-    // to determine "a", the distance the focus lies from the peak on the line
-    // formed by the peak and the midpoint of the start and end points`
-  }
-
-  else if(curve_type == HYPERBOLA_CURVE_TYPE)
-  {
-    assert(intermediate_point_ptr != NULL);
-    //given two foci and a third point on the curve 
-    // if a = 1/2 length major axis, b = 1/2 length minor axis and
-    // c = distance center to focus, then a*a + b*b = c*c
-    CubitVector midpoint_vec = (v1 + v2)/2.0;
-    gp_Pnt center(midpoint_vec.x(), midpoint_vec.y(), midpoint_vec.z());
-    
-    //x direction:
-    CubitVector x = v1 - v2;
-    if(x.length() > 0.000001)
-      x.normalize();
-    else
-    {
-    }
-    //main direction:
-    CubitVector N = x * (v3 - v1);
-    if (N.length() > 0.000001)
-       N.normalize();
-    else
-    {
-    }
-    gp_Ax2 axis(center, N, x);
-    double major = x.length()/2.0;
-    double minor = sqrt((center - v1).length() ^ 2 - major ^ 2);
-    gp_Hypr hypt(axis, major, minor);
+    CubitVector height_vec = midpoint_vec - v3;
+    gp_Pnt center(v3.x(), v3.y(), v3.z());
  
+    if (height_vec.length_squared() < tol * tol)
+    { 
+       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+                 "3 points are in the same line.\n");
+       return (Curve *)NULL;
+    }
+    CubitVector x = height_vec;
+    x.normalize();
+    gp_Dir x_dir(x.x(), x.y(), x.z());
+ 
+    CubitVector N = x * (v2 - v1);  
+    if (N.length_squared() < tol * tol)
+    {
+       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+                 "3 points are in the same line.\n");
+       return (Curve *)NULL;
+    }
+    gp_Dir N_dir(N.x(), N.y(), N.z());
 
-A
-A
-    
+    gp_Ax2 axis(center, N_dir, x_dir);  
+
+    if(curve_type == HYPERBOLA_CURVE_TYPE)
+    { 
+       //    (focus2) (v3) . (v2)
+       //          .   .   . (midpoint = focus1)
+       //                  . (v1)
+       CubitVector focus2 = 2 * v3 - midpoint_vec;
+
+       //according to the definition of hyperbola,
+       //2 * a = length(v2 - focus2)-length(v2 - focus1)
+
+       double major = (v2 - focus2).length()/2.0 - (v2 - midpoint_vec).length()/2.0;
+
+       // if a = 1/2 length major axis, b = 1/2 length minor axis and
+       // c = distance center to focus, then a*a + b*b = c*c
+
+       double c_squared = (midpoint_vec - v3).length_squared();
+       double minor = sqrt(c_squared  - major*major );
+       gp_Hypr hypt(axis, major, minor);
+       curve_ptr =
+             GC_MakeArcOfHyperbola(hypt, pt1, pt2, CUBIT_TRUE);
+    }
+
+    else
+    {
+       // Find the focus of this parabola.
+       // Since for a parabola with its peak at the origin, y = (1/(4*a))*x^2,
+       // and since we have restricted this parabola to be symmetric (per the 
+       // FastQ method, see the FastQ file getwt.f), we can use the following 
+       // relationship to
+       // determine "a", the distance the focus lies from the peak on the line
+       // formed by the peak and the midpoint of the start and end points`
+       double a = width_vec.length_squared()/(16. * height_vec.length()); 
+       gp_Parab parab(axis, a);
+       curve_ptr =
+		GC_MakeArcOfParabola(parab, pt1, pt2, CUBIT_TRUE);
+    } 
   }
 
   TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
