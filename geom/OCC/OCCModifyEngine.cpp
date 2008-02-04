@@ -18,11 +18,13 @@
 #include "gp_Dir.hxx"
 #include "gp_Hypr.hxx"
 #include "gp_Parab.hxx"
+#include "gp_Elips.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
 #include "GC_MakeArcOfParabola.hxx"
+#include "GC_MakeArcOfEllipse.hxx"
 #include "GC_MakeSegment.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
@@ -306,6 +308,8 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 //
 // For ELLIPSE_CURVE_TYPE
 //    intermediate_point_ptr is the center of the ellipse
+//    the point who is farther away to the center is the vertex of the ellipse
+//    the others point projects to major axis at focus.
 //    sense is used to determine which part of the ellipse is required
 //
 // For ARC_CURVE_TYPE
@@ -359,7 +363,34 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   {
      assert(intermediate_point_ptr != NULL);
      
-     //curve_ptr = GC_MakeArcOfEllipse(
+     //calculate for the axis
+     double d1 = (v1 - v3).length_squared(); 
+     double d2 = (v2 - v3).length_squared();
+
+     CubitVector x = d1 >= d2 ? v1-v3 : v2-v3;
+     x.normalize();
+     gp_Dir x_dir(x.x(), x.y(), x.z());
+
+     CubitVector N = (v1 - v3) * (v2 - v3); 
+     {
+       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+                 "3 points are in the same line.\n");
+       return (Curve *)NULL;
+    }
+    N.normalize();
+    gp_Dir N_dir(N.x(), N.y(), N.z());
+
+    gp_Pnt center(v3.x(), v3.y(), v3.z());
+    gp_Ax2 axis(center, N_dir, x_dir); 
+
+    //calculate for the major and minor radius.
+    double major = d1 >= d2 ? sqrt(d1): sqrt(d2);
+    double other_d = d1 >= d2 ? sqrt(d2) : sqrt(d1);
+    double c = cos((v1 - v3).interior_angle(v2 - v3)) * other_d;
+    double minor = sqrt(major * major - c * c);
+
+    gp_Elips ellipse(axis, major, minor);
+    curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, sense);
   }
 
   else if(curve_type == PARABOLA_CURVE_TYPE || 
@@ -370,6 +401,13 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     //find the directrix and focus of the parabola
     //or the axis, major radius and minor radius of the hyperbola
     CubitVector width_vec = v2 - v1;
+    if(width_vec.length_squared() < tol * tol)
+    {
+       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+                 "2 end points are the same.\n");
+       return (Curve *)NULL;
+    }
+
     CubitVector midpoint_vec = (v1 + v2)/2.0;
     CubitVector height_vec = midpoint_vec - v3;
     gp_Pnt center(v3.x(), v3.y(), v3.z());
@@ -391,6 +429,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
                  "3 points are in the same line.\n");
        return (Curve *)NULL;
     }
+    N.normalize();
     gp_Dir N_dir(N.x(), N.y(), N.z());
 
     gp_Ax2 axis(center, N_dir, x_dir);  
