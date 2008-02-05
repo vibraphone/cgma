@@ -372,25 +372,26 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
      gp_Dir x_dir(x.x(), x.y(), x.z());
 
      CubitVector N = (v1 - v3) * (v2 - v3); 
+     if(N.length_squared() < tol * tol)
      {
-       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+       PRINT_ERROR("Cannot create an ellipse curve from the given points.\n"
                  "3 points are in the same line.\n");
        return (Curve *)NULL;
-    }
-    N.normalize();
-    gp_Dir N_dir(N.x(), N.y(), N.z());
+     }
+     N.normalize();
+     gp_Dir N_dir(N.x(), N.y(), N.z());
 
-    gp_Pnt center(v3.x(), v3.y(), v3.z());
-    gp_Ax2 axis(center, N_dir, x_dir); 
+     gp_Pnt center(v3.x(), v3.y(), v3.z());
+     gp_Ax2 axis(center, N_dir, x_dir); 
 
-    //calculate for the major and minor radius.
-    double major = d1 >= d2 ? sqrt(d1): sqrt(d2);
-    double other_d = d1 >= d2 ? sqrt(d2) : sqrt(d1);
-    double c = cos((v1 - v3).interior_angle(v2 - v3)) * other_d;
-    double minor = sqrt(major * major - c * c);
+     //calculate for the major and minor radius.
+     double major = d1 >= d2 ? sqrt(d1): sqrt(d2);
+     double other_d = d1 >= d2 ? sqrt(d2) : sqrt(d1);
+     double c = cos((v1 - v3).interior_angle(v2 - v3)) * other_d;
+     double minor = sqrt(major * major - c * c);
 
-    gp_Elips ellipse(axis, major, minor);
-    curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, sense);
+     gp_Elips ellipse(axis, major, minor);
+     curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, sense);
   }
 
   else if(curve_type == PARABOLA_CURVE_TYPE || 
@@ -478,16 +479,31 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
 //===============================================================================
 // Function   : make_Surface
+//              This function creates a surface given an existing surface, copy.
 // Member Type: PUBLIC
 // Description: make a surface
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 02/08
 //===============================================================================
-Surface* OCCModifyEngine::make_Surface( Surface * /*old_surface_ptr*/,
-                                 CubitBoolean /*extended_from*/) const
+Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
+                                 CubitBoolean extended_from) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Surface*) NULL;
+  OCCSurface* occ_surface = CAST_TO(surface_ptr, OCCSurface);
+  if (!occ_surface)
+  {
+     PRINT_ERROR("Cannot create an OCC surface from the given surface.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (Surface *)NULL;
+  }
+
+  TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
+
+  TopoDS_Shape newShape = theFace->EmptyCopied();
+
+  TopoDS_Face newFace = TopoDS::Face(newShape);
+
+  return OCCQueryEngine::instance()->populate_topology_bridge(newFace);
+
 }
 
 //===============================================================================
