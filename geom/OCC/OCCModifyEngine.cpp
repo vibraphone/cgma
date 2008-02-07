@@ -19,6 +19,7 @@
 #include "gp_Hypr.hxx"
 #include "gp_Parab.hxx"
 #include "gp_Elips.hxx"
+#include "gp_Pln.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
@@ -26,8 +27,12 @@
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
 #include "GC_MakeSegment.hxx"
+#include "GC_MakePlane.hxx"
 #include "Geom_BezierCurve.hxx"
+#include "Handle_Geom_Plane.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
+#include "BRepAdaptor_Surface.hxx"
+#include "BRepBuilderAPI_MakeFace.hxx"
 #include "BRep_Tool.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
@@ -481,7 +486,10 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 // Function   : make_Surface
 //              This function creates a surface given an existing surface, copy.
 // Member Type: PUBLIC
-// Description: make a surface
+// Description: make a surface, OCC allows to create a stand along surface,
+//              however the CGM has a design of making all surfaces in a (sheet)
+//              body. This will add complexity on all free surface related 
+//              calculation and modification, and adding potential bugs too. 
 // Author     : Jane Hu
 // Date       : 02/08
 //===============================================================================
@@ -497,11 +505,42 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   }
 
   TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
+  TopoDS_Face newFace;
 
-  TopoDS_Shape newShape = theFace->EmptyCopied();
-
-  TopoDS_Face newFace = TopoDS::Face(newShape);
-
+  if (extended_from == CUBIT_TRUE)
+  {
+     // We need to get the type of surface.
+     GeometryType type = occ_surface->geometry_type();
+     if (type  == PLANE_SURFACE_TYPE)
+     {
+        BRepAdaptor_Surface asurface(*theFace);
+        gp_Pln plane = asurface.Plane();
+        Handle(Geom_Plane) gc_plane = GC_MakePlane(plane);
+        newFace = BRepBuilderAPI_MakeFace(gc_plane);
+     }
+     else if(extended_from == CONE_SURFACE_TYPE)
+     {
+       //make a whole cone 2 times longer
+     }
+     else if(extended_from == SPHERE_SURFACE_TYPE)
+     {
+       //make a whole sphere.
+     }
+     else if(extended_from == TORUS_SURFACE_TYPE)
+     {
+       //make a whole torus
+     }
+     else if(extended_from == SPLINE_SURFACE_TYPE || BSPLINE_SURFACE_TYPE)
+     {
+       //extend the surfaces using the equation if possible.
+     }
+  }
+ 
+  else
+  {
+    TopoDS_Shape newShape = theFace->EmptyCopied();
+    newFace = TopoDS::Face(newShape);
+  }
   return OCCQueryEngine::instance()->populate_topology_bridge(newFace);
 
 }
@@ -509,16 +548,16 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
 //===============================================================================
 // Function   : make_Surface
 // Member Type: PUBLIC
-// Description: make a surface
-// Author     : John Fowler
-// Date       : 10/02
+// Description: make a surface of type surface_type, given the list of curves.
+// Author     : Jane Hu
+// Date       : 02/08
 //===============================================================================
-Surface* OCCModifyEngine::make_Surface( GeometryType /*surface_type*/,
-                                 DLIList<Curve*>& /*curve_list*/,
-                                 Surface * /*old_surface_ptr*/,
-                                 bool /*check_edges*/) const
+Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
+                                 DLIList<Curve*>& curve_list,
+                                 Surface * old_surface_ptr,
+                                 bool check_edges) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  
   return (Surface*) NULL;
 }
 
