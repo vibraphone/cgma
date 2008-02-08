@@ -20,6 +20,12 @@
 #include "gp_Parab.hxx"
 #include "gp_Elips.hxx"
 #include "gp_Pln.hxx"
+#include "gp_Cylinder.hxx"
+#include "gp_Cone.hxx"
+#include "gp_Sphere.hxx"
+#include "gp_Torus.hxx"
+#include "BRepBuilderAPI_MakeShell.hxx"
+#include "BRepBuilderAPI_MakeSolid.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
@@ -27,7 +33,6 @@
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
 #include "GC_MakeSegment.hxx"
-#include "GC_MakePlane.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "Handle_Geom_Plane.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
@@ -504,8 +509,20 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      return (Surface *)NULL;
   }
 
+  double UMax, VMax, UMin, VMin;
+  occ_surface->get_param_range_U(UMin, UMax);
+  occ_surface->get_param_range_V(VMin, VMax);
+
   TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
+  if( !theFace)
+  {
+     PRINT_ERROR("Cannot create an OCC surface from the given surface.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (Surface *)NULL;
+  }
+
   TopoDS_Face newFace;
+  BRepAdaptor_Surface asurface(*theFace);
 
   if (extended_from == CUBIT_TRUE)
   {
@@ -513,26 +530,41 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      GeometryType type = occ_surface->geometry_type();
      if (type  == PLANE_SURFACE_TYPE)
      {
-        BRepAdaptor_Surface asurface(*theFace);
         gp_Pln plane = asurface.Plane();
-        Handle(Geom_Plane) gc_plane = GC_MakePlane(plane);
-        newFace = BRepBuilderAPI_MakeFace(gc_plane);
+        newFace = BRepBuilderAPI_MakeFace(plane);
      }
-     else if(extended_from == CONE_SURFACE_TYPE)
+     else if(type == CONE_SURFACE_TYPE)
      {
-       //make a whole cone 2 times longer
+       //make an infinite cone.
+       //Given this lets create another face that is extended from it.
+       if(asurface.GetType() == GeomAbs_Cone)
+       {
+         gp_Cone cone = asurface.Cone();
+         newFace = BRepBuilderAPI_MakeFace(cone);
+       }
+       else
+       {
+         gp_Cylinder cylinder = asurface.Cylinder();
+         newFace = BRepBuilderAPI_MakeFace(cylinder);
+       } 
      }
-     else if(extended_from == SPHERE_SURFACE_TYPE)
+     else if(type == SPHERE_SURFACE_TYPE)
      {
        //make a whole sphere.
+       gp_Sphere sphere = asurface.Sphere();
+       newFace = BRepBuilderAPI_MakeFace(sphere); 
      }
-     else if(extended_from == TORUS_SURFACE_TYPE)
+     else if(type == TORUS_SURFACE_TYPE)
      {
        //make a whole torus
+       gp_Torus torus = asurface.Torus();
+       newFace = BRepBuilderAPI_MakeFace(torus);
      }
-     else if(extended_from == SPLINE_SURFACE_TYPE || BSPLINE_SURFACE_TYPE)
+     else if(type == SPLINE_SURFACE_TYPE ) 
      {
        //extend the surfaces using the equation if possible.
+       Handle(Geom_BezierSurface) bezier = asurface.Bezier();
+       newFace = BRepBuilderAPI_MakeFace(bezier);
      }
   }
  
@@ -541,8 +573,34 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
     TopoDS_Shape newShape = theFace->EmptyCopied();
     newFace = TopoDS::Face(newShape);
   }
-  return OCCQueryEngine::instance()->populate_topology_bridge(newFace);
+  
+  //populate the bridges from the body
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(newFace);
 
+  TopoDS_Shell topo_shell; 
+  if (extended_from == CUBIT_FALSE)
+    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, UMin, UMax,
+                            VMin, VMax);
+  else
+    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface);
+ 
+  TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
+  Lump *lump = 
+         OCCQueryEngine::instance()->populate_topology_bridge(topo_solid,
+                                                              CUBIT_TRUE);
+
+  if (lump == NULL)
+  {
+    PRINT_ERROR("In AcisModifyEngine::make_Surface\n"
+                "       Cannot make Surface object.\n");
+    return (Surface *)NULL;
+  }
+
+  DLIList<Surface*> surfs;
+  lump->surfaces( surfs );
+  Surface *surface = surfs.get();
+
+  return surface;
 }
 
 //===============================================================================

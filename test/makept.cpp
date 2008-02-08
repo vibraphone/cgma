@@ -219,6 +219,24 @@ CubitStatus make_Point()
   gti->ref_faces(ref_faces);
   RefFace* ref_face = ref_faces.step_and_get();
 
+  //make a new refface out of existing refface.
+  RefFace* new_face = gmti->make_RefFace(ref_face);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //translate the new curve by (40,40,40)
+  for(int i = 1; i <= bodies.size(); i++)
+  {
+     bodies.step();
+     if( i != 4)
+        continue;
+     Body * entity = bodies.get();
+     gti->translate(entity, i*vector1);
+  }
+
+  vi = new_face->center_point();
+  //center point shout moved by (40,40,40) compared with the original one below
+
   vi = ref_face->center_point();
   // center point
 
@@ -289,6 +307,11 @@ CubitStatus make_Point()
   double angle = edge1->angle_between(edge2, ref_face);
 
   //test for curve
+  for (int j = free_entities.size(); j--;)
+  {
+     gti->delete_RefEntity( free_entities.get_and_step());
+  }
+
   DLIList<RefEdge *> ref_edges;
   gti->ref_edges(ref_edges);
 
@@ -299,17 +322,15 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
-  //translate the new curve by (30,30,30)
-  for(int i = 1; i <= free_entities.size(); i++)
-  {
-     if( i != 3)
-        continue;
-     RefEntity * entity = free_entities.get_and_step();
-     gti->translate((BasicTopologyEntity*)entity, i*vector1);
-  }
+
+  //translate the new curve by (10,10,10)
+  RefEntity * entity = free_entities.get();
+  gti->translate((BasicTopologyEntity*)entity, vector1);
 
   box = new_edge->get_curve_ptr()->bounding_box();
   // test free curve translation
+
+  box = ref_edge->get_curve_ptr()->bounding_box();
 
   DLIList<OCCCurve*> curves;
   CAST_TO(body, OCCBody)->get_all_curves(curves);
