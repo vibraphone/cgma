@@ -22,6 +22,8 @@
 #include "Geom_Curve.hxx"
 #include "BRepBuilderAPI.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_MakeSolid.hxx"
+#include "BRepBuilderAPI_MakeShell.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "Poly_Array1OfTriangle.hxx"
@@ -1068,7 +1070,7 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
     populate_topology_bridge(TopoDS::Shell(Ex.Current()), CUBIT_TRUE);
 
   for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::Face(Ex.Current())));
+    tblist.append(populate_topology_bridge(TopoDS::Face(Ex.Current()),CUBIT_TRUE));
 
   for (Ex.Init(aShape, TopAbs_WIRE, TopAbs_FACE); Ex.More(); Ex.Next())
     populate_topology_bridge(TopoDS::Wire(Ex.Current()), CUBIT_TRUE);
@@ -1157,6 +1159,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
   TopoDS_Shell *poshell = new TopoDS_Shell;
   *poshell = aShape;
   OCCShell *shell ;
+  CubitBoolean build_body = CUBIT_FALSE;
   if (!OCCMap->IsBound(*poshell))
     {
       if(PRINT_RESULT)
@@ -1167,7 +1170,10 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)shell));
       if(standalone)
+      {
+        build_body = CUBIT_TRUE;
 	ShellList->append(shell);
+      }
     }
   else
     {
@@ -1177,11 +1183,12 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
 
   TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
-    populate_topology_bridge(TopoDS::Face(Ex.Current()));
+    populate_topology_bridge(TopoDS::Face(Ex.Current()), build_body);
   return shell;
 }
 
-Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
+Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
+                                                  CubitBoolean build_body)
 {
   TopoDS_Face *poface = new TopoDS_Face;
   *poface = aShape;
@@ -1197,6 +1204,33 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape)
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)surface));
       SurfaceList->append(surface);
+      if(build_body)
+      {
+      	OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+        if (!occ_surface)
+        {
+          PRINT_ERROR("Cannot populate an OCC surface from the given TopoDS_Face.\n");
+          return (Surface *)NULL;
+        }
+
+        double UMax, VMax, UMin, VMin;
+        occ_surface->get_param_range_U(UMin, UMax);
+        occ_surface->get_param_range_V(VMin, VMax);
+   	Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(aShape);
+        TopoDS_Shell topo_shell = 
+		BRepBuilderAPI_MakeShell(HGeom_surface, UMin, UMax,VMin, VMax);
+  	TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
+  	Lump *lump =
+         OCCQueryEngine::instance()->populate_topology_bridge(topo_solid,
+                                                              CUBIT_TRUE);
+
+      	if (lump == NULL)
+  	{
+    	  PRINT_ERROR("In OCCQueryEngine::populate_topology_bridge\n"
+                "       Cannot make sheet body object.\n");
+          return (Surface *)NULL;
+        }
+      }
     } 
   else 
     {

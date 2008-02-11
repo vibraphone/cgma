@@ -333,7 +333,8 @@ public:
   BodySM* populate_topology_bridge(TopoDS_CompSolid aShape);
   Lump* populate_topology_bridge(TopoDS_Solid aShape, 
 				   CubitBoolean build_body = CUBIT_FALSE);
-  Surface* populate_topology_bridge(TopoDS_Face aShape);
+  Surface* populate_topology_bridge(TopoDS_Face aShape,
+                                    CubitBoolean build_body = CUBIT_FALSE);
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
