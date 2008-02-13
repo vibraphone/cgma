@@ -109,7 +109,7 @@ CubitStatus make_Point()
   char *argv = "./66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
-
+/*
   argv = "./62_shaver1.brep";
   status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
@@ -117,9 +117,9 @@ CubitStatus make_Point()
   argv = "./72_shaver6.brep";
   status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
-  
+*/  
   CubitVector vector1(10,10,10);
-  CubitVector vector2(15,15,15);
+  CubitVector vector2(10,-10,10);
   DLIList<RefEntity*> free_entities;
 
   // Make two vertices.
@@ -142,9 +142,10 @@ CubitStatus make_Point()
   const char * filename = "point.occ";
   const char * filetype = "OCC";
   
+  /*
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
-
+  */
  
   //check for vertex
   DLIList<Body*> bodies;
@@ -220,11 +221,26 @@ CubitStatus make_Point()
   RefFace* ref_face = ref_faces.step_and_get();
 
   //make a new refface out of existing refface.
-  RefFace* new_face = gmti->make_RefFace(ref_face);
+  CubitBoolean extended_from = CUBIT_FALSE;
+  RefFace* new_face = gmti->make_RefFace(ref_face, extended_from);
+
+  DLIList<DLIList<RefEdge*>*> ref_edge_loops;
+  new_face->ref_edge_loops(ref_edge_loops);
+
+  DLIList<RefEdge*>* ref_edge_list;
+  ref_edge_list = ref_edge_loops.get();
+
+  for (int i = 0; i < ref_edge_list->size(); i++)
+  {
+    RefEdge * edge = ref_edge_list->get_and_step();
+    double d = edge->measure();
+    RefVertex* start = edge->start_vertex();
+    RefVertex* end = edge->end_vertex();
+  }
 
   bodies.clean_out();
   gti->bodies(bodies);
-  //translate the new curve by (40,40,40)
+  //translate the new face by (40,40,40)
   for(int i = 1; i <= bodies.size(); i++)
   {
      bodies.step();
@@ -298,7 +314,7 @@ CubitStatus make_Point()
   CubitPointContainment pc2 = ref_face->point_containment(3,-20000);
   // this (u,v) location should be inside of the surface.
 
-  DLIList<DLIList<RefEdge*>*> ref_edge_loops;
+  ref_edge_loops.clean_out();
   int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
   DLIList<RefEdge*> *ref_edges1;
   ref_edges1 = ref_edge_loops.get();
@@ -307,6 +323,50 @@ CubitStatus make_Point()
   double angle = edge1->angle_between(edge2, ref_face);
 
   //test for curve
+  CubitVector c_point, tangent, center;
+
+  //make all kinds of curves.
+  CubitVector center_pnt(0,0,0);
+  RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
+					vertex2, &center_pnt);
+  //Gives invalid curve type error.
+
+  //straight line
+  RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt);
+  d = new_edge_2->measure();
+  new_edge_2->closest_point_trimmed(vi, c_point);
+
+  //arc curve
+  RefEdge* new_edge_3 = gmti->make_RefEdge(ARC_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt);
+  d = new_edge_3->measure();
+  new_edge_3->closest_point_trimmed(vi, c_point);
+
+  //ellipse curve
+  RefEdge* new_edge_4 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt);
+  d = new_edge_4->measure();
+  new_edge_4->closest_point_trimmed(vi, c_point);
+
+  RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt, CUBIT_REVERSED);
+  d = new_edge_5->measure();
+  new_edge_5->closest_point_trimmed(vi, c_point);
+
+  //PARABOLA_CURVE_TYPE
+  RefEdge* new_edge_6 = gmti->make_RefEdge(PARABOLA_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt);
+  d = new_edge_6->measure();
+  new_edge_6->closest_point_trimmed(vi, c_point);
+
+  //HYPERBOLA_CURVE_TYPE
+  RefEdge* new_edge_7 = gmti->make_RefEdge(HYPERBOLA_CURVE_TYPE, vertex1,
+                                        vertex2, &center_pnt);
+  d = new_edge_7->measure();
+  new_edge_7->closest_point_trimmed(vi, c_point);
+
+  //delete all free vertices and edges
   for (int j = free_entities.size(); j--;)
   {
      gti->delete_RefEntity( free_entities.get_and_step());
@@ -332,6 +392,7 @@ CubitStatus make_Point()
 
   box = ref_edge->get_curve_ptr()->bounding_box();
 
+  //general query
   DLIList<OCCCurve*> curves;
   CAST_TO(body, OCCBody)->get_all_curves(curves);
 
@@ -364,7 +425,6 @@ CubitStatus make_Point()
   u = ref_edge->u_from_position(vi); 
   // middle point's u value.
 
-  CubitVector c_point, tangent, center;
   double radius;
   ref_edge->closest_point(vi, c_point, &tangent, & curvature1_ptr);
   // Closed point on middle point.

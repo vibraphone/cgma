@@ -38,6 +38,7 @@
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
 #include "BRepBuilderAPI_MakeFace.hxx"
+#include "BRepBuilderAPI_Copy.hxx"
 #include "BRep_Tool.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
@@ -153,7 +154,9 @@ Curve* OCCModifyEngine::make_Curve(Curve * curve_ptr) const
  
   TopoDS_Edge *theEdge = occ_curve->get_TopoDS_Edge();  
  
-  TopoDS_Shape newShape = theEdge->EmptyCopied();
+  BRepBuilderAPI_Copy api_copy(*theEdge);
+
+  TopoDS_Shape newShape = api_copy.ModifiedShape(*theEdge);
  
   TopoDS_Edge newEdge = TopoDS::Edge(newShape);
 
@@ -340,9 +343,6 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   if (intermediate_point_ptr != NULL )
     mid_points.append(&mid_point);
 
-  if(curve_type == SPLINE_CURVE_TYPE)
-    return make_Curve(curve_type, point1_ptr, point2_ptr, mid_points);
-  
   CubitVector v1(point1_ptr->coordinates());
   CubitVector v2(point2_ptr->coordinates());
 
@@ -356,7 +356,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   Handle(Geom_TrimmedCurve) curve_ptr;
   if(intermediate_point_ptr != NULL)
   {
-    v3 = point1_ptr->coordinates();
+    v3 = *intermediate_point_ptr;
     pt3.SetCoord(v3.x(),v3.y(), v3.z());
   }
 
@@ -389,6 +389,8 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
        return (Curve *)NULL;
      }
      N.normalize();
+     if (sense == CUBIT_REVERSED)
+       N = -N;
      gp_Dir N_dir(N.x(), N.y(), N.z());
 
      gp_Pnt center(v3.x(), v3.y(), v3.z());
@@ -401,6 +403,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
      double minor = sqrt(major * major - c * c);
 
      gp_Elips ellipse(axis, major, minor);
+     CubitBoolean use_sense = (sense == CUBIT_FORWARD ? CUBIT_TRUE : CUBIT_FALSE); 
      curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, sense);
   }
 
@@ -483,6 +486,13 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     } 
   }
 
+  else
+  {
+      PRINT_ERROR("In OCCModifyEngine::make_Curve\n"
+                  "       Invalid curve type.\n");
+      return (Curve *)NULL;
+  }
+
   TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
   return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
 }
@@ -526,26 +536,37 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
 
   if (extended_from == CUBIT_TRUE)
   {
+     CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+     double const height = 2*(bounding_box.diagonal()).length();
+     CubitBox box = occ_surface->bounding_box();
+     double ratio = height/(box.diagonal().length());
+     double middleU = (UMin + UMax)/2.0;
+     double middleV = (VMin + VMax)/2.0;
+     double U1 = middleU - (UMax-UMin)/2.0 * ratio;
+     double U2 = middleU + (UMax-UMin)/2.0 * ratio;
+     double V1 = middleV - (VMax - VMin)/2.0 * ratio;
+     double V2 = middleV + (VMax - VMin)/2.0 * ratio;
      // We need to get the type of surface.
      GeometryType type = occ_surface->geometry_type();
      if (type  == PLANE_SURFACE_TYPE)
      {
         gp_Pln plane = asurface.Plane();
-        newFace = BRepBuilderAPI_MakeFace(plane);
+        newFace = BRepBuilderAPI_MakeFace(plane, U1, U2, V1, V2);
      }
      else if(type == CONE_SURFACE_TYPE)
      {
        //make an infinite cone.
        //Given this lets create another face that is extended from it.
+       double middle = (VMin + VMax)/2.0;
        if(asurface.GetType() == GeomAbs_Cone)
        {
          gp_Cone cone = asurface.Cone();
-         newFace = BRepBuilderAPI_MakeFace(cone);
+         newFace = BRepBuilderAPI_MakeFace(cone, 0, 2*CUBIT_PI, V1, V2);
        }
        else
        {
          gp_Cylinder cylinder = asurface.Cylinder();
-         newFace = BRepBuilderAPI_MakeFace(cylinder);
+         newFace = BRepBuilderAPI_MakeFace(cylinder, 0, 2*CUBIT_PI, V1, V2);
        } 
      }
      else if(type == SPHERE_SURFACE_TYPE)
@@ -564,13 +585,14 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      {
        //extend the surfaces using the equation if possible.
        Handle(Geom_BezierSurface) bezier = asurface.Bezier();
-       newFace = BRepBuilderAPI_MakeFace(bezier);
+       newFace = BRepBuilderAPI_MakeFace(bezier, U1, U2, V1, V2);
      }
   }
  
   else
   {
-    TopoDS_Shape newShape = theFace->EmptyCopied();
+    BRepBuilderAPI_Copy api_copy(*theFace);
+    TopoDS_Shape newShape = api_copy.ModifiedShape(*theFace);
     newFace = TopoDS::Face(newShape);
   }
   

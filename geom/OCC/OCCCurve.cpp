@@ -39,6 +39,8 @@
 
 #include <BRepAdaptor_Curve.hxx>
 #include <TopExp.hxx>
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
 #include <Bnd_Box.hxx>
@@ -228,8 +230,9 @@ CubitBox OCCCurve::bounding_box() const
 //-------------------------------------------------------------------------
 double OCCCurve::measure()
 {
-  BRepAdaptor_Curve acurve(*myTopoDSEdge);
-  return GCPnts_AbscissaPoint::Length(acurve);
+  GProp_GProps myProps;
+  BRepGProp::LinearProperties(*myTopoDSEdge, myProps);
+  return myProps.Mass();
 }
 
 //-------------------------------------------------------------------------
