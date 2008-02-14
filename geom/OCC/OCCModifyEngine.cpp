@@ -33,6 +33,8 @@
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
 #include "GC_MakeSegment.hxx"
+#include "GC_MakeTrimmedCone.hxx"
+#include "GC_MakeTrimmedCylinder.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "Handle_Geom_Plane.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
@@ -43,6 +45,7 @@
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "Handle_Geom_TrimmedCurve.hxx"
+#include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
@@ -534,18 +537,20 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   TopoDS_Face newFace;
   BRepAdaptor_Surface asurface(*theFace);
 
+  CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+  double const height = 2*(bounding_box.diagonal()).length();
+  CubitBox box = occ_surface->bounding_box();
+  double ratio = height/(box.diagonal().length());
+
+  double middleU = (UMin + UMax)/2.0;
+  double middleV = (VMin + VMax)/2.0;
+  double U1 = middleU - (UMax-UMin)/2.0 * ratio;
+  double U2 = middleU + (UMax-UMin)/2.0 * ratio;
+  double V1 = middleV - (VMax - VMin)/2.0 * ratio;
+  double V2 = middleV + (VMax - VMin)/2.0 * ratio;
+
   if (extended_from == CUBIT_TRUE)
   {
-     CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
-     double const height = 2*(bounding_box.diagonal()).length();
-     CubitBox box = occ_surface->bounding_box();
-     double ratio = height/(box.diagonal().length());
-     double middleU = (UMin + UMax)/2.0;
-     double middleV = (VMin + VMax)/2.0;
-     double U1 = middleU - (UMax-UMin)/2.0 * ratio;
-     double U2 = middleU + (UMax-UMin)/2.0 * ratio;
-     double V1 = middleV - (VMax - VMin)/2.0 * ratio;
-     double V2 = middleV + (VMax - VMin)/2.0 * ratio;
      // We need to get the type of surface.
      GeometryType type = occ_surface->geometry_type();
      if (type  == PLANE_SURFACE_TYPE)
@@ -557,17 +562,38 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      {
        //make an infinite cone.
        //Given this lets create another face that is extended from it.
-       double middle = (VMin + VMax)/2.0;
        if(asurface.GetType() == GeomAbs_Cone)
        {
          gp_Cone cone = asurface.Cone();
-         newFace = BRepBuilderAPI_MakeFace(cone, 0, 2*CUBIT_PI, V1, V2);
+         gp_Pnt Apex = cone.Apex();
+         double semi_angle = cone.SemiAngle();
+         gp_Pnt p2;
+         double radius2;
+         gp_XYZ xyz;
+         if (semi_angle > 0)
+           xyz = Apex.XYZ() + cone.Position().Direction().XYZ()*height;
+             
+  	 else
+	   xyz = Apex.XYZ() - cone.Position().Direction().XYZ()*height;
+
+         p2.SetXYZ(xyz);
+	 radius2 = height * tan(fabs(semi_angle));
+         Handle(Geom_RectangularTrimmedSurface) trimmed_cone;
+         trimmed_cone = GC_MakeTrimmedCone(Apex, p2, 0, radius2); 
+         newFace = BRepBuilderAPI_MakeFace(trimmed_cone);
        }
        else
        {
          gp_Cylinder cylinder = asurface.Cylinder();
-         newFace = BRepBuilderAPI_MakeFace(cylinder, 0, 2*CUBIT_PI, V1, V2);
+         //gp_Pnt pnt = asurface.Value(UMin,V1); 
+         double radius = cylinder.Radius();
+         gp_Ax1 axis = cylinder.Axis(); 
+         Handle(Geom_RectangularTrimmedSurface) trimmed_cyl;
+         trimmed_cyl = GC_MakeTrimmedCylinder(axis, radius, height);
+         newFace = BRepBuilderAPI_MakeFace(trimmed_cyl);
        } 
+       U2 = 2 * CUBIT_PI;
+       U1 = 0;
      }
      else if(type == SPHERE_SURFACE_TYPE)
      {
@@ -596,6 +622,13 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
     newFace = TopoDS::Face(newShape);
   }
   
+  //get new parameters
+  asurface.Initialize(newFace);
+  U1 = asurface.FirstUParameter();
+  U2 = asurface.LastUParameter();
+  V1 = asurface.FirstVParameter();
+  V2 = asurface.LastVParameter();
+
   //populate the bridges from the body
   Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(newFace);
 
@@ -604,7 +637,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
     topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, UMin, UMax,
                             VMin, VMax);
   else
-    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface);
+    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, U1, U2, V1, V2);
  
   TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
   Lump *lump = 
