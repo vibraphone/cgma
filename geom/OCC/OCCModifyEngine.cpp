@@ -46,6 +46,7 @@
 #include "TopologyBridge.hpp"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
+#include "TopExp_Explorer.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
@@ -522,6 +523,23 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      return (Surface *)NULL;
   }
 
+  //Testing for number of Vertices.
+  DLIList<OCCCurve*> curve_list;
+  DLIList<OCCPoint*> point_list;
+  occ_surface->get_curves(curve_list);
+  for (int i = 0; i < curve_list.size(); i++)
+  {
+    curve_list.get_and_step()->get_points(point_list);
+    point_list.uniquify_unordered();
+  }
+
+  TopoDS_Face * Face = occ_surface->get_TopoDS_Face();
+  TopExp_Explorer Ex;
+  int count = 0;
+  for (Ex.Init(*Face, TopAbs_VERTEX); Ex.More(); Ex.Next())
+    count++;
+
+  //Start of the codes
   double UMax, VMax, UMin, VMin;
   occ_surface->get_param_range_U(UMin, UMax);
   occ_surface->get_param_range_V(VMin, VMax);
@@ -592,8 +610,6 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
          trimmed_cyl = GC_MakeTrimmedCylinder(axis, radius, height);
          newFace = BRepBuilderAPI_MakeFace(trimmed_cyl);
        } 
-       U2 = 2 * CUBIT_PI;
-       U1 = 0;
      }
      else if(type == SPHERE_SURFACE_TYPE)
      {
@@ -622,6 +638,8 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
     newFace = TopoDS::Face(newShape);
   }
   
+  Surface *temp_surface = OCCQueryEngine::instance()->populate_topology_bridge(
+				newFace);
   //get new parameters
   asurface.Initialize(newFace);
   U1 = asurface.FirstUParameter();
@@ -633,11 +651,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(newFace);
 
   TopoDS_Shell topo_shell; 
-  if (extended_from == CUBIT_FALSE)
-    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, UMin, UMax,
-                            VMin, VMax);
-  else
-    topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, U1, U2, V1, V2);
+  topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, U1, U2, V1, V2);
  
   TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
   Lump *lump = 

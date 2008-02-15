@@ -1195,15 +1195,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
   OCCSurface *surface;
   if (!OCCMap->IsBound(*poface))
     {
-      if(PRINT_RESULT)
-	PRINT_INFO("Adding faces.\n");
-      iTotalTBCreated++;
       surface = new OCCSurface(poface);
 
-      OCCMap->Bind(*poface, iTotalTBCreated);
-      OccToCGM->insert(valType(iTotalTBCreated,
-			       (TopologyBridge*)surface));
-      SurfaceList->append(surface);
       if(build_body)
       {
       	OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
@@ -1230,6 +1223,20 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
                 "       Cannot make sheet body object.\n");
           return (Surface *)NULL;
         }
+        DLIList<Surface*> surfs;
+        lump->surfaces( surfs );
+        delete surface;
+        surface = CAST_TO(surfs.get(),OCCSurface);
+      }
+      else
+      {
+        if(PRINT_RESULT)
+          PRINT_INFO("Adding faces.\n");
+        iTotalTBCreated++;
+        OCCMap->Bind(*poface, iTotalTBCreated);
+        OccToCGM->insert(valType(iTotalTBCreated,
+                               (TopologyBridge*)surface));
+        SurfaceList->append(surface);
       }
     } 
   else 
