@@ -638,8 +638,10 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
     newFace = TopoDS::Face(newShape);
   }
   
-  Surface *temp_surface = OCCQueryEngine::instance()->populate_topology_bridge(
-				newFace);
+  Surface *surface = OCCQueryEngine::instance()->populate_topology_bridge(
+                               newFace, CUBIT_TRUE);
+
+/*
   //get new parameters
   asurface.Initialize(newFace);
   U1 = asurface.FirstUParameter();
@@ -668,7 +670,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   DLIList<Surface*> surfs;
   lump->surfaces( surfs );
   Surface *surface = surfs.get();
-
+*/
   return surface;
 }
 

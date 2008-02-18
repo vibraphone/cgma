@@ -45,15 +45,17 @@
 
 // ********** BEGIN PUBLIC FUNCTIONS       **********
 
+
 //-------------------------------------------------------------------------
-// Purpose       : A constructor with a pointer to a ACIS SHELL.
+// Purpose       : A constructor with a pointer to an OCC SHELL.
 //
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-OCCShell::OCCShell(TopoDS_Shell *theShell)
+OCCShell::OCCShell(TopoDS_Shell *theShell, OCCSurface* surface)
 {
   myTopoDSShell = theShell;
+  mySheetSurface = surface;
 }
 
 //-------------------------------------------------------------------------
@@ -106,6 +108,12 @@ CubitStatus OCCShell::get_simple_attribute(const CubitString&,
 //-------------------------------------------------------------------------
 void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
 { 
+  if(mySheetSurface)
+  {
+    parents.append(mySheetSurface->my_lump());
+    return;
+  }
+
   OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
   OCCBody * body = NULL;
   DLIList <OCCBody* > *bodies = oqe->BodyList;
@@ -136,6 +144,11 @@ void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents )
 
 void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 {
+  if(mySheetSurface)
+  {
+    children.append(mySheetSurface);
+    return;
+  }
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSShell, TopAbs_FACE, M);
   int ii;
@@ -152,6 +165,9 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 //----------------------------------------------------------------
 CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
 {
+  if(mySheetSurface)
+    return CUBIT_FAILURE;
+
   TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Shell());
   TopoDS_Shell shell = TopoDS::Shell(shape);
 

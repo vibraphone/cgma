@@ -59,10 +59,12 @@
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-OCCBody::OCCBody(TopoDS_CompSolid *theShape)
+OCCBody::OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody,
+                 OCCSurface* surface)
 {
   myTopoDSShape = theShape;
-  
+  IsSheetBody = isSheetBody; 
+  mySheetSurface = surface;
   update_bounding_box();
 }
 
@@ -84,6 +86,7 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
      B.Add(Co, *solid);
   }
   myTopoDSShape = new TopoDS_CompSolid(Co);
+  IsSheetBody = CUBIT_FALSE;
   update_bounding_box();
 }
 
@@ -146,10 +149,21 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
   gp_Trsf aTrsf;
   aTrsf.SetTranslation(aVec);
 
-  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  
+  BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    aBRepTrsf.Perform(*face);
+    OCCQueryEngine::update_entity_shape((GeometryEntity*)mySheetSurface, aBRepTrsf);
+  }
+  else
+  {
+    aBRepTrsf.Perform(*myTopoDSShape);
+    update_OCC_entity(aBRepTrsf);
+  }
 
   // calculate for bounding box
-  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
 
   return CUBIT_SUCCESS;
@@ -173,10 +187,20 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
   gp_Trsf aTrsf;
   aTrsf.SetRotation(anAxis, angle);
 
-  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    aBRepTrsf.Perform(*face);
+    OCCQueryEngine::update_entity_shape(mySheetSurface, aBRepTrsf);
+  }
+  else
+  {
+    aBRepTrsf.Perform(*myTopoDSShape);
+    update_OCC_entity(aBRepTrsf);
+  }
 
   // calculate for bounding box
-  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
 
   return CUBIT_SUCCESS;
@@ -194,10 +218,20 @@ CubitStatus OCCBody::scale(double scale_factor )
   gp_Trsf aTrsf;
   aTrsf.SetScaleFactor(scale_factor);
 
-  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf);
+  BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    aBRepTrsf.Perform(*face);
+    OCCQueryEngine::update_entity_shape(mySheetSurface, aBRepTrsf);
+  }
+  else
+  {
+    aBRepTrsf.Perform(*myTopoDSShape);
+    update_OCC_entity(aBRepTrsf);
+  }
 
   // calculate for bounding box
-  update_OCC_entity(aBRepTrsf);
   update_bounding_box();
 
   return CUBIT_SUCCESS;  
@@ -235,11 +269,21 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
   gp_Trsf aTrsf;
   aTrsf.SetMirror(anAx2);
 
-  BRepBuilderAPI_Transform aBRepTrsf(*myTopoDSShape, aTrsf); 
+  BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    aBRepTrsf.Perform(*face);
+    OCCQueryEngine::update_entity_shape(mySheetSurface, aBRepTrsf);
+  }
+  else
+  {
+    aBRepTrsf.Perform(*myTopoDSShape);
+    update_OCC_entity(aBRepTrsf);
+  }
 
   // update underlining OCC entities
-  update_OCC_entity(aBRepTrsf);
-
+  update_bounding_box();
   return CUBIT_SUCCESS;
 }
 
@@ -252,6 +296,9 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //----------------------------------------------------------------
 CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf) 
 {
+  if(IsSheetBody)
+    return CUBIT_FAILURE;
+
   TopoDS_Shape shape = aBRepTrsf.Shape();
   TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
 
@@ -297,7 +344,12 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
 void OCCBody::update_bounding_box() 
 {
      Bnd_Box box;
-     const TopoDS_Shape shape=*myTopoDSShape;
+     TopoDS_Shape shape;
+     if(IsSheetBody)
+       shape = *(mySheetSurface->get_TopoDS_Face());
+     else
+       shape=*myTopoDSShape;
+
      //calculate the bounding box
      BRepBndLib::Add(shape, box);
      double min[3], max[3];
@@ -325,6 +377,12 @@ void OCCBody::get_parents_virt( DLIList<TopologyBridge*>& )
   
 void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
 {
+  if (IsSheetBody)
+  { 
+    lumps.append(mySheetSurface->my_lump());
+    return;
+  }
+
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
   int ii;
@@ -347,6 +405,8 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
 CubitStatus OCCBody::mass_properties( CubitVector& centroid, 
                                       double& volume )
 {
+  if(IsSheetBody)
+    return CUBIT_FAILURE;
   GProp_GProps myProps;
   BRepGProp::VolumeProperties(*myTopoDSShape, myProps);
   volume = myProps.Mass();
@@ -367,6 +427,9 @@ CubitStatus OCCBody::mass_properties( CubitVector& centroid,
 //-------------------------------------------------------------------------
 CubitPointContainment OCCBody::point_containment( const CubitVector &point )
 {
+  if(IsSheetBody)
+    return CUBIT_PNT_UNKNOWN;
+
   CubitPointContainment pc_value;
   OCCLump *lump;
 
@@ -396,6 +459,11 @@ CubitPointContainment OCCBody::point_containment( const CubitVector &point )
 
 void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
 {
+  if(IsSheetBody)
+  {
+    surfaces.append(mySheetSurface);
+    return;
+  }
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSShape, TopAbs_FACE, M);
   int ii;
@@ -419,8 +487,14 @@ void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
 
 void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
 {
+  TopoDS_Shape shape;
+  if(IsSheetBody)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else 
+    shape = *myTopoDSShape;
+
   TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSShape, TopAbs_EDGE, M);
+  TopExp::MapShapes(shape, TopAbs_EDGE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
           TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
@@ -442,8 +516,14 @@ void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
 
 void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
 {
+  TopoDS_Shape shape;
+  if(IsSheetBody)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else 
+    shape = *myTopoDSShape;
+
   TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(*myTopoDSShape, TopAbs_VERTEX, M);
+  TopExp::MapShapes(shape, TopAbs_VERTEX, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
           TopologyBridge *vertex = OCCQueryEngine::instance()->occ_to_cgm(M(ii));

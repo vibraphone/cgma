@@ -83,6 +83,9 @@
 OCCSurface::OCCSurface(TopoDS_Face *theFace)
 {
   myTopoDSFace = theFace;
+  myShell = NULL;
+  myLump = NULL;
+  myBody = NULL;
 }
 
 

@@ -46,7 +46,9 @@ class OCCBody : public BodySM
 {
 public:
   
-  OCCBody(TopoDS_CompSolid *theShape);
+  OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody = CUBIT_FALSE, 
+          OCCSurface* surface = NULL);
+
   OCCBody(DLIList<Lump*>& my_lumps);
   void lumps(DLIList<Lump*>& my_lumps); //add lump list to myLumps
   DLIList<Lump*> lumps(){return myLumps;} 
@@ -182,6 +184,10 @@ private:
   TopoDS_CompSolid *myTopoDSShape;
 
   CubitBox boundingbox;
+
+  CubitBoolean IsSheetBody;
+ 
+  OCCSurface* mySheetSurface;
 };
 
 

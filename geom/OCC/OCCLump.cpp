@@ -64,9 +64,10 @@ class RefVolume;
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-OCCLump::OCCLump(TopoDS_Solid *theSolid)
+OCCLump::OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface)
 {
   myTopoDSSolid = theSolid;
+  mySheetSurface = surface;
 }
 
 OCCLump::~OCCLump()
@@ -84,6 +85,9 @@ OCCLump::~OCCLump()
 CubitStatus OCCLump::mass_properties( CubitVector& centroid,
                                       double& volume )
 {
+  if (mySheetSurface)
+    return CUBIT_FAILURE;
+
   GProp_GProps myProps;
   BRepGProp::VolumeProperties(*myTopoDSSolid, myProps);
   volume = myProps.Mass();
@@ -170,7 +174,12 @@ CubitStatus OCCLump::restore_attribs( FILE *file_ptr, unsigned int endian )
 CubitBox OCCLump::bounding_box() const 
 {
   Bnd_Box box;
-  const TopoDS_Shape shape=*myTopoDSSolid;
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else
+    shape =*myTopoDSSolid;
+
   //calculate the bounding box
   BRepBndLib::Add(shape, box);
   double min[3], max[3];
@@ -206,6 +215,8 @@ GeometryQueryEngine*
 //-------------------------------------------------------------------------
 double OCCLump::measure()
 {
+  if(mySheetSurface)
+    return 0.0;
   GProp_GProps myProps;
   BRepGProp::VolumeProperties(*myTopoDSSolid, myProps);
   return myProps.Mass();
@@ -213,11 +224,19 @@ double OCCLump::measure()
 
 void OCCLump::get_parents_virt(DLIList<TopologyBridge*> &bodies) 
 {
-  bodies.append(myBodyPtr);
+  if(mySheetSurface)
+    bodies.append(mySheetSurface->my_body());
+  else
+    bodies.append(myBodyPtr);
 }
 
 void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
 {
+  if (mySheetSurface)
+  {
+    shellsms.append(mySheetSurface->my_shell());
+    return;
+  }
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSSolid, TopAbs_SHELL, M);
   int ii;
@@ -231,6 +250,9 @@ void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
 
 CubitPointContainment OCCLump::point_containment( const CubitVector &point )
 {
+  if (mySheetSurface)
+    return CUBIT_PNT_UNKNOWN;
+
   BOP_SolidClassifier ps;
   TopoDS_Solid * solid = get_TopoDS_Solid();
   gp_Pnt pnt(point.x(), point.y(), point.z());
@@ -261,6 +283,9 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
 //----------------------------------------------------------------
 CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
 {
+  if(mySheetSurface)
+    return CUBIT_FAILURE;
+
   TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Solid());
   TopoDS_Solid solid = TopoDS::Solid(shape);
 

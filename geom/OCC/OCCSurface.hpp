@@ -300,6 +300,21 @@ public :
 
   void get_curves(DLIList<OCCCurve*>&); 
 
+  void set_shell(OCCShell* shell)
+  { myShell = shell;}
+
+  void set_lump(OCCLump* lump)
+  { myLump = lump;}
+
+  void set_body(OCCBody* body)
+  { myBody = body;}
+
+  OCCShell* my_shell() {return myShell;}
+
+  OCCLump* my_lump() {return myLump;}
+
+  OCCBody* my_body() {return myBody;}
+
   virtual CubitBoolean is_parametric();
     //R CubitBoolean
     //R- CUBIT_TRUE/CUBIT_FALSE
@@ -400,6 +415,11 @@ private:
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
 
   TopoDS_Face *myTopoDSFace;
+
+  //Following 3 members are only for sheeted body.
+  OCCShell* myShell;
+  OCCLump* myLump;
+  OCCBody* myBody;
 
 };
 

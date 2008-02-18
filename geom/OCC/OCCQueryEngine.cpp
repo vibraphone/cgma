@@ -1199,45 +1199,20 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
 
       if(build_body)
       {
-      	OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
-        if (!occ_surface)
-        {
-          PRINT_ERROR("Cannot populate an OCC surface from the given TopoDS_Face.\n");
-          return (Surface *)NULL;
-        }
-
-        double UMax, VMax, UMin, VMin;
-        occ_surface->get_param_range_U(UMin, UMax);
-        occ_surface->get_param_range_V(VMin, VMax);
-   	Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(aShape);
-        TopoDS_Shell topo_shell = 
-		BRepBuilderAPI_MakeShell(HGeom_surface, UMin, UMax,VMin, VMax);
-  	TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
-  	Lump *lump =
-         OCCQueryEngine::instance()->populate_topology_bridge(topo_solid,
-                                                              CUBIT_TRUE);
-
-      	if (lump == NULL)
-  	{
-    	  PRINT_ERROR("In OCCQueryEngine::populate_topology_bridge\n"
-                "       Cannot make sheet body object.\n");
-          return (Surface *)NULL;
-        }
-        DLIList<Surface*> surfs;
-        lump->surfaces( surfs );
-        delete surface;
-        surface = CAST_TO(surfs.get(),OCCSurface);
+        OCCShell* shell(NULL, surface);
+        OCCLump* lump(NULL, surface);
+        OCCBody* body(NULL, CUBIT_TRUE, surface);
+        surface->set_body(body);
+        surface->set_lump(lump);
+        surface->set_shell(shell);
       }
-      else
-      {
-        if(PRINT_RESULT)
-          PRINT_INFO("Adding faces.\n");
-        iTotalTBCreated++;
-        OCCMap->Bind(*poface, iTotalTBCreated);
-        OccToCGM->insert(valType(iTotalTBCreated,
-                               (TopologyBridge*)surface));
-        SurfaceList->append(surface);
-      }
+      if(PRINT_RESULT)
+        PRINT_INFO("Adding faces.\n");
+      iTotalTBCreated++;
+      OCCMap->Bind(*poface, iTotalTBCreated);
+      OccToCGM->insert(valType(iTotalTBCreated,
+                             (TopologyBridge*)surface));
+      SurfaceList->append(surface);
     } 
   else 
     {
