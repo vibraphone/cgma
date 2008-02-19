@@ -42,7 +42,7 @@ class OCCShell : public ShellSM
 {
 public:
   
-  OCCShell(TopoDS_Shell *theShell, OCCSurface surface = NULL);
+  OCCShell(TopoDS_Shell *theShell, OCCSurface* surface = NULL);
 
   virtual ~OCCShell() ;
     //- Destructor.

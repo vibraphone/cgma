@@ -1199,9 +1199,9 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
 
       if(build_body)
       {
-        OCCShell* shell(NULL, surface);
-        OCCLump* lump(NULL, surface);
-        OCCBody* body(NULL, CUBIT_TRUE, surface);
+        OCCShell* shell = new OCCShell(NULL, surface);
+        OCCLump* lump = new OCCLump(NULL, surface);
+        OCCBody* body = new OCCBody(NULL, CUBIT_TRUE, surface);
         surface->set_body(body);
         surface->set_lump(lump);
         surface->set_shell(shell);

@@ -669,6 +669,12 @@ CubitSense OCCSurface::get_geometry_sense()
 
 void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
 { 
+  if (myBody) //sheet body
+  {
+     parents.append(myBody);
+     return;
+  }
+
   OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
   OCCBody * body = NULL;
   DLIList <OCCBody* > *bodies = oqe->BodyList;

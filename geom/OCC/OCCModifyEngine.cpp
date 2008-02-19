@@ -523,22 +523,6 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      return (Surface *)NULL;
   }
 
-  //Testing for number of Vertices.
-  DLIList<OCCCurve*> curve_list;
-  DLIList<OCCPoint*> point_list;
-  occ_surface->get_curves(curve_list);
-  for (int i = 0; i < curve_list.size(); i++)
-  {
-    curve_list.get_and_step()->get_points(point_list);
-    point_list.uniquify_unordered();
-  }
-
-  TopoDS_Face * Face = occ_surface->get_TopoDS_Face();
-  TopExp_Explorer Ex;
-  int count = 0;
-  for (Ex.Init(*Face, TopAbs_VERTEX); Ex.More(); Ex.Next())
-    count++;
-
   //Start of the codes
   double UMax, VMax, UMin, VMin;
   occ_surface->get_param_range_U(UMin, UMax);
@@ -641,36 +625,6 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   Surface *surface = OCCQueryEngine::instance()->populate_topology_bridge(
                                newFace, CUBIT_TRUE);
 
-/*
-  //get new parameters
-  asurface.Initialize(newFace);
-  U1 = asurface.FirstUParameter();
-  U2 = asurface.LastUParameter();
-  V1 = asurface.FirstVParameter();
-  V2 = asurface.LastVParameter();
-
-  //populate the bridges from the body
-  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(newFace);
-
-  TopoDS_Shell topo_shell; 
-  topo_shell = BRepBuilderAPI_MakeShell(HGeom_surface, U1, U2, V1, V2);
- 
-  TopoDS_Solid topo_solid = BRepBuilderAPI_MakeSolid(topo_shell);
-  Lump *lump = 
-         OCCQueryEngine::instance()->populate_topology_bridge(topo_solid,
-                                                              CUBIT_TRUE);
-
-  if (lump == NULL)
-  {
-    PRINT_ERROR("In AcisModifyEngine::make_Surface\n"
-                "       Cannot make Surface object.\n");
-    return (Surface *)NULL;
-  }
-
-  DLIList<Surface*> surfs;
-  lump->surfaces( surfs );
-  Surface *surface = surfs.get();
-*/
   return surface;
 }
 
