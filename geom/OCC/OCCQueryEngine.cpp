@@ -1197,15 +1197,6 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
     {
       surface = new OCCSurface(poface);
 
-      if(build_body)
-      {
-        OCCShell* shell = new OCCShell(NULL, surface);
-        OCCLump* lump = new OCCLump(NULL, surface);
-        OCCBody* body = new OCCBody(NULL, CUBIT_TRUE, surface);
-        surface->set_body(body);
-        surface->set_lump(lump);
-        surface->set_shell(shell);
-      }
       if(PRINT_RESULT)
         PRINT_INFO("Adding faces.\n");
       iTotalTBCreated++;
@@ -1219,6 +1210,17 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
       int k = OCCMap->Find(*poface);
       surface = (OCCSurface*)(OccToCGM->find(k))->second;
     }
+
+  if(build_body)
+    {
+      OCCShell* shell = new OCCShell(NULL, surface);
+      OCCLump* lump = new OCCLump(NULL, surface);
+      OCCBody* body = new OCCBody(NULL, CUBIT_TRUE, surface);
+      surface->set_body(body);
+      surface->set_lump(lump);
+      surface->set_shell(shell);
+    }
+
   TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
     populate_topology_bridge(TopoDS::Wire(Ex.Current()));

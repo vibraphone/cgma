@@ -632,6 +632,8 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
 // Function   : make_Surface
 // Member Type: PUBLIC
 // Description: make a surface of type surface_type, given the list of curves.
+//              check edges option is down in GeometryModifyTool level, so 
+//              disregard this option.
 // Author     : Jane Hu
 // Date       : 02/08
 //===============================================================================
@@ -640,8 +642,43 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
                                  Surface * old_surface_ptr,
                                  bool check_edges) const
 {
+  //Create TopoDS_Edge list to make a surface.
+  DLIList<TopoDS_Edge*> topo_edges;
+  curve_list.reset() ;
+  Curve const* curve_ptr = NULL ;
+  OCCCurve* occ_curve = NULL;
+  TopoDS_Edge* topo_edge = NULL;
+  for ( i = 0 ; i < curve_list.size() ; i++ )
+  {
+     curve_ptr = curve_list.get_and_step() ;  
+     occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
+
+     if(occ_curve ==  NULL)
+     {
+        PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                    "       Got a NULL pointer to OCCCurve\n") ;
+	return (Surface*) NULL;
+     }
+
+     topo_edge = occ_curve->get_TopoDS_Edge();
+     topo_edges.append(topo_edge);
+  }
   
-  return (Surface*) NULL;
+  // Use the topo_edges to make a topo_face
+  TopoDS_Face* topo_face = this->make_TopoDS_Face(surface_type,
+					topo_edges, old_surface_ptr) ;
+ 
+  if(topo_face == NULL)
+  {
+     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                 "       Cannot make Surface object.\n");
+     return (Surface *)NULL;
+  }
+
+  // make the topology bridges for the face
+  Surface *surface = OCCQueryEngine::instance()->populate_topology_bridge(
+                               *topo_face, CUBIT_TRUE); 
+  return surface ;
 }
 
 //===============================================================================
@@ -664,8 +701,27 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& /*surface_list*/ ) const
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================
-BodySM* OCCModifyEngine::make_BodySM( Surface * ) const
-    {return NULL ;}
+BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
+{
+  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+  if(!occ_surface)
+  {
+     PRINT_ERROR("Cannot create an OCC body from the given surface.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (BodySM *)NULL;
+  }
+
+  OCCBody* occ_body = occ_surface->my_body();
+  if(occ_body)
+     return occ_body;
+
+  TopoDS_Face* face = occ_surface->get_TopoDS_Face();
+  surface = OCCQueryEngine::instance()->populate_topology_bridge(*face, CUBIT_TRUE);
+   
+  return CAST_TO(surface, OCCSurface)->my_body();
+}
+
+
 
 //===============================================================================
 // Function   : make_BodySM

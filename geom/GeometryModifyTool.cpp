@@ -1336,15 +1336,70 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
    if (ref_face_ptr)
     old_surface_ptr = dynamic_cast<Surface*>(bridge_list.pop());
 
+   //perform edge checks
+   DLIList<RefEdge*> copied_ref_edges;
+   if( check_edges ) 
+   { 
+      DLIList<RefEdge*> vtx_edges;
+      DLIList<RefVertex*> vtx_list; 
+      for ( int i = ref_edge_list.size(); i > 0; i-- )
+      {
+         RefEdge *ref_edge = ref_edge_list.get();
+
+         CubitBoolean other_edge = CUBIT_FALSE;
+         ref_edge->ref_vertices(vtx_list);
+         while( vtx_list.size() )
+         {
+            vtx_edges.clean_out();
+            vtx_list.pop()->ref_edges( vtx_edges );
+            while( vtx_edges.size() )
+            {
+               if( ! ref_edge_list.is_in_list( vtx_edges.pop() ) )
+               {
+                   other_edge = CUBIT_TRUE;
+                   vtx_list.clean_out();
+                   break;
+               }
+            }
+            if(other_edge)
+	       break;
+         }
+
+         if ( other_edge || (ref_edge->get_parents() > 0) )
+         {
+            RefEdge *replacement_edge = GeometryModifyTool::instance()->make_RefEdge( ref_edge );
+            if (!replacement_edge)
+            {
+                PRINT_WARNING("Creation of Surface Unsuccessful\n");
+                return (RefFace *)NULL;
+            }
+            ref_edge_list.change_to( replacement_edge );
+            copied_ref_edges.append( replacement_edge );
+         }
+         ref_edge_list.step();
+      }//end 'for' loop
+   }
+
    DLIList<Curve*> curve_list(ref_edge_list.size());
+   if (copied_ref_edges.size() > 0)
+   {
+     entity_list.clean_out();
+     bridge_list.clean_out();
+     CAST_LIST_TO_PARENT( ref_edge_list, entity_list );
+
+     GME_ptr =
+        common_modify_engine( entity_list, bridge_list ); 
+   }
    CAST_LIST( bridge_list, curve_list, Curve );
 
      // Use the Curves to create a Surface
    Surface* surface_ptr = GME_ptr->make_Surface(ref_face_type, curve_list,
-                                                old_surface_ptr, check_edges) ;
+                                                old_surface_ptr, CUBIT_FALSE) ;
 
    if (surface_ptr == NULL) {
      PRINT_ERROR("Couldn't make new RefFace.\n");
+     for(i=copied_ref_edges.size(); i--; )
+       GeometryQueryTool::instance()->delete_RefEdge( copied_ref_edges.get_and_step() );
      return NULL;
    }
 
