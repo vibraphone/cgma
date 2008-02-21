@@ -9,15 +9,14 @@ INCLUDES = -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/Cholla \
 	   -I$(top_srcdir)/geom/OCC \
 	   -I$(srcdir) \
-	   $(OCC_INC_FLAG) \
-	   -I..\$(OCC_INC_FLAG)
+	   $(OCC_INC_FLAG)
 
 TESTS=
-if WITH_OCC
-  TESTS += makept
-endif
 if build_ACIS
   TESTS += webcut
+endif
+if WITH_OCC
+  TESTS += makept
 endif
 
 CPPFLAGS += -DSRCDIR=@srcdir@
@@ -25,21 +24,14 @@ check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
 makept_SOURCES = makept.cpp
-opt_libs=
 LDADD = ../geom/virtual/libcubit_virtual.la \
         ../geom/facetbool/libcubit_facetbool.la \
-	$(opt_libs) \
         ../geom/Cholla/libcholla.la \
         ../geom/facet/libcubit_facet.la \
         ../geom/libcubit_geom.la \
         ../util/libcubit_util.la 
-
-if build_ACIS
-  opt_libs += ../geom/ACIS/libcubit_ACIS.la 
-endif
-if WITH_OCC
-  opt_libs += ../geom/OCC/libcubit_OCC.la $(OCC_LIB_FLAG) $(OCC_LIBS)
-endif
-
-
+webcut_LDFLAGS = $(LDFLAGS) -R$(ACIS_LIB_DIR)
+webcut_LDADD = ../geom/ACIS/libcubit_ACIS.la  $(LDADD)
+makept_LDFLAGS = $(LDFLAGS) -R$(OCC_LIB_DIR)
+makept_LDADD = ../geom/OCC/libcubit_OCC.la $(LDADD)
 

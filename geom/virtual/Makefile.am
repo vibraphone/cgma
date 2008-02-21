@@ -14,6 +14,8 @@ if BUILD_CGM
   lib_LTLIBRARIES += libcubit_virtual.la
 endif
 
+libcubit_virtual_la_LIBADD = ../libcubit_geom.la
+
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
 

@@ -8,8 +8,6 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) \
        -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) \
        -D$(ACIS_PLATFORM)
 
-LIBS := -L$(ACIS_LIB_DIR) $(ACIS_LIBS) $(LIBS)
-
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/ACIS \
@@ -21,6 +19,8 @@ lib_LTLIBRARIES =
 if BUILD_CGM
   lib_LTLIBRARIES += libcubit_parallel.la
 endif
+
+libcubit_parallel_la_LIBADD = ../libcubit_geom.la ../ACIS/libcubit_ACIS.la
 
 # The directory where headers will be installed
 libcubit_parallel_la_includedir = $(includedir)

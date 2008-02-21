@@ -12,6 +12,8 @@ if BUILD_CGM
   lib_LTLIBRARIES += libcubit_facetbool.la
 endif
 
+libcubit_facetbool_la_LIBADD= ../libcubit_geom.la
+
 # The directory where headers will be installed
 libcubit_facetbool_la_includedir = $(includedir)
 

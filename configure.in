@@ -256,11 +256,13 @@ if test "x$occ_DIR" != "xno"; then
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
     OCC_INC_FLAG=
+    OCC_LIB_DIR=
     OCC_LIB_FLAG=
   else
     uname=`uname`
     OCC_INC_FLAG="-I${occ_DIR}/ros/inc"
-    OCC_LIB_FLAG="-L${occ_DIR}/ros/${uname}/lib"
+    OCC_LIB_DIR="${occ_DIR}/ros/${uname}/lib"
+    OCC_LIB_FLAG='-L$(OCC_LIB_DIR)'
   fi
 
   # Check of OCC is present and working
@@ -269,7 +271,7 @@ if test "x$occ_DIR" != "xno"; then
   old_CPPFLAGS="$CPPFLAGS"
   old_LDFLAGS="$LDFLAGS"
   CPPFLAGS="$CPPFLAGS ${OCC_INC_FLAG}"
-  LDFLAGS="$LDFLAGS ${OCC_LIB_FLAG}"
+  LDFLAGS="$LDFLAGS -L$OCC_LIB_DIR"
 
   # Check if 64-bit
   AC_MSG_CHECKING([if platform is 64-bit (-D_OCC64)])
@@ -304,6 +306,7 @@ fi
 
 # Export these variables as variables in Makefiles
 AC_SUBST(OCC_INC_FLAG)
+AC_SUBST(OCC_LIB_DIR)
 AC_SUBST(OCC_LIB_FLAG)
 AC_SUBST(OCC_LIBS)
 AC_SUBST(CUBIT_OCC_LIB)

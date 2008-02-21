@@ -4,7 +4,6 @@ AUTOMAKE_OPTIONS = foreign
 # Override default defines with the ones we want from the configure script
 DEFAULT_INCLUDES=-I.
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
-LIBS := $(OCC_LIB_FLAG) 
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/Cholla \
@@ -21,6 +20,9 @@ lib_LTLIBRARIES =
 if BUILD_CGM
   lib_LTLIBRARIES += $(OCC_TARGET)
 endif
+
+libcubit_OCC_la_LIBADD = $(OCC_LIB_FLAG) $(OCC_LIBS) \
+                         ../libcubit_geom.la
 
 # The directory where headers will be installed
 libcubit_OCC_la_includedir = $(includedir)

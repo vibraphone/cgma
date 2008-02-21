@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
-SUBDIRS = Cholla facet facetbool virtual
+SUBDIRS = . Cholla facetbool facet virtual
 if build_ACIS
   SUBDIRS += ACIS
 endif
@@ -24,6 +24,8 @@ lib_LTLIBRARIES =
 if BUILD_CGM
   lib_LTLIBRARIES += libcubit_geom.la
 endif
+
+libcubit_geom_la_LIBADD = ../util/libcubit_util.la
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)

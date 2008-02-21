@@ -11,6 +11,8 @@ if BUILD_CGM
   lib_LTLIBRARIES += libcholla.la
 endif
 
+libcholla_la_LIBADD = ../libcubit_geom.la
+
 # The directory where headers will be installed
 libcholla_la_includedir = $(includedir)
 
