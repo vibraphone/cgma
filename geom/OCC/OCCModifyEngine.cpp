@@ -645,6 +645,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 {
   //Create TopoDS_Edge list to make a surface.
   DLIList<TopoDS_Edge*> topo_edges;
+  DLIList<DLIList<TopoDS_Edge*>*> topo_edges_loops;
   curve_list.reset() ;
   Curve const* curve_ptr = NULL ;
   OCCCurve* occ_curve = NULL;
@@ -687,9 +688,11 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
      topo_edges.append(topo_edge);
   }
   
+  topo_edges_loops.append(&topo_edges);
+
   // Use the topo_edges to make a topo_face
   TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
-					topo_edges, old_surface_ptr) ;
+					topo_edges_loops, old_surface_ptr) ;
  
   if(topo_face == NULL)
   {
@@ -747,6 +750,7 @@ TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   for(int i = 1; i < topo_edges->size(); i++)
     aWire.Add(*(topo_edges->step_and_get()));
      
+  return (TopoDS_Face*) NULL;
 }
 //===============================================================================
 // Function   : make_Lump
