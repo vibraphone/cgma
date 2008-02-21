@@ -1398,7 +1398,7 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
 
    if (surface_ptr == NULL) {
      PRINT_ERROR("Couldn't make new RefFace.\n");
-     for(i=copied_ref_edges.size(); i--; )
+     for(int i=copied_ref_edges.size(); i--; )
        GeometryQueryTool::instance()->delete_RefEdge( copied_ref_edges.get_and_step() );
      return NULL;
    }
