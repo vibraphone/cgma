@@ -65,6 +65,7 @@ check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
+testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 
 
 # Automake doesn't seem to have a directory defined for

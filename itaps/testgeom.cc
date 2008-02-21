@@ -23,6 +23,9 @@
 
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
+#define STRINGIFY(S) XSTRINGIFY(S)
+#define XSTRINGIFY(S) #S
+
 static bool print_error( const char* desc, 
                          int err,
                          iGeom_Instance geom,
@@ -111,11 +114,15 @@ void handle_error_code(const bool result,
 int main( int argc, char *argv[] )
 {
     // Check command line arg
-  std::string filename = "testgeom.sat";
+  std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
   
-  if (argc == 2) 
+  if (argc == 1) {
+    std::cout << "Using default input file: " << filename << std::endl;
+  }
+  else if (argc == 2) {
     filename = argv[1];
-  else if (argc != 1) {
+  }
+  else {
     std::cerr << "Usage: " << argv[0] << " [geom_filename]" << std::endl;
     return 1;
   }
