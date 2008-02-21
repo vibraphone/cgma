@@ -74,6 +74,7 @@
 
 
 // ********** BEGIN PUBLIC FUNCTIONS       **********
+
 //-------------------------------------------------------------------------
 // Purpose       : The constructor with a pointer to the TopoDS_Face. 
 //

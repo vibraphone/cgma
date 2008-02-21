@@ -648,7 +648,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   Curve const* curve_ptr = NULL ;
   OCCCurve* occ_curve = NULL;
   TopoDS_Edge* topo_edge = NULL;
-  for ( i = 0 ; i < curve_list.size() ; i++ )
+  for (int i = 0 ; i < curve_list.size() ; i++ )
   {
      curve_ptr = curve_list.get_and_step() ;  
      occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
