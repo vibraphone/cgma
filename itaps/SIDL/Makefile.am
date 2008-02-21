@@ -146,7 +146,7 @@ cfg_DATA = iGeom-SIDL-Defs.inc
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
 install-data-hook:
-	echo "iGeom_DIR=${DESTDIR}${cfgdir}/.." >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
+	echo "iGeom_DIR=${cfgdir}" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
 	echo "iGeom_SIDLLIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
 	echo "iGeom_SIDLINCLUDEDIR=${includedir}/SIDL" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
 	(cd gserver; install -d ${includedir}/SIDL; install -t ${includedir}/SIDL ${SERVER_HDRS})

@@ -82,7 +82,7 @@ cfg_DATA = iGeom-Defs.inc
 install-data-hook:
 	echo "iGeom_SRCDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "iGeom_BLDDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "iGeom_DIR=${DESTDIR}${cfgdir}/.." >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "iGeom_DIR=${cfgdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "iGeom_LIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "CGM_LDFLAGS=-L${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 	echo "CGM_INCLUDEDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
