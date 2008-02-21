@@ -26,6 +26,7 @@
 #include "gp_Torus.hxx"
 #include "BRepBuilderAPI_MakeShell.hxx"
 #include "BRepBuilderAPI_MakeSolid.hxx"
+#include "BRepBuilderAPI_MakeWire.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
@@ -632,7 +633,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
 // Function   : make_Surface
 // Member Type: PUBLIC
 // Description: make a surface of type surface_type, given the list of curves.
-//              check edges option is down in GeometryModifyTool level, so 
+//              check edges option is done in GeometryModifyTool level, so 
 //              disregard this option.
 // Author     : Jane Hu
 // Date       : 02/08
@@ -648,7 +649,29 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   Curve const* curve_ptr = NULL ;
   OCCCurve* occ_curve = NULL;
   TopoDS_Edge* topo_edge = NULL;
-  for (int i = 0 ; i < curve_list.size() ; i++ )
+    
+  //check no intersections of the TopoDS_Edge's.
+  for ( int i = 0 ; i < curve_list.size()-1 ; i++ )
+  {
+     for(int j = i+1; j < curve_list.size(); j ++)
+     {
+        DLIList<CubitVector*> intscts;
+ 	CubitBoolean bounded = CUBIT_TRUE;//dummy arg.
+	CubitBoolean closest = CUBIT_TRUE;//dummy arg.
+        CubitStatus yes_int = 
+              OCCQueryEngine::instance()->get_intersections(curve_list[i],
+				curve_list[j], intscts, bounded, closest);
+        if(yes_int)
+        {
+	   PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                 "       Cannot make Surface with intersecting curves.\n");
+           return (Surface *)NULL;
+        }
+     }
+  }
+
+  //sort the curves so they are in order and make closed loop
+  for ( int i = 0 ; i < curve_list.size() ; i++ )
   {
      curve_ptr = curve_list.get_and_step() ;  
      occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
@@ -665,7 +688,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
   
   // Use the topo_edges to make a topo_face
-  TopoDS_Face* topo_face = this->make_TopoDS_Face(surface_type,
+  TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
 					topo_edges, old_surface_ptr) ;
  
   if(topo_face == NULL)
@@ -681,6 +704,50 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   return surface ;
 }
 
+//===============================================================================
+// Function   : make_TopoDS_Face
+// Member Type: PUBLIC
+// Description: make a opoDS_Face of type surface_type, given the list of 
+//              TopoDS_Edge. the TopoDS_Edge's should be in order in loops.
+//              The first edge loop is the outer loop.
+//              check edges option is done in GeometryModifyTool level, so
+//              disregard this option.
+// Author     : Jane Hu
+// Date       : 02/08
+//===============================================================================
+TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
+			       DLIList<DLIList<TopoDS_Edge*>*> topo_edges_list,
+			       Surface * old_surface_ptr)const
+{
+  // Make sure a supported type of surface is being requested.
+  if ( surface_type != PLANE_SURFACE_TYPE  &&
+       surface_type != BEST_FIT_SURFACE_TYPE)
+  {
+      PRINT_WARNING("In OCCGeometryEngine::make_TopoDS_Face\n"
+                    "       At this time, cannot make a TopoDS_Face that isn't"
+                    " planar or best fit.\n");
+      return (TopoDS_Face *)NULL;
+  }
+ 
+  // Set the TopoDS_Face pointer, if requested.
+  TopoDS_Face *fit_Face = NULL;
+  if ( old_surface_ptr != NULL )
+  {
+      OCCSurface *surf = CAST_TO(old_surface_ptr, OCCSurface );
+      fit_Face = surf->get_TopoDS_Face();
+  }
+ 
+  // Make a wire from the topo_edges.
+  // Coincident TopoDS_Vertex will be deleted by OCC.
+  if(topo_edges_list.size() == 0)
+      return (TopoDS_Face*) NULL;
+
+  DLIList<TopoDS_Edge*>* topo_edges = topo_edges_list.get();
+  BRepBuilderAPI_MakeWire aWire(*(topo_edges->get()));
+  for(int i = 1; i < topo_edges->size(); i++)
+    aWire.Add(*(topo_edges->step_and_get()));
+     
+}
 //===============================================================================
 // Function   : make_Lump
 // Member Type: PUBLIC
