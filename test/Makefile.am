@@ -20,6 +20,7 @@ if build_ACIS
   TESTS += webcut
 endif
 
+CPPFLAGS += -DSRCDIR=@srcdir@
 check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
