@@ -28,7 +28,7 @@ ACIS_INCLUDES        = @ACIS_INCLUDES@
 
 OCC_INCLUDES	     = @OCC_INC_FLAG@
 OCC_LIB_DIR	     = @OCC_LIB_FLAG@
-OCC_LIBS	     = @OCC_LIBS@
+OCC_LIBS	     = @CUBIT_OCC_LIB@ @OCC_LIBS@
 
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
 CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
@@ -83,8 +83,7 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         -lcubit_geom \
         -lcubit_util \
 	${CGM_PARALLEL_LIB} \
-        ${OCC_LIBS} \
-        -lcubit_OCC
+        ${OCC_LIBS} 
 
 CGM_LIBS_FILES_INTERNAL = \
        $(CGM_LIBDIR)/libcubit_virtual.a \

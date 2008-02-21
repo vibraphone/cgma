@@ -248,8 +248,10 @@ AC_ARG_WITH( occ,
              [occ_DIR=no] )
 
 # if user specified option (other than --without-occ)
+CUBIT_OCC_LIB=
 if test "x$occ_DIR" != "xno"; then
   OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase"
+  CUBIT_OCC_LIB="-lcubit_OCC"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
@@ -304,6 +306,7 @@ fi
 AC_SUBST(OCC_INC_FLAG)
 AC_SUBST(OCC_LIB_FLAG)
 AC_SUBST(OCC_LIBS)
+AC_SUBST(CUBIT_OCC_LIB)
 
 # Allow "if WITH_OCC" in Makefile.am
 AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )
