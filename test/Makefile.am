@@ -12,7 +12,10 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   $(OCC_INC_FLAG) \
 	   -I..\$(OCC_INC_FLAG)
 
-TESTS = makept
+TESTS=
+if WITH_OCC
+  TESTS += makept
+endif
 if build_ACIS
   TESTS += webcut
 endif
