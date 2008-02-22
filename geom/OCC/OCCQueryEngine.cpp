@@ -1815,7 +1815,7 @@ CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
 }
 double OCCQueryEngine::get_sme_resabs_tolerance() const
 {
-  return BRepBuilderAPI::Precision(); 
+  return Precision::Confusion(); 
 }
 // Gets solid modeler's resolution absolute tolerance
 

@@ -43,6 +43,8 @@
 #include "BRepBuilderAPI_MakeFace.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
 #include "BRep_Tool.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "Handle_Geom_TrimmedCurve.hxx"
@@ -672,26 +674,77 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
 
   //sort the curves so they are in order and make closed loop
-  for ( int i = 0 ; i < curve_list.size() ; i++ )
+  OCCPoint* start = NULL;
+  OCCPoint* end = NULL;
+  DLIList<OCCPoint*> point_list;
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  CubitBoolean new_end = CUBIT_TRUE;
+  int size = curve_list.size();
+  for ( int i = 0 ; i < size ; i++ )
   {
-     curve_ptr = curve_list.get_and_step() ;  
-     occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
-
-     if(occ_curve ==  NULL)
+     for(int j = 0; j < curve_list.size(); j ++)
      {
-        PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
-                    "       Got a NULL pointer to OCCCurve\n") ;
-	return (Surface*) NULL;
+        curve_ptr = curve_list.get() ;  
+        occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
+
+        if(occ_curve ==  NULL)
+        {
+           PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                       "       Got a NULL pointer to OCCCurve\n") ;
+	   return (Surface*) NULL;
+        }
+
+        occ_curve->get_points(point_list);
+        assert(point_list.size()==2);
+
+        if (i == 0)
+        { 
+          start = point_list.get();
+  	  end = point_list.pop();   
+          break;
+        }
+
+        if(end->is_equal(*(point_list.get()), tol) ||
+	        end->is_equal(*(point_list.step_and_get()),tol))
+	{
+	   end = point_list.step_and_get();
+	   new_end = CUBIT_TRUE;
+           break;
+	}
      }
 
-     topo_edge = occ_curve->get_TopoDS_Edge();
-     topo_edges.append(topo_edge);
+     if (new_end)//found next curve
+     {
+        topo_edge = occ_curve->get_TopoDS_Edge();
+        topo_edges.append(topo_edge);
+        curve_list.remove(); 
+        if(start->is_equal( *end, tol))  //formed a closed loop
+        {
+ 	  i = 0;
+	  size = curve_list.size() ;
+          topo_edges_loops.append(&topo_edges);
+	  topo_edges.clean_out(); 
+        } 
+        else
+          new_end = CUBIT_FALSE;
+     }
+     else
+     {
+        PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                    "  Curve list  can't  form closed loops    \n") ;
+        return (Surface*) NULL;
+     }
   }
   
-  topo_edges_loops.append(&topo_edges);
-
+  if( new_end == CUBIT_FALSE ) //case of one disconnected curve 
+  {
+     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                 "  Curve list  can't  form closed loops    \n") ;
+     return (Surface*) NULL;
+  }
+ 
   // Use the topo_edges to make a topo_face
-  TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
+  const TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
 					topo_edges_loops, old_surface_ptr) ;
  
   if(topo_face == NULL)
@@ -702,8 +755,9 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
 
   // make the topology bridges for the face
+  TopoDS_Face the_face = *topo_face;
   Surface *surface = OCCQueryEngine::instance()->populate_topology_bridge(
-                               *topo_face, CUBIT_TRUE); 
+                               the_face, CUBIT_TRUE); 
   return surface ;
 }
 
@@ -712,13 +766,12 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 // Member Type: PUBLIC
 // Description: make a opoDS_Face of type surface_type, given the list of 
 //              TopoDS_Edge. the TopoDS_Edge's should be in order in loops.
-//              The first edge loop is the outer loop.
 //              check edges option is done in GeometryModifyTool level, so
 //              disregard this option.
 // Author     : Jane Hu
 // Date       : 02/08
 //===============================================================================
-TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
+const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 			       DLIList<DLIList<TopoDS_Edge*>*> topo_edges_list,
 			       Surface * old_surface_ptr)const
 {
@@ -734,10 +787,12 @@ TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
  
   // Set the TopoDS_Face pointer, if requested.
   TopoDS_Face *fit_Face = NULL;
+  Handle_Geom_Surface S;
   if ( old_surface_ptr != NULL )
   {
       OCCSurface *surf = CAST_TO(old_surface_ptr, OCCSurface );
       fit_Face = surf->get_TopoDS_Face();
+      S = BRep_Tool::Surface(*fit_Face);
   }
  
   // Make a wire from the topo_edges.
@@ -745,12 +800,94 @@ TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   if(topo_edges_list.size() == 0)
       return (TopoDS_Face*) NULL;
 
-  DLIList<TopoDS_Edge*>* topo_edges = topo_edges_list.get();
-  BRepBuilderAPI_MakeWire aWire(*(topo_edges->get()));
-  for(int i = 1; i < topo_edges->size(); i++)
-    aWire.Add(*(topo_edges->step_and_get()));
-     
-  return (TopoDS_Face*) NULL;
+  DLIList<TopoDS_Wire*> wires;
+  GProp_GProps myProps;
+  double max_area  = 0.0;
+  TopoDS_Wire* out_Wire = NULL;
+
+  DLIList<TopoDS_Edge*>* topo_edges; 
+  //check and make sure the outer loop is in the first
+  for(int i = 0; i < topo_edges_list.size() ; i++)
+  {
+    topo_edges = topo_edges_list.step_and_get();
+    BRepBuilderAPI_MakeWire aWire(*(topo_edges->get()));
+    for(int j = 1; j < topo_edges->size(); j++)
+      aWire.Add(*(topo_edges->step_and_get()));
+
+    TopoDS_Wire test_Wire = aWire.Wire();
+    wires.append(&test_Wire);
+   
+    BRepBuilderAPI_MakeFace made_face(test_Wire);
+
+    if (!made_face.IsDone())
+    {
+      PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
+                   "   Cannot find the best fit surface for given curves.\n");
+      return (TopoDS_Face *)NULL;
+    }
+ 
+    TopoDS_Face test_face = made_face.Face();
+    BRepGProp::SurfaceProperties(test_face, myProps); 
+    double area = myProps.Mass();
+    out_Wire = max_area > area ? out_Wire : &test_Wire;
+    max_area = max_area > area ? max_area : area;
+  }
+   
+  wires.remove(out_Wire);
+  wires.insert_first(out_Wire);
+
+  //create the TopoDS_Face
+  const TopoDS_Face* topo_face = NULL;
+  CubitBoolean error = CUBIT_FALSE;
+
+  for(int i = 0; i < topo_edges_list.size() ; i++)
+  {
+    TopoDS_Wire *the_wire = wires.get_and_step();
+    if (i == 0)
+    {
+      if( old_surface_ptr != NULL )
+      {
+        BRepBuilderAPI_MakeFace made_face(S, *the_wire);
+        if (!made_face.IsDone())
+        {
+          error = CUBIT_TRUE;
+          break;
+        }
+        topo_face = &(made_face.Face());
+      }
+      else
+      {
+        BRepBuilderAPI_MakeFace made_face(*the_wire);
+        if (!made_face.IsDone())
+        {
+          error = CUBIT_TRUE;
+          break;
+        }
+
+        topo_face = &(made_face.Face());
+      }
+    }
+    else
+    {
+      BRepBuilderAPI_MakeFace made_face(*topo_face, *the_wire);
+      if (!made_face.IsDone())
+      {
+        error = CUBIT_TRUE;
+        break;
+      }
+
+      topo_face = &(made_face.Face());
+    }
+  } 
+
+  if(error)
+  {
+    PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
+                 "   Cannot find the best fit surface for given curves.\n");
+    return (TopoDS_Face *)NULL;
+  }
+
+  return topo_face;
 }
 //===============================================================================
 // Function   : make_Lump
