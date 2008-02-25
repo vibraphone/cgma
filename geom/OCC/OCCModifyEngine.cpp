@@ -47,6 +47,7 @@
 #include "BRepGProp.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
+#include "BRepAlgoAPI_Fuse.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "TopExp_Explorer.hxx"
@@ -809,7 +810,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   //check and make sure the outer loop is in the first
   for(int i = 0; i < topo_edges_list.size() ; i++)
   {
-    topo_edges = topo_edges_list.step_and_get();
+    topo_edges = topo_edges_list.get_and_step();
     BRepBuilderAPI_MakeWire aWire(*(topo_edges->get()));
     for(int j = 1; j < topo_edges->size(); j++)
       aWire.Add(*(topo_edges->step_and_get()));
@@ -817,24 +818,29 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
     TopoDS_Wire test_Wire = aWire.Wire();
     wires.append(&test_Wire);
    
+    if (topo_edges_list.size() == 1)
+      break;
+
     BRepBuilderAPI_MakeFace made_face(test_Wire);
 
     if (!made_face.IsDone())
     {
-      PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
+       PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
                    "   Cannot find the best fit surface for given curves.\n");
-      return (TopoDS_Face *)NULL;
+       return (TopoDS_Face *)NULL;
     }
- 
     TopoDS_Face test_face = made_face.Face();
     BRepGProp::SurfaceProperties(test_face, myProps); 
     double area = myProps.Mass();
     out_Wire = max_area > area ? out_Wire : &test_Wire;
     max_area = max_area > area ? max_area : area;
+  } 
+
+  if (out_Wire)
+  {
+    wires.remove(out_Wire);
+    wires.insert_first(out_Wire);
   }
-   
-  wires.remove(out_Wire);
-  wires.insert_first(out_Wire);
 
   //create the TopoDS_Face
   const TopoDS_Face* topo_face = NULL;
@@ -857,7 +863,9 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
       }
       else
       {
-        BRepBuilderAPI_MakeFace made_face(*the_wire);
+        CubitBoolean is_planar = (surface_type == PLANE_SURFACE_TYPE ?
+				  CUBIT_TRUE : CUBIT_FALSE); 
+        BRepBuilderAPI_MakeFace made_face(*the_wire, is_planar);
         if (!made_face.IsDone())
         {
           error = CUBIT_TRUE;
@@ -892,22 +900,84 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 //===============================================================================
 // Function   : make_Lump
 // Member Type: PUBLIC
-// Description: make a lump
-// Author     : John Fowler
-// Date       : 10/02
+// Description: make a lump of one shell
+// Author     : Jane Hu
+// Date       : 02/08
 //===============================================================================
-Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& /*surface_list*/ ) const
+Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Lump*) NULL;
+  if (surface_list.size() == 0) 
+    return (Lump*) NULL;
+
+  Surface* surface = surface_list.get();
+  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+  if(!occ_surface)
+  {
+     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (Lump *)NULL;
+  }
+  TopoDS_Face* face_ptr = occ_surface->get_TopoDS_Face();
+  for(int i = 1; i < surface_list.size(); i++)
+  {
+     Surface* surface = surface_list.step_and_get();
+     OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+     if(!occ_surface)
+     {
+        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                    "Possible incompatible geometry engines.\n");
+        return (Lump *)NULL;
+     }
+     TopoDS_Face* face2_ptr = occ_surface->get_TopoDS_Face();
+    
+     BRepAlgoAPI_Fuse  aFuse(*face_ptr, *face2_ptr);
+     if(aFuse.ErrorStatus() == 1) //The Object is created but Nothing is Done
+     {
+        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                    "Check surface connectivities.\n");
+        return (Lump *)NULL;
+     }
+     else if (aFuse.ErrorStatus() != 0)
+     {
+        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                    "OCC internal error.\n");
+        return (Lump *)NULL;
+     }
+     
+     TopTools_ListOfShape shapes;
+     shapes.Assign( aFuse.Modified(*face_ptr));
+     face_ptr = & (TopoDS::Face(shapes.First()));
+  }    
+  
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(*face_ptr);
+  BRepBuilderAPI_MakeShell aMakeShell(HGeom_surface);
+  if(!aMakeShell.IsDone())
+  {
+     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                 "OCC internal error.\n");
+     return (Lump *)NULL;
+  }
+
+  TopoDS_Shell aShell = aMakeShell.Shell();
+  BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
+  if (!aMakeSolid.IsDone())
+  {
+     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                 "OCC internal error.\n");
+     return (Lump *)NULL;
+  }
+
+  TopoDS_Solid aSolid = aMakeSolid.Solid();
+  return 
+    OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
 }
 
 //===============================================================================
 // Function   : make_BodySM
 // Member Type: PUBLIC
 // Description: make a BodySM
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 02/08
 //===============================================================================
 BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
 {
