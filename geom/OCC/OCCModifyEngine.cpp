@@ -43,6 +43,7 @@
 #include "BRepBuilderAPI_MakeFace.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
 #include "BRep_Tool.hxx"
+#include "BRep_Builder.hxx"
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
 #include "TopoDS.hxx"
@@ -55,7 +56,7 @@
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
 #include "CubitDefines.h"
-
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include "CubitUtil.hpp"
 #include "CubitPoint.hpp"
 #include "CubitPointData.hpp"
@@ -412,7 +413,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
      gp_Elips ellipse(axis, major, minor);
      CubitBoolean use_sense = (sense == CUBIT_FORWARD ? CUBIT_TRUE : CUBIT_FALSE); 
-     curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, sense);
+     curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, use_sense);
   }
 
   else if(curve_type == PARABOLA_CURVE_TYPE || 
@@ -647,7 +648,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
                                  bool check_edges) const
 {
   //Create TopoDS_Edge list to make a surface.
-  DLIList<TopoDS_Edge*> topo_edges;
+  DLIList<TopoDS_Edge*> topo_edges[curve_list.size()];
   DLIList<DLIList<TopoDS_Edge*>*> topo_edges_loops;
   curve_list.reset() ;
   Curve const* curve_ptr = NULL ;
@@ -681,6 +682,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   CubitBoolean new_end = CUBIT_TRUE;
   int size = curve_list.size();
+  int count = 0;
   for ( int i = 0 ; i < size ; i++ )
   {
      for(int j = 0; j < curve_list.size(); j ++)
@@ -695,8 +697,9 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 	   return (Surface*) NULL;
         }
 
+        point_list.clean_out();
         occ_curve->get_points(point_list);
-        assert(point_list.size()==2);
+        //assert(point_list.size()==2);
 
         if (i == 0)
         { 
@@ -717,14 +720,14 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
      if (new_end)//found next curve
      {
         topo_edge = occ_curve->get_TopoDS_Edge();
-        topo_edges.append(topo_edge);
+        topo_edges[count].append(topo_edge);
         curve_list.remove(); 
         if(start->is_equal( *end, tol))  //formed a closed loop
         {
  	  i = 0;
 	  size = curve_list.size() ;
-          topo_edges_loops.append(&topo_edges);
-	  topo_edges.clean_out(); 
+          topo_edges_loops.append(&topo_edges[count]);
+          count++;
         } 
         else
           new_end = CUBIT_FALSE;
@@ -805,6 +808,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   GProp_GProps myProps;
   double max_area  = 0.0;
   TopoDS_Wire* out_Wire = NULL;
+  TopoDS_Wire test_Wire;
 
   DLIList<TopoDS_Edge*>* topo_edges; 
   //check and make sure the outer loop is in the first
@@ -815,8 +819,8 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
     for(int j = 1; j < topo_edges->size(); j++)
       aWire.Add(*(topo_edges->step_and_get()));
 
-    TopoDS_Wire test_Wire = aWire.Wire();
-    wires.append(&test_Wire);
+    test_Wire = aWire.Wire();
+    wires.append(&(aWire.Wire()));
    
     if (topo_edges_list.size() == 1)
       break;
@@ -918,6 +922,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
      return (Lump *)NULL;
   }
   TopoDS_Face* face_ptr = occ_surface->get_TopoDS_Face();
+
   for(int i = 1; i < surface_list.size(); i++)
   {
      Surface* surface = surface_list.step_and_get();
@@ -968,6 +973,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   }
 
   TopoDS_Solid aSolid = aMakeSolid.Solid();
+
   return 
     OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
 }
@@ -1004,18 +1010,73 @@ BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
 //===============================================================================
 // Function   : make_BodySM
 // Member Type: PUBLIC
-// Description: make a BodySM
-// Author     : John Fowler
-// Date       : 10/02
+// Description: make a BodySM given a list of Lumps.
+// Author     : Jane Hu
+// Date       : 02/08
 //===============================================================================
-BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& /*lump_list*/ ) const
-    {return NULL ;}
+BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
+{
+  if (lump_list.size() == 0)
+    return (BodySM*) NULL;
+
+  //Create a compsolid shape
+  TopoDS_CompSolid CS;
+  BRep_Builder B;
+  B.MakeCompSolid(CS);
+
+  //Add every shape to the CompSolid
+  for(int i = 0; i < lump_list.size(); i++)
+  {
+     Lump* lump = lump_list.get_and_step();
+     OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+     if(!occ_lump)
+     {
+        PRINT_ERROR("Cannot create an OCC BodySM from the given lumps.\n"
+                    "Possible incompatible geometry engines.\n");
+        return (BodySM *)NULL;
+     }
+     TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
+     B.Add(CS, *solid);
+
+     //remove each Lump's body from the BodyList
+     BodySM* bodysm = occ_lump->get_body();
+     if(bodysm == NULL)
+	continue;
+
+     occ_lump->remove_body();
+
+     OCCBody * occ_body = dynamic_cast<OCCBody*>(bodysm);
+     if(occ_body == NULL)
+	continue;
+
+     TopoDS_Shape* shape = occ_body->get_TopoDS_Shape();
+     if (shape == NULL)
+	continue;
+
+     int k;
+     if(OCCQueryEngine::instance()->OCCMap->IsBound(*shape))
+     {
+         k = OCCQueryEngine::instance()->OCCMap->Find(*shape);
+
+         if(!OCCQueryEngine::instance()->OCCMap->UnBind(*shape))
+           PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+
+         if(!OCCQueryEngine::instance()->OccToCGM->erase(k))
+           PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+     }
+
+  }
+ 
+  return
+    OCCQueryEngine::instance()->populate_topology_bridge(CS);
+
+}
 
 
 //===============================================================================
 // Function   : sphere
 // Member Type: PUBLIC
-// Description: build a sphere with facets
+// Description: build an OCC sphere
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================

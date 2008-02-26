@@ -939,6 +939,18 @@ OCCQueryEngine::write_topology( const char* file_name,
       OCCBody* body = OCC_bodies.get_and_step();
       TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
 
+      if (shape == NULL) //sheet body
+      {
+         OCCSurface* surface = body->my_sheet_surface();
+         if (surface == NULL)
+         {
+	   PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
+	   continue;
+         }
+         B.Add(Co,*(surface->get_TopoDS_Face())); 
+         continue;
+      }
+
       //check if this body is build backwards from lump. if so,
       //the body and its CompSolid doesn't have bounded relationship
       //established. In this case, each individual lump of the body 

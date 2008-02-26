@@ -173,6 +173,9 @@ public:
 
   //update the underlining CompSolid
   CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+
+  OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
+				 return (OCCSurface*) NULL;} 
 protected: 
   
 private:
