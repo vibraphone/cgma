@@ -244,6 +244,9 @@ public:
                                          CubitBoolean import_curves = CUBIT_TRUE,
                                          CubitBoolean import_vertices = CUBIT_TRUE,
                                          CubitBoolean free_surfaces = CUBIT_TRUE );
+
+  CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm)const;
+
 private:
   CubitStatus import_solid_model(FILE *file_ptr,
                                  const char* /*file_type*/,
@@ -263,11 +266,15 @@ private:
   CubitStatus unhook_Surface_from_OCC( Surface* surface ) const;
   CubitStatus unhook_Curve_from_OCC( Curve* curve ) const;
   CubitStatus unhook_Point_from_OCC( Point* point ) const;
+  CubitStatus delete_loop( LoopSM* loopsm)const;
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
     //- the input list. 
-      
+  virtual CubitStatus delete_solid_model_entities(
+          GeometryEntity* ref_entity_ptr,
+          bool remove_lower_entities) const;
+    
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 

@@ -820,7 +820,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
       aWire.Add(*(topo_edges->step_and_get()));
 
     test_Wire = aWire.Wire();
-    wires.append(&(aWire.Wire()));
+    wires.append(&test_Wire);
    
     if (topo_edges_list.size() == 1)
       break;
@@ -981,7 +981,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
 //===============================================================================
 // Function   : make_BodySM
 // Member Type: PUBLIC
-// Description: make a BodySM
+// Description: make a BodySM from a surface
 // Author     : Jane Hu
 // Date       : 02/08
 //===============================================================================
@@ -1037,38 +1037,25 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
      }
      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
      B.Add(CS, *solid);
-
-     //remove each Lump's body from the BodyList
-     BodySM* bodysm = occ_lump->get_body();
-     if(bodysm == NULL)
-	continue;
-
-     occ_lump->remove_body();
-
-     OCCBody * occ_body = dynamic_cast<OCCBody*>(bodysm);
-     if(occ_body == NULL)
-	continue;
-
-     TopoDS_Shape* shape = occ_body->get_TopoDS_Shape();
-     if (shape == NULL)
-	continue;
-
-     int k;
-     if(OCCQueryEngine::instance()->OCCMap->IsBound(*shape))
-     {
-         k = OCCQueryEngine::instance()->OCCMap->Find(*shape);
-
-         if(!OCCQueryEngine::instance()->OCCMap->UnBind(*shape))
-           PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
-
-         if(!OCCQueryEngine::instance()->OccToCGM->erase(k))
-           PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
-     }
-
   }
  
-  return
-    OCCQueryEngine::instance()->populate_topology_bridge(CS);
+  BodySM* bodysm = OCCQueryEngine::instance()->populate_topology_bridge(CS);
+
+  if(bodysm)
+  {
+     //remove each Lump's body from the BodyList
+     for(int i = 0; i < lump_list.size(); i++)
+     {
+        Lump* lump = lump_list.get_and_step();
+        OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+        BodySM* bodysm_ptr = occ_lump->get_body();
+        if(bodysm_ptr == NULL)
+      	  continue;
+
+        OCCQueryEngine::instance()->unhook_BodySM_from_OCC(bodysm_ptr);
+     }
+  } 
+  return bodysm;
 
 }
 

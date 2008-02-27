@@ -1520,7 +1520,18 @@ Body* GeometryModifyTool::make_Body(DLIList<RefVolume*>& ref_volume_list) const
       return (Body *)NULL;
    }
 
-   return GeometryQueryTool::instance()->make_Body(bodySM_ptr);
+   DLIList<BodySM*> bodysm_list;
+   bodysm_list.append(bodySM_ptr);
+  
+   DLIList<Body*> input_bodies;
+   for (int i =0; i < ref_volume_list.size(); i++)
+     input_bodies.append(ref_volume_list.get_and_step()->get_body_ptr());
+
+   DLIList<Body*> results;
+
+   finish_sm_op(input_bodies, bodysm_list, results, CUBIT_TRUE);
+   
+   return results.get();
 }
 
 //-------------------------------------------------------------------------
