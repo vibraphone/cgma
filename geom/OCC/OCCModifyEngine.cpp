@@ -1019,7 +1019,9 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
   if (lump_list.size() == 0)
     return (BodySM*) NULL;
 
-  //Create a compsolid shape
+  //Create a compsolid shape, save all BodySM's correponding to lump_list
+  //for deletion.
+  DLIList<BodySM*> bodysm_list;
   TopoDS_CompSolid CS;
   BRep_Builder B;
   B.MakeCompSolid(CS);
@@ -1037,6 +1039,12 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
      }
      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
      B.Add(CS, *solid);
+
+     BodySM* bodysm_ptr = occ_lump->get_body();
+     if(bodysm_ptr == NULL)
+          continue;
+
+     bodysm_list.append_unique(bodysm_ptr);
   }
  
   BodySM* bodysm = OCCQueryEngine::instance()->populate_topology_bridge(CS);
@@ -1044,13 +1052,9 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
   if(bodysm)
   {
      //remove each Lump's body from the BodyList
-     for(int i = 0; i < lump_list.size(); i++)
+     for(int i = 0; i < bodysm_list.size(); i++)
      {
-        Lump* lump = lump_list.get_and_step();
-        OCCLump* occ_lump = CAST_TO(lump, OCCLump);
-        BodySM* bodysm_ptr = occ_lump->get_body();
-        if(bodysm_ptr == NULL)
-      	  continue;
+        BodySM* bodysm_ptr = bodysm_list.get_and_step();
 
         OCCQueryEngine::instance()->unhook_BodySM_from_OCC(bodysm_ptr);
      }

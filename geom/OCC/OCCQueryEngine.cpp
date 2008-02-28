@@ -1422,7 +1422,6 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
        occ_lump->remove_body();
      unhook_Lump_from_OCC(lump);
   }
-
   return unhook_BodySM_from_OCC(bodysm);
 }
 
@@ -1458,6 +1457,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm)const
      BodyList->remove(occ_body_find);
   else
      BodyList->remove(occ_body);
+  //delete shape;
   delete shape;
   delete bodysm;
 } 
