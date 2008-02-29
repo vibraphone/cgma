@@ -55,6 +55,7 @@ public :
   void add_loop(OCCLoop* loop) { myLoopList.append_unique(loop);}   
   DLIList<OCCLoop*> loops() {return myLoopList;}
   void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}
+  void clean_loops(){myLoopList.clean_out();}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void

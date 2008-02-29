@@ -43,6 +43,8 @@ public :
 
   DLIList<OCCCoEdge*> coedges() {return myCoEdgeList;}
 
+  OCCCoEdge* remove_coedge(OCCCoEdge *coedge);
+
   void disconnect_all_curves();
 
   inline TopoDS_Wire* get_TopoDS_Wire() {return myTopoDSWire;}

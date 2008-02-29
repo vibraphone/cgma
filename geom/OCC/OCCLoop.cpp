@@ -80,10 +80,13 @@ void OCCLoop::disconnect_all_curves()
   {
     OCCCoEdge* coedge = myCoEdgeList.get_and_step();
     assert(coedge->loop() == this);
-    OCCCurve* curve = CAST_TO(coedge->curve(), OCCCurve);
-    curve->remove_loop(this);
   }
   myCoEdgeList.clean_out();
+}
+
+OCCCoEdge* OCCLoop::remove_coedge(OCCCoEdge *coedge)
+{ 
+  return myCoEdgeList.remove(coedge);
 }
 
 //-------------------------------------------------------------------------

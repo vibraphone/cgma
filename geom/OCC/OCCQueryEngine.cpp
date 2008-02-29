@@ -1414,6 +1414,15 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   if (!occ_body)
     return CUBIT_FAILURE;
 
+  OCCSurface* occ_surface = occ_body->my_sheet_surface();
+  if(occ_surface)
+  { 
+    delete occ_surface->my_body();
+    delete occ_surface->my_shell();
+    delete occ_surface->my_lump();
+    return delete_solid_model_entities(occ_surface);
+  }
+
   for(int i =0; i < occ_body->lumps().size(); i++)
   {
      Lump* lump = occ_body->lumps().get_and_step();
@@ -1422,6 +1431,7 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
        occ_lump->remove_body();
      unhook_Lump_from_OCC(lump);
   }
+
   return unhook_BodySM_from_OCC(bodysm);
 }
 
@@ -1646,10 +1656,43 @@ OCCQueryEngine::delete_loop( LoopSM* loopsm)const
     return CUBIT_FAILURE;
 
   DLIList<OCCCoEdge*> children;
-  occ_loop->coedges(children);
-  for(int i = 0; i < children.size(); i++)
+  children = occ_loop->coedges();
+  int size = children.size();
+  while(size > 0)
   {
-     Curve* curve = children.get_and_step()->curve();
+     OCCCoEdge* coedge = children.pop();
+     Curve* curve = coedge->curve();
+     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
+     if (occ_curve == NULL)
+	continue;
+
+     DLIList<OCCLoop*> loops;
+     
+     //remove all coedges corresponding to this curve from their loops.
+     loops =  occ_curve->loops();
+     for(int j = 0; j < loops.size(); j++)
+     {
+       OCCLoop* occ_loop = loops.get_and_step();
+       OCCCoEdge* found_coedge = occ_loop->remove_coedge(coedge); 
+
+       if (found_coedge)
+	 delete found_coedge;
+
+       //there might be 2 coedges in the same loop that uses the same curve
+       //as in a scar curve situation
+       DLIList<OCCCoEdge*> coedges = occ_loop->coedges();
+       for(int k =0; k < coedges.size(); k++)
+       {
+         found_coedge = coedges.get_and_step();
+         if (CAST_TO(found_coedge->curve(), OCCCurve) == occ_curve)
+         {
+           occ_loop->remove_coedge(found_coedge); 
+           children.remove(found_coedge);
+           delete found_coedge;
+         }
+       }
+     }
+     size = children.size();
      delete_solid_model_entities(curve);
   }
    
@@ -1739,6 +1782,7 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
   if (!fcurve )
     return CUBIT_FAILURE;
 
+  fcurve->clean_loops();
   TopoDS_Edge * edge = fcurve->get_TopoDS_Edge();
   if (!edge)
     return CUBIT_FAILURE;
