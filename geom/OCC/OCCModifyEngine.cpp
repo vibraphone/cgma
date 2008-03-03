@@ -49,6 +49,8 @@
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "BRepAlgoAPI_Fuse.hxx"
+#include "BRepPrimAPI_MakeSphere.hxx"
+#include "BRepPrimAPI_MakeBox.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "TopExp_Explorer.hxx"
@@ -1068,41 +1070,73 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
 // Function   : sphere
 // Member Type: PUBLIC
 // Description: build an OCC sphere
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 BodySM* OCCModifyEngine::sphere(double radius) const
 {
-  return (BodySM*) NULL;
+  if (radius <= 0)
+    return (BodySM*) NULL; 
+
+  TopoDS_Solid S = BRepPrimAPI_MakeSphere(radius);
+  
+  Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S, 
+								CUBIT_TRUE);
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body();
 }
 
 
 //===============================================================================
 // Function   : brick
 // Member Type: PUBLIC
-// Description: build a brick with facets
-// Author     : John Fowler
-// Date       : 10/02
+// Description: build an OCC brick 
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 BodySM* OCCModifyEngine::brick( double wid, double dep, double hi ) const
 {
-  return (BodySM*)NULL;
+  if (wid <= 0 || dep <=0 || hi <= 0)
+    return (BodySM*)NULL;
+  
+  TopoDS_Solid S = BRepPrimAPI_MakeBox(wid, dep, hi);
+
+  Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S,
+								CUBIT_TRUE);
+
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body();
 }
 
 
 //===============================================================================
 // Function   : brick
 // Member Type: PUBLIC
-// Description: create a brick with facets given center axes and extension
-// Author     : John Fowler
-// Date       : 10/02
+// Description: create an OCC brick given center axes and extension
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
-BodySM* OCCModifyEngine::brick( const CubitVector &/*center*/, 
-                                  const CubitVector* /*axes[3]*/,
-                                  const CubitVector &/*extension*/) const
+BodySM* OCCModifyEngine::brick( const CubitVector& center, 
+                                const CubitVector axes[3],
+                                const CubitVector &extension) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  CubitVector left_corner =  center - 0.5 * extension;
+  gp_Pnt left_point(left_corner.x(), left_corner.y(), left_corner.z());
+  gp_Dir main_dir(axes[2].x(), axes[2].y(), axes[2].z());
+  gp_Ax2 Axis(left_point, main_dir);
+  TopoDS_Solid S = BRepPrimAPI_MakeBox( Axis, extension.x(), extension.y(),
+					extension.z());
+
+  Lump* lump =  OCCQueryEngine::instance()->populate_topology_bridge(S,
+								CUBIT_TRUE);
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body(); 
 }
 
 //===============================================================================

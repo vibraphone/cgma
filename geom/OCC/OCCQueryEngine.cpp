@@ -1423,9 +1423,10 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
     return delete_solid_model_entities(occ_surface);
   }
 
-  for(int i =0; i < occ_body->lumps().size(); i++)
+  DLIList<Lump*> lumps = occ_body->lumps();
+  for(int i =0; i < lumps.size(); i++)
   {
-     Lump* lump = occ_body->lumps().get_and_step();
+     Lump* lump = lumps.get_and_step();
      OCCLump* occ_lump = CAST_TO(lump, OCCLump);
      if (occ_lump)
        occ_lump->remove_body();
@@ -1462,7 +1463,8 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm)const
       if(!OccToCGM->erase(k))
         PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
   }
-  occ_body->lumps().clean_out();
+  DLIList<Lump*> lumps;
+  occ_body->lumps(lumps);
   if (occ_body_find)
      BodyList->remove(occ_body_find);
   else
