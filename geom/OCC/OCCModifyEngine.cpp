@@ -38,6 +38,10 @@
 #include "GC_MakeTrimmedCylinder.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "Handle_Geom_Plane.hxx"
+#include "BRepPrimAPI_MakePrism.hxx"
+#include "BRepPrimAPI_MakeCone.hxx"
+#include "BRepPrimAPI_MakeTorus.hxx"
+#include "GC_MakeEllipse.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
 #include "BRepBuilderAPI_MakeFace.hxx"
@@ -658,6 +662,8 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   TopoDS_Edge* topo_edge = NULL;
     
   //check no intersections of the TopoDS_Edge's.
+  //need to check that no intersection in the middle of the curves not at
+  //vertices.
   for ( int i = 0 ; i < curve_list.size()-1 ; i++ )
   {
      for(int j = i+1; j < curve_list.size(); j ++)
@@ -1127,7 +1133,8 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
   CubitVector left_corner =  center - 0.5 * extension;
   gp_Pnt left_point(left_corner.x(), left_corner.y(), left_corner.z());
   gp_Dir main_dir(axes[2].x(), axes[2].y(), axes[2].z());
-  gp_Ax2 Axis(left_point, main_dir);
+  gp_Dir x_dir(axes[0].x(), axes[0].y(), axes[0].z());
+  gp_Ax2 Axis(left_point, main_dir, x_dir);
   TopoDS_Solid S = BRepPrimAPI_MakeBox( Axis, extension.x(), extension.y(),
 					extension.z());
 
@@ -1142,26 +1149,26 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
 //===============================================================================
 // Function   : prism
 // Member Type: PUBLIC
-// Description: create a prism with facets
-// Author     : John Fowler
-// Date       : 10/02
+// Description: create an OCC prism 
+// Author     : Jane Hu  
+// Date       : 03/08
 //===============================================================================
-BodySM* OCCModifyEngine::prism( double /*height*/, int /*sides*/, double /*major*/,
-                               double /*minor*/) const
+BodySM* OCCModifyEngine::prism( double height, int sides, double major,
+                               double minor) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+   
   return (BodySM*) NULL;
 }
 
 //===============================================================================
 // Function   : pyramid
 // Member Type: PUBLIC
-// Description: create a pyramid with facets
+// Description: create an OCC pyramid 
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================
-BodySM* OCCModifyEngine::pyramid( double /*height*/, int /*sides*/, double /*major*/,
-                                 double /*minor*/, double /*top*/) const
+BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
+                                 double minor, double top) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return (BodySM*) NULL;
@@ -1170,43 +1177,119 @@ BodySM* OCCModifyEngine::pyramid( double /*height*/, int /*sides*/, double /*maj
 //===============================================================================
 // Function   : cylinder
 // Member Type: PUBLIC
-// Description: create a cylinder with facets
-// Author     : John Fowler
-// Date       : 10/02
+// Description: create an OCC cylinder, its base shape can be ellipse with
+//		r1, r2 while r3 = 0; or it can be a cone with r1, 
+//		r3 while r2 = 0. 
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  if(r2 > 0 && r3 > 0)
+  {
+    PRINT_WARNING("Can not make elliptical cone for OCC engine.\n");
+    return (BodySM*) NULL;
+  }
+
+  TopoDS_Solid S;
+  if(r3 == 0)//elliptical cylinder
+  {
+    gp_Pnt center(0.0, 0.0, 0.0);
+    gp_Dir main_dir(0.0, 0.0, 1.0);
+    gp_Dir x_dir(1.0, 0.0, 0.0);
+    gp_Ax2 Axis(center, main_dir, x_dir); 
+    Handle(Geom_Curve) curve_ptr = GC_MakeEllipse(Axis, r1, r2); 
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+    BRepBuilderAPI_MakeWire aWire(new_edge);
+
+    TopoDS_Wire test_Wire = aWire.Wire();
+
+    BRepBuilderAPI_MakeFace made_face(test_Wire);
+
+    if (!made_face.IsDone())
+    {
+       PRINT_ERROR("In OCCModifyEngine::cylinder\n"
+                   "   Cannot create elliptical surface for given radii.\n");
+       return (BodySM *)NULL;
+    }
+    TopoDS_Face test_face = made_face.Face();    
+    gp_Vec V(0.0, 0.0, hi);
+    TopoDS_Shape S1 = BRepPrimAPI_MakePrism(test_face, V);    
+    S = TopoDS::Solid(S1);
+  }
+
+  else // cone
+    S = BRepPrimAPI_MakeCone(r1, r3, hi);
+
+  Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S,
+                                                                CUBIT_TRUE);
+
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body();
 }
 
 //===============================================================================
 // Function   : torus
 // Member Type: PUBLIC
-// Description: create a torus with facets
-// Author     : John Fowler
-// Date       : 10/02
+// Description: create an OCC torus
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 BodySM* OCCModifyEngine::torus( double r1, double r2 ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  if (r1 <= 0 || r2 <= 0)
+    return (BodySM*) NULL;
+ 
+  TopoDS_Solid S = BRepPrimAPI_MakeTorus(r1, r2);
+
+  Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S,
+                                                                CUBIT_TRUE);
+
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body();
 }
 
 //===============================================================================
 // Function   : planar_sheet
 // Member Type: PUBLIC
-// Description: create a planar_sheet with facets
-// Author     : John Fowler
-// Date       : 10/02
+// Description: create an OCC planar_sheet with four vectors. 
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
-BodySM* OCCModifyEngine::planar_sheet ( const CubitVector& /*p1*/,
-                                       const CubitVector& /*p2*/,
-                                       const CubitVector& /*p3*/,
-                                       const CubitVector& /*p4*/ ) const
+BodySM* OCCModifyEngine::planar_sheet ( const CubitVector& p1,
+                                       const CubitVector& p2,
+                                       const CubitVector& p3,
+                                       const CubitVector& p4) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  Point* point1 = make_Point(p1);
+  Point* point2 = make_Point(p2);
+  Point* point3 = make_Point(p3);
+  Point* point4 = make_Point(p4);
+  Curve * curve1 = make_Curve( point1, point2);
+  if (curve1 == NULL)
+	return (BodySM*) NULL;
+  Curve * curve2 = make_Curve( point2, point3); 
+  if (curve2 == NULL)
+        return (BodySM*) NULL;
+  Curve * curve3 = make_Curve( point3, point4);
+  if (curve3 == NULL)
+        return (BodySM*) NULL;
+  Curve * curve4 = make_Curve( point4, point1);
+  if (curve4 == NULL)
+        return (BodySM*) NULL;
+  DLIList<Curve*> curves;
+  curves.append(curve1);
+  curves.append(curve2);
+  curves.append(curve3);
+  curves.append(curve4);
+  Surface* surface = make_Surface(PLANE_SURFACE_TYPE, curves);
+  if (surface == NULL)
+	return (BodySM*) NULL;
+  return CAST_TO(surface,OCCSurface)->my_body();
 }
 
 //===============================================================================
