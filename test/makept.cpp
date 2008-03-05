@@ -109,7 +109,7 @@ CubitStatus make_Point()
   char *argv = "./66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
-/*
+
   argv = "./62_shaver1.brep";
   status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
@@ -117,7 +117,33 @@ CubitStatus make_Point()
   argv = "./72_shaver6.brep";
   status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
-*/  
+  
+  // test create a Compound body.
+  DLIList<Body*> test_bodies;
+  gti->bodies(test_bodies);
+ 
+  DLIList<RefVolume*> ref_volume_list;
+  for(int i = 0; i < test_bodies.size(); i++)
+    test_bodies.get_and_step()->ref_volumes(ref_volume_list);
+  
+  Body* CompBody = gmti->make_Body(ref_volume_list);
+
+  BodySM* CompBodySM = CompBody->get_body_sm_ptr();
+
+  OCCBody *occ_CompBody = CAST_TO(CompBodySM, OCCBody);
+
+  test_bodies.clean_out();
+  gti->bodies(test_bodies);
+
+  CubitVector vi, vii;
+  vi = CompBody->center_point(); 
+
+  CubitVector axis(10,0,0);
+
+  gti->translate(CompBody,axis);
+  vi = CompBody->center_point();
+  // After parellel move, center point moved by x (10)
+
   CubitVector vector1(10,10,10);
   CubitVector vector2(10,-10,10);
   DLIList<RefEntity*> free_entities;
@@ -127,13 +153,6 @@ CubitStatus make_Point()
   gmti->make_RefVertex(vector2,5);
 
   gti->get_free_ref_entities(free_entities);
-
-  //translate the two vertice by (10,10,10) and (20,20,20)
-  for(int i = 1; i <= free_entities.size(); i++)
-  {
-     RefEntity * entity = free_entities.get_and_step();
-     gti->translate((BasicTopologyEntity*)entity, i*vector1);
-  }
 
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
@@ -160,11 +179,10 @@ CubitStatus make_Point()
 		about_spatially_equal(vertex1,vertex2);
   //vertex1,vertex2 are not spatially equal. 
   
-  CubitVector vi, vii;
   double d;
   gti->entity_entity_distance(vertex1,vertex2,vi, vii,d);
   // distance (d) between vertex1,vertex2. vi (20, 20, 20) is vertex1 
-  //translated by (10,10,10) and vii(35, 35, 35) is vertex2 translated
+  //translated by (10,10,10) and vii(30, 10, 30) is vertex2 translated
   //by 2*(10,10,10).
  
   //check for body
@@ -183,7 +201,6 @@ CubitStatus make_Point()
   BodySM* body = bodies.get()->get_body_sm_ptr();
   OCCBody* occ_body = CAST_TO(body, OCCBody);
 
-  CubitVector axis(10,0,0);
   gti->reflect(bodies, axis);
   vi = bodies.get()->center_point();
   // After reflection, only x value should change.
@@ -218,11 +235,15 @@ CubitStatus make_Point()
 
   DLIList<RefFace*> ref_faces;
   gti->ref_faces(ref_faces);
-  RefFace* ref_face = ref_faces.step_and_get();
+  //RefFace* ref_face = ref_faces.step_and_get();
+  RefFace* ref_face = ref_faces.get();
 
   //make a new refface out of existing refface.
-  CubitBoolean extended_from = CUBIT_FALSE;
+  CubitBoolean extended_from = CUBIT_TRUE;
   RefFace* new_face = gmti->make_RefFace(ref_face, extended_from);
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
 
   DLIList<DLIList<RefEdge*>*> ref_edge_loops;
   new_face->ref_edge_loops(ref_edge_loops);
@@ -230,13 +251,18 @@ CubitStatus make_Point()
   DLIList<RefEdge*>* ref_edge_list;
   ref_edge_list = ref_edge_loops.get();
 
+  RefVertex* start = NULL;
+  RefVertex* end = NULL;
   for (int i = 0; i < ref_edge_list->size(); i++)
   {
     RefEdge * edge = ref_edge_list->get_and_step();
     double d = edge->measure();
-    RefVertex* start = edge->start_vertex();
-    RefVertex* end = edge->end_vertex();
+    start = edge->start_vertex();
+    end = edge->end_vertex();
   }
+
+  RefFace* new_face2 = gmti->make_RefFace(PLANE_SURFACE_TYPE, 
+                         *ref_edge_list, ref_face, CUBIT_TRUE);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -250,8 +276,12 @@ CubitStatus make_Point()
      gti->translate(entity, i*vector1);
   }
 
-  vi = new_face->center_point();
-  //center point shout moved by (40,40,40) compared with the original one below
+  RefVolume* volume = NULL;
+  if ( new_face->get_surface_ptr()->is_closed_in_U())
+    volume = new_face->ref_volume(); 
+  else
+    vi = new_face->center_point();
+  //center point should moved by (40,40,40) compared with the original one below
 
   vi = ref_face->center_point();
   // center point

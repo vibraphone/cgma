@@ -652,6 +652,7 @@ public:
                                   DLIList<BodySM*> &new_bodies,
                                   DLIList<TopologyBridge*>*,
                                   DLIList<TopologyBridge*>* ) const; 
+
 protected:
 
  const TopoDS_Face* make_TopoDS_Face( GeometryType surface_type,

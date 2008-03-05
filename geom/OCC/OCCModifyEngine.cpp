@@ -662,8 +662,10 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   TopoDS_Edge* topo_edge = NULL;
     
   //check no intersections of the TopoDS_Edge's.
-  //need to check that no intersection in the middle of the curves not at
-  //vertices.
+  //need to check that no intersection in the middle of the curves, not at
+  //vertices or out of boundary.
+
+  int count = 0; //intersection point should be the same as curve_list size.
   for ( int i = 0 ; i < curve_list.size()-1 ; i++ )
   {
      for(int j = i+1; j < curve_list.size(); j ++)
@@ -676,11 +678,44 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 				curve_list[j], intscts, bounded, closest);
         if(yes_int)
         {
-	   PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+           //check intscts point should be vertex or outside boundary.
+ 	   if (intscts.size() > 2 )  
+	   {
+	     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
                  "       Cannot make Surface with intersecting curves.\n");
-           return (Surface *)NULL;
+             return (Surface *)NULL;
+           }
+           else
+           {
+             for(int k = 0; k < intscts.size(); k++)
+             {
+               CubitVector *v = intscts.get_and_step();
+	       CubitPointContainment is_on = CAST_TO(curve_list[i],OCCCurve)->
+					point_containment(*v);
+               if (is_on == CUBIT_PNT_BOUNDARY)
+               {
+	 	 is_on = CAST_TO(curve_list[j],OCCCurve)->
+				point_containment(*v);
+		 if (is_on == CUBIT_PNT_BOUNDARY)
+                   count++;
+               }
+               else if(is_on == CUBIT_PNT_INSIDE)
+               {
+                 PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                 "       Cannot make Surface with intersecting curves.\n");
+                 return (Surface *)NULL;
+               }
+	     }
+	   }
         }
      }
+  }
+ 
+  if (count > curve_list.size()) 
+  {
+      PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                "       Cannot make Surface with intersecting curves.\n");
+      return (Surface *)NULL;
   }
 
   //sort the curves so they are in order and make closed loop
@@ -690,7 +725,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   CubitBoolean new_end = CUBIT_TRUE;
   int size = curve_list.size();
-  int count = 0;
+  count = 0;
   for ( int i = 0 ; i < size ; i++ )
   {
      for(int j = 0; j < curve_list.size(); j ++)
@@ -871,7 +906,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
           error = CUBIT_TRUE;
           break;
         }
-        topo_face = &(made_face.Face());
+        topo_face = new TopoDS_Face(made_face.Face());
       }
       else
       {
@@ -884,7 +919,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
           break;
         }
 
-        topo_face = &(made_face.Face());
+        topo_face = new TopoDS_Face(made_face.Face());
       }
     }
     else
@@ -896,7 +931,8 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
         break;
       }
 
-      topo_face = &(made_face.Face());
+      delete topo_face;
+      topo_face = new TopoDS_Face(made_face.Face());
     }
   } 
 
@@ -1156,7 +1192,7 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
 BodySM* OCCModifyEngine::prism( double height, int sides, double major,
                                double minor) const
 {
-   
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");   
   return (BodySM*) NULL;
 }
 
@@ -1170,7 +1206,7 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
 BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
                                  double minor, double top) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return (BodySM*) NULL;
 }
 
@@ -1192,7 +1228,7 @@ BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) 
   }
 
   TopoDS_Solid S;
-  if(r3 == 0)//elliptical cylinder
+  if(r3 == 0)//elliptical based cylinder
   {
     gp_Pnt center(0.0, 0.0, 0.0);
     gp_Dir main_dir(0.0, 0.0, 1.0);
@@ -1225,7 +1261,11 @@ BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) 
                                                                 CUBIT_TRUE);
 
   if (lump == NULL)
+  {
+    PRINT_ERROR("In OCCModifyEngine::cylinder\n"
+                "   Cannot create a cylinder for given radii.\n");
     return (BodySM*)NULL;
+  }
 
   return CAST_TO(lump, OCCLump)->body();
 }
@@ -1248,7 +1288,11 @@ BodySM* OCCModifyEngine::torus( double r1, double r2 ) const
                                                                 CUBIT_TRUE);
 
   if (lump == NULL)
+  {
+    PRINT_ERROR("In OCCModifyEngine::torus\n"
+                "   Cannot create a torus for given radii.\n");
     return (BodySM*)NULL;
+  }
 
   return CAST_TO(lump, OCCLump)->body();
 }

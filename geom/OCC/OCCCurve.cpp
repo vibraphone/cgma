@@ -878,8 +878,19 @@ void OCCCurve::adjust_periodic_parameter(double& param)
 CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 {
    if (is_position_on(point) == CUBIT_TRUE)
+   {
+     DLIList<OCCPoint*> points;
+     get_points(points);
+     for (int i = 0; i < points.size(); i++)
+     {
+	OCCPoint* pnt = points.get_and_step();
+        CubitVector v = pnt->coordinates();
+        double d = v.distance_between(point); 
+        if (d < GEOMETRY_RESABS)
+	  return CUBIT_PNT_BOUNDARY; 
+     }
      return CUBIT_PNT_ON;
-   
+   } 
    return CUBIT_PNT_OFF;
 }
 
@@ -1030,8 +1041,8 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         GCPnts_QuasiUniformAbscissa distribution1(acurve1, NbPoints);
         GCPnts_QuasiUniformAbscissa distribution2(acurve2, NbPoints);
         TColgp_Array1OfPnt points(1, 2*NbPoints-1);
-        int i = 1;
-        for (i; i <= NbPoints; i++)
+        int i;
+        for (i = 1; i <= NbPoints; i++)
         {
            double u = distribution1.Parameter(i);
            gp_Pnt P = myCurve1->Value(u);
