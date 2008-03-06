@@ -55,6 +55,7 @@
 #include "BRepAlgoAPI_Fuse.hxx"
 #include "BRepPrimAPI_MakeSphere.hxx"
 #include "BRepPrimAPI_MakeBox.hxx"
+#include "BRepPrimAPI_MakeWedge.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "TopExp_Explorer.hxx"
@@ -1192,8 +1193,14 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
 BodySM* OCCModifyEngine::prism( double height, int sides, double major,
                                double minor) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");   
-  return (BodySM*) NULL;
+  //currently OCC only support 4 sided prism
+  if (sides != 4)
+  {
+    PRINT_ERROR("Option not supported for OCC based geometry.\n");
+    return (BodySM*) NULL;
+  }
+
+  return brick(2 * major, 2 * minor, height); 
 }
 
 //===============================================================================
@@ -1206,8 +1213,23 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
 BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
                                  double minor, double top) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");
-  return (BodySM*) NULL;
+  //currently OCC only support 4 sided pyramid
+  if (sides != 4)
+  {
+    PRINT_ERROR("Option not supported for OCC based geometry.\n");
+    return (BodySM*) NULL;
+  }
+  
+  TopoDS_Solid S = BRepPrimAPI_MakeWedge( 2 * major, 2* minor, height,
+                                        2 * top);
+
+  Lump* lump =  OCCQueryEngine::instance()->populate_topology_bridge(S,
+                                                                CUBIT_TRUE);
+  if (lump == NULL)
+    return (BodySM*)NULL;
+
+  return CAST_TO(lump, OCCLump)->body();
+  
 }
 
 //===============================================================================
@@ -1339,14 +1361,55 @@ BodySM* OCCModifyEngine::planar_sheet ( const CubitVector& p1,
 //===============================================================================
 // Function   : copy_body
 // Member Type: PUBLIC
-// Description: copy a facet-based body
-// Author     : John Fowler
-// Date       : 10/02
+// Description: copy an OCC-based body
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
-BodySM* OCCModifyEngine::copy_body ( BodySM* /*bodyPtr*/) const
+BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  OCCBody* occ_body = CAST_TO(bodyPtr, OCCBody);
+  if (!occ_body)
+  {
+     PRINT_ERROR("Cannot create an OCC bodySM from the given bodySM.\n"
+                 "Possible incompatible geometry engines.\n");
+     return (BodySM *)NULL;
+  }
+
+  TopoDS_CompSolid *theCS = occ_body->get_TopoDS_Shape();
+  
+  if (theCS == NULL) //sheet body
+  {
+    Surface* surface = make_Surface(occ_body->my_sheet_surface());
+    if (surface == NULL)
+    {
+       PRINT_ERROR("Cannot create an OCC sheet bodySM from the given bodySM.\n");
+       return (BodySM *)NULL;
+    }
+
+    return CAST_TO(surface,OCCSurface)->my_body();
+  }
+
+  if(OCCQueryEngine::instance()->OCCMap->IsBound(*theCS))
+  {
+    BRepBuilderAPI_Copy api_copy(*theCS);
+
+    TopoDS_Shape newShape = api_copy.ModifiedShape(*theCS);
+
+    TopoDS_CompSolid newCS = TopoDS::CompSolid(newShape);
+
+    return OCCQueryEngine::instance()->populate_topology_bridge(newCS);
+  }
+
+  //single lump body
+  Lump *lump = occ_body->lumps().get();
+  TopoDS_Solid solid = *(CAST_TO(lump, OCCLump)->get_TopoDS_Solid());
+  BRepBuilderAPI_Copy api_copy(solid);
+  TopoDS_Shape newShape = api_copy.ModifiedShape(solid);
+  TopoDS_Solid newSolid = TopoDS::Solid(newShape);
+  lump = OCCQueryEngine::instance()->populate_topology_bridge(newSolid,
+							CUBIT_TRUE);
+  
+  return CAST_TO(lump, OCCLump)->body();
 }
 
 CubitStatus OCCModifyEngine::stitch_surfs(
