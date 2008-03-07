@@ -1207,8 +1207,8 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
 // Function   : pyramid
 // Member Type: PUBLIC
 // Description: create an OCC pyramid 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
                                  double minor, double top) const
@@ -1412,12 +1412,112 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
   return CAST_TO(lump, OCCLump)->body();
 }
 
+//===============================================================================
+// Function   : stitch_surfs
+// Member Type: PUBLIC
+// Description: Unite surfs into one surface sheet body
+// Author     : Jane Hu
+// Date       : 03/08
+//===============================================================================
 CubitStatus OCCModifyEngine::stitch_surfs(
                       DLIList<BodySM*>& surf_bodies,
                       BodySM*& stitched_body) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_SUCCESS;
+  stitched_body = NULL;
+  if (surf_bodies.size()==0)
+    return CUBIT_SUCCESS;
+
+  if (surf_bodies.size()==1)
+  {
+    stitched_body = surf_bodies.get();
+    return CUBIT_SUCCESS;
+  }
+
+  DLIList<TopoDS_Face*> faces_to_stitch;
+  for (int i = 0; i < surf_bodies.size(); i++)
+  {
+     BodySM * tool_body = surf_bodies.get();
+     OCCBody* occ_body = CAST_TO(tool_body, OCCBody);
+     OCCSurface* surface = occ_body->my_sheet_surface();
+     if (surface == NULL)
+     {
+       PRINT_ERROR("Can't stitch non-sheet bodySM's. \n");
+       return CUBIT_FAILURE;
+     } 
+     TopoDS_Face* topods_face = surface->get_TopoDS_Face();
+     if (topods_face != NULL)
+       faces_to_stitch.append(topods_face);
+  }
+
+  TopoDS_Face* first_face  = faces_to_stitch.get();
+  TopoDS_Face* second_face = NULL;
+  TopoDS_Face* new_face = NULL ;
+  CubitBoolean disconnected = CUBIT_FALSE;
+  DLIList<TopoDS_Face*>disconnected_faces;
+  TopoDS_Shape fusion;
+  int count = 0;
+  for(int i = 0; i < faces_to_stitch.size(); i++)
+  {
+     if (count > 0 && disconnected)
+     {
+       first_face = faces_to_stitch[i];
+       disconnected = CUBIT_FALSE;
+     }
+     else if (count > 0 && disconnected == CUBIT_FALSE)
+     {
+       first_face = new_face;
+     }
+     for(int j = i + 1; j < faces_to_stitch.size(); j++)
+     {
+       second_face = faces_to_stitch[j];
+       BRepAlgoAPI_Fuse fuse(*first_face, *second_face);
+       if (fuse.ErrorStatus() != 0 && fuse.ErrorStatus() != 1)
+       {  
+         PRINT_ERROR("Can't operate fusion for given surfaces. \n");
+         return CUBIT_FAILURE;
+       }
+       else if (fuse.ErrorStatus() == 1) 
+       {
+         //The Object is created but Nothing is Done
+         disconnected = CUBIT_TRUE;
+         continue;
+       }
+
+       //fused into one face
+       fusion = fuse.Shape1();
+       if (count > 0)
+	 delete new_face;
+       new_face = new TopoDS_Face(TopoDS::Face(fusion));
+       faces_to_stitch.remove(second_face);
+       i--;
+       count++;
+       break;
+     }
+     if (disconnected)  
+     {
+       //save the first_face for building the body
+       disconnected_faces.append(first_face);
+     }
+  }
+  if (disconnected) //last one
+    disconnected_faces.append(second_face); 
+
+  if(disconnected_faces.size() == 0)
+  {
+    Surface* surface = OCCQueryEngine::instance()->
+       populate_topology_bridge(*new_face, CUBIT_TRUE);
+
+    stitched_body = CAST_TO(surface, OCCSurface)->my_body(); 
+    //delete all original surfaces
+    OCCQueryEngine::instance()->delete_solid_model_entities(surf_bodies);  
+    return CUBIT_SUCCESS; 
+  }
+
+  //Can't make a body out of disconnected faces
+  PRINT_ERROR("Can't create one BodySM out of disconnected surfaces. \n");
+  if(new_face != NULL)
+    delete new_face; 
+  return CUBIT_FAILURE;
 }
 
 //===============================================================================
