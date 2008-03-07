@@ -2739,10 +2739,9 @@ iGeom_getEntBoundBox(iGeom_Instance instance,
 void
 iGeom_getFaceType( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle gentity_handle,
-                   /*out*/ char **face_type,
-                   int* face_type_allocated,
-                   int* face_type_size,
-                   int* err) 
+                   /*out*/ char *face_type,
+                   int* err,
+                   int *face_type_length) 
 {
   static const char *surf_types[] = {"cone", "plane", "sphere", "spline", 
                                      "torus", "best_fit", "facet", "undefined"};
@@ -2756,24 +2755,13 @@ iGeom_getFaceType( iGeom_Instance instance,
   
   const char* result = surf_types[this_type - CONE_SURFACE_TYPE];
   const int len = strlen(result);
-    // need to allocate space for string
-  if (*face_type_allocated == 0 || !*face_type) {
-    *face_type_allocated = len + 1;
-    *face_type_size = len;
-    *face_type = strdup( result );
+  if (len < *face_type_length) {
+    strcpy(face_type, result);
+    *face_type_length = len;
   }
-    // enough space for text, but not for null termination char
-  else if (*face_type_allocated == len) {
-    *face_type_size = len;
-    memcpy( *face_type, result, len );
-  }
-    // enough space for null-terminated string
-  else if (*face_type_allocated > len) {
-    strcpy( *face_type, result );
-  }
-    // already allocated w/ insuffucient space
   else {
-    RETURN (iBase_BAD_ARRAY_SIZE);
+    strncpy(face_type, result, *face_type_length-1);
+    face_type[*face_type_length] = '\0';
   }
 
   RETURN(iBase_SUCCESS);
