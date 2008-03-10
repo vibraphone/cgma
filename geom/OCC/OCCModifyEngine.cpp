@@ -1453,20 +1453,13 @@ CubitStatus OCCModifyEngine::stitch_surfs(
   TopoDS_Face* second_face = NULL;
   TopoDS_Face* new_face = NULL ;
   CubitBoolean disconnected = CUBIT_FALSE;
-  DLIList<TopoDS_Face*>disconnected_faces;
   TopoDS_Shape fusion;
   int count = 0;
   for(int i = 0; i < faces_to_stitch.size(); i++)
   {
-     if (count > 0 && disconnected)
-     {
-       first_face = faces_to_stitch[i];
-       disconnected = CUBIT_FALSE;
-     }
-     else if (count > 0 && disconnected == CUBIT_FALSE)
-     {
+     if (count > 0)
        first_face = new_face;
-     }
+     
      for(int j = i + 1; j < faces_to_stitch.size(); j++)
      {
        second_face = faces_to_stitch[j];
@@ -1489,35 +1482,28 @@ CubitStatus OCCModifyEngine::stitch_surfs(
 	 delete new_face;
        new_face = new TopoDS_Face(TopoDS::Face(fusion));
        faces_to_stitch.remove(second_face);
+       disconnected = CUBIT_FALSE;
        i--;
        count++;
        break;
      }
      if (disconnected)  
      {
-       //save the first_face for building the body
-       disconnected_faces.append(first_face);
+       //Can't make a body out of disconnected faces
+       PRINT_ERROR("Can't create one BodySM out of disconnected surfaces. \n");
+       if(new_face != NULL)
+         delete new_face;
+       return CUBIT_FAILURE;
      }
   }
-  if (disconnected) //last one
-    disconnected_faces.append(second_face); 
 
-  if(disconnected_faces.size() == 0)
-  {
-    Surface* surface = OCCQueryEngine::instance()->
-       populate_topology_bridge(*new_face, CUBIT_TRUE);
+  Surface* surface = OCCQueryEngine::instance()->
+      populate_topology_bridge(*new_face, CUBIT_TRUE);
 
-    stitched_body = CAST_TO(surface, OCCSurface)->my_body(); 
-    //delete all original surfaces
-    OCCQueryEngine::instance()->delete_solid_model_entities(surf_bodies);  
-    return CUBIT_SUCCESS; 
-  }
-
-  //Can't make a body out of disconnected faces
-  PRINT_ERROR("Can't create one BodySM out of disconnected surfaces. \n");
-  if(new_face != NULL)
-    delete new_face; 
-  return CUBIT_FAILURE;
+  stitched_body = CAST_TO(surface, OCCSurface)->my_body(); 
+  //delete all original surfaces
+  OCCQueryEngine::instance()->delete_solid_model_entities(surf_bodies);  
+  return CUBIT_SUCCESS; 
 }
 
 //===============================================================================

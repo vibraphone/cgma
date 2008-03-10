@@ -16,7 +16,7 @@ if build_ACIS
   TESTS += webcut
 endif
 if WITH_OCC
-  TESTS += makept
+  TESTS += modify makept
 endif
 
 CPPFLAGS += -DSRCDIR=@srcdir@
@@ -24,6 +24,7 @@ check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
 makept_SOURCES = makept.cpp
+modify_SOURCES = modify.cpp
 LDADD = ../geom/virtual/libcubit_virtual.la \
         ../geom/facetbool/libcubit_facetbool.la \
         ../geom/Cholla/libcholla.la \
