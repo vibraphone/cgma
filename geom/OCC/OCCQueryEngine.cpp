@@ -141,7 +141,6 @@ OCCQueryEngine::OCCQueryEngine()
   OccToCGM = new std::map<int, TopologyBridge*>;
 
   BodyList = new DLIList<OCCBody*>;
-  ShellList = new DLIList<OCCShell*>;
   WireList = new DLIList<OCCLoop*>;
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
@@ -158,7 +157,6 @@ OCCQueryEngine::~OCCQueryEngine()
   delete OCCMap;
   delete OccToCGM;
   while( BodyList->size() ) delete BodyList->pop();
-  delete[] ShellList;
   delete[] WireList;
   delete[] SurfaceList;
   delete[] CurveList;
@@ -939,15 +937,20 @@ OCCQueryEngine::write_topology( const char* file_name,
       OCCBody* body = OCC_bodies.get_and_step();
       TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
 
-      if (shape == NULL) //sheet body
+      if (shape == NULL) //sheet body or shell body
       {
          OCCSurface* surface = body->my_sheet_surface();
-         if (surface == NULL)
+         OCCShell* shell = body->shell();
+         if (surface == NULL && shell == NULL)
          {
+           
 	   PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
 	   continue;
          }
-         B.Add(Co,*(surface->get_TopoDS_Face())); 
+         if(surface)
+           B.Add(Co,*(surface->get_TopoDS_Face())); 
+         else
+    	   B.Add(Co,*(shell->get_TopoDS_Shell()));
          continue;
       }
 
@@ -967,13 +970,6 @@ OCCQueryEngine::write_topology( const char* file_name,
 	      B.Add(Co, solid);
 	    }
 	}
-    }
-
-  //Add standalone shells to export BRep file
-  for (i = 0; i < ShellList->size(); i++)
-    {
-      TopoDS_Shell *shell = ShellList->get_and_step()->get_TopoDS_Shell();
-      B.Add(Co, *shell);
     }
 
   for (i = 0; i < OCC_surfaces.size(); i++)
@@ -1079,7 +1075,11 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
   }
 
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
-    populate_topology_bridge(TopoDS::Shell(Ex.Current()), CUBIT_TRUE);
+  {
+    OCCShell* shell =
+       populate_topology_bridge(TopoDS::Shell(Ex.Current()), CUBIT_TRUE);
+    tblist.append(shell->my_body());
+  }
 
   for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
     tblist.append(populate_topology_bridge(TopoDS::Face(Ex.Current()),CUBIT_TRUE));
@@ -1183,8 +1183,10 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
 			       (TopologyBridge*)shell));
       if(standalone)
       {
-        build_body = CUBIT_TRUE;
-	ShellList->append(shell);
+        OCCLump* lump = new OCCLump(NULL, NULL, shell);
+        OCCBody* body = new OCCBody(NULL, CUBIT_FALSE, NULL, shell);
+        shell->set_body(body);
+        shell->set_lump(lump);
       }
     }
   else
@@ -1423,6 +1425,14 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
     return delete_solid_model_entities(occ_surface);
   }
 
+  OCCShell* occ_shell = occ_body->shell();
+  if(occ_shell)
+  {
+    delete occ_shell->my_body();
+    delete occ_shell->my_lump();
+    return unhook_ShellSM_from_OCC(occ_shell);
+  }
+
   DLIList<Lump*> lumps = occ_body->lumps();
   for(int i =0; i < lumps.size(); i++)
   {
@@ -1566,7 +1576,6 @@ OCCQueryEngine::unhook_ShellSM_from_OCC( ShellSM* shell ) const
      Surface* surface = CAST_TO(children.get_and_step(), Surface);
      delete_solid_model_entities(surface);
   }
-  ShellList->remove(CAST_TO(shell, OCCShell));
   delete Shell;
   delete shell;
   return CUBIT_SUCCESS;

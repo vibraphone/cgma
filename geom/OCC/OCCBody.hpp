@@ -47,11 +47,14 @@ class OCCBody : public BodySM
 public:
   
   OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody = CUBIT_FALSE, 
-          OCCSurface* surface = NULL);
+          OCCSurface* surface = NULL, OCCShell* shell = NULL);
 
   OCCBody(DLIList<Lump*>& my_lumps);
   void lumps(DLIList<Lump*>& my_lumps); //add lump list to myLumps
   DLIList<Lump*> lumps(){return myLumps;} 
+  
+  void shell(OCCShell* shell) {myShell = shell;}
+  OCCShell* shell() {return myShell;}
 
   virtual ~OCCBody() ;
     //- The destructor.
@@ -190,7 +193,9 @@ private:
 
   CubitBoolean IsSheetBody;
  
-  OCCSurface* mySheetSurface;
+  OCCSurface* mySheetSurface; //one surface body
+
+  OCCShell*  myShell; //shell only body
 };
 
 

@@ -44,7 +44,8 @@ class OCCLump : public Lump
 {
 public:
   
-  OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface = NULL);
+  OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface = NULL, 
+          OCCShell* shell = NULL);
   
   virtual ~OCCLump();
     //- The destructor
@@ -161,6 +162,7 @@ private:
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
 
   OCCSurface *mySheetSurface;
+  OCCShell * myShell;
 } ;
 
 

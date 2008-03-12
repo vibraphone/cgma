@@ -45,6 +45,7 @@
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
 #include "BRepBuilderAPI_MakeFace.hxx"
+#include "BRepBuilderAPI_Sewing.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
 #include "BRep_Tool.hxx"
 #include "BRep_Builder.hxx"
@@ -1415,7 +1416,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 //===============================================================================
 // Function   : stitch_surfs
 // Member Type: PUBLIC
-// Description: Unite surfs into one surface sheet body
+// Description: stitch all surfs and try to make a closed solid out of them.
 // Author     : Jane Hu
 // Date       : 03/08
 //===============================================================================
@@ -1436,7 +1437,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
   DLIList<TopoDS_Face*> faces_to_stitch;
   for (int i = 0; i < surf_bodies.size(); i++)
   {
-     BodySM * tool_body = surf_bodies.get();
+     BodySM * tool_body = surf_bodies.get_and_step();
      OCCBody* occ_body = CAST_TO(tool_body, OCCBody);
      OCCSurface* surface = occ_body->my_sheet_surface();
      if (surface == NULL)
@@ -1449,58 +1450,43 @@ CubitStatus OCCModifyEngine::stitch_surfs(
        faces_to_stitch.append(topods_face);
   }
 
-  TopoDS_Face* first_face  = faces_to_stitch.get();
+  TopoDS_Shape* first_face  = faces_to_stitch.get();
   TopoDS_Face* second_face = NULL;
-  TopoDS_Face* new_face = NULL ;
-  CubitBoolean disconnected = CUBIT_FALSE;
-  TopoDS_Shape fusion;
-  int count = 0;
-  for(int i = 0; i < faces_to_stitch.size(); i++)
+  TopoDS_Shape fuse;
+  for(int i = 1; i < faces_to_stitch.size(); i++)
   {
-     if (count > 0)
-       first_face = new_face;
-     
-     for(int j = i + 1; j < faces_to_stitch.size(); j++)
-     {
-       second_face = faces_to_stitch[j];
-       BRepAlgoAPI_Fuse fuse(*first_face, *second_face);
-       if (fuse.ErrorStatus() != 0 && fuse.ErrorStatus() != 1)
-       {  
-         PRINT_ERROR("Can't operate fusion for given surfaces. \n");
-         return CUBIT_FAILURE;
-       }
-       else if (fuse.ErrorStatus() == 1) 
-       {
-         //The Object is created but Nothing is Done
-         disconnected = CUBIT_TRUE;
-         continue;
-       }
-
-       //fused into one face
-       fusion = fuse.Shape1();
-       if (count > 0)
-	 delete new_face;
-       new_face = new TopoDS_Face(TopoDS::Face(fusion));
-       faces_to_stitch.remove(second_face);
-       disconnected = CUBIT_FALSE;
-       i--;
-       count++;
-       break;
-     }
-     if (disconnected)  
-     {
-       //Can't make a body out of disconnected faces
-       PRINT_ERROR("Can't create one BodySM out of disconnected surfaces. \n");
-       if(new_face != NULL)
-         delete new_face;
-       return CUBIT_FAILURE;
-     }
+     second_face = faces_to_stitch[i];
+     fuse = BRepAlgoAPI_Fuse(*first_face, *second_face);
+     first_face = &fuse;
   }
 
-  Surface* surface = OCCQueryEngine::instance()->
-      populate_topology_bridge(*new_face, CUBIT_TRUE);
+  TopExp_Explorer Ex;
+  int count_face = 0;
+  int count_shell = 0;
+  for (Ex.Init(fuse, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
+    count_face++;
+  for (Ex.Init(fuse, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
+    count_shell++;
 
-  stitched_body = CAST_TO(surface, OCCSurface)->my_body(); 
+  if (count_face != 1 && count_shell != 1)
+  {
+     PRINT_ERROR("Can't stitch all surfaces into one BodySM's. \n");
+     return CUBIT_FAILURE;
+  }
+ 
+  DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->
+     populate_topology_bridge(fuse);
+  OCCBody* body = CAST_TO(tbs.get(), OCCBody);
+  if (body)
+    stitched_body = body ;
+
+  else
+  {
+    OCCSurface* face = CAST_TO(tbs.get(), OCCSurface);
+    if(face)
+      stitched_body = face->my_body();
+  }
+
   //delete all original surfaces
   OCCQueryEngine::instance()->delete_solid_model_entities(surf_bodies);  
   return CUBIT_SUCCESS; 

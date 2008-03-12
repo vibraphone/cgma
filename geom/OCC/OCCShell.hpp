@@ -50,6 +50,11 @@ public:
   TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
   void set_TopoDS_Shell(TopoDS_Shell shell){*myTopoDSShell = shell;} 
 
+  OCCLump* my_lump() {return myLump;}
+  OCCBody* my_body() {return myBody;}
+  void set_lump(OCCLump* lump) {myLump = lump;}
+  void set_body(OCCBody* body) {myBody = body;}
+
   virtual GeometryQueryEngine* 
   get_geometry_query_engine() const;
     //R GeometryQueryEngine*
@@ -107,6 +112,8 @@ protected:
 private:
   TopoDS_Shell *myTopoDSShell;
   OCCSurface* mySheetSurface;
+  OCCLump*    myLump;
+  OCCBody*    myBody;
 };
 
 

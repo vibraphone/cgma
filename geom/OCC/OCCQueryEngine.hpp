@@ -346,7 +346,6 @@ public:
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
   DLIList<OCCBody*> *BodyList ;
-  DLIList<OCCShell*> *ShellList; //standalone shell list
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
