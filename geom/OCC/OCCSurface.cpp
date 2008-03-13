@@ -676,6 +676,12 @@ void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
      return;
   }
 
+  if(myShell) //shell body
+  {
+    parents.append(myShell);
+    return;
+  }
+
   OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
   OCCBody * body = NULL;
   DLIList <OCCBody* > *bodies = oqe->BodyList;

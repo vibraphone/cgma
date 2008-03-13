@@ -88,6 +88,7 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
   }
   myTopoDSShape = new TopoDS_CompSolid(Co);
   IsSheetBody = CUBIT_FALSE;
+  myShell = NULL;
   update_bounding_box();
 }
 

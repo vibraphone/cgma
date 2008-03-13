@@ -35,4 +35,5 @@ webcut_LDFLAGS = $(LDFLAGS) -R$(ACIS_LIB_DIR)
 webcut_LDADD = ../geom/ACIS/libcubit_ACIS.la  $(LDADD)
 makept_LDFLAGS = $(LDFLAGS) -R$(OCC_LIB_DIR)
 makept_LDADD = ../geom/OCC/libcubit_OCC.la $(LDADD)
-
+modify_LDFLAGS = $(LDFLAGS) -R$(OCC_LIB_DIR)
+modify_LDADD = ../geom/OCC/libcubit_OCC.la $(LDADD)

@@ -1487,8 +1487,6 @@ CubitStatus OCCModifyEngine::stitch_surfs(
       stitched_body = face->my_body();
   }
 
-  //delete all original surfaces
-  OCCQueryEngine::instance()->delete_solid_model_entities(surf_bodies);  
   return CUBIT_SUCCESS; 
 }
 

@@ -143,6 +143,16 @@ CubitStatus make_Point()
      
   CubitVector v = body2->center_point();
   
+  CubitStatus rsl = CUBIT_SUCCESS;
+  DLIList<RefEntity*> ref_entity_list;
+  int num_ents_exported=0;
+  const CubitString cubit_version="10.2";
+  const char * filename = "stitch.occ";
+  const char * filetype = "OCC";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
   gti->bodies(bodies);
@@ -155,5 +165,14 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
+  // Read in the geometry from files specified on the command line
+  char *argv = "./stitch.occ";
+  CubitStatus status = read_geometry(1, &argv);
+  if (status == CUBIT_FAILURE) exit(1);
+
+  bodies.clean_out();
+  free_entities.clean_out();
+  gti->bodies(bodies); 
+  gti->get_free_ref_entities(free_entities);
   return stat;
 }
