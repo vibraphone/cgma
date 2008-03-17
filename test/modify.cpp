@@ -174,5 +174,23 @@ CubitStatus make_Point()
   free_entities.clean_out();
   gti->bodies(bodies); 
   gti->get_free_ref_entities(free_entities);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  for (int j = free_entities.size(); j--;)
+    {
+      gti->delete_RefEntity( free_entities.get_and_step());
+    }
+
+  //test for subtract
+  Body* from_body = gmti->brick(10, 10, 10);
+  Body* tool_body = gmti->brick(1, 1, 1);  
+  DLIList<Body*> from_bodies;
+  from_bodies.append(from_body);
+  DLIList<Body*>  new_bodies;
+  rsl = gmti->subtract(tool_body, from_bodies, new_bodies, 
+                       CUBIT_FALSE, CUBIT_FALSE);
+  double d = new_bodies.get()->measure();
   return stat;
 }

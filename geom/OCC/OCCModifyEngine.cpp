@@ -54,6 +54,7 @@
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
 #include "BRepAlgoAPI_Fuse.hxx"
+#include "BRepAlgoAPI_Cut.hxx"
 #include "BRepPrimAPI_MakeSphere.hxx"
 #include "BRepPrimAPI_MakeBox.hxx"
 #include "BRepPrimAPI_MakeWedge.hxx"
@@ -1416,7 +1417,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 //===============================================================================
 // Function   : stitch_surfs
 // Member Type: PUBLIC
-// Description: stitch all surfs and try to make a closed solid out of them.
+// Description: stitch all surfs and try to make a shell body.
 // Author     : Jane Hu
 // Date       : 03/08
 //===============================================================================
@@ -1493,16 +1494,170 @@ CubitStatus OCCModifyEngine::stitch_surfs(
 //===============================================================================
 // Function   : subtract
 // Member Type: PUBLIC
-// Description: subtract boolean operation on facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: subtract boolean operation on OCC-based bodies
+// Author     : Jane Hu
+// Date       : 03/08
 //===============================================================================
 CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
-                                            DLIList<BodySM*> &from_bodies,
-                                            DLIList<BodySM*> &new_bodies,
-                                            bool /*imprint*/,
-                                            bool keep_old) const
+                                          DLIList<BodySM*> &from_bodies,
+                                          DLIList<BodySM*> &new_bodies,
+                                          bool imprint,
+                                          bool keep_old) const
 {
+  //need to implement "imprint" function.
+  // copy the bodies in case subtraction has some errors
+  DLIList<TopoDS_Shape*> tool_bodies_copy;
+  DLIList<TopoDS_Shape*> from_bodies_copy;
+  for (int i = 0; i < from_bodies.size(); i++)
+  {
+    BodySM* body = from_bodies.get_and_step();
+    OCCBody* occ_body = CAST_TO(body, OCCBody);
+    OCCSurface* surface = occ_body->my_sheet_surface();
+    OCCShell*   shell = occ_body->shell();
+    if(surface)
+    {
+       TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+       BRepBuilderAPI_Copy api_copy(*topo_face);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       from_bodies_copy.append(newShape_ptr);
+    }
+    else if(shell)
+    {
+       TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+       BRepBuilderAPI_Copy api_copy(*topo_shell);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell); 
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       from_bodies_copy.append(newShape_ptr);
+    }
+    else
+    {
+       DLIList<Lump*> lumps = occ_body->lumps();
+       if (lumps.size() > 1)
+       {
+	 PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+         return CUBIT_FAILURE;
+       }
+ 
+       TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+       BRepBuilderAPI_Copy api_copy(*solid);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       from_bodies_copy.append(newShape_ptr);
+    }
+  }
+
+  DLIList<CubitBox*> tool_boxes;
+  for (int i = 0; i < tool_body_list.size(); i++)
+  {
+    BodySM* body = tool_body_list.get_and_step();
+    OCCBody* occ_body = CAST_TO(body, OCCBody);     
+    OCCSurface* surface = occ_body->my_sheet_surface();
+    OCCShell*   shell = occ_body->shell();
+    if(surface)
+    {
+       TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+       BRepBuilderAPI_Copy api_copy(*topo_face);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       tool_bodies_copy.append(newShape_ptr);
+    }
+    else if(shell)
+    {
+       TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+       BRepBuilderAPI_Copy api_copy(*topo_shell);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       tool_bodies_copy.append(newShape_ptr);
+    }
+    else
+    {
+       DLIList<Lump*> lumps = occ_body->lumps();
+       if (lumps.size() > 1)
+       {
+         PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+         return CUBIT_FAILURE;
+       }
+
+       TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+       BRepBuilderAPI_Copy api_copy(*solid);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+       tool_bodies_copy.append(newShape_ptr);
+    }
+    CubitBox *tool_box = new CubitBox(occ_body->get_bounding_box());
+    tool_boxes.append(tool_box);
+  }
+
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
+  int fraction_remaining = 100;
+
+  // subtract the tool body from each body in the list
+
+  CubitMessage* cmi = CubitMessage::instance(); 
+  TopoDS_Shape*  from_shape = from_bodies_copy.get();
+  DLIList<TopologyBridge*> tbs;
+  for (int i = 0; i < from_bodies_copy.size(); i++)
+  {
+    BodySM* from_body = from_bodies.get_and_step();
+    CubitBox box1 = CAST_TO(from_body, OCCBody)->get_bounding_box();
+    for(int j = 0; j < tool_body_list.size(); j ++)
+    {
+      if (cmi->Interrupt())
+      {
+         PRINT_ERROR("Subtraction interrupted.  Aborting...\n");
+         while (tool_boxes.size())
+           delete tool_boxes.pop();
+         while (tool_bodies_copy.size())
+            delete tool_bodies_copy.pop();
+         while (from_bodies_copy.size())
+            delete from_bodies_copy.pop();
+         return CUBIT_FAILURE;
+      }
+      CubitBox tool_box = *tool_boxes.get_and_step();  
+      if(!tool_box.overlap(tol,box1))
+        continue;
+      
+      TopoDS_Shape* tool_shape = tool_bodies_copy.get_and_step();
+      //bodies overlap, proceed with the subtract
+      TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
+      delete from_shape;
+      from_shape = new TopoDS_Shape(cut_shape);
+    }
+
+    //ok, we're done wih all cuts, construct new Body'
+    tbs = OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
+    from_shape = from_bodies_copy.step_and_get();
+
+    // done with this j iteration; write out count, if necessary
+    if (from_bodies.size() * tool_body_list.size() > 1)
+    {
+       int frac_done = (100 * (i+1)) / (from_bodies.size());
+       if ((100 - frac_done) < fraction_remaining)
+       {
+          fraction_remaining = 100 - frac_done;
+          PRINT_INFO("%d% remaining. ", fraction_remaining);
+       }
+    }
+  }
+
+  for (int i = 0; i< tbs.size(); i++)
+  {
+    BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+    if (bodysm)
+      new_bodies.append(bodysm);
+  }    
+
+  //ok, we're done wih all cuts, construct new Body's 
+  while (tool_boxes.size())
+    delete tool_boxes.pop();
+  while (tool_bodies_copy.size())
+    delete tool_bodies_copy.pop();
+  if (!keep_old)
+  {
+    OCCQueryEngine::instance()->delete_solid_model_entities(from_bodies); 
+    OCCQueryEngine::instance()->delete_solid_model_entities( tool_body_list);
+  }
   return CUBIT_SUCCESS; 
 }
 
