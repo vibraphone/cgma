@@ -1599,8 +1599,9 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   DLIList<TopologyBridge*> tbs;
   for (int i = 0; i < from_bodies_copy.size(); i++)
   {
-    BodySM* from_body = from_bodies.get_and_step();
+    BodySM* from_body = from_bodies.get();
     CubitBox box1 = CAST_TO(from_body, OCCBody)->get_bounding_box();
+    int count = 0;  //count for not preforming cut
     for(int j = 0; j < tool_body_list.size(); j ++)
     {
       if (cmi->Interrupt())
@@ -1616,17 +1617,31 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       }
       CubitBox tool_box = *tool_boxes.get_and_step();  
       if(!tool_box.overlap(tol,box1))
+      {
+        count++;
         continue;
-      
+      } 
       TopoDS_Shape* tool_shape = tool_bodies_copy.get_and_step();
       //bodies overlap, proceed with the subtract
       TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
+      if(!from_shape->Modified())
+      {
+        count++;
+        continue;
+      }
       delete from_shape;
       from_shape = new TopoDS_Shape(cut_shape);
     }
 
     //ok, we're done wih all cuts, construct new Body'
-    tbs = OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
+    if (count < tool_body_list.size())
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
+    else
+    {
+      PRINT_INFO("The %d body did not change because cutting tools are not interscting with it.\n", i+1);
+      from_bodies.change_to(NULL);
+    }
+    from_bodies.step();
     from_shape = from_bodies_copy.step_and_get();
 
     // done with this j iteration; write out count, if necessary
@@ -1636,14 +1651,14 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        if ((100 - frac_done) < fraction_remaining)
        {
           fraction_remaining = 100 - frac_done;
-          PRINT_INFO("%d% remaining. ", fraction_remaining);
+          PRINT_INFO("%d% remaining.\n ", fraction_remaining);
        }
     }
   }
 
   for (int i = 0; i< tbs.size(); i++)
   {
-    BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+    BodySM* bodysm = CAST_TO(tbs.get_and_step(), BodySM);
     if (bodysm)
       new_bodies.append(bodysm);
   }    
@@ -1655,6 +1670,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     delete tool_bodies_copy.pop();
   if (!keep_old)
   {
+    from_bodies.remove_all_with_value(NULL);
     OCCQueryEngine::instance()->delete_solid_model_entities(from_bodies); 
     OCCQueryEngine::instance()->delete_solid_model_entities( tool_body_list);
   }
