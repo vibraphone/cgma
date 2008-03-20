@@ -55,6 +55,7 @@
 #include "TopologyBridge.hpp"
 #include "BRepAlgoAPI_Fuse.hxx"
 #include "BRepAlgoAPI_Cut.hxx"
+#include "BRepAlgoAPI_Section.hxx"
 #include "BRepPrimAPI_MakeSphere.hxx"
 #include "BRepPrimAPI_MakeBox.hxx"
 #include "BRepPrimAPI_MakeWedge.hxx"
@@ -66,6 +67,7 @@
 #include "CubitMessage.hpp"
 #include "CubitDefines.h"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopOpeBRep_ShapeIntersector.hxx"
 #include "CubitUtil.hpp"
 #include "CubitPoint.hpp"
 #include "CubitPointData.hpp"
@@ -1508,12 +1510,14 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   // copy the bodies in case subtraction has some errors
   DLIList<TopoDS_Shape*> tool_bodies_copy;
   DLIList<TopoDS_Shape*> from_bodies_copy;
+  DLIList<CubitBoolean> is_volume;
   for (int i = 0; i < from_bodies.size(); i++)
   {
     BodySM* body = from_bodies.get_and_step();
     OCCBody* occ_body = CAST_TO(body, OCCBody);
     OCCSurface* surface = occ_body->my_sheet_surface();
     OCCShell*   shell = occ_body->shell();
+    is_volume.append( CUBIT_TRUE);
     if(surface)
     {
        TopoDS_Face* topo_face = surface->get_TopoDS_Face();
@@ -1521,6 +1525,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
        TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
        from_bodies_copy.append(newShape_ptr);
+       is_volume.change_to( CUBIT_FALSE);
     }
     else if(shell)
     {
@@ -1529,6 +1534,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell); 
        TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
        from_bodies_copy.append(newShape_ptr);
+       is_volume.change_to( CUBIT_FALSE);
     }
     else
     {
@@ -1624,10 +1630,39 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       TopoDS_Shape* tool_shape = tool_bodies_copy.get_and_step();
       //bodies overlap, proceed with the subtract
       TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
-      if(!from_shape->Modified())
+ 
+      //compare to see if the from_shape is getting cut.
+      if(is_volume[i])
       {
-        count++;
-        continue;
+        GProp_GProps myProps;
+        BRepGProp::VolumeProperties(*from_shape, myProps);
+        double orig_mass = myProps.Mass();
+        BRepGProp::VolumeProperties(cut_shape, myProps);
+        double after_mass = myProps.Mass();
+        if((-after_mass + orig_mass) <= tol*tol*tol)
+        {
+          //Add imprint code here 
+          if(imprint)
+            imprint_toposhapes(from_shape, tool_shape);
+	  count++;
+          continue;
+        }
+      }
+      else
+      {
+        GProp_GProps myProps;
+        BRepGProp::SurfaceProperties(*from_shape, myProps);
+        double orig_mass = myProps.Mass();
+        BRepGProp::SurfaceProperties(cut_shape, myProps);
+        double after_mass = myProps.Mass();
+        if((-after_mass + orig_mass) <= tol*tol)
+        {
+          //Add imprint code here
+          if(imprint)
+            imprint_toposhapes(from_shape, tool_shape);
+          count++;
+          continue;
+        }
       }
       delete from_shape;
       from_shape = new TopoDS_Shape(cut_shape);
@@ -1651,7 +1686,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        if ((100 - frac_done) < fraction_remaining)
        {
           fraction_remaining = 100 - frac_done;
-          PRINT_INFO("%d% remaining.\n ", fraction_remaining);
+          PRINT_INFO("%d% remaining.\n ", fraction_remaining+1);
        }
     }
   }
@@ -1677,6 +1712,20 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   return CUBIT_SUCCESS; 
 }
 
+CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape, 
+                                                TopoDS_Shape* tool_shape)const
+{
+  TopOpeBRep_ShapeIntersector intersector;
+  intersector.InitIntersection(*from_shape, *tool_shape);
+  TopTools_ListOfShape list_of_edges;
+  for(; intersector.MoreIntersection(); intersector.NextIntersection())
+  {
+    TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
+    TopoDS_Shape face2 = intersector.ChangeFacesIntersector().Face(2);
+    BRepAlgoAPI_Section section(face1, face2);
+    list_of_edges.Assign(section.SectionEdges());
+  } 
+}
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC

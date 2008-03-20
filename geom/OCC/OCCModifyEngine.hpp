@@ -658,6 +658,8 @@ protected:
  const TopoDS_Face* make_TopoDS_Face( GeometryType surface_type,
   	                        DLIList<DLIList<TopoDS_Edge*>*> topo_edges, 
                                 Surface* old_surface_ptr) const;     
+
+ CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*) const;
 private:
   
 } ;
