@@ -67,7 +67,9 @@
 #include "CubitMessage.hpp"
 #include "CubitDefines.h"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "BRepFeat_SplitShape.hxx"
 #include "TopOpeBRep_ShapeIntersector.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "CubitUtil.hpp"
 #include "CubitPoint.hpp"
 #include "CubitPointData.hpp"
@@ -659,12 +661,8 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
                                  bool check_edges) const
 {
   //Create TopoDS_Edge list to make a surface.
-  DLIList<TopoDS_Edge*> topo_edges[curve_list.size()];
   DLIList<DLIList<TopoDS_Edge*>*> topo_edges_loops;
   curve_list.reset() ;
-  Curve const* curve_ptr = NULL ;
-  OCCCurve* occ_curve = NULL;
-  TopoDS_Edge* topo_edge = NULL;
     
   //check no intersections of the TopoDS_Edge's.
   //need to check that no intersection in the middle of the curves, not at
@@ -723,77 +721,9 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
       return (Surface *)NULL;
   }
 
-  //sort the curves so they are in order and make closed loop
-  OCCPoint* start = NULL;
-  OCCPoint* end = NULL;
-  DLIList<OCCPoint*> point_list;
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
-  CubitBoolean new_end = CUBIT_TRUE;
-  int size = curve_list.size();
-  count = 0;
-  for ( int i = 0 ; i < size ; i++ )
-  {
-     for(int j = 0; j < curve_list.size(); j ++)
-     {
-        curve_ptr = curve_list.get() ;  
-        occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
-
-        if(occ_curve ==  NULL)
-        {
-           PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
-                       "       Got a NULL pointer to OCCCurve\n") ;
-	   return (Surface*) NULL;
-        }
-
-        point_list.clean_out();
-        occ_curve->get_points(point_list);
-        //assert(point_list.size()==2);
-
-        if (i == 0)
-        { 
-          start = point_list.get();
-  	  end = point_list.pop();   
-          break;
-        }
-
-        if(end->is_equal(*(point_list.get()), tol) ||
-	        end->is_equal(*(point_list.step_and_get()),tol))
-	{
-	   end = point_list.step_and_get();
-	   new_end = CUBIT_TRUE;
-           break;
-	}
-     }
-
-     if (new_end)//found next curve
-     {
-        topo_edge = occ_curve->get_TopoDS_Edge();
-        topo_edges[count].append(topo_edge);
-        curve_list.remove(); 
-        if(start->is_equal( *end, tol))  //formed a closed loop
-        {
- 	  i = 0;
-	  size = curve_list.size() ;
-          topo_edges_loops.append(&topo_edges[count]);
-          count++;
-        } 
-        else
-          new_end = CUBIT_FALSE;
-     }
-     else
-     {
-        PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
-                    "  Curve list  can't  form closed loops    \n") ;
-        return (Surface*) NULL;
-     }
-  }
-  
-  if( new_end == CUBIT_FALSE ) //case of one disconnected curve 
-  {
-     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
-                 "  Curve list  can't  form closed loops    \n") ;
+  CubitStatus stat = sort_curves(curve_list, topo_edges_loops); 
+  if( stat == CUBIT_FAILURE ) //case of one disconnected curve 
      return (Surface*) NULL;
-  }
  
   // Use the topo_edges to make a topo_face
   const TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
@@ -814,8 +744,99 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 }
 
 //===============================================================================
+// Function   : sort_curves
+// Member Type: PROTECTED
+// Description: sort the curves so they are in order and make closed loop 
+// Author     : Jane Hu
+// Date       : 03/08
+//===============================================================================
+CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
+                                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const
+{
+  topo_edges_loops.clean_out();
+
+  DLIList<TopoDS_Edge*> topo_edges[curve_list.size()];
+  curve_list.reset() ;
+  Curve const* curve_ptr = NULL ;
+  OCCCurve* occ_curve = NULL;
+  TopoDS_Edge* topo_edge = NULL;
+
+  OCCPoint* start = NULL;
+  OCCPoint* end = NULL;
+  DLIList<OCCPoint*> point_list;
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  CubitBoolean new_end = CUBIT_TRUE;
+  int size = curve_list.size();
+
+  int count = 0;
+  for ( int i = 0 ; i < size ; i++ )
+  {
+     for(int j = 0; j < curve_list.size(); j ++)
+     {
+        curve_ptr = curve_list.get() ; 
+        occ_curve = CAST_TO(const_cast<Curve*>(curve_ptr), OCCCurve);
+
+        if(occ_curve ==  NULL)
+        {
+           PRINT_ERROR("In OCCModifyEngine::sort_curves\n"
+                       "       Got a NULL pointer to OCCCurve\n") ;
+           return CUBIT_FAILURE;
+        }
+
+        point_list.clean_out();
+        occ_curve->get_points(point_list);
+        //assert(point_list.size()==2);
+
+        if (i == 0)
+        {
+          start = point_list.get();
+          end = point_list.pop();  
+          break;
+        }
+
+        if(end->is_equal(*(point_list.get()), tol) ||
+                end->is_equal(*(point_list.step_and_get()),tol))
+        {
+           end = point_list.step_and_get();
+           new_end = CUBIT_TRUE;
+           break;
+        }
+     }
+
+     if (new_end)//found next curve 
+     {
+        topo_edge = occ_curve->get_TopoDS_Edge();
+        topo_edges[count].append(topo_edge);
+        curve_list.remove();
+        if(start->is_equal( *end, tol))  //formed a closed loop
+        {
+          i = 0;
+          size = curve_list.size() ;
+          topo_edges_loops.append(&topo_edges[count]);
+          count++;
+        }
+        else
+          new_end = CUBIT_FALSE;
+     }
+     else
+     {
+        PRINT_ERROR("In OCCModifyEngine::sort_curves\n"
+                    "  Curve list  can't  form closed loops    \n") ;
+        return CUBIT_FAILURE;
+     }
+  }
+
+  if( new_end == CUBIT_FALSE ) //case of one disconnected curve
+  {
+     PRINT_ERROR("In OCCModifyEngine::sort_curves\n"
+                 "  Curve list  can't  form closed loops    \n") ;
+     return CUBIT_FAILURE;
+  }
+  return CUBIT_SUCCESS;
+} 
+//===============================================================================
 // Function   : make_TopoDS_Face
-// Member Type: PUBLIC
+// Member Type: PROTECTED
 // Description: make a opoDS_Face of type surface_type, given the list of 
 //              TopoDS_Edge. the TopoDS_Edge's should be in order in loops.
 //              check edges option is done in GeometryModifyTool level, so
@@ -1631,7 +1652,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       //bodies overlap, proceed with the subtract
       TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
  
-      //compare to see if the from_shape is getting cut.
+      //compare to see if the from_shape has gotten cut.
       if(is_volume[i])
       {
         GProp_GProps myProps;
@@ -1686,7 +1707,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        if ((100 - frac_done) < fraction_remaining)
        {
           fraction_remaining = 100 - frac_done;
-          PRINT_INFO("%d% remaining.\n ", fraction_remaining+1);
+          PRINT_INFO("%d\% remaining.\n ", fraction_remaining+1);
        }
     }
   }
@@ -1698,7 +1719,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       new_bodies.append(bodysm);
   }    
 
-  //ok, we're done wih all cuts, construct new Body's 
+  //ok, we're done wih all cuts, delete unnecessaries. 
   while (tool_boxes.size())
     delete tool_boxes.pop();
   while (tool_bodies_copy.size())
@@ -1712,18 +1733,61 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   return CUBIT_SUCCESS; 
 }
 
+//===============================================================================
+// Function   : imprint_toposhapes
+// Member Type: PROTECTED
+// Description: imprint boolean operation on OCC-based bodies
+// Author     : Jane HU
+// Date       : 03/08
+//===============================================================================
 CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape, 
                                                 TopoDS_Shape* tool_shape)const
 {
   TopOpeBRep_ShapeIntersector intersector;
   intersector.InitIntersection(*from_shape, *tool_shape);
   TopTools_ListOfShape list_of_edges;
+  BRepFeat_SplitShape splitor(*from_shape);
+
   for(; intersector.MoreIntersection(); intersector.NextIntersection())
   {
     TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
     TopoDS_Shape face2 = intersector.ChangeFacesIntersector().Face(2);
     BRepAlgoAPI_Section section(face1, face2);
     list_of_edges.Assign(section.SectionEdges());
+    int num_edges = list_of_edges.Extent();
+
+    TopTools_ListIteratorOfListOfShape Itor;
+    Itor.Initialize(list_of_edges);
+    DLIList<Curve*> curve_list;
+    for(; Itor.More(); Itor.Next())
+    {
+      TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+      if (num_edges == 1) //surface solid imprint
+      {
+        splitor.Add(edge, TopoDS::Face(face1));  
+        break;
+      }
+      Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+      curve_list.append(curve);
+    }
+    if (num_edges > 1)
+    {      
+      DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
+      CubitStatus stat = sort_curves(curve_list, edge_lists); 
+      if (!stat)
+      {
+        PRINT_ERROR("can't do solid solid imprint without a closed loop.\n");
+        return CUBIT_FAILURE;
+      }  
+      assert(edge_lists.size() == 1);
+      DLIList<TopoDS_Edge*> edge_list;
+      edge_list = *(edge_lists.get());
+      BRepBuilderAPI_MakeWire myWire;
+      for(int i = 0; i < edge_list.size(); i++)
+        myWire.Add(*(edge_list.get_and_step())); 
+      splitor.Add(TopoDS::Wire(myWire.Shape()),TopoDS::Face(face1));
+    }
+    splitor.Build();
   } 
 }
 //===============================================================================
