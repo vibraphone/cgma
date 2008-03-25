@@ -751,11 +751,14 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 // Date       : 03/08
 //===============================================================================
 CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
-                                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const
+                                         DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const
 {
   topo_edges_loops.clean_out();
 
-  DLIList<TopoDS_Edge*> topo_edges[curve_list.size()];
+  DLIList<TopoDS_Edge*>* topo_edges[curve_list.size()];
+  for(int i = 0; i < curve_list.size(); i++)
+    topo_edges[i] = new DLIList<TopoDS_Edge*>;
+
   curve_list.reset() ;
   Curve const* curve_ptr = NULL ;
   OCCCurve* occ_curve = NULL;
@@ -801,18 +804,19 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
            new_end = CUBIT_TRUE;
            break;
         }
+        curve_list.step();
      }
 
      if (new_end)//found next curve 
      {
         topo_edge = occ_curve->get_TopoDS_Edge();
-        topo_edges[count].append(topo_edge);
+        topo_edges[count]->append(topo_edge);
         curve_list.remove();
         if(start->is_equal( *end, tol))  //formed a closed loop
         {
           i = 0;
           size = curve_list.size() ;
-          topo_edges_loops.append(&topo_edges[count]);
+          topo_edges_loops.append(topo_edges[count]);
           count++;
         }
         else
@@ -1653,6 +1657,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
  
       //compare to see if the from_shape has gotten cut.
+      CubitStatus stat;
       if(is_volume[i])
       {
         GProp_GProps myProps;
@@ -1664,8 +1669,12 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         {
           //Add imprint code here 
           if(imprint)
-            imprint_toposhapes(from_shape, tool_shape);
-	  count++;
+            stat = imprint_toposhapes(from_shape, tool_shape);
+          if(!stat)
+          {
+            PRINT_ERROR("Can't do imprint operation on the body. \n");
+            count++;
+          }
           continue;
         }
       }
@@ -1680,8 +1689,12 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         {
           //Add imprint code here
           if(imprint)
-            imprint_toposhapes(from_shape, tool_shape);
-          count++;
+            stat = imprint_toposhapes(from_shape, tool_shape);
+          if(!stat)
+          {
+            PRINT_ERROR("Can't do imprint operation on the body. \n");
+            count++;
+          }
           continue;
         }
       }
@@ -1690,7 +1703,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     }
 
     //ok, we're done wih all cuts, construct new Body'
-    if (count < tool_body_list.size())
+    if (count < tool_body_list.size() )
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
     else
     {
@@ -1745,50 +1758,75 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 {
   TopOpeBRep_ShapeIntersector intersector;
   intersector.InitIntersection(*from_shape, *tool_shape);
-  TopTools_ListOfShape list_of_edges;
   BRepFeat_SplitShape splitor(*from_shape);
+  TopTools_ListOfShape list_of_edges;
 
+  int max_edge = 0;
+  TopoDS_Shape from_face; 
   for(; intersector.MoreIntersection(); intersector.NextIntersection())
   {
     TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
     TopoDS_Shape face2 = intersector.ChangeFacesIntersector().Face(2);
     BRepAlgoAPI_Section section(face1, face2);
-    list_of_edges.Assign(section.SectionEdges());
-    int num_edges = list_of_edges.Extent();
-
-    TopTools_ListIteratorOfListOfShape Itor;
-    Itor.Initialize(list_of_edges);
-    DLIList<Curve*> curve_list;
-    for(; Itor.More(); Itor.Next())
+    TopTools_ListOfShape temp_list_of_edges;
+    temp_list_of_edges.Assign(section.SectionEdges());
+    int num_edges = temp_list_of_edges.Extent();
+    if (max_edge < num_edges)
     {
-      TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
-      if (num_edges == 1) //surface solid imprint
-      {
-        splitor.Add(edge, TopoDS::Face(face1));  
-        break;
-      }
-      Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
-      curve_list.append(curve);
+      list_of_edges.Assign(temp_list_of_edges);  
+      max_edge =  num_edges ;
+      from_face = face1;
     }
-    if (num_edges > 1)
-    {      
-      DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
-      CubitStatus stat = sort_curves(curve_list, edge_lists); 
-      if (!stat)
-      {
-        PRINT_ERROR("can't do solid solid imprint without a closed loop.\n");
-        return CUBIT_FAILURE;
-      }  
-      assert(edge_lists.size() == 1);
-      DLIList<TopoDS_Edge*> edge_list;
-      edge_list = *(edge_lists.get());
-      BRepBuilderAPI_MakeWire myWire;
-      for(int i = 0; i < edge_list.size(); i++)
-        myWire.Add(*(edge_list.get_and_step())); 
-      splitor.Add(TopoDS::Wire(myWire.Shape()),TopoDS::Face(face1));
+  }
+
+  TopTools_ListIteratorOfListOfShape Itor;
+  Itor.Initialize(list_of_edges);
+  DLIList<Curve*> curve_list;
+  for(; Itor.More(); Itor.Next())
+  {
+    TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+    if (max_edge == 1) //surface solid imprint
+    {
+      splitor.Add(edge, TopoDS::Face(from_face));  
+      break;
     }
-    splitor.Build();
+    Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+    curve_list.append(curve);
+  }
+  if (max_edge > 1)
+  {      
+    DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
+    CubitStatus stat = sort_curves(curve_list, edge_lists); 
+    if (!stat)
+    {
+      PRINT_ERROR("can't do solid solid imprint without a closed loop.\n");
+      return CUBIT_FAILURE;
+    }  
+    assert(edge_lists.size() == 1);
+    DLIList<TopoDS_Edge*>* edge_list;
+    edge_list = edge_lists.get();
+    BRepBuilderAPI_MakeWire myWire;
+    for(int i = 0; i < edge_list->size(); i++)
+    {
+      TopoDS_Edge e = *(edge_list->get_and_step());
+      myWire.Add(e); 
+    }
+    splitor.Add(myWire.Wire(),TopoDS::Face(from_face));
   } 
+  splitor.Build();
+  if(splitor.IsDone())
+    delete from_shape;
+  from_shape = new TopoDS_Shape(splitor.Shape());
+  /*
+  TopExp_Explorer Ex;
+  int num_face = 0;
+  for (Ex.Init(*from_shape, TopAbs_FACE); Ex.More(); Ex.Next())
+  {
+     TopoDS_Face face = TopoDS::Face(Ex.Current());
+     num_face++;
+  }
+  */
+  return CUBIT_SUCCESS;
 }
 //===============================================================================
 // Function   : imprint
