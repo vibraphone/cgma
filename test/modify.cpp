@@ -183,14 +183,33 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
+  //test for cylinder making
+  Body* from_body = gmti->cylinder(10, 4, 3, 2);
+  Body* from_body2 = gmti->cylinder(8, 4, 2, 0);
+  Body* tool_body = gmti->cylinder(10, 1, 1, 1);
+  double d;
+  d = from_body->measure(); //d = 219.91
+  d = from_body2->measure();//d = 67.02
+  d = tool_body->measure(); //d = 31.41
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies); 
+
   //test for subtract
-  Body* from_body = gmti->brick(10, 10, 10);
-  Body* tool_body = gmti->brick(1, 1, 1);  
+  from_body = gmti->brick(10, 10, 10);
+  from_body2 = gmti->brick(4, 4, 4);
+  tool_body = gmti->brick(1, 1, 1);  
+  CubitVector v_move(1,0,0);
+  gti->translate(from_body2,v_move);
   DLIList<Body*> from_bodies;
   from_bodies.append(from_body);
+  from_bodies.append(from_body2);
   DLIList<Body*>  new_bodies;
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies, 
-                       CUBIT_FALSE, CUBIT_FALSE);
-  double d = new_bodies.get()->measure();
+                       CUBIT_TRUE, CUBIT_FALSE);
+  d = new_bodies.step_and_get()->measure();
+  v = new_bodies.get()->center_point();
   return stat;
 }
