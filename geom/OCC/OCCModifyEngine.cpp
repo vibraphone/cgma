@@ -63,6 +63,7 @@
 #include "BRepPrimAPI_MakeWedge.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
+#include "TopOpeBRep_EdgesIntersector.hxx"
 #include "TopExp_Explorer.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
@@ -758,7 +759,8 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
   topo_edges_loops.clean_out();
   CubitStatus stat = CUBIT_SUCCESS;
   DLIList<TopoDS_Edge*>* topo_edges[curve_list.size()];
-  for(int i = 0; i < curve_list.size(); i++)
+  int size_in = curve_list.size();
+  for(int i = 0; i < size_in; i++)
     topo_edges[i] = new DLIList<TopoDS_Edge*>;
 
   curve_list.reset() ;
@@ -770,12 +772,14 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
   OCCPoint* end = NULL;
   DLIList<OCCPoint*> point_list;
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
-  CubitBoolean new_end = CUBIT_TRUE;
+  CubitBoolean new_end;
   int size = curve_list.size();
 
   int count = 0;
   for ( int i = 0 ; i < size ; i++ )
   {
+     if (i == 0)
+       new_end = CUBIT_TRUE;
      for(int j = 0; j < curve_list.size(); j ++)
      {
         curve_ptr = curve_list.get() ; 
@@ -800,9 +804,18 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
         }
 
         if(end->is_equal(*(point_list.get()), tol) ||
-                end->is_equal(*(point_list.step_and_get()),tol))
+           end->is_equal(*(point_list.step_and_get()),tol)) 
         {
            end = point_list.step_and_get();
+           new_end = CUBIT_TRUE;
+           break;
+        }
+   
+        else if(start->is_equal(*(point_list.get()), tol) ||
+           start->is_equal(*(point_list.step_and_get()),tol))
+        {
+           start = end;
+           end = point_list.step_and_get(); 
            new_end = CUBIT_TRUE;
            break;
         }
@@ -816,7 +829,7 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
         curve_list.remove();
         if(start->is_equal( *end, tol))  //formed a closed loop
         {
-          i = 0;
+          i = -1;
           size = curve_list.size() ;
           topo_edges_loops.append(topo_edges[count]);
           count++;
@@ -829,11 +842,22 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
         stat = CUBIT_FAILURE; 
         i = -1;
         size = curve_list.size();
+        topo_edges_loops.append(topo_edges[count]);
+        count++;
      }
   }
 
   if( new_end == CUBIT_FALSE ) //case of one disconnected curve
+  {
+    topo_edges_loops.append(topo_edges[count]); 
     stat = CUBIT_FAILURE;
+  }
+
+  for(int i = 0; i < size_in; i++)
+  {
+     if(topo_edges[i]->size() == 0)
+       delete topo_edges[i];
+  }
   return stat;
 } 
 //===============================================================================
@@ -1671,6 +1695,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         double after_mass = myProps.Mass();
         if((-after_mass + orig_mass) <= tol*tol*tol)
         {
+          stat = CUBIT_FAILURE;
           //Add imprint code here 
           if(imprint)
             stat = imprint_toposhapes(from_shape, tool_shape);
@@ -1691,6 +1716,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         double after_mass = myProps.Mass();
         if((-after_mass + orig_mass) <= tol*tol)
         {
+          stat = CUBIT_FAILURE;
           //Add imprint code here
           if(imprint)
             stat = imprint_toposhapes(from_shape, tool_shape);
@@ -1761,6 +1787,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                                                 TopoDS_Shape* tool_shape)const
 {
   int num_cuts = 1;
+  CubitStatus stat = CUBIT_SUCCESS;
   while(num_cuts)
   {
       TopOpeBRep_ShapeIntersector intersector;
@@ -1768,6 +1795,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       BRepFeat_SplitShape splitor(*from_shape);
       TopTools_ListOfShape list_of_edges;
 
+      //find the intersecting edges and faces.
       int max_edge = 0;
       TopoDS_Face from_face, tool_face; 
       for(; intersector.MoreIntersection(); intersector.NextIntersection())
@@ -1790,6 +1818,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       TopTools_ListIteratorOfListOfShape Itor;
       Itor.Initialize(list_of_edges);
       DLIList<Curve*> curve_list;
+      CubitBoolean topo_changed = CUBIT_FALSE;
       for(; Itor.More(); Itor.Next())
       {
         TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
@@ -1800,31 +1829,28 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
 	{
 	  TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
-          TopOpeBRep_ShapeIntersector intersector;
-   	  intersector.InitIntersection(edge, from_edge, tool_face, from_face);
-	  for(; intersector.MoreIntersection(); intersector.NextIntersection())
-   	  {
-            TopoDS_Shape section_shape = intersector.CurrentGeomShape(1);
-            TopExp_Explorer Ex;
-            int num_edges = 0;
-            for (Ex.Init(section_shape, TopAbs_EDGE); Ex.More(); Ex.Next())
-              num_edges++;
-	    if(num_edges== 1) //overlap
+          TopOpeBRep_EdgesIntersector intersector;
+   	  intersector.SetFaces(tool_face, from_face);
+          intersector.Perform(edge, from_edge);
+          int num_edges = intersector.NbSegments();
+	  if(num_edges == 1) //overlap
  	    {
 	      added = CUBIT_TRUE;
    	      splitor.Add(edge, from_edge);
 	      max_edge--;
 	      break;
 	    }
-	  }
-	  if(added)
-	    continue;
         } 
+        if(added)
+        {
+          topo_changed = CUBIT_TRUE;
+          continue;
+        }
 	Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 	curve_list.append(curve);
       }
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
-      if (max_edge > 1)
+      if (max_edge >= 1)
 	{      
 	  sort_curves(curve_list, edge_lists); 
 	  DLIList<TopoDS_Edge*>* edge_list;
@@ -1836,11 +1862,17 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      myWire.Add(e); 
 	    }
 	  splitor.Add(myWire.Wire(),from_face);
+          topo_changed = CUBIT_TRUE; 
 	} 
-      splitor.Build();
-      if(splitor.IsDone())
-	delete from_shape;
-      from_shape = new TopoDS_Shape(splitor.Shape());
+      if(topo_changed)
+      {
+        splitor.Build();
+        if(splitor.IsDone())
+	  delete from_shape;
+        from_shape = new TopoDS_Shape(splitor.Shape());
+      }
+      else
+        stat = CUBIT_FAILURE;
       if(edge_lists.size()==0)
 	num_cuts--;
   }
@@ -1853,7 +1885,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
      num_face++;
   }
   */
-  return CUBIT_SUCCESS;
+  return stat;
 }
 //===============================================================================
 // Function   : imprint
