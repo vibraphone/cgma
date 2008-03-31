@@ -345,6 +345,8 @@ public:
   Curve* populate_topology_bridge(TopoDS_Edge aShape);
   Point* populate_topology_bridge(TopoDS_Vertex aShape);
 
+  OCCShell* populate_topology_bridge(TopoDS_Shell aShape,
+                                     CubitBoolean standalone = CUBIT_FALSE );
   DLIList<OCCBody*> *BodyList ;
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
@@ -361,8 +363,6 @@ private:
 
   OCCLoop* populate_topology_bridge(TopoDS_Wire aShape,
 				    CubitBoolean standalone = CUBIT_FALSE);  
-  OCCShell* populate_topology_bridge(TopoDS_Shell aShape,
-				     CubitBoolean standalone = CUBIT_FALSE );
 
   CubitStatus write_topology( const char* file_name, 
                               DLIList<OCCBody*> &facet_bodies,

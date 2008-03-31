@@ -1062,7 +1062,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
 DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
 {
   DLIList<TopologyBridge*> tblist;
-  // suitable to popolate for a TopoDS_CompSolid or TopoDS_Compound shape.
+  // suitable to populate for a TopoDS_CompSolid or TopoDS_Compound shape.
   TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
     tblist.append(populate_topology_bridge(TopoDS::CompSolid(Ex.Current())));
@@ -1071,7 +1071,7 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
   {
     Lump *lump = 
     populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE);
-    tblist.append(CAST_TO(lump, OCCLump)->body());
+    tblist.append(CAST_TO(lump, OCCLump)->get_body());
   }
 
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
@@ -1545,8 +1545,8 @@ OCCQueryEngine::unhook_Lump_from_OCC( Lump* lump ) const
      ShellSM* shell = CAST_TO(children.get_and_step(), ShellSM); 
      unhook_ShellSM_from_OCC(shell);
   }
-  if (occ_lump->body() != NULL)
-    BodyList->remove(CAST_TO(occ_lump->body(), OCCBody));
+  if (occ_lump->get_body() != NULL)
+    BodyList->remove(CAST_TO(occ_lump->get_body(), OCCBody));
   delete solid;
   delete lump;
   return CUBIT_SUCCESS;

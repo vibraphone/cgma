@@ -50,8 +50,6 @@ public:
   virtual ~OCCLump();
     //- The destructor
 
-  BodySM* body() {return myBodyPtr;}
-
   void add_body(BodySM* new_body)
     {myBodyPtr = new_body;}
     

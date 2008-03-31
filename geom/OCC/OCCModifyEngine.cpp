@@ -1060,18 +1060,24 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   }
 
   TopoDS_Shell aShell = aMakeShell.Shell();
-  BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
-  if (!aMakeSolid.IsDone())
+  if(aShell.Closed())
   {
-     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
-                 "OCC internal error.\n");
-     return (Lump *)NULL;
+    BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
+    if (!aMakeSolid.IsDone())
+    {
+       PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+                   "OCC internal error.\n");
+       return (Lump *)NULL;
+    }
+
+    TopoDS_Solid aSolid = aMakeSolid.Solid();
+
+    return
+      OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
   }
-
-  TopoDS_Solid aSolid = aMakeSolid.Solid();
-
-  return 
-    OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
+  OCCShell* occ_shell = 
+    OCCQueryEngine::instance()->populate_topology_bridge(aShell, CUBIT_TRUE);
+  return occ_shell->my_lump();
 }
 
 //===============================================================================
@@ -1179,7 +1185,7 @@ BodySM* OCCModifyEngine::sphere(double radius) const
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
 }
 
 
@@ -1203,7 +1209,7 @@ BodySM* OCCModifyEngine::brick( double wid, double dep, double hi ) const
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
 }
 
 
@@ -1231,7 +1237,7 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->body(); 
+  return CAST_TO(lump, OCCLump)->get_body(); 
 }
 
 //===============================================================================
@@ -1279,7 +1285,7 @@ BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
   
 }
 
@@ -1347,7 +1353,7 @@ BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) 
     return (BodySM*)NULL;
   }
 
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
 }
 
 //===============================================================================
@@ -1374,7 +1380,7 @@ BodySM* OCCModifyEngine::torus( double r1, double r2 ) const
     return (BodySM*)NULL;
   }
 
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
 }
 
 //===============================================================================
@@ -1467,7 +1473,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
   lump = OCCQueryEngine::instance()->populate_topology_bridge(newSolid,
 							CUBIT_TRUE);
   
-  return CAST_TO(lump, OCCLump)->body();
+  return CAST_TO(lump, OCCLump)->get_body();
 }
 
 //===============================================================================
@@ -1797,7 +1803,8 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
       //find the intersecting edges and faces.
       int max_edge = 0;
-      TopoDS_Face from_face, tool_face; 
+      TopoDS_Face from_face,tool_face; 
+      DLIList<TopoDS_Face*> tool_faces;
       for(; intersector.MoreIntersection(); intersector.NextIntersection())
 	{
 	  TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
@@ -1806,13 +1813,52 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  TopTools_ListOfShape temp_list_of_edges;
 	  temp_list_of_edges.Assign(section.SectionEdges());
 	  int num_edges = temp_list_of_edges.Extent();
-	  if (max_edge < num_edges)
+          CubitBoolean is_same = face1.IsSame(from_face);
+          CubitBoolean is_same_tool_face = CUBIT_FALSE;
+          for (int j = 0; j < tool_faces.size(); j++)
+          {
+  	    if(face2.IsSame(*(tool_faces.get_and_step())))
+            {
+              is_same_tool_face = CUBIT_TRUE;
+	      break;
+	    }
+          }
+	  if (max_edge < num_edges && !is_same)
 	    {
 	      list_of_edges.Assign(temp_list_of_edges);  
 	      max_edge =  num_edges ;
 	      from_face = TopoDS::Face(face1);
               tool_face = TopoDS::Face(face2);
+              tool_faces.clean_out();
+              for(int i = 0 ; i < num_edges; i++)
+                tool_faces.append(&tool_face);
 	    }
+          else if(num_edges == max_edge && is_same && !is_same_tool_face) 
+          //multi tool faces cut the same face
+          {
+            TopTools_ListIteratorOfListOfShape Itor, temp_Itor;
+            temp_Itor.Initialize(temp_list_of_edges);
+            for(; temp_Itor.More(); temp_Itor.Next())
+            {
+              TopoDS_Edge temp_edge = TopoDS::Edge(temp_Itor.Value());
+              Itor.Initialize(list_of_edges);
+              CubitBoolean same_edge = CUBIT_FALSE;
+              for(; Itor.More(); Itor.Next())
+              {
+                TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+                if(edge.IsSame(temp_edge))
+                {
+		  same_edge = CUBIT_TRUE;
+                  break;
+  		}
+	      }
+              if(!same_edge)
+              {
+                list_of_edges.Append(temp_edge);
+                tool_faces.append(&(TopoDS::Face(face2)));
+ 	      }
+            }
+          }
 	}
 
       TopTools_ListIteratorOfListOfShape Itor;
@@ -1830,7 +1876,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	{
 	  TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
           TopOpeBRep_EdgesIntersector intersector;
-   	  intersector.SetFaces(tool_face, from_face);
+   	  intersector.SetFaces(*(tool_faces.get_and_step()), from_face);
           intersector.Perform(edge, from_edge);
           int num_edges = intersector.NbSegments();
 	  if(num_edges == 1) //overlap
