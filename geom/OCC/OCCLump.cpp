@@ -218,8 +218,11 @@ GeometryQueryEngine*
 //-------------------------------------------------------------------------
 double OCCLump::measure()
 {
-  if(mySheetSurface || myShell)
-    return 0.0;
+  if(mySheetSurface) 
+    return mySheetSurface->measure();
+  else if(myShell)
+    return myShell->measure();
+
   GProp_GProps myProps;
   BRepGProp::VolumeProperties(*myTopoDSSolid, myProps);
   return myProps.Mass();

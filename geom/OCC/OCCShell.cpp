@@ -35,6 +35,8 @@
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "TopoDS.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
@@ -186,6 +188,17 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
   }
   set_TopoDS_Shell(shell);
   return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Returns the area of the Shell
+//
+//-------------------------------------------------------------------------
+double OCCShell::measure()
+{
+  GProp_GProps myProps;
+  BRepGProp::SurfaceProperties(*myTopoDSShell, myProps);
+  return myProps.Mass();
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

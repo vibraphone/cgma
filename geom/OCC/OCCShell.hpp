@@ -107,6 +107,7 @@ public:
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
   CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  double measure(); //area of the shell
 protected: 
   
 private:
