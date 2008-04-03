@@ -37,6 +37,7 @@
 #include "GC_MakeTrimmedCone.hxx"
 #include "GC_MakeTrimmedCylinder.hxx"
 #include "Geom_BezierCurve.hxx"
+#include "BndLib_AddSurface.hxx"
 #include "Handle_Geom_Plane.hxx"
 #include "BRepPrimAPI_MakePrism.hxx"
 #include "BRepPrimAPI_MakeCone.hxx"
@@ -1884,42 +1885,64 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       DLIList<Curve*> curve_list;
       CubitBoolean topo_changed = CUBIT_FALSE;
       tool_faces.reset();
+      double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+      Bnd_Box aBox2;
+      BRepAdaptor_Surface asurface(from_face);
+      BndLib_AddSurface::Add(asurface, tol, aBox2);
       for(; Itor.More(); Itor.Next())
       {
         TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+        Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
       	//check if the edge is on from_face edges, add such edge on existing 
         //edge to split it.
+        //note: even if the edge is on one of from_face edges, if it's not 
+        //shorter than the from_face edge, we won't need to added it either.
+        //For this reason, do the length check out first, because there's a bug
+        //in TopOpeBRep_EdgesIntersector so that when the two edges are
+        //overlapping and has the same length, but on two non-parallel faces
+        //the sector will crash.
 	TopExp_Explorer Ex;
 	CubitBoolean added = CUBIT_FALSE;
         CubitBoolean skipped = CUBIT_FALSE;
-        double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+        GProp_GProps myProps1;
+        BRepGProp::LinearProperties(edge, myProps1);
+        double d1 = myProps1.Mass();
+
 	for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
 	{
 	  TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
+          Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
+         
           TopOpeBRep_EdgesIntersector intersector;
-   	  intersector.SetFaces(*(tool_faces.get_and_step()), from_face);
+          TopoDS_Face face = *(tool_faces.get_and_step());
+          BRepAdaptor_Surface asurface(face);
+          Bnd_Box aBox1;
+          BndLib_AddSurface::Add(asurface, tol, aBox1); 
+
+   	  intersector.SetFaces(face, from_face, aBox1, aBox2);
           intersector.Perform(edge, from_edge);
           int num_edges = intersector.NbSegments();
 	  if(num_edges == 1) //overlap
- 	    {
-              //check if they are the same edge, so don't need to be split
-	      //the overlapped edges are considered the same if they have the
-              //same length
-              GProp_GProps myProps1, myProps2;
-              BRepGProp::LinearProperties(edge, myProps1);
-              double d1 = myProps1.Mass(); 
-              BRepGProp::LinearProperties(from_edge, myProps2);
-              double d2 = myProps2.Mass();
-              if (fabs(d1 - d2) > tol)
-              { 
-	        added = CUBIT_TRUE;
-   	        splitor.Add(edge, from_edge);
-              }
-              else
-                skipped = CUBIT_TRUE;
-	      max_edge--;
-	      break;
-	    }
+ 	  {
+            //check if they are the same edge, so don't need to be split
+            //the overlapped edges are considered the same if they have the
+            //same length
+            GProp_GProps myProps1;
+            BRepGProp::LinearProperties(edge, myProps1);
+            double d1 = myProps1.Mass();
+            GProp_GProps myProps2;
+            BRepGProp::LinearProperties(from_edge, myProps2);
+            double d2 = myProps2.Mass();
+            if((d2 - d1) > tol)
+            {
+	      added = CUBIT_TRUE;
+   	      splitor.Add(edge, from_edge);
+            }
+            else
+	      skipped = CUBIT_TRUE;
+            max_edge--;
+            break;
+	  }
         } 
         if(added)
         {
@@ -1940,6 +1963,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  DLIList<TopoDS_Edge*>* edge_list;
 	  edge_list = edge_lists.pop();
 	  BRepBuilderAPI_MakeWire myWire;
+        
 	  for(int i = 0; i < edge_list->size(); i++)
 	    {
 	      TopoDS_Edge e = *(edge_list->get_and_step());
