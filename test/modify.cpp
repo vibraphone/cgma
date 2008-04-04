@@ -27,9 +27,13 @@
 #include "RefEntityFactory.hpp"
 #include "RefEdge.hpp"
 #include "BodySM.hpp"
+#include "Lump.hpp"
+#include "OCCLump.hpp"
 #include "OCCBody.hpp"
 #include "OCCSurface.hpp"
 #include "OCCCurve.hpp"
+#include "OCCShell.hpp"
+#include "TopoDS_Shape.hxx"
 
 // forward declare some functions used and defined later
 CubitStatus read_geometry(int, char **);
@@ -103,12 +107,12 @@ CubitStatus make_Point()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   OCCQueryEngine::instance();
-  OCCModifyEngine::instance();
+  OCCModifyEngine* ome = OCCModifyEngine::instance();
 
   Body* body = gmti->brick(10, 10, 10);
   BodySM* bodysm = body->get_body_sm_ptr();
-  DLIList<OCCSurface*> surfaces;
-  CAST_TO(bodysm, OCCBody)->get_all_surfaces(surfaces);  
+  DLIList<OCCSurface*> occ_surfaces;
+  CAST_TO(bodysm, OCCBody)->get_all_surfaces(occ_surfaces);  
   DLIList<RefFace*> ref_faces;
   body->ref_faces(ref_faces);
   
@@ -134,7 +138,7 @@ CubitStatus make_Point()
   }
 
   //stitch surfaces together
-  GeometryModifyEngine *gme = gmti->get_engine(surfaces.get());
+  GeometryModifyEngine *gme = gmti->get_engine(occ_surfaces.get());
   BodySM* stitched_body = NULL;
   CubitStatus stat = gme->stitch_surfs(bodysm_list, stitched_body);
   Body* body2;
@@ -201,15 +205,116 @@ CubitStatus make_Point()
   from_body = gmti->brick(10, 10, 10);
   from_body2 = gmti->brick(4, 4, 4);
   tool_body = gmti->brick(1, 1, 1);  
-  CubitVector v_move(1,0,0);
+  CubitVector v_move(1,0,-1);
   gti->translate(from_body2,v_move);
   DLIList<Body*> from_bodies;
   from_bodies.append(from_body);
   from_bodies.append(from_body2);
   DLIList<Body*>  new_bodies;
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies, 
-                       CUBIT_TRUE, CUBIT_FALSE);
+                       CUBIT_TRUE, CUBIT_TRUE);
   d = new_bodies.step_and_get()->measure();
   v = new_bodies.get()->center_point();
+
+  from_bodies.clean_out();
+  from_bodies += new_bodies;
+  new_bodies.clean_out();
+  CubitVector v_move2(0, -2, -2);
+  Body* body_new = from_bodies.step_and_get();
+  d = body_new->measure();
+  v = body_new->center_point();
+  gti->translate(body_new,v_move2);
+  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
+                       CUBIT_TRUE, CUBIT_FALSE);
+  d = new_bodies.step_and_get()->measure();
+  int n = new_bodies.get()->num_ref_faces();
+  n = new_bodies.get()->num_ref_edges();
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies); 
+  
+  //test for multi-cut imprint for subtract.
+  from_body = gmti->brick(10, 10, 10);
+  tool_body = gmti->brick(11, 1, 1);
+  CubitVector v_move4(0,1,-1);
+  gti->translate(from_body,v_move4);
+  from_bodies.clean_out();
+  from_bodies.append(from_body);
+  new_bodies.clean_out();
+  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
+                       CUBIT_TRUE, CUBIT_TRUE); 
+  n = new_bodies.get()->num_ref_faces();
+  n = new_bodies.get()->num_ref_edges();
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  //test for shell body subtract.
+  tool_body = gmti->brick(1, 1, 1);
+  //just need two surfaces.
+  DLIList<RefFace*> reffaces;
+  tool_body->ref_faces(reffaces);
+  CubitVector v1(1, 0.5, 0.5);
+  CubitVector v2(0.5, 0.5, 1);
+  DLIList<Surface*> surfaces;
+  for (int i = 0; i < tool_body->num_ref_faces(); i++)
+  {
+    RefFace* face = reffaces.get_and_step();
+    v = face->center_point();
+    if (v.about_equal(v1) || v.about_equal(v2))
+      surfaces.append(face->get_surface_ptr());
+  } 
+  assert(surfaces.size() == 2);
+  DLIList<BodySM*> body_list;
+  for (int i = 0; i < surfaces.size(); i++)
+  {
+    Surface* surface = surfaces.get_and_step();
+    surface = ome->make_Surface(surface);
+    body_list.append(CAST_TO(surface,OCCSurface)->my_body());
+  } 
+  bodysm = NULL;
+
+  //test stitch surfaces operation
+  ome->stitch_surfs(body_list, bodysm);
+
+  bodies.clean_out();
+  bodies.append(tool_body);
+  gti->delete_Body(bodies);
+
+  from_body2 = gti->make_Body(bodysm); 
+
+  tool_body  = gmti->brick(4, 4, 4);
+  CubitVector v_move3(1,0,0);
+  gti->translate(tool_body,v_move3);
+  from_bodies.clean_out();
+  from_bodies.append(from_body2);
+  new_bodies.clean_out();
+
+  //test body cutting a shell, one surface got cut as the result. 
+  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
+                       CUBIT_TRUE, CUBIT_TRUE);
+  d = new_bodies.step_and_get()->measure();
+  v = new_bodies.get()->center_point();
+ 
+  from_bodies.clean_out();
+  from_bodies.append(tool_body);
+  
+  //test a shell cutting a body, failed operation with a warning message.
+  rsl = gmti->subtract(from_body2, from_bodies, new_bodies,
+                       CUBIT_TRUE, CUBIT_TRUE);
+
+  //test solid solid imprint
+  tool_body  = gmti->brick(4, 4, 4);
+  CubitVector v_move5(0,0.5,0);
+  gti->translate(tool_body,v_move5);
+  from_body = gmti->brick(1,1,1);
+  TopoDS_Shape* from_shape = CAST_TO(from_body->get_body_sm_ptr(), OCCBody)->get_TopoDS_Shape();
+  TopoDS_Shape* tool_shape = CAST_TO(tool_body->get_body_sm_ptr(),OCCBody)->get_TopoDS_Shape();
+  ome->imprint_toposhapes(tool_shape, from_shape);
+  ome->imprint_toposhapes(from_shape, tool_shape);
   return stat;
 }
