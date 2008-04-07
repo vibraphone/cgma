@@ -1445,6 +1445,16 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
   
   if (theCS == NULL) //sheet body
   {
+    OCCShell* occ_shell = occ_body->shell();
+    if (occ_shell != NULL)
+    {
+      TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
+      BRepBuilderAPI_Copy api_copy(*shell);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*shell);
+      TopoDS_Shell newShell = TopoDS::Shell(newShape);
+      return OCCQueryEngine::instance()->populate_topology_bridge(newShell, CUBIT_TRUE)->my_body();
+    }
+ 
     Surface* surface = make_Surface(occ_body->my_sheet_surface());
     if (surface == NULL)
     {
