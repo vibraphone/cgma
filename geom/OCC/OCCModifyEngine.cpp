@@ -39,12 +39,15 @@
 #include "Geom_BezierCurve.hxx"
 #include "BndLib_AddSurface.hxx"
 #include "Handle_Geom_Plane.hxx"
+#include "BRepExtrema_DistShapeShape.hxx"
+#include "Extrema_ExtPC.hxx"
 #include "BRepPrimAPI_MakePrism.hxx"
 #include "BRepPrimAPI_MakeCone.hxx"
 #include "BRepOffsetAPI_ThruSections.hxx"
 #include "BRepPrimAPI_MakeTorus.hxx"
 #include "BRepPrimAPI_MakeCylinder.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepAdaptor_Curve.hxx"
 #include "GC_MakeEllipse.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
@@ -1992,18 +1995,32 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
       if (total_edges >= 1)
 	{      
-	  sort_curves(curve_list, edge_lists); 
+	  CubitStatus stat = sort_curves(curve_list, edge_lists); 
 	  DLIList<TopoDS_Edge*>* edge_list;
 	  edge_list = edge_lists.pop();
-	  BRepBuilderAPI_MakeWire myWire;
-        
-	  for(int i = 0; i < edge_list->size(); i++)
-	    {
-	      TopoDS_Edge e = *(edge_list->get_and_step());
-	      myWire.Add(e); 
-	    }
-	  splitor.Add(myWire.Wire(),from_face);
-          topo_changed = CUBIT_TRUE; 
+
+          //check if the edges make a split of the surface, error out if it's
+          //just a scar on the surface
+          int count_intersection = 0;
+          if (stat == CUBIT_FAILURE) //Open wire
+          {
+            count_intersection = check_intersection(edge_list, from_face);
+            
+            if (count_intersection < 2)
+              PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
+	  } 
+          if (stat || count_intersection == 2)
+          {
+	    BRepBuilderAPI_MakeWire myWire;
+            edge_list->reset(); 
+	    for(int i = 0; i < edge_list->size(); i++)
+	      {
+	        TopoDS_Edge e = *(edge_list->get_and_step());
+	        myWire.Add(e); 
+	      }
+	    splitor.Add(myWire.Wire(),from_face);
+            topo_changed = CUBIT_TRUE; 
+          }
 	} 
       if(topo_changed)
       {
@@ -2051,6 +2068,78 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   if (count > 0)
      return CUBIT_SUCCESS;
   return CUBIT_FAILURE;
+}
+
+int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
+ 				        TopoDS_Face from_face)const
+{
+  int  count_intersection = 0;
+  for(int j = 0; j < edge_list->size(); j++)
+  {
+    TopoDS_Edge* edge = edge_list->get_and_step();
+    BRepAdaptor_Curve acurve(*edge);
+    double lower_bound = acurve.FirstParameter();
+    double upper_bound = acurve.LastParameter();
+    TopExp_Explorer Ex;
+    gp_Pnt newP(0.0, 0.0, 0.0);
+    double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+    for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
+    {
+      TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
+      BRepAdaptor_Curve acurve2(from_edge);
+      double lower_bound2 = acurve2.FirstParameter();
+      double upper_bound2 = acurve2.LastParameter();
+      BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
+      CubitBoolean qualified = CUBIT_FALSE;
+      if (distShapeShape.IsDone() && distShapeShape.Value() < tol)
+	{
+	  newP = distShapeShape.PointOnShape1(1);
+	  Extrema_ExtPC ext(newP, acurve, Precision::Approximation());
+	  double newVal;
+	  if (ext.IsDone() && (ext.NbExt() > 0)) {
+	    for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
+	      if ( ext.IsMin(i) ) {
+		newVal = ext.Point(i).Parameter();
+		if ((newVal-lower_bound) >= -tol && 
+                    (upper_bound - newVal) >= -tol)
+		  {
+		    qualified = CUBIT_TRUE;
+		    break;
+		  }
+	      }
+	    }
+          }
+	  if (qualified)
+	    {
+	      qualified = CUBIT_FALSE;
+	      Extrema_ExtPC ext(newP, acurve2, Precision::Approximation());
+	      double newVal;
+	      if (ext.IsDone() && (ext.NbExt() > 0)) {
+		for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
+		  if ( ext.IsMin(i) ) {
+		    newVal = ext.Point(i).Parameter();
+                    if ((newVal-lower_bound2) >= -tol &&
+                        (upper_bound2 - newVal) >= -tol)
+		      {
+			qualified = CUBIT_TRUE;
+			break;
+		      }
+		  }
+		}
+	      }
+	    }
+
+	  if(qualified)
+	    {
+	      count_intersection++;
+	      break;
+	    }
+	}
+      if (count_intersection == 2)
+	break;
+    } //for loop
+  }
+  return count_intersection;
 }
 //===============================================================================
 // Function   : imprint

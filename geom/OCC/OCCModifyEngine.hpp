@@ -665,6 +665,9 @@ protected:
  CubitStatus sort_curves(DLIList<Curve*> curve_list,
                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const;
 private:
+ int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
+                        TopoDS_Face from_face)const;
+
   
 } ;
 
