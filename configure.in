@@ -318,6 +318,7 @@ AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )
 ################################################################################
 #                           Output Files
 ################################################################################
+AC_SUBST(AM_CPPFLAGS)
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )

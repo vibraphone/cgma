@@ -19,7 +19,7 @@ if WITH_OCC
   TESTS += modify makept
 endif
 
-CPPFLAGS += -DSRCDIR=@srcdir@
+AM_CPPFLAGS += -DSRCDIR=@srcdir@
 check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
