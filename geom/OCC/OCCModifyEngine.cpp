@@ -2074,6 +2074,13 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
  				        TopoDS_Face from_face)const
 {
   int  count_intersection = 0;
+  //Consider if edge_list has only one edge, and it intersects the from_face
+  //at two different places.
+  CubitBoolean double_check = CUBIT_FALSE;
+  if (edge_list->size() == 1)
+    double_check = CUBIT_TRUE;
+
+  gp_Pnt intsec_pnt[2];
   for(int j = 0; j < edge_list->size(); j++)
   {
     TopoDS_Edge* edge = edge_list->get_and_step();
@@ -2081,7 +2088,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
     double lower_bound = acurve.FirstParameter();
     double upper_bound = acurve.LastParameter();
     TopExp_Explorer Ex;
-    gp_Pnt newP(0.0, 0.0, 0.0);
+    gp_Pnt newP[2];
     double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
     for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
     {
@@ -2090,51 +2097,65 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
       double lower_bound2 = acurve2.FirstParameter();
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
-      CubitBoolean qualified = CUBIT_FALSE;
+      CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
       if (distShapeShape.IsDone() && distShapeShape.Value() < tol)
-	{
-	  newP = distShapeShape.PointOnShape1(1);
-	  Extrema_ExtPC ext(newP, acurve, Precision::Approximation());
-	  double newVal;
-	  if (ext.IsDone() && (ext.NbExt() > 0)) {
-	    for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
-	      if ( ext.IsMin(i) ) {
-		newVal = ext.Point(i).Parameter();
-		if ((newVal-lower_bound) >= -tol && 
-                    (upper_bound - newVal) >= -tol)
-		  {
-		    qualified = CUBIT_TRUE;
-		    break;
-		  }
-	      }
-	    }
-          }
-	  if (qualified)
-	    {
-	      qualified = CUBIT_FALSE;
-	      Extrema_ExtPC ext(newP, acurve2, Precision::Approximation());
-	      double newVal;
-	      if (ext.IsDone() && (ext.NbExt() > 0)) {
-		for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
-		  if ( ext.IsMin(i) ) {
-		    newVal = ext.Point(i).Parameter();
-                    if ((newVal-lower_bound2) >= -tol &&
-                        (upper_bound2 - newVal) >= -tol)
-		      {
-			qualified = CUBIT_TRUE;
-			break;
-		      }
-		  }
+      {
+        newP[0] = distShapeShape.PointOnShape1(1);
+        if (double_check && distShapeShape.NbSolution() == 2)
+          newP[1] = distShapeShape.PointOnShape1(2);
+        double newVal[2];
+        for(int j =0; j < distShapeShape.NbSolution(); j++)
+        {
+          Extrema_ExtPC ext(newP[j], acurve, Precision::Approximation());
+          if (ext.IsDone() && (ext.NbExt() > 0)) {
+            for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
+              if ( ext.IsMin(i) ) {
+        	newVal[j] = ext.Point(i).Parameter();
+		if ((newVal[j]-lower_bound) >= -tol && 
+                    (upper_bound - newVal[j]) >= -tol)
+		{
+		  qualified[j] = CUBIT_TRUE;
+		  break;
 		}
 	      }
 	    }
-
-	  if(qualified)
-	    {
-	      count_intersection++;
-	      break;
+          }
+        }
+        for(int j = 0; j < distShapeShape.NbSolution(); j++)
+        {
+	  if (qualified[j])
+	  {
+	    qualified[j] = CUBIT_FALSE;
+	    Extrema_ExtPC ext(newP[j], acurve2, Precision::Approximation());
+	    double newVal;
+	    if (ext.IsDone() && (ext.NbExt() > 0)) {
+	      for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
+	      	if ( ext.IsMin(i) ) {
+		  newVal = ext.Point(i).Parameter();
+                  if ((newVal-lower_bound2) >= -tol &&
+                      (upper_bound2 - newVal) >= -tol)
+		  {
+		    qualified[j] = CUBIT_TRUE;
+		    break;
+		  }
+		}
+    	      }
 	    }
-	}
+	  }
+        }
+        for(int k = 0; k < distShapeShape.NbSolution(); k++)
+        {
+          if (qualified[k])
+            count_intersection++;
+          intsec_pnt[count_intersection-1] = newP[k];
+          if (count_intersection == 2)
+          {
+            //make sure the two intersect point are not the same one 
+            if (intsec_pnt[0].IsEqual(intsec_pnt[1], tol))
+              count_intersection--;
+          }
+        }
+      }
       if (count_intersection == 2)
 	break;
     } //for loop
@@ -2144,15 +2165,75 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC
-// Description: imprint boolean operation on facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: imprint boolean operation on OCC-based bodies
+// Author     : Jane Hu
+// Date       : 04/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint(BodySM* /*BodyPtr1*/, BodySM* /*BodyPtr2*/,
-                                           BodySM*& /*newBody1*/, BodySM*& /*newBody2*/,
-                                           bool  /*keep_old*/) const
+CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
+                                         BodySM*& newBody1, BodySM*& newBody2,
+                                         bool  keep_old) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  OCCBody* occ_body = NULL;
+  DLIList<TopoDS_Shape*> shape_list;
+  for(int i = 0; i <2; i++)
+  {
+    if (i == 0)
+      occ_body = CAST_TO(BodyPtr1, OCCBody);
+    else
+      occ_body = CAST_TO(BodyPtr2, OCCBody);
+    OCCSurface* surface = occ_body->my_sheet_surface();
+    OCCShell*   shell = occ_body->shell();   
+    if(surface)
+    {
+      TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+      BRepBuilderAPI_Copy api_copy(*topo_face);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+    else if(shell)
+    {
+      TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+      BRepBuilderAPI_Copy api_copy(*topo_shell);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+
+    else
+    {
+      DLIList<Lump*> lumps = occ_body->lumps();
+      if (lumps.size() > 1)
+      {
+        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+        return CUBIT_FAILURE;
+      }
+  
+      TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+      BRepBuilderAPI_Copy api_copy(*solid);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+  }
+  
+  TopoDS_Shape* shape1 = shape_list.get();
+  TopoDS_Shape* shape2 = shape_list.step_and_get();
+  DLIList<TopologyBridge*> tbs;
+  CubitStatus stat = imprint_toposhapes(shape1, shape2);
+  if(stat)
+  {
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape1); 
+    newBody1 = CAST_TO(tbs.get(),BodySM);
+  }
+
+  tbs.clean_out();
+  stat = imprint_toposhapes(shape2, shape1);
+  if(stat)
+  {
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape2);
+    newBody2 = CAST_TO(tbs.get(),BodySM);     
+  }
   return CUBIT_FAILURE;
 }
 
