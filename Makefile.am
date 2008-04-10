@@ -33,5 +33,8 @@ check: example_test
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
 install-data-hook:
+	echo 'CGM_LIBS_LDFLAGS=$$(CGM_LIBS_LDFLAGS_INSTALLED)' >> $(DESTDIR)$(cfgdir)/cgm.make
+	echo 'CGMA_INIT_LDFLAGS=$$(CGMA_INIT_LDFLAGS_INSTALLED)' >> $(DESTDIR)$(cfgdir)/cgm.make
+	echo 'CGM_INCLUDES=$$(CGM_INC_CPPFLAGS_INSTALLED)' >> $(DESTDIR)$(cfgdir)/cgm.make
 	echo "CGM_LIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/cgm.make
 	echo "CGM_INCLUDEDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/cgm.make

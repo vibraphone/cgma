@@ -2,7 +2,7 @@
 #
 # To build CGM applications, do the following:
 #
-# 0. include this file in your makefile (using 'include config.make')
+# 0. include this file in your makefile (using 'include cgm.make')
 # 1. Insert '${CGM_INCLUDES}' (w/o quotes) in your compile command, e.g.
 #      ${CXX} ${CGM_INCLUDES} -c mysource.cpp
 # 2. Insert '${CGM_LIBS_LINK}' (w/o quotes) on your link line
@@ -27,7 +27,8 @@ ACIS_LIBS            = @CGM_ACIS_LIBS@ @ACIS_LIBS@
 ACIS_INCLUDES        = @ACIS_INCLUDES@
 
 OCC_INCLUDES	     = @OCC_INC_FLAG@
-OCC_LIB_DIR	     = @OCC_LIB_FLAG@
+OCC_LIB_DIR          = @OCC_LIB_DIR@
+OCC_LIB_FLAG	     = @OCC_LIB_FLAG@
 OCC_LIBS	     = @CUBIT_OCC_LIB@ @OCC_LIBS@
 
 CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
@@ -45,38 +46,50 @@ CGM_CXXFLAGS = @CXXFLAGS@
 CGM_CFLAGS = @CFLAGS@
 CGM_LDFLAGS = @LDFLAGS@
 
-CGM_INCLUDES = -I$(CGM_INCLUDEDIR)/util \
-               -I$(CGM_INCLUDEDIR)/init \
-               -I$(CGM_INCLUDEDIR)/geom \
-               -I$(CGM_INCLUDEDIR)/geom/ACIS \
-               -I$(CGM_INCLUDEDIR)/geom/OCC \
+CGM_INC_CPPFLAGS_COMMON = ${ACIS_INCLUDES} ${OCC_INCLUDES}
+CGM_INC_CPPFLAGS_UNINSTALLED = \
+               -I@abs_srcdir@/util \
+               -I@abs_builddir@/util \
+               -I@abs_srcdir@/init \
+               -I@abs_srcdir@/geom \
+               -I@abs_builddir@/geom \
+               -I@abs_srcdir@/itaps \
+               -I@abs_builddir@/itaps \
+               -I@abs_srcdir@/geom/ACIS \
+               -I@abs_srcdir@/geom/OCC \
                $(CGM_PARALLEL_INCLUDE) \
+               $(CGM_INC_CPPFLAGS_COMMON)
+CGM_INC_CPPFLAGS_INSTALLED = \
                -I$(CGM_INCLUDEDIR) \
-               ${ACIS_INCLUDES} \
-               ${OCC_INCLUDES}
+               $(CGM_INC_CPPFLAGS_COMMON)
 
-CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
-	-L$(CGM_LIBDIR) \
-        -L$(CGM_LIBDIR)/init/.libs \
-	-L$(CGM_LIBDIR)/geom/virtual/.libs \
-        -L$(CGM_LIBDIR)/geom/facetbool/.libs \
-        -L$(CGM_LIBDIR)/geom/facet/.libs \
-	-L$(CGM_LIBDIR)/geom/Cholla/.libs \
-        -L$(CGM_LIBDIR)/geom/ACIS/.libs \
-        -L$(CGM_LIBDIR)/geom/OCC/.libs \
-        -L$(CGM_LIBDIR)/geom/.libs \
-        -L$(CGM_LIBDIR)/util/.libs \
-	-L$(CGM_LIBDIR)/geom/virtual \
-        -L$(CGM_LIBDIR)/geom/facetbool \
-        -L$(CGM_LIBDIR)/geom/facet \
-	-L$(CGM_LIBDIR)/geom/Cholla \
-        -L$(CGM_LIBDIR)/geom/ACIS \
-        -L$(CGM_LIBDIR)/geom \
-        -L$(CGM_LIBDIR)/util \
-	-L${ACIS_LIB_DIR} \
-        ${OCC_LIB_DIR} \
-        -lcgma_init \
-	${ACIS_LIBS} \
+# will be overriden upon install
+CGM_INCLUDES = $(CGM_INC_CPPFLAGS_UNINSTALLED)
+
+CGM_LIBS_LDFLAGS_COMMON = -L$(ACIS_LIB_DIR) $(OCC_LIB_FLAG)
+
+CGM_LIBS_LDFLAGS_UNINSTALLED = \
+	-L@abs_builddir@/geom/virtual/.libs \
+        -L@abs_builddir@/geom/facetbool/.libs \
+        -L@abs_builddir@/geom/facet/.libs \
+	-L@abs_builddir@/geom/Cholla/.libs \
+        -L@abs_builddir@/geom/ACIS/.libs \
+        -L@abs_builddir@/geom/OCC/.libs \
+        -L@abs_builddir@/geom/.libs \
+        -L@abs_builddir@/util/.libs \
+	-L@abs_builddir@/geom/virtual \
+        -L@abs_builddir@/geom/facetbool \
+        -L@abs_builddir@/geom/facet \
+	-L@abs_builddir@/geom/Cholla \
+        -L@abs_builddir@/geom/ACIS \
+        -L@abs_builddir@/geom \
+        -L@abs_builddir@/util \
+        $(CGM_LIBS_LDFLAGS_COMMON)
+
+CGM_LIBS_LDFLAGS_INSTALLED = -L$(CGM_LIBDIR) $(CGM_LIBS_LDFLAGS_COMMON)
+
+CGM_LIBS_LIBRARIES = \
+        ${ACIS_LIBS} \
         -lcubit_virtual \
         -lcubit_facet \
         -lcubit_facetbool \
@@ -86,6 +99,17 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         -lcubit_util \
 	${CGM_PARALLEL_LIB} \
         ${OCC_LIBS} 
+
+# Will be overridden upon install
+CGM_LIBS_LDFLAGS = $(CGM_LIBS_LDFLAGS_UNINSTALLED)
+
+CGM_LIBS_LINK_INTERNAL = $(LDFLAGS) $(CGM_LIBS_LDFLAGS) $(CGM_LIBS_LIBRARIES)
+
+CGMA_INIT_LDFLAGS_UNINSTALLED = -L$(CGM_LIBDIR)/init -L$(CGM_LIBDIR)/init/.libs 
+CGMA_INIT_LDFLAGS_INSTALLED = -L$(CGM_LIBDIR)
+
+# Will be overridden upon install
+CGMA_INIT_LDFLAGS = $(CGMA_INIT_LDFLAGS_UNINSTALLED)
 
 CGM_LIBS_FILES_INTERNAL = \
        $(CGM_LIBDIR)/libcgma_init.la \
@@ -97,12 +121,13 @@ CGM_LIBS_FILES_INTERNAL = \
        $(CGM_LIBDIR)/libcubit_util.la \
        ${CGM_PARALLEL_LIB_FILE}
        
-CUBIT_LDFwAGS = @CUBIT_LDFLAGS@
-
 CUBIT_LTFLAGS = @CUBIT_LTFLAGS@
+CUBIT_LDFLAGS = @CUBIT_LDFLAGS@
 CUBIT_LIBS = @CUBIT_LIBS@
 CUBIT_FILE = @CUBIT_FILE@
 
-CGM_LIBS_LINK = @CGM_LIBS_LINK@  
+# CGM_LIBS_LINK is set by configure script to be either
+# "$(CUBIT_LDFLAGS) $(CUBIT_LIBS)" or "$(CGM_LIBS_LINK_INTERNAL)"
+CGM_LIBS_LINK = $(CGMA_INIT_LDFLAGS) -lcgma_init @CGM_LIBS_LINK@  
 CGM_LIBS_FILES = @CGM_LIBS_FILES@ 
 CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
