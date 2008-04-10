@@ -32,7 +32,7 @@ if test "x$WITH_MPI" != "xno"; then
   CXXFLAGS="$CXXFLAGS -DUSE_MPI"
   CGM_PARALLEL_INCLUDE='-I${CGM_DIR}/geom/parallel'
   CGM_PARALLEL_LIB='-L${CGM_DIR}/geom/parallel -lcubit_parallel'
-  CGM_PARALLEL_LIB_FILE='${CGM_LIBDIR}/libcubit_parallel.a'
+  CGM_PARALLEL_LIB_FILE='${CGM_LIBDIR}/libcubit_parallel.la'
 fi
 AM_CONDITIONAL(USE_MPI, [test "xno" != "x$WITH_MPI"])
 AC_SUBST(CGM_PARALLEL_INCLUDE)

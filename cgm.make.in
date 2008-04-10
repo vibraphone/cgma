@@ -56,6 +56,8 @@ CGM_INCLUDES = -I$(CGM_INCLUDEDIR)/util \
                ${OCC_INCLUDES}
 
 CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
+	-L$(CGM_LIBDIR) \
+        -L$(CGM_LIBDIR)/init/.libs \
 	-L$(CGM_LIBDIR)/geom/virtual/.libs \
         -L$(CGM_LIBDIR)/geom/facetbool/.libs \
         -L$(CGM_LIBDIR)/geom/facet/.libs \
@@ -72,8 +74,8 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         -L$(CGM_LIBDIR)/geom \
         -L$(CGM_LIBDIR)/util \
 	-L${ACIS_LIB_DIR} \
-	-L$(CGM_LIBDIR) \
         ${OCC_LIB_DIR} \
+        -lcgma_init \
 	${ACIS_LIBS} \
         -lcubit_virtual \
         -lcubit_facet \
@@ -86,20 +88,21 @@ CGM_LIBS_LINK_INTERNAL = ${LDFLAGS} \
         ${OCC_LIBS} 
 
 CGM_LIBS_FILES_INTERNAL = \
-       $(CGM_LIBDIR)/libcubit_virtual.a \
-       $(CGM_LIBDIR)/libcubit_facetbool.a \
-       $(CGM_LIBDIR)/libcubit_facet.a \
-       $(CGM_LIBDIR)/libcholla.a \
-       $(CGM_LIBDIR)/libcubit_geom.a \
-       $(CGM_LIBDIR)/libcubit_util.a \
+       $(CGM_LIBDIR)/libcgma_init.la \
+       $(CGM_LIBDIR)/libcubit_virtual.la \
+       $(CGM_LIBDIR)/libcubit_facetbool.la \
+       $(CGM_LIBDIR)/libcubit_facet.la \
+       $(CGM_LIBDIR)/libcholla.la \
+       $(CGM_LIBDIR)/libcubit_geom.la \
+       $(CGM_LIBDIR)/libcubit_util.la \
        ${CGM_PARALLEL_LIB_FILE}
-
+       
 CUBIT_LDFwAGS = @CUBIT_LDFLAGS@
 
 CUBIT_LTFLAGS = @CUBIT_LTFLAGS@
 CUBIT_LIBS = @CUBIT_LIBS@
 CUBIT_FILE = @CUBIT_FILE@
 
-CGM_LIBS_LINK = -L$(CGM_LIBDIR)/init -L$(CGM_LIBDIR)/init/.libs -lcgma_init @CGM_LIBS_LINK@  
-CGM_LIBS_FILES = @CGM_LIBS_FILES@ $(CGM_LIBDIR)/libcgma_init.a
+CGM_LIBS_LINK = @CGM_LIBS_LINK@  
+CGM_LIBS_FILES = @CGM_LIBS_FILES@ 
 CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@
