@@ -60,6 +60,7 @@
 #include "BRepGProp.hxx"
 #include "TopoDS.hxx"
 #include "TopologyBridge.hpp"
+#include "ProgressTool.hpp"
 #include "BRepAlgoAPI_Fuse.hxx"
 #include "BRepAlgoAPI_Cut.hxx"
 #include "BRepAlgoAPI_Section.hxx"
@@ -2174,6 +2175,8 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
                                          bool  keep_old) const
 {
   OCCBody* occ_body = NULL;
+  newBody1 = NULL;
+  newBody2 = NULL;
   DLIList<TopoDS_Shape*> shape_list;
   for(int i = 0; i <2; i++)
   {
@@ -2234,23 +2237,134 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
     tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape2);
     newBody2 = CAST_TO(tbs.get(),BodySM);     
   }
-  return CUBIT_FAILURE;
+  
+  if (!keep_old)
+  {
+    if (newBody1)
+      OCCQueryEngine::instance()->delete_solid_model_entities(BodyPtr1);
+    if (newBody2)
+      OCCQueryEngine::instance()->delete_solid_model_entities( BodyPtr2);
+  }
+
+  if (!newBody1)
+  {
+    delete shape1;
+    newBody1 = BodyPtr1;
+  }
+
+  if(!newBody2)
+  {
+    delete shape2;
+    newBody2 = BodyPtr2;
+  }
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
-// Function   : imprint
+// Function   : imprint multiple bodies at once
 // Member Type: PUBLIC
-// Description: imprint boolean operation on facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: imprint boolean operation on OCC-based bodies
+// Author     : Jane HU
+// Date       : 04/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
-                                           DLIList<BodySM*> &new_from_body_list,
-                                           bool keep_old,
-                                           DLIList<TopologyBridge*>* ,
-                                           DLIList<TopologyBridge*>*) const
+CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
+                                     DLIList<BodySM*> &new_from_body_list,
+                                     bool keep_old,
+                                     DLIList<TopologyBridge*>* new_tbs,
+                                     DLIList<TopologyBridge*>* att_tbs) const
 {
   CubitStatus success = CUBIT_SUCCESS;
+  OCCBody* occ_body = NULL;
+  DLIList<TopoDS_Shape*> shape_list;
+  // pass in keep_old to the delete_owner_attrib flag; if we're not keeping
+  // old bodies, we want to keep the owner attrib, so we can pick up entities
+  // that didn't change
+  bool delete_attribs =
+        (GeometryModifyTool::instance()->get_new_ids() || keep_old);
+
+  for(int i = 0; i <from_body_list.size(); i++)
+  {
+    occ_body = CAST_TO(from_body_list.get_and_step(), OCCBody);
+    OCCSurface* surface = occ_body->my_sheet_surface();
+    OCCShell*   shell = occ_body->shell();
+    if(surface)
+    {
+      TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+      BRepBuilderAPI_Copy api_copy(*topo_face);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+    else if(shell)
+    {
+      TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+      BRepBuilderAPI_Copy api_copy(*topo_shell);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+
+    else
+    {
+      DLIList<Lump*> lumps = occ_body->lumps();
+      if (lumps.size() > 1)
+      {
+        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+        return CUBIT_FAILURE;
+      }
+
+      TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+      BRepBuilderAPI_Copy api_copy(*solid);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.append(Shape1);
+    }
+  }
+ 
+  int size = shape_list.size();
+  // total number of imprints to be done
+  int total_imprints = (size * (size -1))/2;
+
+  if( size > 2 )
+  {
+     char message[128];
+     sprintf(message, "Imprinting %d ACIS Bodies", from_body_list.size() );          AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
+  }
+
+  for(int i = 0; i < size; i++)
+  {
+    TopoDS_Shape* shape1 = shape_list[i];
+    shape_list.append(shape1);
+    CubitBoolean modified = CUBIT_FALSE;
+    for(int j = i+1; j < size+i; j ++)
+    {
+       if (CubitMessage::instance()->Interrupt())
+       {
+          success = CUBIT_FAILURE;
+          break;
+       }
+
+       TopoDS_Shape* shape2 = shape_list[j];
+       DLIList<TopologyBridge*> tbs;
+       CubitStatus stat = imprint_toposhapes(shape1, shape2);
+       if(stat)
+          modified = CUBIT_TRUE; 
+    }
+    if(modified)
+    {
+      DLIList<TopologyBridge*> tbs;
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape1);
+      new_from_body_list.append(CAST_TO(tbs.get(),BodySM));
+    }
+    if( size > 2 )
+      AppUtil::instance()->progress_tool()->step();
+  }
+
+  if( size > 2 )
+    AppUtil::instance()->progress_tool()->end();
+
+  if( CubitMessage::instance()->Interrupt() )
+        PRINT_INFO("Imprint aborted.\n");
 
   return success;
 }
