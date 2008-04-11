@@ -30,6 +30,7 @@
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class CubitSimpleAttrib;
 class BRepBuilderAPI_Transform;
+class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCPoint : public Point
@@ -136,7 +137,8 @@ public :
 
   CubitStatus restore_attribs( FILE *file_ptr, unsigned int endian );
 
-  void update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                          BRepAlgoAPI_BooleanOperation *op = NULL);
 };
 
 

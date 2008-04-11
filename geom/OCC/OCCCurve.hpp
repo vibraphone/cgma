@@ -38,7 +38,7 @@ class OCCLoop;
 class OCCCoEdge;
 class OCCPoint;
 class BRepBuilderAPI_Transform; 
-
+class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCCurve : public Curve
@@ -324,7 +324,8 @@ public :
     { return myTopoDSEdge; } 
   void set_TopoDS_Edge(TopoDS_Edge edge){*myTopoDSEdge = edge;}
 
-  void update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                          BRepAlgoAPI_BooleanOperation *op = NULL );
  
   Curve* project_curve(Surface* face_ptr,
                        CubitBoolean closed,

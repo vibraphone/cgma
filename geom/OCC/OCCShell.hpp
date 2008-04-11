@@ -35,6 +35,7 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
+class BRepAlgoAPI_BooleanOperation;
 
 // ********** END CUBIT INCLUDES           **********
 
@@ -106,7 +107,8 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                 BRepAlgoAPI_BooleanOperation *op = NULL);
   double measure(); //area of the shell
 protected: 
   

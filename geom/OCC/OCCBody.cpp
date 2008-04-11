@@ -163,12 +163,12 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
   {
     TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
     aBRepTrsf.Perform(*shell);
-    myShell->update_OCC_entity(aBRepTrsf);
+    myShell->update_OCC_entity(&aBRepTrsf);
   }
   else
   {
     aBRepTrsf.Perform(*myTopoDSShape);
-    update_OCC_entity(aBRepTrsf);
+    update_OCC_entity(&aBRepTrsf);
   }
 
   // calculate for bounding box
@@ -206,12 +206,12 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
   {
     TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
     aBRepTrsf.Perform(*shell);
-    myShell->update_OCC_entity(aBRepTrsf);
+    myShell->update_OCC_entity(&aBRepTrsf);
   }
   else
   {
     aBRepTrsf.Perform(*myTopoDSShape);
-    update_OCC_entity(aBRepTrsf);
+    update_OCC_entity(&aBRepTrsf);
   }
 
   // calculate for bounding box
@@ -243,12 +243,12 @@ CubitStatus OCCBody::scale(double scale_factor )
   {
     TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
     aBRepTrsf.Perform(*shell);
-    myShell->update_OCC_entity(aBRepTrsf);
+    myShell->update_OCC_entity(&aBRepTrsf);
   }
   else
   {
     aBRepTrsf.Perform(*myTopoDSShape);
-    update_OCC_entity(aBRepTrsf);
+    update_OCC_entity(&aBRepTrsf);
   }
 
   // calculate for bounding box
@@ -300,12 +300,12 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
   {
     TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
     aBRepTrsf.Perform(*shell);
-    myShell->update_OCC_entity(aBRepTrsf);
+    myShell->update_OCC_entity(&aBRepTrsf);
   }
   else
   {
     aBRepTrsf.Perform(*myTopoDSShape);
-    update_OCC_entity(aBRepTrsf);
+    update_OCC_entity(&aBRepTrsf);
   }
 
   // update underlining OCC entities
@@ -320,31 +320,36 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //           as the body's lumps number.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf) 
+CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                       BRepAlgoAPI_BooleanOperation *op) 
 {
   if(IsSheetBody || myShell)
     return CUBIT_FAILURE;
 
-  TopoDS_Shape shape = aBRepTrsf.Shape();
-  TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
+  assert(aBRepTrsf != NULL || op != NULL);
 
-  if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )
+  TopoDS_CompSolid compsolid;
+  if(aBRepTrsf)
   {
-     int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSShape);
-     assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-     OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSShape);
-     OCCQueryEngine::instance()->OCCMap->Bind(shape, k);
+    TopoDS_Shape shape = aBRepTrsf->Shape();
+    TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
+  
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )
+       OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShape, shape);
   }
 
+  //Boolean operation works only on one lump body
   //set the lumps
   DLIList<Lump *> lumps;
   lumps = this->lumps();
   for (int i = 1; i <= lumps.size(); i++)
   {
      OCCLump *lump = CAST_TO(lumps.get_and_step(), OCCLump);
-     lump->update_OCC_entity(aBRepTrsf);
+     lump->update_OCC_entity(aBRepTrsf, op);
   }
-  set_TopoDS_Shape(compsolid);
+
+  if (aBRepTrsf)
+    set_TopoDS_Shape(compsolid);
 
   update_bounding_box(); 
 

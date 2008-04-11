@@ -32,6 +32,7 @@
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -258,18 +259,26 @@ void OCCPoint::get_children_virt( DLIList<TopologyBridge*>& )
 //           for any movement of the body/surface/curve/vertex.
 // Author: Jane Hu
 //----------------------------------------------------------------
-void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                  BRepAlgoAPI_BooleanOperation *op)
 {
   if (this->myMarked == CUBIT_TRUE)
     return;
 
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Vertex());
+  assert(aBRepTrsf != NULL || op != NULL);
+
+  TopoDS_Shape shape;
+  if(aBRepTrsf)
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Vertex());
+  else
+  {
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(*get_TopoDS_Vertex()));
+    shape = shapes.First();
+  }
   TopoDS_Vertex vertex = TopoDS::Vertex(shape);
 
-  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSVertex);
-  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSVertex);
-  OCCQueryEngine::instance()->OCCMap->Bind(vertex, k);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSVertex, vertex);
 
   set_myMarked(CUBIT_TRUE);
   set_TopoDS_Vertex(vertex);

@@ -37,7 +37,7 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
-
+class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCLump : public Lump
@@ -147,7 +147,8 @@ public:
 
   CubitPointContainment point_containment( const CubitVector &point );
 
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                BRepAlgoAPI_BooleanOperation *op = NULL);
 
 protected: 
   

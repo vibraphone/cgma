@@ -2154,25 +2154,25 @@ CubitStatus OCCQueryEngine::update_entity_shape(GeometryEntity* entity_ptr,
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
     {
-      body_ptr->update_OCC_entity(aBRepTrsf);
+      body_ptr->update_OCC_entity(&aBRepTrsf);
       return CUBIT_SUCCESS;
     }
 
   else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
     {
-      surface_ptr->update_OCC_entity(aBRepTrsf);
+      surface_ptr->update_OCC_entity(&aBRepTrsf);
       return CUBIT_SUCCESS;
     }
 
   else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
     {
-       curve_ptr->update_OCC_entity(aBRepTrsf); 
+       curve_ptr->update_OCC_entity(&aBRepTrsf); 
        return CUBIT_SUCCESS;
     }
 
   else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
     {
-      point_ptr->update_OCC_entity(aBRepTrsf);
+      point_ptr->update_OCC_entity(&aBRepTrsf);
       return CUBIT_SUCCESS;
     }
 
@@ -2343,4 +2343,12 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
   return CUBIT_FALSE;
 }
 
+void OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
+                                    TopoDS_Shape new_shape)
+{
+  int k = OCCMap->Find(old_shape);
+  assert (k > 0 && k <= iTotalTBCreated);
+  OCCMap->UnBind(old_shape);
+  OCCMap->Bind(new_shape, k);
+}
 //EOF

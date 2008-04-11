@@ -1529,14 +1529,20 @@ CubitStatus OCCModifyEngine::stitch_surfs(
        faces_to_stitch.append(topods_face);
   }
 
-  TopoDS_Shape* first_face  = faces_to_stitch.get();
+  faces_to_stitch.reset();
+  surf_bodies.reset();
+  TopoDS_Shape* first_face  = faces_to_stitch.pop();
+  surf_bodies.pop(); //make consistance with faces_to_stitch.
+
   TopoDS_Face* second_face = NULL;
   TopoDS_Shape fuse;
-  for(int i = 1; i < faces_to_stitch.size(); i++)
+  for( int i = faces_to_stitch.size()-1; i >= 0; i --)
   {
      second_face = faces_to_stitch[i];
-     fuse = BRepAlgoAPI_Fuse(*first_face, *second_face);
+     BRepAlgoAPI_Fuse fuser(*second_face, *first_face);
+     fuse = fuser.Shape();
      first_face = &fuse;
+     CAST_TO(surf_bodies[i], OCCBody)->my_sheet_surface()->update_OCC_entity(NULL, &fuser);      
   }
 
   TopExp_Explorer Ex;
@@ -1694,9 +1700,11 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         continue;
       } 
       TopoDS_Shape* tool_shape = tool_bodies_copy.get_and_step();
+
       //bodies overlap, proceed with the subtract
-      TopoDS_Shape cut_shape = BRepAlgoAPI_Cut(*from_shape, *tool_shape);
- 
+      BRepAlgoAPI_Cut cutter(*from_shape, *tool_shape);
+      TopoDS_Shape cut_shape = cutter.Shape(); 
+
       //compare to see if the from_shape has gotten cut.
       CubitStatus stat;
       if(is_volume[i])

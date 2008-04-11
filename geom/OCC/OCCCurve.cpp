@@ -56,6 +56,7 @@
 #include "TColgp_Array1OfPnt.hxx"
 #include "GeomAdaptor_Curve.hxx"
 #include "GCPnts_QuasiUniformAbscissa.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "TopTools_ListOfShape.hxx"
 #include "BRepAlgo_NormalProjection.hxx"
 #include "TopExp_Explorer.hxx"
@@ -899,18 +900,26 @@ CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 //           for any movement of the body/surface/curve.
 // Author: Jane Hu
 //----------------------------------------------------------------
-void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                 BRepAlgoAPI_BooleanOperation *op)
 {
   if (myMarked == 1) 
      return;
 
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Edge());
+  assert(aBRepTrsf != NULL || op != NULL);
+  
+  TopoDS_Shape shape;
+  if (aBRepTrsf)
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Edge());
+  else
+  {
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(*get_TopoDS_Edge()));
+    shape = shapes.First();
+  }
   TopoDS_Edge curve = TopoDS::Edge(shape);
 
-  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSEdge);
-  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSEdge);
-  OCCQueryEngine::instance()->OCCMap->Bind(curve, k);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSEdge, curve);
 
   //set the vertices
   DLIList<TopologyBridge*> vertices;
@@ -920,7 +929,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
      TopologyBridge* tb = vertices.get_and_step();
      OCCPoint *point = CAST_TO(tb, OCCPoint);
      if (point)
-       point->update_OCC_entity(aBRepTrsf);
+       point->update_OCC_entity(aBRepTrsf, op);
   }
   myMarked = 1;
   set_TopoDS_Edge(curve);

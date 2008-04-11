@@ -48,7 +48,7 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
-
+class BRepAlgoAPI_BooleanOperation;
 //// class CubitTransformMatrix;
 
 class OCCSurface : public Surface
@@ -396,7 +396,8 @@ public :
   CubitBoolean is_spherical(); //// Not in SurfaceACIS
   CubitBoolean is_conical();  //// Not in SurfaceACIS
 
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                 BRepAlgoAPI_BooleanOperation *op = NULL);
 protected: 
 
 private:

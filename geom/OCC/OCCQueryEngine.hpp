@@ -109,6 +109,8 @@ public:
     //- Singleton pattern
     //- Controlled access and creation of the sole instance of this class.
 
+  void update_OCC_map(TopoDS_Shape old_shape, TopoDS_Shape new_shape);
+
   virtual ~OCCQueryEngine();
   
   const char* modeler_type()

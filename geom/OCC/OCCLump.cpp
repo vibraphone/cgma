@@ -39,6 +39,7 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
@@ -294,18 +295,26 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
 //           for any movement of the lump.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                        BRepAlgoAPI_BooleanOperation *op)
 {
   if(mySheetSurface || myShell)
     return CUBIT_FAILURE;
 
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Solid());
+  assert(aBRepTrsf != NULL || op != NULL);
+ 
+  TopoDS_Shape shape;
+  if (aBRepTrsf)
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Solid());
+  else
+  {
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(*get_TopoDS_Solid()));
+    shape = shapes.First();
+  }
   TopoDS_Solid solid = TopoDS::Solid(shape);
 
-  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSSolid);
-  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSSolid);
-  OCCQueryEngine::instance()->OCCMap->Bind(solid, k);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSSolid, solid);
 
   //set the lumps
   DLIList<TopologyBridge *> shells;
@@ -313,7 +322,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
   for (int i = 1; i <= shells.size(); i++)
   {
      OCCShell *shell = CAST_TO(shells.get_and_step(), OCCShell);
-     shell->update_OCC_entity(aBRepTrsf);
+     shell->update_OCC_entity(aBRepTrsf, op);
   }
   set_TopoDS_Solid(solid);
 }

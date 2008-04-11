@@ -40,6 +40,7 @@
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -165,26 +166,34 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 //           for any movement of the body.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                        BRepAlgoAPI_BooleanOperation *op)
 {
   if(mySheetSurface)
     return CUBIT_FAILURE;
 
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Shell());
+  assert (aBRepTrsf != NULL || op != NULL);
+
+  TopoDS_Shape shape;
+  if (aBRepTrsf)
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Shell());
+  else
+  {
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(*get_TopoDS_Shell()));
+    shape = shapes.First();
+  } 
   TopoDS_Shell shell = TopoDS::Shell(shape);
 
-  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSShell);
-  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSShell);
-  OCCQueryEngine::instance()->OCCMap->Bind(shell, k);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShell, shell);
 
-  //set the lumps
+  //set the surfaces
   DLIList<TopologyBridge *> surfaces;
   this->get_children_virt(surfaces);
   for (int i = 1; i <= surfaces.size(); i++)
   {
      OCCSurface *surface = CAST_TO(surfaces.get_and_step(), OCCSurface);
-     surface->update_OCC_entity(aBRepTrsf);
+     surface->update_OCC_entity(aBRepTrsf, op);
   }
   set_TopoDS_Shell(shell);
   return CUBIT_SUCCESS;

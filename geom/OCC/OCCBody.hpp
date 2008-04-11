@@ -39,7 +39,7 @@ class OCCLoop;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
-
+class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCBody : public BodySM
@@ -175,7 +175,8 @@ public:
   virtual CubitPointContainment point_containment( const CubitVector& pos );
 
   //update the underlining CompSolid
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf);
+  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                 BRepAlgoAPI_BooleanOperation *op = NULL);
 
   OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
 				 return (OCCSurface*) NULL;} 

@@ -43,6 +43,7 @@
 #include "Lump.hpp"
 #include "LoopSM.hpp"
 #include "CubitPointData.hpp"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 
 
 // ********** END CUBIT INCLUDES           **********
@@ -766,25 +767,43 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 //           for any movement of the body.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform &aBRepTrsf)
+CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+                                         BRepAlgoAPI_BooleanOperation *op)
 {
-  TopoDS_Shape shape = aBRepTrsf.ModifiedShape(*get_TopoDS_Face());
-  TopoDS_Face surface = TopoDS::Face(shape);
+  assert(aBRepTrsf != NULL || op != NULL);
 
-  int k = OCCQueryEngine::instance()->OCCMap->Find(*myTopoDSFace);
-  assert (k > 0 && k <= OCCQueryEngine::instance()->iTotalTBCreated);
-  OCCQueryEngine::instance()->OCCMap->UnBind(*myTopoDSFace);
-  OCCQueryEngine::instance()->OCCMap->Bind(surface, k);
+  TopoDS_Shape shape;
+  CubitBoolean need_update = CUBIT_TRUE;
+  if (aBRepTrsf)
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Face());
+  else
+  {
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(*get_TopoDS_Face()));
+    if (shapes.Extent() > 0)
+      shape = shapes.First();
+    else
+      need_update = CUBIT_FALSE;
+  }
+ 
+  TopoDS_Face surface; 
+  if(need_update)
+  {
+    surface = TopoDS::Face(shape);
 
+    OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
+  }
   //set the loops
   DLIList<OCCLoop *> loops;
   this->get_loops(loops);
   for (int i = 1; i <= loops.size(); i++)
   {
      OCCLoop *loop = loops.get_and_step();
-     loop->update_OCC_entity(aBRepTrsf);
+     loop->update_OCC_entity(aBRepTrsf, op);
   }
-  set_TopoDS_Face(surface);
+  if (need_update)
+    set_TopoDS_Face(surface);
+
   return CUBIT_SUCCESS;
 }
 
