@@ -310,7 +310,10 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Solid()));
-    shape = shapes.First();
+    if(shapes.Extent() > 0)
+      shape = shapes.First();
+    else
+      return CUBIT_SUCCESS;
   }
   TopoDS_Solid solid = TopoDS::Solid(shape);
 

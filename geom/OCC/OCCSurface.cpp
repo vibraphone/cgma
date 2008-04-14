@@ -783,16 +783,14 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     if (shapes.Extent() > 0)
       shape = shapes.First();
     else
-      need_update = CUBIT_FALSE;
+      return CUBIT_SUCCESS;
   }
  
   TopoDS_Face surface; 
-  if(need_update)
-  {
-    surface = TopoDS::Face(shape);
+  surface = TopoDS::Face(shape);
 
-    OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
-  }
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
+
   //set the loops
   DLIList<OCCLoop *> loops;
   this->get_loops(loops);
@@ -801,8 +799,7 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      OCCLoop *loop = loops.get_and_step();
      loop->update_OCC_entity(aBRepTrsf, op);
   }
-  if (need_update)
-    set_TopoDS_Face(surface);
+  set_TopoDS_Face(surface);
 
   return CUBIT_SUCCESS;
 }

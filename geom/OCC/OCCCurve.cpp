@@ -915,7 +915,10 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Edge()));
-    shape = shapes.First();
+    if(shapes.Extent())
+      shape = shapes.First();
+    else
+      return ;
   }
   TopoDS_Edge curve = TopoDS::Edge(shape);
 

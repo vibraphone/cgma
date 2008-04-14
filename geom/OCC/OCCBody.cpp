@@ -348,7 +348,7 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      lump->update_OCC_entity(aBRepTrsf, op);
   }
 
-  if (aBRepTrsf)
+  if (aBRepTrsf && !compsolid.IsNull())
     set_TopoDS_Shape(compsolid);
 
   update_bounding_box(); 

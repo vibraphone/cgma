@@ -181,7 +181,10 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Shell()));
-    shape = shapes.First();
+    if (shapes.Extent())
+      shape = shapes.First();
+    else
+      return CUBIT_SUCCESS;
   } 
   TopoDS_Shell shell = TopoDS::Shell(shape);
 

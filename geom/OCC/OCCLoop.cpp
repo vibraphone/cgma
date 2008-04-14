@@ -233,7 +233,10 @@ CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes; 
     shapes.Assign(op->Modified(*get_TopoDS_Wire()));
-    shape = shapes.First();
+    if(shapes.Extent())
+      shape = shapes.First();
+    else
+      return CUBIT_SUCCESS;
   }
   TopoDS_Wire loop = TopoDS::Wire(shape);
 

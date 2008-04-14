@@ -1542,7 +1542,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      BRepAlgoAPI_Fuse fuser(*second_face, *first_face);
      fuse = fuser.Shape();
      first_face = &fuse;
-     CAST_TO(surf_bodies[i], OCCBody)->my_sheet_surface()->update_OCC_entity(NULL, &fuser);      
+     CAST_TO(surf_bodies[i], OCCBody)->my_sheet_surface()->my_shell()->update_OCC_entity(NULL, &fuser);      
   }
 
   TopExp_Explorer Ex;

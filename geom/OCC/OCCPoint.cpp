@@ -274,7 +274,10 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Vertex()));
-    shape = shapes.First();
+    if(shapes.Extent())
+      shape = shapes.First();
+    else
+      return ;
   }
   TopoDS_Vertex vertex = TopoDS::Vertex(shape);
 
