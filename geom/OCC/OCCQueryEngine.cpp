@@ -1242,6 +1242,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
       surface->set_body(body);
       surface->set_lump(lump);
       surface->set_shell(shell);
+      shell->set_body(body);
+      shell->set_lump(lump);
       //Doesn't need to save sheet bodies.
     }
     TopExp_Explorer Ex;

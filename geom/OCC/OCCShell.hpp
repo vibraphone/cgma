@@ -49,10 +49,13 @@ public:
     //- Destructor.
 
   TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
-  void set_TopoDS_Shell(TopoDS_Shell shell){*myTopoDSShell = shell;} 
+  void set_TopoDS_Shell(TopoDS_Shell shell);
 
   OCCLump* my_lump() {return myLump;}
   OCCBody* my_body() {return myBody;}
+  OCCSurface* my_surface() {return mySheetSurface;}
+  void set_sheet_surface (OCCSurface* surface) {mySheetSurface = surface;}
+
   void set_lump(OCCLump* lump) {myLump = lump;}
   void set_body(OCCBody* body) {myBody = body;}
 

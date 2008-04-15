@@ -32,6 +32,7 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "TopExp_Explorer.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "TopoDS.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
@@ -69,6 +70,13 @@ OCCShell::OCCShell(TopoDS_Shell *theShell, OCCSurface* surface)
 //-------------------------------------------------------------------------
 OCCShell::~OCCShell()
 {
+}
+
+void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
+{
+  if (!myTopoDSShell)
+    myTopoDSShell = new TopoDS_Shell();
+  *myTopoDSShell = shell;
 }
 
 //-------------------------------------------------------------------------
@@ -169,15 +177,34 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                                         BRepAlgoAPI_BooleanOperation *op)
 {
-  if(mySheetSurface)
+  if(mySheetSurface && op == NULL)
     return CUBIT_FAILURE;
 
+  else if(mySheetSurface && op)//stitch surface body into shell body
+  {
+    mySheetSurface->update_OCC_entity(aBRepTrsf, op); 
+    TopoDS_Shape shape = op->Shape();
+    TopExp_Explorer Ex;
+    TopoDS_Shell shell;
+    for (Ex.Init(shape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
+    {
+      shell = TopoDS::Shell(Ex.Current());
+      this->set_TopoDS_Shell(shell);
+      this->my_lump()->set_surface(NULL);
+      this->my_lump()->set_shell(this);
+      this->my_body()->shell(this);
+      this->my_body()->set_sheet_surface(NULL);
+      this->set_sheet_surface(NULL);
+      break;
+    }   
+    return CUBIT_SUCCESS;
+  }
   assert (aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
   if (aBRepTrsf)
     shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Shell());
-  else
+  else if(!mySheetSurface)
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Shell()));

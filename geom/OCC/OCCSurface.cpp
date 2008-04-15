@@ -773,7 +773,6 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
-  CubitBoolean need_update = CUBIT_TRUE;
   if (aBRepTrsf)
     shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Face());
   else

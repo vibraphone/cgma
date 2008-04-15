@@ -47,6 +47,11 @@ public:
   OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface = NULL, 
           OCCShell* shell = NULL);
   
+  OCCSurface* my_sheet_surface() {return mySheetSurface;}
+  OCCShell * my_shell() {return myShell;}
+  void set_surface(OCCSurface* surface) {mySheetSurface = surface;}
+  void set_shell(OCCShell* shell) {myShell = shell;}
+
   virtual ~OCCLump();
     //- The destructor
 

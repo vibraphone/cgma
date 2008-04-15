@@ -69,6 +69,14 @@ OCCBody::OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody,
   update_bounding_box();
 }
 
+void OCCBody::set_sheet_surface(OCCSurface* surface)
+{
+  IsSheetBody = CUBIT_TRUE;
+  mySheetSurface = surface;
+  if(surface == NULL)
+    IsSheetBody = CUBIT_FALSE;
+}
+
 void OCCBody::lumps(DLIList<Lump*>& my_lumps)
 {
   myLumps.clean_out();

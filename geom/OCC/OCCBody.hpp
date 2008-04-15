@@ -180,6 +180,8 @@ public:
 
   OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
 				 return (OCCSurface*) NULL;} 
+  void set_sheet_surface(OCCSurface* surface); 
+
 protected: 
   
 private:

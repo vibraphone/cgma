@@ -1532,7 +1532,6 @@ CubitStatus OCCModifyEngine::stitch_surfs(
   faces_to_stitch.reset();
   surf_bodies.reset();
   TopoDS_Shape* first_face  = faces_to_stitch.pop();
-  surf_bodies.pop(); //make consistance with faces_to_stitch.
 
   TopoDS_Face* second_face = NULL;
   TopoDS_Shape fuse;
@@ -1542,7 +1541,8 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      BRepAlgoAPI_Fuse fuser(*second_face, *first_face);
      fuse = fuser.Shape();
      first_face = &fuse;
-     CAST_TO(surf_bodies[i], OCCBody)->my_sheet_surface()->my_shell()->update_OCC_entity(NULL, &fuser);      
+     OCCBody* occ_body = CAST_TO(surf_bodies[i], OCCBody);
+     occ_body->my_sheet_surface()->update_OCC_entity(NULL, &fuser);
   }
 
   TopExp_Explorer Ex;
