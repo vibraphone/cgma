@@ -78,6 +78,7 @@ class OCCPoint;
  
 class BRepBuilderAPI_Transform;
 class TopTools_DataMapOfShapeInteger;
+class BRepAlgoAPI_BooleanOperation;
 class TopoDS_Vertex;
 class TopoDS_Edge;
 class TopoDS_Shape;
@@ -306,7 +307,8 @@ public:
                                 CubitBox& super_box );
 
   CubitStatus update_entity_shape(GeometryEntity* entity_ptr,
-                                  BRepBuilderAPI_Transform& aTranf);
+                                  BRepBuilderAPI_Transform* aTranf,
+                                  BRepAlgoAPI_BooleanOperation *op = NULL);
 
   CubitStatus translate( BodySM* body, const CubitVector& offset );
   CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle );

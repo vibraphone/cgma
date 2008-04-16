@@ -28,6 +28,7 @@
 #include "TColgp_Array1OfPnt.hxx"
 #include "Poly_Array1OfTriangle.hxx"
 #include "Poly_Triangle.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "Handle_Poly_Triangulation.hxx"
 #include "Poly_Polygon3D.hxx"
 #include "Handle_Poly_Polygon3D.hxx"
@@ -1116,22 +1117,24 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)body));
       BodyList->append(body);
-
-      TopExp_Explorer Ex;
-      DLIList<Lump*> lumps;
-      for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
-        {
-          Lump* lump = populate_topology_bridge(TopoDS::Solid(Ex.Current()));
-          lumps.append(lump);
-          CAST_TO(lump, OCCLump)->add_body(body);
-        }
-      body->lumps(lumps);
     }
   else
     {
       int k = OCCMap->Find(*posolid);
       body = (OCCBody*)(OccToCGM->find(k))->second;
+      body->set_TopoDS_Shape(*posolid);
     }
+
+  TopExp_Explorer Ex;
+  DLIList<Lump*> lumps;
+  for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
+  {
+     Lump* lump = populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+     lumps.append(lump);
+     CAST_TO(lump, OCCLump)->add_body(body);
+  }
+  body->lumps(lumps);
+
   return body;
 }
 
@@ -1160,16 +1163,18 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
     OCCMap->Bind(*posolid, iTotalTBCreated);
     OccToCGM->insert(valType(iTotalTBCreated,
 		       (TopologyBridge*)lump));
-
-    TopExp_Explorer Ex;
-    for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
-      populate_topology_bridge(TopoDS::Shell(Ex.Current()));
   }
   else 
   {
     int k = OCCMap->Find(*posolid);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
+    lump->set_TopoDS_Solid(*posolid);
   }
+ 
+  TopExp_Explorer Ex;
+  for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
+    populate_topology_bridge(TopoDS::Shell(Ex.Current()));
+
   return lump;
 }
 
@@ -1198,20 +1203,21 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
       shell->set_lump(lump);
       //don't need to add body into BodyList.
     }
-
-    TopExp_Explorer Ex;
-    for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
-    {
-      Surface* face =
-        populate_topology_bridge(TopoDS::Face(Ex.Current()), build_body);
-      if(standalone)
-        CAST_TO(face,OCCSurface)->set_shell(shell);
-    }
   }
   else
   {
     int k = OCCMap->Find(*poshell);
     shell = (OCCShell*)(OccToCGM->find(k))->second;
+    shell->set_TopoDS_Shell(*poshell);
+  }
+
+  TopExp_Explorer Ex;
+  for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
+  {
+    Surface* face =
+      populate_topology_bridge(TopoDS::Face(Ex.Current()), build_body);
+    if(standalone)
+      CAST_TO(face,OCCSurface)->set_shell(shell);
   }
 
   return shell;
@@ -1246,16 +1252,18 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
       shell->set_lump(lump);
       //Doesn't need to save sheet bodies.
     }
-    TopExp_Explorer Ex;
-    for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
-      populate_topology_bridge(TopoDS::Wire(Ex.Current()));
   } 
 
   else 
   {
     int k = OCCMap->Find(*poface);
     surface = (OCCSurface*)(OccToCGM->find(k))->second;
+    surface->set_TopoDS_Face(*poface);
   }
+
+  TopExp_Explorer Ex;
+  for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
+    populate_topology_bridge(TopoDS::Wire(Ex.Current()));
 
   return surface;
 }
@@ -1277,25 +1285,26 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
 			       (TopologyBridge*)loop));
       if(standalone)
 	WireList->append(loop);
-
-      BRepTools_WireExplorer Ex;
-      DLIList <OCCCoEdge*> coedges;
-      for (Ex.Init(aShape); Ex.More(); Ex.Next())
-        {
-          Curve* curve = populate_topology_bridge(Ex.Current());
-          OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
-          OCCCoEdge * coedge = new OCCCoEdge( curve, loop,
-            (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
-          coedges.append(coedge);
-          occ_curve->add_loop(loop);
-        }
-      loop->coedges(coedges);
     }
   else
     {
       int k = OCCMap->Find(*powire);
       loop = (OCCLoop*)(OccToCGM->find(k))->second;
+      loop->set_TopoDS_Wire(*powire);
     }
+
+  BRepTools_WireExplorer Ex;
+  DLIList <OCCCoEdge*> coedges;
+  for (Ex.Init(aShape); Ex.More(); Ex.Next())
+  {
+    Curve* curve = populate_topology_bridge(Ex.Current());
+    OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
+    OCCCoEdge * coedge = new OCCCoEdge( curve, loop,
+        (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
+    coedges.append(coedge);
+    occ_curve->add_loop(loop);
+  }
+  loop->coedges(coedges);
 
   return loop;
 }
@@ -1315,16 +1324,17 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)curve));
       CurveList->append((OCCCurve*)curve);
-
-      TopExp_Explorer Ex;
-      for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
-        populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
     }
   else 
     {
       int i = OCCMap->Find(*poedge);
       curve = (OCCCurve*)(OccToCGM->find(i))->second;
+      CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(*poedge);
     }
+
+  TopExp_Explorer Ex;
+  for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
+    populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
 
   return curve;
 }
@@ -1348,6 +1358,7 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
     {
       int i = OCCMap->Find(*povertex);
       point = (OCCPoint*)(OccToCGM->find(i))->second;
+      point->set_TopoDS_Vertex(*povertex);
     }
   return point;
 }
@@ -2147,34 +2158,35 @@ CubitStatus OCCQueryEngine::translate( GeometryEntity* entity,
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
   
-  update_entity_shape(entity, aBRepTrsf);
+  update_entity_shape(entity, &aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCQueryEngine::update_entity_shape(GeometryEntity* entity_ptr,
-						BRepBuilderAPI_Transform& aBRepTrsf)
+					BRepBuilderAPI_Transform* aBRepTrsf,
+                                        BRepAlgoAPI_BooleanOperation *op)
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
     {
-      body_ptr->update_OCC_entity(&aBRepTrsf);
+      body_ptr->update_OCC_entity(aBRepTrsf, op);
       return CUBIT_SUCCESS;
     }
 
   else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
     {
-      surface_ptr->update_OCC_entity(&aBRepTrsf);
+      surface_ptr->update_OCC_entity(aBRepTrsf, op);
       return CUBIT_SUCCESS;
     }
 
   else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
     {
-       curve_ptr->update_OCC_entity(&aBRepTrsf); 
+       curve_ptr->update_OCC_entity(aBRepTrsf, op); 
        return CUBIT_SUCCESS;
     }
 
   else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
     {
-      point_ptr->update_OCC_entity(&aBRepTrsf);
+      point_ptr->update_OCC_entity(aBRepTrsf, op);
       return CUBIT_SUCCESS;
     }
 
@@ -2203,7 +2215,7 @@ CubitStatus OCCQueryEngine::rotate( GeometryEntity* entity,
   aTrsf.SetRotation(anAxis, a);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
-  update_entity_shape(entity, aBRepTrsf);
+  update_entity_shape(entity, &aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
@@ -2221,7 +2233,7 @@ CubitStatus OCCQueryEngine::scale( GeometryEntity* entity, double f )
   aTrsf.SetScaleFactor(f);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
-  update_entity_shape(entity, aBRepTrsf);
+  update_entity_shape(entity, &aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 
@@ -2251,7 +2263,7 @@ CubitStatus OCCQueryEngine::reflect( GeometryEntity* entity,
   aTrsf.SetMirror(anAx2);
 
   BRepBuilderAPI_Transform aBRepTrsf(*shape, aTrsf);
-  update_entity_shape(entity, aBRepTrsf);
+  update_entity_shape(entity, &aBRepTrsf);
   return CUBIT_SUCCESS;
 }
 

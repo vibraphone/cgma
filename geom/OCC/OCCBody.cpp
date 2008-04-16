@@ -165,7 +165,7 @@ CubitStatus OCCBody::move(double dx, double dy, double dz)
   {
     TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
     aBRepTrsf.Perform(*face);
-    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, aBRepTrsf);
+    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, &aBRepTrsf);
   }
   else if(myShell)
   {
@@ -208,7 +208,7 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
   {
     TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
     aBRepTrsf.Perform(*face);
-    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, aBRepTrsf);
+    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, &aBRepTrsf);
   }
   else if(myShell)
   {
@@ -245,7 +245,7 @@ CubitStatus OCCBody::scale(double scale_factor )
   {
     TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
     aBRepTrsf.Perform(*face);
-    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, aBRepTrsf);
+    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, &aBRepTrsf);
   }
   else if(myShell)
   {
@@ -302,7 +302,7 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
   {
     TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
     aBRepTrsf.Perform(*face);
-    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, aBRepTrsf);
+    OCCQueryEngine::instance()->update_entity_shape(mySheetSurface, &aBRepTrsf);
   }
   else if(myShell)
   {

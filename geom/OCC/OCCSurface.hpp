@@ -61,6 +61,11 @@ public :
   virtual ~OCCSurface() ;
     //- The destructor
    
+  static CubitStatus update_OCC_entity(TopoDS_Face& old_surface,
+                                       TopoDS_Face& new_surface,
+                                       BRepAlgoAPI_BooleanOperation *op);
+
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 

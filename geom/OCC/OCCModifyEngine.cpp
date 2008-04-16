@@ -71,6 +71,7 @@
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "TopOpeBRep_EdgesIntersector.hxx"
 #include "TopExp_Explorer.hxx"
+#include "TopExp.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
@@ -1540,9 +1541,23 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      second_face = faces_to_stitch[i];
      BRepAlgoAPI_Fuse fuser(*second_face, *first_face);
      fuse = fuser.Shape();
-     first_face = &fuse;
      OCCBody* occ_body = CAST_TO(surf_bodies[i], OCCBody);
      occ_body->my_sheet_surface()->update_OCC_entity(NULL, &fuser);
+     TopoDS_Shape new_shape ;
+     TopTools_IndexedMapOfShape M;
+     TopExp::MapShapes(*first_face, TopAbs_FACE, M);
+     for(int ii=1; ii<=M.Extent(); ii++)
+     {
+	TopoDS_Face face = TopoDS::Face(M(ii));
+        TopTools_ListOfShape shapes;
+        shapes.Assign(fuser.Modified(face));
+        if (shapes.Extent() > 0)
+        {
+          new_shape = shapes.First();
+          OCCSurface::update_OCC_entity(face, TopoDS::Face(new_shape), &fuser);
+        }
+      }
+      first_face = &fuse;
   }
 
   TopExp_Explorer Ex;

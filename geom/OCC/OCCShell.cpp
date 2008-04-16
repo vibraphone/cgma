@@ -179,7 +179,7 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 {
   if(mySheetSurface && op == NULL)
     return CUBIT_FAILURE;
-
+/*
   else if(mySheetSurface && op)//stitch surface body into shell body
   {
     mySheetSurface->update_OCC_entity(aBRepTrsf, op); 
@@ -199,6 +199,7 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     }   
     return CUBIT_SUCCESS;
   }
+*/
   assert (aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;

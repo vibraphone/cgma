@@ -44,7 +44,8 @@
 #include "LoopSM.hpp"
 #include "CubitPointData.hpp"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
-
+#include "BRepTools_WireExplorer.hxx"
+#include "BRep_Tool.hxx"
 
 // ********** END CUBIT INCLUDES           **********
 
@@ -764,7 +765,7 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 
 //----------------------------------------------------------------
 // Function: to update the core Surface
-//           for any movement of the body.
+//           for any movement  or Boolean operation of the body.
 // Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
@@ -788,20 +789,88 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   TopoDS_Face surface; 
   surface = TopoDS::Face(shape);
 
-  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
-
-  //set the loops
-  DLIList<OCCLoop *> loops;
-  this->get_loops(loops);
-  for (int i = 1; i <= loops.size(); i++)
+  if (aBRepTrsf)
   {
-     OCCLoop *loop = loops.get_and_step();
-     loop->update_OCC_entity(aBRepTrsf, op);
+    OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
+
+    //set the loops
+    DLIList<OCCLoop *> loops;
+    this->get_loops(loops);
+    for (int i = 1; i <= loops.size(); i++)
+    {
+       OCCLoop *loop = loops.get_and_step();
+       loop->update_OCC_entity(aBRepTrsf, op);
+    }
+    set_TopoDS_Face(surface);
   }
-  set_TopoDS_Face(surface);
+
+  else
+    update_OCC_entity(*myTopoDSFace, surface, op);
 
   return CUBIT_SUCCESS;
 }
+
+//----------------------------------------------------------------
+// Function: TopoDS_Shape level function to update the core Surface
+//           for any movement  or Boolean operation of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
+                                          TopoDS_Face& new_surface,
+                                          BRepAlgoAPI_BooleanOperation *op)
+{
+  OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
+
+  //set the Wires
+  TopTools_IndexedMapOfShape M;
+  TopoDS_Shape shape;
+  TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  int ii;
+  for (ii=1; ii<=M.Extent(); ii++) {
+     TopoDS_Wire wire = TopoDS::Wire(M(ii)); 
+     TopTools_ListOfShape shapes;
+     shapes.Assign(op->Modified(wire));
+     if (shapes.Extent() > 0)
+       shape = shapes.First();
+     else
+     {
+       TopTools_IndexedMapOfShape M_new;
+       TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
+       shape = M_new(ii);
+     }
+  
+     OCCQueryEngine::instance()->update_OCC_map(wire, shape);
+      
+     //set curves
+     CubitBoolean need_update = CUBIT_TRUE;
+     BRepTools_WireExplorer Ex;
+     for(Ex.Init(wire); Ex.More();Ex.Next())
+     {
+       TopoDS_Edge edge = Ex.Current();
+       shapes.Assign(op->Modified(edge));
+       if (shapes.Extent() > 0)
+         shape = shapes.First();
+       else
+         need_update = CUBIT_FALSE; 
+
+       if (need_update)
+         OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
+  
+       //update vertex
+       TopoDS_Vertex vertex = Ex.CurrentVertex();
+       shapes.Assign(op->Modified(vertex));
+       need_update = CUBIT_TRUE;
+       if (shapes.Extent() > 0)
+       {
+         shape = shapes.First();
+         OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
+       }
+     }
+  }
+  return CUBIT_SUCCESS;
+}
+
 
 // ********** END PUBLIC FUNCTIONS         **********
 
