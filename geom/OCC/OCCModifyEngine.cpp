@@ -1013,61 +1013,39 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 //===============================================================================
 Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
 {
-  if (surface_list.size() == 0) 
+  if (surface_list.size() < 2) 
     return (Lump*) NULL;
 
-  Surface* surface = surface_list.get();
-  OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
-  if(!occ_surface)
+  //all surfaces should be stand along surface bodies
+  DLIList<BodySM*> body_list;
+  for(int i = 0; i < surface_list.size(); i++)
   {
-     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+    OCCSurface* occ_surface = CAST_TO(surface_list.get_and_step(), OCCSurface);
+    if (occ_surface == NULL)
+    {
+       PRINT_ERROR("Cannot create an OCC lump from the given surfaces.\n"
                  "Possible incompatible geometry engines.\n");
-     return (Lump *)NULL;
+       return (Lump *)NULL;
+    }
+    OCCBody* occ_body = occ_surface->my_body();
+    if(occ_body->my_sheet_surface() == NULL)
+    {
+      PRINT_ERROR("Cannot create an OCC lump from the given surfaces.\n"
+                 "The surfaces are not free.\n");
+       return (Lump *)NULL;
+    }
+    body_list.append(occ_body);
   }
-  TopoDS_Face* face_ptr = occ_surface->get_TopoDS_Face();
 
-  for(int i = 1; i < surface_list.size(); i++)
-  {
-     Surface* surface = surface_list.step_and_get();
-     OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
-     if(!occ_surface)
-     {
-        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
-                    "Possible incompatible geometry engines.\n");
-        return (Lump *)NULL;
-     }
-     TopoDS_Face* face2_ptr = occ_surface->get_TopoDS_Face();
-    
-     BRepAlgoAPI_Fuse  aFuse(*face_ptr, *face2_ptr);
-     if(aFuse.ErrorStatus() == 1) //The Object is created but Nothing is Done
-     {
-        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
-                    "Check surface connectivities.\n");
-        return (Lump *)NULL;
-     }
-     else if (aFuse.ErrorStatus() != 0)
-     {
-        PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
-                    "OCC internal error.\n");
-        return (Lump *)NULL;
-     }
-     
-     TopTools_ListOfShape shapes;
-     shapes.Assign( aFuse.Modified(*face_ptr));
-     face_ptr = & (TopoDS::Face(shapes.First()));
-  }    
+  TopoDS_Shape aShape;
+  CubitStatus stat = stitch_surfs(body_list, aShape);
   
-  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(*face_ptr);
-  BRepBuilderAPI_MakeShell aMakeShell(HGeom_surface);
-  if(!aMakeShell.IsDone())
-  {
-     PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
-                 "OCC internal error.\n");
-     return (Lump *)NULL;
-  }
-
-  TopoDS_Shell aShell = aMakeShell.Shell();
-  if(aShell.Closed())
+  TopExp_Explorer Ex;
+  TopoDS_Shell aShell ;
+  for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More()&& stat; Ex.Next())
+    aShell = TopoDS::Shell(Ex.Current());
+ 
+  if(aShell.Closed(CUBIT_TRUE))
   {
     BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
     if (!aMakeSolid.IsDone())
@@ -1082,9 +1060,8 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
     return
       OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
   }
-  OCCShell* occ_shell = 
-    OCCQueryEngine::instance()->populate_topology_bridge(aShell, CUBIT_TRUE);
-  return occ_shell->my_lump();
+
+  return (Lump*) NULL;
 }
 
 //===============================================================================
@@ -1514,6 +1491,42 @@ CubitStatus OCCModifyEngine::stitch_surfs(
     return CUBIT_SUCCESS;
   }
 
+  TopoDS_Shape fuse;
+  CubitStatus stat =  stitch_surfs(surf_bodies, fuse);
+  if (stat == CUBIT_FAILURE)
+    return stat;
+
+  DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->
+     populate_topology_bridge(fuse);
+  OCCBody* body = CAST_TO(tbs.get(), OCCBody);
+  if (body)
+    stitched_body = body ;
+
+  else
+  {
+    OCCSurface* face = CAST_TO(tbs.get(), OCCSurface);
+    if(face)
+      stitched_body = face->my_body();
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+//===============================================================================
+// Function   : stitch_surfs
+// Member Type: PUBLIC
+// Description: stitch all surfs and try to make a TopoDS_Shell .
+//              called by stitch into surface body
+// Author     : Jane Hu
+// Date       : 03/08
+//===============================================================================
+CubitStatus OCCModifyEngine::stitch_surfs(
+                      DLIList<BodySM*>& surf_bodies,
+                      TopoDS_Shape& fuse) const
+{
+  if (surf_bodies.size() < 2)
+    return CUBIT_SUCCESS;
+
   DLIList<TopoDS_Face*> faces_to_stitch;
   for (int i = 0; i < surf_bodies.size(); i++)
   {
@@ -1524,7 +1537,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      {
        PRINT_ERROR("Can't stitch non-sheet bodySM's. \n");
        return CUBIT_FAILURE;
-     } 
+     }
      TopoDS_Face* topods_face = surface->get_TopoDS_Face();
      if (topods_face != NULL)
        faces_to_stitch.append(topods_face);
@@ -1535,12 +1548,10 @@ CubitStatus OCCModifyEngine::stitch_surfs(
   TopoDS_Shape* first_face  = faces_to_stitch.pop();
 
   TopoDS_Face* second_face = NULL;
-  TopoDS_Shape fuse;
   for( int i = faces_to_stitch.size()-1; i >= 0; i --)
   {
      second_face = faces_to_stitch[i];
      BRepAlgoAPI_Fuse fuser(*second_face, *first_face);
-     fuse = fuser.Shape();
      OCCBody* occ_body = CAST_TO(surf_bodies[i], OCCBody);
      occ_body->my_sheet_surface()->update_OCC_entity(NULL, &fuser);
      TopoDS_Shape new_shape ;
@@ -1548,7 +1559,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      TopExp::MapShapes(*first_face, TopAbs_FACE, M);
      for(int ii=1; ii<=M.Extent(); ii++)
      {
-	TopoDS_Face face = TopoDS::Face(M(ii));
+        TopoDS_Face face = TopoDS::Face(M(ii));
         TopTools_ListOfShape shapes;
         shapes.Assign(fuser.Modified(face));
         if (shapes.Extent() > 0)
@@ -1556,7 +1567,10 @@ CubitStatus OCCModifyEngine::stitch_surfs(
           new_shape = shapes.First();
           OCCSurface::update_OCC_entity(face, TopoDS::Face(new_shape), &fuser);
         }
+        else
+          OCCSurface::update_OCC_entity(face, face, &fuser);
       }
+      fuse = fuser.Shape();
       first_face = &fuse;
   }
 
@@ -1573,21 +1587,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      PRINT_ERROR("Can't stitch all surfaces into one BodySM's. \n");
      return CUBIT_FAILURE;
   }
- 
-  DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->
-     populate_topology_bridge(fuse);
-  OCCBody* body = CAST_TO(tbs.get(), OCCBody);
-  if (body)
-    stitched_body = body ;
-
-  else
-  {
-    OCCSurface* face = CAST_TO(tbs.get(), OCCSurface);
-    if(face)
-      stitched_body = face->my_body();
-  }
-
-  return CUBIT_SUCCESS; 
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================

@@ -2360,6 +2360,8 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
 void OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
                                     TopoDS_Shape new_shape)
 {
+  if (!OCCMap->IsBound(old_shape))
+    return;
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);
   OCCMap->UnBind(old_shape);

@@ -664,6 +664,9 @@ protected:
  
  CubitStatus sort_curves(DLIList<Curve*> curve_list,
                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const;
+
+ CubitStatus stitch_surfs(DLIList<BodySM*>& surf_bodies,
+                          TopoDS_Shape& stitched_shape) const;
 private:
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
