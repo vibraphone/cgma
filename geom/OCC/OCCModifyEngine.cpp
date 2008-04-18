@@ -1045,7 +1045,10 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More()&& stat; Ex.Next())
     aShell = TopoDS::Shell(Ex.Current());
  
-  if(aShell.Closed(CUBIT_TRUE))
+  int num_edge = 0;
+  for (Ex.Init(aShell, TopAbs_EDGE); Ex.More()&& stat; Ex.Next())
+    num_edge++;
+  if(aShell.Closed())
   {
     BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
     if (!aMakeSolid.IsDone())
@@ -1057,6 +1060,9 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
 
     TopoDS_Solid aSolid = aMakeSolid.Solid();
 
+    int num_edge = 0;
+    for (Ex.Init(aSolid, TopAbs_EDGE); Ex.More()&& stat; Ex.Next())
+      num_edge++;
     return
       OCCQueryEngine::instance()->populate_topology_bridge(aSolid, CUBIT_TRUE); 
   }
@@ -1571,18 +1577,19 @@ CubitStatus OCCModifyEngine::stitch_surfs(
           OCCSurface::update_OCC_entity(face, face, &fuser);
       }
       fuse = fuser.Shape();
+      TopExp_Explorer Ex_edge;
+      TopoDS_Edge edge;
+      for (Ex_edge.Init(fuse,TopAbs_EDGE); Ex_edge.More(); Ex_edge.Next())
+        edge = TopoDS::Edge(Ex_edge.Current());
       first_face = &fuse;
   }
 
   TopExp_Explorer Ex;
-  int count_face = 0;
   int count_shell = 0;
-  for (Ex.Init(fuse, TopAbs_FACE, TopAbs_SHELL); Ex.More(); Ex.Next())
-    count_face++;
   for (Ex.Init(fuse, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
     count_shell++;
 
-  if (count_face != 1 && count_shell != 1)
+  if ( count_shell != 1)
   {
      PRINT_ERROR("Can't stitch all surfaces into one BodySM's. \n");
      return CUBIT_FAILURE;
@@ -1642,6 +1649,15 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        }
  
        TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+       TopExp_Explorer Ex_edge;
+       TopoDS_Edge edge;
+       int num_edge = 0;
+       for (Ex_edge.Init(*solid,TopAbs_EDGE); Ex_edge.More(); Ex_edge.Next())
+       {
+         edge = TopoDS::Edge(Ex_edge.Current());
+         num_edge++;
+       }
+
        BRepBuilderAPI_Copy api_copy(*solid);
        TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
        TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
