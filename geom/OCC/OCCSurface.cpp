@@ -784,13 +784,13 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     if (shapes.Extent() > 0)
       shape = shapes.First();
     else
-      need_update = CUBIT_FALSE;
+      return CUBIT_SUCCESS;
   }
  
   TopoDS_Face surface; 
   surface = TopoDS::Face(shape);
 
-  if (aBRepTrsf  && need_update)
+  if (aBRepTrsf) 
   {
     OCCQueryEngine::instance()->update_OCC_map(*myTopoDSFace, surface);
 
@@ -805,12 +805,8 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     set_TopoDS_Face(surface);
   }
 
-  else if(op && need_update)
+  else if(op)
     update_OCC_entity(*myTopoDSFace, surface, op);
-
-  else
-    update_OCC_entity(*myTopoDSFace, *myTopoDSFace, op); //underling curves may
-    //need update
 
   return CUBIT_SUCCESS;
 }
@@ -859,6 +855,9 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        else
          continue;
 
+       if(wire.Orientation() == TopAbs_REVERSED)
+         shape.Orientation(
+          shape.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
        OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
   
        //update vertex

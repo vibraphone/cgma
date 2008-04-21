@@ -1040,14 +1040,34 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   TopoDS_Shape aShape;
   CubitStatus stat = stitch_surfs(body_list, aShape);
   
-  TopExp_Explorer Ex;
+  TopExp_Explorer Ex, Ex2;
   TopoDS_Shell aShell ;
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More()&& stat; Ex.Next())
     aShell = TopoDS::Shell(Ex.Current());
  
-  int num_edge = 0;
+  //check to make sure the aShell is closed.
+  int num_edges = 0;
+  int pairs = 0;
   for (Ex.Init(aShell, TopAbs_EDGE); Ex.More()&& stat; Ex.Next())
-    num_edge++;
+  {
+    TopoDS_Edge edge1 = TopoDS::Edge(Ex.Current());
+    num_edges++;
+    for (Ex2.Init(aShell, TopAbs_EDGE); Ex2.More()&& stat; Ex2.Next())  
+    {
+      TopoDS_Edge edge2 = TopoDS::Edge(Ex2.Current());    
+      if (!edge1.IsEqual(edge2)&& edge1.IsSame(edge2))
+      {
+        pairs++;
+        break;
+      }
+    }
+  }
+  if (num_edges == pairs)
+    aShell.Closed(CUBIT_TRUE);
+
+  else
+    PRINT_ERROR("Surfaces must make a water-tight shape to make a lump.\n");
+  
   if(aShell.Closed())
   {
     BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
@@ -1111,6 +1131,18 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
   if (lump_list.size() == 0)
     return (BodySM*) NULL;
 
+  //make sure the lumps in lump_list don't attached to any Bodies.
+  for (int i = 0; i < lump_list.size(); i++)
+  {
+    Lump* lump = lump_list.get_and_step();
+    BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+    if (body)
+    {
+      if (lump_list.size()>1)
+        PRINT_ERROR("the lump_list should be free to bodysm's to make a new bodysm.\n");
+      return body;
+    } 
+  }
   //Create a compsolid shape, save all BodySM's correponding to lump_list
   //for deletion.
   DLIList<BodySM*> bodysm_list;
