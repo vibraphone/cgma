@@ -182,6 +182,8 @@ public:
 				 return (OCCSurface*) NULL;} 
   void set_sheet_surface(OCCSurface* surface); 
 
+  virtual CubitBoolean is_sheet_body(){return IsSheetBody;}
+
 protected: 
   
 private:
