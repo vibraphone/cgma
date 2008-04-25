@@ -94,6 +94,7 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 
 OCCSurface::~OCCSurface() 
 {
+  delete myTopoDSFace;
 }
 
 
@@ -774,7 +775,6 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
-  CubitBoolean need_update = CUBIT_TRUE;
   if (aBRepTrsf)
     shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Face());
   else
@@ -828,46 +828,81 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   int ii;
+  TopTools_ListOfShape shapes;  
+
   for (ii=1; ii<=M.Extent(); ii++) {
-     TopoDS_Wire wire = TopoDS::Wire(M(ii)); 
-     TopTools_ListOfShape shapes;
-     shapes.Assign(op->Modified(wire));
-     if (shapes.Extent() > 0)
-       shape = shapes.First();
-     else
+     TopoDS_Wire wire = TopoDS::Wire(M(ii));
+
+     if(!new_surface.IsNull())
      {
-       TopTools_IndexedMapOfShape M_new;
-       TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
-       shape = M_new(ii);
-     }
+       TopTools_ListOfShape shapes;
+       shapes.Assign(op->Modified(wire));
+       if (shapes.Extent() > 0)
+         shape = shapes.First();
+       else
+       {
+         TopTools_IndexedMapOfShape M_new;
+         TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
+         shape = M_new(ii);
+       }
   
-     OCCQueryEngine::instance()->update_OCC_map(wire, shape);
-      
+       OCCQueryEngine::instance()->update_OCC_map(wire, shape);
+     } 
      //set curves
-     CubitBoolean need_update = CUBIT_TRUE;
      BRepTools_WireExplorer Ex;
      for(Ex.Init(wire); Ex.More();Ex.Next())
      {
        TopoDS_Edge edge = Ex.Current();
+       shape.Nullify();
        shapes.Assign(op->Modified(edge));
+       shape.Nullify();
        if (shapes.Extent() > 0)
          shape = shapes.First();
-       else
+       else if (op->IsDeleted(edge))
+       {
+         int k = OCCQueryEngine::instance()->update_OCC_map(edge, shape);
+         std::map<int, TopologyBridge*>::iterator it =
+                OCCQueryEngine::instance()->OccToCGM->find(k);
+         TopologyBridge* tb = NULL;
+         if (it != OCCQueryEngine::instance()->OccToCGM->end())
+         {
+           OCCQueryEngine::instance()->OccToCGM->erase(k);
+           tb = (*it).second;
+           delete tb;
+         }
+       }    
+
+       else 
          continue;
 
-       if(wire.Orientation() == TopAbs_REVERSED)
+       if(wire.Orientation() == TopAbs_REVERSED && !shape.IsNull())
+       {
          shape.Orientation(
           shape.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
-       OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
+         OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
+       }
   
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
        shapes.Assign(op->Modified(vertex));
-       need_update = CUBIT_TRUE;
+       shape.Nullify();
        if (shapes.Extent() > 0)
        {
          shape = shapes.First();
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
+       }
+       else if(op->IsDeleted(vertex))
+       {
+         int k = OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
+         std::map<int, TopologyBridge*>::iterator it =
+                OCCQueryEngine::instance()->OccToCGM->find(k);
+         TopologyBridge* tb = NULL;
+         if (it != OCCQueryEngine::instance()->OccToCGM->end())
+         {
+           OCCQueryEngine::instance()->OccToCGM->erase(k);
+           tb = (*it).second;
+           delete tb;
+         }
        }
      }
   }

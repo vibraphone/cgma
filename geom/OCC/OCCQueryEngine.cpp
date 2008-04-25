@@ -53,6 +53,7 @@
 #include "OCCPoint.hpp"
 #include "OCCCurve.hpp"
 #include "OCCCoEdge.hpp"
+#include "OCCCoFace.hpp"
 #include "OCCLoop.hpp"
 #include "OCCSurface.hpp"
 #include "OCCShell.hpp"
@@ -1212,14 +1213,22 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
   }
 
   TopExp_Explorer Ex;
+  DLIList<OCCCoFace*> cofaces;
   for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
   {
+    TopoDS_Face topo_face = TopoDS::Face(Ex.Current());
     Surface* face =
-      populate_topology_bridge(TopoDS::Face(Ex.Current()), build_body);
+      populate_topology_bridge(topo_face, build_body);
+    
+    OCCSurface *occ_surface = CAST_TO(face, OCCSurface);
+    OCCCoFace * coface = new OCCCoFace( occ_surface, shell,
+        ( topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
+    cofaces.append(coface);
+ 
     if(standalone)
-      CAST_TO(face,OCCSurface)->set_shell(shell);
+      occ_surface->set_shell(shell);
   }
-
+  shell->cofaces(cofaces);
   return shell;
 }
 
@@ -2429,14 +2438,33 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
   return CUBIT_FALSE;
 }
 
-void OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
+int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
                                     TopoDS_Shape new_shape)
 {
   if (!OCCMap->IsBound(old_shape))
-    return;
+    return -1;
+
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);
+
+  if (!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
+      OCCMap->IsBound(new_shape)) 
+  //already has a TB built on new_shape
+  {
+    //delete the second TB corresponding to old_shape
+    std::map<int, TopologyBridge*>::iterator it = OccToCGM->find(k);
+    TopologyBridge* tb = NULL;
+    if (it != OccToCGM->end())
+    {
+       OccToCGM->erase(k);
+       tb = (*it).second;
+       delete tb;
+    }
+  }
+
   OCCMap->UnBind(old_shape);
-  OCCMap->Bind(new_shape, k);
+  if(!new_shape.IsNull())
+    OCCMap->Bind(new_shape, k);
+  return k;
 }
 //EOF

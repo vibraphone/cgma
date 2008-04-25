@@ -45,7 +45,7 @@ class OCCCurve : public Curve
 {
 public :
   
-  OCCCurve( TopoDS_Edge *theEdge );
+  OCCCurve( TopoDS_Edge* theEdge );
   
   virtual ~OCCCurve() ;
     //- The destructor

@@ -119,7 +119,6 @@
 #include "AppUtil.hpp"
 #include "SphereEvaluator.hpp"
 #include "CylinderEvaluator.hpp"
-
 OCCModifyEngine* OCCModifyEngine::instance_ = 0;
 
 //===============================================================================
@@ -1595,6 +1594,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
        delete shell->my_lump();
        shell->set_body(NULL);
        shell->set_lump(NULL);
+
        TopoDS_Shell* topods_shell = shell->get_TopoDS_Shell();
        if(topods_shell)
           faces_to_stitch.append(topods_shell);
@@ -1629,8 +1629,20 @@ CubitStatus OCCModifyEngine::stitch_surfs(
             new_shape = shapes.First();
             OCCSurface::update_OCC_entity(face, TopoDS::Face(new_shape), &fuser);
           }
-          //else
-          //  OCCSurface::update_OCC_entity(face, face, &fuser);
+          else if(fuser.IsDeleted(face))
+          {
+            TopoDS_Face null_face;
+            int k = OCCSurface::update_OCC_entity(face, null_face, &fuser);
+            std::map<int, TopologyBridge*>::iterator it =  
+                OCCQueryEngine::instance()->OccToCGM->find(k);
+            TopologyBridge* tb = NULL;
+            if (it != OCCQueryEngine::instance()->OccToCGM->end())
+     	    {
+              OCCQueryEngine::instance()->OccToCGM->erase(k);
+              tb = (*it).second;
+              delete tb;
+   	    }
+          }
         }
       } 
 

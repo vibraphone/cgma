@@ -111,7 +111,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 //-------------------------------------------------------------------------
 OCCCurve::~OCCCurve() 
 {
-  assert(myLoopList.size() == 0);  
+  delete myTopoDSEdge;
 }
 
 //-------------------------------------------------------------------------

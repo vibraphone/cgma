@@ -31,7 +31,7 @@ class OCCBody;
 class OCCLump;
 class OCCSurface;
 class OCCLoop;
-class OCCCoEdge;
+class OCCCoFace;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
@@ -48,6 +48,11 @@ public:
   virtual ~OCCShell() ;
     //- Destructor.
 
+  void cofaces(DLIList<OCCCoFace *> cofaces) {myCoFaceList = cofaces;}
+
+  DLIList<OCCCoFace*> cofaces() {return myCoFaceList;}
+
+  OCCCoFace* remove_coface(OCCCoFace *coface);
   TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
   void set_TopoDS_Shell(TopoDS_Shell shell);
 
@@ -120,6 +125,7 @@ private:
   OCCSurface* mySheetSurface;
   OCCLump*    myLump;
   OCCBody*    myBody;
+  DLIList<OCCCoFace *> myCoFaceList;
 };
 
 
