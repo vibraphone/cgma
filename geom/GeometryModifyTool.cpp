@@ -1425,7 +1425,6 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
 //
 // Creation Date : 03/29/97
 //-------------------------------------------------------------------------
-/*
 RefVolume*
 GeometryModifyTool::make_RefVolume( DLIList<RefFace*>& ref_face_list) const
 {
@@ -1465,13 +1464,14 @@ GeometryModifyTool::make_RefVolume( DLIList<RefFace*>& ref_face_list) const
    }
 
      // Use the Lump to make a RefVolume
+    CubitBoolean modified;
     RefVolume* ref_volume_ptr =
-      GeometryQueryTool::instance()->make_RefVolume(lump_ptr);
+      GeometryQueryTool::instance()->make_RefVolume(lump_ptr, modified);
 
      // Return the new RefVolume
    return ref_volume_ptr ;
 }
-*/
+
 //-------------------------------------------------------------------------
 // Purpose       : This function takes a list of RefVolumes to create a
 //                 Body. The underlying representation of the Body is

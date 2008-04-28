@@ -78,6 +78,7 @@ class CompositeBody: public BodySM, public TBOwner
     
     void combine( CompositeBody* other );
     
+    CubitBoolean is_sheet_body(){return CUBIT_FALSE;}
   private:
   
     CompositeLump* firstLump;

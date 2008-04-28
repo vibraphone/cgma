@@ -916,7 +916,7 @@ public :
     *  made for some reason.
     */
 
-//  RefVolume* make_RefVolume(DLIList<RefFace*>& ref_face_list) const ;
+  RefVolume* make_RefVolume(DLIList<RefFace*>& ref_face_list) const ;
   /**<  \return  RefVlume*
     *  \return - A pointer to a newly created RefVlume
     *  \arg ref_volume_type

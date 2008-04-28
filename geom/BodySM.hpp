@@ -74,6 +74,7 @@ class CUBIT_GEOM_EXPORT BodySM : public TopologyBridge
 
       CubitBox bounding_box();
       
+      virtual CubitBoolean is_sheet_body() = 0; 
    protected: 
 
    private:

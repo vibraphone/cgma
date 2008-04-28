@@ -100,7 +100,8 @@ class PartitionBody : public BodySM, public PartitionEntity
     void transform(const CubitTransformMatrix&) {}
     
     void get_all_children( DLIList<PartitionEntity*>& list );
-
+  
+    virtual CubitBoolean is_sheet_body(){return CUBIT_FALSE;}
   protected:
     
   private:

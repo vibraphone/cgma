@@ -853,25 +853,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      for(Ex.Init(wire); Ex.More();Ex.Next())
      {
        TopoDS_Edge edge = Ex.Current();
-       shape.Nullify();
        shapes.Assign(op->Modified(edge));
        shape.Nullify();
        if (shapes.Extent() > 0)
          shape = shapes.First();
        else if (op->IsDeleted(edge))
-       {
-         int k = OCCQueryEngine::instance()->update_OCC_map(edge, shape);
-         std::map<int, TopologyBridge*>::iterator it =
-                OCCQueryEngine::instance()->OccToCGM->find(k);
-         TopologyBridge* tb = NULL;
-         if (it != OCCQueryEngine::instance()->OccToCGM->end())
-         {
-           OCCQueryEngine::instance()->OccToCGM->erase(k);
-           tb = (*it).second;
-           delete tb;
-         }
-       }    
-
+         ; 
        else 
          continue;
 
@@ -879,9 +866,9 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        {
          shape.Orientation(
           shape.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
-         OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
        }
-  
+       OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
+
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
        shapes.Assign(op->Modified(vertex));
@@ -892,18 +879,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
        }
        else if(op->IsDeleted(vertex))
-       {
-         int k = OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
-         std::map<int, TopologyBridge*>::iterator it =
-                OCCQueryEngine::instance()->OccToCGM->find(k);
-         TopologyBridge* tb = NULL;
-         if (it != OCCQueryEngine::instance()->OccToCGM->end())
-         {
-           OCCQueryEngine::instance()->OccToCGM->erase(k);
-           tb = (*it).second;
-           delete tb;
-         }
-       }
+         OCCQueryEngine::instance()->update_OCC_map(vertex, shape);
      }
   }
   return CUBIT_SUCCESS;

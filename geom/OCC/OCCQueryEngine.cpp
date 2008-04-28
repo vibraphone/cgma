@@ -2447,8 +2447,10 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);
 
-  if (!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
-      OCCMap->IsBound(new_shape)) 
+  OCCMap->UnBind(old_shape);
+
+  if ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
+      OCCMap->IsBound(new_shape))|| new_shape.IsNull()) 
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
@@ -2462,8 +2464,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     }
   }
 
-  OCCMap->UnBind(old_shape);
-  if(!new_shape.IsNull())
+  else
     OCCMap->Bind(new_shape, k);
   return k;
 }

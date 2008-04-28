@@ -1632,16 +1632,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
           else if(fuser.IsDeleted(face))
           {
             TopoDS_Face null_face;
-            int k = OCCSurface::update_OCC_entity(face, null_face, &fuser);
-            std::map<int, TopologyBridge*>::iterator it =  
-                OCCQueryEngine::instance()->OccToCGM->find(k);
-            TopologyBridge* tb = NULL;
-            if (it != OCCQueryEngine::instance()->OccToCGM->end())
-     	    {
-              OCCQueryEngine::instance()->OccToCGM->erase(k);
-              tb = (*it).second;
-              delete tb;
-   	    }
+            OCCSurface::update_OCC_entity(face, null_face, &fuser);
           }
         }
       } 
