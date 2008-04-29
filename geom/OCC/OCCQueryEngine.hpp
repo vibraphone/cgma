@@ -248,14 +248,10 @@ public:
                                          CubitBoolean import_vertices = CUBIT_TRUE,
                                          CubitBoolean free_surfaces = CUBIT_TRUE );
 
-  CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm,
-                                      TopoDS_Shape*& shape)const;
-  CubitStatus unhook_Surface_from_OCC( Surface* surface,
-                                       TopoDS_Face*& topo_face ) const;
-  CubitStatus unhook_Curve_from_OCC( Curve* curve,
-                                     TopoDS_Edge*& edge ) const;
-  CubitStatus unhook_Point_from_OCC( Point* point,
-                                     TopoDS_Vertex*& vertex ) const;
+  CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm)const;
+  CubitStatus unhook_Surface_from_OCC( Surface* surface) const;
+  CubitStatus unhook_Curve_from_OCC( Curve* curve) const;
+  CubitStatus unhook_Point_from_OCC( Point* point) const;
 
 private:
   CubitStatus import_solid_model(FILE *file_ptr,
@@ -270,11 +266,9 @@ private:
                                  CubitBoolean import_vertices = CUBIT_TRUE,
                                  CubitBoolean free_surfaces = CUBIT_TRUE);
 
-  CubitStatus unhook_Lump_from_OCC( Lump* lump, TopoDS_Solid*& solid ) const;
-  CubitStatus unhook_ShellSM_from_OCC( ShellSM* shell, 
-                                       TopoDS_Shell*& shell ) const;
-  CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm,
-                                      TopoDS_Wire*& wire ) const;
+  CubitStatus unhook_Lump_from_OCC( Lump* lump ) const;
+  CubitStatus unhook_ShellSM_from_OCC( ShellSM* shell ) const;
+  CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm) const;
   CubitStatus delete_loop( LoopSM* loopsm)const;
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
@@ -283,7 +277,7 @@ public:
   virtual CubitStatus delete_solid_model_entities(
           GeometryEntity* ref_entity_ptr,
           bool remove_lower_entities) const;
-    
+  CubitStatus delete_solid_model_entities(TopologyBridge* tb) const;  
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 

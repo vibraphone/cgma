@@ -102,7 +102,8 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 
 OCCBody::~OCCBody() 
 {
-  delete myTopoDSShape;
+  if (myTopoDSShape)
+    delete myTopoDSShape;
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const

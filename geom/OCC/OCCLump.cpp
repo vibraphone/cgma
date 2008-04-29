@@ -73,7 +73,10 @@ OCCLump::OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface, OCCShell* shell)
 }
 
 OCCLump::~OCCLump()
-{ delete myTopoDSSolid;}
+{ 
+  if (myTopoDSSolid)
+    delete myTopoDSSolid;
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : Find centroid

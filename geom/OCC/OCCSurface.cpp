@@ -94,7 +94,8 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 
 OCCSurface::~OCCSurface() 
 {
-  delete myTopoDSFace;
+  if(myTopoDSFace)
+    delete myTopoDSFace;
 }
 
 
@@ -868,6 +869,8 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
           shape.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
        }
        OCCQueryEngine::instance()->update_OCC_map(edge, shape); 
+       if (shape.IsNull())
+         continue;
 
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();

@@ -111,7 +111,8 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 //-------------------------------------------------------------------------
 OCCCurve::~OCCCurve() 
 {
-  delete myTopoDSEdge;
+  if (myTopoDSEdge)
+    delete myTopoDSEdge;
 }
 
 //-------------------------------------------------------------------------
