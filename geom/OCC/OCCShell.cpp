@@ -218,12 +218,14 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     shapes.Assign(op->Modified(*get_TopoDS_Shell()));
     if (shapes.Extent())
       shape = shapes.First();
+    else if(op->IsDeleted(*get_TopoDS_Shell()))
+      ;
     else
       return CUBIT_SUCCESS;
   } 
-  TopoDS_Shell shell = TopoDS::Shell(shape);
-
-  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShell, shell);
+  TopoDS_Shell shell;
+  if (!shape.IsNull())
+    shell = TopoDS::Shell(shape);
 
   //set the surfaces
   DLIList<TopologyBridge *> surfaces;
@@ -233,7 +235,7 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      OCCSurface *surface = CAST_TO(surfaces.get_and_step(), OCCSurface);
      surface->update_OCC_entity(aBRepTrsf, op);
   }
-  set_TopoDS_Shell(shell);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShell, shell);
   return CUBIT_SUCCESS;
 }
 

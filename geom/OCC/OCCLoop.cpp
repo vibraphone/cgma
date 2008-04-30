@@ -238,8 +238,17 @@ CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     shapes.Assign(op->Modified(*get_TopoDS_Wire()));
     if(shapes.Extent())
       shape = shapes.First();
+    else if (op->IsDeleted(*get_TopoDS_Wire()))
+      ;
     else
       need_update = CUBIT_FALSE;
+  }
+
+  //set the curves
+  for (int i = 1; i <= myCoEdgeList.size(); i++)
+  {
+     OCCCurve *curve = CAST_TO(myCoEdgeList.get_and_step()->curve(), OCCCurve);
+     curve->update_OCC_entity(aBRepTrsf, op);
   }
   TopoDS_Wire loop;
   if (need_update)
@@ -247,13 +256,5 @@ CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     loop = TopoDS::Wire(shape);
     OCCQueryEngine::instance()->update_OCC_map(*myTopoDSWire, loop);
   }
-  //set the curves
-  for (int i = 1; i <= myCoEdgeList.size(); i++)
-  {
-     OCCCurve *curve = CAST_TO(myCoEdgeList.get_and_step()->curve(), OCCCurve);
-     curve->update_OCC_entity(aBRepTrsf, op);
-  }
-  if (need_update)
-    set_TopoDS_Wire(loop);
 }
 

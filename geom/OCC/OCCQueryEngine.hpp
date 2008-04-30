@@ -310,6 +310,7 @@ public:
                                   BRepBuilderAPI_Transform* aTranf,
                                   BRepAlgoAPI_BooleanOperation *op = NULL);
 
+  void set_TopoDS_Shape(TopologyBridge* tb, TopoDS_Shape new_shape);
   CubitStatus translate( BodySM* body, const CubitVector& offset );
   CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle );
   CubitStatus scale    ( BodySM* body, double factor );

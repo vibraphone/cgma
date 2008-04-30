@@ -315,12 +315,15 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     shapes.Assign(op->Modified(*get_TopoDS_Solid()));
     if(shapes.Extent() > 0)
       shape = shapes.First();
+    else if(op->IsDeleted(*get_TopoDS_Solid()))
+      ;
     else
       return CUBIT_SUCCESS;
   }
-  TopoDS_Solid solid = TopoDS::Solid(shape);
-
-  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSSolid, solid);
+  
+  TopoDS_Solid solid;
+  if(!op->IsDeleted(*get_TopoDS_Solid()))
+    solid = TopoDS::Solid(shape);
 
   //set the lumps
   DLIList<TopologyBridge *> shells;
@@ -330,6 +333,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      OCCShell *shell = CAST_TO(shells.get_and_step(), OCCShell);
      shell->update_OCC_entity(aBRepTrsf, op);
   }
-  set_TopoDS_Solid(solid);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSSolid, solid);
+
 }
 

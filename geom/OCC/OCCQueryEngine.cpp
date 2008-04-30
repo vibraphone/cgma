@@ -2471,23 +2471,61 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
 
   OCCMap->UnBind(old_shape);
 
+  std::map<int, TopologyBridge*>::iterator it = OccToCGM->find(k);
+  TopologyBridge* tb = NULL;
+  if (it != OccToCGM->end())
+     tb = (*it).second;
+
+  else
+     assert(0);
+
   if ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
       OCCMap->IsBound(new_shape))|| new_shape.IsNull()) 
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
-    std::map<int, TopologyBridge*>::iterator it = OccToCGM->find(k);
-    TopologyBridge* tb = NULL;
-    if (it != OccToCGM->end())
-    {
-       OccToCGM->erase(k);
-       tb = (*it).second;
-       delete_solid_model_entities( tb);
-    }
+    OccToCGM->erase(k);
+    delete_solid_model_entities( tb);
   }
 
   else
+  {   
     OCCMap->Bind(new_shape, k);
+    set_TopoDS_Shape(tb, new_shape);
+  }
   return k;
+}
+
+void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
+                                      TopoDS_Shape shape)
+{
+  BodySM* body = CAST_TO(tb, BodySM);
+  if(body)
+    return CAST_TO(body, OCCBody)->set_TopoDS_Shape(TopoDS::CompSolid(shape));
+
+  Lump* lump = CAST_TO(tb, Lump);
+  if(lump)
+    return CAST_TO(lump, OCCLump)->set_TopoDS_Solid(TopoDS::Solid(shape));
+
+  ShellSM* shell = CAST_TO(tb, ShellSM);
+  if(shell)
+    return CAST_TO(shell, OCCShell)->set_TopoDS_Shell(TopoDS::Shell(shape));
+
+  Surface* surface = CAST_TO(tb, Surface);
+  if (surface)
+    return CAST_TO(surface, OCCSurface)->set_TopoDS_Face(TopoDS::Face(shape));
+
+  LoopSM* loop =  CAST_TO(tb, LoopSM);
+  if(loop)
+    return CAST_TO(loop, OCCLoop)->set_TopoDS_Wire(TopoDS::Wire(shape));
+
+  Curve* curve = CAST_TO(tb, Curve);
+  if (curve)
+    return CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(TopoDS::Edge(shape));
+
+  Point* point = CAST_TO(tb, Point);
+  if(point)
+    return CAST_TO(point, OCCPoint)->set_TopoDS_Vertex(TopoDS::Vertex(shape));
+  
 }
 //EOF

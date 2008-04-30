@@ -918,12 +918,14 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     shapes.Assign(op->Modified(*get_TopoDS_Edge()));
     if(shapes.Extent())
       shape = shapes.First();
+    else if (op->IsDeleted(*get_TopoDS_Edge()))
+      ;
     else
       return ;
   }
-  TopoDS_Edge curve = TopoDS::Edge(shape);
-
-  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSEdge, curve);
+  TopoDS_Edge curve;
+  if(!shape.IsNull())
+    curve = TopoDS::Edge(shape);
 
   //set the vertices
   DLIList<TopologyBridge*> vertices;
@@ -936,7 +938,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
        point->update_OCC_entity(aBRepTrsf, op);
   }
   myMarked = 1;
-  set_TopoDS_Edge(curve);
+  OCCQueryEngine::instance()->update_OCC_map(*myTopoDSEdge, curve);
 }
 
 //===============================================================================

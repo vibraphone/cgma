@@ -278,10 +278,14 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     shapes.Assign(op->Modified(*get_TopoDS_Vertex()));
     if(shapes.Extent())
       shape = shapes.First();
+    else if(op->IsDeleted(*get_TopoDS_Vertex()))
+      ;
     else
       return ;
   }
-  TopoDS_Vertex vertex = TopoDS::Vertex(shape);
+  TopoDS_Vertex vertex;
+  if(!shape.IsNull())
+    vertex = TopoDS::Vertex(shape);
 
   OCCQueryEngine::instance()->update_OCC_map(*myTopoDSVertex, vertex);
 
