@@ -72,6 +72,7 @@ class OCCShell;
 class OCCLoop;
 class OCCSurface;
 class OCCBody;
+class OCCCoFace;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
@@ -268,8 +269,12 @@ private:
 
   CubitStatus unhook_Lump_from_OCC( Lump* lump ) const;
   CubitStatus unhook_ShellSM_from_OCC( ShellSM* shell ) const;
+  CubitStatus unhook_CoEdges_from_OCC( DLIList<OCCCoEdge*> coedges) const;
+  CubitStatus unhook_CoFaces_from_OCC( DLIList<OCCCoFace*> cofaces) const;
   CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm) const;
   CubitStatus delete_loop( LoopSM* loopsm)const;
+  void unhook_cofaces_of_a_surface(OCCSurface* surface)const;
+  void unhook_coedges_of_a_curve(OCCCurve* curve)const;
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
@@ -277,7 +282,6 @@ public:
   virtual CubitStatus delete_solid_model_entities(
           GeometryEntity* ref_entity_ptr,
           bool remove_lower_entities) const;
-  CubitStatus delete_solid_model_entities(TopologyBridge* tb) const;  
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 

@@ -66,6 +66,11 @@ public :
                                        BRepAlgoAPI_BooleanOperation *op);
 
 
+  void add_shell(OCCShell* shell) { myShellList.append_unique(shell);}
+  DLIList<OCCShell*> shells() {return myShellList;}
+  void remove_shell(OCCShell* shell) {myShellList.remove(shell);}
+  void clean_shells(){myShellList.clean_out();}
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
@@ -422,6 +427,7 @@ private:
 
   TopoDS_Face *myTopoDSFace;
 
+  DLIList<OCCShell*> myShellList;
   //Following 3 members are only for sheeted body.
   OCCShell* myShell;
   OCCLump* myLump;
