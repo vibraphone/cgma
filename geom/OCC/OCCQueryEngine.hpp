@@ -363,7 +363,7 @@ public:
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
   static int iTotalTBCreated ;
-
+  static int total_coedges;
 protected:
   
   OCCQueryEngine();

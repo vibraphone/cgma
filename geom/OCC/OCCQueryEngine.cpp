@@ -117,6 +117,7 @@ const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
+int OCCQueryEngine::total_coedges = 0;
 CubitBoolean OCCQueryEngine::PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
@@ -1304,17 +1305,36 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
     }
 
   BRepTools_WireExplorer Ex;
-  DLIList <OCCCoEdge*> coedges;
+  DLIList <OCCCoEdge*> coedges_old, coedges_new;
   for (Ex.Init(aShape); Ex.More(); Ex.Next())
   {
     Curve* curve = populate_topology_bridge(Ex.Current());
     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
-    OCCCoEdge * coedge = new OCCCoEdge( curve, loop,
+    coedges_old = loop->coedges();
+    CubitBoolean exist = CUBIT_FALSE;
+    OCCCoEdge * coedge = NULL;
+    int size = coedges_old.size();
+    for(int i = 0; i < size; i++)
+    {
+      coedge = coedges_old.pop();
+      if(coedge->curve() == curve)
+      {
+        exist = CUBIT_TRUE;
+        coedge->set_sense(Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+        coedges_new.append(coedge);
+        break;
+      }
+    }   
+    if(!exist)
+    {
+      coedge = new OCCCoEdge( curve, loop,
         (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
-    coedges.append(coedge);
+      coedges_new.append(coedge);
+      total_coedges++;
+    }
     occ_curve->add_loop(loop);
   }
-  loop->coedges(coedges);
+  loop->coedges(coedges_new);
 
   return loop;
 }
@@ -1788,15 +1808,15 @@ OCCQueryEngine::delete_loop( LoopSM* loopsm)const
   }
    
   CubitStatus status = unhook_LoopSM_from_OCC(loopsm);
+
+  for(int i = 0; i < curves.size(); i ++)
+    delete_solid_model_entities(curves.get_and_step());
+
   if (status)
   {
     WireList->remove(occ_loop);
     delete loopsm;
   }
-
-  for(int i = 0; i < curves.size(); i ++)
-    delete_solid_model_entities(curves.get_and_step());
-
   return status;
 }
 
@@ -2486,16 +2506,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     OccToCGM->erase(k);
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
-    {
-      OCCSurface* surface = CAST_TO(ge, OCCSurface);
-      OCCCurve* curve = CAST_TO(ge, OCCCurve);
-      if (surface)
-        unhook_cofaces_of_a_surface(surface);
-      else if (curve)
-        unhook_coedges_of_a_curve(curve);
-
       delete_solid_model_entities( ge, CUBIT_FALSE );
-    }
   }
 
   else
@@ -2511,10 +2522,11 @@ void OCCQueryEngine::unhook_cofaces_of_a_surface(OCCSurface* surface)const
   DLIList<OCCShell*> shells;
   shells = surface->shells();
   DLIList<OCCCoFace*> cofaces;
-  for (int i = 0; i < shells.size(); i ++)
+  while ( shells.size() > 0)
   {
     DLIList<OCCCoFace*> children ;
-    children = shells.get_and_step()->cofaces();
+    OCCShell* shell = shells.pop();
+    children = shell->cofaces();
     for(int j = 0; j < children.size(); j++)
     {
        OCCCoFace* coface = children.get_and_step();
@@ -2525,7 +2537,6 @@ void OCCQueryEngine::unhook_cofaces_of_a_surface(OCCSurface* surface)const
        }
     }
   }
-  assert (cofaces.size() == shells.size());
   unhook_CoFaces_from_OCC(cofaces);
 }
 void OCCQueryEngine::unhook_coedges_of_a_curve(OCCCurve* curve)const 
@@ -2541,10 +2552,7 @@ void OCCQueryEngine::unhook_coedges_of_a_curve(OCCCurve* curve)const
      {
         OCCCoEdge* coedge = children.get_and_step();
         if (coedge->curve() == curve)
-        {
            coedges.append(coedge);
-           break;
-        }
      }
   }
   unhook_CoEdges_from_OCC(coedges);
