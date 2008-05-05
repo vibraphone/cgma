@@ -1803,7 +1803,7 @@ OCCQueryEngine::delete_loop( LoopSM* loopsm)const
   {
      OCCCoEdge* coedge = children.pop();
      Curve* curve = coedge->curve();
-     curves.append(curve);
+     curves.append_unique(curve);
      size = children.size();
   }
    

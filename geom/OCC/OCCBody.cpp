@@ -432,6 +432,15 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
     return;
   }
 
+  TopoDS_Shape shape = *myTopoDSShape;
+  if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)==CUBIT_FALSE )
+  {
+    DLIList<Lump*> occ_lumps;
+    occ_lumps = this->lumps();
+    lumps.append( occ_lumps.get()); 
+    return;
+  }
+
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
   int ii;
@@ -457,7 +466,16 @@ CubitStatus OCCBody::mass_properties( CubitVector& centroid,
   if(IsSheetBody || myShell)
     return CUBIT_FAILURE;
   GProp_GProps myProps;
-  BRepGProp::VolumeProperties(*myTopoDSShape, myProps);
+  TopoDS_Shape shape = *myTopoDSShape;
+  if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)==CUBIT_FALSE )
+  {
+    DLIList<Lump *> lumps;
+    lumps = this->lumps();
+    assert (lumps.size() == 1);
+    OCCLump *lump = CAST_TO(lumps.get(), OCCLump);
+    shape = *(lump->get_TopoDS_Solid());
+  }
+  BRepGProp::VolumeProperties(shape, myProps);
   volume = myProps.Mass();
   gp_Pnt pt = myProps.CentreOfMass(); 
   centroid.set(pt.X(), pt.Y(), pt.Z());
@@ -518,7 +536,18 @@ void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
   if (myShell)
     shape = *(myShell->get_TopoDS_Shell());
   else
+  {
     shape = *myTopoDSShape;
+
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
+    {
+      DLIList<Lump *> lumps;
+      lumps = this->lumps();
+      assert (lumps.size() == 1);
+      OCCLump *lump = CAST_TO(lumps.get(), OCCLump);
+      shape = *(lump->get_TopoDS_Solid());
+    }
+  }
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(shape, TopAbs_FACE, M);
   int ii;
@@ -548,8 +577,18 @@ void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
   else if(myShell)
     shape = *(myShell->get_TopoDS_Shell());
   else 
+  {
     shape = *myTopoDSShape;
 
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
+    {  
+      DLIList<Lump *> lumps;
+      lumps = this->lumps();
+      assert (lumps.size() == 1);
+      OCCLump *lump = CAST_TO(lumps.get(), OCCLump);
+      shape = *(lump->get_TopoDS_Solid());
+    }
+  }
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(shape, TopAbs_EDGE, M);
   int ii;
@@ -579,7 +618,18 @@ void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
   else if(myShell)
     shape = *(myShell->get_TopoDS_Shell());
   else 
+  {
     shape = *myTopoDSShape;
+
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
+    {
+      DLIList<Lump *> lumps;
+      lumps = this->lumps();
+      assert (lumps.size() == 1);
+      OCCLump *lump = CAST_TO(lumps.get(), OCCLump);
+      shape = *(lump->get_TopoDS_Solid());
+    }
+  }
 
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(shape, TopAbs_VERTEX, M);

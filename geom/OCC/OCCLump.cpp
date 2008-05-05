@@ -322,7 +322,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   }
   
   TopoDS_Solid solid;
-  if(!op->IsDeleted(*get_TopoDS_Solid()))
+  if(aBRepTrsf || !op->IsDeleted(*get_TopoDS_Solid()))
     solid = TopoDS::Solid(shape);
 
   //set the lumps
