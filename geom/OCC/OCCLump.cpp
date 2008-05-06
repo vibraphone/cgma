@@ -337,3 +337,34 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 
 }
 
+//----------------------------------------------------------------
+// Function: TopoDS_Shape level function to update the core Lump
+//           for any movement  or Boolean operation of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
+                                       TopoDS_Shape& new_solid,
+                                       BRepAlgoAPI_BooleanOperation *op)
+{
+  //set the Shells
+  TopTools_IndexedMapOfShape M;
+  TopoDS_Shape shape;
+  TopExp::MapShapes(old_solid, TopAbs_SHELL, M);
+  TopTools_ListOfShape shapes;
+ 
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Shell shell = TopoDS::Shell(M(ii));
+
+    if(!new_solid.IsNull())
+    {
+       TopTools_ListOfShape shapes;
+       shapes.Assign(op->Modified(shell));
+       if (shapes.Extent() > 0)
+         shape = shapes.First();
+    }
+    if(shapes.Extent() > 0 || op->IsDeleted(shell))
+      OCCShell::update_OCC_entity(shell, shape, op);
+  }
+  OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
+}

@@ -154,7 +154,9 @@ public:
 
   CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                                 BRepAlgoAPI_BooleanOperation *op = NULL);
-
+  static CubitStatus update_OCC_entity(TopoDS_Solid& old_shape,
+                                       TopoDS_Shape& new_shape,
+                                       BRepAlgoAPI_BooleanOperation *op);
 protected: 
   
 private:

@@ -62,7 +62,7 @@ public :
     //- The destructor
    
   static CubitStatus update_OCC_entity(TopoDS_Face& old_surface,
-                                       TopoDS_Face& new_surface,
+                                       TopoDS_Shape& new_surface,
                                        BRepAlgoAPI_BooleanOperation *op);
 
 

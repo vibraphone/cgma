@@ -250,6 +250,32 @@ double OCCShell::measure()
   return myProps.Mass();
 }
 
+//----------------------------------------------------------------
+// Function: TopoDS_Shape level function to update the core Shell
+//           for any boolean operation of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
+                                        TopoDS_Shape& new_shell,
+                                        BRepAlgoAPI_BooleanOperation *op)
+{
+  //set the surfaces
+  TopTools_IndexedMapOfShape M;
+  TopoDS_Shape shape;
+  TopExp::MapShapes(old_shell, TopAbs_FACE, M);
+  TopTools_ListOfShape shapes;
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Face face = TopoDS::Face(M(ii));
+    shapes.Assign(op->Modified(face));
+    if(shapes.Extent() > 0)
+      shape = shapes.First();
+    if(shapes.Extent() > 0 || op->IsDeleted(face))
+      OCCSurface::update_OCC_entity(face,shape, op);
+  }
+  OCCQueryEngine::instance()->update_OCC_map(old_shell, new_shell);
+  return CUBIT_SUCCESS;
+}
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

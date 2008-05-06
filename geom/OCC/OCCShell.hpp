@@ -118,6 +118,9 @@ public:
   CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                                  BRepAlgoAPI_BooleanOperation *op = NULL);
   double measure(); //area of the shell
+  static CubitStatus update_OCC_entity(TopoDS_Shell& old_shell,
+                                       TopoDS_Shape& new_shell,
+                                       BRepAlgoAPI_BooleanOperation *op);
 protected: 
   
 private:

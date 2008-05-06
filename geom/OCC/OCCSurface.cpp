@@ -819,32 +819,36 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 // Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
-                                          TopoDS_Face& new_surface,
+                                          TopoDS_Shape& new_surface,
                                           BRepAlgoAPI_BooleanOperation *op)
 {
   //set the Wires
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape, shape_edge, shape_vertex;
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
-  int ii;
+
   TopTools_ListOfShape shapes;  
 
-  for (ii=1; ii<=M.Extent(); ii++) 
+  for (int ii=1; ii<=M.Extent(); ii++) 
   {
      TopoDS_Wire wire = TopoDS::Wire(M(ii));
-
      if(!new_surface.IsNull())
      {
        TopTools_ListOfShape shapes;
        shapes.Assign(op->Modified(wire));
        if (shapes.Extent() > 0)
          shape = shapes.First();
-       else
+       else if(op->IsDeleted(wire))
        {
          TopTools_IndexedMapOfShape M_new;
          TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
-         shape = M_new(ii);
+         if (M_new.Extent()>= ii)
+           shape = M_new(ii);
+       }
+       else
+       {
+         shape = wire;
+         continue;
        }
      } 
      //set curves
@@ -859,8 +863,10 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        else if (op->IsDeleted(edge))
          ; 
        else 
+       {
+         shape_edge = edge;
          continue;
-
+       }
        if(wire.Orientation() == TopAbs_REVERSED && !shape_edge.IsNull())
        {
          shape_edge.Orientation(

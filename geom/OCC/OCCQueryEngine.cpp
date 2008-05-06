@@ -1106,13 +1106,13 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
 
 BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
 {
-  TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
-  *posolid = aShape;
   OCCBody *body;
-  if (!OCCMap->IsBound(*posolid))
+  if (!OCCMap->IsBound(aShape))
     {
       if(PRINT_RESULT)
 	PRINT_INFO("Adding Bodies.\n");
+      TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
+      *posolid = aShape;
       (iTotalTBCreated)++;
       body = new OCCBody(posolid);
       OCCMap->Bind(*posolid, iTotalTBCreated);
@@ -1122,9 +1122,9 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
     }
   else
     {
-      int k = OCCMap->Find(*posolid);
+      int k = OCCMap->Find(aShape);
       body = (OCCBody*)(OccToCGM->find(k))->second;
-      body->set_TopoDS_Shape(*posolid);
+      body->set_TopoDS_Shape(aShape);
     }
 
   TopExp_Explorer Ex;
@@ -1144,14 +1144,14 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
 		 			       CubitBoolean build_body)
 {
   //one OCCBody corresponds one OCCLump
-  TopoDS_Solid *posolid =  new TopoDS_Solid;
-  *posolid = aShape;
   OCCLump *lump;
   OCCBody *body;
-  if (!OCCMap->IsBound(*posolid))
+  if (!OCCMap->IsBound(aShape))
   {
     if(PRINT_RESULT)
       PRINT_INFO("Adding solids.\n");
+    TopoDS_Solid *posolid =  new TopoDS_Solid;
+    *posolid = aShape;
     iTotalTBCreated++;
     lump = new OCCLump(posolid);
     if (build_body)
@@ -1168,9 +1168,9 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   }
   else 
   {
-    int k = OCCMap->Find(*posolid);
+    int k = OCCMap->Find(aShape);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
-    lump->set_TopoDS_Solid(*posolid);
+    lump->set_TopoDS_Solid(aShape);
   }
  
   TopExp_Explorer Ex;
@@ -1183,14 +1183,14 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
 OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
 						   CubitBoolean standalone)
 {
-  TopoDS_Shell *poshell = new TopoDS_Shell;
-  *poshell = aShape;
   OCCShell *shell ;
   CubitBoolean build_body = CUBIT_FALSE;
-  if (!OCCMap->IsBound(*poshell))
+  if (!OCCMap->IsBound(aShape))
   {
     if(PRINT_RESULT)
       PRINT_INFO("Adding shells.\n");
+    TopoDS_Shell *poshell = new TopoDS_Shell;
+    *poshell = aShape;
     iTotalTBCreated++;
     shell = new OCCShell(poshell);
     OCCMap->Bind(*poshell, iTotalTBCreated);
@@ -1208,9 +1208,9 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
   }
   else
   {
-    int k = OCCMap->Find(*poshell);
+    int k = OCCMap->Find(aShape);
     shell = (OCCShell*)(OccToCGM->find(k))->second;
-    shell->set_TopoDS_Shell(*poshell);
+    shell->set_TopoDS_Shell(aShape);
   }
 
   TopExp_Explorer Ex;
@@ -1237,11 +1237,11 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
 Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
                                                   CubitBoolean build_body)
 {
-  TopoDS_Face *poface = new TopoDS_Face;
-  *poface = aShape;
   OCCSurface *surface = NULL;
-  if (!OCCMap->IsBound(*poface))
+  if (!OCCMap->IsBound(aShape))
   {
+    TopoDS_Face *poface = new TopoDS_Face;
+    *poface = aShape;
     surface = new OCCSurface(poface);
 
     if(PRINT_RESULT)
@@ -1267,9 +1267,9 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
 
   else 
   {
-    int k = OCCMap->Find(*poface);
+    int k = OCCMap->Find(aShape);
     surface = (OCCSurface*)(OccToCGM->find(k))->second;
-    surface->set_TopoDS_Face(*poface);
+    surface->set_TopoDS_Face(aShape);
   }
 
   TopExp_Explorer Ex;
@@ -1282,13 +1282,13 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
 OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
 						  CubitBoolean standalone)
 {
-  TopoDS_Wire *powire = new TopoDS_Wire;
-  *powire = aShape;
   OCCLoop *loop ;
-  if (!OCCMap->IsBound(*powire))
+  if (!OCCMap->IsBound(aShape))
     {
       if(PRINT_RESULT)
 	PRINT_INFO("Adding loops.\n");
+      TopoDS_Wire *powire = new TopoDS_Wire;
+      *powire = aShape;
       iTotalTBCreated++;
       loop = new OCCLoop(powire);
       OCCMap->Bind(*powire, iTotalTBCreated);
@@ -1299,9 +1299,9 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
     }
   else
     {
-      int k = OCCMap->Find(*powire);
+      int k = OCCMap->Find(aShape);
       loop = (OCCLoop*)(OccToCGM->find(k))->second;
-      loop->set_TopoDS_Wire(*powire);
+      loop->set_TopoDS_Wire(aShape);
     }
 
   BRepTools_WireExplorer Ex;
@@ -1342,12 +1342,12 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
 Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
 {
   Curve *curve;
-  TopoDS_Edge *poedge = new TopoDS_Edge;
-  *poedge = aShape;
-  if (!OCCMap->IsBound(*poedge)) 
+  if (!OCCMap->IsBound(aShape)) 
     {
       if(PRINT_RESULT)
 	PRINT_INFO("Adding edges.\n");
+      TopoDS_Edge *poedge = new TopoDS_Edge;
+      *poedge = aShape;
       iTotalTBCreated++;
       curve = new OCCCurve(poedge);
       OCCMap->Bind(*poedge, iTotalTBCreated);
@@ -1357,9 +1357,9 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
     }
   else 
     {
-      int i = OCCMap->Find(*poedge);
+      int i = OCCMap->Find(aShape);
       curve = (OCCCurve*)(OccToCGM->find(i))->second;
-      CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(*poedge);
+      CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(aShape);
     }
 
   TopExp_Explorer Ex;
@@ -1372,12 +1372,12 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
 Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
 {
   OCCPoint *point;
-  TopoDS_Vertex *povertex = new TopoDS_Vertex;
-  *povertex = aShape;
-  if (iTotalTBCreated == 0 || !OCCMap->IsBound(*povertex)) 
+  if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape)) 
     {
       if(PRINT_RESULT)
 	PRINT_INFO("Adding vertices.\n");
+      TopoDS_Vertex *povertex = new TopoDS_Vertex;
+      *povertex = aShape;
       iTotalTBCreated++;
       point = new OCCPoint(povertex);
       OCCMap->Bind(*povertex, iTotalTBCreated);
@@ -1386,9 +1386,9 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
     } 
   else 
     {
-      int i = OCCMap->Find(*povertex);
+      int i = OCCMap->Find(aShape);
       point = (OCCPoint*)(OccToCGM->find(i))->second;
-      point->set_TopoDS_Vertex(*povertex);
+      point->set_TopoDS_Vertex(aShape);
     }
   return point;
 }
@@ -1428,6 +1428,28 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
     GeometryEntity* ref_entity_ptr,
     bool remove_lower_entities) const
 {
+     //Lump
+   Lump* lump = CAST_TO(ref_entity_ptr, Lump);
+   if(lump != NULL)
+   {
+     BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+     
+     if (remove_lower_entities)
+       return delete_solid_model_entities(body);
+
+     CubitStatus stat = this->unhook_BodySM_from_OCC(body); 
+     if(stat)
+     {
+       DLIList<TopologyBridge*> children;
+       CAST_TO(lump, OCCLump)->get_children_virt(children);
+       while (children.size())
+          delete children.pop();
+       delete lump;
+       delete body;
+     }
+     return stat;
+   }
+
      // Surface
    Surface* ref_face_ptr = CAST_TO(ref_entity_ptr, Surface);
    if (ref_face_ptr != NULL)
@@ -2507,6 +2529,15 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
       delete_solid_model_entities( ge, CUBIT_FALSE );
+    else
+    {
+      ShellSM * shell = CAST_TO(tb, ShellSM);
+      if(shell)
+      {
+        unhook_ShellSM_from_OCC(shell);
+        delete shell;
+      }
+    }
   }
 
   else

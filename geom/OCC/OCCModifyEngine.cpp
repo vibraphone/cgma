@@ -1667,7 +1667,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
                                           bool imprint,
                                           bool keep_old) const
 {
-  // copy the bodies in case subtraction has some errors
+  // copy the bodies in case keep_old is true
   DLIList<TopoDS_Shape*> tool_bodies_copy;
   DLIList<TopoDS_Shape*> from_bodies_copy;
   DLIList<CubitBoolean> is_volume;
@@ -1681,19 +1681,29 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     if(surface)
     {
        TopoDS_Face* topo_face = surface->get_TopoDS_Face();
-       BRepBuilderAPI_Copy api_copy(*topo_face);
-       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
-       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-       from_bodies_copy.append(newShape_ptr);
+       if(keep_old)
+       {
+         BRepBuilderAPI_Copy api_copy(*topo_face);
+         TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+         from_bodies_copy.append(newShape_ptr);
+       }
+       else
+         from_bodies_copy.append(topo_face);
        is_volume.change_to( CUBIT_FALSE);
     }
     else if(shell)
     {
        TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
-       BRepBuilderAPI_Copy api_copy(*topo_shell);
-       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell); 
-       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-       from_bodies_copy.append(newShape_ptr);
+       if(keep_old)
+       {
+         BRepBuilderAPI_Copy api_copy(*topo_shell);
+         TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell); 
+         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+         from_bodies_copy.append(newShape_ptr);
+       }
+       else
+         from_bodies_copy.append(topo_shell);
        is_volume.change_to( CUBIT_FALSE);
     }
     else
@@ -1706,19 +1716,15 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        }
  
        TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-       TopExp_Explorer Ex_edge;
-       TopoDS_Edge edge;
-       int num_edge = 0;
-       for (Ex_edge.Init(*solid,TopAbs_EDGE); Ex_edge.More(); Ex_edge.Next())
+       if(keep_old)
        {
-         edge = TopoDS::Edge(Ex_edge.Current());
-         num_edge++;
+         BRepBuilderAPI_Copy api_copy(*solid);
+         TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
+         from_bodies_copy.append(newShape_ptr);
        }
-
-       BRepBuilderAPI_Copy api_copy(*solid);
-       TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
-       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-       from_bodies_copy.append(newShape_ptr);
+       else
+         from_bodies_copy.append(solid);
     }
   }
 
@@ -1815,6 +1821,12 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
           }
           continue;
         }
+        //got cut. Update the entities
+        if(after_mass > tol*tol*tol)
+        {
+          TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
+          OCCLump::update_OCC_entity(old_solid , cut_shape, &cutter);
+        }
       }
       else
       {
@@ -1835,6 +1847,20 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
             count++;
           }
           continue;
+        }
+        //got cut. Update the entities
+        if(after_mass > tol*tol)
+        { 
+          if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
+          {
+            TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
+	    OCCShell::update_OCC_entity(old_shell,cut_shape, &cutter);
+          }
+          else
+          {
+            TopoDS_Face old_face = TopoDS::Face(*from_shape);
+            OCCSurface::update_OCC_entity(old_face,cut_shape, &cutter);
+          }
         }
       }
       delete from_shape;
