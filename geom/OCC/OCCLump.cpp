@@ -343,7 +343,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 // Author: Jane Hu
 //----------------------------------------------------------------
 CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
-                                       TopoDS_Shape& new_solid,
+                                       TopoDS_Shape& new_shape,
                                        BRepAlgoAPI_BooleanOperation *op)
 {
   //set the Shells
@@ -356,7 +356,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   {
     TopoDS_Shell shell = TopoDS::Shell(M(ii));
 
-    if(!new_solid.IsNull())
+    if(!new_shape.IsNull())
     {
        TopTools_ListOfShape shapes;
        shapes.Assign(op->Modified(shell));
@@ -366,5 +366,8 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
     if(shapes.Extent() > 0 || op->IsDeleted(shell))
       OCCShell::update_OCC_entity(shell, shape, op);
   }
+  TopoDS_Solid new_solid;
+  if(!op->IsDeleted(old_solid))
+    new_solid = TopoDS::Solid(new_shape);
   OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }

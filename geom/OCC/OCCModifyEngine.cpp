@@ -1824,7 +1824,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         //got cut. Update the entities
         if(after_mass > tol*tol*tol)
         {
-          TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
+          TopoDS_Solid old_solid = TopoDS::Solid(cutter.Shape1());
           OCCLump::update_OCC_entity(old_solid , cut_shape, &cutter);
         }
       }
@@ -1902,12 +1902,6 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     delete tool_boxes.pop();
   while (tool_bodies_copy.size())
     delete tool_bodies_copy.pop();
-  if (!keep_old)
-  {
-    from_bodies.remove_all_with_value(NULL);
-    OCCQueryEngine::instance()->delete_solid_model_entities(from_bodies); 
-    OCCQueryEngine::instance()->delete_solid_model_entities( tool_body_list);
-  }
   return CUBIT_SUCCESS; 
 }
 

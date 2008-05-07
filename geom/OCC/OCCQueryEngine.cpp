@@ -1185,6 +1185,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
 {
   OCCShell *shell ;
   CubitBoolean build_body = CUBIT_FALSE;
+  DLIList<OCCCoFace*> cofaces_old, cofaces_new;
   if (!OCCMap->IsBound(aShape))
   {
     if(PRINT_RESULT)
@@ -1210,6 +1211,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
   {
     int k = OCCMap->Find(aShape);
     shell = (OCCShell*)(OccToCGM->find(k))->second;
+    cofaces_old =  shell->cofaces();
     shell->set_TopoDS_Shell(aShape);
   }
 
@@ -1222,15 +1224,32 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
       populate_topology_bridge(topo_face, build_body);
     
     OCCSurface *occ_surface = CAST_TO(face, OCCSurface);
-    OCCCoFace * coface = new OCCCoFace( occ_surface, shell,
+    CubitBoolean exist = CUBIT_FALSE;
+    OCCCoFace * coface = NULL;
+    int size = cofaces_old.size();
+    for(int i = 0; i < size; i++)
+    {
+      coface = cofaces_old.pop();
+      if(coface->surface() == occ_surface)
+      {
+        exist = CUBIT_TRUE;
+        coface->set_sense(topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+        cofaces_new.append(coface);
+        break;
+      }
+    }
+    if(!exist)
+    {
+      OCCCoFace * coface = new OCCCoFace( occ_surface, shell,
         ( topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
-    cofaces.append(coface);
+      cofaces_new.append(coface);
+    }
     occ_surface->add_shell(shell);
  
     if(standalone)
       occ_surface->set_shell(shell);
   }
-  shell->cofaces(cofaces);
+  shell->cofaces(cofaces_new);
   return shell;
 }
 
@@ -1437,11 +1456,12 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
      if (remove_lower_entities)
        return delete_solid_model_entities(body);
 
+     DLIList<TopologyBridge*> children;
+       CAST_TO(lump, OCCLump)->get_children_virt(children);
+
      CubitStatus stat = this->unhook_BodySM_from_OCC(body); 
      if(stat)
      {
-       DLIList<TopologyBridge*> children;
-       CAST_TO(lump, OCCLump)->get_children_virt(children);
        while (children.size())
           delete children.pop();
        delete lump;
@@ -2504,7 +2524,7 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
 int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
                                     TopoDS_Shape new_shape)
 {
-  if (!OCCMap->IsBound(old_shape))
+  if (!OCCMap->IsBound(old_shape) || old_shape.IsEqual(new_shape))
     return -1;
 
   int k = OCCMap->Find(old_shape);
@@ -2532,7 +2552,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     else
     {
       ShellSM * shell = CAST_TO(tb, ShellSM);
-      if(shell)
+      if(shell && CAST_TO(shell, OCCShell)->my_lump())
       {
         unhook_ShellSM_from_OCC(shell);
         delete shell;

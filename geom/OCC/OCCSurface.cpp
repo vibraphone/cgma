@@ -863,16 +863,14 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        else if (op->IsDeleted(edge))
          ; 
        else 
-       {
          shape_edge = edge;
-         continue;
-       }
+/*
        if(wire.Orientation() == TopAbs_REVERSED && !shape_edge.IsNull())
        {
          shape_edge.Orientation(
           shape_edge.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
        }
-
+*/
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
        shapes.Assign(op->Modified(vertex));
