@@ -172,7 +172,8 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
 	  TopologyBridge *surface = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-	  children.append_unique(surface);
+          if(surface)
+	    children.append_unique(surface);
   }
 }
 
@@ -268,8 +269,11 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
   {
     TopoDS_Face face = TopoDS::Face(M(ii));
     shapes.Assign(op->Modified(face));
-    if(shapes.Extent() > 0)
+    if(shapes.Extent() == 1)
       shape = shapes.First();
+    else
+      shape.Nullify();
+
     if(shapes.Extent() > 0 || op->IsDeleted(face))
       OCCSurface::update_OCC_entity(face,shape, op);
   }

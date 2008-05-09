@@ -720,7 +720,8 @@ void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
      TopologyBridge *loop = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-     children.append_unique(loop);
+     if(loop)
+       children.append_unique(loop);
   }
 }
 
@@ -832,25 +833,27 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   for (int ii=1; ii<=M.Extent(); ii++) 
   {
      TopoDS_Wire wire = TopoDS::Wire(M(ii));
-     if(!new_surface.IsNull())
+     TopTools_ListOfShape shapes;
+     shapes.Assign(op->Modified(wire));
+     if (shapes.Extent() == 1)
+       shape = shapes.First();
+     else if(shapes.Extent() > 1)
+       shape.Nullify();
+     else if(op->IsDeleted(wire))
      {
-       TopTools_ListOfShape shapes;
-       shapes.Assign(op->Modified(wire));
-       if (shapes.Extent() > 0)
-         shape = shapes.First();
-       else if(op->IsDeleted(wire))
-       {
-         TopTools_IndexedMapOfShape M_new;
-         TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
-         if (M_new.Extent()>= ii)
-           shape = M_new(ii);
-       }
+       TopTools_IndexedMapOfShape M_new;
+       TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
+       if (M_new.Extent()== 1)
+         shape = M_new(1);
        else
-       {
-         shape = wire;
-         continue;
-       }
-     } 
+         shape.Nullify();
+     }
+     else
+     {
+       shape = wire;
+       continue;
+     }
+
      //set curves
      BRepTools_WireExplorer Ex;
      
@@ -858,10 +861,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      {
        TopoDS_Edge edge = Ex.Current();
        shapes.Assign(op->Modified(edge));
-       if (shapes.Extent() > 0)
+       if (shapes.Extent() == 1)
          shape_edge = shapes.First();
+       else if (shapes.Extent() > 1)
+         shape_edge.Nullify();
        else if (op->IsDeleted(edge))
-         ; 
+         shape_edge.Nullify(); 
        else 
          shape_edge = edge;
 /*
@@ -874,8 +879,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
        shapes.Assign(op->Modified(vertex));
-       if (shapes.Extent() > 0)
+       if (shapes.Extent() == 1)
          shape_vertex = shapes.First();
+
+       else
+         shape_vertex.Nullify();
 
        if(shapes.Extent() > 0 || op->IsDeleted(vertex))
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape_vertex);

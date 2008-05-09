@@ -1197,7 +1197,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
     OCCMap->Bind(*poshell, iTotalTBCreated);
     OccToCGM->insert(valType(iTotalTBCreated,
 		       (TopologyBridge*)shell));
- 
+    shell->set_body(NULL);
+    shell->set_lump(NULL); 
     if(standalone)
     {
       OCCLump* lump = new OCCLump(NULL, NULL, shell);
@@ -1243,8 +1244,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
       OCCCoFace * coface = new OCCCoFace( occ_surface, shell,
         ( topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
       cofaces_new.append(coface);
+      occ_surface->add_shell(shell);
     }
-    occ_surface->add_shell(shell);
  
     if(standalone)
       occ_surface->set_shell(shell);
@@ -1270,6 +1271,9 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
     OccToCGM->insert(valType(iTotalTBCreated,
                              (TopologyBridge*)surface));
     SurfaceList->append(surface);
+    surface->set_body(NULL);
+    surface->set_lump(NULL);
+    surface->set_shell(NULL);
     if(build_body)
     {
       OCCShell* shell = new OCCShell(NULL, surface);
@@ -1349,9 +1353,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
       coedge = new OCCCoEdge( curve, loop,
         (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
       coedges_new.append(coedge);
-      total_coedges++;
+      occ_curve->add_loop(loop);
     }
-    occ_curve->add_loop(loop);
   }
   loop->coedges(coedges_new);
 
@@ -2522,7 +2525,7 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
 }
 
 int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
-                                    TopoDS_Shape new_shape)
+                                   TopoDS_Shape new_shape)
 {
   if (!OCCMap->IsBound(old_shape) || old_shape.IsEqual(new_shape))
     return -1;
@@ -2552,10 +2555,39 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     else
     {
       ShellSM * shell = CAST_TO(tb, ShellSM);
-      if(shell && CAST_TO(shell, OCCShell)->my_lump())
+      if(shell)
       {
-        unhook_ShellSM_from_OCC(shell);
-        delete shell;
+        DLIList<OCCCoFace*> children;
+        children = CAST_TO(shell, OCCShell)->cofaces();
+        while(children.size())
+        {
+          OCCCoFace* coface = children.pop();
+          CAST_TO(coface->surface(),OCCSurface)->remove_shell(CAST_TO(shell, OCCShell));
+          delete coface;
+        }
+
+        OCCLump* lump = CAST_TO(shell, OCCShell)->my_lump();
+        if(lump)
+        {
+          delete CAST_TO(shell, OCCShell)->my_body();
+          delete lump;
+          unhook_ShellSM_from_OCC(shell);
+          delete shell;
+        }
+      }
+      LoopSM* loop = CAST_TO(tb, LoopSM);
+      if(loop)
+      {
+         DLIList<OCCCoEdge*> children;
+         children = CAST_TO(loop, OCCLoop)->coedges();
+         while(children.size())
+         {
+           OCCCoEdge* coedge = children.pop();
+           CAST_TO(coedge->curve(), OCCCurve)->remove_loop(CAST_TO(loop, OCCLoop));
+           delete coedge;
+         }
+         unhook_LoopSM_from_OCC(loop);
+         delete loop;
       }
     }
   }

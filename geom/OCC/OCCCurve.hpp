@@ -35,7 +35,6 @@ class OCCLump;
 class OCCShell;
 class OCCSurface;
 class OCCLoop;
-class OCCCoEdge;
 class OCCPoint;
 class BRepBuilderAPI_Transform; 
 class BRepAlgoAPI_BooleanOperation;

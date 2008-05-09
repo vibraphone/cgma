@@ -446,7 +446,8 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
 	  TopologyBridge *lump = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-	  lumps.append_unique(lump);
+          if (lump)
+	    lumps.append_unique(lump);
   }
 }
 

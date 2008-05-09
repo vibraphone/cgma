@@ -259,7 +259,8 @@ void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
 	  TopologyBridge *shell = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-	  shellsms.append_unique(shell);
+          if (shell)
+	    shellsms.append_unique(shell);
   }
 }
 
@@ -349,6 +350,11 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   //set the Shells
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape;
+  TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
+  if(M.Extent() > 1)
+    new_shape.Nullify();
+
+  M.Clear();
   TopExp::MapShapes(old_solid, TopAbs_SHELL, M);
   TopTools_ListOfShape shapes;
  
@@ -356,18 +362,34 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   {
     TopoDS_Shell shell = TopoDS::Shell(M(ii));
 
-    if(!new_shape.IsNull())
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(shell));
+    if (shapes.Extent() == 1)
+      shape = shapes.First();
+
+    else if(shapes.Extent() > 1)
+      shape.Nullify();
+
+    else if(op->IsDeleted(shell))
     {
-       TopTools_ListOfShape shapes;
-       shapes.Assign(op->Modified(shell));
-       if (shapes.Extent() > 0)
-         shape = shapes.First();
+       TopTools_IndexedMapOfShape M_new;
+       TopExp::MapShapes(new_shape, TopAbs_SHELL, M_new);
+       if (M_new.Extent()== 1)
+         shape = M_new(1);
+       else
+         shape.Nullify();
     }
+    else
+    {
+       shape = shell;
+       continue;
+    }
+ 
     if(shapes.Extent() > 0 || op->IsDeleted(shell))
       OCCShell::update_OCC_entity(shell, shape, op);
   }
   TopoDS_Solid new_solid;
-  if(!op->IsDeleted(old_solid))
+  if(!new_shape.IsNull() && !op->IsDeleted(old_solid))
     new_solid = TopoDS::Solid(new_shape);
   OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }
