@@ -1228,21 +1228,25 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoFace * coface = NULL;
     int size = cofaces_old.size();
+    CubitSense sense ;
+    if( aShape.Orientation() == CUBIT_REVERSED )
+      sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+    else
+      sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
     for(int i = 0; i < size; i++)
     {
       coface = cofaces_old.pop();
       if(coface->surface() == occ_surface)
       {
         exist = CUBIT_TRUE;
-        coface->set_sense(topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+        coface->set_sense(sense);
         cofaces_new.append(coface);
         break;
       }
     }
     if(!exist)
     {
-      OCCCoFace * coface = new OCCCoFace( occ_surface, shell,
-        ( topo_face.Orientation()== TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
+      OCCCoFace * coface = new OCCCoFace( occ_surface, shell, sense);
       cofaces_new.append(coface);
       occ_surface->add_shell(shell);
     }
@@ -1329,29 +1333,33 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
 
   BRepTools_WireExplorer Ex;
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
+  coedges_old = loop->coedges();
   for (Ex.Init(aShape); Ex.More(); Ex.Next())
   {
     Curve* curve = populate_topology_bridge(Ex.Current());
     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
-    coedges_old = loop->coedges();
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoEdge * coedge = NULL;
     int size = coedges_old.size();
+    CubitSense sense ;
+    if( aShape.Orientation() == CUBIT_REVERSED )
+      sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+    else
+      sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
     for(int i = 0; i < size; i++)
     {
       coedge = coedges_old.pop();
       if(coedge->curve() == curve)
       {
         exist = CUBIT_TRUE;
-        coedge->set_sense(Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+        coedge->set_sense(sense);
         coedges_new.append(coedge);
         break;
       }
     }   
     if(!exist)
     {
-      coedge = new OCCCoEdge( curve, loop,
-        (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED));
+      coedge = new OCCCoEdge( curve, loop, sense);
       coedges_new.append(coedge);
       occ_curve->add_loop(loop);
     }
