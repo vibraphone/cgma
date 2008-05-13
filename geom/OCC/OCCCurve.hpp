@@ -321,7 +321,7 @@ public :
 
   TopoDS_Edge *get_TopoDS_Edge( )
     { return myTopoDSEdge; } 
-  void set_TopoDS_Edge(TopoDS_Edge edge){*myTopoDSEdge = edge;}
+  void set_TopoDS_Edge(TopoDS_Edge edge);
 
   void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                           BRepAlgoAPI_BooleanOperation *op = NULL );

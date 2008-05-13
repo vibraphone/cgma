@@ -67,7 +67,7 @@ public :
   void set_myMarked(CubitBoolean marked) {myMarked = marked;}
 
   TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
-  void set_TopoDS_Vertex(TopoDS_Vertex vertex){*myTopoDSVertex = vertex;}
+  void set_TopoDS_Vertex(TopoDS_Vertex vertex);
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void

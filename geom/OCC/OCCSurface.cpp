@@ -98,6 +98,13 @@ OCCSurface::~OCCSurface()
     delete myTopoDSFace;
 }
 
+void OCCSurface::set_TopoDS_Face(TopoDS_Face face)
+{
+  if(!myTopoDSFace)
+    myTopoDSFace = new TopoDS_Face; 
+  *myTopoDSFace = face;
+}
+
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a

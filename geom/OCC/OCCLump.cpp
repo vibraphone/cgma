@@ -78,6 +78,13 @@ OCCLump::~OCCLump()
     delete myTopoDSSolid;
 }
 
+void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
+{
+  if(myTopoDSSolid)
+    *myTopoDSSolid = solid;
+  else
+    myTopoDSSolid = new TopoDS_Solid(solid);
+}
 //-------------------------------------------------------------------------
 // Purpose       : Find centroid
 //
@@ -351,8 +358,9 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
+  CubitBoolean is_null_new_shape = CUBIT_FALSE;
   if(M.Extent() > 1)
-    new_shape.Nullify();
+    is_null_new_shape = CUBIT_TRUE;
 
   M.Clear();
   TopExp::MapShapes(old_solid, TopAbs_SHELL, M);
@@ -389,7 +397,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
       OCCShell::update_OCC_entity(shell, shape, op);
   }
   TopoDS_Solid new_solid;
-  if(!new_shape.IsNull() && !op->IsDeleted(old_solid))
+  if(!is_null_new_shape && !op->IsDeleted(old_solid))
     new_solid = TopoDS::Solid(new_shape);
   OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }

@@ -48,7 +48,7 @@ public :
   void disconnect_all_curves();
 
   inline TopoDS_Wire* get_TopoDS_Wire() {return myTopoDSWire;}
-  void set_TopoDS_Wire(TopoDS_Wire loop){ *myTopoDSWire = loop;}
+  void set_TopoDS_Wire(TopoDS_Wire loop);
 
   virtual ~OCCLoop() ;
     //- The destructor

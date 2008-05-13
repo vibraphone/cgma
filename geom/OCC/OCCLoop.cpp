@@ -66,6 +66,12 @@ OCCLoop::~OCCLoop()
     delete myTopoDSWire;
 }
 
+void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
+{
+   if(!myTopoDSWire)
+     myTopoDSWire = new TopoDS_Wire;
+   *myTopoDSWire = loop;
+}
 //-------------------------------------------------------------------------
 // Purpose       : Tear down topology
 //

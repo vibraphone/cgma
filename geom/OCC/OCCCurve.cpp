@@ -115,6 +115,13 @@ OCCCurve::~OCCCurve()
     delete myTopoDSEdge;
 }
 
+void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
+{
+  if(!myTopoDSEdge)
+    myTopoDSEdge = new TopoDS_Edge;
+  *myTopoDSEdge = edge;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a
 //                 attribute to the GE. The name is attached to the 

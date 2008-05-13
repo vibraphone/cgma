@@ -1636,9 +1636,8 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
      unhook_Lump_from_OCC(lump);
   }
 
-  delete shape;
-  TopoDS_CompSolid Nullshape;
-  occ_body->set_TopoDS_Shape(Nullshape);
+  if (!shape->IsNull())
+    shape->Nullify();
   return CUBIT_SUCCESS;
 } 
   
@@ -1689,9 +1688,8 @@ OCCQueryEngine::unhook_Lump_from_OCC( Lump* lump ) const
   if (occ_lump->get_body() != NULL)
     BodyList->remove(CAST_TO(occ_lump->get_body(), OCCBody));
 
-  delete solid;
-  TopoDS_Solid Nullsolid;
-  occ_lump->set_TopoDS_Solid(Nullsolid);
+  if(!solid->IsNull())
+     solid->Nullify();
   return CUBIT_SUCCESS;
 } 
 
@@ -1729,9 +1727,8 @@ OCCQueryEngine::unhook_ShellSM_from_OCC( ShellSM* shell) const
         PRINT_ERROR("The OccSurface and TopoDS_Face pair is not in the map!");
     }
 
-  delete Shell;
-  TopoDS_Shell Nullshell;
-  occ_shell->set_TopoDS_Shell(Nullshell);
+  if(!Shell->IsNull())
+    Shell->Nullify();
   return CUBIT_SUCCESS;
 }
 
@@ -1826,9 +1823,8 @@ OCCQueryEngine::unhook_Surface_from_OCC( Surface* surface) const
         PRINT_WARNING("The OccSurface and TopoDS_Face pair is not in the map!");
     }
   SurfaceList->remove(fsurf);
-  delete face;
-  TopoDS_Face Nullface;
-  fsurf->set_TopoDS_Face(Nullface);
+  if(!face->IsNull())
+    face->Nullify();
   return CUBIT_SUCCESS;
 }
 
@@ -1907,9 +1903,8 @@ OCCQueryEngine::unhook_LoopSM_from_OCC( LoopSM* loopsm) const
         PRINT_ERROR("The OccLoop and TopoDS_Wire pair is not in the map!");
     }
 
-  delete wire; 
-  TopoDS_Wire Nullwire;
-  occ_loop->set_TopoDS_Wire(Nullwire);
+  if(!wire->IsNull())
+    wire->Nullify(); 
   return CUBIT_SUCCESS;
 }
 
@@ -2012,9 +2007,8 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
         PRINT_WARNING("The OccCurve and TopoDS_Edge pair is not in the map!");
     }
   CurveList->remove(fcurve); 
-  delete edge;
-  TopoDS_Edge Nulledge;
-  fcurve->set_TopoDS_Edge(Nulledge);
+  if(!edge->IsNull())
+    edge->Nullify();
   return CUBIT_SUCCESS;
 }
 //-------------------------------------------------------------------------
@@ -2071,9 +2065,8 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point) const
       if(!OccToCGM->erase(k))
         PRINT_ERROR("The OccPoint and TopoDS_Vertex pair is not in the map!");
     }
-  delete vertex;
-  TopoDS_Vertex Nullvertex;
-  fpoint->set_TopoDS_Vertex(Nullvertex);
+  if(!vertex->IsNull())
+    vertex->Nullify();
   return CUBIT_SUCCESS;
 }
 
