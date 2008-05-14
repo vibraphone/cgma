@@ -1235,7 +1235,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
     for(int i = 0; i < size; i++)
     {
-      coface = cofaces_old.pop();
+      coface = cofaces_old.get_and_step();
       if(coface->surface() == occ_surface)
       {
         exist = CUBIT_TRUE;
@@ -1348,7 +1348,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
     for(int i = 0; i < size; i++)
     {
-      coedge = coedges_old.pop();
+      coedge = coedges_old.get_and_step();
       if(coedge->curve() == curve)
       {
         exist = CUBIT_TRUE;
@@ -2572,9 +2572,10 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
         {
           delete CAST_TO(shell, OCCShell)->my_body();
           delete lump;
-          unhook_ShellSM_from_OCC(shell);
-          delete shell;
         }
+        unhook_ShellSM_from_OCC(shell);
+        delete shell;
+        return k;
       }
       LoopSM* loop = CAST_TO(tb, LoopSM);
       if(loop)

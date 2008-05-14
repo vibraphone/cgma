@@ -1624,12 +1624,12 @@ CubitStatus OCCModifyEngine::stitch_surfs(
           TopoDS_Face face = TopoDS::Face(M(ii));
           TopTools_ListOfShape shapes;
           shapes.Assign(fuser.Modified(face));
-          if (shapes.Extent() > 0)
+          if (shapes.Extent() == 1)
           {
             new_shape = shapes.First();
             OCCSurface::update_OCC_entity(face, TopoDS::Face(new_shape), &fuser);
           }
-          else if(fuser.IsDeleted(face))
+          else if(fuser.IsDeleted(face) || shapes.Extent() > 1)
           {
             TopoDS_Face null_face;
             OCCSurface::update_OCC_entity(face, null_face, &fuser);

@@ -81,7 +81,6 @@ void OCCBody::lumps(DLIList<Lump*>& my_lumps)
 {
   myLumps.clean_out();
   myLumps += my_lumps;
-  myTopoDSShape = NULL;
 }
 
 void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)

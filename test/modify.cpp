@@ -243,28 +243,15 @@ CubitStatus make_Point()
   //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
   //remaining (unchanged or modified).
 
-/*
-  from_bodies.clean_out();
-  from_bodies += new_bodies;
-  new_bodies.clean_out();
-  CubitVector v_move2(0, -2, -2);
-  Body* body_new = from_bodies.step_and_get();
-  d = body_new->measure();
-  v = body_new->center_point();
-  gti->translate(body_new,v_move2);
-  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
-                       CUBIT_TRUE, CUBIT_FALSE);
-  d = new_bodies.step_and_get()->measure();
-  n = new_bodies.get()->num_ref_faces();
-  // n = 8
-  n = new_bodies.get()->num_ref_edges();
-  // n = 22
-
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
   gti->delete_Body(bodies); 
   
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  //there shouldn't be any free_entites.
+
   //test for multi-cut imprint for subtract.
   from_body = gmti->brick(10, 10, 10);
   tool_body = gmti->brick(11, 1, 1);
@@ -274,16 +261,20 @@ CubitStatus make_Point()
   from_bodies.append(from_body);
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
-                       CUBIT_TRUE, CUBIT_TRUE); 
+                       CUBIT_TRUE, CUBIT_FALSE); 
   n = new_bodies.get()->num_ref_faces();
   //n = 8
   n = new_bodies.get()->num_ref_edges();
   //n = 18
-*/
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
   gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  //there shouldn't be any free_entites.
 
   //test for shell body subtract.
   tool_body = gmti->brick(1, 1, 1);
@@ -323,7 +314,7 @@ CubitStatus make_Point()
   BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
   CubitVector v_move3(0,1,0);
   gti->translate(tool_body,v_move3);
-/*  from_bodies.clean_out();
+  from_bodies.clean_out();
   from_bodies.append(from_body2);
   new_bodies.clean_out();
 
@@ -362,6 +353,6 @@ CubitStatus make_Point()
   tool_shape = CAST_TO(tool_body->get_body_sm_ptr(),OCCBody)->get_TopoDS_Shape();
   ome->imprint_toposhapes(tool_shape, from_shape);
   ome->imprint_toposhapes(from_shape, tool_shape);
-  return stat;
-*/
+  return CUBIT_SUCCESS;
+
 }
