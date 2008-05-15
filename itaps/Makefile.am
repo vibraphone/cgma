@@ -14,8 +14,10 @@ lib_LTLIBRARIES = libiGeom.la
 
 if build_ACIS
   TEST_ACISLIBS = $(top_builddir)/geom/ACIS/libcubit_ACIS.la
+  TEST_ACISPATH = -R$(ACIS_LIB_DIR)
 else
   TEST_ACISLIBS =
+  TEST_ACISPATH =
 endif
 
 if BUILD_CGM
@@ -66,7 +68,7 @@ check_PROGRAMS = $(TESTS)
 testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = $(TEST_XLDFLAGS) libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
-
+testgeom_LDFLAGS = $(TEST_ACISPATH)
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 
