@@ -344,6 +344,10 @@ AC_CONFIG_FILES(Makefile
 	   itaps/SIDL/Makefile
 	   itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
+           cgm_apps/Makefile
+           cgm_apps/examples/Makefile
+           cgm_apps/examples/driverc++/Makefile
+           cgm_apps/examples/facetdriver/Makefile
 	   )
 
 AC_OUTPUT

@@ -1,9 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = util geom init itaps test
-
-if build_ACIS
-  ACIS_EXAMPLE_TEST=cd cgm_apps/examples/driverc++; make check-TESTS
-endif
+SUBDIRS = util geom init itaps test cgm_apps
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 
@@ -11,21 +7,6 @@ endif
 # check that only libraries are going in $(libdir)
 cfgdir = $(libdir)
 cfg_DATA = cgm.make
-
-EXTRA_DIST = \
-	cgm_apps/examples/README \
-	cgm_apps/examples/facetdriver/Makefile \
-	cgm_apps/examples/facetdriver/facets.cpp \
-	cgm_apps/examples/facetdriver/README \
-	cgm_apps/examples/driverc++/Makefile \
-	cgm_apps/examples/driverc++/mergechk.cpp \
-	cgm_apps/examples/driverc++/merge.sat
-
-example_test:
-	cd cgm_apps/examples/facetdriver; make check-TESTS
-	$(ACIS_EXAMPLE_TEST)
-
-check: example_test
 
 # By default, cmg.make will define these to $(srcdir).  We
 # want to override that during the INSTALL of the file so

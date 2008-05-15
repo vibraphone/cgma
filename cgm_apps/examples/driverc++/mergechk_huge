@@ -1,0 +1,2 @@
+#!/bin/sh
+./mergechk $srcdir/huge.sat
