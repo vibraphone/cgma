@@ -33,7 +33,6 @@ libcubit_OCC_la_SOURCES = \
     OCCAttribSet.cpp \
     OCCBody.cpp \
     OCCCoEdge.cpp \
-    OCCCoFace.cpp \
     OCCCurve.cpp \
     OCCLoop.cpp \
     OCCLump.cpp \
