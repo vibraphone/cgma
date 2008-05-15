@@ -49,6 +49,7 @@ INCLUDES = -I$(top_srcdir)/util \
            -I.
 
 libiGeom_la_SOURCES = \
+        CGMAIterator.hpp \
         CATag.hpp \
 	CATag.cpp \
 	iGeom_CGMA.cc \

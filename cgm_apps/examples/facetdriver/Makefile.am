@@ -1,10 +1,9 @@
-EXTRA_DIST = README
+TESTS = facets_90
+EXTRA_DIST = README $(TESTS)
 
 check_PROGRAMS = facets
 
 facets_SOURCES = facets.cpp
-
-TESTS = facets_90
 
 CPPFLAGS += -I$(top_srcdir)/util \
             -I$(top_srcdir)/geom \

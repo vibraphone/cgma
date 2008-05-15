@@ -1,8 +1,7 @@
-EXTRA_DIST = README merge.sat huge.sat
+TESTS = mergechk_merge mergechk_huge
+EXTRA_DIST = README merge.sat huge.sat $(TESTS)
 
 check_PROGRAMS = mergechk
-
-TESTS = mergechk_merge mergechk_huge
 
 CPPFLAGS += -I$(top_srcdir)/util \
             -I$(top_srcdir)/geom \
