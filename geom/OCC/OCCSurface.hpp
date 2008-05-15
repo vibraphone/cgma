@@ -49,6 +49,7 @@ class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
+class BRepBuilderAPI_MakeShape;
 //// class CubitTransformMatrix;
 
 class OCCSurface : public Surface
@@ -63,7 +64,7 @@ public :
    
   static CubitStatus update_OCC_entity(TopoDS_Face& old_surface,
                                        TopoDS_Shape& new_surface,
-                                       BRepAlgoAPI_BooleanOperation *op);
+                                       BRepBuilderAPI_MakeShape *op);
 
 
   void add_shell(OCCShell* shell) { myShellList.append_unique(shell);}

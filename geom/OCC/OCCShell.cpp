@@ -42,6 +42,7 @@
 #include "TopTools_ListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
+#include "BRepBuilderAPI_MakeShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -258,7 +259,7 @@ double OCCShell::measure()
 //----------------------------------------------------------------
 CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
                                         TopoDS_Shape& new_shell,
-                                        BRepAlgoAPI_BooleanOperation *op)
+                                        BRepBuilderAPI_MakeShape *op)
 {
   //set the surfaces
   TopTools_IndexedMapOfShape M;

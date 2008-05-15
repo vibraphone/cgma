@@ -69,6 +69,7 @@
 #include "BRepPrimAPI_MakeWedge.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
+#include "BndLib_Add3dCurve.hxx"
 #include "TopOpeBRep_EdgesIntersector.hxx"
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
@@ -1808,7 +1809,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         double orig_mass = myProps.Mass();
         BRepGProp::VolumeProperties(cut_shape, myProps);
         double after_mass = myProps.Mass();
-        if((-after_mass + orig_mass) <= tol*tol*tol)
+        if((-after_mass + orig_mass) <= tol)
         {
           stat = CUBIT_FAILURE;
           //Add imprint code here 
@@ -1822,7 +1823,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
           continue;
         }
         //got cut. Update the entities
-        if(after_mass > tol*tol*tol)
+        if(after_mass > tol)
         {
           TopoDS_Solid old_solid = TopoDS::Solid(cutter.Shape1());
           OCCLump::update_OCC_entity(old_solid , cut_shape, &cutter);
@@ -1835,7 +1836,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
         double orig_mass = myProps.Mass();
         BRepGProp::SurfaceProperties(cut_shape, myProps);
         double after_mass = myProps.Mass();
-        if((-after_mass + orig_mass) <= tol*tol)
+        if((-after_mass + orig_mass) <= tol)
         {
           stat = CUBIT_FAILURE;
           //Add imprint code here
@@ -1849,7 +1850,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
           continue;
         }
         //got cut. Update the entities
-        if(after_mass > tol*tol)
+        if(after_mass > tol)
         { 
           if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
           {
@@ -1958,6 +1959,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  TopTools_ListOfShape temp_list_of_edges;
 	  temp_list_of_edges.Assign(section.SectionEdges());
 	  int num_edges = temp_list_of_edges.Extent();
+  
           CubitBoolean is_same = face1.IsSame(from_face);
           CubitBoolean is_same_tool_face = CUBIT_FALSE;
           for (int j = 0; j < tool_faces.size(); j++)
@@ -2023,7 +2025,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   
       TopTools_ListIteratorOfListOfShape Itor;
 
-      //list_of_edges is the intersection edges on from_face from all tool_faces
+      //list_of_edges is the intersection edges on tool_faces 
       Itor.Initialize(list_of_edges);
       int total_edges = list_of_edges.Extent();
       DLIList<Curve*> curve_list;
@@ -2080,9 +2082,6 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             //check if they are the same edge, so don't need to be split
             //the overlapped edges are considered the same if they have the
             //same length
-            GProp_GProps myProps1;
-            BRepGProp::LinearProperties(edge, myProps1);
-            double d1 = myProps1.Mass();
             GProp_GProps myProps2;
             BRepGProp::LinearProperties(from_edge, myProps2);
             double d2 = myProps2.Mass();
@@ -2104,8 +2103,22 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         }
         if (!skipped)
         {
-	  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
-	  curve_list.append(curve);
+          //check if edge's inside from_face by checking bounding boxes  
+          BRepAdaptor_Curve acurve(edge);
+          BRepAdaptor_Surface asurface( from_face);
+          Bnd_Box aBox_edge, aBox_face;
+          BndLib_Add3dCurve::Add(acurve, Precision::Approximation(), aBox_edge);
+          BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox_face);
+          double min[3], max[3];
+          aBox_edge.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
+          CubitBox aBox_e(min, max);
+          aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
+          CubitBox aBox_f(min, max);
+          if (aBox_e <= aBox_f)
+          {
+	    Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+	    curve_list.append(curve);
+          }
         }
       }
 
@@ -2144,8 +2157,46 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         splitor.Build();
         if(splitor.IsDone())
         {
-	  delete from_shape;
-          from_shape = new TopoDS_Shape(splitor.Shape());
+          TopoDS_Shape new_from_shape = splitor.Shape();
+          if(from_shape->TShape()->ShapeType() == TopAbs_COMPSOLID)
+          {
+            TopTools_IndexedMapOfShape M;
+            TopExp::MapShapes(*from_shape, TopAbs_SOLID, M);
+            if (M.Extent() == 1)
+            {
+              TopoDS_Solid old_solid = TopoDS::Solid(M(1));
+              OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
+              from_shape = new TopoDS_Shape(old_solid);
+            }
+          }
+
+          else if(from_shape->TShape()->ShapeType() == TopAbs_SOLID)
+          {
+            TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
+            OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
+            from_shape = new TopoDS_Shape(old_solid);
+          }
+          else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
+          {
+            TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
+            OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
+            from_shape = new TopoDS_Shape(old_shell);
+          }
+          else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
+          {
+            TopoDS_Face old_face = TopoDS::Face(*from_shape);
+            OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
+            from_shape = new TopoDS_Shape(old_face);
+          }
+
+          else //imprinting an edge
+          {
+             TopoDS_Edge old_edge = TopoDS::Edge(*from_shape);
+             TopTools_IndexedMapOfShape M;
+             TopExp::MapShapes(new_from_shape, TopAbs_EDGE, M);
+             if (M.Extent() > 1) //split successfully
+               OCCQueryEngine::instance()->update_OCC_map(old_edge, M(1));
+          }
           TopTools_ListOfShape shapes;
           for(int i = 0; i < from_faces.size(); i++)
           {
@@ -2155,13 +2206,6 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
              from_faces.change_to(topo_face);
              from_faces.step();
           } 
-          shapes.Assign(splitor.Modified(from_face)); 
-          TopTools_ListIteratorOfListOfShape It(shapes);
-          for(; It.More(); It.Next())
-          {
-	    TopoDS_Face* topo_face = new TopoDS_Face(TopoDS::Face(It.Value()));
-            from_faces.append(topo_face);
-          }
           count++;
         }
       }

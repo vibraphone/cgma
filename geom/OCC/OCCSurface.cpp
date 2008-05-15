@@ -44,6 +44,7 @@
 #include "LoopSM.hpp"
 #include "CubitPointData.hpp"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
+#include "BRepBuilderAPI_MakeShape.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "BRep_Tool.hxx"
 
@@ -828,7 +829,7 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 //----------------------------------------------------------------
 CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
                                           TopoDS_Shape& new_surface,
-                                          BRepAlgoAPI_BooleanOperation *op)
+                                          BRepBuilderAPI_MakeShape *op)
 {
   //set the Wires
   TopTools_IndexedMapOfShape M;

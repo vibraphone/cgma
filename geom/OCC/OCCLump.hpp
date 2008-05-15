@@ -37,6 +37,7 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
+class BRepBuilderAPI_MakeShape;
 class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -156,7 +157,7 @@ public:
                                 BRepAlgoAPI_BooleanOperation *op = NULL);
   static CubitStatus update_OCC_entity(TopoDS_Solid& old_shape,
                                        TopoDS_Shape& new_shape,
-                                       BRepAlgoAPI_BooleanOperation *op);
+                                       BRepBuilderAPI_MakeShape *op);
 protected: 
   
 private:

@@ -36,7 +36,7 @@ class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
-
+class BRepBuilderAPI_MakeShape;
 // ********** END CUBIT INCLUDES           **********
 
 class OCCShell : public ShellSM
@@ -120,7 +120,7 @@ public:
   double measure(); //area of the shell
   static CubitStatus update_OCC_entity(TopoDS_Shell& old_shell,
                                        TopoDS_Shape& new_shell,
-                                       BRepAlgoAPI_BooleanOperation *op);
+                                       BRepBuilderAPI_MakeShape *op);
 protected: 
   
 private:

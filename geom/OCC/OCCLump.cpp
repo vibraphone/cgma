@@ -40,6 +40,7 @@
 #include "BRepBuilderAPI_Transform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
+#include "BRepBuilderAPI_MakeShape.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
@@ -352,7 +353,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 //----------------------------------------------------------------
 CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
                                        TopoDS_Shape& new_shape,
-                                       BRepAlgoAPI_BooleanOperation *op)
+                                       BRepBuilderAPI_MakeShape *op)
 {
   //set the Shells
   TopTools_IndexedMapOfShape M;
@@ -399,5 +400,12 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   TopoDS_Solid new_solid;
   if(!is_null_new_shape && !op->IsDeleted(old_solid))
     new_solid = TopoDS::Solid(new_shape);
+  else if (op->IsDeleted(old_solid))
+  {
+    M.Clear();
+    TopExp::MapShapes(new_shape, TopAbs_SOLID, M);
+    if(M.Extent() == 1)
+      new_solid = TopoDS::Solid(M(1));
+  }
   OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }
