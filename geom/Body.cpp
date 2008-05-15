@@ -193,19 +193,8 @@ CubitBoolean Body::is_sheet_body()
   DLIList<RefVolume*> volumes;
   ref_volumes(volumes);
   while (volumes.size())
-  {
     if (!volumes.pop()->is_sheet())
-    {   
-      //OCC sheet body just has one face or shell, not like Acis
-      BodySM* bodysm = get_body_sm_ptr();
-      if (bodysm == NULL)
-      {
-        PRINT_ERROR("Body %d is invalid -- no attached BodySM.\n", this->id());
-        return CUBIT_FALSE;
-      }
-      return bodysm->is_sheet_body();
-    }
-  }
+      return CUBIT_FALSE;
   return CUBIT_TRUE;
 }
  

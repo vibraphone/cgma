@@ -191,7 +191,6 @@ public:
   
   virtual CubitPointContainment point_containment( const CubitVector& pos );
 
-  virtual CubitBoolean is_sheet_body(){return CUBIT_FALSE;}
 protected: 
   
 private:
