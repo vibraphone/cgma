@@ -64,7 +64,7 @@ TESTS = testgeom
 check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
-testgeom_LDADD = libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
+testgeom_LDADD = $(TEST_XLDFLAGS) libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 
 
