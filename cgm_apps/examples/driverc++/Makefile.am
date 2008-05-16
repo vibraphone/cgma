@@ -3,11 +3,11 @@ EXTRA_DIST = README merge.sat huge.sat $(TESTS)
 
 check_PROGRAMS = mergechk
 
-CPPFLAGS += -I$(top_srcdir)/util \
-            -I$(top_srcdir)/geom \
-            -I$(top_srcdir)/geom/ACIS
+AM_CPPFLAGS += -I$(top_srcdir)/util \
+               -I$(top_srcdir)/geom \
+               -I$(top_srcdir)/geom/ACIS
 
-LDFLAGS += -L$(ACIS_LIB_DIR) -R$(ACIS_LIB_DIR)
+AM_LDFLAGS = -L$(ACIS_LIB_DIR) -R$(ACIS_LIB_DIR)
 
 mergechk_SOURCES = mergechk.cpp
 
