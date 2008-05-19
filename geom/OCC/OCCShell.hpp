@@ -64,6 +64,8 @@ public:
   void set_lump(OCCLump* lump) {myLump = lump;}
   void set_body(OCCBody* body) {myBody = body;}
 
+  bool is_sheet() const { return mySheetSurface != 0; }
+
   virtual GeometryQueryEngine* 
   get_geometry_query_engine() const;
     //R GeometryQueryEngine*

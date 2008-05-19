@@ -731,10 +731,12 @@ void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
 CubitSense OCCSurface::get_shell_sense( ShellSM* shell_ptr ) const
 {
   OCCShell* shell = dynamic_cast<OCCShell*>(shell_ptr);
-  if (!shell)
+  if (!shell) // error
     return CUBIT_UNKNOWN;
-  if (shell->my_surface() == this)
+    
+  if (shell->is_sheet())  // relative sense is "both" for sheet
     return CUBIT_UNKNOWN;
+    
   return CUBIT_FORWARD;
 }
 
