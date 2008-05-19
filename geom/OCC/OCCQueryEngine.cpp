@@ -1254,6 +1254,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
     if(standalone)
       occ_surface->set_shell(shell);
   }
+  if(aShape.Orientation() == TopAbs_REVERSED)
+    cofaces_new.reverse();
   shell->cofaces(cofaces_new);
   return shell;
 }
@@ -1364,6 +1366,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
       occ_curve->add_loop(loop);
     }
   }
+  if(aShape.Orientation() == TopAbs_REVERSED)
+    coedges_new.reverse();
   loop->coedges(coedges_new);
 
   return loop;
@@ -1587,10 +1591,10 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   CubitStatus stat = unhook_BodySM_from_OCC(bodysm);
 
   for(int j = 0; j < shell_list.size(); j++)
-     delete shell_list.pop();
+     delete shell_list.get_and_step();
 
   for(int i =0; i < lumps.size(); i++)
-     delete lumps.pop(); 
+     delete lumps.get_and_step(); 
 
   BodyList->remove(occ_body);
   delete bodysm;

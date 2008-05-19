@@ -86,9 +86,9 @@ void OCCBody::lumps(DLIList<Lump*>& my_lumps)
 void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
 {
   if(myTopoDSShape)
-    *myTopoDSShape = theshape;
-  else
-    myTopoDSShape = new TopoDS_CompSolid(theshape);
+    delete myTopoDSShape;
+
+  myTopoDSShape = new TopoDS_CompSolid(theshape);
 }
 
 OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
@@ -349,11 +349,13 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   TopoDS_CompSolid compsolid;
   if(aBRepTrsf)
   {
-    TopoDS_Shape shape = aBRepTrsf->Shape();
+    TopoDS_Shape shape = aBRepTrsf->ModifiedShape(*myTopoDSShape);
     TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
   
     if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )
        OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShape, shape);
+    else if (!shape.IsEqual(*myTopoDSShape))
+       set_TopoDS_Shape(compsolid);
   }
 
   //Boolean operation works only on one lump body

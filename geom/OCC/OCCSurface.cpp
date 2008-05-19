@@ -101,9 +101,9 @@ OCCSurface::~OCCSurface()
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face face)
 {
-  if(!myTopoDSFace)
-    myTopoDSFace = new TopoDS_Face; 
-  *myTopoDSFace = face;
+  if(myTopoDSFace)
+    delete myTopoDSFace;
+  myTopoDSFace = new TopoDS_Face(face); 
 }
 
 

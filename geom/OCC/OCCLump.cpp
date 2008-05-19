@@ -82,9 +82,9 @@ OCCLump::~OCCLump()
 void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
 {
   if(myTopoDSSolid)
-    *myTopoDSSolid = solid;
-  else
-    myTopoDSSolid = new TopoDS_Solid(solid);
+    delete myTopoDSSolid ;
+
+  myTopoDSSolid = new TopoDS_Solid(solid);
 }
 //-------------------------------------------------------------------------
 // Purpose       : Find centroid

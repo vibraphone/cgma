@@ -1143,20 +1143,7 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
   if (lump_list.size() == 0)
     return (BodySM*) NULL;
 
-  //make sure the lumps in lump_list don't attached to any Bodies.
-  for (int i = 0; i < lump_list.size(); i++)
-  {
-    Lump* lump = lump_list.get_and_step();
-    BodySM* body = CAST_TO(lump, OCCLump)->get_body();
-    if (body)
-    {
-      if (lump_list.size()>1)
-        PRINT_ERROR("the lump_list should be free to bodysm's to make a new bodysm.\n");
-      return body;
-    } 
-  }
-  //Create a compsolid shape, save all BodySM's correponding to lump_list
-  //for deletion.
+  //Create a compsolid shape, copy all BodySM's solids to create new compbody 
   DLIList<BodySM*> bodysm_list;
   TopoDS_CompSolid CS;
   BRep_Builder B;
@@ -1174,7 +1161,9 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
         return (BodySM *)NULL;
      }
      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
-     B.Add(CS, *solid);
+     BRepBuilderAPI_Copy api_copy(*solid);
+     TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+     B.Add(CS, newShape);
   }
  
   BodySM* bodysm = OCCQueryEngine::instance()->populate_topology_bridge(CS);
