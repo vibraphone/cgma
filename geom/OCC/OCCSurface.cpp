@@ -682,12 +682,6 @@ CubitSense OCCSurface::get_geometry_sense()
 
 void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
 { 
-  if (myBody) //sheet body
-  {
-     parents.append(myBody);
-     return;
-  }
-
   if(myShell) //shell body
   {
     parents.append(myShell);
@@ -736,6 +730,11 @@ void OCCSurface::get_children_virt( DLIList<TopologyBridge*>& children )
 // return the sense with respect to the given shell
 CubitSense OCCSurface::get_shell_sense( ShellSM* shell_ptr ) const
 {
+  OCCShell* shell = dynamic_cast<OCCShell*>(shell_ptr);
+  if (!shell)
+    return CUBIT_UNKNOWN;
+  if (shell->my_surface() == this)
+    return CUBIT_UNKNOWN;
   return CUBIT_FORWARD;
 }
 

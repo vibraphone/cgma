@@ -6,7 +6,6 @@
  * This program acts as a simple driver for CGM.  It reads in a geometry,
  * and performs varies checks for bodies, surfaces, curves and vertices.
  */
-#include "config.h"
 #include "CpuTimer.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
@@ -30,6 +29,14 @@
 #include "OCCBody.hpp"
 #include "OCCSurface.hpp"
 #include "OCCCurve.hpp"
+
+#ifndef SRCDIR
+# define SRCDIR .
+#endif
+
+#define STRINGIFY_(X) #X
+#define STRINGIFY(X) STRINGIFY_(X)
+#define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
 CubitStatus read_geometry(int, char **);
@@ -87,9 +94,11 @@ CubitStatus read_geometry(int num_files, char **argv)
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
-    status = gti->import_solid_model(argv[i], "OCC");
+    std::string filename( SRCPATH );
+    filename += argv[i];
+    status = gti->import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
-      PRINT_ERROR("Problems reading geometry file %s.\n", argv[i]);
+      PRINT_ERROR("Problems reading geometry file %s.\n", filename);
     }
   }
   PRINT_SEPARATOR;

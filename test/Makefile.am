@@ -11,20 +11,27 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS=
+ENGINE_LIBS = 
+LINK_FLAGS = 
+TESTS = sheet
 if build_ACIS
   TESTS += webcut
+  ENGINE_LIBS += ../geom/ACIS/libcubit_ACIS.la 
+  LINK_FLAGS += -R$(ACIS_LIB_DIR)
 endif
 if WITH_OCC
   TESTS += modify makept
+  ENGINE_LIBS += ../geom/OCC/libcubit_OCC.la
+  LINK_FLAGS += -R$(OCC_LIB_DIR)
 endif
 
-AM_CPPFLAGS += -DSRCDIR=@srcdir@
+AM_CPPFLAGS += -DSRCDIR=@srcdir@ $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
+sheet_SOURCES  = sheet.cpp
 LDADD = ../geom/virtual/libcubit_virtual.la \
         ../geom/facetbool/libcubit_facetbool.la \
         ../geom/Cholla/libcholla.la \
@@ -37,3 +44,5 @@ makept_LDFLAGS = $(LDFLAGS) -R$(OCC_LIB_DIR)
 makept_LDADD = ../geom/OCC/libcubit_OCC.la $(LDADD)
 modify_LDFLAGS = $(LDFLAGS) -R$(OCC_LIB_DIR)
 modify_LDADD = ../geom/OCC/libcubit_OCC.la $(LDADD)
+sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+sheet_LDADD = $(ENGINE_LIBS) $(LDADD)

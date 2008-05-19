@@ -252,6 +252,7 @@ AC_ARG_WITH( occ,
 
 # if user specified option (other than --without-occ)
 CUBIT_OCC_LIB=
+HAVE_OCC_DEF=
 if test "x$occ_DIR" != "xno"; then
   OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase"
   CUBIT_OCC_LIB="-lcubit_OCC"
@@ -305,6 +306,7 @@ if test "x$occ_DIR" != "xno"; then
   # Restore original values of variables
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
+  HAVE_OCC_DEF="-DHAVE_OCC"
 fi
 
 # Export these variables as variables in Makefiles
@@ -313,6 +315,7 @@ AC_SUBST(OCC_LIB_DIR)
 AC_SUBST(OCC_LIB_FLAG)
 AC_SUBST(OCC_LIBS)
 AC_SUBST(CUBIT_OCC_LIB)
+AC_SUBST(HAVE_OCC_DEF)
 
 # Allow "if WITH_OCC" in Makefile.am
 AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )

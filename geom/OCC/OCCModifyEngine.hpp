@@ -20,14 +20,13 @@
 
 class Point;
 class TopologyBridge;
-class TopologyEntity;
-class Point;
 class CoEdgeSM;
 class ShellSM;
 class OCCBody;
-class Body;
-class RefFace;
 class OCCSurface;
+class TopoDS_Shape;
+class TopoDS_Edge;
+class TopoDS_Face;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {
