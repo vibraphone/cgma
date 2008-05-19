@@ -137,20 +137,16 @@ CubitStatus make_Point()
   
   Body* CompBody = gmti->make_Body(ref_volume_list);
 
-  BodySM* CompBodySM = CompBody->get_body_sm_ptr();
-
-  OCCBody *occ_CompBody = CAST_TO(CompBodySM, OCCBody);
-
   test_bodies.clean_out();
   gti->bodies(test_bodies);
 
   CubitVector vi, vii;
-  vi = CompBody->center_point(); 
+  vi = test_bodies.get()->center_point(); 
 
   CubitVector axis(10,0,0);
 
-  gti->translate(CompBody,axis);
-  vi = CompBody->center_point();
+  gti->translate(test_bodies.get(),axis);
+  vi = test_bodies.get()->center_point();
   // After parellel move, center point moved by x (10)
 
   CubitVector vector1(10,10,10);
@@ -207,14 +203,14 @@ CubitStatus make_Point()
   gti->entity_entity_distance(gti->get_first_ref_volume(), vertex2,vi, vii,d);
   //first body and vertex2 's minimum distance(d) and locations for the minimum.
 
-  BodySM* body = bodies.get()->get_body_sm_ptr();
+  BodySM* body = CompBody->get_body_sm_ptr();
   OCCBody* occ_body = CAST_TO(body, OCCBody);
 
   gti->reflect(bodies, axis);
-  vi = bodies.get()->center_point();
+  vi = bodies.pop()->center_point();
   // After reflection, only x value should change.
 
-  gti->scale(bodies.get(),2);
+  gti->scale(CompBody,2);
   vi = bodies.get()->center_point();
   // After scale, center point moved by 2 times 
 
@@ -222,8 +218,10 @@ CubitStatus make_Point()
   vi = bodies.get()->center_point();
   // After parellel move, center point moved by x (10)
 
-  gti->rotate(bodies.get(), axis, 3.14/6);
-  vi = bodies.get()->center_point();
+  gti->delete_Body(bodies);
+
+  gti->rotate(CompBody, axis, 3.14/6);
+  vi = CompBody->center_point();
   // After rotation, center point changed in y and z value.
 
   occ_body->mass_properties(vi, d);
@@ -279,7 +277,7 @@ CubitStatus make_Point()
   for(int i = 1; i <= bodies.size(); i++)
   {
      bodies.step();
-     if( i != 4)
+     if( i != 2)
         continue;
      Body * entity = bodies.get();
      gti->translate(entity, i*vector1);
@@ -336,10 +334,10 @@ CubitStatus make_Point()
 
   double lower, upper;
   ref_face->get_param_range_U(lower, upper);
-  // get surface U direction boundaries. here it's (2.48, 3.91)
+  // get surface U direction boundaries. here it's (-0.003, 5.7413)
 
   ref_face->get_param_range_V(lower, upper);
-  // get surface V direction boundaries. here it's (-20010,-19998)
+  // get surface V direction boundaries. here it's (-20003,-19998)
 
   CubitBoolean closed = surface->is_closed_in_U();
   // check if surface is closed in U direction.
@@ -347,7 +345,7 @@ CubitStatus make_Point()
   closed = surface->is_closed_in_V();
   // check if surface is closed in V direction.
 
-  CubitPointContainment pc = ref_face->point_containment(1,-20000);
+  CubitPointContainment pc = ref_face->point_containment(7,-20000);
   // this (u,v) location should be outside of the surface.
 
   CubitPointContainment pc2 = ref_face->point_containment(3,-20000);
@@ -365,10 +363,15 @@ CubitStatus make_Point()
   CubitVector c_point, tangent, center;
 
   //make all kinds of curves.
-  CubitVector center_pnt(0,0,0);
-  RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
-					vertex2, &center_pnt);
-  //Gives invalid curve type error.
+  CubitVector center_pnt(0,0,10);
+  DLIList<CubitVector*> list;
+  CubitVector center_pnt1(5,6,10);
+  CubitVector center_pnt2(5,-6,10);
+  list.append(&center_pnt1);
+  list.append(&center_pnt);
+  list.append(&center_pnt2);
+  //RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
+  //                                         vertex2, list);
 
   //straight line
   RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,

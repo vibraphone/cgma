@@ -321,20 +321,20 @@ CubitStatus make_Point()
   from_body2 = gti->make_Body(bodysm); 
 
   tool_body  = gmti->brick(4, 4, 4);
-  BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
   CubitVector v_move3(0,1,0);
   gti->translate(tool_body,v_move3);
+  BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
   from_bodies.clean_out();
   from_bodies.append(from_body2);
   new_bodies.clean_out();
 
   //test face body imprint
   TopoDS_Shape* tool_shape = CAST_TO(copy_bodysm,OCCBody)->get_TopoDS_Shape();  
-  TopoDS_Shape* from_shape = CAST_TO(body_list[0],OCCBody)->my_sheet_surface()->get_TopoDS_Face(); 
+/*  TopoDS_Shape* from_shape = CAST_TO(body_list[0],OCCBody)->my_sheet_surface()->get_TopoDS_Face(); 
   ome->imprint_toposhapes(tool_shape, from_shape);
-
+*/
   //test shell body imprint.
-  from_shape = CAST_TO(bodysm,OCCBody)->shell()->get_TopoDS_Shell();
+  TopoDS_Shape* from_shape = CAST_TO(bodysm,OCCBody)->shell()->get_TopoDS_Shell();
   ome->imprint_toposhapes(tool_shape, from_shape);
 
   //test body cutting a shell, one surface got cut as the result. 
