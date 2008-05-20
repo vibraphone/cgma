@@ -266,6 +266,9 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
      return (Curve *)NULL;
   }
 
+  if (curve_type == STRAIGHT_CURVE_TYPE)
+    return make_Curve(curve_type, point1_ptr, point2_ptr, NULL, CUBIT_FORWARD);
+
   OCCPoint* occ_point1 = CAST_TO(const_cast<Point*>(point1_ptr), OCCPoint);
   OCCPoint* occ_point2 = CAST_TO(const_cast<Point*>(point2_ptr), OCCPoint);
 
@@ -319,18 +322,8 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   if(curve_type == SPLINE_CURVE_TYPE)
   {
     Geom_BezierCurve BezierCurve(points);
-    Handle(Geom_Curve) curve_ptr(&BezierCurve);
-    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
-    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
-  }
-
-  else if(curve_type == STRAIGHT_CURVE_TYPE)
-  {
-    TColgp_Array1OfPnt two_points(1,2); 
-    two_points.SetValue(1, points.Value(1));
-    two_points.SetValue(2, points.Value(size));
-    Geom_BezierCurve BezierCurve(two_points);
-    Handle(Geom_Curve) curve_ptr(&BezierCurve);
+    Geom_BezierCurve* curve =  new Geom_BezierCurve(BezierCurve);
+    Handle(Geom_BoundedCurve) curve_ptr(curve);
     TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
     return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
   }
@@ -371,9 +364,11 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 {
   assert (point1_ptr != NULL && point2_ptr != NULL);
   DLIList<CubitVector*> mid_points;
-  CubitVector mid_point = *intermediate_point_ptr;
-  if (intermediate_point_ptr != NULL )
+  if (intermediate_point_ptr)
+  {
+    CubitVector mid_point = *intermediate_point_ptr;
     mid_points.append(&mid_point);
+  }
 
   CubitVector v1(point1_ptr->coordinates());
   CubitVector v2(point2_ptr->coordinates());
@@ -2144,6 +2139,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       if(topo_changed)
       {
         splitor.Build();
+        topo_changed = CUBIT_FALSE;
         if(splitor.IsDone())
         {
           TopoDS_Shape new_from_shape = splitor.Shape();
@@ -2155,7 +2151,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             {
               TopoDS_Solid old_solid = TopoDS::Solid(M(1));
               OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-              from_shape = new TopoDS_Shape(old_solid);
+              from_shape = new TopoDS_Shape(new_from_shape);
             }
           }
 
@@ -2163,19 +2159,19 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           {
             TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
             OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-            from_shape = new TopoDS_Shape(old_solid);
+            from_shape = new TopoDS_Shape(new_from_shape);
           }
           else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
           {
             TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
             OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
-            from_shape = new TopoDS_Shape(old_shell);
+            from_shape = new TopoDS_Shape(new_from_shape);
           }
           else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
           {
             TopoDS_Face old_face = TopoDS::Face(*from_shape);
             OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
-            from_shape = new TopoDS_Shape(old_face);
+            from_shape = new TopoDS_Shape(new_from_shape);
           }
 
           else //imprinting an edge

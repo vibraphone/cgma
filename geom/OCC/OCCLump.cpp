@@ -360,8 +360,11 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   TopoDS_Shape shape;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
   CubitBoolean is_null_new_shape = CUBIT_FALSE;
+  TopoDS_Solid new_solid;
   if(M.Extent() > 1)
     is_null_new_shape = CUBIT_TRUE;
+  else if(M.Extent() == 1 )
+    new_solid = TopoDS::Solid(M(1));  
 
   M.Clear();
   TopExp::MapShapes(old_solid, TopAbs_SHELL, M);
@@ -396,16 +399,6 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
  
     if(shapes.Extent() > 0 || op->IsDeleted(shell))
       OCCShell::update_OCC_entity(shell, shape, op);
-  }
-  TopoDS_Solid new_solid;
-  if(!is_null_new_shape && !op->IsDeleted(old_solid))
-    new_solid = TopoDS::Solid(new_shape);
-  else if (op->IsDeleted(old_solid))
-  {
-    M.Clear();
-    TopExp::MapShapes(new_shape, TopAbs_SOLID, M);
-    if(M.Extent() == 1)
-      new_solid = TopoDS::Solid(M(1));
   }
   OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }

@@ -150,13 +150,14 @@ CubitStatus make_Point()
   // After parellel move, center point moved by x (10)
 
   CubitVector vector1(10,10,10);
-  CubitVector vector2(10,-10,10);
+  CubitVector vector2(-10,-10,10);
+  CubitVector vector3(10, -10, 10);
   DLIList<RefEntity*> free_entities;
 
   // Make two vertices.
   gmti->make_RefVertex(vector1,5);
   gmti->make_RefVertex(vector2,5);
-
+  gmti->make_RefVertex(vector3,5);
   gti->get_free_ref_entities(free_entities);
 
   CubitStatus rsl = CUBIT_SUCCESS;
@@ -166,10 +167,8 @@ CubitStatus make_Point()
   const char * filename = "point.occ";
   const char * filetype = "OCC";
   
-  /*
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
-  */
  
   //check for vertex
   DLIList<Body*> bodies;
@@ -179,16 +178,15 @@ CubitStatus make_Point()
   gti->get_free_ref_entities(free_entities);
  
   RefVertex* vertex1 = CAST_TO(free_entities.get_and_step(),RefVertex);
-  RefVertex* vertex2 = CAST_TO(free_entities.get(),RefVertex);
+  RefVertex* vertex2 = CAST_TO(free_entities.get_and_step(),RefVertex);
+  RefVertex* vertex3 = CAST_TO(free_entities.get(),RefVertex); 
   CubitBoolean is_equal = gti->
 		about_spatially_equal(vertex1,vertex2);
   //vertex1,vertex2 are not spatially equal. 
   
   double d;
   gti->entity_entity_distance(vertex1,vertex2,vi, vii,d);
-  // distance (d) between vertex1,vertex2. vi (20, 20, 20) is vertex1 
-  //translated by (10,10,10) and vii(30, 10, 30) is vertex2 translated
-  //by 2*(10,10,10).
+  // distance (d) between vertex1,vertex2.  
  
   //check for body
   d = bodies.get()->measure(); 
@@ -211,9 +209,10 @@ CubitStatus make_Point()
   // After reflection, only x value should change.
 
   gti->scale(CompBody,2);
-  vi = bodies.get()->center_point();
+  vi = CompBody->center_point();
   // After scale, center point moved by 2 times 
 
+  vi = bodies.get()->center_point();
   gti->translate(bodies.get(),axis);
   vi = bodies.get()->center_point();
   // After parellel move, center point moved by x (10)
@@ -249,6 +248,7 @@ CubitStatus make_Point()
   CubitBoolean extended_from = CUBIT_TRUE;
   RefFace* new_face = gmti->make_RefFace(ref_face, extended_from);
 
+  ref_entity_list.clean_out();
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
@@ -288,7 +288,7 @@ CubitStatus make_Point()
     volume = new_face->ref_volume(); 
   else
     vi = new_face->center_point();
-  //center point should moved by (40,40,40) compared with the original one below
+  //center point should moved by (20,20,20) compared with the original one below
 
   vi = ref_face->center_point();
   // center point
@@ -365,13 +365,16 @@ CubitStatus make_Point()
   //make all kinds of curves.
   CubitVector center_pnt(0,0,10);
   DLIList<CubitVector*> list;
-  CubitVector center_pnt1(5,6,10);
-  CubitVector center_pnt2(5,-6,10);
+  CubitVector center_pnt1(5,8,10);
+  CubitVector center_pnt2(1,2,10);
+  CubitVector center_pnt3(-2,-3.5,10);
   list.append(&center_pnt1);
-  list.append(&center_pnt);
   list.append(&center_pnt2);
-  //RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
-  //                                         vertex2, list);
+  list.append(&center_pnt);
+  list.append(&center_pnt3);
+  RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
+                                          vertex2, list);
+  d = new_edge_1->measure();
 
   //straight line
   RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,
@@ -381,30 +384,30 @@ CubitStatus make_Point()
 
   //arc curve
   RefEdge* new_edge_3 = gmti->make_RefEdge(ARC_CURVE_TYPE, vertex1,
-                                        vertex2, &center_pnt);
+                                        vertex3, &center_pnt);
   d = new_edge_3->measure();
   new_edge_3->closest_point_trimmed(vi, c_point);
 
   //ellipse curve
   RefEdge* new_edge_4 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
-                                        vertex2, &center_pnt);
+                                        vertex3, &center_pnt);
   d = new_edge_4->measure();
   new_edge_4->closest_point_trimmed(vi, c_point);
 
   RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
-                                        vertex2, &center_pnt, CUBIT_REVERSED);
+                                        vertex3, &center_pnt, CUBIT_REVERSED);
   d = new_edge_5->measure();
   new_edge_5->closest_point_trimmed(vi, c_point);
 
   //PARABOLA_CURVE_TYPE
   RefEdge* new_edge_6 = gmti->make_RefEdge(PARABOLA_CURVE_TYPE, vertex1,
-                                        vertex2, &center_pnt);
+                                        vertex3, &center_pnt);
   d = new_edge_6->measure();
   new_edge_6->closest_point_trimmed(vi, c_point);
 
   //HYPERBOLA_CURVE_TYPE
   RefEdge* new_edge_7 = gmti->make_RefEdge(HYPERBOLA_CURVE_TYPE, vertex1,
-                                        vertex2, &center_pnt);
+                                        vertex3, &center_pnt);
   d = new_edge_7->measure();
   new_edge_7->closest_point_trimmed(vi, c_point);
 
