@@ -46,7 +46,7 @@
 #define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **);
+CubitStatus read_geometry(int, char **, bool local = false);
 CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
@@ -91,7 +91,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv) 
+CubitStatus read_geometry(int num_files, char **argv, bool local) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -101,11 +101,12 @@ CubitStatus read_geometry(int num_files, char **argv)
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
-    std::string filename( SRCPATH );
+    std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
     status = gti->import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
-      PRINT_ERROR("Problems reading geometry file %s.\n", filename);
+      PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
+      abort();
     }
   }
   PRINT_SEPARATOR;
@@ -194,8 +195,8 @@ CubitStatus make_Point()
     }
 
   // Read in the geometry from files specified on the command line
-  char *argv = "./stitch.occ";
-  CubitStatus status = read_geometry(1, &argv);
+  char *argv = "stitch.occ";
+  CubitStatus status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
 
   bodies.clean_out();

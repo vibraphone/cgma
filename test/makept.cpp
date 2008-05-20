@@ -98,7 +98,7 @@ CubitStatus read_geometry(int num_files, char **argv)
     filename += argv[i];
     status = gti->import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
-      PRINT_ERROR("Problems reading geometry file %s.\n", filename);
+      PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
     }
   }
   PRINT_SEPARATOR;
