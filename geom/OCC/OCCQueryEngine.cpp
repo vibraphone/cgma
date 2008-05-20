@@ -1000,10 +1000,7 @@ OCCQueryEngine::write_topology( const char* file_name,
       B.Add(Co, *vertex);
     }
  
-  char* file = new char[sizeof(file_name)];
-  strcpy(file, file_name);
-  
-  if(!BRepTools::Write(Co, file))
+  if(!BRepTools::Write(Co, const_cast<char*>(file_name)))
     return CUBIT_FAILURE;
  
   return CUBIT_SUCCESS;
