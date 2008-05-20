@@ -1045,9 +1045,12 @@ CubitStatus OCCQueryEngine::import_solid_model(
   BRep_Builder aBuilder;
   Standard_Boolean result = BRepTools::Read(*aShape, (char*) file_name, aBuilder);
   if (result==0) return CUBIT_FAILURE;
+  
+  CubitBoolean prev_global_val = PRINT_RESULT;
   PRINT_RESULT = print_results;
   
   imported_entities = populate_topology_bridge(*aShape);
+  PRINT_RESULT = prev_global_val;
   return CUBIT_SUCCESS;
 }
 
