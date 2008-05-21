@@ -221,6 +221,30 @@ CubitStatus make_Point()
   d = from_body2->measure();//d = 67.02
   d = tool_body->measure(); //d = 31.41
 
+  // test for sphere making
+  Body* test_body = gmti->sphere(5);
+  d = test_body->measure(); //d = 
+
+  //test for prism making
+  test_body = gmti->prism(10, 4, 4,2);
+  d =  test_body->measure(); //d =
+
+  //test for pyramid making
+  test_body = gmti->pyramid(10, 4, 5, 2, 3);
+  d =  test_body->measure(); //d =
+
+  //test for torus making
+  test_body =  gmti->torus(10,5);
+  d =  test_body->measure(); //d =
+
+  //test for planar_sheet making
+  CubitVector p1(0, 0, 0);
+  CubitVector p2(0, 0, 1);
+  CubitVector p3(0, 1, 1);
+  CubitVector p4(0, 1, 0);
+  test_body =  gmti->planar_sheet(p1, p2, p3, p4);
+  d =  test_body->measure(); //d = 1
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -325,22 +349,24 @@ CubitStatus make_Point()
   CubitVector v_move3(0,1,0);
   gti->translate(tool_body,v_move3);
   BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
-  from_bodies.clean_out();
-  from_bodies.append(from_body2);
-  new_bodies.clean_out();
+  Body* copy_tool_body = gmti->copy_body(tool_body);
 
-  //test face body imprint
-  TopoDS_Shape* tool_shape = CAST_TO(copy_bodysm,OCCBody)->get_TopoDS_Shape();  
-/*  TopoDS_Shape* from_shape = CAST_TO(body_list[0],OCCBody)->my_sheet_surface()->get_TopoDS_Face(); 
-  ome->imprint_toposhapes(tool_shape, from_shape);
-*/
-  //test shell body imprint.
-  TopoDS_Shape* from_shape = CAST_TO(bodysm,OCCBody)->shell()->get_TopoDS_Shell();
-  ome->imprint_toposhapes(tool_shape, from_shape);
+  //test shell body imprint
+  //TopoDS_Shape* tool_shape = CAST_TO(copy_bodysm,OCCBody)->get_TopoDS_Shape();  
+  //TopoDS_Shape* from_shape = CAST_TO(bodysm,OCCBody)->shell()->get_TopoDS_Shell();
+  //ome->imprint_toposhapes(tool_shape, from_shape);
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  from_bodies.append(copy_tool_body);
+  from_bodies.append(from_body2);
+  CubitStatus stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE); 
 
   //test body cutting a shell, one surface got cut as the result. 
   CubitVector v_move6(1,-1,0);
   gti->translate(tool_body,v_move6);
+  from_bodies.clean_out();
+  from_bodies.append(from_body2);
+  new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_TRUE);
   d = new_bodies.step_and_get()->measure();
@@ -360,10 +386,16 @@ CubitStatus make_Point()
   CubitVector v_move5(0,0.5,0);
   gti->translate(tool_body,v_move5);
   from_body = gmti->brick(1,1,1);
-  from_shape = CAST_TO(from_body->get_body_sm_ptr(), OCCBody)->get_TopoDS_Shape();
-  tool_shape = CAST_TO(tool_body->get_body_sm_ptr(),OCCBody)->get_TopoDS_Shape();
-  ome->imprint_toposhapes(tool_shape, from_shape);
-  ome->imprint_toposhapes(from_shape, tool_shape);
+  //from_shape = CAST_TO(from_body->get_body_sm_ptr(), OCCBody)->get_TopoDS_Shape();
+  //tool_shape = CAST_TO(tool_body->get_body_sm_ptr(),OCCBody)->get_TopoDS_Shape();
+//  ome->imprint_toposhapes(tool_shape, from_shape);
+//  ome->imprint_toposhapes(from_shape, tool_shape);
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  from_bodies.append(from_body);
+  from_bodies.append(tool_body);
+  stat =  gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
+  
   return CUBIT_SUCCESS;
 
 }

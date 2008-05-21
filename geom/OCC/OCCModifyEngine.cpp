@@ -2319,60 +2319,34 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
                                          BodySM*& newBody1, BodySM*& newBody2,
                                          bool  keep_old) const
 {
-  OCCBody* occ_body = NULL;
   newBody1 = NULL;
   newBody2 = NULL;
   DLIList<TopoDS_Shape*> shape_list;
-  for(int i = 0; i <2; i++)
-  {
-    if (i == 0)
-      occ_body = CAST_TO(BodyPtr1, OCCBody);
-    else
-      occ_body = CAST_TO(BodyPtr2, OCCBody);
-    OCCSurface* surface = occ_body->my_sheet_surface();
-    OCCShell*   shell = occ_body->shell();   
-    if(surface)
-    {
-      TopoDS_Face* topo_face = surface->get_TopoDS_Face();
-      BRepBuilderAPI_Copy api_copy(*topo_face);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
-    else if(shell)
-    {
-      TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
-      BRepBuilderAPI_Copy api_copy(*topo_shell);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
+  
+  DLIList<BodySM*> bodysm_list;
+  bodysm_list.append(BodyPtr1);
+  bodysm_list.append(BodyPtr2);
+  
+  CubitStatus stat = get_the_shape_list(bodysm_list, shape_list, keep_old);
 
-    else
-    {
-      DLIList<Lump*> lumps = occ_body->lumps();
-      if (lumps.size() > 1)
-      {
-        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
-        return CUBIT_FAILURE;
-      }
-  
-      TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-      BRepBuilderAPI_Copy api_copy(*solid);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
-  }
-  
+  if(!stat)
+    return stat;
+
   TopoDS_Shape* shape1 = shape_list.get();
   TopoDS_Shape* shape2 = shape_list.step_and_get();
   DLIList<TopologyBridge*> tbs;
-  CubitStatus stat = imprint_toposhapes(shape1, shape2);
+  stat = imprint_toposhapes(shape1, shape2);
   if(stat)
   {
     tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape1); 
     newBody1 = CAST_TO(tbs.get(),BodySM);
+  }
+
+  else if(!stat && keep_old)
+  {
+    delete shape1;
+    PRINT_INFO("There's no imprint on the first body.\n");
+    newBody1 = BodyPtr1;
   }
 
   tbs.clean_out();
@@ -2383,28 +2357,83 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
     newBody2 = CAST_TO(tbs.get(),BodySM);     
   }
   
-  if (!keep_old)
-  {
-    if (newBody1)
-      OCCQueryEngine::instance()->delete_solid_model_entities(BodyPtr1);
-    if (newBody2)
-      OCCQueryEngine::instance()->delete_solid_model_entities( BodyPtr2);
-  }
-
-  if (!newBody1)
-  {
-    delete shape1;
-    newBody1 = BodyPtr1;
-  }
-
-  if(!newBody2)
+  else if(!stat && keep_old)
   {
     delete shape2;
+    PRINT_INFO("There's no imprint on the second body.\n");
     newBody2 = BodyPtr2;
   }
   return CUBIT_SUCCESS;
 }
 
+//===============================================================================
+// Function   : get_the_shape_list
+// Member Type: PRIVATE
+// Description: get the TopoDS_Shape list for imprinting use. 
+// Author     : Jane Hu
+// Date       : 05/08
+//===============================================================================
+CubitStatus OCCModifyEngine::get_the_shape_list(DLIList<BodySM*> BodySM_list, 
+                                         DLIList<TopoDS_Shape*>& shape_list,
+                                         bool  keep_old) const
+{
+  OCCBody* occ_body = NULL;
+  shape_list.clean_out();
+  for(int i = 0; i <BodySM_list.size(); i++)
+  {
+    occ_body = CAST_TO(BodySM_list.get_and_step(), OCCBody);
+    OCCSurface* surface = occ_body->my_sheet_surface();
+    OCCShell*   shell = occ_body->shell();
+    if(surface)
+    {
+      TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+      if(keep_old)
+      {
+        BRepBuilderAPI_Copy api_copy(*topo_face);
+        TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
+        TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+        shape_list.append(Shape1);
+      }
+      else
+        shape_list.append(topo_face);
+    }
+    else if(shell)
+    {
+      TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+      if(keep_old)
+      {
+        BRepBuilderAPI_Copy api_copy(*topo_shell);
+        TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
+        TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+        shape_list.append(Shape1);
+      }
+      else
+        shape_list.append(topo_shell);
+    }
+
+    else
+    {
+      DLIList<Lump*> lumps = occ_body->lumps();
+      if (lumps.size() > 1)
+      {
+        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+        return CUBIT_FAILURE;
+      }
+
+      TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+      if(keep_old)
+      {
+        BRepBuilderAPI_Copy api_copy(*solid);
+        TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
+        TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+        shape_list.append(Shape1);
+      }
+      else
+        shape_list.append(solid);
+    }
+  }
+  return CUBIT_SUCCESS;
+}
 //===============================================================================
 // Function   : imprint multiple bodies at once
 // Member Type: PUBLIC
@@ -2419,47 +2448,12 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
                                      DLIList<TopologyBridge*>* att_tbs) const
 {
   CubitStatus success = CUBIT_SUCCESS;
-  OCCBody* occ_body = NULL;
   DLIList<TopoDS_Shape*> shape_list;
 
-  for(int i = 0; i <from_body_list.size(); i++)
-  {
-    occ_body = CAST_TO(from_body_list.get_and_step(), OCCBody);
-    OCCSurface* surface = occ_body->my_sheet_surface();
-    OCCShell*   shell = occ_body->shell();
-    if(surface)
-    {
-      TopoDS_Face* topo_face = surface->get_TopoDS_Face();
-      BRepBuilderAPI_Copy api_copy(*topo_face);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
-    else if(shell)
-    {
-      TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
-      BRepBuilderAPI_Copy api_copy(*topo_shell);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
+  CubitStatus stat = get_the_shape_list(from_body_list, shape_list, keep_old);
 
-    else
-    {
-      DLIList<Lump*> lumps = occ_body->lumps();
-      if (lumps.size() > 1)
-      {
-        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
-        return CUBIT_FAILURE;
-      }
-
-      TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-      BRepBuilderAPI_Copy api_copy(*solid);
-      TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
-      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
-      shape_list.append(Shape1);
-    }
-  }
+  if(!stat)
+    return stat;
  
   int size = shape_list.size();
   // total number of imprints to be done
@@ -2468,7 +2462,8 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
   if( size > 2 )
   {
      char message[128];
-     sprintf(message, "Imprinting %d ACIS Bodies", from_body_list.size() );          AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
+     sprintf(message, "Imprinting %d OCC Bodies", from_body_list.size() ); 
+     AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
   }
 
   for(int i = 0; i < size; i++)
@@ -2484,7 +2479,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
           break;
        }
 
-       TopoDS_Shape* shape2 = shape_list[j];
+       TopoDS_Shape* shape2 = shape_list[j%size];
        DLIList<TopologyBridge*> tbs;
        CubitStatus stat = imprint_toposhapes(shape1, shape2);
        if(stat)
@@ -2512,7 +2507,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC
-// Description: imprint boolean operation on facet-based bodies
+// Description: imprint boolean operation on OCC-based bodies
 // Author     : John Fowler
 // Date       : 10/02
 //===============================================================================

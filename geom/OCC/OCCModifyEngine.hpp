@@ -669,7 +669,9 @@ protected:
 private:
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
-
+ CubitStatus get_the_shape_list(DLIList<BodySM*> BodySM_list,
+                         DLIList<TopoDS_Shape*>& shape_list,
+                         bool  keep_old) const;
   
 } ;
 
