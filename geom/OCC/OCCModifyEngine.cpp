@@ -1893,7 +1893,9 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
 //===============================================================================
 // Function   : imprint_toposhapes
 // Member Type: PROTECTED
-// Description: imprint boolean operation on OCC-based bodies
+// Description: imprint boolean operation on OCC-based bodies.
+//              from_shape must be TopoDS_Face or above, tool_shape can be
+//              TopoDS_Edge or above.
 // Author     : Jane HU
 // Date       : 03/08
 //===============================================================================
@@ -1918,7 +1920,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       //find the intersecting edges and faces.
       int max_edge = 0;
       TopoDS_Face from_face,tool_face; 
-      DLIList<TopoDS_Face*> tool_faces;
+      DLIList<TopoDS_Shape*> tool_faces_edges;
       for(; intersector.MoreIntersection(); intersector.NextIntersection())
 	{
 	  TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
@@ -1936,22 +1938,27 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           if (has_imprinted)
 	    continue;
 
-	  TopoDS_Shape face2 = intersector.ChangeFacesIntersector().Face(2);
-	  BRepAlgoAPI_Section section(face1, face2);
+          TopoDS_Shape edge_face;
 
-          //intersection edges between face1 and face2
+          if(tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
+             edge_face = intersector.ChangeFaceEdgeIntersector().Shape(2);
+          else
+             edge_face = intersector.ChangeFacesIntersector().Face(2);
+          BRepAlgoAPI_Section section(face1, edge_face);
+
+          //intersection edges between face1 and edge_face
 	  TopTools_ListOfShape temp_list_of_edges;
 	  temp_list_of_edges.Assign(section.SectionEdges());
 	  int num_edges = temp_list_of_edges.Extent();
   
           CubitBoolean is_same = face1.IsSame(from_face);
-          CubitBoolean is_same_tool_face = CUBIT_FALSE;
-          for (int j = 0; j < tool_faces.size(); j++)
+          CubitBoolean is_same_tool = CUBIT_FALSE;
+          for (int j = 0; j < tool_faces_edges.size(); j++)
           {
-            TopoDS_Face* topo_face = tool_faces.get_and_step();
-  	    if(face2.IsSame(*topo_face))
+            TopoDS_Shape* topo_face_edge = tool_faces_edges.get_and_step();
+            if(edge_face.IsSame(*topo_face_edge))
             {
-              is_same_tool_face = CUBIT_TRUE;
+              is_same_tool = CUBIT_TRUE;
 	      break;
 	    }
           }
@@ -1960,13 +1967,24 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      list_of_edges.Assign(temp_list_of_edges);  
 	      max_edge =  num_edges ;
 	      from_face = TopoDS::Face(face1);
-              tool_face = TopoDS::Face(face2);
-              TopoDS_Face* topo_face = new TopoDS_Face(tool_face);
-              tool_faces.clean_out();
+              TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
+              DLIList<TopoDS_Shape*> shape_list;
+              for(int iii = 0; iii < tool_faces_edges.size(); iii++)
+              {
+                int size = shape_list.size();
+                shape_list.append_unique(tool_faces_edges.get_and_step());
+                if (size < shape_list.size())
+                {
+                  shape_list.last();
+                  shape_list.get()->Nullify();
+                  delete shape_list.get();
+                }
+              }
+              tool_faces_edges.clean_out();
               for(int i = 0 ; i < num_edges; i++)
-                tool_faces.append(topo_face);
+                tool_faces_edges.append(topo_shape);
 	    }
-          else if(num_edges == max_edge && is_same && !is_same_tool_face) 
+          else if(num_edges == max_edge && is_same && !is_same_tool) 
           //multi tool faces cut the same face
           {
             TopTools_ListIteratorOfListOfShape Itor, temp_Itor;
@@ -1995,8 +2013,8 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               if(!same_edge)
               {
                 list_of_edges.Append(temp_edge);
-                TopoDS_Face* topo_face = new TopoDS_Face(TopoDS::Face(face2));
-                tool_faces.append(topo_face);
+                TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
+                tool_faces_edges.append(topo_shape);
  	      }
             }
           }
@@ -2004,17 +2022,30 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       if (from_face.IsNull())
       {
         more_face = CUBIT_FALSE;
+        DLIList<TopoDS_Shape*> shape_list;
+        for(int iii = 0; iii < tool_faces_edges.size(); iii++)
+        {
+           int size = shape_list.size();
+           shape_list.append_unique(tool_faces_edges.get_and_step());
+           if (size < shape_list.size())
+           {
+              shape_list.last();
+              shape_list.get()->Nullify();
+              delete shape_list.get();
+           }
+         }
+        tool_faces_edges.clean_out();
         continue;
       }
   
       TopTools_ListIteratorOfListOfShape Itor;
 
-      //list_of_edges is the intersection edges on tool_faces 
+      //list_of_edges is the intersection edges on tool_faces_edges 
       Itor.Initialize(list_of_edges);
       int total_edges = list_of_edges.Extent();
       DLIList<Curve*> curve_list;
       CubitBoolean topo_changed = CUBIT_FALSE;
-      tool_faces.reset();
+      tool_faces_edges.reset();
 
       //check to see if the intersecting edge is overlapping with any
       //of the edges on from_edge. It's possible that the tool_face is
@@ -2047,8 +2078,13 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         GProp_GProps myProps1;
         BRepGProp::LinearProperties(edge, myProps1);
         double d1 = myProps1.Mass();
-        TopoDS_Face face = *(tool_faces.get_and_step());
-        BRepAdaptor_Surface asurface(face);
+        TopoDS_Shape ashape = *(tool_faces_edges.get_and_step());
+        TopoDS_Shape face;
+        if(ashape.TShape()->ShapeType() == TopAbs_EDGE)
+          face = extended_from_face;
+        else
+          face = TopoDS::Face(ashape);
+        BRepAdaptor_Surface asurface(TopoDS::Face(face));
         Bnd_Box aBox1;
         BndLib_AddSurface::Add(asurface, tol, aBox1);
 
@@ -2151,6 +2187,8 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             {
               TopoDS_Solid old_solid = TopoDS::Solid(M(1));
               OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
+              from_shape->Nullify();
+              delete from_shape;
               from_shape = new TopoDS_Shape(new_from_shape);
             }
           }
@@ -2159,35 +2197,35 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           {
             TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
             OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
+            from_shape->Nullify();
+            delete from_shape;
             from_shape = new TopoDS_Shape(new_from_shape);
           }
           else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
           {
             TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
             OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
+            from_shape->Nullify();
+            delete from_shape;
             from_shape = new TopoDS_Shape(new_from_shape);
           }
           else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
           {
             TopoDS_Face old_face = TopoDS::Face(*from_shape);
             OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
+            from_shape->Nullify();
+            delete from_shape;
             from_shape = new TopoDS_Shape(new_from_shape);
           }
 
-          else //imprinting an edge
-          {
-             TopoDS_Edge old_edge = TopoDS::Edge(*from_shape);
-             TopTools_IndexedMapOfShape M;
-             TopExp::MapShapes(new_from_shape, TopAbs_EDGE, M);
-             if (M.Extent() > 1) //split successfully
-               OCCQueryEngine::instance()->update_OCC_map(old_edge, M(1));
-          }
           TopTools_ListOfShape shapes;
           for(int i = 0; i < from_faces.size(); i++)
           {
              TopoDS_Face* topo_face = from_faces.get();
              shapes.Assign(splitor.Modified(*topo_face));
              topo_face = new TopoDS_Face(TopoDS::Face(shapes.First()));
+             from_faces.get()->Nullify();
+             delete from_faces.get();
              from_faces.change_to(topo_face);
              from_faces.step();
           } 
@@ -2507,9 +2545,9 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC
-// Description: imprint boolean operation on OCC-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: imprint curves onto body_list
+// Author     : Jane Hu
+// Date       : 05/08
 //===============================================================================
 CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            DLIList<Curve*> &ref_edge_list,
@@ -2518,6 +2556,11 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            bool show_messages) const
 {
   CubitStatus success = CUBIT_SUCCESS;
+  DLIList<TopoDS_Shape*> shape_list;
+
+  CubitStatus stat = get_the_shape_list(body_list, shape_list, keep_old);
+  if (!stat)
+    return stat;
   return success;
 }
 
