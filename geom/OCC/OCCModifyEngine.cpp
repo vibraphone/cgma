@@ -1923,7 +1923,11 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       DLIList<TopoDS_Shape*> tool_faces_edges;
       for(; intersector.MoreIntersection(); intersector.NextIntersection())
 	{
-	  TopoDS_Shape face1 = intersector.ChangeFacesIntersector().Face(1);
+          TopoDS_Shape face1;
+          if(tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
+            face1 = intersector.ChangeFaceEdgeIntersector().Shape(1);
+          else
+	    face1 = intersector.ChangeFacesIntersector().Face(1);
           CubitBoolean has_imprinted = CUBIT_FALSE;
           for (int j = 0; j < from_faces.size(); j++)
           {
@@ -1948,7 +1952,10 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
           //intersection edges between face1 and edge_face
 	  TopTools_ListOfShape temp_list_of_edges;
-	  temp_list_of_edges.Assign(section.SectionEdges());
+          if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
+            temp_list_of_edges.Append(edge_face);
+          else
+	    temp_list_of_edges.Assign(section.SectionEdges());
 	  int num_edges = temp_list_of_edges.Extent();
   
           CubitBoolean is_same = face1.IsSame(from_face);
@@ -2081,7 +2088,12 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         TopoDS_Shape ashape = *(tool_faces_edges.get_and_step());
         TopoDS_Shape face;
         if(ashape.TShape()->ShapeType() == TopAbs_EDGE)
-          face = extended_from_face;
+        {
+          TopOpeBRep_FaceEdgeIntersector intersector;
+          intersector.Perform(extended_from_face, ashape);
+          if (intersector.NbPoints()< 2)
+            return CUBIT_FAILURE;
+        }
         else
           face = TopoDS::Face(ashape);
         BRepAdaptor_Surface asurface(TopoDS::Face(face));
@@ -2147,29 +2159,34 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	{      
 	  CubitStatus stat = sort_curves(curve_list, edge_lists); 
 	  DLIList<TopoDS_Edge*>* edge_list;
-	  edge_list = edge_lists.pop();
+          int size = edge_lists.size();
+          for (int iii = 0; iii < size; iii++)
+          {
+	    edge_list = edge_lists.pop();
 
-          //check if the edges make a split of the surface, error out if it's
-          //just a scar on the surface
-          int count_intersection = 0;
-          if (stat == CUBIT_FAILURE) //Open wire
-          {
-            count_intersection = check_intersection(edge_list, from_face);
+            //check if the edges make a split of the surface, error out if it's
+            //just a scar on the surface
+            int count_intersection = 0;
+            if (stat == CUBIT_FAILURE) //Open wire
+            {
+              count_intersection = check_intersection(edge_list, from_face);
             
-            if (count_intersection < 2)
-              PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
-	  } 
-          if (stat || count_intersection == 2)
-          {
-	    BRepBuilderAPI_MakeWire myWire;
-            edge_list->reset(); 
-	    for(int i = 0; i < edge_list->size(); i++)
-	      {
-	        TopoDS_Edge e = *(edge_list->get_and_step());
-	        myWire.Add(e); 
-	      }
-	    splitor.Add(myWire.Wire(),from_face);
-            topo_changed = CUBIT_TRUE; 
+              if (count_intersection < 2)
+                PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
+	    } 
+            if (stat || count_intersection == 2)
+            {
+	      BRepBuilderAPI_MakeWire myWire;
+              edge_list->reset(); 
+	      for(int i = 0; i < edge_list->size(); i++)
+	        {
+	          TopoDS_Edge e = *(edge_list->get_and_step());
+	          myWire.Add(e); 
+	        }
+	      splitor.Add(myWire.Wire(),from_face);
+              topo_changed = CUBIT_TRUE; 
+              break;
+            }
           }
 	} 
       if(topo_changed)
@@ -2556,11 +2573,65 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            bool show_messages) const
 {
   CubitStatus success = CUBIT_SUCCESS;
-  DLIList<TopoDS_Shape*> shape_list;
+  DLIList<TopoDS_Shape*> shape_list, tool_shapes;
 
   CubitStatus stat = get_the_shape_list(body_list, shape_list, keep_old);
   if (!stat)
     return stat;
+
+  int size = ref_edge_list.size();
+  // total number of imprints to be done
+
+  if( size > 2 && show_messages)
+  {
+     char message[128];
+     sprintf(message, "Imprinting %d OCC Bodies", body_list.size() );
+     AppUtil::instance()->progress_tool()->start(0, size, message);
+  }
+  for (int i = 0; i < ref_edge_list.size(); i++)
+  {
+    OCCCurve* curve = CAST_TO(ref_edge_list.get_and_step(), OCCCurve) ;
+    if (!curve)
+      continue;
+
+    TopoDS_Edge* edge = curve->get_TopoDS_Edge();
+    if (edge->IsNull())
+      continue;
+    
+    if (CubitMessage::instance()->Interrupt())
+    {
+       success = CUBIT_FAILURE;
+       break;
+    }
+
+    for(int j = 0; j < shape_list.size(); j ++)
+    {
+      TopoDS_Shape* shape = shape_list.get();
+        
+      stat = imprint_toposhapes(shape, (TopoDS_Shape*)edge);
+      if (stat)
+        shape_list.change_to(shape);
+      shape_list.step();
+      body_list.step();
+    }
+
+    if( size > 2 )
+      AppUtil::instance()->progress_tool()->step();
+  }   
+
+  for(int j = 0; j < shape_list.size(); j ++)
+  {
+    DLIList<TopologyBridge*> tbs;
+    TopoDS_Shape* shape = shape_list.get_and_step();
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape);
+    new_body_list.append(CAST_TO(tbs.get(),BodySM));
+  }
+
+  if( size > 2 )
+    AppUtil::instance()->progress_tool()->end();
+
+  if( CubitMessage::instance()->Interrupt() )
+        PRINT_INFO("Imprint aborted.\n"); 
   return success;
 }
 

@@ -285,7 +285,7 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
   
   //use face tolerance at the tolerence to see if the point is on.
   TopExp_Explorer Ex;
-  Ex.Init(*solid, TopAbs_FACE, TopAbs_SOLID);
+  Ex.Init(*solid, TopAbs_FACE);
   TopoDS_Face face = TopoDS::Face(Ex.Current());
   
   double dtol = BRep_Tool::Tolerance(face);
