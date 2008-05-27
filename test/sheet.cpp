@@ -7,6 +7,7 @@
  * and performs varies checks for bodies, surfaces, curves and vertices.
  */
 #include "GeometryModifyTool.hpp"
+#include "GeometryModifyEngine.hpp"
 #include "GeometryQueryTool.hpp"
 #include "ModelQueryEngine.hpp"
 #include "Body.hpp"
@@ -15,6 +16,7 @@
 
 #include <typeinfo>
 #include <assert.h>
+#define HAVE_OCC
 
 #ifdef HAVE_ACIS
 #include "AcisModifyEngine.hpp"
@@ -34,6 +36,7 @@ int main (int argc, char **argv)
   CubitObserver::init_static_observers();
   CGMApp::instance()->startup( argc, argv );
 
+#define HAVE_OCC 
   GeometryQueryEngine* const gqe_list[] = {
 #ifdef HAVE_ACIS
     AcisQueryEngine::instance(),
@@ -77,44 +80,15 @@ int test_sheet_query( GeometryModifyEngine* engine )
     return 1;
   }
 
-/*  This fails for OCC.  Try something else to create sheet body
   sheet = GeometryModifyTool::instance()->planar_sheet( 
     CubitVector(0,0,0), CubitVector(1,0,0), 
     CubitVector(1,1,0), CubitVector(0,1,0) );
-  if (!sphere) {
+  if (!sheet) {
     fprintf(stderr,"Planar sheet creation failed for engine (%s)\n", 
       typeid(*engine).name());
     return 1;
   }
-*/  
   
-  DLIList<ModelEntity*> list;
-  rval = ModelQueryEngine::instance()->query_model( *sphere, DagType::ref_face_type(), list );
-  if (!rval || list.size() != 1) {
-    fprintf(stderr,"Failed to get face from body (%s)\n", 
-      typeid(*engine).name());
-    return 1;
-  }
-  RefFace* sphere_face = dynamic_cast<RefFace*>(list.get());
-  assert(NULL != sphere_face);
-  
-  RefFace* sheet_face = GeometryModifyTool::instance()->make_RefFace( sphere_face );
-  if (!sheet_face) {
-    fprintf(stderr,"Failed to create face from sphere face (%s)\n", 
-      typeid(*engine).name());
-    return 1;
-  }
-  
-  list.clean_out();
-  rval = ModelQueryEngine::instance()->query_model( *sheet_face, DagType::body_type(), list );
-  if (!rval || list.size() != 1) {
-    fprintf(stderr,"Failed to get body from sheet face (%s)\n", 
-      typeid(*engine).name());
-    return 1;
-  }
-  sheet = dynamic_cast<Body*>(list.get());
-  assert(NULL != sheet);
-
   if (sphere->is_sheet_body()) {
     fprintf(stderr,"Solid sphere reported as sheet body (%s).\n", 
       typeid(*engine).name());
