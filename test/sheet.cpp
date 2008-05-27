@@ -35,7 +35,6 @@ int main (int argc, char **argv)
   CubitObserver::init_static_observers();
   CGMApp::instance()->startup( argc, argv );
 
-#define HAVE_OCC 
   GeometryQueryEngine* const gqe_list[] = {
 #ifdef HAVE_ACIS
     AcisQueryEngine::instance(),
