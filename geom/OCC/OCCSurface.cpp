@@ -647,6 +647,7 @@ CubitPointContainment OCCSurface::point_containment( const CubitVector &point )
    gp_Pnt p(point.x(), point.y(), point.z());
    double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
 
+   //It's checking the state of the projected point of THIS Point
    BRepClass_FaceClassifier face_classifier;
    face_classifier.Perform(*face, p, tol);
    TopAbs_State state = face_classifier.State();

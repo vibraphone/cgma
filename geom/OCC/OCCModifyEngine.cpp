@@ -2054,79 +2054,81 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       CubitBoolean topo_changed = CUBIT_FALSE;
       tool_faces_edges.reset();
 
-      //check to see if the intersecting edge is overlapping with any
-      //of the edges on from_edge. It's possible that the tool_face is
-      //adjacent with the from_face and cutting it with one overlapping
-      //edge, the intersector will crash when the edge from the from_face
-      //intersect with the "edge" at one of the vertices.
-      //To avoid this, scale the from_face of 10%
-      TopoDS_Face extended_from_face = from_face;
-      GProp_GProps myProps;
-      BRepGProp::SurfaceProperties(from_face, myProps);
-      gp_Pnt pt = myProps.CentreOfMass();
-      gp_Trsf aTrsf;
-      aTrsf.SetScale(pt, 1.1 );
+      //check to see if the intersection edge is:
+      //1. on from_face: if not, skip it
+      //2. overlap with from_edges : if not, add the edge for splitting face
+      //3. if overlap, is it the same edge:if not add it for splitting edge
+      // if yes, skip it too
 
-      BRepBuilderAPI_Transform aBRepTrsf(from_face, aTrsf);
-      extended_from_face =
-              TopoDS::Face(aBRepTrsf.ModifiedShape(from_face));
+      Surface* face = NULL;
+      if (OCCQueryEngine::instance()->OCCMap->IsBound(from_face))
+      {
+        int i = OCCQueryEngine::instance()->OCCMap->Find(from_face);
+        face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
+      }
+      else
+        face = OCCQueryEngine::instance()->populate_topology_bridge(from_face);
+      OCCSurface* occ_face = CAST_TO(face, OCCSurface);
 
-      Bnd_Box aBox2;
-      BRepAdaptor_Surface asurface(extended_from_face);
-      BndLib_AddSurface::Add(asurface, tol, aBox2);
       for(; Itor.More(); Itor.Next())
       {
         TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
-      	//check if the edge is on from_face edges, add such edge on existing 
-        //edge to split it.
+        //check to see if the intersection edge is on from_face
 	TopExp_Explorer Ex;
 	CubitBoolean added = CUBIT_FALSE;
         CubitBoolean skipped = CUBIT_FALSE;
         GProp_GProps myProps1;
         BRepGProp::LinearProperties(edge, myProps1);
         double d1 = myProps1.Mass();
-        TopoDS_Shape ashape = *(tool_faces_edges.get_and_step());
-        TopoDS_Shape face;
-        if(ashape.TShape()->ShapeType() == TopAbs_EDGE)
+        gp_Pnt pt = myProps1.CentreOfMass();
+        CubitVector p(pt.X(), pt.Y(), pt.Z());
+
+        CubitVector point_on_surf;
+        occ_face->closest_point_trimmed(p, point_on_surf);
+        if(p.distance_between(point_on_surf) > tol) //edge not on from_face
         {
-          TopOpeBRep_FaceEdgeIntersector intersector;
-          intersector.Perform(extended_from_face, ashape);
-          if (intersector.NbPoints()< 2)
-            return CUBIT_FAILURE;
+          skipped = CUBIT_TRUE;
+          total_edges--;
         }
-        else
-          face = TopoDS::Face(ashape);
-        BRepAdaptor_Surface asurface(TopoDS::Face(face));
-        Bnd_Box aBox1;
-        BndLib_AddSurface::Add(asurface, tol, aBox1);
 
-	for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
-	{
-	  TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
+        else 
+        {
+	  for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
+	  {
+            //check if the edge is on from_face edges, add such edge on existing
+            //edge to split it.
+	    TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
          
-          TopOpeBRep_EdgesIntersector intersector;
-
-   	  intersector.SetFaces(extended_from_face, face, aBox2, aBox1);
-          intersector.Perform(from_edge, edge);
-          int num_edges = intersector.NbSegments();
-	  if(num_edges == 1) //overlap
- 	  {
-            //check if they are the same edge, so don't need to be split
-            //the overlapped edges are considered the same if they have the
-            //same length
             GProp_GProps myProps2;
             BRepGProp::LinearProperties(from_edge, myProps2);
             double d2 = myProps2.Mass();
-            if((d2 - d1) > tol)
+            Curve* curve = NULL;
+            if (OCCQueryEngine::instance()->OCCMap->IsBound(from_edge))
             {
-	      added = CUBIT_TRUE;
-   	      splitor.Add(edge, from_edge);
+              int i = OCCQueryEngine::instance()->OCCMap->Find(from_edge);
+              curve = (OCCCurve*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
             }
             else
-	      skipped = CUBIT_TRUE;
-            total_edges--;
-            break;
-	  }
+              curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
+            OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+            CubitPointContainment pc = occ_curve->point_containment(p);
+
+	    if(pc == CUBIT_PNT_ON) //overlap
+ 	    {
+              //check if they are the same edge, so don't need to be split
+              //the overlapped edges are considered the same if they have the
+              //same length
+              if((d2 - d1) > tol)
+              {
+	        added = CUBIT_TRUE;
+   	        splitor.Add(edge, from_edge);
+              }
+              else
+	        skipped = CUBIT_TRUE;
+              total_edges--;
+              break;
+	    }
+          } 
         } 
         if(added)
         {
