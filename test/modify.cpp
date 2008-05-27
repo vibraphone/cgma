@@ -292,6 +292,8 @@ CubitStatus make_Point()
   tool_body = gmti->brick(11, 1, 1);
   CubitVector v_move4(0,1,-1);
   gti->translate(from_body,v_move4);
+  Body* cp_from_body = gmti->copy_body(from_body);
+  Body* cp_tool_body = gmti->copy_body(tool_body);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   new_bodies.clean_out();
@@ -301,6 +303,13 @@ CubitStatus make_Point()
   //n = 8
   n = new_bodies.get()->num_ref_edges();
   //n = 18
+
+  //test edge imprint on body
+  ref_edges.clean_out();
+  cp_tool_body->ref_edges(ref_edges);
+  from_bodies.clean_out();
+  from_bodies.append(cp_from_body);
+  CubitStatus stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -350,6 +359,7 @@ CubitStatus make_Point()
   gti->translate(tool_body,v_move3);
   BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
   Body* copy_tool_body = gmti->copy_body(tool_body);
+  Body* copy_tool_body2 = gmti->copy_body(tool_body);
 
   //test shell body imprint
   //TopoDS_Shape* tool_shape = CAST_TO(copy_bodysm,OCCBody)->get_TopoDS_Shape();  
@@ -359,7 +369,15 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   from_bodies.append(copy_tool_body);
   from_bodies.append(from_body2);
-  CubitStatus stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE); 
+  stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE); 
+
+  //test body imprinted by curves.
+  ref_edges.clean_out();
+  from_body2->ref_edges(ref_edges);
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  from_bodies.append(copy_tool_body2);
+  stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
 
   //test body cutting a shell, one surface got cut as the result. 
   CubitVector v_move6(1,-1,0);

@@ -16,7 +16,6 @@
 
 #include <typeinfo>
 #include <assert.h>
-#define HAVE_OCC
 
 #ifdef HAVE_ACIS
 #include "AcisModifyEngine.hpp"
