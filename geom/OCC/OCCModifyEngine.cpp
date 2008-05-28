@@ -64,6 +64,7 @@
 #include "BRepAlgoAPI_Fuse.hxx"
 #include "BRepAlgoAPI_Cut.hxx"
 #include "BRepAlgoAPI_Section.hxx"
+#include "BRepAlgoAPI_Common.hxx"
 #include "BRepPrimAPI_MakeSphere.hxx"
 #include "BRepPrimAPI_MakeBox.hxx"
 #include "BRepPrimAPI_MakeWedge.hxx"
@@ -1895,7 +1896,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
 // Member Type: PROTECTED
 // Description: imprint boolean operation on OCC-based bodies.
 //              from_shape must be TopoDS_Face or above, tool_shape can be
-//              TopoDS_Edge or above.
+//              TopoDS_Edge or above. 
 // Author     : Jane HU
 // Date       : 03/08
 //===============================================================================
@@ -1912,22 +1913,30 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   while( more_face)
   {
+    TopoDS_Face from_face,tool_face;
+    TopoDS_Edge* common_edge = NULL;
+    DLIList<TopoDS_Shape*> tool_faces_edges;
+    TopTools_ListOfShape list_of_edges;
+    BRepFeat_SplitShape splitor(*from_shape);
+    if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
+    {
+      if(count == 1)
+        break;
+      common_edge = find_imprinting_edge(*from_shape, TopoDS::Edge(*tool_shape),from_face);
+      if (common_edge)
+        list_of_edges.Append(*common_edge);
+    }
+    else 
+    {
       TopOpeBRep_ShapeIntersector intersector;
       intersector.InitIntersection(*from_shape, *tool_shape);
-      BRepFeat_SplitShape splitor(*from_shape);
-      TopTools_ListOfShape list_of_edges;
 
       //find the intersecting edges and faces.
       int max_edge = 0;
-      TopoDS_Face from_face,tool_face; 
-      DLIList<TopoDS_Shape*> tool_faces_edges;
       for(; intersector.MoreIntersection(); intersector.NextIntersection())
 	{
           TopoDS_Shape face1;
-          if(tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
-            face1 = intersector.ChangeFaceEdgeIntersector().Shape(1);
-          else
-	    face1 = intersector.ChangeFacesIntersector().Face(1);
+	  face1 = intersector.ChangeFacesIntersector().Face(1);
           CubitBoolean has_imprinted = CUBIT_FALSE;
           for (int j = 0; j < from_faces.size(); j++)
           {
@@ -1944,18 +1953,12 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
           TopoDS_Shape edge_face;
 
-          if(tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
-             edge_face = intersector.ChangeFaceEdgeIntersector().Shape(2);
-          else
-             edge_face = intersector.ChangeFacesIntersector().Face(2);
+          edge_face = intersector.ChangeFacesIntersector().Face(2);
           BRepAlgoAPI_Section section(face1, edge_face);
 
           //intersection edges between face1 and edge_face
 	  TopTools_ListOfShape temp_list_of_edges;
-          if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
-            temp_list_of_edges.Append(edge_face);
-          else
-	    temp_list_of_edges.Assign(section.SectionEdges());
+	  temp_list_of_edges.Assign(section.SectionEdges());
 	  int num_edges = temp_list_of_edges.Extent();
   
           CubitBoolean is_same = face1.IsSame(from_face);
@@ -2026,6 +2029,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             }
           }
 	}
+      }
       if (from_face.IsNull())
       {
         more_face = CUBIT_FALSE;
@@ -2042,6 +2046,13 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
            }
          }
         tool_faces_edges.clean_out();
+
+        for (int iii=0; iii < from_faces.size(); iii++)
+        {
+          TopoDS_Face* topo_face = from_faces.get_and_step();
+          topo_face->Nullify();
+          delete topo_face;
+        }
         continue;
       }
   
@@ -2271,6 +2282,45 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   if (count > 0)
      return CUBIT_SUCCESS;
   return CUBIT_FAILURE;
+}
+
+//===============================================================================
+// Function   : find_imprinting_edge
+// Member Type: PROTECTED
+// Description: imprint boolean operation on OCC-based bodies.
+//              from_shape must be TopoDS_Face or above, tool_shape must be
+//              TopoDS_Edge.
+// Author     : Jane HU
+// Date       : 05/08
+//===============================================================================
+TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
+                                                TopoDS_Edge& tool_shape,
+                                                TopoDS_Face& face)const
+{
+  //list of face on from_shape that has been imprinted
+  DLIList<TopoDS_Face*> from_faces;
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  TopExp_Explorer Ex;
+  for (Ex.Init(from_shape, TopAbs_FACE); Ex.More(); Ex.Next())
+  {
+    face = TopoDS::Face(Ex.Current());
+    BRepAlgoAPI_Common intersector(face, tool_shape);
+    TopTools_ListOfShape shapes;
+    shapes.Assign(intersector.Modified(tool_shape));
+    if (shapes.IsEmpty())
+      continue;
+    if ( shapes.Extent() > 1)
+    {
+      PRINT_ERROR("Edge has multiple intersection with the shape, make it simpler. \n");
+      continue;
+    }
+    if (shapes.First().TShape()->ShapeType() != TopAbs_EDGE)
+      continue;
+    TopoDS_Edge* edge = new TopoDS_Edge(TopoDS::Edge(shapes.First()));
+    return edge;
+  }
+  face.Nullify();
+  return NULL;
 }
 
 int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
@@ -2526,7 +2576,6 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* shape1 = shape_list[i];
-    shape_list.append(shape1);
     CubitBoolean modified = CUBIT_FALSE;
     for(int j = i+1; j < size+i; j ++)
     {
@@ -2548,6 +2597,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape1);
       new_from_body_list.append(CAST_TO(tbs.get(),BodySM));
     }
+    shape_list.reset();
     if( size > 2 )
       AppUtil::instance()->progress_tool()->step();
   }

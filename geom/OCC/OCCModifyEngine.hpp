@@ -660,7 +660,11 @@ protected:
                                 Surface* old_surface_ptr) const;     
 
  //CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*) const;
- 
+
+ TopoDS_Edge* find_imprinting_edge(TopoDS_Shape& from_shape,
+                                   TopoDS_Edge& tool_shape,
+                                   TopoDS_Face& face)const;
+
  CubitStatus sort_curves(DLIList<Curve*> curve_list,
                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const;
 

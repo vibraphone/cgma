@@ -811,7 +811,8 @@ void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
   int ii;
   for (ii=M.Extent(); ii>0; ii--) {
 	  TopologyBridge *point = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-	  result_list.append_unique(dynamic_cast<OCCPoint*>(point));
+          if (point)
+	    result_list.append_unique(dynamic_cast<OCCPoint*>(point));
   }
 }
 
