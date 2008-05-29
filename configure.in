@@ -57,7 +57,6 @@ AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
 CGM_LIBS_LINK='$(CGM_LIBS_LINK_INTERNAL)'
 CGM_LIBS_FILES='$(CGM_LIBS_FILES_INTERNAL)'
 CGM_LIBS_LTFLAGS=
-CUBIT_LINK=no
 CUBIT_FILE=no
 CUBIT_BIN_DIR=no
 HAVE_ACIS_DEF=
@@ -78,23 +77,17 @@ elif test "x$CUBIT_DIR" != "xno"; then
   CUBIT_LTFLAGS=
   CUBIT_LIBS=no
   if test -d "$CUBIT_DIR/bin"; then
-    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/bin"
-    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/bin"
-    if test -d "$CUBIT_DIR/bin/lib"; then
-      CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/bin/lib"
-      CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/bin/lib"
-    fi
+    CUBIT_BIN_DIR="$CUBIT_DIR/bin"
+  elif test -d "$CUBIT_DIR/lib"; then
+    CUBIT_BIN_DIR="$CUBIT_DIR/lib"
+  elif test -d "$CUBIT_DIR/libs"; then
+    CUBIT_BIN_DIR="$CUBIT_DIR/libs"
+  else
+    CUBIT_BIN_DIR="$CUBIT_DIR"
   fi
-  if test -d "$CUBIT_DIR/lib"; then
-    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/lib"
-    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/lib"
-  fi
-  if test -d "$CUBIT_DIR/libs"; then
-    CUBIT_LDFLAGS="$CUBIT_LDFLAGS -L$CUBIT_DIR/libs"
-    CUBIT_LTFLAGS="$CUBIT_LTFLAGS -R$CUBIT_DIR/libs"
-  fi
+  CUBIT_LDFLAGS="-L$CUBIT_BIN_DIR"
+  CUBIT_LTFLAGS="-R$CUBIT_BIN_DIR"
 
-  CUBIT_BIN_DIR="$CUBIT_DIR/bin"
   cat >conftest.cc <<EOCUBITCT
 class AcisQueryEngine { public: static AcisQueryEngine* instance_; };
 int main() {
@@ -108,8 +101,8 @@ EOCUBITCT
     num=[`expr X"$file" : X".*cubiti\([0-9][0-9]\)\..*"`]
     if ./libtool --mode=link $CXX $LDFLAGS $CUBIT_LDFLAGS $CUBIT_LTFLAGS -lcubiti$num conftest.cc -o conftest >&5 2>&5; then
       CUBIT_LIBS="-lcubiti$num"
-      CUBIT_FILE=`expr x"$file" : x"$CUBIT_DIR/bin/\(.*\)"`
-      CUBIT_FILE="${CUBIT_DIR}/bin/$CUBIT_FILE"
+      CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
+      CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
@@ -128,6 +121,7 @@ dnl  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
   HAVE_ACIS_DEF=-DHAVE_ACIS
 fi
 
+AC_SUBST(CUBIT_BIN_DIR)
 AC_SUBST(CUBIT_LDFLAGS)
 AC_SUBST(CUBIT_LTFLAGS)
 AC_SUBST(CUBIT_LIBS)
