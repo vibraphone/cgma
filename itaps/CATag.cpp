@@ -20,6 +20,8 @@
  * Renamed CATag and added to ANL ITAPS repository by J.Kraftcheck,
  * 2007-6-15
  */
+
+#include <algorithm>
  
 #include "CATag.hpp"
 #include "RefEntity.hpp"
