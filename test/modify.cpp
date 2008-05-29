@@ -293,6 +293,7 @@ CubitStatus make_Point()
   CubitVector v_move4(0,1,-1);
   gti->translate(from_body,v_move4);
   Body* cp_from_body = gmti->copy_body(from_body);
+  Body* cp_from_body2 = gmti->copy_body(from_body);
   Body* cp_tool_body = gmti->copy_body(tool_body);
   from_bodies.clean_out();
   from_bodies.append(from_body);
@@ -310,6 +311,22 @@ CubitStatus make_Point()
   from_bodies.clean_out();
   from_bodies.append(cp_from_body);
   CubitStatus stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
+
+  //test edge imprint on surface
+  CubitVector vv(5,1,4.0);
+  face_list.clean_out();
+  cp_from_body2->ref_faces(face_list);
+  int size = face_list.size();
+  for(int i = 0; i < size; i++)
+  {
+    CubitVector v = face_list.get()->center_point();
+    if(!v.about_equal(vv))
+      face_list.remove();
+    else
+      face_list.step();
+  }
+  assert(face_list.size() == 1);
+  stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -395,7 +412,7 @@ CubitStatus make_Point()
   from_bodies.clean_out();
   from_bodies.append(tool_body);
   
-  //test a shell cutting a body, failed operation with a warning message.
+  //test a shell cutting a body, failed operation with an Error message.
   rsl = gmti->subtract(from_body2, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_TRUE);
 
@@ -404,10 +421,6 @@ CubitStatus make_Point()
   CubitVector v_move5(0,0.5,0);
   gti->translate(tool_body,v_move5);
   from_body = gmti->brick(1,1,1);
-  //from_shape = CAST_TO(from_body->get_body_sm_ptr(), OCCBody)->get_TopoDS_Shape();
-  //tool_shape = CAST_TO(tool_body->get_body_sm_ptr(),OCCBody)->get_TopoDS_Shape();
-//  ome->imprint_toposhapes(tool_shape, from_shape);
-//  ome->imprint_toposhapes(from_shape, tool_shape);
   from_bodies.clean_out();
   new_bodies.clean_out();
   from_bodies.append(from_body);

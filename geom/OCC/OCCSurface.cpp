@@ -683,7 +683,7 @@ CubitSense OCCSurface::get_geometry_sense()
 
 void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
 { 
-  if(myShell) //shell body
+  if(myShell) //shell or sheet body
   {
     parents.append(myShell);
     return;

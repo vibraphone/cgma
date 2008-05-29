@@ -122,7 +122,7 @@
 #include "SphereEvaluator.hpp"
 #include "CylinderEvaluator.hpp"
 OCCModifyEngine* OCCModifyEngine::instance_ = 0;
-
+#define DEBUG
 //===============================================================================
 // Function   : OCCModifyEngine
 // Member Type: PUBLIC
@@ -1897,11 +1897,14 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
 // Description: imprint boolean operation on OCC-based bodies.
 //              from_shape must be TopoDS_Face or above, tool_shape can be
 //              TopoDS_Edge or above. 
+//              on_faces works only when tool_shape is an Edge, indicates that
+//              those edges only imprint on the on_faces.
 // Author     : Jane HU
 // Date       : 03/08
 //===============================================================================
 CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape, 
-                                                TopoDS_Shape* tool_shape)const
+                                             TopoDS_Shape* tool_shape,
+                                             DLIList<TopoDS_Face*>*on_faces)const
 {
   int count = 0;   //number of imprinting
  
@@ -1918,13 +1921,27 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
     DLIList<TopoDS_Shape*> tool_faces_edges;
     TopTools_ListOfShape list_of_edges;
     BRepFeat_SplitShape splitor(*from_shape);
+    CubitBoolean qualified = CUBIT_TRUE;
     if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
     {
       if(count == 1)
         break;
       common_edge = find_imprinting_edge(*from_shape, TopoDS::Edge(*tool_shape),from_face);
       if (common_edge)
-        list_of_edges.Append(*common_edge);
+      {
+        for (int i = 0; on_faces && i < on_faces->size(); i++)
+        {
+          if (from_face.IsSame(*(on_faces->get_and_step())))
+          {
+            qualified = CUBIT_FALSE; 
+            break;
+          }
+        }
+        if (qualified && (from_faces.size() == 0 || (from_faces.size() && !from_face.IsSame(*from_faces.get()))) )
+          list_of_edges.Append(*common_edge);
+        else
+          from_face.Nullify();
+      }
     }
     else 
     {
@@ -2278,7 +2295,10 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
      num_face++;
   }
   
+#ifdef DEBUG  
   PRINT_INFO("Total %d cuts performed, with from_shape having %d faces.\n", count, num_face); 
+#endif
+
   if (count > 0)
      return CUBIT_SUCCESS;
   return CUBIT_FAILURE;
@@ -2299,7 +2319,6 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
 {
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces;
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   TopExp_Explorer Ex;
   for (Ex.Init(from_shape, TopAbs_FACE); Ex.More(); Ex.Next())
   {
@@ -2434,7 +2453,7 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
   bodysm_list.append(BodyPtr1);
   bodysm_list.append(BodyPtr2);
   
-  CubitStatus stat = get_the_shape_list(bodysm_list, shape_list, keep_old);
+  CubitStatus stat = get_shape_list(bodysm_list, shape_list, keep_old);
 
   if(!stat)
     return stat;
@@ -2480,7 +2499,7 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
 // Author     : Jane Hu
 // Date       : 05/08
 //===============================================================================
-CubitStatus OCCModifyEngine::get_the_shape_list(DLIList<BodySM*> BodySM_list, 
+CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list, 
                                          DLIList<TopoDS_Shape*>& shape_list,
                                          bool  keep_old) const
 {
@@ -2557,7 +2576,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
   CubitStatus success = CUBIT_SUCCESS;
   DLIList<TopoDS_Shape*> shape_list;
 
-  CubitStatus stat = get_the_shape_list(from_body_list, shape_list, keep_old);
+  CubitStatus stat = get_shape_list(from_body_list, shape_list, keep_old);
 
   if(!stat)
     return stat;
@@ -2627,7 +2646,7 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
   CubitStatus success = CUBIT_SUCCESS;
   DLIList<TopoDS_Shape*> shape_list, tool_shapes;
 
-  CubitStatus stat = get_the_shape_list(body_list, shape_list, keep_old);
+  CubitStatus stat = get_shape_list(body_list, shape_list, keep_old);
   if (!stat)
     return stat;
 
@@ -2690,17 +2709,104 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC
-// Description: imprint boolean operation on facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: to be consistante with Acis imprint.
+//              The surfaces must be part of a body, but the curves 
+//              just have to be valid OCC edge.
+// Author     : Jane Hu
+// Date       : 05/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &/*ref_face_list*/,
-                                           DLIList<Curve*> &/*ref_edge_list*/,
-                                           DLIList<BodySM*>& /*new_body_list*/,
-                                           bool /*keep_old_body*/ ) const
+CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
+                                          DLIList<Curve*> &edge_list,
+                                          DLIList<BodySM*>& new_body_list,
+                                          bool keep_old ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  DLIList<TopoDS_Face*> face_list;
+  DLIList<TopoDS_Shape*> shape_list;
+  for(int i = 0; i <ref_face_list.size(); i++)
+  {
+    OCCSurface* surface = CAST_TO(ref_face_list.get_and_step(), OCCSurface);
+    if(!surface)
+      continue;
+   
+    TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+    face_list.append(topo_face);
+
+    if(surface->my_shell() && !surface->my_body())//shell body
+      shape_list.append(surface->my_shell()->get_TopoDS_Shell());
+    else if(surface->my_body()) //a sheet body
+      shape_list.append(topo_face);
+    else 
+    {
+      int size = shape_list.size();
+      OCCQueryEngine* oqe = OCCQueryEngine::instance();
+      DLIList <OCCBody* > *bodies = oqe->BodyList;
+      TopTools_IndexedDataMapOfShapeListOfShape M;
+      OCCBody * body = NULL;
+      for(int i = 0; i <  bodies->size(); i++)
+      {
+        body = bodies->get_and_step();
+        TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
+                                 TopAbs_FACE, TopAbs_SOLID, M);
+        if(!M.Contains(*topo_face))
+          continue; 
+        const TopTools_ListOfShape& ListOfShapes =
+                              M.FindFromKey(*topo_face);
+        if (!ListOfShapes.IsEmpty())
+        {
+          TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
+          for (;it.More(); it.Next())
+          {
+            TopoDS_Solid solid = TopoDS::Solid(it.Value());
+            int k = oqe->OCCMap->Find(solid);
+            OCCLump* lump = (OCCLump*)oqe->OccToCGM->find(k)->second;
+            if(lump && lump->get_TopoDS_Solid())
+              shape_list.append_unique(lump->get_TopoDS_Solid());
+          }
+        }
+      }
+      assert(size < shape_list.size());
+    }
+  }
+
+  if(keep_old)
+  {
+    for(int i = 0; i < shape_list.size(); i++)
+    {
+      TopoDS_Shape* shape = shape_list.get();
+      BRepBuilderAPI_Copy api_copy(*shape);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*shape);
+      TopoDS_Shape* Shape1 = new TopoDS_Shape(newShape);
+      shape_list.change_to(Shape1);
+      shape_list.step();
+    }
+  } 
+
+  for (int i = 0; i < edge_list.size(); i++)
+  {
+    OCCCurve* curve = CAST_TO(edge_list.get_and_step(), OCCCurve) ;
+    if (!curve)
+      continue;
+
+    TopoDS_Edge* edge = curve->get_TopoDS_Edge();
+    if (edge->IsNull())
+      continue;
+
+    for(int j = 0; j < shape_list.size(); j ++)
+    {
+      TopoDS_Shape* shape = shape_list.get_and_step();
+      imprint_toposhapes(shape, (TopoDS_Shape*)edge, &face_list);
+    }
+  }
+
+  for(int j = 0; j < shape_list.size(); j ++)
+  {
+    DLIList<TopologyBridge*> tbs;
+    TopoDS_Shape* shape = shape_list.get_and_step();
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape);
+    new_body_list.append(CAST_TO(tbs.get(),BodySM));
+  }
+
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================

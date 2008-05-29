@@ -652,14 +652,14 @@ public:
                                   DLIList<TopologyBridge*>*,
                                   DLIList<TopologyBridge*>* ) const; 
 
-  CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*) const;
 protected:
 
  const TopoDS_Face* make_TopoDS_Face( GeometryType surface_type,
   	                        DLIList<DLIList<TopoDS_Edge*>*> topo_edges, 
                                 Surface* old_surface_ptr) const;     
 
- //CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*) const;
+ CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*,
+                                DLIList<TopoDS_Face*>*on_faces = NULL) const;
 
  TopoDS_Edge* find_imprinting_edge(TopoDS_Shape& from_shape,
                                    TopoDS_Edge& tool_shape,
@@ -673,7 +673,7 @@ protected:
 private:
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
- CubitStatus get_the_shape_list(DLIList<BodySM*> BodySM_list,
+ CubitStatus get_shape_list(DLIList<BodySM*> BodySM_list,
                          DLIList<TopoDS_Shape*>& shape_list,
                          bool  keep_old) const;
   
