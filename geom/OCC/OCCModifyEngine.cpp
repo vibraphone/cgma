@@ -732,10 +732,18 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
      return (Surface*) NULL;
  
   // Use the topo_edges to make a topo_face
-  const TopoDS_Face* topo_face = make_TopoDS_Face(surface_type,
-					topo_edges_loops, old_surface_ptr) ;
+  TopoDS_Face* topo_face;
+  topo_face = make_TopoDS_Face(surface_type,topo_edges_loops, old_surface_ptr);
  
-  if(topo_face == NULL)
+  for (int i = 0; i < topo_edges_loops.size(); i++)
+  {
+    DLIList<TopoDS_Edge*>* topo_edges = topo_edges_loops.get_and_step();
+    for(int j = 0; j < topo_edges->size(); j++)
+      topo_edges->pop();
+    delete topo_edges;
+  }
+  
+  if(!topo_face)
   {
      PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
                  "       Cannot make Surface object.\n");
@@ -743,9 +751,10 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
 
   // make the topology bridges for the face
-  TopoDS_Face the_face = *topo_face;
   Surface *surface = OCCQueryEngine::instance()->populate_topology_bridge(
-                               the_face, CUBIT_TRUE); 
+                               *topo_face, CUBIT_TRUE); 
+  topo_face->Nullify();
+  delete topo_face;
   return surface ;
 }
 
@@ -873,10 +882,11 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
 // Author     : Jane Hu
 // Date       : 02/08
 //===============================================================================
-const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
+TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 			       DLIList<DLIList<TopoDS_Edge*>*> topo_edges_list,
 			       Surface * old_surface_ptr)const
 {
+  TopoDS_Face* topo_face = NULL;
   // Make sure a supported type of surface is being requested.
   if ( surface_type != PLANE_SURFACE_TYPE  &&
        surface_type != BEST_FIT_SURFACE_TYPE)
@@ -884,7 +894,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
       PRINT_WARNING("In OCCGeometryEngine::make_TopoDS_Face\n"
                     "       At this time, cannot make a TopoDS_Face that isn't"
                     " planar or best fit.\n");
-      return (TopoDS_Face *)NULL;
+      return topo_face;
   }
  
   // Set the TopoDS_Face pointer, if requested.
@@ -900,14 +910,13 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   // Make a wire from the topo_edges.
   // Coincident TopoDS_Vertex will be deleted by OCC.
   if(topo_edges_list.size() == 0)
-      return (TopoDS_Face*) NULL;
+      return topo_face;
 
   DLIList<TopoDS_Wire*> wires;
   GProp_GProps myProps;
   double max_area  = 0.0;
   TopoDS_Wire* out_Wire = NULL;
   TopoDS_Wire test_Wire;
-
   DLIList<TopoDS_Edge*>* topo_edges; 
   //check and make sure the outer loop is in the first
   for(int i = 0; i < topo_edges_list.size() ; i++)
@@ -929,7 +938,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
     {
        PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
                    "   Cannot find the best fit surface for given curves.\n");
-       return (TopoDS_Face *)NULL;
+       return topo_face;
     }
     TopoDS_Face test_face = made_face.Face();
     BRepGProp::SurfaceProperties(test_face, myProps); 
@@ -945,7 +954,6 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   }
 
   //create the TopoDS_Face
-  const TopoDS_Face* topo_face = NULL;
   CubitBoolean error = CUBIT_FALSE;
 
   for(int i = 0; i < topo_edges_list.size() ; i++)
@@ -985,7 +993,6 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
         error = CUBIT_TRUE;
         break;
       }
-
       delete topo_face;
       topo_face = new TopoDS_Face(made_face.Face());
     }
@@ -995,7 +1002,7 @@ const TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
   {
     PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
                  "   Cannot find the best fit surface for given curves.\n");
-    return (TopoDS_Face *)NULL;
+    return (TopoDS_Face*) NULL;
   }
 
   return topo_face;
@@ -1888,6 +1895,16 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     delete tool_boxes.pop();
   while (tool_bodies_copy.size())
     delete tool_bodies_copy.pop();
+  if(keep_old)
+  {
+    int size  = from_bodies_copy.size();
+    for (int i = 0; i < size; i++)
+    {
+      TopoDS_Shape* shape = from_bodies_copy.pop();
+      shape->Nullify();
+      delete shape;
+    }
+  } 
   return CUBIT_SUCCESS; 
 }
 
@@ -1929,11 +1946,13 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       common_edge = find_imprinting_edge(*from_shape, TopoDS::Edge(*tool_shape),from_face);
       if (common_edge)
       {
+        if (on_faces)
+          qualified = CUBIT_FALSE;
         for (int i = 0; on_faces && i < on_faces->size(); i++)
         {
           if (from_face.IsSame(*(on_faces->get_and_step())))
           {
-            qualified = CUBIT_FALSE; 
+            qualified = CUBIT_TRUE; 
             break;
           }
         }
@@ -1941,6 +1960,8 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           list_of_edges.Append(*common_edge);
         else
           from_face.Nullify();
+        common_edge->Nullify();
+        delete common_edge;
       }
     }
     else 
@@ -2009,6 +2030,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               }
               tool_faces_edges.clean_out();
               for(int i = 0 ; i < num_edges; i++)
+                //later has to use it num_edges times 
                 tool_faces_edges.append(topo_shape);
 	    }
           else if(num_edges == max_edge && is_same && !is_same_tool) 
@@ -2217,6 +2239,9 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               topo_changed = CUBIT_TRUE; 
               break;
             }
+            for(int iii = 0; iii < edge_list->size(); iii++)
+              edge_list->pop();
+            delete edge_list;
           }
 	} 
       if(topo_changed)
@@ -2317,6 +2342,7 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
                                                 TopoDS_Edge& tool_shape,
                                                 TopoDS_Face& face)const
 {
+  TopoDS_Edge* edge = NULL;
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces;
   TopExp_Explorer Ex;
@@ -2335,11 +2361,11 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
     }
     if (shapes.First().TShape()->ShapeType() != TopAbs_EDGE)
       continue;
-    TopoDS_Edge* edge = new TopoDS_Edge(TopoDS::Edge(shapes.First()));
+    edge = new TopoDS_Edge(TopoDS::Edge(shapes.First()));
     return edge;
   }
   face.Nullify();
-  return NULL;
+  return edge;
 }
 
 int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
@@ -2742,9 +2768,14 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
       DLIList <OCCBody* > *bodies = oqe->BodyList;
       TopTools_IndexedDataMapOfShapeListOfShape M;
       OCCBody * body = NULL;
-      for(int i = 0; i <  bodies->size(); i++)
+      for(int j = 0; j <  bodies->size(); j++)
       {
         body = bodies->get_and_step();
+        TopExp_Explorer Ex;
+        TopoDS_Face the_face;
+        for (Ex.Init(*(body->get_TopoDS_Shape()), TopAbs_FACE);Ex.More(); Ex.Next())
+          the_face = TopoDS::Face(Ex.Current());
+ 
         TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
                                  TopAbs_FACE, TopAbs_SOLID, M);
         if(!M.Contains(*topo_face))
@@ -2764,7 +2795,6 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
           }
         }
       }
-      assert(size < shape_list.size());
     }
   }
 
