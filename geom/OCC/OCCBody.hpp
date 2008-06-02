@@ -184,8 +184,8 @@ public:
 
   virtual CubitBoolean is_sheet_body(){return IsSheetBody;}
 
+  TopoDS_CompSolid* make_CompSolid(DLIList<Lump*>& my_lumps);
 protected: 
-  
 private:
 
   DLIList<Lump*> myLumps;

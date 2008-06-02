@@ -94,6 +94,15 @@ void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
 OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 {
   myLumps += my_lumps;
+  TopoDS_CompSolid* new_top = make_CompSolid(my_lumps);
+  myTopoDSShape = new_top;
+  IsSheetBody = CUBIT_FALSE;
+  myShell = NULL;
+  update_bounding_box();
+}
+
+TopoDS_CompSolid* OCCBody::make_CompSolid(DLIList<Lump*>& my_lumps)
+{
   BRep_Builder B;
   TopoDS_CompSolid Co;
   B.MakeCompSolid(Co);
@@ -102,10 +111,8 @@ OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
      TopoDS_Solid * solid = CAST_TO(myLumps.get_and_step(), OCCLump)->get_TopoDS_Solid();
      B.Add(Co, *solid);
   }
-  myTopoDSShape = new TopoDS_CompSolid(Co);
-  IsSheetBody = CUBIT_FALSE;
-  myShell = NULL;
-  update_bounding_box();
+  TopoDS_CompSolid* new_top = new TopoDS_CompSolid(Co);
+  return new_top; 
 }
 
 OCCBody::~OCCBody() 

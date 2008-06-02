@@ -1170,7 +1170,16 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   {
     int k = OCCMap->Find(aShape);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
-    lump->set_TopoDS_Solid(aShape);
+    if (!aShape.IsSame(*lump->get_TopoDS_Solid()))
+    {
+      lump->set_TopoDS_Solid(aShape);
+      OCCBody* body = CAST_TO(lump->get_body(), OCCBody);
+      DLIList<Lump*> lumps = body->lumps();
+      TopoDS_CompSolid* new_top = body->make_CompSolid(lumps);
+      body->set_TopoDS_Shape(*new_top);
+      new_top->Nullify();
+      delete new_top;
+    }
   }
  
   TopExp_Explorer Ex;
