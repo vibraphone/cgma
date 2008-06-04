@@ -5135,6 +5135,22 @@ iGeom_deleteEnt (iGeom_Instance instance,
 }
 
 void
+iGeom_createSphere( iGeom_Instance instance,
+                    double radius,
+                    iBase_EntityHandle *geom_entity,
+                    int* err )
+{
+  if (radius <= 0.0) {
+    ERROR(iBase_INVALID_ARGUMENT, "Sphere radius must be must be positive.");
+  }
+  
+  RefEntity* tmp_body = gmt->sphere( radius );
+  *geom_entity = tmp_body;
+  RETURN ((tmp_body ? iBase_SUCCESS : iBase_FAILURE));
+}
+  
+
+void
 iGeom_createBrick (iGeom_Instance instance,
                    /*in*/ double x,
                    /*in*/ double y,

@@ -989,6 +989,12 @@ package iGeom version 0.6.99
 
   interface Primitives extends Modify
     {
+//==========================Sphere=================
+        /* Construct a Sphere with specified radius. */
+      void Sphere(in double radius,
+                  out opaque geom_entity) 
+        throws iBase.Error;
+          
 //==========================Brick=================
         /* Construct a brick with specified dimensions.  If both y and z are
          * zero, a cube of dimension x is constructed.  

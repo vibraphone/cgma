@@ -2059,6 +2059,13 @@ extern "C" {
                         iBase_EntityHandle,
                         int* err );
 
+    /**\brief Create a sphere centered on the origin
+     */
+  void iGeom_createSphere( iGeom_Instance,
+                           double radius,
+                           iBase_EntityHandle* sphere_handle_out,
+                           int* err );
+
 /**\brief 
  *
  */

@@ -3977,6 +3977,23 @@ throw (
 }
 
 /**
+ * Method:  Sphere[]
+ */
+void
+iGeom_SIDL::GeomSidl_impl::Sphere (
+  /* in */ double radius,
+  /* out */ void*& geom_entity ) 
+throw ( 
+  ::iBase::Error
+){
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Sphere)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Sphere} (Sphere method)
+  iGeom_Sphere(igeomInstance, radius, &geom_entity);
+  PROCESS_ERROR;
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Sphere)
+}
+
+/**
  * Method:  Brick[]
  */
 void
