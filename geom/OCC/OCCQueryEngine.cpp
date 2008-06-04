@@ -1170,16 +1170,13 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   {
     int k = OCCMap->Find(aShape);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
-    if (!aShape.IsSame(*lump->get_TopoDS_Solid()))
-    {
-      lump->set_TopoDS_Solid(aShape);
-      OCCBody* body = CAST_TO(lump->get_body(), OCCBody);
-      DLIList<Lump*> lumps = body->lumps();
-      TopoDS_CompSolid* new_top = body->make_CompSolid(lumps);
-      body->set_TopoDS_Shape(*new_top);
-      new_top->Nullify();
-      delete new_top;
-    }
+    lump->set_TopoDS_Solid(aShape);
+    OCCBody* body = CAST_TO(lump->get_body(), OCCBody);
+    DLIList<Lump*> lumps = body->lumps();
+    TopoDS_CompSolid* new_top = body->make_CompSolid(lumps);
+    body->set_TopoDS_Shape(*new_top);
+    new_top->Nullify();
+    delete new_top;
   }
  
   TopExp_Explorer Ex;
@@ -1349,6 +1346,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
   {
     Curve* curve = populate_topology_bridge(Ex.Current());
     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
+    DLIList<OCCLoop*> loops = occ_curve->loops();
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoEdge * coedge = NULL;
     int size = coedges_old.size();
@@ -1368,8 +1366,29 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
         break;
       }
     }   
+    
     if(!exist)
     {
+      //search through the curve loops
+      for(int i = 0; i < loops.size() ; i++)
+      {
+        OCCLoop* loop = loops.get_and_step();
+        if (!OCCMap->IsBound(*loop->get_TopoDS_Wire()))
+        { 
+          DLIList<OCCCoEdge*> coedge_list = loop->coedges();
+          for(int j = 0; j < coedge_list.size(); j++)
+          {
+            OCCCoEdge * test_coedge = coedge_list.get_and_step();
+            if (test_coedge->curve() == curve)
+            {
+              loop->remove_coedge(test_coedge);
+              occ_curve->remove_loop(loop);
+              delete test_coedge;
+            }
+          }
+          delete loop;
+        }
+      }
       coedge = new OCCCoEdge( curve, loop, sense);
       coedges_new.append(coedge);
       occ_curve->add_loop(loop);

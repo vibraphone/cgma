@@ -87,7 +87,6 @@ void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
 {
   if(myTopoDSShape)
     delete myTopoDSShape;
-
   myTopoDSShape = new TopoDS_CompSolid(theshape);
 }
 
@@ -392,6 +391,55 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   for(int i = 0; i < points.size(); i++)
     points.get_and_step()->set_myMarked(CUBIT_FALSE);
 
+}
+
+//----------------------------------------------------------------
+// Function: TopoDS_Shape level function to update the core Body
+//           for any Boolean operation of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
+                                       TopoDS_Shape& new_shape,
+                                       BRepBuilderAPI_MakeShape *op)
+{
+  //set the Shells
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(old_shape, TopAbs_SOLID, M);
+  TopTools_ListOfShape shapes;
+  TopoDS_Shape shape;
+
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Solid solid = TopoDS::Solid(M(ii));
+
+    TopTools_ListOfShape shapes;
+    shapes.Assign(op->Modified(solid));
+    if (shapes.Extent() == 1)
+      shape = shapes.First();
+
+    else if(shapes.Extent() > 1)
+      shape.Nullify();
+
+    else if(op->IsDeleted(solid))
+    {
+       TopTools_IndexedMapOfShape M_new;
+       TopExp::MapShapes(new_shape, TopAbs_SOLID, M_new);
+       if (M_new.Extent()== 1)
+         shape = M_new(1);
+       else
+         shape.Nullify();
+    }
+    else
+    {
+       shape = solid;
+       continue;
+    }
+
+    if(shapes.Extent() > 0 || op->IsDeleted(solid))
+      OCCLump::update_OCC_entity(solid, shape, op);
+  }
+  if(!old_shape.IsSame(new_shape))
+    OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);
 }
 //----------------------------------------------------------------
 // Function: update_bounding_box

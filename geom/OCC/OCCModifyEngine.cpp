@@ -2268,38 +2268,38 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         topo_changed = CUBIT_FALSE;
         if(splitor.IsDone())
         {
-          //take care of on_faces list first.
-          if (on_faces && on_faces->size())
+          //take care of on_faces list first:after operation, the on_faces
+          // will have at least one face changed, update the pointer.
+          if (on_faces)
           {
-            TopoDS_Face* compare_face = on_faces->get();
-            if(from_face.IsSame(*compare_face))
+            for(int k = 0; k < on_faces->size(); k++)
             {
-              on_faces->remove(compare_face);
-              TopTools_ListOfShape shapes;
-              shapes.Assign(splitor.Modified(from_face)); 
-              while(shapes.Extent() > 0)
+              TopoDS_Face* compare_face = on_faces->get_and_step();
+              if(from_face.IsSame(*compare_face))
               {
-                TopoDS_Face* face = 
-                  new TopoDS_Face(TopoDS::Face(shapes.First())); 
-                shapes.RemoveFirst();
-                on_faces->append(face);
-                list_for_delete.append(face);
+                on_faces->remove(compare_face);
+                TopTools_ListOfShape shapes;
+                shapes.Assign(splitor.Modified(from_face)); 
+                while(shapes.Extent() > 0)
+                {
+                  TopoDS_Face* face = 
+                    new TopoDS_Face(TopoDS::Face(shapes.First())); 
+                  shapes.RemoveFirst();
+                  on_faces->append(face);
+                  list_for_delete.append(face);
+                }
               }
             }
           }
+
           TopoDS_Shape new_from_shape = splitor.Shape();
           if(from_shape->TShape()->ShapeType() == TopAbs_COMPSOLID)
           {
-            TopTools_IndexedMapOfShape M;
-            TopExp::MapShapes(*from_shape, TopAbs_SOLID, M);
-            if (M.Extent() == 1)
-            {
-              TopoDS_Solid old_solid = TopoDS::Solid(M(1));
-              OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-              from_shape->Nullify();
-              delete from_shape;
-              from_shape = new TopoDS_Shape(new_from_shape);
-            }
+            TopoDS_CompSolid old_csolid = TopoDS::CompSolid(*from_shape);
+            OCCBody::update_OCC_entity(old_csolid, new_from_shape, &splitor);
+            from_shape->Nullify();
+            delete from_shape;
+            from_shape = new TopoDS_Shape(new_from_shape);
           }
 
           else if(from_shape->TShape()->ShapeType() == TopAbs_SOLID)
@@ -2399,7 +2399,12 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
     if (shapes.First().TShape()->ShapeType() != TopAbs_EDGE)
       continue;
     if(edge == NULL)
-      edge = new TopoDS_Edge(TopoDS::Edge(shapes.First()));
+    {
+      TopoDS_Edge common_edge = TopoDS::Edge(shapes.First());
+       BRepBuilderAPI_Copy api_copy(common_edge);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(common_edge);
+       edge = new TopoDS_Edge(TopoDS::Edge(newShape));
+    }
     from_faces.append(new TopoDS_Face(face));
   }
   return edge;
@@ -2811,34 +2816,10 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
         TopExp_Explorer Ex;
         TopoDS_Face the_face;
         TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
-        if (OCCQueryEngine::instance()->OCCMap->IsBound(ashape))
-          TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_SOLID, M);
-        else
-	{
-          DLIList<Lump*> lumps = body->lumps();
-          for(int i = 0; i < lumps.size(); i++)
-          {
-            OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
-            TopExp::MapShapesAndAncestors(*occ_lump->get_TopoDS_Solid(),
-                                    TopAbs_FACE, TopAbs_SOLID, M);
-          }
-        }  
+        TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPSOLID, M);
         if(!M.Contains(*topo_face))
           continue; 
-        const TopTools_ListOfShape& ListOfShapes =
-                              M.FindFromKey(*topo_face);
-        if (!ListOfShapes.IsEmpty())
-        {
-          TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
-          for (;it.More(); it.Next())
-          {
-            TopoDS_Solid solid = TopoDS::Solid(it.Value());
-            int k = oqe->OCCMap->Find(solid);
-            OCCLump* lump = (OCCLump*)oqe->OccToCGM->find(k)->second;
-            if(lump && lump->get_TopoDS_Solid())
-              shape_list.append_unique(lump->get_TopoDS_Solid());
-          }
-        }
+        shape_list.append_unique(body->get_TopoDS_Shape());
       }
     }
   }
@@ -2880,6 +2861,8 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
     if (edge->IsNull())
       continue;
 
+    DLIList<OCCPoint*> point_list;
+    curve->get_points(point_list);
     for(int j = 0; j < shape_list.size(); j ++)
     {
       TopoDS_Shape* shape = shape_list.get_and_step();
@@ -2891,8 +2874,23 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
   {
     DLIList<TopologyBridge*> tbs;
     TopoDS_Shape* shape = shape_list.get_and_step();
-    tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape);
-    new_body_list.append(CAST_TO(tbs.get(),BodySM));
+    if (shape->TShape()->ShapeType() == TopAbs_COMPSOLID)
+    {
+      if(!OCCQueryEngine::instance()->OCCMap->IsBound(*shape)) 
+      {
+        TopExp_Explorer Ex;
+        for (Ex.Init(*shape, TopAbs_SOLID);Ex.More(); Ex.Next())
+        {
+          tbs += OCCQueryEngine::instance()->populate_topology_bridge(Ex.Current());
+          new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
+        }
+      }
+    }
+    else
+    {
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape);
+      new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
+    }
   }
 
   if (keep_old)

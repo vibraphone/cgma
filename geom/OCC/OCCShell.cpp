@@ -279,7 +279,8 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
     if(shapes.Extent() > 0 || op->IsDeleted(face))
       OCCSurface::update_OCC_entity(face,shape, op);
   }
-  OCCQueryEngine::instance()->update_OCC_map(old_shell, new_shell);
+  if(!old_shell.IsSame(new_shell))
+    OCCQueryEngine::instance()->update_OCC_map(old_shell, new_shell);
   return CUBIT_SUCCESS;
 }
 // ********** END PUBLIC FUNCTIONS         **********

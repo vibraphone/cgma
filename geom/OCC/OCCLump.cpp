@@ -400,5 +400,6 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
     if(shapes.Extent() > 0 || op->IsDeleted(shell))
       OCCShell::update_OCC_entity(shell, shape, op);
   }
-  OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
+  if(!old_solid.IsSame(new_shape))
+    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
 }

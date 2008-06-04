@@ -895,14 +895,17 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        else
          shape_vertex.Nullify();
 
-       if(shapes.Extent() > 0 || op->IsDeleted(vertex))
+       if(!vertex.IsSame(shape_vertex) && (shapes.Extent() > 0 || op->IsDeleted(vertex)))
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape_vertex);
 
-       OCCQueryEngine::instance()->update_OCC_map(edge, shape_edge);
+       if (!edge.IsSame(shape_edge))
+         OCCQueryEngine::instance()->update_OCC_map(edge, shape_edge);
      }
-     OCCQueryEngine::instance()->update_OCC_map(wire, shape);
+     if (!wire.IsSame(shape))
+       OCCQueryEngine::instance()->update_OCC_map(wire, shape);
   }
-  OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
+  if (!old_surface.IsSame(new_surface))
+    OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
   return CUBIT_SUCCESS;
 }
 

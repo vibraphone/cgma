@@ -40,6 +40,7 @@ class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
+class BRepBuilderAPI_MakeShape;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCBody : public BodySM
@@ -177,6 +178,10 @@ public:
   //update the underlining CompSolid
   CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                                  BRepAlgoAPI_BooleanOperation *op = NULL);
+
+  static CubitStatus update_OCC_entity(TopoDS_Shape& old_shape,
+                                       TopoDS_Shape& new_shape,
+                                       BRepBuilderAPI_MakeShape *op);
 
   OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
 				 return (OCCSurface*) NULL;} 

@@ -167,10 +167,6 @@ CubitStatus make_Point()
   BodySM* stitched_body = NULL;
   DLIList<Body*> new_bodies;
   gmti->create_solid_bodies_from_surfs(face_list, new_bodies);
-  //ome->stitch_surfs(bodysm_list, bodysm);
-  //Lump* lump = ome->make_Lump(surface_list);
-  //bodysm = CAST_TO(lump, OCCLump)->get_body();
-  //gti->make_Body(bodysm);
 
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
@@ -223,19 +219,19 @@ CubitStatus make_Point()
 
   // test for sphere making
   Body* test_body = gmti->sphere(5);
-  d = test_body->measure(); //d = 
+  d = test_body->measure(); //d = 523.598 
 
   //test for prism making
   test_body = gmti->prism(10, 4, 4,2);
-  d =  test_body->measure(); //d =
+  d =  test_body->measure(); //d = 320
 
   //test for pyramid making
   test_body = gmti->pyramid(10, 4, 5, 2, 3);
-  d =  test_body->measure(); //d =
+  d =  test_body->measure(); //d = 320
 
   //test for torus making
   test_body =  gmti->torus(10,5);
-  d =  test_body->measure(); //d =
+  d =  test_body->measure(); //d = 4934.8
 
   //test for planar_sheet making
   CubitVector p1(0, 0, 0);
@@ -287,29 +283,19 @@ CubitStatus make_Point()
   gti->get_free_ref_entities(free_entities);
   //there shouldn't be any free_entites.
 
-  //test for multi-cut imprint for subtract.
   from_body = gmti->brick(10, 10, 10);
   tool_body = gmti->brick(11, 1, 1);
   CubitVector v_move4(0,1,-1);
   gti->translate(from_body,v_move4);
   Body* cp_from_body = gmti->copy_body(from_body);
-  Body* cp_from_body2 = gmti->copy_body(from_body);
-  Body* cp_tool_body = gmti->copy_body(tool_body);
-  from_bodies.clean_out();
-  from_bodies.append(from_body);
-  new_bodies.clean_out();
-  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
-                       CUBIT_TRUE, CUBIT_FALSE); 
-  n = new_bodies.get()->num_ref_faces();
-  //n = 8
-  n = new_bodies.get()->num_ref_edges();
-  //n = 18
+  Body* cp_from_body2 = gmti->copy_body(cp_from_body);
 
   //test edge imprint on body
   ref_edges.clean_out();
-  cp_tool_body->ref_edges(ref_edges);
+  tool_body->ref_edges(ref_edges);
   from_bodies.clean_out();
   from_bodies.append(cp_from_body);
+  new_bodies.clean_out();
   CubitStatus stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
 
   //test edge imprint on surface
@@ -317,6 +303,26 @@ CubitStatus make_Point()
   face_list.clean_out();
   cp_from_body2->ref_faces(face_list);
   int size = face_list.size();
+  DLIList<RefFace*> unimprint_faces;
+  for(int i = 0; i < size; i++)
+  {
+    CubitVector v = face_list.get()->center_point();
+    if(!v.about_equal(vv))
+      unimprint_faces.append(face_list.remove());
+    else
+      face_list.step();
+  }
+  assert(face_list.size() == 1);
+  new_bodies.clean_out();
+  vertices.clean_out();
+  cp_from_body2->ref_vertices(vertices);
+  vertices.clean_out();
+  ref_edges.step_and_get()->ref_vertices(vertices);
+  stat = gmti->imprint(unimprint_faces, ref_edges, new_bodies, CUBIT_FALSE);
+
+  new_bodies.clean_out();
+  face_list.clean_out();
+  cp_from_body2->ref_faces(face_list);
   for(int i = 0; i < size; i++)
   {
     CubitVector v = face_list.get()->center_point();
@@ -325,8 +331,25 @@ CubitStatus make_Point()
     else
       face_list.step();
   }
-  assert(face_list.size() == 1);
+
+  vertices.clean_out();
+  face_list.get()->ref_vertices(vertices);
+  vertices.clean_out();
+  ref_edges.step_and_get()->ref_vertices(vertices);
+
+  OCCBody* check_body = CAST_TO(face_list.get()->body()->get_body_sm_ptr(), OCCBody);
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
+
+  //test for multi-cut imprint for subtract.
+  from_bodies.clean_out();
+  from_bodies.append(from_body);
+  new_bodies.clean_out();
+  rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
+                       CUBIT_TRUE, CUBIT_FALSE);
+  n = new_bodies.get()->num_ref_faces();
+  //n = 8
+  n = new_bodies.get()->num_ref_edges();
+  //n = 18
 
   bodies.clean_out();
   gti->bodies(bodies);
