@@ -676,7 +676,11 @@ private:
  CubitStatus get_shape_list(DLIList<BodySM*> BodySM_list,
                          DLIList<TopoDS_Shape*>& shape_list,
                          bool  keep_old) const;
-  
+ CubitStatus face_edge_imprint( DLIList<Surface*> &ref_face_list,
+                                DLIList<Curve*> &edge_list,
+                                DLIList<TopoDS_Face*>& face_list,
+                                DLIList<TopoDS_Shape*>& shape_list,
+                                bool keep_old ) const; 
 } ;
 
 #endif
