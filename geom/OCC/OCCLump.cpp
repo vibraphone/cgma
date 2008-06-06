@@ -49,6 +49,7 @@
 #include "TopExp_Explorer.hxx"
 #include "TopoDS.hxx"
 #include "BRep_Tool.hxx"
+#include "LocOpe_SplitShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -353,7 +354,8 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 //----------------------------------------------------------------
 CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
                                        TopoDS_Shape& new_shape,
-                                       BRepBuilderAPI_MakeShape *op)
+                                       BRepBuilderAPI_MakeShape *op,
+                                       LocOpe_SplitShape* sp)
 {
   //set the Shells
   TopTools_IndexedMapOfShape M;
@@ -375,7 +377,11 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
     TopoDS_Shell shell = TopoDS::Shell(M(ii));
 
     TopTools_ListOfShape shapes;
-    shapes.Assign(op->Modified(shell));
+    if (op)
+      shapes.Assign(op->Modified(shell));
+    else if(sp)
+      shapes.Assign(sp->DescendantShapes(shell));
+
     if (shapes.Extent() == 1)
       shape = shapes.First();
 
@@ -397,8 +403,8 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
        continue;
     }
  
-    if(shapes.Extent() > 0 || op->IsDeleted(shell))
-      OCCShell::update_OCC_entity(shell, shape, op);
+    if(shapes.Extent() > 0 || (op && op->IsDeleted(shell)))
+      OCCShell::update_OCC_entity(shell, shape, op, sp);
   }
   if(!old_solid.IsSame(new_shape))
     OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);

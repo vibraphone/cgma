@@ -435,7 +435,7 @@ CubitStatus OCCCurve::closest_point(
 {  
   BRepAdaptor_Curve acurve(*myTopoDSEdge);
   gp_Pnt p(location.x(), location.y(), location.z()), newP(0.0, 0.0, 0.0);
-  double newVal=0.0;
+  double newVal=0.0, global_newVal = 0.0;
   int i;
   BRepLProp_CLProps CLP(acurve, 2, Precision::PConfusion());
   Extrema_ExtPC ext(p, acurve, Precision::Approximation());
@@ -443,26 +443,33 @@ CubitStatus OCCCurve::closest_point(
 	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
 		  if ( ext.IsMin(i) ) {
 			  newVal = ext.Point(i).Parameter();
-			  newP = ext.Point(i).Value();
-			  CLP.SetParameter(newVal);
+                          if(i == 1)
+                            global_newVal = newVal;
+                          if(newVal <= global_newVal)
+                          {
+                            global_newVal = newVal;
+			    newP = ext.Point(i).Value();
+			    CLP.SetParameter(newVal);
+                          } 
 		  }
 	  }
   }
-  closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
-  if (tangent_ptr != NULL) {
+  if(global_newVal < 10^10)
+  {
+    closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
+    if (tangent_ptr != NULL) {
 	  gp_Dir tangent;
 	  if (CLP.IsTangentDefined()) {
 		  CLP.Tangent(tangent);
 		  *tangent_ptr = CubitVector(tangent.X(), tangent.Y(), tangent.Z()); 
 	  }
-  }
-  if (curvature_ptr != NULL) 
-     get_curvature( location, *curvature_ptr);
+    }
+    if (curvature_ptr != NULL) 
+       get_curvature( location, *curvature_ptr);
   
-  if (param != NULL) {
+    if (param != NULL) 
 	  *param = newVal;
-  }
-  
+  } 
   return CUBIT_SUCCESS;
 }
 

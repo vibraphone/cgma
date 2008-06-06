@@ -54,6 +54,7 @@
 #include "BRepBuilderAPI_MakeFace.hxx"
 #include "BRepBuilderAPI_Sewing.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
+#include "LocOpe_SplitShape.hxx"
 #include "BRep_Tool.hxx"
 #include "BRep_Builder.hxx"
 #include "GProp_GProps.hxx"
@@ -2576,6 +2577,9 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list,
   for(int i = 0; i <BodySM_list.size(); i++)
   {
     occ_body = CAST_TO(BodySM_list.get_and_step(), OCCBody);
+    if (!occ_body)
+      continue;
+
     OCCSurface* surface = occ_body->my_sheet_surface();
     OCCShell*   shell = occ_body->shell();
     if(surface)
@@ -3006,19 +3010,107 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
 //===============================================================================
 // Function   : imprint
 // Member Type: PUBLIC
-// Description: Imprints locations to bodies (for splitting curves or putting
-//              hardpoints on surfaces).   
+// Description: Imprints locations to bodies (for splitting curves, there's
+//              no known ways to put hard points on surfaces in OCC, so I just
+//              add free_vertex on OCCSurface definition, mesh should look on
+//              this structure).   
 // Author     : Jane Hu
 // Date       : 06/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &/*body_list*/,
-                                           DLIList<CubitVector*> &/*vector_list*/,
-                                           DLIList<BodySM*>& /*new_body_list*/,
-                                           bool keep_old /*keep_old_body*/,
+CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
+                                           DLIList<CubitVector*> &vector_list,
+                                           DLIList<BodySM*>& new_body_list,
+                                           bool keep_old,
                                            DLIList<TopologyBridge*>*,
                                            DLIList<TopologyBridge*>* ) const
 {
-  return CUBIT_FAILURE;
+  DLIList<TopoDS_Shape*> shape_list;
+  CubitStatus stat = get_shape_list(body_list, shape_list, keep_old);
+
+  if(!stat)
+    return stat;
+
+  for (int i = 0; i < body_list.size(); i++)
+  {
+    OCCBody* body = CAST_TO(body_list.get_and_step(), OCCBody);
+    TopoDS_Shape* from_shape = shape_list.get_and_step();
+    if (!body)
+      continue;
+    DLIList<OCCSurface*> surfaces;
+    DLIList<OCCCurve*> curves;
+
+    body->get_all_surfaces(surfaces);
+    body->get_all_curves(curves);
+    
+    CubitBoolean on_vertex = CUBIT_FALSE;
+    CubitBoolean on_curve = CUBIT_FALSE;
+    for (int j = 0; j < vector_list.size(); j ++)
+    {
+      CubitVector* v = vector_list.get_and_step();
+      for (int k = 0;  k < curves.size(); k ++)
+      {
+         OCCCurve* curve = curves.get_and_step();
+         CubitPointContainment pc = curve->point_containment(*v);
+         if(pc == CUBIT_PNT_BOUNDARY)
+         {
+           on_vertex = CUBIT_TRUE;
+           break;
+         }
+
+         else if( pc == CUBIT_PNT_INSIDE)
+         {
+           LocOpe_SplitShape splitor(*from_shape); 
+           on_curve = CUBIT_TRUE;
+           TopoDS_Edge edge = *curve->get_TopoDS_Edge();
+           gp_Pnt pt = gp_Pnt(v->x(), v->y(), v->z());
+           TopoDS_Vertex vertex = BRepBuilderAPI_MakeVertex(pt);
+           double param = curve->u_from_position(*v);
+           splitor.Add(vertex, param, edge);
+           TopTools_ListOfShape shapes;
+           shapes.Assign(splitor.DescendantShapes(*from_shape));
+           BRepBuilderAPI_MakeShape* pointor = NULL;
+           if(from_shape->TShape()->ShapeType() ==TopAbs_COMPSOLID)
+             OCCBody::update_OCC_entity(*from_shape, shapes.First(), 
+                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+           else if(shapes.First().TShape()->ShapeType() == TopAbs_SOLID)
+             OCCLump::update_OCC_entity(TopoDS::Solid(*from_shape), 
+                    shapes.First(), 
+                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+     
+           else if(shapes.First().TShape()->ShapeType() == TopAbs_SHELL)
+             OCCShell::update_OCC_entity(TopoDS::Shell(*from_shape),
+                    shapes.First(), 
+                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+
+           else if(shapes.First().TShape()->ShapeType() == TopAbs_FACE)
+             OCCSurface::update_OCC_entity(TopoDS::Face(*from_shape), 
+                    shapes.First(), 
+                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+           break;
+         }  
+       } 
+       if(on_vertex || on_curve)
+         continue;
+
+       //check possible on surface
+       for(int n = 0; n < surfaces.size(); n ++)
+       {
+          OCCSurface* surface = surfaces.get_and_step();
+          if(!surface->is_position_on(*v))
+            continue;
+           
+          CubitPointContainment ps = surface->point_containment(*v);
+          if(ps == CUBIT_PNT_INSIDE)
+          {
+             Point* p = make_Point(*v);
+             if(p)
+               surface->add_hardpoint(CAST_TO(p, OCCPoint));
+             break;
+          }
+       }
+    }
+  }       
+  return stat;
 }
 
 //===============================================================================

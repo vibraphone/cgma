@@ -43,6 +43,7 @@
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
+#include "LocOpe_SplitShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -260,7 +261,8 @@ double OCCShell::measure()
 //----------------------------------------------------------------
 CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
                                         TopoDS_Shape& new_shell,
-                                        BRepBuilderAPI_MakeShape *op)
+                                        BRepBuilderAPI_MakeShape *op,
+                                        LocOpe_SplitShape* sp)
 {
   //set the surfaces
   TopTools_IndexedMapOfShape M;
@@ -270,14 +272,18 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
   for(int ii=1; ii<=M.Extent(); ii++)
   {
     TopoDS_Face face = TopoDS::Face(M(ii));
-    shapes.Assign(op->Modified(face));
+    if (op)
+      shapes.Assign(op->Modified(face));
+    else if(sp)
+      shapes.Assign(sp->DescendantShapes(face));
+
     if(shapes.Extent() == 1)
       shape = shapes.First();
     else
       shape.Nullify();
 
-    if(shapes.Extent() > 0 || op->IsDeleted(face))
-      OCCSurface::update_OCC_entity(face,shape, op);
+    if(shapes.Extent() > 0 || (op && op->IsDeleted(face)))
+      OCCSurface::update_OCC_entity(face,shape, op, sp);
   }
   if(!old_shell.IsSame(new_shell))
     OCCQueryEngine::instance()->update_OCC_map(old_shell, new_shell);

@@ -47,7 +47,7 @@
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "BRep_Tool.hxx"
-
+#include "LocOpe_SplitShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 
@@ -831,7 +831,8 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 //----------------------------------------------------------------
 CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
                                           TopoDS_Shape& new_surface,
-                                          BRepBuilderAPI_MakeShape *op)
+                                          BRepBuilderAPI_MakeShape *op,
+                                          LocOpe_SplitShape* sp) 
 {
   //set the Wires
   TopTools_IndexedMapOfShape M;
@@ -844,7 +845,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   {
      TopoDS_Wire wire = TopoDS::Wire(M(ii));
      TopTools_ListOfShape shapes;
-     shapes.Assign(op->Modified(wire));
+     if(op)
+       shapes.Assign(op->Modified(wire));
+     else if(sp)
+       shapes.Assign(sp->DescendantShapes(wire));
+
      if (shapes.Extent() == 1)
        shape = shapes.First();
      else if(shapes.Extent() > 1)
@@ -870,7 +875,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      for(Ex.Init(wire); Ex.More();Ex.Next())
      {
        TopoDS_Edge edge = Ex.Current();
-       shapes.Assign(op->Modified(edge));
+       if(op)
+         shapes.Assign(op->Modified(edge));
+       else if(sp)
+         shapes.Assign(sp->DescendantShapes(edge));
+
        if (shapes.Extent() == 1)
          shape_edge = shapes.First();
        else if (shapes.Extent() > 1)
@@ -879,23 +888,21 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          shape_edge.Nullify(); 
        else 
          shape_edge = edge;
-/*
-       if(wire.Orientation() == TopAbs_REVERSED && !shape_edge.IsNull())
-       {
-         shape_edge.Orientation(
-          shape_edge.Orientation()==TopAbs_FORWARD? TopAbs_REVERSED:TopAbs_FORWARD);
-       }
-*/
+
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
-       shapes.Assign(op->Modified(vertex));
+       if(op)
+         shapes.Assign(op->Modified(vertex));
+       else if(sp)
+         shapes.Assign(sp->DescendantShapes(vertex));
+
        if (shapes.Extent() == 1)
          shape_vertex = shapes.First();
 
        else
          shape_vertex.Nullify();
 
-       if(!vertex.IsSame(shape_vertex) && (shapes.Extent() > 0 || op->IsDeleted(vertex)))
+       if(!vertex.IsSame(shape_vertex) && (shapes.Extent() > 0 || (op && op->IsDeleted(vertex))))
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape_vertex);
 
        if (!edge.IsSame(shape_edge))

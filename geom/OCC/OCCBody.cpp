@@ -53,6 +53,7 @@
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
 #include "Standard_Boolean.hxx"
+#include "LocOpe_SplitShape.hxx"
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
@@ -400,7 +401,8 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 //----------------------------------------------------------------
 CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
                                        TopoDS_Shape& new_shape,
-                                       BRepBuilderAPI_MakeShape *op)
+                                       BRepBuilderAPI_MakeShape *op,
+                                       LocOpe_SplitShape* sp)
 {
   //set the Shells
   TopTools_IndexedMapOfShape M;
@@ -413,7 +415,11 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
     TopoDS_Solid solid = TopoDS::Solid(M(ii));
 
     TopTools_ListOfShape shapes;
-    shapes.Assign(op->Modified(solid));
+    if(op)
+      shapes.Assign(op->Modified(solid));
+    else if(sp)
+      shapes.Assign(sp->DescendantShapes(solid));
+
     if (shapes.Extent() == 1)
       shape = shapes.First();
 
@@ -435,8 +441,8 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
        continue;
     }
 
-    if(shapes.Extent() > 0 || op->IsDeleted(solid))
-      OCCLump::update_OCC_entity(solid, shape, op);
+    if(shapes.Extent() > 0 || (op && op->IsDeleted(solid)))
+      OCCLump::update_OCC_entity(solid, shape, op, sp);
   }
   if(!old_shape.IsSame(new_shape))
     OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);

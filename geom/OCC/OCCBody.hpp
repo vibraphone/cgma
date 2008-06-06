@@ -41,6 +41,7 @@ class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
+class LocOpe_SplitShape;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCBody : public BodySM
@@ -181,7 +182,8 @@ public:
 
   static CubitStatus update_OCC_entity(TopoDS_Shape& old_shape,
                                        TopoDS_Shape& new_shape,
-                                       BRepBuilderAPI_MakeShape *op);
+                                       BRepBuilderAPI_MakeShape *op,
+                                       LocOpe_SplitShape* sp = NULL );
 
   OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
 				 return (OCCSurface*) NULL;} 

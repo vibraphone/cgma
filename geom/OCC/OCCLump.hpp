@@ -39,6 +39,7 @@ class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepBuilderAPI_MakeShape;
 class BRepAlgoAPI_BooleanOperation;
+class LocOpe_SplitShape;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCLump : public Lump
@@ -157,7 +158,8 @@ public:
                                 BRepAlgoAPI_BooleanOperation *op = NULL);
   static CubitStatus update_OCC_entity(TopoDS_Solid& old_shape,
                                        TopoDS_Shape& new_shape,
-                                       BRepBuilderAPI_MakeShape *op);
+                                       BRepBuilderAPI_MakeShape *op,
+                                       LocOpe_SplitShape* sp = NULL);
 protected: 
   
 private:

@@ -50,6 +50,7 @@ class OCCPoint;
 class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
+class LocOpe_SplitShape;
 //// class CubitTransformMatrix;
 
 class OCCSurface : public Surface
@@ -64,13 +65,17 @@ public :
    
   static CubitStatus update_OCC_entity(TopoDS_Face& old_surface,
                                        TopoDS_Shape& new_surface,
-                                       BRepBuilderAPI_MakeShape *op);
+                                       BRepBuilderAPI_MakeShape *op,
+                                       LocOpe_SplitShape* sp = NULL);
 
 
   void add_shell(OCCShell* shell) { myShellList.append_unique(shell);}
   DLIList<OCCShell*> shells() {return myShellList;}
   void remove_shell(OCCShell* shell) {myShellList.remove(shell);}
   void clean_shells(){myShellList.clean_out();}
+
+  void add_hardpoint(OCCPoint* HardPoint){myHardPoints.append(HardPoint);}
+  void remove_hardpoint(OCCPoint* HardPoint){myHardPoints.remove(HardPoint);}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
@@ -433,6 +438,7 @@ private:
   OCCShell* myShell;
   OCCLump* myLump;
   OCCBody* myBody;
+  DLIList<OCCPoint*> myHardPoints;
 
 };
 
