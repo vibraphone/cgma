@@ -454,7 +454,7 @@ CubitStatus OCCCurve::closest_point(
 		  }
 	  }
   }
-  if(global_newVal < 10^10)
+  if(global_newVal > 0.0)
   {
     closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
     if (tangent_ptr != NULL) {

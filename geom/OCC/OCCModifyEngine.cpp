@@ -2976,6 +2976,26 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
   }
 
   DLIList<BodySM*> new_body_list;
+  shape_to_bodySM(shape_list, new_body_list);
+  
+  if (new_body_list.size() == 1)
+  {
+    new_body = new_body_list.get();
+    return CUBIT_SUCCESS;
+  }
+  return CUBIT_FAILURE;
+}
+
+//===============================================================================
+// Function   : shape_to_bodySM
+// Member Type: PRIVATE
+// Description: After imprint, update shape list to bodySM_list
+// Author     : Jane Hu
+// Date       : 06/08
+//===============================================================================
+void OCCModifyEngine::shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
+                                       DLIList<BodySM*>& new_body_list)const
+{
   for(int j = 0; j < shape_list.size(); j ++)
   {
     DLIList<TopologyBridge*> tbs;
@@ -2998,13 +3018,6 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
       new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
     }
   }
-
-  if (new_body_list.size() == 1)
-  {
-    new_body = new_body_list.get();
-    return CUBIT_SUCCESS;
-  }
-  return CUBIT_FAILURE;
 }
 
 //===============================================================================
@@ -3046,7 +3059,9 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
     CubitBoolean on_curve = CUBIT_FALSE;
     for (int j = 0; j < vector_list.size(); j ++)
     {
-      CubitVector* v = vector_list.get_and_step();
+      CubitVector* v = vector_list[j];
+      if(v == NULL)
+        continue;
       for (int k = 0;  k < curves.size(); k ++)
       {
          OCCCurve* curve = curves.get_and_step();
@@ -3066,9 +3081,24 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
            TopoDS_Vertex vertex = BRepBuilderAPI_MakeVertex(pt);
            double param = curve->u_from_position(*v);
            splitor.Add(vertex, param, edge);
+           
+           //update the curve_list
+           TopTools_ListOfShape edge_shapes;
+           edge_shapes.Assign(splitor.DescendantShapes(edge));
+           while(edge_shapes.Extent())
+           {
+             TopoDS_Shape edge_shape = edge_shapes.First();
+             TopoDS_Edge occ_edge = TopoDS::Edge(edge_shape);
+             OCCCurve* test_curve; 
+             test_curve = CAST_TO(OCCQueryEngine::instance()->populate_topology_bridge(occ_edge), OCCCurve);
+             if(test_curve)
+               curves.append(test_curve);
+             edge_shapes.RemoveFirst();
+           }
+           curves.remove(curve);
+           
            TopTools_ListOfShape shapes;
            shapes.Assign(splitor.DescendantShapes(*from_shape));
-           BRepBuilderAPI_MakeShape* pointor = NULL;
            if(from_shape->TShape()->ShapeType() ==TopAbs_COMPSOLID)
              OCCBody::update_OCC_entity(*from_shape, shapes.First(), 
                     (BRepBuilderAPI_MakeShape*) NULL, &splitor);
@@ -3086,6 +3116,10 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
              OCCSurface::update_OCC_entity(TopoDS::Face(*from_shape), 
                     shapes.First(), 
                     (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+
+           from_shape->Nullify();
+           delete from_shape;
+           from_shape = new TopoDS_Shape(shapes.First());
            break;
          }  
        } 
@@ -3110,6 +3144,9 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
        }
     }
   }       
+
+  shape_to_bodySM(shape_list, new_body_list);
+  
   return stat;
 }
 

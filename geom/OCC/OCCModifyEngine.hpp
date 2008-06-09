@@ -681,6 +681,8 @@ private:
                                 DLIList<TopoDS_Face*>& face_list,
                                 DLIList<TopoDS_Shape*>& shape_list,
                                 bool keep_old ) const; 
+ void shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
+                       DLIList<BodySM*>& new_body_list)const;
 } ;
 
 #endif

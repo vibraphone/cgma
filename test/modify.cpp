@@ -313,10 +313,6 @@ CubitStatus make_Point()
       face_list.step();
   }
   assert(face_list.size() == 1);
-  new_bodies.clean_out();
-  vertices.clean_out();
-  cp_from_body2->ref_vertices(vertices);
-  vertices.clean_out();
   ref_edges.step_and_get()->ref_vertices(vertices);
   stat = gmti->imprint(unimprint_faces, ref_edges, new_bodies, CUBIT_FALSE);
 
@@ -332,10 +328,20 @@ CubitStatus make_Point()
       face_list.step();
   }
 
-  vertices.clean_out();
-  face_list.get()->ref_vertices(vertices);
-  vertices.clean_out();
-  ref_edges.step_and_get()->ref_vertices(vertices);
+  //imprint a point on an edge, split it
+  CubitVector pp1(10,1,8);
+  CubitVector pp2(10,5,9);
+  CubitVector pp3(10,1,6);
+  DLIList<CubitVector*> vectors;
+  vectors.append(&pp1);
+  vectors.append(&pp2);
+  vectors.append(&pp3);
+  from_bodies.clean_out();
+  from_bodies.append(cp_from_body2);
+  new_bodies.clean_out(); 
+  stat = gmti->imprint(from_bodies, vectors, new_bodies, CUBIT_FALSE);
+
+  n = new_bodies.get()->num_ref_edges();//n = 17
 
   OCCBody* check_body = CAST_TO(face_list.get()->body()->get_body_sm_ptr(), OCCBody);
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
