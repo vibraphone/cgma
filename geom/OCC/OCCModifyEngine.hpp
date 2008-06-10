@@ -683,6 +683,10 @@ private:
                                 bool keep_old ) const; 
  void shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
                        DLIList<BodySM*>& new_body_list)const;
+
+ CubitStatus project_curves( DLIList<Surface*> &ref_face_list,
+                             DLIList<Curve*> &ref_edge_list,
+                             DLIList<Curve*> &projected_curves)const;
 } ;
 
 #endif

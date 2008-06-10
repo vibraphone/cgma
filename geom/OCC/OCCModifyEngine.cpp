@@ -69,6 +69,7 @@
 #include "BRepPrimAPI_MakeSphere.hxx"
 #include "BRepPrimAPI_MakeBox.hxx"
 #include "BRepPrimAPI_MakeWedge.hxx"
+#include "BRepTools_WireExplorer.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "BndLib_Add3dCurve.hxx"
@@ -2139,7 +2140,45 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         face = OCCQueryEngine::instance()->populate_topology_bridge(from_face);
       OCCSurface* occ_face = CAST_TO(face, OCCSurface);
 
+      DLIList<Curve*> common_curves;
       for(; Itor.More(); Itor.Next())
+      {
+        TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+        //copy the edge for imprinting.
+        BRepBuilderAPI_Copy api_copy(edge);
+        TopoDS_Shape newShape = api_copy.ModifiedShape(edge);
+        edge = TopoDS::Edge(newShape);
+        Curve* curve = NULL;
+        curve = OCCQueryEngine::instance()->populate_topology_bridge(edge); 
+        if(curve)
+          common_curves.append(curve);
+      }
+
+      DLIList<DLIList<TopoDS_Edge*>*> temp_edge_lists;
+      list_of_edges.Clear(); 
+      if (common_curves.size() >= 1)
+      {
+        sort_curves(common_curves, temp_edge_lists);
+        DLIList<TopoDS_Edge*>* edge_list;
+        int size = temp_edge_lists.size();
+        for(int i = 0; i < size; i++)
+        {
+          edge_list = temp_edge_lists.pop();
+          //make sure the copied edges are sharing vertices.
+          BRepBuilderAPI_MakeWire myWire;
+          edge_list->reset();
+          for(int i = 0; i < edge_list->size(); i++)
+          {
+             TopoDS_Edge e = *(edge_list->get_and_step());
+             myWire.Add(e);
+          }
+          TopoDS_Wire wire = myWire.Wire();
+          BRepTools_WireExplorer Ex(wire); 
+          for(; Ex.More(); Ex.Next())
+            list_of_edges.Append(Ex.Current());
+        }
+      }
+      for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
       {
         TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
         //check to see if the intersection edge is on from_face
@@ -2164,7 +2203,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
         {
 	  for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
 	  {
-            //check if the edge is on from_face edges, add such edge on existing
+           //check if the edge is on from_face edges, add such edge on existing
             //edge to split it.
 	    TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
          
@@ -3153,18 +3192,87 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 //===============================================================================
 // Function   : imprint_projected_edges
 // Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Description: Projects a list of Curves on to a list of Surfaces
+//              and imprint the faces with the new Curves
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &/*ref_face_list*/,
-                                                           DLIList<Curve*> &/*ref_edge_list*/,
-                                                           DLIList<BodySM*>& /*new_body_list*/,
-                                                           bool /*keep_old_body*/,
-                                                           bool /*keep_free_edges*/) const
+CubitStatus     
+OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &ref_face_list,
+                                          DLIList<Curve*> &ref_edge_list,
+                                          DLIList<BodySM*>& new_body_list,
+                                          bool keep_old_body,
+                                          bool keep_free_edges) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  DLIList<Curve*> projected_curves;
+  CubitStatus 
+     stat = project_curves(ref_face_list, ref_edge_list, projected_curves);
+  if(!stat)
+    return stat;
+
+  // imprint Surface with curves
+  stat = imprint(ref_face_list, projected_curves, new_body_list, keep_old_body );
+
+  if(keep_free_edges)
+     return  stat;
+
+  PRINT_INFO( "Removing projected curves \n");
+  for(int i=0; i< projected_curves.size();i++)
+  {
+    // Now delete this Curve and its underlying solid model entities
+
+    Curve* curve = projected_curves.get_and_step();
+    stat = OCCQueryEngine::instance()->delete_solid_model_entities( curve );
+    if (stat == CUBIT_FAILURE)
+    {
+       PRINT_ERROR("In OCCQueryEngine::delete_geometry\n"
+                 "       Could not delete OCCCurve.\n"
+                 "       The Model database is likely corrupted "
+                 "due to\n       this unsuccessful deletion.\n" );
+    }
+  } 
+  return stat;
+}
+//===============================================================================
+// Function   : project_curves
+// Member Type: PRIVATE
+// Description: Projects a list of Curves on to a list of Surfaces
+// Author     : Jane Hu
+// Date       : 06/08
+//===============================================================================
+CubitStatus 
+ OCCModifyEngine::project_curves( DLIList<Surface*> &ref_face_list,
+                                  DLIList<Curve*> &ref_edge_list,
+                                  DLIList<Curve*> &projected_curves)const
+
+{
+  CubitVector* v = NULL;
+  Curve* projected_curve = NULL;
+  //project curves onto surfaces.
+  for(int i = 0; i < ref_edge_list.size(); i++)
+  {
+    OCCCurve* curve = CAST_TO(ref_edge_list.get_and_step(), OCCCurve);
+    if(!curve)
+       continue;
+
+    for (int j = 0; j < ref_face_list.size(); j++)
+    {
+      OCCSurface* surface = CAST_TO(ref_face_list.get_and_step(), OCCSurface); 
+      if(!surface)
+        continue;
+      if(surface->is_closed_in_U() || surface->is_closed_in_V())
+      {
+        PRINT_ERROR("This function can't project curves on closed surfaces.\n");
+        return CUBIT_FAILURE;
+      }
+      
+      projected_curve = NULL;
+      projected_curve = curve->project_curve(surface, CUBIT_FALSE, v);
+      if(projected_curve)
+        projected_curves.append(projected_curve);
+    }
+  }
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================

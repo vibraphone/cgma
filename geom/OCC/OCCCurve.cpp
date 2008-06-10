@@ -437,6 +437,7 @@ CubitStatus OCCCurve::closest_point(
   gp_Pnt p(location.x(), location.y(), location.z()), newP(0.0, 0.0, 0.0);
   double newVal=0.0, global_newVal = 0.0;
   int i;
+  CubitBoolean found = CUBIT_FALSE;
   BRepLProp_CLProps CLP(acurve, 2, Precision::PConfusion());
   Extrema_ExtPC ext(p, acurve, Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
@@ -447,6 +448,7 @@ CubitStatus OCCCurve::closest_point(
                             global_newVal = newVal;
                           if(newVal <= global_newVal)
                           {
+                            found = CUBIT_TRUE;
                             global_newVal = newVal;
 			    newP = ext.Point(i).Value();
 			    CLP.SetParameter(newVal);
@@ -454,7 +456,7 @@ CubitStatus OCCCurve::closest_point(
 		  }
 	  }
   }
-  if(global_newVal > 0.0)
+  if(found)
   {
     closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
     if (tangent_ptr != NULL) {
@@ -967,8 +969,8 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 // Date       : 01/08
 //===============================================================================
 Curve* OCCCurve::project_curve(Surface* face_ptr, 
-                                      CubitBoolean closed,
-                                      const CubitVector* third_point)
+                               CubitBoolean closed,
+                               const CubitVector* third_point)
 {
    TopoDS_Edge* edge = get_TopoDS_Edge();
    if (edge == NULL)
