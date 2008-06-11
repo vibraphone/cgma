@@ -343,7 +343,7 @@ CubitStatus make_Point()
 
   n = new_bodies.get()->num_ref_edges();//n = 17
 
-  OCCBody* check_body = CAST_TO(face_list.get()->body()->get_body_sm_ptr(), OCCBody);
+  new_bodies.clean_out();
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
 
   //test for multi-cut imprint for subtract.
@@ -403,14 +403,9 @@ CubitStatus make_Point()
   tool_body  = gmti->brick(4, 4, 4);
   CubitVector v_move3(0,1,0);
   gti->translate(tool_body,v_move3);
-  BodySM* copy_bodysm = ome->copy_body(tool_body->get_body_sm_ptr());
   Body* copy_tool_body = gmti->copy_body(tool_body);
   Body* copy_tool_body2 = gmti->copy_body(tool_body);
 
-  //test shell body imprint
-  //TopoDS_Shape* tool_shape = CAST_TO(copy_bodysm,OCCBody)->get_TopoDS_Shape();  
-  //TopoDS_Shape* from_shape = CAST_TO(bodysm,OCCBody)->shell()->get_TopoDS_Shell();
-  //ome->imprint_toposhapes(tool_shape, from_shape);
   from_bodies.clean_out();
   new_bodies.clean_out();
   from_bodies.append(copy_tool_body);
@@ -456,6 +451,31 @@ CubitStatus make_Point()
   from_bodies.append(tool_body);
   stat =  gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
   
+  //test imprint projected edges
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);  
+  
+  OCCQueryEngine* oqe = OCCQueryEngine::instance();
+  DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
+
+  from_body  = gmti->brick(4, 4, 4);
+  CubitVector v_move9(0,3,0);
+  gti->translate(from_body,v_move9); 
+  ref_faces.clean_out();
+  from_body->ref_faces(ref_faces);
+  tool_body = gmti->brick(11, 1, 1);  
+  ref_edges.clean_out();
+  tool_body->ref_edges(ref_edges);
+  new_bodies.clean_out();
+  gmti->imprint_projected_edges(ref_faces,ref_edges, new_bodies, CUBIT_TRUE,
+       CUBIT_FALSE); 
+  if(new_bodies.size())
+    n = new_bodies.get()->num_ref_faces();
   return CUBIT_SUCCESS;
 
 }

@@ -327,6 +327,7 @@ public :
                           BRepAlgoAPI_BooleanOperation *op = NULL );
  
   Curve* project_curve(Surface* face_ptr,
+                       DLIList<Point*>&  normal_proj_points,
                        CubitBoolean closed,
                        const CubitVector* third_point);
 protected: 

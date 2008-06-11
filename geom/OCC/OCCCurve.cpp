@@ -969,6 +969,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 // Date       : 01/08
 //===============================================================================
 Curve* OCCCurve::project_curve(Surface* face_ptr, 
+                               DLIList<Point*>&  normal_proj_points,
                                CubitBoolean closed,
                                const CubitVector* third_point)
 {
@@ -998,13 +999,28 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         return (Curve*) NULL;
    }
 
-   TopTools_ListOfShape projections;
-   projections = aProjection.Generated(*edge);
-   int num_projection = projections.Extent();
-   if (num_projection == 0)
+   TopoDS_Shape new_shape = aProjection.Projection();//compound shape
+   int num_projection = 0;
+   if (new_shape.IsNull())
    {
        PRINT_ERROR("Cannot project the curve to the surface.\n");
        return (Curve*) NULL;
+   }
+
+   else
+   {
+     //count how many free edges and vertices the new_shape has.
+     TopExp_Explorer Ex;
+     for (Ex.Init(new_shape,TopAbs_EDGE); Ex.More(); Ex.Next())
+       num_projection++;
+     for (Ex.Init(new_shape,TopAbs_VERTEX, TopAbs_EDGE); Ex.More(); Ex.Next())
+       num_projection++;
+   }
+
+   if(num_projection == 0)
+   {
+      PRINT_INFO("No projection on the surface.\n");
+      return (Curve*) NULL;
    }
 
    else if ( num_projection == 1 )
@@ -1012,20 +1028,54 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
       if(closed == true)
        PRINT_WARNING("Cannot project the curve to create a closed projection.\n"                 "There is only one projection segment.\n");
 
-      TopoDS_Shape new_shape = aProjection.Projection();//compound shape
-      TopoDS_Edge new_edge = TopoDS::Edge(new_shape);
-      return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+      TopExp_Explorer Ex;
+      TopoDS_Edge new_edge;
+      TopoDS_Vertex new_point;
+      for (Ex.Init(new_shape,TopAbs_EDGE); Ex.More(); Ex.Next())
+      {
+        new_edge = TopoDS::Edge(Ex.Current());
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+      }
+      for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
+      {
+        new_point = TopoDS::Vertex(Ex.Current());
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point));
+      } 
+      return (Curve*) NULL;
    }
 
    else if (num_projection == 2)
    {
       double d;
       double first, last;
-      TopoDS_Shape shape1 = projections.First();
-      TopoDS_Edge edge1 = TopoDS::Edge(shape1);
+      TopExp_Explorer Ex;
+      TopoDS_Edge edge1, edge2;
+      TopoDS_Vertex point;
 
-      TopoDS_Shape shape2 = projections.Last();
-      TopoDS_Edge edge2 = TopoDS::Edge(shape2);
+      int count = 0;
+      for (Ex.Init(new_shape,TopAbs_EDGE); Ex.More(); Ex.Next())
+      {
+        count++;
+        if(count == 1)
+          edge1 = TopoDS::Edge(Ex.Current());
+        if(count == 2)
+          edge2 = TopoDS::Edge(Ex.Current());
+      }
+
+      for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
+      {
+        point = TopoDS::Vertex(Ex.Current());
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(point));
+      }
+
+      if(edge1.IsNull())
+        return OCCQueryEngine::instance()->populate_topology_bridge(edge2);
+
+      if(edge2.IsNull())
+        return OCCQueryEngine::instance()->populate_topology_bridge(edge1);
+
+      if(edge1.IsNull() && edge2.IsNull())
+        return (Curve*) NULL;
 
       Handle(Geom_Curve) myCurve1 =
                         BRep_Tool::Curve(edge1,first,last);
@@ -1055,9 +1105,8 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         }
 
         double d2 = projOncurve2.LowerDistance();
-        TopoDS_Shape new_shape =
-                d > d2 ? projections.Last() : projections.First() ;
-        TopoDS_Edge new_edge = TopoDS::Edge(new_shape);
+        TopoDS_Edge new_edge =
+                d > d2 ? edge2 : edge1 ;
         return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
       }
 

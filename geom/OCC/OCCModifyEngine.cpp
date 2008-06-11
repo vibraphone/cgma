@@ -239,8 +239,9 @@ Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
   if(face_ptr == NULL)
     return curve;
  
+  DLIList<Point*> points;
   new_curve = 
-	CAST_TO(curve, OCCCurve)->project_curve(face_ptr, closed, third_point); 
+	CAST_TO(curve, OCCCurve)->project_curve(face_ptr, points, closed, third_point); 
 
   delete curve;
   return new_curve;
@@ -2913,6 +2914,7 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
         TopExp_Explorer Ex;
         TopoDS_Face the_face;
         TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
+        M.Clear();
         TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPSOLID, M);
         if(!M.Contains(*topo_face))
           continue;
@@ -3248,6 +3250,7 @@ CubitStatus
 {
   CubitVector* v = NULL;
   Curve* projected_curve = NULL;
+  DLIList<Point*> points;
   //project curves onto surfaces.
   for(int i = 0; i < ref_edge_list.size(); i++)
   {
@@ -3267,11 +3270,13 @@ CubitStatus
       }
       
       projected_curve = NULL;
-      projected_curve = curve->project_curve(surface, CUBIT_FALSE, v);
+      projected_curve = curve->project_curve(surface, points, CUBIT_FALSE, v);
       if(projected_curve)
-        projected_curves.append(projected_curve);
+        projected_curves.append_unique(projected_curve);
     }
   }
+  while(points.size() > 0)
+    delete points.pop();
   return CUBIT_SUCCESS;
 }
 

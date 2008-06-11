@@ -1582,9 +1582,9 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   {
     delete occ_shell->my_body();
     delete occ_shell->my_lump();
-    CubitStatus stat = unhook_ShellSM_from_OCC(occ_shell);
     DLIList<TopologyBridge*> tb_surfaces;
     occ_shell->get_children_virt(tb_surfaces);
+    CubitStatus stat = unhook_ShellSM_from_OCC(occ_shell);
     for(int k = 0; k < tb_surfaces.size(); k++)
       delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
     delete occ_shell;
