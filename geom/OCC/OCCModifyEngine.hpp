@@ -27,6 +27,7 @@ class OCCSurface;
 class TopoDS_Shape;
 class TopoDS_Edge;
 class TopoDS_Face;
+class CubitBox;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {
@@ -673,9 +674,12 @@ protected:
 private:
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
- CubitStatus get_shape_list(DLIList<BodySM*> BodySM_list,
+ CubitStatus get_shape_list(DLIList<BodySM*>& BodySM_list,
                          DLIList<TopoDS_Shape*>& shape_list,
-                         bool  keep_old) const;
+                         DLIList<CubitBoolean>& is_volume,
+                         bool  keep_old,
+                         DLIList<CubitBox*>* b_boxes = NULL) const;
+
  CubitStatus face_edge_imprint( DLIList<Surface*> &ref_face_list,
                                 DLIList<Curve*> &edge_list,
                                 DLIList<TopoDS_Face*>& face_list,
@@ -684,9 +688,12 @@ private:
  void shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
                        DLIList<BodySM*>& new_body_list)const;
 
- CubitStatus project_curves( DLIList<Surface*> &ref_face_list,
-                             DLIList<Curve*> &ref_edge_list,
-                             DLIList<Curve*> &projected_curves)const;
+ void check_operation(TopoDS_Shape& cut_shape,
+                      TopoDS_Shape*& from_shape, //output
+                      CubitBoolean  is_volume,
+                      CubitBoolean& has_changed, //output
+                      BRepAlgoAPI_BooleanOperation* op) const;
+
 } ;
 
 #endif

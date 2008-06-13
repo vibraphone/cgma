@@ -1667,95 +1667,41 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   DLIList<TopoDS_Shape*> tool_bodies_copy;
   DLIList<TopoDS_Shape*> from_bodies_copy;
   DLIList<CubitBoolean> is_volume;
-  for (int i = 0; i < from_bodies.size(); i++)
-  {
-    BodySM* body = from_bodies.get_and_step();
-    OCCBody* occ_body = CAST_TO(body, OCCBody);
-    OCCSurface* surface = occ_body->my_sheet_surface();
-    OCCShell*   shell = occ_body->shell();
-    is_volume.append( CUBIT_TRUE);
-    if(surface)
-    {
-       TopoDS_Face* topo_face = surface->get_TopoDS_Face();
-       if(keep_old)
-       {
-         BRepBuilderAPI_Copy api_copy(*topo_face);
-         TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face);
-         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-         from_bodies_copy.append(newShape_ptr);
-       }
-       else
-         from_bodies_copy.append(topo_face);
-       is_volume.change_to( CUBIT_FALSE);
-    }
-    else if(shell)
-    {
-       TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
-       if(keep_old)
-       {
-         BRepBuilderAPI_Copy api_copy(*topo_shell);
-         TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_shell); 
-         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-         from_bodies_copy.append(newShape_ptr);
-       }
-       else
-         from_bodies_copy.append(topo_shell);
-       is_volume.change_to( CUBIT_FALSE);
-    }
-    else
-    {
-       DLIList<Lump*> lumps = occ_body->lumps();
-       if (lumps.size() > 1)
-       {
-	 PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
-         return CUBIT_FAILURE;
-       }
- 
-       TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-       if(keep_old)
-       {
-         BRepBuilderAPI_Copy api_copy(*solid);
-         TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
-         TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-         from_bodies_copy.append(newShape_ptr);
-       }
-       else
-         from_bodies_copy.append(solid);
-    }
-  }
 
   //for subtract function, tool-body has to be solid, 
   //otherwise it's just imprint
-  DLIList<CubitBox*> tool_boxes;
-  for (int i = 0; i < tool_body_list.size(); i++)
-  {
-    BodySM* body = tool_body_list.get_and_step();
-    OCCBody* occ_body = CAST_TO(body, OCCBody);     
-    OCCSurface* surface = occ_body->my_sheet_surface();
-    OCCShell*   shell = occ_body->shell();
-    if(surface || shell)
-    {
-       PRINT_WARNING("Surfaces or Shells can't be used to cut a body.\n");
-       return CUBIT_FAILURE;
-    }
-    else
-    {
-       DLIList<Lump*> lumps = occ_body->lumps();
-       if (lumps.size() > 1)
-       {
-         PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
-         return CUBIT_FAILURE;
-       }
+  DLIList<CubitBox*>* tool_boxes = new DLIList<CubitBox*>();
+  DLIList<CubitBoolean> is_tool_volume;
+  //keep the tool_body untouched
+  CubitStatus stat = 
+    get_shape_list(tool_body_list, tool_bodies_copy, is_tool_volume, CUBIT_TRUE, tool_boxes);
 
-       TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-       BRepBuilderAPI_Copy api_copy(*solid);
-       TopoDS_Shape newShape = api_copy.ModifiedShape(*solid);
-       TopoDS_Shape* newShape_ptr = new TopoDS_Shape(newShape);
-       tool_bodies_copy.append(newShape_ptr);
-    }
-    CubitBox *tool_box = new CubitBox(occ_body->get_bounding_box());
-    tool_boxes.append(tool_box);
+  if(!stat)
+  {
+     PRINT_WARNING("Surfaces or Shells can't be used to cut a body.\n");
+     while (tool_boxes->size())
+       delete tool_boxes->pop();   
+     delete tool_boxes;
+     while (tool_bodies_copy.size())
+       delete tool_bodies_copy.pop();
+     return CUBIT_FAILURE;
   }
+
+  //check that tool_bodies are all solid, shell and surface body can't be used
+  //for subtracting purpose.
+  if(is_tool_volume.is_in_list(CUBIT_FALSE))
+  {
+     PRINT_WARNING("Surfaces or Shells can't be used to cut a body.\n");
+     while (tool_boxes->size())
+       delete tool_boxes->pop();
+     delete tool_boxes;
+     while (tool_bodies_copy.size())
+       delete tool_bodies_copy.pop();
+     return CUBIT_FAILURE;
+  }
+
+  //get the from_bodies underling shapes
+  get_shape_list(from_bodies, from_bodies_copy, is_volume, keep_old);
 
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
   int fraction_remaining = 100;
@@ -1775,15 +1721,16 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       if (cmi->Interrupt())
       {
          PRINT_ERROR("Subtraction interrupted.  Aborting...\n");
-         while (tool_boxes.size())
-           delete tool_boxes.pop();
+         while (tool_boxes->size())
+           delete tool_boxes->pop();
+         delete tool_boxes;
          while (tool_bodies_copy.size())
             delete tool_bodies_copy.pop();
          while (from_bodies_copy.size())
             delete from_bodies_copy.pop();
          return CUBIT_FAILURE;
       }
-      CubitBox tool_box = *tool_boxes.get_and_step();  
+      CubitBox tool_box = *tool_boxes->get_and_step();  
       if(!tool_box.overlap(tol,box1))
       {
         count++;
@@ -1796,71 +1743,23 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       TopoDS_Shape cut_shape = cutter.Shape(); 
 
       //compare to see if the from_shape has gotten cut.
+      CubitBoolean has_changed;
+      check_operation(cut_shape, from_shape, is_volume[i], has_changed, &cutter);
+
       CubitStatus stat;
-      if(is_volume[i])
+      if(!has_changed && !from_shape->IsNull())
       {
-        GProp_GProps myProps;
-        BRepGProp::VolumeProperties(*from_shape, myProps);
-        double orig_mass = myProps.Mass();
-        BRepGProp::VolumeProperties(cut_shape, myProps);
-        double after_mass = myProps.Mass();
-        if((-after_mass + orig_mass) <= tol)
+        stat = CUBIT_FAILURE;
+        //Add imprint code here 
+        if(imprint)
+          stat = imprint_toposhapes(from_shape, tool_shape);
+        if(!stat)
         {
-          stat = CUBIT_FAILURE;
-          //Add imprint code here 
-          if(imprint)
-            stat = imprint_toposhapes(from_shape, tool_shape);
-          if(!stat)
-          {
-            PRINT_ERROR("Can't do imprint operation on the body. \n");
-            count++;
-          }
-          continue;
+          PRINT_ERROR("Can't do imprint operation on the body. \n");
+          count++;
         }
-        //got cut. Update the entities
-        if(after_mass > tol)
-        {
-          TopoDS_Solid old_solid = TopoDS::Solid(cutter.Shape1());
-          OCCLump::update_OCC_entity(old_solid , cut_shape, &cutter);
-        }
+        continue;
       }
-      else
-      {
-        GProp_GProps myProps;
-        BRepGProp::SurfaceProperties(*from_shape, myProps);
-        double orig_mass = myProps.Mass();
-        BRepGProp::SurfaceProperties(cut_shape, myProps);
-        double after_mass = myProps.Mass();
-        if((-after_mass + orig_mass) <= tol)
-        {
-          stat = CUBIT_FAILURE;
-          //Add imprint code here
-          if(imprint)
-            stat = imprint_toposhapes(from_shape, tool_shape);
-          if(!stat)
-          {
-            PRINT_ERROR("Can't do imprint operation on the body. \n");
-            count++;
-          }
-          continue;
-        }
-        //got cut. Update the entities
-        if(after_mass > tol)
-        { 
-          if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
-          {
-            TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
-	    OCCShell::update_OCC_entity(old_shell,cut_shape, &cutter);
-          }
-          else
-          {
-            TopoDS_Face old_face = TopoDS::Face(*from_shape);
-            OCCSurface::update_OCC_entity(old_face,cut_shape, &cutter);
-          }
-        }
-      }
-      delete from_shape;
-      from_shape = new TopoDS_Shape(cut_shape);
     }
 
     //ok, we're done wih all cuts, construct new Body'
@@ -1894,8 +1793,9 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   }    
 
   //ok, we're done wih all cuts, delete unnecessaries. 
-  while (tool_boxes.size())
-    delete tool_boxes.pop();
+  while (tool_boxes->size())
+    delete tool_boxes->pop();
+  delete tool_boxes;
   while (tool_bodies_copy.size())
     delete tool_bodies_copy.pop();
   if(keep_old)
@@ -2557,12 +2457,13 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
   newBody1 = NULL;
   newBody2 = NULL;
   DLIList<TopoDS_Shape*> shape_list;
+  DLIList<CubitBoolean> is_volume;
   
   DLIList<BodySM*> bodysm_list;
   bodysm_list.append(BodyPtr1);
   bodysm_list.append(BodyPtr2);
   
-  CubitStatus stat = get_shape_list(bodysm_list, shape_list, keep_old);
+  CubitStatus stat = get_shape_list(bodysm_list,shape_list,is_volume,keep_old);
 
   if(!stat)
     return stat;
@@ -2608,9 +2509,11 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
 // Author     : Jane Hu
 // Date       : 05/08
 //===============================================================================
-CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list, 
+CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list, 
                                          DLIList<TopoDS_Shape*>& shape_list,
-                                         bool  keep_old) const
+                                         DLIList<CubitBoolean>& is_volume,
+                                         bool  keep_old,
+                                         DLIList<CubitBox*>* b_boxes) const
 {
   OCCBody* occ_body = NULL;
   shape_list.clean_out();
@@ -2622,6 +2525,14 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list,
 
     OCCSurface* surface = occ_body->my_sheet_surface();
     OCCShell*   shell = occ_body->shell();
+    is_volume.append( CUBIT_TRUE);
+
+    if(b_boxes)
+    {
+      CubitBox *tool_box = new CubitBox(occ_body->get_bounding_box());
+      b_boxes->append(tool_box);
+    }
+
     if(surface)
     {
       TopoDS_Face* topo_face = surface->get_TopoDS_Face();
@@ -2634,6 +2545,7 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list,
       }
       else
         shape_list.append(topo_face);
+      is_volume.change_to( CUBIT_FALSE);
     }
     else if(shell)
     {
@@ -2647,6 +2559,7 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*> BodySM_list,
       }
       else
         shape_list.append(topo_shell);
+      is_volume.change_to( CUBIT_FALSE);
     }
 
     else
@@ -2687,8 +2600,8 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
 {
   CubitStatus success = CUBIT_SUCCESS;
   DLIList<TopoDS_Shape*> shape_list;
-
-  CubitStatus stat = get_shape_list(from_body_list, shape_list, keep_old);
+  DLIList<CubitBoolean> is_vo;
+  CubitStatus stat = get_shape_list(from_body_list, shape_list, is_vo,keep_old);
 
   if(!stat)
     return stat;
@@ -2757,8 +2670,8 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 {
   CubitStatus success = CUBIT_SUCCESS;
   DLIList<TopoDS_Shape*> shape_list, tool_shapes;
-
-  CubitStatus stat = get_shape_list(body_list, shape_list, keep_old);
+  DLIList<CubitBoolean> is_vo;
+  CubitStatus stat = get_shape_list(body_list, shape_list, is_vo, keep_old);
   if (!stat)
     return stat;
 
@@ -3079,7 +2992,8 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            DLIList<TopologyBridge*>* ) const
 {
   DLIList<TopoDS_Shape*> shape_list;
-  CubitStatus stat = get_shape_list(body_list, shape_list, keep_old);
+  DLIList<CubitBoolean> is_vo;
+  CubitStatus stat = get_shape_list(body_list, shape_list, is_vo, keep_old);
 
   if(!stat)
     return stat;
@@ -3208,7 +3122,7 @@ OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &ref_face_list,
 {
   DLIList<Curve*> projected_curves;
   CubitStatus 
-     stat = project_curves(ref_face_list, ref_edge_list, projected_curves);
+     stat = project_edges(ref_face_list, ref_edge_list, projected_curves);
   if(!stat)
     return stat;
 
@@ -3236,16 +3150,16 @@ OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &ref_face_list,
   return stat;
 }
 //===============================================================================
-// Function   : project_curves
-// Member Type: PRIVATE
+// Function   : project_edges
+// Member Type: PUBLIC
 // Description: Projects a list of Curves on to a list of Surfaces
 // Author     : Jane Hu
 // Date       : 06/08
 //===============================================================================
-CubitStatus 
- OCCModifyEngine::project_curves( DLIList<Surface*> &ref_face_list,
-                                  DLIList<Curve*> &ref_edge_list,
-                                  DLIList<Curve*> &projected_curves)const
+CubitStatus OCCModifyEngine::project_edges( DLIList<Surface*> &ref_face_list,
+                                            DLIList<Curve*> &ref_edge_list,
+                                            DLIList<Curve*> &projected_curves,
+                                            bool print_error ) const
 
 {
   CubitVector* v = NULL;
@@ -3265,7 +3179,8 @@ CubitStatus
         continue;
       if(surface->is_closed_in_U() || surface->is_closed_in_V())
       {
-        PRINT_ERROR("This function can't project curves on closed surfaces.\n");
+        if(print_error)
+          PRINT_ERROR("This function can't project curves on closed surfaces.\n");
         return CUBIT_FAILURE;
       }
       
@@ -3283,55 +3198,193 @@ CubitStatus
 //===============================================================================
 // Function   : imprint_projected_edges
 // Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Description: Projects a list of curves on to a list of surfaces
+//              and imprint the bodies with the new curves
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::imprint_projected_edges(DLIList<Surface*> &/*ref_face_list*/,
-                                                           DLIList<BodySM*> &/*body_list*/,
-                                                           DLIList<Curve*> &/*ref_edge_list*/,
-                                                           DLIList<BodySM*>& /*new_body_list*/,
-                                                           bool /*keep_old_body*/,
-                                                           bool /*keep_free_edges*/) const
+CubitStatus 
+OCCModifyEngine::imprint_projected_edges(DLIList<Surface*> &ref_face_list,
+                                         DLIList<BodySM*> &body_list,
+                                         DLIList<Curve*> &ref_edge_list,
+                                         DLIList<BodySM*>& new_body_list,
+                                         bool keep_old,
+                                         bool keep_free_edges) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  DLIList<Curve*> projected_curves;
+  CubitStatus
+     stat = project_edges(ref_face_list, ref_edge_list, projected_curves);
+  if(!stat)
+    return stat; 
   return CUBIT_FAILURE;
-}
 
-//===============================================================================
-// Function   : project_edges
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus     OCCModifyEngine::project_edges( DLIList<Surface*> &/*ref_face_list*/,
-                                                 DLIList<Curve*> &/*ref_edge_list_in*/,
-                                                 DLIList<Curve*> &/*ref_edge_list_new*/,
-                                                 bool /*print_error*/ ) const
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
+  // imprint bodies with curves
+  stat = imprint(body_list,projected_curves, new_body_list, keep_old);
 
+  if (keep_free_edges)
+        return  stat;
+
+  PRINT_INFO( "Removing projected curves \n");
+  for(int i=0; i< projected_curves.size();i++)
+  {
+    // Now delete this Curve 
+    Curve* curve = projected_curves.get_and_step();
+    stat = OCCQueryEngine::instance()->
+          delete_solid_model_entities( curve );
+    if (stat == CUBIT_FAILURE)
+    {
+       PRINT_ERROR("In OCCModifyEngine::delete_geometry\n"
+                   "       Could not delete Curve.\n"
+                   "       The Model database is likely corrupted "
+                   "due to\n       this unsuccessful deletion.\n" );
+    }
+  }
+  return stat; 
+}
 
 //===============================================================================
 // Function   : intersect
 // Member Type: PUBLIC
-// Description: intersect boolean operation between facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: intersect boolean operation of body with list of bodies.
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
-CubitStatus     OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
-                                             DLIList<BodySM*>  &from_bodies,
-                                             DLIList<BodySM*>  &new_bodies,
-                                             bool  keep_old) const
+CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
+                                       DLIList<BodySM*>  &from_bodies,
+                                       DLIList<BodySM*>  &new_bodies,
+                                       bool  keep_old) const
 {
+  DLIList<BodySM*> tool_bodies;
+  DLIList<TopoDS_Shape*> tool_shapes;
+  DLIList<CubitBoolean> is_tool_volume, is_volume;
+  
+  tool_bodies.append(tool_body_ptr);
+  //get tool_body's underlying shape, copy it, so boolean wouldn't touch it.
+  get_shape_list(tool_bodies, tool_shapes, is_tool_volume, CUBIT_TRUE); 
 
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  DLIList<TopoDS_Shape*> shape_list;
+  get_shape_list(from_bodies, shape_list, is_volume, keep_old);
+
+  TopoDS_Shape* tool_shape = tool_shapes.get();
+  CubitBoolean has_changed;
+  DLIList<TopologyBridge*> tbs;
+  for (int i = 0; i < shape_list.size(); i++)
+  { 
+    TopoDS_Shape* from_shape = shape_list.get_and_step();
+    BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
+    TopoDS_Shape common_shape = intersector.Shape();
+    check_operation(common_shape, from_shape, is_volume[i], has_changed, 
+                    &intersector); 
+
+    if(from_shape->IsNull())
+    {
+      PRINT_INFO("The %d body did not change because cutting tools are not interscting with it.\n", i+1);
+      continue; 
+    }
+    else
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
+  }
+  for (int i = 0; i< tbs.size(); i++)
+  {
+    BodySM* bodysm = CAST_TO(tbs.get_and_step(), BodySM);
+    if (bodysm)
+      new_bodies.append(bodysm);
+  }
+  
+  //ok, we're done wih all cuts, delete unnecessaries.
+  while (tool_shapes.size())
+    tool_shapes.pop();
+  if(keep_old)
+  {
+    int size  = shape_list.size();
+    for (int i = 0; i < size; i++)
+    {
+      TopoDS_Shape* shape = shape_list.pop();
+      shape->Nullify();
+      delete shape;
+    }
+  }
+  return CUBIT_SUCCESS;
 }
 
+//===============================================================================
+// Function   : check_operation
+// Member Type: PRIVATE
+// Description: check and update the from_shape according to type of the body.
+// Author     : Jane Hu
+// Date       : 06/08
+//===============================================================================
+void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
+                                      TopoDS_Shape*& from_shape, //output
+                                      CubitBoolean  is_volume,
+                                      CubitBoolean& has_changed, //output
+                                      BRepAlgoAPI_BooleanOperation* op) const
+{
+   //compare to see if the from_shape has gotten cut.
+   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+   if(is_volume)
+   {
+     GProp_GProps myProps;
+     BRepGProp::VolumeProperties(*from_shape, myProps);
+     double orig_mass = myProps.Mass();
+     BRepGProp::VolumeProperties(cut_shape, myProps);
+     double after_mass = myProps.Mass();
+     if((-after_mass + orig_mass) <= tol)
+     {
+        has_changed= CUBIT_FALSE; //common is itself
+        return;
+     }
+     //got cut. Update the entities
+     if(after_mass > tol)
+     {
+        has_changed = CUBIT_TRUE;
+        TopoDS_Solid old_solid = TopoDS::Solid(op->Shape1());
+        OCCLump::update_OCC_entity(old_solid , cut_shape, op);
+     }
+     else //no common section
+     {
+        from_shape->Nullify();
+        has_changed = CUBIT_FALSE;
+        return;
+     }
+   }
+   else
+   {
+     GProp_GProps myProps;
+     BRepGProp::SurfaceProperties(*from_shape, myProps);
+     double orig_mass = myProps.Mass();
+     BRepGProp::SurfaceProperties(cut_shape, myProps);
+     double after_mass = myProps.Mass();
+     if((-after_mass + orig_mass) <= tol)
+     {
+       has_changed= CUBIT_FALSE; //common is itself, or not cut
+       return;
+     }
+     //got cut. Update the entities
+     if(after_mass > tol)
+     {
+        has_changed = CUBIT_TRUE;
+        if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
+        {
+          TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
+          OCCShell::update_OCC_entity(old_shell,cut_shape, op);
+        }
+        else
+        {
+          TopoDS_Face old_face = TopoDS::Face(*from_shape);
+          OCCSurface::update_OCC_entity(old_face,cut_shape, op);
+        }
+     }
+     else //no common section
+     {
+       from_shape->Nullify();
+       has_changed = CUBIT_FALSE;
+       return;
+     }
+  }
+  delete from_shape;
+  from_shape = new TopoDS_Shape(cut_shape);
+}
 //===============================================================================
 // Function   : chop
 // Member Type: PUBLIC
