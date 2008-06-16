@@ -1677,15 +1677,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     get_shape_list(tool_body_list, tool_bodies_copy, is_tool_volume, CUBIT_TRUE, tool_boxes);
 
   if(!stat)
-  {
-     PRINT_WARNING("Surfaces or Shells can't be used to cut a body.\n");
-     while (tool_boxes->size())
-       delete tool_boxes->pop();   
-     delete tool_boxes;
-     while (tool_bodies_copy.size())
-       delete tool_bodies_copy.pop();
-     return CUBIT_FAILURE;
-  }
+    return stat;
 
   //check that tool_bodies are all solid, shell and surface body can't be used
   //for subtracting purpose.
@@ -1701,7 +1693,17 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   }
 
   //get the from_bodies underling shapes
-  get_shape_list(from_bodies, from_bodies_copy, is_volume, keep_old);
+  stat = get_shape_list(from_bodies, from_bodies_copy, is_volume, keep_old);
+  if(!stat)
+  {
+    for (int i = 0; i < tool_bodies_copy.size(); i++)
+    {
+       TopoDS_Shape* shape = tool_bodies_copy.get_and_step();
+       delete shape;
+    }
+    tool_bodies_copy.clean_out();
+    return CUBIT_FAILURE;
+  } 
 
   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
   int fraction_remaining = 100;
@@ -1808,6 +1810,8 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       delete shape;
     }
   } 
+  if(!keep_old) //delete tool_bodies
+    OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_list); 
   return CUBIT_SUCCESS; 
 }
 
@@ -2517,6 +2521,8 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
 {
   OCCBody* occ_body = NULL;
   shape_list.clean_out();
+  is_volume.clean_out();
+  CubitStatus stat = CUBIT_SUCCESS;
   for(int i = 0; i <BodySM_list.size(); i++)
   {
     occ_body = CAST_TO(BodySM_list.get_and_step(), OCCBody);
@@ -2536,6 +2542,11 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
     if(surface)
     {
       TopoDS_Face* topo_face = surface->get_TopoDS_Face();
+      if(!topo_face)
+      {
+        stat = CUBIT_FAILURE;
+        break;
+      }
       if(keep_old)
       {
         BRepBuilderAPI_Copy api_copy(*topo_face);
@@ -2550,6 +2561,11 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
     else if(shell)
     {
       TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+      if(!topo_shell)
+      {
+        stat = CUBIT_FAILURE;
+        break;
+      }
       if(keep_old)
       {
         BRepBuilderAPI_Copy api_copy(*topo_shell);
@@ -2568,10 +2584,16 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
       if (lumps.size() > 1)
       {
         PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
-        return CUBIT_FAILURE;
+        stat = CUBIT_FAILURE;
+        break;
       }
 
       TopoDS_Solid* solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+      if(!solid)
+      {
+        stat = CUBIT_FAILURE;
+        break;
+      }
       if(keep_old)
       {
         BRepBuilderAPI_Copy api_copy(*solid);
@@ -2582,6 +2604,16 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
       else
         shape_list.append(solid);
     }
+  }
+  if(!stat)
+  {   
+    for (int i = 0; keep_old && i < shape_list.size(); i++)
+    {
+          TopoDS_Shape* shape = shape_list.get_and_step();
+          delete shape;
+    }
+    shape_list.clean_out();
+    return CUBIT_FAILURE;
   }
   return CUBIT_SUCCESS;
 }
@@ -2994,7 +3026,6 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_vo;
   CubitStatus stat = get_shape_list(body_list, shape_list, is_vo, keep_old);
-
   if(!stat)
     return stat;
 
@@ -3260,10 +3291,23 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   
   tool_bodies.append(tool_body_ptr);
   //get tool_body's underlying shape, copy it, so boolean wouldn't touch it.
-  get_shape_list(tool_bodies, tool_shapes, is_tool_volume, CUBIT_TRUE); 
+  CubitStatus stat = 
+       get_shape_list(tool_bodies, tool_shapes, is_tool_volume, keep_old); 
+  if(!stat)
+    return stat;
 
   DLIList<TopoDS_Shape*> shape_list;
-  get_shape_list(from_bodies, shape_list, is_volume, keep_old);
+  stat =  get_shape_list(from_bodies, shape_list, is_volume, keep_old);
+  if(!stat)
+  {
+    for (int i = 0; i < tool_shapes.size(); i++)
+    {
+       TopoDS_Shape* shape = tool_shapes.get_and_step();
+       delete shape;
+    }
+    tool_shapes.clean_out();
+    return CUBIT_FAILURE;
+  }
 
   TopoDS_Shape* tool_shape = tool_shapes.get();
   CubitBoolean has_changed;
@@ -3271,6 +3315,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   for (int i = 0; i < shape_list.size(); i++)
   { 
     TopoDS_Shape* from_shape = shape_list.get_and_step();
+    BodySM* from_body = from_bodies.get_and_step();
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopoDS_Shape common_shape = intersector.Shape();
     check_operation(common_shape, from_shape, is_volume[i], has_changed, 
@@ -3278,7 +3323,9 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
 
     if(from_shape->IsNull())
     {
-      PRINT_INFO("The %d body did not change because cutting tools are not interscting with it.\n", i+1);
+      PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
+      if (!keep_old)
+        OCCQueryEngine::instance()->delete_solid_model_entities(from_body);
       continue; 
     }
     else
@@ -3292,8 +3339,9 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   }
   
   //ok, we're done wih all cuts, delete unnecessaries.
-  while (tool_shapes.size())
-    tool_shapes.pop();
+  if(!keep_old)
+    OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_ptr);   
+
   if(keep_old)
   {
     int size  = shape_list.size();
@@ -3334,19 +3382,13 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
         has_changed= CUBIT_FALSE; //common is itself
         return;
      }
+
      //got cut. Update the entities
-     if(after_mass > tol)
-     {
-        has_changed = CUBIT_TRUE;
-        TopoDS_Solid old_solid = TopoDS::Solid(op->Shape1());
-        OCCLump::update_OCC_entity(old_solid , cut_shape, op);
-     }
-     else //no common section
-     {
-        from_shape->Nullify();
-        has_changed = CUBIT_FALSE;
-        return;
-     }
+     if(after_mass < tol) //no common section
+       cut_shape.Nullify();
+     has_changed = CUBIT_TRUE;
+     TopoDS_Solid old_solid = TopoDS::Solid(op->Shape1());
+     OCCLump::update_OCC_entity(old_solid , cut_shape, op);
    }
    else
    {
@@ -3361,46 +3403,74 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
        return;
      }
      //got cut. Update the entities
-     if(after_mass > tol)
+     if(after_mass < tol)//no common section
+       cut_shape.Nullify();
+     has_changed = CUBIT_TRUE;
+     if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
      {
-        has_changed = CUBIT_TRUE;
-        if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
-        {
-          TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
-          OCCShell::update_OCC_entity(old_shell,cut_shape, op);
-        }
-        else
-        {
-          TopoDS_Face old_face = TopoDS::Face(*from_shape);
-          OCCSurface::update_OCC_entity(old_face,cut_shape, op);
-        }
+       TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
+       OCCShell::update_OCC_entity(old_shell,cut_shape, op);
      }
-     else //no common section
+     else
      {
-       from_shape->Nullify();
-       has_changed = CUBIT_FALSE;
-       return;
+       TopoDS_Face old_face = TopoDS::Face(*from_shape);
+       OCCSurface::update_OCC_entity(old_face,cut_shape, op);
      }
   }
   delete from_shape;
   from_shape = new TopoDS_Shape(cut_shape);
 }
+
 //===============================================================================
 // Function   : chop
 // Member Type: PUBLIC
-// Description: chop boolean operation between facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: chop boolean operation between OCC-based bodies
+//              bodies has a size() = 2, a blank body and a tool body.
+//              chops the blank with the  tool, returing the body formed
+//              by subtracting the tool from the blank, and the body formed
+//              by intersecting the tool with the blank, simultaneously.
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
-CubitStatus      OCCModifyEngine::chop(DLIList<BodySM*>& bodies, 
-                                         DLIList<BodySM*> &intersectBodies, 
-                                         DLIList<BodySM*> &outsideBodies,
-                                         BodySM*& leftoversBody,
-                                         bool keep_old ,
-                                         bool nonreg) const
+CubitStatus  OCCModifyEngine::chop(DLIList<BodySM*>& bodies, 
+                                   DLIList<BodySM*> &intersectBodies, 
+                                   DLIList<BodySM*> &outsideBodies,
+                                   BodySM*& leftoversBody,
+                                   bool keep_old ,
+                                   bool nonreg) const
 {
- PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE; 
+  //according to Acis chop function, leftoverBody = 0;
+  leftoversBody = 0;
+
+  //there's no effect of nonreg. keep_old mean if to keep the tool_body
+  if(bodies.size() < 2)
+  {
+    PRINT_WARNING("There is only one volume in the list. Nothing modified\n");  
+    return CUBIT_FAILURE; 
+  }
+  
+  //outsideBodies keeps the surface, curve ids if keep_old is false.
+  BodySM* blank_body = bodies.get();
+  BodySM* blank_copy = copy_body(blank_body);
+  
+  DLIList<BodySM*> tool_bodies, from_bodies;
+  from_bodies.append(blank_copy);
+  BodySM* tool_body = bodies.step_and_get();
+  tool_bodies.append(tool_body);
+  
+  CubitStatus stat = intersect(tool_body, from_bodies, 
+                               intersectBodies, CUBIT_TRUE);
+
+  if(!stat)
+    return CUBIT_FAILURE;
+
+  from_bodies.clean_out();
+  from_bodies.append(blank_body);
+  stat = subtract(tool_bodies, from_bodies, outsideBodies, 
+                  CUBIT_FALSE, keep_old);
+  
+  OCCQueryEngine::instance()->delete_solid_model_entities(blank_copy);
+  return stat;
 }
 
 //===============================================================================
