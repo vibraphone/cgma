@@ -3292,7 +3292,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   tool_bodies.append(tool_body_ptr);
   //get tool_body's underlying shape, copy it, so boolean wouldn't touch it.
   CubitStatus stat = 
-       get_shape_list(tool_bodies, tool_shapes, is_tool_volume, keep_old); 
+       get_shape_list(tool_bodies, tool_shapes, is_tool_volume, CUBIT_TRUE); 
   if(!stat)
     return stat;
 
@@ -3324,8 +3324,6 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     if(from_shape->IsNull())
     {
       PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
-      if (!keep_old)
-        OCCQueryEngine::instance()->delete_solid_model_entities(from_body);
       continue; 
     }
     else
@@ -3341,6 +3339,13 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   //ok, we're done wih all cuts, delete unnecessaries.
   if(!keep_old)
     OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_ptr);   
+
+  for(int i = 0; i < tool_shapes.size(); i++)
+  {
+    TopoDS_Shape* shape = tool_shapes.get_and_step();
+    shape->Nullify();
+    delete shape;
+  }
 
   if(keep_old)
   {
@@ -3377,7 +3382,7 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      double orig_mass = myProps.Mass();
      BRepGProp::VolumeProperties(cut_shape, myProps);
      double after_mass = myProps.Mass();
-     if((-after_mass + orig_mass) <= tol)
+     if(fabs(-after_mass + orig_mass) <= tol)
      {
         has_changed= CUBIT_FALSE; //common is itself
         return;
@@ -3397,7 +3402,7 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      double orig_mass = myProps.Mass();
      BRepGProp::SurfaceProperties(cut_shape, myProps);
      double after_mass = myProps.Mass();
-     if((-after_mass + orig_mass) <= tol)
+     if(fabs(-after_mass + orig_mass) <= tol)
      {
        has_changed= CUBIT_FALSE; //common is itself, or not cut
        return;
@@ -3451,10 +3456,9 @@ CubitStatus  OCCModifyEngine::chop(DLIList<BodySM*>& bodies,
   
   //outsideBodies keeps the surface, curve ids if keep_old is false.
   BodySM* blank_body = bodies.get();
-  BodySM* blank_copy = copy_body(blank_body);
   
   DLIList<BodySM*> tool_bodies, from_bodies;
-  from_bodies.append(blank_copy);
+  from_bodies.append(blank_body);
   BodySM* tool_body = bodies.step_and_get();
   tool_bodies.append(tool_body);
   
@@ -3464,28 +3468,141 @@ CubitStatus  OCCModifyEngine::chop(DLIList<BodySM*>& bodies,
   if(!stat)
     return CUBIT_FAILURE;
 
-  from_bodies.clean_out();
-  from_bodies.append(blank_body);
   stat = subtract(tool_bodies, from_bodies, outsideBodies, 
                   CUBIT_FALSE, keep_old);
   
-  OCCQueryEngine::instance()->delete_solid_model_entities(blank_copy);
   return stat;
 }
 
 //===============================================================================
 // Function   : unite
 // Member Type: PUBLIC
-// Description: unite boolean operation between facet-based bodies
-// Author     : John Fowler
-// Date       : 10/02
+// Description: unite boolean operation between OCC-based bodies
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
 CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies, 
-                                         DLIList<BodySM*> &newBodies,
-                                         bool keep_old) const
+                                       DLIList<BodySM*> &newBodies,
+                                       bool keep_old) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE; 
+  if(bodies.size() < 2)
+    return CUBIT_SUCCESS;
+
+  //all bodies must have only one lump in order for boolean operation to work.
+  DLIList<Lump*> lumps;
+  for (int i = 0; i < bodies.size(); i++)
+  {
+    lumps = CAST_TO(bodies.get_and_step(), OCCBody)->lumps();
+    if (lumps.size() > 1)
+    {
+      PRINT_WARNING("All bodies must have only one lump for boolean operations to work.\n");
+      return CUBIT_FAILURE;
+    }
+  }
+ 
+  DLIList<TopoDS_Shape*> shape_list;
+  DLIList<CubitBoolean> is_volume;
+  CubitStatus stat =
+    get_shape_list(bodies, shape_list, is_volume, keep_old);
+
+  if(!stat)
+    return stat;
+
+  TopoDS_Shape* first_shape = shape_list.pop();
+  
+  int size = shape_list.size();
+  OCCBody* deleted_body = NULL;
+  CubitBoolean restore_first_shape = CUBIT_FALSE;
+  for(int i = 0; i < size; i++)
+  {
+    TopoDS_Shape* second_shape = shape_list.get_and_step();
+    
+    BRepAlgoAPI_Fuse fuser(*first_shape, *second_shape);
+    TopTools_ListOfShape shapes;
+    shapes.Assign(fuser.Modified(*first_shape));
+    if(shapes.Extent() != 1)
+    {
+      restore_first_shape = CUBIT_TRUE;
+      PRINT_WARNING("The unite boolean didn't work in opencascade.\n");
+      break;
+    }
+
+    CubitBoolean has_changed;
+    if(is_volume[size] == CUBIT_TRUE || is_volume[i] == CUBIT_TRUE)
+    {
+      if(is_volume[size] == CUBIT_FALSE)
+      {
+        //exchange the first and second bodies.
+        TopoDS_Shape* temp_shape = first_shape;
+        first_shape = second_shape;
+        second_shape = temp_shape;
+        OCCBody temp_body1 = *CAST_TO(bodies[size], OCCBody);
+        OCCBody temp_body2 = *CAST_TO(bodies.get(), OCCBody);
+        BodySM* first_body = bodies.get();
+        first_body = &temp_body1;
+        BodySM* second_body = bodies[size];
+        second_body = &temp_body2; 
+      }
+      check_operation(shapes.First(), first_shape, CUBIT_TRUE, has_changed, &fuser);
+    }
+    else
+      check_operation(shapes.First(), first_shape, CUBIT_FALSE,has_changed, &fuser);
+ 
+    BodySM* second_body = bodies.get_and_step();
+    if(second_body)
+    {
+      deleted_body = CAST_TO(second_body, OCCBody);
+      //delete the second body, keep lower entities.
+      DLIList<Lump*> lumps = deleted_body->lumps();
+      OCCQueryEngine::instance()->delete_solid_model_entities(lumps.get(),
+                                                              CUBIT_FALSE);
+      second_body = NULL;
+    }
+    TopExp_Explorer Ex;
+    for (Ex.Init(*second_shape, TopAbs_FACE);Ex.More(); Ex.Next())
+    {
+      TopoDS_Face face =  TopoDS::Face(Ex.Current());
+      TopoDS_Shape nullshape;
+      if(fuser.IsDeleted(face))
+        OCCSurface::update_OCC_entity(face,nullshape, &fuser);
+      else
+      {
+        shapes.Assign(fuser.Modified(face));
+        if(shapes.Extent() > 1)
+        {
+           restore_first_shape = CUBIT_TRUE;
+           PRINT_WARNING("The unite boolean didn't work in opencascade.\n");
+           break;
+        }
+        OCCSurface::update_OCC_entity(face, shapes.First(), &fuser);
+      }
+    }
+  }      
+
+  //ok, we're done wih all unites, construct new Body'
+  DLIList<TopologyBridge*> tbs;
+  tbs += OCCQueryEngine::instance()->populate_topology_bridge(*first_shape);
+
+  for (int i = 0; i< tbs.size(); i++)
+  {
+    BodySM* bodysm = CAST_TO(tbs.get_and_step(), BodySM);
+    if (bodysm)
+      newBodies.append(bodysm);
+  }
+
+  //ok, we're done wih all unites, delete unnecessaries.
+  if(keep_old)
+  {
+    int size  = shape_list.size();
+    for (int i = 0; i < size; i++)
+    {
+      TopoDS_Shape* shape = shape_list.pop();
+      shape->Nullify();
+      delete shape;
+    }
+  }
+
+  return CUBIT_SUCCESS; 
 }
 
 
