@@ -3392,7 +3392,9 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      if(after_mass < tol) //no common section
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
-     TopoDS_Solid old_solid = TopoDS::Solid(op->Shape1());
+     TopExp_Explorer Ex;
+     Ex.Init(*from_shape, TopAbs_SOLID);
+     TopoDS_Solid old_solid = TopoDS::Solid(Ex.Current()); 
      OCCLump::update_OCC_entity(old_solid , cut_shape, op);
    }
    else
@@ -3508,46 +3510,47 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   if(!stat)
     return stat;
 
-  TopoDS_Shape* first_shape = shape_list.pop();
-  
+  //find a non-sheet body to be the first shape
+  TopoDS_Shape* first_shape;
+  CubitBoolean first_is_volume;
+  if(first_is_volume = is_volume.move_to(CUBIT_TRUE))
+  {
+    int index = is_volume.get_index();
+    first_shape = shape_list[index];
+    shape_list.remove(first_shape);
+    is_volume.step(index);
+    is_volume.remove();
+    bodies.step(index);
+    bodies.remove();
+  }
+ 
+  else
+  {
+    first_shape = shape_list.pop();
+    bodies.pop();
+  }
+
   int size = shape_list.size();
   OCCBody* deleted_body = NULL;
   CubitBoolean restore_first_shape = CUBIT_FALSE;
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* second_shape = shape_list.get_and_step();
-    
-    BRepAlgoAPI_Fuse fuser(*first_shape, *second_shape);
-    TopTools_ListOfShape shapes;
-    shapes.Assign(fuser.Modified(*first_shape));
-    if(shapes.Extent() != 1)
-    {
-      restore_first_shape = CUBIT_TRUE;
-      PRINT_WARNING("The unite boolean didn't work in opencascade.\n");
-      break;
-    }
 
-    CubitBoolean has_changed;
-    if(is_volume[size] == CUBIT_TRUE || is_volume[i] == CUBIT_TRUE)
-    {
-      if(is_volume[size] == CUBIT_FALSE)
-      {
-        //exchange the first and second bodies.
-        TopoDS_Shape* temp_shape = first_shape;
-        first_shape = second_shape;
-        second_shape = temp_shape;
-        OCCBody temp_body1 = *CAST_TO(bodies[size], OCCBody);
-        OCCBody temp_body2 = *CAST_TO(bodies.get(), OCCBody);
-        BodySM* first_body = bodies.get();
-        first_body = &temp_body1;
-        BodySM* second_body = bodies[size];
-        second_body = &temp_body2; 
-      }
-      check_operation(shapes.First(), first_shape, CUBIT_TRUE, has_changed, &fuser);
-    }
-    else
-      check_operation(shapes.First(), first_shape, CUBIT_FALSE,has_changed, &fuser);
+    BRepAlgoAPI_Fuse fuser(*first_shape, *second_shape);
+    TopoDS_Shape new_shape = fuser.Shape();
+
+    //Debug:: check how many faces are there in new_shape.
+    TopExp_Explorer Ex;
+    int count = 0;
+    for (Ex.Init(new_shape, TopAbs_FACE);Ex.More(); Ex.Next())
+      count++;
  
+    CubitBoolean has_changed;
+    check_operation(new_shape, first_shape, first_is_volume, has_changed, &fuser);
+ 
+    check_operation(new_shape,second_shape, is_volume[i], has_changed, &fuser);
+/*
     BodySM* second_body = bodies.get_and_step();
     if(second_body)
     {
@@ -3558,7 +3561,9 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
                                                               CUBIT_FALSE);
       second_body = NULL;
     }
+
     TopExp_Explorer Ex;
+    TopTools_ListOfShape shapes; 
     for (Ex.Init(*second_shape, TopAbs_FACE);Ex.More(); Ex.Next())
     {
       TopoDS_Face face =  TopoDS::Face(Ex.Current());
@@ -3574,9 +3579,11 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
            PRINT_WARNING("The unite boolean didn't work in opencascade.\n");
            break;
         }
-        OCCSurface::update_OCC_entity(face, shapes.First(), &fuser);
+        else if(shapes.Extent() == 1)
+          OCCSurface::update_OCC_entity(face, shapes.First(), &fuser);
       }
     }
+*/
   }      
 
   //ok, we're done wih all unites, construct new Body'
@@ -3590,9 +3597,10 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
       newBodies.append(bodysm);
   }
 
-  //ok, we're done wih all unites, delete unnecessaries.
+  //ok, we're done with all unites, delete unnecessaries.
   if(keep_old)
   {
+    shape_list.append(first_shape);
     int size  = shape_list.size();
     for (int i = 0; i < size; i++)
     {

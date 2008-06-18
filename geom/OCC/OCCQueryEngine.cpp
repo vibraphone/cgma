@@ -1495,19 +1495,25 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
    if(lump != NULL)
    {
      BodySM* body = CAST_TO(lump, OCCLump)->get_body();
-     
+     DLIList<Lump*> lumps = CAST_TO(body, OCCBody)->lumps();
+ 
      if (remove_lower_entities)
        return delete_solid_model_entities(body);
 
      DLIList<TopologyBridge*> children;
+     for(int i = 0; i < lumps.size(); i++)
+     {
+       lump = lumps.get_and_step();
        CAST_TO(lump, OCCLump)->get_children_virt(children);
+     }
 
      CubitStatus stat = this->unhook_BodySM_from_OCC(body); 
      if(stat)
      {
        while (children.size())
           delete children.pop();
-       delete lump;
+       while(lumps.size())
+          delete lumps.pop();
        delete body;
      }
      return stat;

@@ -607,5 +607,52 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
+
+  //test unite 1
+  tool_body = gmti->brick(1,1,1);
+  gti->translate(tool_body,v_move7);
+  gti->translate(tool_body,v_move7);
+  from_body = gmti->brick(1,1,1);
+  from_bodies.append(from_body);
+  from_bodies.append(tool_body);
+  new_bodies.clean_out();
+  stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  //Updated volume(s): 49
+  //Destroyed volume(s): 48
+  d = new_bodies.get()->measure(); //d = 2
+  n = new_bodies.get()->num_ref_faces(); //d = 10  
+ 
+  bodies.clean_out();
+  gti->bodies(bodies); //bodies.size() = 1
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  //delete all entities
+  gti->delete_Body(bodies);
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+
+  //test unite 2
+  tool_body = gmti->brick(4, 4,4);
+  gti->translate(tool_body,v_move7);
+  from_body = gmti->brick(1,1,1);
+  from_bodies.clean_out();
+  from_bodies.append(from_body);
+  from_bodies.append(tool_body);
+  new_bodies.clean_out();
+  stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  //Updated volume(s): 51
+  //Destroyed volume(s): 50
+  d = new_bodies.get()->measure(); //d = 65
+  n = new_bodies.get()->num_ref_faces(); //d = 11
+
+  bodies.clean_out();
+  gti->bodies(bodies); //bodies.size() = 1
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  //delete all entities
+  gti->delete_Body(bodies);
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+
   return CUBIT_SUCCESS;
 }
