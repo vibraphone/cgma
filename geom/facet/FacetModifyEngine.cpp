@@ -1745,6 +1745,7 @@ CubitFacetboolOp op;
 // Date       : 10/02
 //===============================================================================
 CubitStatus FacetModifyEngine::thicken(DLIList<BodySM*>& /*bodies*/, 
+                                       DLIList<Surface*> & /*surfs*/,
                                        DLIList<BodySM*>& /*new_bodies*/,
                                        double /*depth*/,
                                        bool /*both*/) const

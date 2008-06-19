@@ -412,6 +412,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
 	  
 
       virtual CubitStatus thicken( DLIList<BodySM*>& bodies, 
+                                   DLIList<Surface*>& surfs_to_remove,
                                    DLIList<BodySM*>& new_body_list,
                                    double depth,
                                    bool both = false) const = 0;
@@ -419,7 +420,9 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //R-the result of the thicken operation: Success or Failure
     //I bodies
     //I-DLIList<Body*>: a list of Body pointers that will be thicken
-    //O intersectBody, outsideBody, leftoversBody
+    //I- or for OCC: a list of solid BodySM's that will be hollowed into a 
+    //I- thick solid. 
+    //I- surfs_to_remove: the faces to be removed from the original solid (OCC).
     //O- new Bodies build by thicken operation on the list of  Body pointers.
     //- This function performs a thicken of sheet bodies and returns 
     //- the result through the output argument in_out_body. If the thicken

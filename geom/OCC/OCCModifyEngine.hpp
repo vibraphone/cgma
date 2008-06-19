@@ -201,6 +201,7 @@ public:
     bool keep_old = CUBIT_FALSE) const;
   
   virtual CubitStatus thicken(DLIList<BodySM*>& bodies, 
+                              DLIList<Surface*>& surfs_to_remove,
     DLIList<BodySM*>& new_bodies,
     double depth,
     bool both = CUBIT_FALSE) const ;

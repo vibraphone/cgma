@@ -3550,43 +3550,9 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     check_operation(new_shape, first_shape, first_is_volume, has_changed, &fuser);
  
     check_operation(new_shape,second_shape, is_volume[i], has_changed, &fuser);
-/*
-    BodySM* second_body = bodies.get_and_step();
-    if(second_body)
-    {
-      deleted_body = CAST_TO(second_body, OCCBody);
-      //delete the second body, keep lower entities.
-      DLIList<Lump*> lumps = deleted_body->lumps();
-      OCCQueryEngine::instance()->delete_solid_model_entities(lumps.get(),
-                                                              CUBIT_FALSE);
-      second_body = NULL;
-    }
-
-    TopExp_Explorer Ex;
-    TopTools_ListOfShape shapes; 
-    for (Ex.Init(*second_shape, TopAbs_FACE);Ex.More(); Ex.Next())
-    {
-      TopoDS_Face face =  TopoDS::Face(Ex.Current());
-      TopoDS_Shape nullshape;
-      if(fuser.IsDeleted(face))
-        OCCSurface::update_OCC_entity(face,nullshape, &fuser);
-      else
-      {
-        shapes.Assign(fuser.Modified(face));
-        if(shapes.Extent() > 1)
-        {
-           restore_first_shape = CUBIT_TRUE;
-           PRINT_WARNING("The unite boolean didn't work in opencascade.\n");
-           break;
-        }
-        else if(shapes.Extent() == 1)
-          OCCSurface::update_OCC_entity(face, shapes.First(), &fuser);
-      }
-    }
-*/
   }      
 
-  //ok, we're done wih all unites, construct new Body'
+  //ok, we're done with all unites, construct new Body'
   DLIList<TopologyBridge*> tbs;
   tbs += OCCQueryEngine::instance()->populate_topology_bridge(*first_shape);
 
@@ -3622,6 +3588,7 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
 // Date       : 10/02
 //===============================================================================
 CubitStatus OCCModifyEngine::thicken(DLIList<BodySM*>& /*bodies*/, 
+                                     DLIList<Surface*>& surfs_to_remove,
                                        DLIList<BodySM*>& /*new_bodies*/,
                                        double /*depth*/,
                                        bool /*both*/) const
