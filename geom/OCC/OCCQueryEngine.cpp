@@ -2,7 +2,7 @@
 // Filename      : OCCQueryEngine.cpp
 //
 // Purpose       : Implementation of the OCCQueryEngine class.
-//                 This class provides facet-based implementations
+//                 This class provides OCC-based implementations
 //                 of various virtual functions in the GeometryQueryEngine
 //                 hierarchy.
 //
@@ -2309,8 +2309,6 @@ CubitStatus OCCQueryEngine::create_super_bounding_box(
 
   return status;
 }
-
-const char* fqe_xform_err = "Transform not implemented for OCC geometry.\n";
 
 CubitStatus OCCQueryEngine::restore_transform( BodySM* body )
 {

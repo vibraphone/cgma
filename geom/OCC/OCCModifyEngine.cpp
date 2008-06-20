@@ -52,6 +52,7 @@
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
 #include "BRepBuilderAPI_MakeFace.hxx"
+#include "BRepOffsetAPI_MakeThickSolid.hxx"
 #include "BRepBuilderAPI_Sewing.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
 #include "LocOpe_SplitShape.hxx"
@@ -3583,18 +3584,89 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
 //===============================================================================
 // Function   : thicken
 // Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Description: Hollow existing solid body by remove one or several surfaces 
+//              Can only take one body at a time.
+//              No both (side) option.
+//              depth > 0, thick body going outside bodies
+//              depth < 0, thick body going inside bodies
+// Author     : Jane Hu 
+// Date       : 06/08
 //===============================================================================
-CubitStatus OCCModifyEngine::thicken(DLIList<BodySM*>& /*bodies*/, 
+CubitStatus OCCModifyEngine::thicken(DLIList<BodySM*>& bodies, 
                                      DLIList<Surface*>& surfs_to_remove,
-                                       DLIList<BodySM*>& /*new_bodies*/,
-                                       double /*depth*/,
-                                       bool /*both*/) const
+                                     DLIList<BodySM*>& new_bodies,
+                                     double depth,
+                                     bool /*both*/) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  if(bodies.size() != 1 || surfs_to_remove.size() < 1)
+  {
+    PRINT_ERROR("Making thick solid in OCC will take one body and at least one surface at a time.\n"); 
+    return CUBIT_FAILURE;
+  }
+
+  DLIList<TopoDS_Shape*> shape_list;
+  DLIList<CubitBoolean> is_volume;
+  CubitStatus stat = get_shape_list(bodies, shape_list, is_volume, CUBIT_FALSE);
+
+  if(!stat)
+    return stat;
+
+  if(!is_volume.get())//sheet body
+  {
+    PRINT_ERROR("Making thick solid in OCC needs an initial solid body to hollow with.\n");
+    return CUBIT_FAILURE;
+  }
+
+  //make sure the body to be hollowed has only one lump
+  OCCBody* occ_body = CAST_TO(bodies.get(), OCCBody);
+  DLIList<Lump*> lumps;
+  lumps = occ_body->lumps();
+  if(lumps.size()!=1)
+  {
+    PRINT_ERROR("bodies with more than one lump can't be hollowed to make a thick body.\n");
+    return CUBIT_FAILURE;
+  }
+
+  //make sure surfs_to_remove are all in bodies
+  DLIList<OCCSurface*> surfaces;
+  TopTools_ListOfShape face_shapes;
+  occ_body->get_all_surfaces(surfaces);
+  for(int i = 0; i < surfs_to_remove.size(); i++)
+  {
+    OCCSurface* occ_surf = CAST_TO(surfs_to_remove.get(), OCCSurface);
+    if(!occ_surf)
+      continue;
+    if(!surfaces.is_in_list(occ_surf))
+      continue;
+    TopoDS_Face * face = occ_surf->get_TopoDS_Face();
+    face_shapes.Append(*face); 
+  }
+
+  if(face_shapes.IsEmpty())
+  {
+    PRINT_ERROR("The surfaces provided should be from the body to be hollowed.\n");
+    return CUBIT_FAILURE;
+  }
+  
+  double tol = 1.e-3; //hard coded for now, can be changed by application
+  TopoDS_Shape* solid = shape_list.get();
+  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, tol);
+  TopoDS_Shape new_shape = hollower.Shape();
+  TopoDS_Solid old_solid = TopoDS::Solid(*solid);
+  OCCLump::update_OCC_entity(old_solid , new_shape, &hollower); 
+ 
+  //ok, we're done with all hollowing, construct new Body'
+  DLIList<TopologyBridge*> tbs;
+  tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+
+  for (int i = 0; i< tbs.size(); i++)
+  {
+    BodySM* bodysm = CAST_TO(tbs.get_and_step(), BodySM);
+    if (bodysm)
+      new_bodies.append(bodysm);
+  }
+
+  return CUBIT_SUCCESS;
 }
 
 
