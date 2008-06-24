@@ -642,8 +642,9 @@ CubitStatus make_Point()
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
   //Updated volume(s): 51
   //Destroyed volume(s): 50
-  d = new_bodies.get()->measure(); //d = 65
-  n = new_bodies.get()->num_ref_faces(); //d = 11
+  d = new_bodies.get()->measure(); //d = 64.5
+  n = new_bodies.get()->num_ref_faces(); 
+  //d = 13. because fusion keeps the imprintings.
 
   bodies.clean_out();
   gti->bodies(bodies); //bodies.size() = 1
@@ -654,5 +655,36 @@ CubitStatus make_Point()
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
 
+  //test making thick body.
+  from_body = gmti->cylinder(10, 4, 4, 4); 
+  tool_body = gmti->cylinder(5,1,1,1);
+  //  v = from_body->center_point();
+  //v = tool_body->center_point();
+  CubitVector v_move8(0,0,10);
+  gti->translate(tool_body,v_move8);  
+  from_bodies.clean_out();
+  from_bodies.append(from_body);
+  from_bodies.append(tool_body);
+  new_bodies.clean_out();
+  stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  d = new_bodies.get()->measure(); //d = 518.3627
+  n = new_bodies.get()->num_ref_faces(); //n = 5
+  //find the top most surface as the opening of the thick body.
+  ref_faces.clean_out();
+  new_bodies.get()->ref_faces(ref_faces);
+  CubitVector center(0,0,15);
+  for(int i = 0; i < n; i++)
+  {
+    if(ref_faces.step_and_get()->is_planar() && 
+       ref_faces.get()->center_point() == center )
+      break;
+  }
+  DLIList<RefFace*> faces_to_remove;
+  faces_to_remove.append(ref_faces.get());
+  from_bodies = new_bodies;
+  new_bodies.clean_out();
+  stat = gmti->make_thick_solid(from_bodies, faces_to_remove, new_bodies, -.2);
+  n = new_bodies.get()->num_ref_faces(); //n = 10
+  d = new_bodies.get()->measure(); //d = 72.3618
   return CUBIT_SUCCESS;
 }
