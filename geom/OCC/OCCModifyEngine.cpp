@@ -3674,12 +3674,12 @@ CubitStatus OCCModifyEngine::thicken(DLIList<BodySM*>& bodies,
 // Function   : flip_normals
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
 CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -3688,8 +3688,8 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
 // Function   : sweep_translational
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 06/08
 //===============================================================================
 CubitStatus OCCModifyEngine:: sweep_translational(
   DLIList<GeometryEntity*>& /*ref_ent_list*/,
