@@ -412,7 +412,6 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
 	  
 
       virtual CubitStatus thicken( DLIList<BodySM*>& bodies, 
-                                   DLIList<Surface*>& surfs_to_remove,
                                    DLIList<BodySM*>& new_body_list,
                                    double depth,
                                    bool both = false) const = 0;
@@ -420,9 +419,6 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //R-the result of the thicken operation: Success or Failure
     //I bodies
     //I-DLIList<Body*>: a list of Body pointers that will be thicken
-    //I- or for OCC: a list of solid BodySM's that will be hollowed into a 
-    //I- thick solid. 
-    //I- surfs_to_remove: the faces to be removed from the original solid (OCC).
     //O- new Bodies build by thicken operation on the list of  Body pointers.
     //- This function performs a thicken of sheet bodies and returns 
     //- the result through the output argument in_out_body. If the thicken
@@ -431,6 +427,23 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- argument is assigned a NULL value and the function returns 
     //- CUBIT_FAILURE.
 
+     virtual CubitStatus hollow(DLIList<BodySM*>& bodies,
+                                DLIList<Surface*>& surfs_to_remove,
+                                DLIList<BodySM*>& new_bodies,
+                                double depth) const = 0;
+     //R CubitStatus
+    //R-the result of the hollow operation: Success or Failure
+    //I body
+    //I- for OCC: a list of solid BodySM's that will be hollowed into a list of
+    //I- thick solids.
+    //I- surfs_to_remove: the faces to be removed from the original solid (OCC).
+    //O- new Bodies build by hollow operation on the  body pointers.
+    //- This function performs a hollow of solid body and returns
+    //- the result through the output argument in_out_body. If the hollow
+    //- operation went through OK, the function returns CUBIT_SUCCESS. If,
+    //- for some reason, the hollow operation did not go well, the output
+    //- argument is assigned a NULL value and the function returns
+    //- CUBIT_FAILURE.
 
      virtual CubitStatus flip_normals( DLIList<Surface*>& face_list ) const = 0;
             //R CubitStatus

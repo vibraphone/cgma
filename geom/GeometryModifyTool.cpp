@@ -4155,12 +4155,10 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*>& bodies,
   return CUBIT_SUCCESS;
 }
 
-CubitStatus GeometryModifyTool::
-        make_thick_solid( DLIList<Body*>& bodies,
-                          DLIList<RefFace*>& faces_to_remove,
-                          DLIList<Body*>& new_bodies,
-                          double depth,
-                          bool both )
+CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
+                                         DLIList<Body*>& new_bodies,
+                                         double depth,
+                                         bool both )
 {
   if (bodies.size() <= 0)
   {
@@ -4188,24 +4186,11 @@ CubitStatus GeometryModifyTool::
      return CUBIT_FAILURE;
   }
 
-  DLIList<Surface*> surfs_to_remove;
-  if(faces_to_remove.size() > 0)
-  {
-    GeometryModifyEngine* gme2 = common_modify_engine(faces_to_remove,
-						      surfs_to_remove);
-    if(gme2 != gme)
-    {
-       PRINT_ERROR("Performing THICKEN with volumes containing geometry\n"
-                   " from different modeling engines is not allowed.\n"
-                   "Delete uncommon geometry on these volumes before operation.\n\n");
-       return CUBIT_FAILURE;
-    }
-  }  
   DLIList<BodySM*> new_sms(count);
   DLIList<BodySM*> body_sms(count);
   CAST_LIST(bridge_list, body_sms, BodySM);
   
-  CubitStatus result = gme->thicken( body_sms, surfs_to_remove, new_sms, depth, both);
+  CubitStatus result = gme->thicken( body_sms, new_sms, depth, both);
 
   // check for resued entities, they have been moved and we need to notify observers
   DLIList<RefEntity*> entities_to_update;

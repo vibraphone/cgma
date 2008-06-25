@@ -225,8 +225,7 @@ public :
                     bool keep_old = false,
                     bool nonreg = false );
 
-  CubitStatus make_thick_solid( DLIList<Body*>& bodies,
-                       DLIList<RefFace*>& faces_to_remove,
+  CubitStatus thicken( DLIList<Body*>& bodies,
                        DLIList<Body*>& new_bodies,
                        double depth,
                        bool both = false );

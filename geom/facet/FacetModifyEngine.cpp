@@ -1737,6 +1737,15 @@ CubitFacetboolOp op;
 }
 
 
+CubitStatus FacetModifyEngine::hollow( DLIList<BodySM*>& /*bodies*/,
+                                       DLIList<Surface*> & /*surfs*/,
+                                       DLIList<BodySM*>& /*new_bodies*/,
+                                       double /*depth*/) const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
 //===============================================================================
 // Function   : thicken
 // Member Type: PUBLIC
@@ -1745,7 +1754,6 @@ CubitFacetboolOp op;
 // Date       : 10/02
 //===============================================================================
 CubitStatus FacetModifyEngine::thicken(DLIList<BodySM*>& /*bodies*/, 
-                                       DLIList<Surface*> & /*surfs*/,
                                        DLIList<BodySM*>& /*new_bodies*/,
                                        double /*depth*/,
                                        bool /*both*/) const

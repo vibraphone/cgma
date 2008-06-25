@@ -3580,23 +3580,29 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   return CUBIT_SUCCESS; 
 }
 
+CubitStatus OCCModifyEngine::thicken( DLIList<BodySM*>& bodies,
+                                      DLIList<BodySM*>& new_bodies,
+                                      double depth,
+                                      CubitBoolean both) const
+{
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  return CUBIT_FAILURE;
+}
 
 //===============================================================================
-// Function   : thicken
+// Function   : hollow
 // Member Type: PUBLIC
 // Description: Hollow existing solid body by remove one or several surfaces 
 //              Can only take one body at a time.
-//              No both (side) option.
 //              depth > 0, thick body going outside bodies
 //              depth < 0, thick body going inside bodies
 // Author     : Jane Hu 
 // Date       : 06/08
 //===============================================================================
-CubitStatus OCCModifyEngine::thicken(DLIList<BodySM*>& bodies, 
+CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies, 
                                      DLIList<Surface*>& surfs_to_remove,
                                      DLIList<BodySM*>& new_bodies,
-                                     double depth,
-                                     bool /*both*/) const
+                                     double depth) const
 {
   if(bodies.size() != 1 || surfs_to_remove.size() < 1)
   {
