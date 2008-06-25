@@ -130,7 +130,7 @@ inline CubitSense CubitUtil::opposite_sense( CubitSense sense )
            sense == CUBIT_REVERSED );
    if ( sense == CUBIT_UNKNOWN ) return CUBIT_UNKNOWN;
    else {
-      CubitSense opp_sense = (CubitSense) (1 - sense);
+      CubitSense opp_sense = static_cast<CubitSense>(1 - sense);
       return opp_sense;
    }
 }

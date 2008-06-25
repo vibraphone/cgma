@@ -27,8 +27,8 @@ class DagType
       // Dimension may be outside the range [0,3], but
       // if so is_valid() will return false.  (i.e. it is
       // possible to construct invalid DagType objects.)
-    inline DagType( int dimension, FunctionalType func )
-      : intType( 3 * dimension + func ) 
+    inline DagType( int my_dimension, FunctionalType func )
+      : intType( 3 * my_dimension + func ) 
       { }
     
     
@@ -44,7 +44,7 @@ class DagType
       // Return values are one of GroupingEntity_TYPE,
       // SenseEntity_TYPE, or BasicTopologyEntity_TYPE.
     inline FunctionalType functional_type() const
-      { return (FunctionalType)(intType % 3); }
+      { return static_cast<FunctionalType> (intType % 3); }
       
     
       // Is this a valid DagType?  
@@ -55,8 +55,8 @@ class DagType
       // move above a Body or below a RefVertex in the DAG.
     inline bool is_valid() const
       { 
-        const unsigned body_type = 11;
-        return (unsigned)intType <= body_type;
+        const unsigned my_body_type = 11;
+        return static_cast<unsigned>(intType) <= my_body_type;
       }
       
       // get parent of this type

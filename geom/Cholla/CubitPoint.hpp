@@ -85,7 +85,7 @@ public:
   virtual double z() = 0;
   virtual void set( const CubitVector &pos ) = 0;
 
-  virtual void marked(int marked) {markedFlag = marked;};
+  virtual void marked(int is_marked) {markedFlag = is_marked;};
   virtual int marked() {return markedFlag;};
       
   virtual CubitVector coordinates() const = 0;
@@ -111,8 +111,9 @@ public:
   virtual double u() { return uVal; };
   virtual double v() { return vVal; };
   virtual double size() {return sizeVal; };
-  virtual void set_uv( double u, double v ) { uVal = u; vVal = v; };
-  virtual void set_uvs(double u, double v, double s) {uVal = u; vVal = v; sizeVal = s; }
+  virtual void set_uv( double u_new, double v_new ) { uVal = u_new; vVal = v_new; };
+  virtual void set_uvs(double u_new, double v_new, double s_new) 
+    {uVal = u_new; vVal = v_new; sizeVal = s_new; }
     //- get and set the u-v coordinates (careful with internal boundaries - see TDFacetBoundarPoint)
   virtual CubitStatus get_uv( CubitFacet *facet, double &u, double &v );
   virtual CubitStatus get_uvs( CubitFacet *facet, double &u, double &v, double &s);

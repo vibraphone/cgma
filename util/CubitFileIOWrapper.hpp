@@ -77,7 +77,7 @@ template <class T> void SwapEndian(unsigned int xintCount, T* xpT)
     unsigned char* lpCurFromByte;
     unsigned char lachrBuffer[sizeof(T)];
     
-    unsigned char* lpCurAtom = (unsigned char*)xpT;
+    unsigned char* lpCurAtom = reinterpret_cast<unsigned char*>(xpT);
     int lintAtom = xintCount;
     while(lintAtom) {
         lintAtom--;

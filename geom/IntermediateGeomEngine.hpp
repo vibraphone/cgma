@@ -12,6 +12,9 @@ class IntermediateGeomEngine
 {
 
 public:
+  
+  virtual ~IntermediateGeomEngine() {}
+
   virtual bool is_composite(TBOwner *bridge_owner) = 0;
   virtual bool is_partition(TBOwner *bridge_owner) = 0;
 

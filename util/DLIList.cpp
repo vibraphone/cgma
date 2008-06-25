@@ -27,16 +27,16 @@ template <class X> MY_INLINE X DLIList<X>::pop()
 //- will be grown by {increment} each time it is filled. Memory for the
 //- list is not allocated until the first element is inserted using
 //- {insertLink}. 
-template <class X> MY_INLINE DLIList<X>::DLIList (int size)
+template <class X> MY_INLINE DLIList<X>::DLIList (int list_size)
 {
    index      = 0;
    itemCount  = 0;
    listLength = 0;
    listArray  = NULL;
-   if (size)
+   if (list_size)
    {
-      listArray = new X [size];
-      listLength = size;
+      listArray = new X [list_size];
+      listLength = list_size;
    }
 }
 
@@ -76,7 +76,7 @@ template <class X> MY_INLINE void DLIList<X>::lengthen_list(int by_how_much,
 {
     // Make a new array
   int new_size = 
-    (int) ((double)listLength * by_what_factor)
+    static_cast<int>( static_cast<double>(listLength) * by_what_factor )
     + by_how_much;
   X* temp_list = new X [new_size];
 
@@ -173,7 +173,7 @@ template <class X> MY_INLINE void DLIList<X>::intersect_unordered(
   X* end1 = iter1 + itemCount;               // end of this array
   X* iter2 = intersect_list.listArray;       // iterstor for other array
   X* end2 = iter2 + intersect_list.itemCount;// end of other array
-  X* insert = iter1 - 1;                     // location of last insert
+  X* last_insert = iter1 - 1;                // location of last insert
   
   for ( ; iter1 < end1; ++iter1 )
   {
@@ -183,13 +183,13 @@ template <class X> MY_INLINE void DLIList<X>::intersect_unordered(
     if (iter2 == end2)
       break;
     
-    if ((*iter2 == *iter1) &&   // items are the same and ...
-        (insert < listArray ||  // is the first item or ...
-         *iter1 != *insert))    // is not the same as the previous item
-      *++insert = *iter1;
+    if ((*iter2 == *iter1) &&        // items are the same and ...
+        (last_insert < listArray ||  // is the first item or ...
+         *iter1 != *last_insert))    // is not the same as the previous item
+      *++last_insert = *iter1;
   }
   
-  itemCount = insert - listArray + 1;
+  itemCount = last_insert - listArray + 1;
   reset();
 }    
 
@@ -218,7 +218,7 @@ template <class X> MY_INLINE void DLIList<X>::intersect ( const DLIList<X>& merg
 
 template <class X> MY_INLINE void DLIList<X>::intersect ( void* merge_list )
 {
-  intersect( *(DLIList<X>*)merge_list );
+  intersect( *static_cast< DLIList<X>* >(merge_list) );
 }
 
 
@@ -230,7 +230,7 @@ template <class X> MY_INLINE X DLIList<X>::remove ()
    if ( !itemCount )
    {
       PRINT_WARNING("Attempted link removal from empty DLIList\n");
-      return (X)0;
+      return X(0);
    }
 
      // save the current value
@@ -267,7 +267,7 @@ template <class X> MY_INLINE X DLIList<X>::extract ()
    if ( !itemCount )
    {
       PRINT_WARNING("Attempted link removal from empty DLIList\n");
-      return (X)0;
+      return X(0);
    }
 
      // save the current value
@@ -334,7 +334,7 @@ template <class X> MY_INLINE X DLIList<X>::step_and_get ()
    if ( !itemCount )
    {
       PRINT_WARNING("Attempted step_and_get from empty DLIList\n");
-      return (X)0;
+      return X(0);
    }
 
    if (++index == itemCount)
@@ -400,7 +400,7 @@ template <class X> MY_INLINE DLIList<X>& DLIList<X>::
 template <class X> MY_INLINE DLIList<X>& DLIList<X>::
                        operator+=(void* from)
 {
-  DLIList<X>* cast_from = (DLIList<X>*)from;
+  DLIList<X>* cast_from = static_cast< DLIList<X>* >(from);
   
      // Don't do anything if the list being appended is empty.
    if (cast_from->itemCount == 0)
@@ -594,14 +594,14 @@ template <class X> MY_INLINE int DLIList<X>::memory_use(CubitBoolean verbose_boo
 {
    // report amount of memory allocated
 
-   int size = listLength * sizeof(X);
+   int my_size = listLength * sizeof(X);
 
    if (verbose_boolean)
    {
-      PRINT_INFO("      DLIList: %d bytes\n",size);
+      PRINT_INFO("      DLIList: %d bytes\n", my_size);
    }
 
-   return size;
+   return my_size;
 }
 
 template <class X> MY_INLINE void DLIList<X>::copy_to(X *other_array)

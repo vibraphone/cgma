@@ -304,7 +304,7 @@ RefEntity::marked(int value)
 
 inline int
 RefEntity::marked()
-{return (int) markedFlag;}
+{return static_cast<int>(markedFlag);}
 
 inline void
 RefEntity::list_mark(int value)

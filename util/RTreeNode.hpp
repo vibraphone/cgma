@@ -110,7 +110,7 @@ private:
 
 public:
   RTreeNode(Y data, double tol, int max_children, int min_children );
-  RTreeNode(CubitBox &bounding_box, int max_children, int min_children);
+  RTreeNode(CubitBox &bound_box, int max_children, int min_children);
   
   ~RTreeNode();
     //- Constructor/Destructor
@@ -140,7 +140,7 @@ public:
     {return myData;}
     //- Determine if the RTreeNode is a leaf node.
   
-  void add_child(RTreeNode<Y>* child_node, CubitBoolean recalc_b_box);
+  void add_child(RTreeNode<Y>* child_node, CubitBoolean recalc_bound_box);
     //- Add the child to the myChildrenNodes' list. Adds
     //- it to the next availabel spot.  Won't add if overflow will
     //- occur.
@@ -156,7 +156,7 @@ public:
     //- Returns the number of children in the myChildrenNode's array.
 
   RTreeNode<Y>* get_child(int i)
-    {return ((i < nextChildIndex) ? myChildrenNodes[i] : (RTreeNode<Y>*)NULL) ;}
+    {return ( (i < nextChildIndex) ? myChildrenNodes[i] : static_cast< RTreeNode<Y>* >(NULL) );}
   
     
   void flush(CubitBox &new_box);

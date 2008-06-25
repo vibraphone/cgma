@@ -35,7 +35,7 @@ template <class Y> MY_INLINE RTreeNode<Y>::RTreeNode (Y data, double tol,
   myChildrenNodes = new RTreeNode<Y>* [maxChildren];
   int ii;
   for ( ii = 0; ii < maxChildren; ii++ )
-    myChildrenNodes[ii] = (RTreeNode<Y>*) NULL;
+    myChildrenNodes[ii] = static_cast< RTreeNode<Y>* >(NULL);
   if ( data == NULL )
   {
     PRINT_ERROR("Building RTree with null data is not allowed!\n");
@@ -70,17 +70,17 @@ template <class Y> MY_INLINE RTreeNode<Y>::RTreeNode (Y data, double tol,
   distIsBox = 1;
   myDist = CUBIT_DBL_MAX;
 }
-template <class Y> MY_INLINE RTreeNode<Y>::RTreeNode (CubitBox &bounding_box,
+template <class Y> MY_INLINE RTreeNode<Y>::RTreeNode (CubitBox &bound_box,
                                                       int max_children,
                                                       int min_children)
 {  
   maxChildren = max_children;
   minChildren = min_children;
-  myBoundingBox = new CubitBox(bounding_box);
+  myBoundingBox = new CubitBox(bound_box);
   myChildrenNodes = new RTreeNode<Y>* [maxChildren];
   int ii;
   for ( ii = 0; ii < maxChildren; ii++ )
-    myChildrenNodes[ii] = (RTreeNode<Y>*) NULL;
+    myChildrenNodes[ii] = static_cast< RTreeNode<Y>* >(NULL);
   myData = NULL;
   myLevel = UNSET_RNODE;
   myParent = NULL;
@@ -199,7 +199,7 @@ template <class Y> MY_INLINE RTreeNode<Y>* RTreeNode<Y>::choose_leaf( RTreeNode<
   }
     //do error checking...
   if ( child_index == -1 || child_index >= maxChildren )
-    return (RTreeNode<Y>*)NULL;
+    return static_cast< RTreeNode<Y>* >(NULL);
   RTreeNode<Y> *f = n->myChildrenNodes[child_index];
     //Now continue on...
   curr_node = choose_leaf(f,e);
@@ -420,12 +420,12 @@ template <class Y> MY_INLINE void RTreeNode<Y>::flush( CubitBox &new_box )
   myBoundingBox = new CubitBox(new_box);
 }
 template <class Y> MY_INLINE void RTreeNode<Y>::add_child(RTreeNode<Y> *child_node,
-                                                CubitBoolean recalc_b_box)
+							  CubitBoolean recalc_bound_box)
 {
   assert(nextChildIndex < maxChildren && child_node != NULL );
   myChildrenNodes[nextChildIndex] = child_node;
     //update the bounding box. by uniting with child node...
-  if ( recalc_b_box )
+  if ( recalc_bound_box )
   {
     CubitBox *old_box = myBoundingBox;
     myBoundingBox = new CubitBox( *old_box |= child_node->bounding_box());
@@ -464,8 +464,8 @@ template <class Y> MY_INLINE CubitStatus RTreeNode<Y>::pick_seeds(RTreeNode<Y> *
   RTreeNode<Y> *e_1, *e_2;
   CubitBox e_box_1, e_box_2, j;
   double d, max_d = -CUBIT_DBL_MAX;
-  seed_1 = (RTreeNode<Y>*)NULL;
-  seed_2 = (RTreeNode<Y>*)NULL;
+  seed_1 = static_cast< RTreeNode<Y>* >(NULL);
+  seed_2 = static_cast< RTreeNode<Y>* >(NULL);
   
   for(ii = 0; ii < input_list_size; ii++ )
   {
@@ -509,7 +509,7 @@ template <class Y> MY_INLINE CubitStatus RTreeNode<Y>::pick_next(DLIList <RTreeN
   int ii, next_index = 0;
   double d1, d2, max_diff = -CUBIT_DBL_MAX;
   add_to_group_1 = CUBIT_TRUE;
-  RTreeNode<Y> *max_diff_node = (RTreeNode<Y>*)NULL;
+  RTreeNode<Y> *max_diff_node = static_cast< RTreeNode<Y>* >(NULL);
   RTreeNode<Y> *curr_node;
   CubitBox group_1_box = group_1->bounding_box();
   CubitBox group_2_box = group_2->bounding_box();
@@ -659,7 +659,7 @@ template <class Y> MY_INLINE CubitBoolean RTreeNode<Y>::remove( Y e,
   if ( root->num_children() == 1 )
   {
     new_root = root->get_child(0);
-    new_root->set_parent((RTreeNode<Y>*)NULL);
+    new_root->set_parent(static_cast< RTreeNode<Y>* >(NULL));
     delete_root = CUBIT_TRUE;
   }
   return CUBIT_TRUE;

@@ -60,7 +60,7 @@ template <class Z> KDDTree<Z>::KDDTree (double tol, CubitBoolean selfBalancingOn
   if (myRandomOn)
   {
     //// seed the random number generator
-    srand( (unsigned)time( NULL ) );
+    srand( static_cast<unsigned>(time(NULL)) );
   }
 }
 
@@ -375,17 +375,17 @@ template <class Z> int KDDTree<Z>::find_max_height ()
 
 //- Find the depth of the tree
 template <class Z> void KDDTree<Z>::recursive_find_max_height
- (KDDTreeNode<Z> *root, int depth, int *maxdepth)
+ (KDDTreeNode<Z> *the_root, int depth, int *maxdepth)
 {
-  if (root)
+  if (the_root)
   {
     depth++;
     if (depth > *maxdepth)
     {
       *maxdepth = depth;
     }
-    recursive_find_max_height (root->left, depth, maxdepth);
-    recursive_find_max_height (root->right, depth, maxdepth);
+    recursive_find_max_height (the_root->left, depth, maxdepth);
+    recursive_find_max_height (the_root->right, depth, maxdepth);
   }
 }
 
@@ -495,7 +495,7 @@ template <class Z> CubitBoolean KDDTree<Z>::remove (Z data)
       myMarkedNodes++;
       if (myDeletionTolerance != 0)
       {
-        if ( (((double)myMarkedNodes / myNodeList.size()) > myDeletionTolerance) &&
+        if ( (( static_cast<double>(myMarkedNodes) / myNodeList.size()) > myDeletionTolerance) &&
              (myMarkedNodes > 1)
            )
         {

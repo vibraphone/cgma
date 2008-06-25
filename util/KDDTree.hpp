@@ -49,7 +49,7 @@ template <class Z> class KDDTree : public AbstractTree<Z>
     double min_dist_sq (CubitVector &q, CubitBox &b_box);
 
     //- Find the depth of the tree recursively
-    void recursive_find_max_height (KDDTreeNode<Z> *root, int depth, int *maxdepth);
+    void recursive_find_max_height (KDDTreeNode<Z> *the_root, int depth, int *maxdepth);
 
     //- Balance the tree recursively
     KDDTreeNode<Z> *recursive_balance (DIMENSION dim, int left, int right,

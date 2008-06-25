@@ -27,7 +27,7 @@
 
 class CubitStringRep;
 
-const size_t MAX_POS = (size_t) -1;    // "SIZE_T_MAX"
+const size_t MAX_POS = static_cast<size_t>(-1);    // "SIZE_T_MAX"
 
 class CUBIT_UTIL_EXPORT CubitString
 {

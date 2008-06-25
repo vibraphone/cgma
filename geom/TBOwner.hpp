@@ -22,6 +22,8 @@ class CUBIT_GEOM_EXPORT TBOwner
 {
 
   public:
+
+    virtual ~TBOwner() {}
   
     virtual CubitStatus remove_bridge( TopologyBridge* bridge ) = 0;
     
@@ -33,7 +35,7 @@ class CUBIT_GEOM_EXPORT TBOwner
                                      bool reversed ) = 0;
                                      
     virtual CubitBoolean contains_bridge( TopologyBridge* bridge ) const
-      { return (CubitBoolean)(bridge->owner() == this); }
+      { return static_cast<CubitBoolean>(bridge->owner() == this); }
     
     virtual void notify_reversed( TopologyBridge* ) = 0;
 

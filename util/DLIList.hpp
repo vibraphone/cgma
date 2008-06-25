@@ -37,7 +37,7 @@ template<class X> class DLIList
 public:
   friend class DLIListIterator<X>;
   
-  explicit DLIList (int size = 0);
+  explicit DLIList (int list_size = 0);
     //- Constructor: Create a list with initial size 'size'. Memory for the
     //- list is not allocated until the first element is added to the list. 
   
@@ -109,7 +109,7 @@ public:
   int operator==(const DLIList<X>& from);
   int operator!=(const DLIList<X>& from);
 
-  X & operator[](int index) const;
+  X & operator[](int my_index) const;
   void merge_unique(const DLIList<X>& merge_list, 
                     bool merge_list_unique = false);
     //- Merges the contents of the list, merge_list, with those of "this"
@@ -264,10 +264,10 @@ DLIList<X>& DLIList<X>::operator=(const DLIListIterator<X>& from_iter)
 }
 
 template <class X> inline
-X & DLIList<X>::operator[](int index) const
+X & DLIList<X>::operator[](int my_index) const
 {
-    assert( index >= 0 && index < itemCount );
-    return listArray[index];
+    assert( my_index >= 0 && my_index < itemCount );
+    return listArray[my_index];
 }
 
 template <class X> inline void DLIList<X>::step()
@@ -379,7 +379,7 @@ template <class X> inline X DLIList<X>::get() const
   if ( !itemCount )
   {
     PRINT_WARNING("Attempted get of empty DLIList\n");
-    return (X)0;
+    return X(0);
   }
   else
   {
@@ -393,7 +393,7 @@ template <class X> inline X DLIList<X>::get_and_step()
   if ( !itemCount )
   {
     PRINT_WARNING("Attempted get_and_step from empty DLIList\n");
-    return (X)0;
+    return X(0);
   }
   else
 #endif
@@ -410,7 +410,7 @@ template <class X> inline X DLIList<X>::get_and_back ()
    if ( !itemCount )
    {
       PRINT_WARNING("Attempted get_and_back from empty DLIList\n");
-      return (X)0;
+      return X(0);
    }
    X temp = listArray[index--];
    if (index < 0)
@@ -423,7 +423,7 @@ template <class X> inline X DLIList<X>::next() const
   if (!itemCount)
   {
     PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;
+    return X(0);
   }
   else if (index == itemCount-1)
     return listArray[0];
@@ -436,7 +436,7 @@ template <class X> inline X DLIList<X>::next(int n) const
   if ( !itemCount )
   {
     PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;
+    return X(0);
   }
   else
   {
@@ -484,7 +484,7 @@ template <class X> inline CubitBoolean DLIList<X>::move_to (X item)
 
 template <class X> inline X DLIList<X>::change_to (X new_value)
 {
-  X temp = (X)0;
+  X temp = X(0);
   if ( !itemCount )
   {
     PRINT_WARNING("DLIList: Attempted update of empty list\n");
@@ -516,7 +516,7 @@ template <class X> inline void DLIList<X>::remove_all_with_value(X val)
 // If the item was found and removed it is returned, else 0 is returned.
 template <class X> inline X DLIList<X>::remove (X item)
 {
-  X temp = (X)0;
+  X temp = X(0);
   if (move_to(item))
     temp = remove();
   return temp;
