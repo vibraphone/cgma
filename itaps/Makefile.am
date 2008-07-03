@@ -10,42 +10,22 @@ endif
 
 SUBDIRS = . $(SIDL_DIR)
 
-lib_LTLIBRARIES = libiGeom.la
+noinst_LTLIBRARIES = libiGeom.la
 
 if build_ACIS
-  TEST_ACISLIBS = $(top_builddir)/geom/ACIS/libcubit_ACIS.la
   TEST_ACISPATH = -R$(ACIS_LIB_DIR)
 else
-  TEST_ACISLIBS =
   TEST_ACISPATH =
-endif
-
-if BUILD_CGM
-  TEST_XLIBS = $(TEST_ACISLIBS) \
-               $(top_builddir)/geom/facet/libcubit_facet.la \
-               $(top_builddir)/geom/facetbool/libcubit_facetbool.la \
-               $(top_builddir)/geom/Cholla/libcholla.la \
-               $(top_builddir)/geom/virtual/libcubit_virtual.la \
-               $(top_builddir)/geom/libcubit_geom.la \
-               $(top_builddir)/util/libcubit_util.la
-else
-  TEST_XLDFLAGS = $(CUBIT_LDFLAGS) $(CUBIT_LTFLAGS)
-  TEST_XLIBS = $(CUBIT_LIBS)
-endif
-
-if build_ACIS
-  ACIS_CGM_INCLUDES = -I$(top_srcdir)/geom/ACIS
-else
-  ACIS_CGM_INCLUDES =
 endif
 
 libiGeom_la_includedir = $(includedir)
 
-libiGeom_la_libadd = $(top_builddir)/init/libcgma_init.la $(TEST_XLIBS)
+libiGeom_la_libadd = $(top_builddir)/libcgm.la
 
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
 	   -I$(top_srcdir)/init \
+           -I$(top_srcdir)/geom/ACIS \
            -I.
 
 libiGeom_la_SOURCES = \
@@ -67,7 +47,7 @@ TESTS = testgeom
 check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
-testgeom_LDADD = $(TEST_XLDFLAGS) libiGeom.la  ../init/libcgma_init.la $(TEST_XLIBS)
+testgeom_LDADD = ../libcgm.la
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 testgeom_LDFLAGS = $(TEST_ACISPATH)
 
@@ -83,11 +63,12 @@ cfg_DATA = iGeom-Defs.inc
 # that the correct values are set (e.g. if someone does 
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
-install-data-hook:
-	echo "iGeom_SRCDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "iGeom_BLDDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "iGeom_DIR=${cfgdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "iGeom_LIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "CGM_LDFLAGS=-L${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo "CGM_INCLUDEDIR=${includedir}" >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+iGeom-Defs.inc: Makefile.am
+	@echo "include $(cfgdir)/cgm.make"         > $@
+	@echo 'iGeom_LDFLAGS  = $$(CGM_LDFLAGS)'  >> $@
+	@echo 'iGeom_LTFLAGS  = $$(CGM_LTFLAGS)'  >> $@
+	@echo 'iGeom_LIBS     = $$(CGM_LIBS)'     >> $@
+	@echo 'iGeom_DEFINES  = $$(CGM_DEFINES)'  >> $@
+	@echo 'iGeom_INCLUDES = $$(CGM_INCLUDES)' >> $@
+	@echo 'iGeom_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $@
 

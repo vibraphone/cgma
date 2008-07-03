@@ -20,12 +20,10 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 INCLUDES = -I$(top_srcdir)/util -I.
 
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_geom.la
+  noinst_LTLIBRARIES += libcubit_geom.la
 endif
-
-libcubit_geom_la_LIBADD = ../util/libcubit_util.la
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)

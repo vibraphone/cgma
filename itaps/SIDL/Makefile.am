@@ -143,10 +143,11 @@ cfg_DATA = iGeom-SIDL-Defs.inc
 # that the correct values are set (e.g. if someone does 
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
-install-data-hook:
-	echo "iGeom_DIR=${cfgdir}" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
-	echo "iGeom_SIDLLIBDIR=${libdir}" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
-	echo "iGeom_SIDLINCLUDEDIR=${includedir}/SIDL" >> $(DESTDIR)$(cfgdir)/iGeom-SIDL-Defs.inc
-	(cd gserver; install -d ${includedir}/SIDL; install -t ${includedir}/SIDL ${SERVER_HDRS})
-
-#include make.dependencies
+iGeom-SIDL-Defs.inc:
+	@echo "include $(cfgdir)/iGeom-SIDL-Defs.inc" > $@
+	@echo 'iGeom_SIDL_INCLUDES = $$(iGeom_INCLUDES) -I$(BABEL_DIR)/include' >> $@
+	@echo 'iGeom_SIDL_CPPFLAGS = $$(iGeom_CPPFLAGS) -I$(BABEL_DIR)/include' >> $@
+	@echo 'iGeom_SIDL_DEFINES  = $$(iGeom_DEFINES)' >> $@
+	@echo 'iGeom_SIDL_LDFLAGS  = $$(iGeom_LDFLAGS) -L$(BABEL_DIR)/lib' >> $@
+	@echo 'iGeom_SIDL_LTFLAGS  = $$(iGeom_LDFLAGS) -R$(BABEL_DIR)/lib' >> $@
+	@echo 'iGeom_SIDL_LIBS     = $$(iGeom_LIBS) -lsidl -liGeomserver' >> $@

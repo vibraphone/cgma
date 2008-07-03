@@ -11,18 +11,9 @@ INCLUDES = -I$(top_srcdir)/util \
            $(OCC_INC_FLAG)
 
 # The name of the library to build
-OCC_TARGET=
-if WITH_OCC
-  OCC_TARGET += libcubit_OCC.la
-endif
+noinst_LTLIBRARIES = libcubit_OCC.la
 
-lib_LTLIBRARIES = 
-if BUILD_CGM
-  lib_LTLIBRARIES += $(OCC_TARGET)
-endif
-
-libcubit_OCC_la_LIBADD = $(OCC_LIB_FLAG) $(OCC_LIBS) \
-                         ../libcubit_geom.la
+libcubit_OCC_la_LIBADD = -L$(OCC_LIB_DIR) $(OCC_LIBS)
 
 # The directory where headers will be installed
 libcubit_OCC_la_includedir = $(includedir)

@@ -337,9 +337,7 @@ AC_CONFIG_FILES(Makefile
            init/Makefile
            cgm.make
            itaps/Makefile
-           itaps/iGeom-Defs.inc
 	   itaps/SIDL/Makefile
-	   itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
            cgm_apps/Makefile
            cgm_apps/examples/Makefile

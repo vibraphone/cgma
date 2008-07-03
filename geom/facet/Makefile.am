@@ -9,14 +9,10 @@ INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom/facetbool 
 
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_facet.la
+  noinst_LTLIBRARIES += libcubit_facet.la
 endif
-
-libcubit_facet_la_LIBADD = ../libcubit_geom.la \
-                           ../facetbool/libcubit_facetbool.la \
-                           ../Cholla/libcholla.la 
 
 # The directory where headers will be installed
 libcubit_facet_la_includedir = $(includedir)

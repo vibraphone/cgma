@@ -11,6 +11,5 @@ AM_LDFLAGS = -L$(ACIS_LIB_DIR) -R$(ACIS_LIB_DIR)
 
 mergechk_SOURCES = mergechk.cpp
 
-LDADD = ../../../geom/libcubit_geom.la \
-        ../../../geom/ACIS/libcubit_ACIS.la
+LDADD = ../../../libcgm.la
 

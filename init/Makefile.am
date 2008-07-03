@@ -12,7 +12,7 @@ INCLUDES = -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/cholla \
            -I$(srcdir)
 
-lib_LTLIBRARIES = libcgma_init.la
+noinst_LTLIBRARIES = libcgma_init.la
 libcgma_init_la_includedir = $(includedir)
 libcgma_init_la_SOURCES = InitCGMA.cpp
 libcgma_init_la_include_HEADERS = InitCGMA.hpp

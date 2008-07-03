@@ -15,12 +15,10 @@ INCLUDES = -I$(top_srcdir)/util \
            $(MPI_INCLUDE)
 
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_parallel.la
+  noinst_LTLIBRARIES += libcubit_parallel.la
 endif
-
-libcubit_parallel_la_LIBADD = ../libcubit_geom.la ../ACIS/libcubit_ACIS.la
 
 # The directory where headers will be installed
 libcubit_parallel_la_includedir = $(includedir)

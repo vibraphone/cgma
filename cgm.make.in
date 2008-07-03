@@ -11,124 +11,24 @@
 #
 #==================================================================
 
-CANT_USE_STD           = @CANT_USE_STD@
-CANT_USE_STD_IO        = @CANT_USE_STD_IO@
-TEMPLATE_DEFS_INCLUDED = @TEMPLATE_DEFS_INCLUDED@
+# The following variables are overridden when this file is installed
+CGM_EXT_INCLUDE = 
+CGM_EXT_LIBS    = 
+CGM_EXT_LDFLAGS = 
+CGM_EXT_LTFLAGS = 
+CGM_INCLUDEDIR  = .
+CGM_LIBDIR      = $(abs_buildidr)/.libs
 
-ACIS_DEFS            = @ACIS_DEFS@
-ACIS_DIR             = @ACIS_DIR@
-ACIS_LIB_DIR         = @ACIS_LIB_DIR@
-ACIS_LINK_FLAGS      = @ACIS_LINK_FLAGS@
-ACIS_VERSION         = @ACIS_VERSION@
-ACIS_HEALER          = @ACIS_HEALER@
-ACIS_PLATFORM        = @ACIS_PLATFORM@
-ACIS_STEP_TRANSLATOR = @ACIS_STEP_TRANSLATOR@
-ACIS_IGES_TRANSLATOR = @ACIS_IGES_TRANSLATOR@
-ACIS_LIBS            = @CGM_ACIS_LIBS@ @ACIS_LIBS@
-ACIS_INCLUDES        = @ACIS_INCLUDES@
+# Pre-processor flags
+CGM_DEFINES = @CANT_USE_STD@ @CANT_USE_STD_IO@ @TEMPLATE_DEFS_INCLUDED@
+CGM_INCLUDES = $(CGM_EXT_INCLUDE) -I$(CGM_INCLUDEDIR)
+CGM_CPPFLAGS = $(CGM_DEFINES) $(CGM_INCLUDES)
 
-OCC_INCLUDES	     = @OCC_INC_FLAG@
-OCC_LIB_DIR          = @OCC_LIB_DIR@
-OCC_LIB_FLAG	     = @OCC_LIB_FLAG@
-OCC_LIBS	     = @CUBIT_OCC_LIB@ @OCC_LIBS@
+# Link flags
+CGM_LDFLAGS = -L$(CGM_LIBDIR) $(CGM_EXT_LDFLAGS)
+CGM_LTFLAGS = -R$(CGM_LIBDIR) $(CGM_EXT_LTFLAGS)
+CGM_LIBS = -lcgm $(CGM_EXT_LIBS)
+CGM_LIBS_LINK = $(CGM_LDFLAGS) $(CGM_LIBS)
 
-CGM_PARALLEL_INCLUDE = @CGM_PARALLEL_INCLUDE@
-CGM_PARALLEL_LIB = @CGM_PARALLEL_LIB@
-CGM_PARALLEL_LIB_FILE = @CGM_PARALLEL_LIB_FILE@
-# These get redefined by a makefile target during *install*
-# by appending correct values to the end of the file.
-CGM_LIBDIR = @abs_builddir@
-CGM_INCLUDEDIR = @abs_srcdir@
+# Build-generated values appended after this line
 
-CGM_CXX = @CXX@
-CGM_CC = @CC@
-CGM_CPPFLAGS = @CUBIT_CGM@ @CANT_USE_STD@ @CANT_USE_STD_IO@ @TEMPLATE_DEFS_INCLUDED@ ${ACIS_DEFS}
-CGM_CXXFLAGS = @CXXFLAGS@
-CGM_CFLAGS = @CFLAGS@
-CGM_LDFLAGS = @LDFLAGS@
-
-CGM_INC_CPPFLAGS_COMMON = ${ACIS_INCLUDES} ${OCC_INCLUDES}
-CGM_INC_CPPFLAGS_UNINSTALLED = \
-               -I@abs_srcdir@/util \
-               -I@abs_builddir@/util \
-               -I@abs_srcdir@/init \
-               -I@abs_srcdir@/geom \
-               -I@abs_builddir@/geom \
-               -I@abs_srcdir@/itaps \
-               -I@abs_builddir@/itaps \
-               -I@abs_srcdir@/geom/ACIS \
-               -I@abs_srcdir@/geom/OCC \
-               $(CGM_PARALLEL_INCLUDE) \
-               $(CGM_INC_CPPFLAGS_COMMON)
-CGM_INC_CPPFLAGS_INSTALLED = \
-               -I$(CGM_INCLUDEDIR) \
-               $(CGM_INC_CPPFLAGS_COMMON)
-
-# will be overriden upon install
-CGM_INCLUDES = $(CGM_INC_CPPFLAGS_UNINSTALLED)
-
-CGM_LIBS_LDFLAGS_COMMON = $(ACIS_LINK_FLAGS) $(OCC_LIB_FLAG)
-
-CGM_LIBS_LDFLAGS_UNINSTALLED = \
-	-L@abs_builddir@/geom/virtual/.libs \
-        -L@abs_builddir@/geom/facetbool/.libs \
-        -L@abs_builddir@/geom/facet/.libs \
-	-L@abs_builddir@/geom/Cholla/.libs \
-        -L@abs_builddir@/geom/ACIS/.libs \
-        -L@abs_builddir@/geom/OCC/.libs \
-        -L@abs_builddir@/geom/.libs \
-        -L@abs_builddir@/util/.libs \
-	-L@abs_builddir@/geom/virtual \
-        -L@abs_builddir@/geom/facetbool \
-        -L@abs_builddir@/geom/facet \
-	-L@abs_builddir@/geom/Cholla \
-        -L@abs_builddir@/geom/ACIS \
-        -L@abs_builddir@/geom \
-        -L@abs_builddir@/util \
-        $(CGM_LIBS_LDFLAGS_COMMON)
-
-CGM_LIBS_LDFLAGS_INSTALLED = -L$(CGM_LIBDIR) $(CGM_LIBS_LDFLAGS_COMMON)
-
-CGM_LIBS_LIBRARIES = \
-        ${ACIS_LIBS} \
-        -lcubit_virtual \
-        -lcubit_facet \
-        -lcubit_facetbool \
-        -lcholla \
-        ${ACIS_LIBS} \
-        -lcubit_geom \
-        -lcubit_util \
-	${CGM_PARALLEL_LIB} \
-        ${OCC_LIBS} 
-
-# Will be overridden upon install
-CGM_LIBS_LDFLAGS = $(CGM_LIBS_LDFLAGS_UNINSTALLED)
-
-CGM_LIBS_LINK_INTERNAL = $(LDFLAGS) $(CGM_LIBS_LDFLAGS) $(CGM_LIBS_LIBRARIES)
-
-CGMA_INIT_LDFLAGS_UNINSTALLED = -L@abs_builddir@/init -L@abs_builddir@/init/.libs 
-CGMA_INIT_LDFLAGS_INSTALLED = -L$(CGM_LIBDIR)
-
-# Will be overridden upon install
-CGMA_INIT_LDFLAGS = $(CGMA_INIT_LDFLAGS_UNINSTALLED)
-
-CGM_LIBS_FILES_INTERNAL = \
-       $(CGM_LIBDIR)/libcgma_init.la \
-       $(CGM_LIBDIR)/libcubit_virtual.la \
-       $(CGM_LIBDIR)/libcubit_facetbool.la \
-       $(CGM_LIBDIR)/libcubit_facet.la \
-       $(CGM_LIBDIR)/libcholla.la \
-       $(CGM_LIBDIR)/libcubit_geom.la \
-       $(CGM_LIBDIR)/libcubit_util.la \
-       ${CGM_PARALLEL_LIB_FILE}
-       
-CUBIT_LTFLAGS = @CUBIT_LTFLAGS@
-CUBIT_LDFLAGS = @CUBIT_LDFLAGS@
-CUBIT_LIBS = @CUBIT_LIBS@
-CUBIT_FILE = @CUBIT_FILE@
-
-# CGM_LIBS_LINK is set by configure script to be either
-# "$(CUBIT_LDFLAGS) $(CUBIT_LIBS)" or "$(CGM_LIBS_LINK_INTERNAL)"
-CGM_LIBS_LINK = $(CGMA_INIT_LDFLAGS) -lcgma_init @CGM_LIBS_LINK@  
-CGM_LIBS_FILES = @CGM_LIBS_FILES@ 
-CGM_LIBS_LTFLAGS = @CGM_LIBS_LTFLAGS@

@@ -9,12 +9,10 @@ INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom/Cholla
 
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_virtual.la
+  noinst_LTLIBRARIES += libcubit_virtual.la
 endif
-
-libcubit_virtual_la_LIBADD = ../libcubit_geom.la
 
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
