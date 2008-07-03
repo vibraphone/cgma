@@ -127,7 +127,7 @@ GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
 }
 
 void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa); }
+  { attribSet.append_attribute(csa, *myTopoDSShape); }
   
 void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
   { attribSet.remove_attribute(csa); }

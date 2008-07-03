@@ -102,10 +102,13 @@
 //#include "TopOpeBRepTool_ShapeTool.hxx"
 //#include "BRepPrimAPI_MakePrism.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
+#include "TDF_Label.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
 #include "BRepAlgoAPI_Section.hxx"
 #include "BRepBuilderAPI_MakeEdge.hxx"
+#include "TDocStd_Document.hxx"
+#include "TCollection_ExtendedString.hxx"
 #include "gp_Lin.hxx"
 using namespace NCubitFile;
 
@@ -147,6 +150,9 @@ OCCQueryEngine::OCCQueryEngine()
   WireList = new DLIList<OCCLoop*>;
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
+  TCollection_ExtendedString xString;
+  MyDF = new TDocStd_Document(xString);
+  mainLabel = MyDF->Main();
 }
 
 //================================================================================
@@ -1351,7 +1357,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
     OCCCoEdge * coedge = NULL;
     int size = coedges_old.size();
     CubitSense sense ;
-    if( aShape.Orientation() == CUBIT_REVERSED )
+    if( aShape.Orientation() == TopAbs_REVERSED )
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);

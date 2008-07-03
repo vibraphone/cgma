@@ -117,7 +117,7 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face face)
 //
 //-------------------------------------------------------------------------
 void OCCSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa); }
+  { attribSet.append_attribute(csa, *myTopoDSFace); }
 
 
 //-------------------------------------------------------------------------

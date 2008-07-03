@@ -4,7 +4,7 @@
 #include "CubitFileIOWrapper.hpp"
 
   // Constructor - copy from CubitSimpleAttrib
-OCCAttrib::OCCAttrib( CubitSimpleAttrib* csa ) : listNext(0)
+OCCAttrib::OCCAttrib( CubitSimpleAttrib* csa) : listNext(0)
 {
   int i;
   

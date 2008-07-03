@@ -3,6 +3,7 @@
 
 #include "CubitDefines.h"
 #include "CubitString.hpp"
+
 class CubitSimpleAttrib;
 class CubitString;
 
@@ -43,8 +44,8 @@ public:
 private:
 
   OCCAttrib( int string_count, CubitString* strings,
-               int double_count, double* doubles,
-               int integer_count, int* integers );
+             int double_count, double* doubles,
+             int integer_count, int* integers);
 
 };
 

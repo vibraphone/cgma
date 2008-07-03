@@ -135,7 +135,7 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 void OCCCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa); }
+  { attribSet.append_attribute(csa, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 

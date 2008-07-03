@@ -124,7 +124,7 @@ CubitStatus OCCLump::mass_properties( CubitVector& centroid,
 // Creation Date : 11/21/96
 //-------------------------------------------------------------------------
 void OCCLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa); }
+  { attribSet.append_attribute(csa, *myTopoDSSolid); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 

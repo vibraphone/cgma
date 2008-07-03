@@ -105,7 +105,7 @@ void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
 void OCCPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa); }
+  { attribSet.append_attribute(csa, *myTopoDSVertex); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 

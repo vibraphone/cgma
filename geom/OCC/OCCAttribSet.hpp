@@ -14,21 +14,26 @@
 #define FACET_BRIDGE_HPP
 
 #include <DLIList.hpp>
+#include "TDF_Label.hxx"
+#include "TDF_TagSource.hxx"
+#include "OCCQueryEngine.hpp"
 
 class CubitSimpleAttrib;
 class OCCAttrib;
 class CubitString;
+class TopoDS_Shape;
 
 class OCCAttribSet 
 {
 
   public:
   
-    OCCAttribSet() : listHead(0) {}
+    OCCAttribSet() : listHead(0) 
+    {myLabel = TDF_TagSource::NewChild(OCCQueryEngine::mainLabel);}
     
     ~OCCAttribSet() { remove_all_attributes(); }
     
-    void append_attribute( CubitSimpleAttrib* );
+    void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
     
     void remove_attribute( CubitSimpleAttrib* );
     
@@ -48,6 +53,7 @@ class OCCAttribSet
   private:
   
     OCCAttrib* listHead;
+    TDF_Label   myLabel;
 };
 
 #endif

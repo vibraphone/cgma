@@ -31,7 +31,7 @@ using std::type_info;
 #include "config.h"
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
-
+#include "Handle_TDocStd_Document.hxx"
 #include <map>
 // ********** END CUBIT INCLUDES              **********
 
@@ -77,6 +77,7 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
  
+class TDF_Label;
 class BRepBuilderAPI_Transform;
 class TopTools_DataMapOfShapeInteger;
 class BRepAlgoAPI_BooleanOperation;
@@ -360,6 +361,8 @@ public:
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
+  Handle(TDocStd_Document) MyDF;
+  static TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
   static int iTotalTBCreated ;
@@ -387,7 +390,6 @@ private:
   static const int OCCQE_MAJOR_VERSION;
   static const int OCCQE_MINOR_VERSION;
   static const int OCCQE_SUBMINOR_VERSION;
-
 };
 
 // ********** BEGIN INLINE FUNCTIONS          **********
