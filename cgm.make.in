@@ -16,8 +16,8 @@ CGM_EXT_INCLUDE =
 CGM_EXT_LIBS    = 
 CGM_EXT_LDFLAGS = 
 CGM_EXT_LTFLAGS = 
-CGM_INCLUDEDIR  = .
-CGM_LIBDIR      = $(abs_buildidr)/.libs
+CGM_INCLUDEDIR  = @abs_srcdir@
+CGM_LIBDIR      = @abs_builddir@/.libs
 
 # Pre-processor flags
 CGM_DEFINES = @CANT_USE_STD@ @CANT_USE_STD_IO@ @TEMPLATE_DEFS_INCLUDED@
