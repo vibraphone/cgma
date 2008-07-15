@@ -50,6 +50,8 @@ if BUILD_CGM
                   util/libcubit_util.la
 else
   CORE_CGM_LIBS = $(CUBIT_LTFLAGS) $(CUBIT_LDFLAGS) $(CUBIT_LIBS)
+  EXT_LINK_FLAGS += $(CUBIT_LDFLAGS)
+  EXT_LIBTOOL_FLAGS += $(CUBIT_LTFLAGS)
 endif
 
 
