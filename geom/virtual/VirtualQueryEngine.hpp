@@ -467,7 +467,7 @@ inline VirtualQueryEngine* VirtualQueryEngine::instance()
   if( instance_ == NULL )
   {
     instance_ = new VirtualQueryEngine;
-    assert( instance != NULL );
+    assert( instance_ != NULL );
   }
   
   return instance_;
