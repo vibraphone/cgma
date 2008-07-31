@@ -14,6 +14,7 @@
 //
 //-------------------------------------------------------------------------
 #include "config.h"
+#include <Standard_Stream.hxx>
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
 #include "gp_Ax1.hxx"
@@ -23,6 +24,7 @@
 #include "BRepBuilderAPI.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepBuilderAPI_MakeSolid.hxx"
+#include "OCCShapeAttributeSet.hpp"
 #include "BRepBuilderAPI_MakeShell.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -95,6 +97,8 @@
 #include <BndLib_AddSurface.hxx>
 #include <Precision.hxx>
 #include <BRepAdaptor_Surface.hxx>
+#include <TDataStd_Shape.hxx>
+#include <TDF_ChildIterator.hxx>
 #include "Standard_Boolean.hxx"
 
 //#include "TopOpeBRep_ShapeIntersector.hxx"
@@ -153,6 +157,7 @@ OCCQueryEngine::OCCQueryEngine()
   TCollection_ExtendedString xString;
   MyDF = new TDocStd_Document(xString);
   mainLabel = MyDF->Main();
+  EXPORT_ATTRIB = CUBIT_TRUE;
 }
 
 //================================================================================
@@ -1006,12 +1011,62 @@ OCCQueryEngine::write_topology( const char* file_name,
       B.Add(Co, *vertex);
     }
  
-  if(!BRepTools::Write(Co, const_cast<char*>(file_name)))
+  TDF_Label label;
+  if(EXPORT_ATTRIB)
+    label = mainLabel;
+
+  if(!Write(Co, const_cast<char*>(file_name),label))
+  //if(!BRepTools::Write(Co, const_cast<char*>(file_name)))
     return CUBIT_FAILURE;
  
   return CUBIT_SUCCESS;
 }
 
+CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
+                                   const Standard_CString File,
+                                   TDF_Label label) 
+{
+  ofstream os;
+  os.open(File, ios::out);
+  if (!os.rdbuf()->is_open()) return Standard_False;
+  
+  CubitBoolean isGood = (os.good() && !os.eof());
+  if(!isGood)
+    return isGood;
+
+  OCCShapeAttributeSet SS;
+  SS.Add(Sh);
+
+  os << "DBRep_DrawableShape\n";  // for easy Draw read
+  SS.Write(os, label);
+  isGood = os.good();
+  if(isGood )
+    SS.Write(Sh,os);
+  os.flush();
+  isGood = os.good();
+  os.close();
+  isGood = os.good() && isGood;
+
+  return isGood;
+}
+
+                                   
+CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
+                                  const Standard_CString File,
+                                  TDF_Label label)
+{
+  filebuf fic;
+  istream in(&fic);
+  //  if (!fic.open(File,input)) return Standard_False;
+  if (!fic.open(File, ios::in)) return Standard_False;
+
+  OCCShapeAttributeSet SS;
+  SS.Read(in, label);
+  int nbshapes = SS.NbShapes();
+  if(!nbshapes) return CUBIT_FALSE;
+  SS.Read(Sh,in,nbshapes);
+  return CUBIT_TRUE;
+}
 
 CubitStatus
 OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
@@ -1049,7 +1104,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
   BRep_Builder aBuilder;
-  Standard_Boolean result = BRepTools::Read(*aShape, (char*) file_name, aBuilder);
+  Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel);
   if (result==0) return CUBIT_FAILURE;
   
   CubitBoolean prev_global_val = PRINT_RESULT;
@@ -1241,7 +1296,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
     OCCCoFace * coface = NULL;
     int size = cofaces_old.size();
     CubitSense sense ;
-    if( aShape.Orientation() == CUBIT_REVERSED )
+    if( aShape.Orientation() == TopAbs_REVERSED )
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
@@ -2573,6 +2628,19 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
   if (!OCCMap->IsBound(old_shape) || old_shape.IsEqual(new_shape))
     return -1;
 
+  //update the attribute label tree
+  DLIList<CubitSimpleAttrib*> list;
+  OCCAttribSet::get_attributes(old_shape, list);
+  
+  for(int i = 0; i < list.size(); i ++)
+  {
+    CubitSimpleAttrib* s_attr = list.get_and_step();
+    OCCAttribSet::remove_attribute(s_attr);
+    if(!new_shape.IsNull())
+      OCCAttribSet::append_attribute(s_attr, new_shape);
+  }
+  
+  //update CGM-OCC map
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);
 

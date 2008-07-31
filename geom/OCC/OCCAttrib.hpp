@@ -1,5 +1,5 @@
-#ifndef FACET_ATTRIB_HPP
-#define FACET_ATTRIB_HPP
+#ifndef OCC_ATTRIB_HPP
+#define OCC_ATTRIB_HPP
 
 #include "CubitDefines.h"
 #include "CubitString.hpp"

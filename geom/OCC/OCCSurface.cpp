@@ -117,7 +117,7 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face face)
 //
 //-------------------------------------------------------------------------
 void OCCSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa, *myTopoDSFace); }
+  { OCCAttribSet::append_attribute(csa, *myTopoDSFace); }
 
 
 //-------------------------------------------------------------------------
@@ -129,7 +129,7 @@ void OCCSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 //-------------------------------------------------------------------------
 void OCCSurface::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.remove_attribute( csa ); }
+  { OCCAttribSet::remove_attribute( csa , *myTopoDSFace); }
 
 
 //-------------------------------------------------------------------------
@@ -142,7 +142,7 @@ void OCCSurface::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 //-------------------------------------------------------------------------
 void OCCSurface::remove_all_simple_attribute_virt()
-  { attribSet.remove_all_attributes(); }
+  { OCCAttribSet::remove_attribute(NULL, *myTopoDSFace); }
 
 
 //-------------------------------------------------------------------------
@@ -155,19 +155,11 @@ void OCCSurface::remove_all_simple_attribute_virt()
 //-------------------------------------------------------------------------
 CubitStatus OCCSurface::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                  csa_list)
-  { return attribSet.get_attributes(csa_list); }
+  { return OCCAttribSet::get_attributes(*myTopoDSFace,csa_list); }
 
 CubitStatus OCCSurface::get_simple_attribute(const CubitString& name,
                                         DLIList<CubitSimpleAttrib*>& csa_list )
-  { return attribSet.get_attributes( name, csa_list ); }
-
-
-CubitStatus OCCSurface::save_attribs( FILE *file_ptr )
-  { return attribSet.save_attributes(file_ptr); }
-  
-CubitStatus OCCSurface::restore_attribs( FILE *file_ptr, unsigned int endian )
-  { return attribSet.restore_attributes( file_ptr, endian ); }
-
+  { return OCCAttribSet::get_attributes( name, *myTopoDSFace, csa_list ); }
 
 
 //-------------------------------------------------------------------------

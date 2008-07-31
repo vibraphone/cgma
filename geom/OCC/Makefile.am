@@ -20,7 +20,7 @@ libcubit_OCC_la_includedir = $(includedir)
 
 # The non-template sources
 libcubit_OCC_la_SOURCES = \
-    OCCAttrib.cpp \
+    OCCShapeAttributeSet.cpp \
     OCCAttribSet.cpp \
     OCCBody.cpp \
     OCCCoEdge.cpp \
@@ -39,7 +39,7 @@ libcubit_OCC_la_SOURCES = \
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
 libcubit_OCC_la_include_HEADERS = \
-    OCCAttrib.hpp \
+    OCCShapeAttributeSet.hpp \
     OCCAttribSet.hpp \
     OCCBody.hpp \
     OCCCoEdge.hpp \

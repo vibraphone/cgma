@@ -127,26 +127,71 @@ GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
 }
 
 void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa, *myTopoDSShape); }
+{ 
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    OCCAttribSet::append_attribute(csa, *face);
+  }
+  else if(myShell)
+  {
+    TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
+    OCCAttribSet::append_attribute(csa, *shell);
+  }
+  else
+    OCCAttribSet::append_attribute(csa, *myTopoDSShape); 
+}
   
 void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.remove_attribute(csa); }
+{ 
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    OCCAttribSet::remove_attribute(csa, *face);
+  }
+  else if(myShell)
+  {
+    TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
+    OCCAttribSet::remove_attribute(csa, *shell);
+  }
+  else
+    OCCAttribSet::remove_attribute(csa, *myTopoDSShape); 
+}
+
 
 void OCCBody::remove_all_simple_attribute_virt()
-  { attribSet.remove_all_attributes(); }
+  { remove_simple_attribute_virt(NULL); }
   
 CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
-  { return attribSet.get_attributes(csa_list); }
+{ 
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    return OCCAttribSet::get_attributes(*face, csa_list);
+  }
+  else if(myShell)
+  {
+    TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
+    return OCCAttribSet::get_attributes(*shell, csa_list);
+  }
+  return OCCAttribSet::get_attributes(*myTopoDSShape,csa_list); 
+}
 
 CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
                                           DLIList<CubitSimpleAttrib*>& csa_list )
-  { return attribSet.get_attributes( name, csa_list ); }
-
-CubitStatus OCCBody::save_attribs( FILE *file_ptr )
-  { return attribSet.save_attributes( file_ptr); }
-
-CubitStatus OCCBody::restore_attribs( FILE *file_ptr, unsigned int endian )
-  { return attribSet.restore_attributes( file_ptr, endian ); }
+{ 
+  if(IsSheetBody)
+  {
+    TopoDS_Face * face = mySheetSurface->get_TopoDS_Face();
+    return OCCAttribSet::get_attributes(name, *face, csa_list);
+  }
+  else if(myShell)
+  {
+    TopoDS_Shell* shell = myShell->get_TopoDS_Shell();
+    return OCCAttribSet::get_attributes(name, *shell, csa_list);
+  }
+  return OCCAttribSet::get_attributes( name, *myTopoDSShape, csa_list ); 
+}
 
 CubitStatus OCCBody::get_transforms( CubitTransformMatrix &tfm )
 {

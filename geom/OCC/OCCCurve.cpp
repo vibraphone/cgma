@@ -135,7 +135,7 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 void OCCCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa, *myTopoDSEdge); }
+  { OCCAttribSet::append_attribute(csa, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 
@@ -149,7 +149,7 @@ void OCCCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 void OCCCurve::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.remove_attribute(csa); }
+  { OCCAttribSet::remove_attribute(csa, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove all simple 
@@ -164,7 +164,7 @@ void OCCCurve::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 void OCCCurve::remove_all_simple_attribute_virt()
-  { attribSet.remove_all_attributes(); }
+  { OCCAttribSet::remove_attribute(NULL, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to get the  
@@ -179,20 +179,11 @@ void OCCCurve::remove_all_simple_attribute_virt()
 //-------------------------------------------------------------------------
 CubitStatus OCCCurve::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                csa_list)
-  { return attribSet.get_attributes(csa_list); }
+  { return OCCAttribSet::get_attributes(*myTopoDSEdge, csa_list); }
   
 CubitStatus OCCCurve::get_simple_attribute( const CubitString& name,
                                       DLIList<CubitSimpleAttrib*>& csa_list)
-  { return attribSet.get_attributes( name, csa_list ); }
-
-
-CubitStatus OCCCurve::save_attribs( FILE *file_ptr )
-  { return attribSet.save_attributes(file_ptr); }
-
-CubitStatus OCCCurve::restore_attribs( FILE *file_ptr, unsigned int endian )
-  { return attribSet.restore_attributes(file_ptr, endian); }
-
-
+  { return OCCAttribSet::get_attributes( name, *myTopoDSEdge, csa_list ); }
 
 //-------------------------------------------------------------------------
 // Purpose       : Get geometry modeling engine: OCCQueryEngine

@@ -12,14 +12,12 @@
 
 #ifndef FACET_BRIDGE_HPP
 #define FACET_BRIDGE_HPP
+#include "config.h"
 
 #include <DLIList.hpp>
 #include "TDF_Label.hxx"
-#include "TDF_TagSource.hxx"
-#include "OCCQueryEngine.hpp"
 
 class CubitSimpleAttrib;
-class OCCAttrib;
 class CubitString;
 class TopoDS_Shape;
 
@@ -28,32 +26,35 @@ class OCCAttribSet
 
   public:
   
-    OCCAttribSet() : listHead(0) 
-    {myLabel = TDF_TagSource::NewChild(OCCQueryEngine::mainLabel);}
+    OCCAttribSet() {}; 
     
-    ~OCCAttribSet() { remove_all_attributes(); }
+    ~OCCAttribSet() { ; }
+    static void FindShape(TopoDS_Shape& shape,
+                          TDF_Label& aLabel,
+                          CubitBoolean& found);
     
-    void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
+    static CubitBoolean find_attribute(TDF_Label child,
+                                       CubitSimpleAttrib* csa);
+
+    static void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
     
-    void remove_attribute( CubitSimpleAttrib* );
+    static void remove_attribute( CubitSimpleAttrib* );
     
-    void remove_all_attributes();
+    static void remove_attribute(CubitSimpleAttrib*, TopoDS_Shape& shape );
+ 
+    static void get_attributes(TDF_Label &lab,
+                               DLIList<CubitSimpleAttrib*>& list);
+
+    static CubitStatus get_attributes( TopoDS_Shape& shape,
+                                       DLIList<CubitSimpleAttrib*>& ) ;
     
-    CubitStatus get_attributes( DLIList<CubitSimpleAttrib*>& ) const;
+    static CubitStatus get_attributes( const CubitString& name,
+                                       TopoDS_Shape& shape,
+                                DLIList<CubitSimpleAttrib*>& ) ;
     
-    CubitStatus get_attributes( const CubitString& name,
-                                DLIList<CubitSimpleAttrib*>& ) const;
-    
-    CubitStatus save_attributes( FILE* file ) const;
-    
-    CubitStatus restore_attributes( FILE* file, unsigned int endian );
-    
-    int attribute_count() const;
+    static int attribute_count() ;
     
   private:
-  
-    OCCAttrib* listHead;
-    TDF_Label   myLabel;
 };
 
 #endif

@@ -108,9 +108,6 @@ OCCCoEdge* OCCLoop::remove_coedge(OCCCoEdge *coedge)
 //-------------------------------------------------------------------------
 void OCCLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
 {
-  //PRINT_ERROR("OCCLoop::append_simple_attribute_virt not defined\n");
-  return;
-
 }
 
 //-------------------------------------------------------------------------
@@ -123,8 +120,6 @@ void OCCLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
 //-------------------------------------------------------------------------
 void OCCLoop::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
 {
-  //PRINT_ERROR("OCCLoop::remove_simple_attribute_virt not defined\n");
-  return;
 }
 
 //-------------------------------------------------------------------------
@@ -138,8 +133,6 @@ void OCCLoop::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
 //-------------------------------------------------------------------------
 void OCCLoop::remove_all_simple_attribute_virt()
 {
-  //PRINT_ERROR(" OCCLoop::remove_all_simple_attribute_virt not defined\n");
-  return;
 }
 
 //-------------------------------------------------------------------------
@@ -153,11 +146,9 @@ void OCCLoop::remove_all_simple_attribute_virt()
 CubitStatus OCCLoop::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                  /*cubit_simple_attrib_list*/)
 {
-  //PRINT_ERROR("OCCLoop::get_simple_attribute not defined\n");
-  return CUBIT_FAILURE;
 }
 CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
+                                          DLIList<CubitSimpleAttrib*>&)
   { return CUBIT_FAILURE; }
 
 void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )

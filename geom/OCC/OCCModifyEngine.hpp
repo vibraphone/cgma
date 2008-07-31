@@ -28,6 +28,7 @@ class TopoDS_Shape;
 class TopoDS_Edge;
 class TopoDS_Face;
 class CubitBox;
+class BRepAlgoAPI_BooleanOperation;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {

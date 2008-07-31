@@ -26,13 +26,14 @@ using std::type_info;
 #endif
 
 // ********** END STANDARD INCLUDES           **********
-
+#include "TDF_Label.hxx"
 // ********** BEGIN CUBIT INCLUDES            **********
 #include "config.h"
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "Handle_TDocStd_Document.hxx"
 #include <map>
+
 // ********** END CUBIT INCLUDES              **********
 
 // ********** BEGIN FORWARD DECLARATIONS
@@ -77,7 +78,6 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
  
-class TDF_Label;
 class BRepBuilderAPI_Transform;
 class TopTools_DataMapOfShapeInteger;
 class BRepAlgoAPI_BooleanOperation;
@@ -111,6 +111,8 @@ public:
   static OCCQueryEngine* instance();
     //- Singleton pattern
     //- Controlled access and creation of the sole instance of this class.
+
+  CubitBoolean EXPORT_ATTRIB;
 
   int update_OCC_map(TopoDS_Shape old_shape, TopoDS_Shape new_shape);
 
@@ -362,7 +364,7 @@ public:
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
   Handle(TDocStd_Document) MyDF;
-  static TDF_Label mainLabel;
+  TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
   static int iTotalTBCreated ;
@@ -381,6 +383,14 @@ private:
                               DLIList<OCCSurface*> &facet_surfaces,
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
+
+  CubitBoolean Write(const TopoDS_Shape& Sh,
+                     const Standard_CString File,
+                     TDF_Label label);
+
+  CubitBoolean Read(TopoDS_Shape& Sh,
+                    const Standard_CString File,
+                    TDF_Label label);
 
   static CubitBoolean PRINT_RESULT;
 

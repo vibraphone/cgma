@@ -124,7 +124,16 @@ CubitStatus OCCLump::mass_properties( CubitVector& centroid,
 // Creation Date : 11/21/96
 //-------------------------------------------------------------------------
 void OCCLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
-  { attribSet.append_attribute(csa, *myTopoDSSolid); }
+{ 
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else if(myShell)
+    shape = *(myShell->get_TopoDS_Shell());
+  else
+    shape =*myTopoDSSolid;
+  OCCAttribSet::append_attribute(csa, shape); 
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove a simple 
@@ -138,7 +147,16 @@ void OCCLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 03/18/97
 //-------------------------------------------------------------------------
 void OCCLump::remove_simple_attribute_virt(CubitSimpleAttrib *csa )
-  { attribSet.remove_attribute(csa); }
+{ 
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else if(myShell)
+    shape = *(myShell->get_TopoDS_Shell());
+  else
+    shape =*myTopoDSSolid;
+  OCCAttribSet::remove_attribute(csa, shape); 
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to remove all simple 
@@ -153,7 +171,16 @@ void OCCLump::remove_simple_attribute_virt(CubitSimpleAttrib *csa )
 // Creation Date : 07/10/98
 //-------------------------------------------------------------------------
 void OCCLump::remove_all_simple_attribute_virt()
-{ attribSet.remove_all_attributes(); }
+{ 
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else if(myShell)
+    shape = *(myShell->get_TopoDS_Shell());
+  else
+    shape =*myTopoDSSolid;
+  OCCAttribSet::remove_attribute(NULL, shape); 
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to get the  
@@ -164,19 +191,29 @@ void OCCLump::remove_all_simple_attribute_virt()
 //
 //-------------------------------------------------------------------------
 CubitStatus OCCLump::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
-  { return attribSet.get_attributes( csa_list ); }
+{ 
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else if(myShell)
+    shape = *(myShell->get_TopoDS_Shell());
+  else
+    shape =*myTopoDSSolid;
+  return OCCAttribSet::get_attributes(shape, csa_list ); 
+}
 
 CubitStatus OCCLump::get_simple_attribute( const CubitString& name,
                                         DLIList<CubitSimpleAttrib*>& csa_list )
-  { return attribSet.get_attributes( name, csa_list ); }
-
-CubitStatus OCCLump::save_attribs( FILE *file_ptr )
-  { return attribSet.save_attributes( file_ptr ); }
-
-CubitStatus OCCLump::restore_attribs( FILE *file_ptr, unsigned int endian )
-  { return attribSet.restore_attributes( file_ptr, endian ); }
-
-
+{
+  TopoDS_Shape shape;
+  if(mySheetSurface)
+    shape = *(mySheetSurface->get_TopoDS_Face());
+  else if(myShell)
+    shape = *(myShell->get_TopoDS_Shell());
+  else
+    shape =*myTopoDSSolid;
+  return OCCAttribSet::get_attributes( name, shape, csa_list ); 
+}
 
 
 //-------------------------------------------------------------------------
