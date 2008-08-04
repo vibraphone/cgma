@@ -124,6 +124,7 @@ CubitStatus make_Point()
   OCCModifyEngine* ome = OCCModifyEngine::instance();
 
   Body* body = gmti->brick(10, 10, 10);
+  CubitVector v(15,0,0);
   BodySM* bodysm = body->get_body_sm_ptr();
   DLIList<OCCSurface*> occ_surfaces;
   CAST_TO(bodysm, OCCBody)->get_all_surfaces(occ_surfaces);  
@@ -145,7 +146,6 @@ CubitStatus make_Point()
   DLIList<RefFace*> face_list;
   DLIList<Surface*> surface_list;
   DLIList<RefVertex*> vertices;
-  CubitVector v(15,0,0);
   for(int i = 0; i < faces_to_stitch.size(); i++)
   {
     //move each refface by (15,0,0)
@@ -683,8 +683,8 @@ CubitStatus make_Point()
   faces_to_remove.append(ref_faces.get());
   from_bodies = new_bodies;
   new_bodies.clean_out();
-  stat = gmti->make_thick_solid(from_bodies, faces_to_remove, new_bodies, -.2);
-  n = new_bodies.get()->num_ref_faces(); //n = 10
-  d = new_bodies.get()->measure(); //d = 72.3618
+  //stat = gmti->make_thick_solid(from_bodies, faces_to_remove, new_bodies, -.2);
+  //n = new_bodies.get()->num_ref_faces(); //n = 10
+  //d = new_bodies.get()->measure(); //d = 72.3618
   return CUBIT_SUCCESS;
 }

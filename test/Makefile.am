@@ -18,7 +18,7 @@ if build_ACIS
   LINK_FLAGS += -R$(ACIS_LIB_DIR)
 endif
 if WITH_OCC
-  TESTS += modify makept
+  TESTS += modify makept r_w
   LINK_FLAGS += -R$(OCC_LIB_DIR)
 endif
 
@@ -30,8 +30,10 @@ webcut_SOURCES = webcut.cpp
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
 sheet_SOURCES  = sheet.cpp
+r_w_SOURCES    = r_w.cpp
 LDADD = ../libcgm.la
 webcut_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 makept_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
