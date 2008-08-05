@@ -270,6 +270,19 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa)
   }
 }
 
+void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
+{
+  CubitBoolean found = CUBIT_FALSE;
+  TDF_Label myLabel;
+
+  FindShape(shape, myLabel, found);
+
+  if(!found)
+    return;
+
+  myLabel.Nullify();
+}
+
 void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa, 
                                      TopoDS_Shape& shape)
 {

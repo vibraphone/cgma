@@ -23,7 +23,6 @@
 #include "CubitBox.hpp"
 #include "GeometryDefines.h"
 #include "OCCCurve.hpp"
-#include "OCCAttrib.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CoEdgeSM.hpp"

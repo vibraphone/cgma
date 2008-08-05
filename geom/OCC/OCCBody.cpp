@@ -37,7 +37,6 @@
 #include "OCCShell.hpp"
 #include "OCCLump.hpp"
 #include "OCCModifyEngine.hpp"
-#include "OCCAttrib.hpp"
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>

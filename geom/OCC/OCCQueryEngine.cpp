@@ -2632,12 +2632,12 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
   DLIList<CubitSimpleAttrib*> list;
   OCCAttribSet::get_attributes(old_shape, list);
   
-  for(int i = 0; i < list.size(); i ++)
+  OCCAttribSet::remove_attribute(old_shape);
+
+  for(int i = 0; !new_shape.IsNull() && i < list.size(); i ++)
   {
     CubitSimpleAttrib* s_attr = list.get_and_step();
-    OCCAttribSet::remove_attribute(s_attr);
-    if(!new_shape.IsNull())
-      OCCAttribSet::append_attribute(s_attr, new_shape);
+    OCCAttribSet::append_attribute(s_attr, new_shape);
   }
   
   //update CGM-OCC map

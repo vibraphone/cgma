@@ -38,10 +38,16 @@ class OCCAttribSet
 
     static void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
     
+    //remove this simple attrib from all shapes. useful when it's a shared
+    //feature like materials
     static void remove_attribute( CubitSimpleAttrib* );
     
+    //remove this simple attrib from the shape attribs.
     static void remove_attribute(CubitSimpleAttrib*, TopoDS_Shape& shape );
  
+    //remove this shape's label from the lable tree. 
+    static void remove_attribute( TopoDS_Shape& shape);
+
     static void get_attributes(TDF_Label &lab,
                                DLIList<CubitSimpleAttrib*>& list);
 

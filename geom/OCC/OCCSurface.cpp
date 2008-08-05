@@ -17,7 +17,6 @@
 #include "OCCSurface.hpp"
 #include "RefFace.hpp"
 #include "OCCQueryEngine.hpp"
-#include "OCCAttrib.hpp"
 
 #include "OCCBody.hpp"
 #include "OCCLump.hpp"
