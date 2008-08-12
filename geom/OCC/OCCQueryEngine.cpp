@@ -2622,6 +2622,20 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
   return CUBIT_FALSE;
 }
 
+void OCCQueryEngine::copy_attributes(TopoDS_Shape old_shape,
+                                     TopoDS_Shape new_shape)
+{
+  //update the attribute label tree
+  DLIList<CubitSimpleAttrib*> list;
+  OCCAttribSet::get_attributes(old_shape, list);
+
+  for(int i = 0; !new_shape.IsNull() && i < list.size(); i ++)
+  {
+    CubitSimpleAttrib* s_attr = list.get_and_step();
+    OCCAttribSet::append_attribute(s_attr, new_shape);
+  }
+}
+
 int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
                                    TopoDS_Shape new_shape)
 {
@@ -2629,17 +2643,9 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape,
     return -1;
 
   //update the attribute label tree
-  DLIList<CubitSimpleAttrib*> list;
-  OCCAttribSet::get_attributes(old_shape, list);
-  
+  copy_attributes(old_shape, new_shape); 
   OCCAttribSet::remove_attribute(old_shape);
 
-  for(int i = 0; !new_shape.IsNull() && i < list.size(); i ++)
-  {
-    CubitSimpleAttrib* s_attr = list.get_and_step();
-    OCCAttribSet::append_attribute(s_attr, new_shape);
-  }
-  
   //update CGM-OCC map
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);

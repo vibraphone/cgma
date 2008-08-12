@@ -564,7 +564,7 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
     if(child.FindAttribute(TDataStd_Name::GetID(), attr_name))
     {
       OS << "\n";
-      OS << "NEW_SIMPLE_ATTRIB ";
+      OS << "CGM_ATTRIB ";
       name_string = attr_name->Get(); 
       name_string.Print(OS);
       OS << "* " ;
@@ -784,7 +784,7 @@ void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
     // Read Attributes and Set the flags
     IS >> buffer;
 
-    while (buffer[0] == 'N')
+    while (buffer[0] == 'C')
     {
       ReadAttribute(S, IS,l_attr);
       IS >> buffer;

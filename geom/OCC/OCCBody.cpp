@@ -42,6 +42,7 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "gp_Ax1.hxx"
 #include "gp_Ax2.hxx"
 #include "Bnd_Box.hxx"
@@ -468,8 +469,17 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
       shape = shapes.First();
 
     else if(shapes.Extent() > 1)
-      shape.Nullify();
-
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(old_shape, shape);
+      } 
+      shape = shapes.First();
+    }
     else if(op->IsDeleted(solid))
     {
        TopTools_IndexedMapOfShape M_new;

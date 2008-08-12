@@ -133,10 +133,6 @@ public :
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  CubitStatus save_attribs( FILE *file_ptr );
-
-  CubitStatus restore_attribs( FILE *file_ptr, unsigned int endian );
-
   void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
                           BRepAlgoAPI_BooleanOperation *op = NULL);
 };

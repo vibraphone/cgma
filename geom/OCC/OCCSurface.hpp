@@ -399,12 +399,6 @@ public :
   virtual CubitSense get_geometry_sense();
     //- Return the relative surface sense. (see below)
   
-  CubitStatus save_attribs( FILE* file_ptr );
-    // Write FactAttribs out to file
-
-  CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
-    // Read FactAttribs from file
-  
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 

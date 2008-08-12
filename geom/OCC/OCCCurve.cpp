@@ -41,6 +41,7 @@
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "TopTools_ListIteratorOfListOfShape.hxx"
 #include <GCPnts_AbscissaPoint.hxx>
 #include <Bnd_Box.hxx>
 #include <BndLib_Add3dCurve.hxx>
@@ -923,8 +924,20 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Edge()));
-    if(shapes.Extent())
+    if(shapes.Extent() == 1)
       shape = shapes.First();
+    else if(shapes.Extent() > 1)
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Edge(), shape);
+      }
+      shape = shapes.First();
+    }
     else if (op->IsDeleted(*get_TopoDS_Edge()))
       ;
     else

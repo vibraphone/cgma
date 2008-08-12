@@ -273,8 +273,20 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Vertex()));
-    if(shapes.Extent())
+    if(shapes.Extent() == 1)
       shape = shapes.First();
+    else if(shapes.Extent() > 1)
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Vertex(),shape);
+      }
+      shape = shapes.First();
+    }
     else if(op->IsDeleted(*get_TopoDS_Vertex()))
       ;
     else

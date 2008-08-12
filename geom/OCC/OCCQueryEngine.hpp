@@ -114,6 +114,9 @@ public:
 
   CubitBoolean EXPORT_ATTRIB;
 
+  void copy_attributes(TopoDS_Shape old_shape,
+                       TopoDS_Shape new_shape);
+
   int update_OCC_map(TopoDS_Shape old_shape, TopoDS_Shape new_shape);
 
   virtual ~OCCQueryEngine();

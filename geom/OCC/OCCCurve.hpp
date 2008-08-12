@@ -307,12 +307,6 @@ public :
     //                           if not known let the function figure it out)
     // NOTE: POINT MUST LIE ON THE SURFACE FOR THIS FUNCTION TO WORK PROPERLY.
 
-  CubitStatus save_attribs( FILE* file_ptr );
-    // Write FactAttribs out to file
-
-  CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
-    // Read FactAttribs from file
-  
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 

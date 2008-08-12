@@ -784,8 +784,20 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Face()));
-    if (shapes.Extent() > 0)
+    if (shapes.Extent() == 1)
       shape = shapes.First();
+    else if(shapes.Extent() > 1)
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Face(), shape);
+      }
+      shape = shapes.First();
+    }
     else if(op->IsDeleted(*get_TopoDS_Face()))
       ;
     else
@@ -874,7 +886,17 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        if (shapes.Extent() == 1)
          shape_edge = shapes.First();
        else if (shapes.Extent() > 1)
-         shape_edge.Nullify();
+       {
+         //update all attributes first.
+         TopTools_ListIteratorOfListOfShape it;
+         it.Initialize(shapes);
+         for(it; it.More(); it.Next())
+         {
+           shape = it.Value();
+           OCCQueryEngine::instance()->copy_attributes(edge, shape_edge);
+         }
+         shape_edge = shapes.First();
+       }
        else if (op->IsDeleted(edge))
          shape_edge.Nullify(); 
        else 
@@ -890,6 +912,18 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        if (shapes.Extent() == 1)
          shape_vertex = shapes.First();
 
+       else if(shapes.Extent() > 1)
+       {
+         //update all attributes first.
+         TopTools_ListIteratorOfListOfShape it;
+         it.Initialize(shapes);
+         for(it; it.More(); it.Next())
+         {
+           shape = it.Value();
+           OCCQueryEngine::instance()->copy_attributes(vertex, shape_vertex);
+         }
+         shape_vertex = shapes.First();
+       }
        else
          shape_vertex.Nullify();
 

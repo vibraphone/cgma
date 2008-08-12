@@ -39,6 +39,7 @@
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "Bnd_Box.hxx"
@@ -360,7 +361,20 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Solid()));
-    if(shapes.Extent() > 0)
+    if(shapes.Extent() > 1)
+    { 
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Solid(), 
+                                                    shape);
+      } 
+      shape = shapes.First();
+    }
+    else if (shapes.Extent() == 1)
       shape = shapes.First();
     else if(op->IsDeleted(*get_TopoDS_Solid()))
       ;
@@ -398,11 +412,17 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
-  CubitBoolean is_null_new_shape = CUBIT_FALSE;
   TopoDS_Solid new_solid;
   if(M.Extent() > 1)
-    is_null_new_shape = CUBIT_TRUE;
-  else if(M.Extent() == 1 )
+  {
+    //update all attributes first.
+    for(int ii=1; ii<=M.Extent(); ii++)
+    {
+      TopoDS_Solid solid = TopoDS::Solid(M(ii));
+      OCCQueryEngine::instance()->copy_attributes(old_solid, solid);
+    }
+  }
+  if(M.Extent() == 1 )
     new_solid = TopoDS::Solid(M(1));  
 
   M.Clear();
@@ -423,8 +443,17 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
       shape = shapes.First();
 
     else if(shapes.Extent() > 1)
-      shape.Nullify();
-
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
+      {
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(shell, shape);
+      }
+      shape = shapes.First();
+    }
     else if(op->IsDeleted(shell))
     {
        TopTools_IndexedMapOfShape M_new;
