@@ -173,7 +173,7 @@ Wi
 Fa
 0  1e-07 1 0
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face4* * *
+CGM_ATTRIB ENTITY_NAME* face4* * *
 *
 0111000
 +61 0 *
@@ -225,6 +225,8 @@ Wi
 Fa
 0  1e-07 2 0
 
+CGM_ATTRIB ENTITY_NAME* face2* * *
+*
 0111000
 +54 0 *
 Ve
@@ -259,7 +261,7 @@ Wi
 Fa
 0  1e-07 3 0
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face1* * *
+CGM_ATTRIB ENTITY_NAME* face1* * *
 *
 0111000
 +49 0 *
@@ -295,6 +297,8 @@ Wi
 Fa
 0  1e-07 4 0
 
+CGM_ATTRIB ENTITY_NAME* face3* * *
+*
 0111000
 +44 0 *
 Ed
@@ -313,7 +317,7 @@ Wi
 Fa
 0  1e-07 5 1
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face5* * *
+CGM_ATTRIB ENTITY_NAME* face5* * *
 *
 0111000
 +41 0 *
@@ -405,7 +409,7 @@ Wi
 Fa
 0  1e-07 1 0
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face8* * *
+CGM_ATTRIB ENTITY_NAME* face8* * *
 *
 0111000
 +27 0 *
@@ -457,7 +461,7 @@ Wi
 Fa
 0  1e-07 12 1
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face7* * *
+CGM_ATTRIB ENTITY_NAME* face7* * *
 *
 0101000
 +20 0 *
@@ -493,6 +497,8 @@ Wi
 Fa
 0  1e-07 4 0
 
+CGM_ATTRIB ENTITY_NAME* face3@A* * *
+*
 0101000
 +15 0 *
 Ve
@@ -527,7 +533,7 @@ Wi
 Fa
 0  1e-07 13 0
 
-NEW_SIMPLE_ATTRIB ENTITY_NAME* face9* * *
+CGM_ATTRIB ENTITY_NAME* face9* * *
 *
 0101000
 +10 0 *
@@ -547,6 +553,8 @@ Wi
 Fa
 0  1e-07 2 0
 
+CGM_ATTRIB ENTITY_NAME* face2@A* * *
+*
 0101000
 +7 0 *
 Wi
