@@ -37,3 +37,28 @@ makept_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+
+EXTRA_DIST = 62_shaver1.brep \
+             66_shaver3.brep \
+             72_shaver6.brep \
+             aftersub.occ_ref \
+             beforesub.occ_ref \
+             beforesub2.occ_ref \
+             huge.sat \
+             model1.sat \
+             model2.sat \
+             model3.sat \
+             model4.sat \
+             model5.sat \
+             model6.sat \
+             model7.sat \
+             stitch.occ_name \
+             webcut_with_brick.sat \
+             webcut_with_curve_loop.sat \
+             webcut_with_extended_surf.sat \
+             webcut_with_sheet.sat \
+             webcut_with_sweep_along_curve.sat \
+             webcut_with_sweep_surfaces.sat \
+             webcut_with_sweep_surfaces_along_curve.sat \
+             webcut_with_sweep_surfaces_rotated.sat
+
