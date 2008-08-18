@@ -126,7 +126,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   char *argv = "stitch.occ_name";
-  CubitStatus status = read_geometry(1, &argv, true);
+  CubitStatus status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
