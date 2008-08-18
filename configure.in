@@ -193,6 +193,17 @@ if test "x$ACIS_DIR" != "xno"; then
 dnl  AC_DEFINE( HAVE_ACIS )
   HAVE_ACIS_DEF=-DHAVE_ACIS
 fi
+
+# ACIS (at least up to version 16) requires new.h. 
+# Newer C++ compilers may not provide this backwards-compatibility
+# file.  Check if it is present, and if not, use our own.
+ACIS_NEW_COMPAT_INC='-I${top_srcdir}/compat/new'
+if test "x$ACIS_DIR" != "xno"; then
+  AC_LANG_PUSH(C++)
+  AC_CHECK_HEADER([new.h],[],[ACIS_INCLUDES="$ACIS_INCLUDES $ACIS_NEW_COMPAT_INC"])
+  AC_LANG_POP(C++)
+fi
+
 AC_SUBST(ACIS_DEFS)
 AC_SUBST(ACIS_DIR)
 AC_SUBST(ACIS_LINK_FLAGS)
