@@ -3541,12 +3541,6 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     BRepAlgoAPI_Fuse fuser(*first_shape, *second_shape);
     TopoDS_Shape new_shape = fuser.Shape();
 
-    //Debug:: check how many faces are there in new_shape.
-    TopExp_Explorer Ex;
-    int count = 0;
-    for (Ex.Init(new_shape, TopAbs_FACE);Ex.More(); Ex.Next())
-      count++;
- 
     CubitBoolean has_changed;
     check_operation(new_shape, first_shape, first_is_volume, has_changed, &fuser);
  

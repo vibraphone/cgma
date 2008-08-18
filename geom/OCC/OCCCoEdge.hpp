@@ -64,6 +64,9 @@ public:
 
   inline void set_loop(LoopSM * loop) {myLoop = loop;}
 
+  inline int get_mark(){return myMark;}
+  inline void set_mark(int k){myMark = k;}
+
   virtual GeometryQueryEngine*
   get_geometry_query_engine() const;
     //R GeometryQueryEngine*
@@ -120,6 +123,7 @@ private:
   LoopSM *myLoop;
   Curve *myCurve;
   CubitSense edgeSense;
+  int myMark;
 };
 
 

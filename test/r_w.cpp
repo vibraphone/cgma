@@ -172,8 +172,8 @@ CubitStatus make_Point()
   Body* tool_body = bodies.step_and_get();  
   rsl = gmti->subtract(tool_body,from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Created volume(s): 21, 22
-  //Destroyed volume(s): 18, 20
+  //Created volume(s): 5, 6
+  //Destroyed volume(s): 3, 4
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
@@ -193,5 +193,7 @@ CubitStatus make_Point()
   //delete all entities
   gti->delete_Body(bodies); 
   
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
   return CUBIT_SUCCESS;
 }

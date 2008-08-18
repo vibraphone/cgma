@@ -41,7 +41,7 @@
 
 OCCCoEdge::OCCCoEdge( Curve *curv_ptr, 
 	  	      LoopSM *loop_ptr, CubitSense sense )
-	 	    : myCurve(curv_ptr), 
+	 	    : myMark(0), myCurve(curv_ptr), 
  	  	      myLoop(loop_ptr),edgeSense(sense)
 {
 }

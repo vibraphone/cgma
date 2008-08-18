@@ -892,7 +892,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          it.Initialize(shapes);
          for(it; it.More(); it.Next())
          {
-           shape = it.Value();
+           shape_edge = it.Value();
            OCCQueryEngine::instance()->copy_attributes(edge, shape_edge);
          }
          shape_edge = shapes.First();
@@ -919,7 +919,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          it.Initialize(shapes);
          for(it; it.More(); it.Next())
          {
-           shape = it.Value();
+           shape_vertex = it.Value();
            OCCQueryEngine::instance()->copy_attributes(vertex, shape_vertex);
          }
          shape_vertex = shapes.First();

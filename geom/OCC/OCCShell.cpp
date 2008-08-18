@@ -232,10 +232,8 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
           OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Shell(), 
                                                       shape);
         }
-        shape.Nullify();
       }
-      else
-        shape = shapes.First();
+      shape = shapes.First();
     }
     else if(op->IsDeleted(*get_TopoDS_Shell()))
       ;
@@ -294,20 +292,19 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
 
     if(shapes.Extent() == 1)
       shape = shapes.First();
-    else
+    else if(shapes.Extent() > 1)
     {
-      if(shapes.Extent() > 1)
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(it; it.More(); it.Next())
       {
-        TopTools_ListIteratorOfListOfShape it;
-        it.Initialize(shapes);
-        for(it; it.More(); it.Next())
-        {
-          shape = it.Value();
-          OCCQueryEngine::instance()->copy_attributes(face, shape);
-        }
+        shape = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(face, shape);
       }
-      shape.Nullify();
+      shape = shapes.First();
     }
+    else 
+      shape.Nullify();
     if(shapes.Extent() > 0 || (op && op->IsDeleted(face)))
       OCCSurface::update_OCC_entity(face,shape, op, sp);
   }

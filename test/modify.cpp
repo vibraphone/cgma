@@ -289,6 +289,7 @@ CubitStatus make_Point()
   
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() == 0);
   //there shouldn't be any free_entites.
 
   from_body = gmti->brick(10, 10, 10);
@@ -380,6 +381,7 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() == 0);
   //there shouldn't be any free_entites.
 
   //test for shell body subtract.
@@ -484,7 +486,8 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);  
-  
+  assert(free_entities.size() == 0);
+ 
   OCCQueryEngine* oqe = OCCQueryEngine::instance();
   DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
 
@@ -511,7 +514,7 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
-
+  assert(free_entities.size() == 0);
   //test body-body intersect.
   //1. from body is the commom body, no update
   tool_body  = gmti->brick(4, 4, 4);
@@ -560,6 +563,7 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() == 0);
 
   //test chop operation
   tool_body  = gmti->brick(4, 4, 4);
@@ -584,7 +588,7 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
-
+  assert(free_entities.size() == 0);
   //test chop 2
   from_body = gmti->brick(4, 4, 4);
   tool_body = gmti->brick(1,1,1);
@@ -607,6 +611,7 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() == 0);
 
   //test unite 1
   tool_body = gmti->brick(1,1,1);
@@ -626,11 +631,12 @@ CubitStatus make_Point()
   gti->bodies(bodies); //bodies.size() = 1
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  assert(free_entities.size() == 0);
   //delete all entities
   gti->delete_Body(bodies);
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
-
+  assert(free_entities.size() == 0);
   //test unite 2
   tool_body = gmti->brick(4, 4,4);
   gti->translate(tool_body,v_move7);
@@ -650,10 +656,12 @@ CubitStatus make_Point()
   gti->bodies(bodies); //bodies.size() = 1
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  assert(free_entities.size() == 0);
   //delete all entities
   gti->delete_Body(bodies);
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  assert(free_entities.size() == 0);
 
   //test making thick body.
   from_body = gmti->cylinder(10, 4, 4, 4); 

@@ -1421,6 +1421,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
       coedge = coedges_old.get_and_step();
       if(coedge->curve() == curve)
       {
+        coedge->set_mark(1);
         exist = CUBIT_TRUE;
         coedge->set_sense(sense);
         coedges_new.append(coedge);
@@ -1459,6 +1460,15 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
     coedges_new.reverse();
   loop->coedges(coedges_new);
 
+  //remove unused coedges
+  for(int i = 0; i < coedges_old.size(); i++)
+  {
+    OCCCoEdge *coedge = coedges_old.get_and_step();
+    if(coedge->get_mark() != 1)
+      delete coedge;
+    else
+      coedge->set_mark(0);
+  }
   return loop;
 }
 
