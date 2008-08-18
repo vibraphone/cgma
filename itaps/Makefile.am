@@ -72,3 +72,4 @@ iGeom-Defs.inc: Makefile.am
 	@echo 'iGeom_INCLUDES = $$(CGM_INCLUDES)' >> $@
 	@echo 'iGeom_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $@
 
+CLEANFILES = iGeom-Defs.inc
