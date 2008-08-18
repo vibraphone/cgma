@@ -20,6 +20,7 @@
 #include <set>
 #include <vector>
 #include <iterator>
+#include <algorithm>
 
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
