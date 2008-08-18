@@ -72,4 +72,6 @@ iGeom-Defs.inc: Makefile.am
 	@echo 'iGeom_INCLUDES = $$(CGM_INCLUDES)' >> $@
 	@echo 'iGeom_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $@
 
+EXTRA_DIST = testgeom.sat
+
 CLEANFILES = iGeom-Defs.inc
