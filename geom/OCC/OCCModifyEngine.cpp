@@ -2794,7 +2794,8 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
         TopExp_Explorer Ex;
         for (Ex.Init(*shape, TopAbs_SOLID);Ex.More(); Ex.Next())
         {
-          tbs += OCCQueryEngine::instance()->populate_topology_bridge(Ex.Current());
+          TopoDS_Shape subshape = Ex.Current();
+          tbs += OCCQueryEngine::instance()->populate_topology_bridge(subshape);
           new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
         }
       }
@@ -2994,7 +2995,8 @@ void OCCModifyEngine::shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
         TopExp_Explorer Ex;
         for (Ex.Init(*shape, TopAbs_SOLID);Ex.More(); Ex.Next())
         {
-          tbs += OCCQueryEngine::instance()->populate_topology_bridge(Ex.Current());
+          TopoDS_Shape subshape = Ex.Current();
+          tbs += OCCQueryEngine::instance()->populate_topology_bridge(subshape);
           new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
         }
       }

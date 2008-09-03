@@ -570,9 +570,9 @@ void OCCBody::get_children_virt( DLIList<TopologyBridge*>& lumps )
   TopExp::MapShapes(*myTopoDSShape, TopAbs_SOLID, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-	  TopologyBridge *lump = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          if (lump)
-	    lumps.append_unique(lump);
+     TopologyBridge *lump = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+     if (lump)
+       lumps.append_unique(lump);
   }
 }
 
@@ -678,9 +678,9 @@ void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
   TopExp::MapShapes(shape, TopAbs_FACE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-          TopologyBridge *surface = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
-	  if (occ_surface)
+       TopologyBridge *surface = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+       OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+       if (occ_surface)
             surfaces.append_unique(occ_surface);
   }
 }
@@ -719,10 +719,10 @@ void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
   TopExp::MapShapes(shape, TopAbs_EDGE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-          TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
-          if (occ_curve)
-            curves.append_unique(occ_curve);
+       TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+       OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+       if (occ_curve)
+         curves.append_unique(occ_curve);
   }
 }
 
@@ -761,10 +761,10 @@ void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
   TopExp::MapShapes(shape, TopAbs_VERTEX, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
-          TopologyBridge *vertex = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCPoint* occ_point = CAST_TO(vertex, OCCPoint);
-          if (occ_point)
-            points.append_unique(occ_point);
+       TopologyBridge *vertex = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+       OCCPoint* occ_point = CAST_TO(vertex, OCCPoint);
+       if (occ_point)
+         points.append_unique(occ_point);
   }
 }
 

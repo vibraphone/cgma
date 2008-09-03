@@ -114,10 +114,10 @@ public:
 
   CubitBoolean EXPORT_ATTRIB;
 
-  void copy_attributes(TopoDS_Shape old_shape,
-                       TopoDS_Shape new_shape);
+  void copy_attributes(TopoDS_Shape& old_shape,
+                       TopoDS_Shape& new_shape);
 
-  int update_OCC_map(TopoDS_Shape old_shape, TopoDS_Shape new_shape);
+  int update_OCC_map(TopoDS_Shape& old_shape, TopoDS_Shape& new_shape);
 
   virtual ~OCCQueryEngine();
   
@@ -320,7 +320,7 @@ public:
                                   BRepBuilderAPI_Transform* aTranf,
                                   BRepAlgoAPI_BooleanOperation *op = NULL);
 
-  void set_TopoDS_Shape(TopologyBridge* tb, TopoDS_Shape new_shape);
+  void set_TopoDS_Shape(TopologyBridge* tb, TopoDS_Shape& new_shape);
   CubitStatus translate( BodySM* body, const CubitVector& offset );
   CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle );
   CubitStatus scale    ( BodySM* body, double factor );
@@ -347,20 +347,20 @@ public:
   //-  are overlaping.  The full intersect Boolean is needed to see if
   //-  the bodies actually overlap and don't just touch.
 
-  TopologyBridge* occ_to_cgm(TopoDS_Shape shape);
+  TopologyBridge* occ_to_cgm(const TopoDS_Shape& shape);
   
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
-  DLIList<TopologyBridge*> populate_topology_bridge(TopoDS_Shape aShape);
-  BodySM* populate_topology_bridge(TopoDS_CompSolid aShape);
-  Lump* populate_topology_bridge(TopoDS_Solid aShape, 
+  DLIList<TopologyBridge*> populate_topology_bridge(TopoDS_Shape& aShape);
+  BodySM* populate_topology_bridge(const TopoDS_CompSolid& aShape);
+  Lump* populate_topology_bridge(const TopoDS_Solid& aShape, 
 				   CubitBoolean build_body = CUBIT_FALSE);
-  Surface* populate_topology_bridge(TopoDS_Face aShape,
+  Surface* populate_topology_bridge(const TopoDS_Face& aShape,
                                     CubitBoolean build_body = CUBIT_FALSE);
-  Curve* populate_topology_bridge(TopoDS_Edge aShape);
-  Point* populate_topology_bridge(TopoDS_Vertex aShape);
+  Curve* populate_topology_bridge(const TopoDS_Edge& aShape);
+  Point* populate_topology_bridge(const TopoDS_Vertex& aShape);
 
-  OCCShell* populate_topology_bridge(TopoDS_Shell aShape,
+  OCCShell* populate_topology_bridge(const TopoDS_Shell& aShape,
                                      CubitBoolean standalone = CUBIT_FALSE );
   DLIList<OCCBody*> *BodyList ;
   DLIList<OCCSurface*> *SurfaceList ;
@@ -378,7 +378,7 @@ protected:
   
 private:
 
-  OCCLoop* populate_topology_bridge(TopoDS_Wire aShape,
+  OCCLoop* populate_topology_bridge(const TopoDS_Wire& aShape,
 				    CubitBoolean standalone = CUBIT_FALSE);  
 
   CubitStatus write_topology( const char* file_name, 

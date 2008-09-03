@@ -1123,7 +1123,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
 //Date:         11/16/2007
 //===========================================================================
 
-DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape aShape)
+DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& aShape)
 {
   DLIList<TopologyBridge*> tblist;
   // suitable to populate for a TopoDS_CompSolid or TopoDS_Compound shape.
@@ -1165,7 +1165,7 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape a
   return tblist;
 }
 
-BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
+BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
 {
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
@@ -1201,7 +1201,7 @@ BodySM* OCCQueryEngine::populate_topology_bridge(TopoDS_CompSolid aShape)
   return body;
 }
 
-Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
+Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
 		 			       CubitBoolean build_body)
 {
   //one OCCBody corresponds one OCCLump
@@ -1247,7 +1247,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(TopoDS_Solid aShape,
   return lump;
 }
 
-OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
+OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
 						   CubitBoolean standalone)
 {
   OCCShell *shell ;
@@ -1327,7 +1327,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(TopoDS_Shell aShape,
   return shell;
 }
 
-Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
+Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
                                                   CubitBoolean build_body)
 {
   OCCSurface *surface = NULL;
@@ -1375,7 +1375,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(TopoDS_Face aShape,
   return surface;
 }
 
-OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
+OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 						  CubitBoolean standalone)
 {
   OCCLoop *loop ;
@@ -1472,7 +1472,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(TopoDS_Wire aShape,
   return loop;
 }
 
-Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
+Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
 {
   Curve *curve;
   if (!OCCMap->IsBound(aShape)) 
@@ -1502,7 +1502,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(TopoDS_Edge aShape)
   return curve;
 }
 
-Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
+Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape)
 {
   OCCPoint *point;
   if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape)) 
@@ -1526,7 +1526,7 @@ Point* OCCQueryEngine::populate_topology_bridge(TopoDS_Vertex aShape)
   return point;
 }
 
-TopologyBridge* OCCQueryEngine::occ_to_cgm(TopoDS_Shape shape)
+TopologyBridge* OCCQueryEngine::occ_to_cgm(const TopoDS_Shape& shape)
 {
   if(!OCCMap->IsBound(shape))
     return (TopologyBridge*) NULL;
@@ -2632,8 +2632,8 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
   return CUBIT_FALSE;
 }
 
-void OCCQueryEngine::copy_attributes(TopoDS_Shape old_shape,
-                                     TopoDS_Shape new_shape)
+void OCCQueryEngine::copy_attributes(TopoDS_Shape& old_shape,
+                                     TopoDS_Shape& new_shape)
 {
   //update the attribute label tree
   DLIList<CubitSimpleAttrib*> list;
@@ -2646,8 +2646,8 @@ void OCCQueryEngine::copy_attributes(TopoDS_Shape old_shape,
   }
 }
 
-int OCCQueryEngine::update_OCC_map(TopoDS_Shape old_shape, 
-                                   TopoDS_Shape new_shape)
+int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape, 
+                                   TopoDS_Shape& new_shape)
 {
   if (!OCCMap->IsBound(old_shape) || old_shape.IsEqual(new_shape))
     return -1;
@@ -2769,7 +2769,7 @@ void OCCQueryEngine::unhook_coedges_of_a_curve(OCCCurve* curve)const
   unhook_CoEdges_from_OCC(coedges);
 }
 void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
-                                      TopoDS_Shape shape)
+                                      TopoDS_Shape& shape)
 {
   BodySM* body = CAST_TO(tb, BodySM);
   if(body)

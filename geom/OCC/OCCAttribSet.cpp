@@ -43,7 +43,7 @@ void OCCAttribSet::FindShape(TopoDS_Shape& shape,
     TopoDS_Shape old_shape;
     if(aLabel.FindAttribute(TDataStd_Shape::GetID(), attr_shape))
       old_shape = attr_shape->Get(aLabel);
-    if(old_shape.IsSame(shape))
+    if(old_shape.IsPartner(shape))
     {
       found = CUBIT_TRUE;
       break;
@@ -74,8 +74,8 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   TDF_Label lab;
   Handle_TDataStd_Name attr_name;
   TCollection_ExtendedString name_string;
-  CubitString type = csa->character_type();
-  TCollection_ExtendedString cstring( (Standard_CString)type.c_str() );
+  CubitString* type = csa->string_data_list()->get_and_step();
+  TCollection_ExtendedString cstring( (Standard_CString)type->c_str() );
   found = CUBIT_FALSE;
   for (TDF_ChildIterator it(aLabel,CUBIT_FALSE); it.More(); it.Next()) 
   {
