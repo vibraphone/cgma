@@ -280,7 +280,7 @@ void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
   if(!found)
     return;
 
-  myLabel.Nullify();
+  myLabel.ForgetAllAttributes();
 }
 
 void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa, 

@@ -1718,6 +1718,9 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
   if (!shape)
     return CUBIT_FAILURE;
 
+  //remove the entry from label tree
+  OCCAttribSet::remove_attribute(*shape) ;
+
   //remove the entry from the map
   int k;
   OCCBody* occ_body_find = NULL;
@@ -1773,6 +1776,9 @@ OCCQueryEngine::unhook_Lump_from_OCC( Lump* lump ) const
 
   if(!solid)
     return CUBIT_FAILURE;
+
+  //remove the entry from label tree
+  OCCAttribSet::remove_attribute(*solid) ;
 
   //remove the entry from the map
   int k;
@@ -1918,6 +1924,9 @@ OCCQueryEngine::unhook_Surface_from_OCC( Surface* surface) const
     return CUBIT_FAILURE;
 
   unhook_cofaces_of_a_surface(fsurf);
+
+  //remove the entry from label tree
+  OCCAttribSet::remove_attribute(*face) ;
 
   //remove the entry from the map
   int k;
@@ -2102,6 +2111,8 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
   if (!edge)
     return CUBIT_FAILURE;
 
+  //remove the entry from label tree
+  OCCAttribSet::remove_attribute(*edge) ;
   
   //remove the entry from the map
   int k;
@@ -2161,6 +2172,9 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point) const
   TopoDS_Vertex* vertex = fpoint->get_TopoDS_Vertex();
   if (!vertex)
     return CUBIT_FAILURE;
+
+  //remove the entry from label tree
+  OCCAttribSet::remove_attribute(*vertex) ;
 
   //remove the entry from the map
   int k;
