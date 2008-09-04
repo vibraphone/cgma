@@ -195,5 +195,117 @@ CubitStatus make_Point()
   
   gti->get_free_ref_entities(free_entities);
   assert(free_entities.size() ==0);
+
+  // Read in the geometry from files specified on the command line
+  argv = "unite1.occ";
+  status = read_geometry(1, &argv, true);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  gti->bodies(from_bodies);
+  status = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  assert(status);
+
+  filename = "unite2.occ";
+  ref_entity_list.clean_out();
+  num_ents_exported = 0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
+
+  // Read in the geometry from files specified on the command line
+  argv = "unite1.occ";
+  status = read_geometry(1, &argv, true);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  //change the order of the two bodies,and unite, see the united name unchanged.
+  new_bodies.clean_out();
+  bodies.clean_out();
+  gti->bodies(bodies);
+  from_bodies.clean_out();
+  from_bodies.append(bodies.step_and_get());
+  from_bodies.append(bodies.step_and_get());
+
+  status = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  assert(status);
+  filename = "unite3.occ";
+  ref_entity_list.clean_out();
+  num_ents_exported = 0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
+
+    // Read in the geometry from files specified on the command line
+  argv = "unite4.occ";
+  status = read_geometry(1, &argv, true);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  gti->bodies(from_bodies);
+  status = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  assert(status);
+
+  filename = "unite5.occ";
+  ref_entity_list.clean_out();
+  num_ents_exported = 0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
+
+  // Read in the geometry from files specified on the command line
+  argv = "unite4.occ";
+  status = read_geometry(1, &argv, true);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  //change the order of the two bodies, and unite, see the name change.
+  new_bodies.clean_out();
+  bodies.clean_out();
+  gti->bodies(bodies);
+  from_bodies.clean_out();
+  from_bodies.append(bodies.step_and_get());
+  from_bodies.append(bodies.step_and_get());
+
+  status = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  assert(status);
+  filename = "unite6.occ";
+  ref_entity_list.clean_out();
+  num_ents_exported = 0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
   return CUBIT_SUCCESS;
 }
