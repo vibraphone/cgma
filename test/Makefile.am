@@ -44,6 +44,12 @@ EXTRA_DIST = 62_shaver1.brep \
              aftersub.occ_ref \
              beforesub.occ_ref \
              beforesub2.occ_ref \
+             unite1.occ\
+             unite2.occ\
+             unite3.occ\
+             unite4.occ\
+             unite5.occ\
+             unite6.occ\
              huge.sat \
              model1.sat \
              model2.sat \
