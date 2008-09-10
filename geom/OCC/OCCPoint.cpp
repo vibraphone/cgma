@@ -87,9 +87,10 @@ OCCPoint::~OCCPoint()
 
 void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 {
+  TopoDS_Vertex* the_vertex = new TopoDS_Vertex(vertex);
   if(myTopoDSVertex)
     delete myTopoDSVertex;
-  myTopoDSVertex = new TopoDS_Vertex(vertex);
+  myTopoDSVertex = the_vertex;
 }
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a

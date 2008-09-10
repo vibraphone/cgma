@@ -133,6 +133,7 @@ CubitStatus make_Point()
   body->ref_faces(ref_faces);
 
   DLIList<RefFace*> faces_to_stitch;
+  RefFace* test_face = NULL;
   for(int i = 0 ; i < ref_faces.size(); i++)
   {
     RefFace* refface = gmti->make_RefFace(ref_faces.get_and_step());
@@ -140,11 +141,21 @@ CubitStatus make_Point()
 	faces_to_stitch.append(refface);
   }
 
+  DLIList<Surface*> surface_list;
+  test_face = gmti->make_RefFace(ref_faces.get());
+  surface_list.append(test_face->get_surface_ptr());
+  CubitVector v_test(0,5,5);
+  CubitVector normal;
+  normal = test_face->normal_at(v_test); //(-1,0,0)
+  ome->flip_normals(surface_list);
+  normal = test_face->normal_at(v_test); //(1,0, 0)
+  gti->delete_RefEntity(ref_faces.get());
+  surface_list.clean_out();
+
   gti->delete_Body(body);
 
   DLIList<BodySM*> bodysm_list;
   DLIList<RefFace*> face_list;
-  DLIList<Surface*> surface_list;
   DLIList<RefVertex*> vertices;
   for(int i = 0; i < faces_to_stitch.size(); i++)
   {
@@ -416,7 +427,21 @@ CubitStatus make_Point()
   bodies.append(tool_body);
   gti->delete_Body(bodies);
 
+  //test flip_normal for a shell body.
   from_body2 = gti->make_Body(bodysm); 
+  test_body = gmti->copy_body(from_body2);
+  ref_faces.clean_out();
+  test_body->ref_faces(ref_faces);
+  normal = ref_faces.get()->normal_at(v1); //(1,0,0)
+  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
+  surfaces.clean_out();
+  surfaces.append(ref_faces.step_and_get()->get_surface_ptr());
+  ome->flip_normals(surfaces);
+  normal = ref_faces.get()->normal_at(v1); //(-1,0,0)
+  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
+  gti->delete_Body(test_body);
+  surfaces.clean_out();
+   
 
   tool_body  = gmti->brick(4, 4, 4);
   CubitVector v_move3(0,1,0);

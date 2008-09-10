@@ -28,6 +28,7 @@
 #include "BRepBuilderAPI_MakeSolid.hxx"
 #include "BRepBuilderAPI_MakeWire.hxx"
 #include "TopoDS_Shape.hxx"
+#include "TopAbs_Orientation.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
@@ -79,6 +80,7 @@
 #include "TopExp.hxx"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
+#include "OCCCoFace.hpp"
 #include "CubitMessage.hpp"
 #include "CubitDefines.h"
 #include "TopTools_DataMapOfShapeInteger.hxx"
@@ -3318,7 +3320,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   for (int i = 0; i < shape_list.size(); i++)
   { 
     TopoDS_Shape* from_shape = shape_list.get_and_step();
-    BodySM* from_body = from_bodies.get_and_step();
+    //BodySM* from_body = from_bodies.get_and_step();
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopoDS_Shape common_shape = intersector.Shape();
     check_operation(common_shape, from_shape, is_volume[i], has_changed, 
@@ -3516,7 +3518,7 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   //find a non-sheet body to be the first shape
   TopoDS_Shape* first_shape;
   CubitBoolean first_is_volume;
-  if(first_is_volume = is_volume.move_to(CUBIT_TRUE))
+  if((first_is_volume = is_volume.move_to(CUBIT_TRUE)))
   {
     int index = is_volume.get_index();
     first_shape = shape_list[index];
@@ -3534,8 +3536,6 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   }
 
   int size = shape_list.size();
-  OCCBody* deleted_body = NULL;
-  CubitBoolean restore_first_shape = CUBIT_FALSE;
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* second_shape = shape_list.get_and_step();
@@ -3681,8 +3681,55 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
 //===============================================================================
 CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");
-  return CUBIT_FAILURE;
+  while (face_list.size())
+  {
+    OCCSurface* occ_surface = CAST_TO(face_list.pop(), OCCSurface);
+    OCCShell* occ_shell = occ_surface->my_shell();
+    DLIList<OCCSurface*> surfaces;
+    surfaces.append(occ_surface);
+    if(occ_shell) //find all surfaces in face_list that belong to this shell
+    {
+      while ( face_list.size())
+      {
+        occ_surface = CAST_TO(face_list.get(), OCCSurface); 
+        if(occ_shell == occ_surface->my_shell())
+          surfaces.append(CAST_TO(face_list.remove(),OCCSurface));
+      } 
+      
+      if (!occ_shell->is_sheet())
+      {
+        DLIList<OCCCoFace*> cofaces;
+        cofaces = occ_shell->cofaces();
+        for(int i = 0; i < cofaces.size(); i++)
+        {
+          OCCCoFace* coface =cofaces.get_and_step();
+          occ_surface = coface->surface();
+          if(surfaces.is_in_list(occ_surface))
+          { 
+            TopoDS_Face* topoface = occ_surface->get_TopoDS_Face();
+            TopAbs_Orientation ori = topoface->Orientation();
+            topoface->Orientation(ori == TopAbs_FORWARD ? TopAbs_REVERSED :
+                                                      TopAbs_FORWARD);
+            occ_surface->set_TopoDS_Face(*topoface);
+            coface->set_sense(coface->sense() == CUBIT_FORWARD ? 
+                                 CUBIT_REVERSED : CUBIT_FORWARD);
+          }
+        }
+      }
+      else //sheet body 
+      {
+        TopoDS_Face* topoface = occ_surface->get_TopoDS_Face();
+        TopAbs_Orientation ori = topoface->Orientation();
+        topoface->Orientation(ori == TopAbs_FORWARD ? TopAbs_REVERSED :
+                                                    TopAbs_FORWARD);
+        occ_surface->set_TopoDS_Face(*topoface);
+      }
+      PRINT_INFO( "Modified volume\n" );
+    }
+    else
+      PRINT_WARNING( "Volume was not modified\n" );
+  }
+  return CUBIT_SUCCESS;
 }
 
 

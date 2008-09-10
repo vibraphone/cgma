@@ -98,11 +98,12 @@ OCCSurface::~OCCSurface()
     delete myTopoDSFace;
 }
 
-void OCCSurface::set_TopoDS_Face(TopoDS_Face face)
+void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 {
+  TopoDS_Face* face_ptr = new TopoDS_Face(face);
   if(myTopoDSFace)
     delete myTopoDSFace;
-  myTopoDSFace = new TopoDS_Face(face); 
+  myTopoDSFace = face_ptr ; 
 }
 
 
@@ -280,11 +281,15 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
 	if (closest_location != NULL)
  	 	*closest_location = CubitVector(newP.X(), newP.Y(), newP.Z());
   	if (unit_normal_ptr != NULL) {
-	  	gp_Dir normal;
-	  	if (SLP.IsNormalDefined()) {
-		  normal = SLP.Normal();
-		  *unit_normal_ptr = CubitVector(normal.X(), normal.Y(), normal.Z()); 
-	  	}
+	  gp_Dir normal;
+          //normal of a RefFace point to outside of the material
+	  if (SLP.IsNormalDefined()) {
+	    normal = SLP.Normal();
+            CubitSense sense = get_geometry_sense();
+            if(sense == CUBIT_REVERSED)
+              normal.Reverse() ;
+	      *unit_normal_ptr = CubitVector(normal.X(), normal.Y(), normal.Z()); 
+	  }
   	}
   
         gp_Dir MaxD, MinD;
@@ -791,7 +796,7 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Face(), shape);
@@ -890,7 +895,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          //update all attributes first.
          TopTools_ListIteratorOfListOfShape it;
          it.Initialize(shapes);
-         for(it; it.More(); it.Next())
+         for(; it.More(); it.Next())
          {
            shape_edge = it.Value();
            OCCQueryEngine::instance()->copy_attributes(edge, shape_edge);
@@ -917,7 +922,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          //update all attributes first.
          TopTools_ListIteratorOfListOfShape it;
          it.Initialize(shapes);
-         for(it; it.More(); it.Next())
+         for(; it.More(); it.Next())
          {
            shape_vertex = it.Value();
            OCCQueryEngine::instance()->copy_attributes(vertex, shape_vertex);

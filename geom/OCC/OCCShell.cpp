@@ -83,10 +83,11 @@ OCCCoFace* OCCShell::remove_coface(OCCCoFace *coface)
 
 void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
 {
+  TopoDS_Shell* the_shell = new TopoDS_Shell(shell);
   if (myTopoDSShell)
     delete myTopoDSShell;
 
-  myTopoDSShell = new TopoDS_Shell(shell);
+  myTopoDSShell = the_shell;
 }
 
 //-------------------------------------------------------------------------

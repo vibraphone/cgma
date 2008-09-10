@@ -308,7 +308,7 @@ public :
     //- values.
   
   TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
-  void set_TopoDS_Face(TopoDS_Face face); 
+  void set_TopoDS_Face(TopoDS_Face& face); 
 
   void get_loops(DLIList<OCCLoop*>&);
 

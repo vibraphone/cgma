@@ -1365,7 +1365,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   {
     int k = OCCMap->Find(aShape);
     surface = (OCCSurface*)(OccToCGM->find(k))->second;
-    surface->set_TopoDS_Face(aShape);
+    TopoDS_Face aFace(aShape);
+    surface->set_TopoDS_Face(aFace);
   }
 
   TopExp_Explorer Ex;
