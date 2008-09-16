@@ -149,9 +149,11 @@ CubitStatus make_Point()
   normal = test_face->normal_at(v_test); //(-1,0,0)
   ome->flip_normals(surface_list);
   normal = test_face->normal_at(v_test); //(1,0, 0)
-  gti->delete_RefEntity(ref_faces.get());
+  DLIList<Body*> bodies;
+  test_face->bodies(bodies);
+  gti->delete_Body(bodies);
   surface_list.clean_out();
-
+  bodies.clean_out(); 
   gti->delete_Body(body);
 
   DLIList<BodySM*> bodysm_list;
@@ -178,7 +180,7 @@ CubitStatus make_Point()
   BodySM* stitched_body = NULL;
   DLIList<Body*> new_bodies;
   gmti->create_solid_bodies_from_surfs(face_list, new_bodies);
-  //Created volume(s): 8 
+  //Created volume(s): 9 
   //Destroyed volume(s): 2 to 7
 
   CubitStatus rsl = CUBIT_SUCCESS;
@@ -191,7 +193,6 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
   gti->bodies(bodies);
   gti->get_free_ref_entities(free_entities);
@@ -274,8 +275,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(from_body2, from_bodies, new_bodies, 
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Updated volume(s): 18
-  //Destroyed volume(s): 19
+  //Updated volume(s): 19
+  //Destroyed volume(s): 20
   //new bodies has one body, new body has 10 ref-faces, 5 of them are remaining
   //with old id, 5 of them are new faces.
 
@@ -283,8 +284,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body,from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Created volume(s): 21, 22
-  //Destroyed volume(s): 18, 20
+  //Created volume(s): 22, 23
+  //Destroyed volume(s): 19, 21
   d = new_bodies.step_and_get()->measure();
   v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
@@ -317,7 +318,7 @@ CubitStatus make_Point()
   from_bodies.append(cp_from_body);
   new_bodies.clean_out();
   CubitStatus stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
-  //Updated volume(s): 25
+  //Updated volume(s): 26
 
   //test edge imprint on surface
   CubitVector vv(5,1,4.0);
@@ -336,7 +337,7 @@ CubitStatus make_Point()
   assert(face_list.size() == 1);
   ref_edges.step_and_get()->ref_vertices(vertices);
   stat = gmti->imprint(unimprint_faces, ref_edges, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 26
+  //Updated volume(s): 27
 
   new_bodies.clean_out();
   face_list.clean_out();
@@ -362,13 +363,13 @@ CubitStatus make_Point()
   from_bodies.append(cp_from_body2);
   new_bodies.clean_out(); 
   stat = gmti->imprint(from_bodies, vectors, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 26
+  //Updated volume(s): 27
 
   n = new_bodies.get()->num_ref_edges();//n = 17
 
   new_bodies.clean_out();
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 26
+  //Updated volume(s): 27
 
   n = new_bodies.get()->num_ref_edges();//n = 21
 
@@ -378,7 +379,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Updated volume(s): 23
+  //Updated volume(s): 24
+  //Destroyed volume(s): 25
 
   n = new_bodies.get()->num_ref_faces();
   //n = 8
@@ -454,7 +456,7 @@ CubitStatus make_Point()
   from_bodies.append(copy_tool_body);
   from_bodies.append(from_body2);
   stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE); 
-  //Updated volume(s): 30 one body gets cut once with 7 faces, the other is not
+  //Updated volume(s): 32 one body gets cut once with 7 faces, the other is not
 
   //test body imprinted by curves.
   ref_edges.clean_out();
@@ -463,7 +465,7 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   from_bodies.append(copy_tool_body2);
   stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
-  //Updated volume(s): 31, no cuts performed
+  //Updated volume(s): 33, no cuts performed
 
   //test body cutting a shell, one surface got cut as the result. 
   CubitVector v_move6(1,-1,0);
@@ -473,7 +475,7 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_TRUE);
-  //Created volume(s): 32
+  //Created volume(s): 34
 
   d = new_bodies.step_and_get()->measure();
   v = new_bodies.get()->center_point();
@@ -499,7 +501,7 @@ CubitStatus make_Point()
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
   stat =  gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 33, 34
+  //Updated volume(s): 35, 36
   //one body gets 4 cuts, the other 3.
   //one body gets 10 faces, the other 9.
   
@@ -527,7 +529,7 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   gmti->imprint_projected_edges(ref_faces,ref_edges, new_bodies, CUBIT_TRUE,
        CUBIT_FALSE); 
-  //Created volume(s): 37
+  //Created volume(s): 39
   if(new_bodies.size())
     n = new_bodies.get()->num_ref_faces();//n = 8, new_bodies.size() == 1
 
@@ -548,8 +550,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   from_bodies.append(from_body);
   stat =  gmti->intersect(tool_body, from_bodies, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 39
-  //Destroyed volume(s): 38
+  //Updated volume(s): 41
+  //Destroyed volume(s): 40
   d = new_bodies.get()->measure(); //d = 1
   
   //2. common body is part of from body, update the correponding face
@@ -561,8 +563,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   stat =  gmti->intersect(tool_body, from_bodies, new_bodies, CUBIT_FALSE);
   d = new_bodies.get()->measure(); //d = 0.5
-  //Updated volume(s): 39
-  //Destroyed volume(s): 40
+  //Updated volume(s): 41
+  //Destroyed volume(s): 42
 
   //3. there's no common body, from body is deleted or kept depending on
   //keep-old flag. 
@@ -579,7 +581,7 @@ CubitStatus make_Point()
   //from_body get deleted
   stat =  gmti->intersect(tool_body, from_bodies, new_bodies, CUBIT_FALSE);
   //"The 1 body did not have common part with the tool_body."
-  //Destroyed volume(s): 39, 41
+  //Destroyed volume(s): 41, 43
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -602,9 +604,9 @@ CubitStatus make_Point()
   //new_bodies = intersect bodies;bodies = outside bodies; body is dummy 
   stat =  gmti->chop(from_bodies, new_bodies, bodies, body, CUBIT_FALSE);
   d = new_bodies.get()->measure(); //d = 0.5
-  //Created volume(s): 44
-  //Destroyed volume(s): 42
-  //Updated volume(s): 43 
+  //Created volume(s): 46
+  //Destroyed volume(s): 44
+  //Updated volume(s): 45 
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -624,9 +626,9 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   bodies.clean_out();
   stat =  gmti->chop(from_bodies, new_bodies, bodies, body, CUBIT_FALSE);
-  //Created volume(s): 47
-  //Destroyed volume(s): 46
-  //Updated volume(s): 45
+  //Created volume(s): 49
+  //Destroyed volume(s): 48
+  //Updated volume(s): 47
   d = bodies.get()->measure();//d = 63
   
   bodies.clean_out();
@@ -647,8 +649,8 @@ CubitStatus make_Point()
   from_bodies.append(tool_body);
   new_bodies.clean_out();
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 49
-  //Destroyed volume(s): 48
+  //Updated volume(s): 51
+  //Destroyed volume(s): 50
   d = new_bodies.get()->measure(); //d = 2
   n = new_bodies.get()->num_ref_faces(); //d = 10  
  
@@ -671,8 +673,8 @@ CubitStatus make_Point()
   from_bodies.append(tool_body);
   new_bodies.clean_out();
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 51
-  //Destroyed volume(s): 50
+  //Updated volume(s): 53
+  //Destroyed volume(s): 52
   d = new_bodies.get()->measure(); //d = 64.5
   n = new_bodies.get()->num_ref_faces(); 
   //d = 13. because fusion keeps the imprintings.
@@ -700,6 +702,8 @@ CubitStatus make_Point()
   from_bodies.append(tool_body);
   new_bodies.clean_out();
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
+  //Updated volume(s): 54
+  //Destroyed volume(s): 55
   d = new_bodies.get()->measure(); //d = 518.3627
   n = new_bodies.get()->num_ref_faces(); //n = 5
   //find the top most surface as the opening of the thick body.
