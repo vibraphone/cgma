@@ -268,10 +268,43 @@ if test "x$occ_DIR" != "xno"; then
     OCC_LIB_DIR=
     OCC_LIB_FLAG=
   else
-    uname=`uname`
-    OCC_INC_FLAG="-I${occ_DIR}/ros/inc"
-    OCC_LIB_DIR="${occ_DIR}/ros/${uname}/lib"
-    OCC_LIB_FLAG='-L$(OCC_LIB_DIR)'
+    AC_CACHE_CHECK( [for 'include' subdir of $occ_DIR], 
+                    [ac_cv_occ_include_dir],
+                    [ac_cv_occ_include_dir=NONE
+                     for subdir in inc ros/inc include; do
+                       if test -f "${occ_DIR}/${subdir}/Standard_Version.hxx"; then
+                         ac_cv_occ_include_dir="$subdir"
+                         break
+                       elif test -d "${occ_DIR}/${subdir}"; then
+                         ac_cv_occ_include_dir="$subdir";
+                       fi
+                     done] )
+    if test "xNONE" = "x$ac_cv_occ_include_dir"; then
+      AC_MSG_ERROR([Count not find include dir in: $occ_DIR])
+    else
+      OCC_INC_FLAG="-I${occ_DIR}/$ac_cv_occ_include_dir"
+    fi
+    
+    AC_CACHE_CHECK( [for 'lib' subdir of $occ_DIR],
+                    [ac_cv_occ_lib_dir],
+                    [ac_cv_occ_lib_dir=NONE
+                     uname=`uname`
+                     for subdir in lib ros/lib ros/${uname}/lib ros/$uname ; do
+                       if test -d "${occ_DIR}/${subdir}"; then
+                         ac_cv_occ_lib_dir="$subdir"
+                         for file in ${occ_DIR}/${subdir}/libTKernel.* ; do
+                           if test -f $file; then
+                             break 2
+                           fi
+                         done
+                       fi
+                     done] )
+    if test "xNONE" = "x$ac_cv_occ_lib_dir"; then
+      AC_MSG_ERROR([Count not find lib dir in: $occ_DIR])
+    else
+      OCC_LIB_DIR="$occ_DIR/$ac_cv_occ_lib_dir"
+      OCC_LIB_FLAG='-L$(OCC_LIB_DIR)'
+    fi
   fi
 
   # Check of OCC is present and working
@@ -297,15 +330,21 @@ if test "x$occ_DIR" != "xno"; then
   AC_CHECK_HEADER([fstream.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_FSTREAM_H"])
   AC_CHECK_HEADER([limits.h],[OCC_INC_FLAG="$OCC_INC_FLAG -DHAVE_LIMITS_H"])
 
-  # Check for CCC headers Stadard_Version.hxx
+  # Check for OCC headers Stadard_Version.hxx
   AC_CHECK_HEADER( [Standard_Version.hxx], [],
                  [AC_MSG_ERROR([OpenCascade config error:Standard_Version.hxx not found])] )
 
   # Check if libTKernel.so contains function 'create_mailbox'
-  old_LIBS="$LIBS"
+  # OCC 6.3 has build error where libTKernel.so requires libdl.so,
+  #   but does not list that in the shared library dependencies.
+  #   Try to work around this bug by detecting the need for -ldl.
   AC_CHECK_LIB( [TKernel], [create_mailbox],,
-                [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])])
-  LIBS="$old_LIBS"
+                [unset ac_cv_lib_TKernel_create_mailbox
+                 AC_CHECK_LIB( [TKernel], [create_mailbox],
+                               [OCC_LIBS="$OCC_LIBS -ldl"],
+                               [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])],
+                               [-ldl] )
+                ] )
   AC_LANG_POP(C++)
 
   # Restore original values of variables
