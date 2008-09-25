@@ -28,7 +28,6 @@ using std::type_info;
 // ********** END STANDARD INCLUDES           **********
 #include "TDF_Label.hxx"
 // ********** BEGIN CUBIT INCLUDES            **********
-#include "config.h"
 #include "CubitFileIOWrapper.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "Handle_TDocStd_Document.hxx"

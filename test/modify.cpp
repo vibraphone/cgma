@@ -723,5 +723,12 @@ CubitStatus make_Point()
   //stat = gmti->make_thick_solid(from_bodies, faces_to_remove, new_bodies, -.2);
   //n = new_bodies.get()->num_ref_faces(); //n = 10
   //d = new_bodies.get()->measure(); //d = 72.3618
+
+  RefFace* sweep_face = gmti->make_RefFace(ref_faces.get()); 
+  DLIList<RefEntity*> refentities;
+  refentities.append(sweep_face);
+//  gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
+//  body = CAST_TO(refentities.get(), Body);
+//  d = body->measure();
   return CUBIT_SUCCESS;
 }

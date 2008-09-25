@@ -12,7 +12,6 @@
 
 #ifndef FACET_BRIDGE_HPP
 #define FACET_BRIDGE_HPP
-#include "config.h"
 
 #include <DLIList.hpp>
 #include "TDF_Label.hxx"

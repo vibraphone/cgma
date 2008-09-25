@@ -5,7 +5,6 @@
 //- Author: Jane Hu       
 
 // ********** BEGIN OCC INCLUDES             **********
-#include "config.h"
 #include "gp_Pnt.hxx"
 #include "TopoDS.hxx"
 #include "TopoDS_Face.hxx"

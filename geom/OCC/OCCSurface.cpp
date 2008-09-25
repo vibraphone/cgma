@@ -13,7 +13,6 @@
 //-------------------------------------------------------------------------
 
 // ********** BEGIN OCC INCLUDES           **********
-#include "config.h"
 #include "OCCSurface.hpp"
 #include "RefFace.hpp"
 #include "OCCQueryEngine.hpp"
@@ -738,7 +737,7 @@ CubitSense OCCSurface::get_shell_sense( ShellSM* shell_ptr ) const
 }
 
 
-void OCCSurface::get_loops( DLIList<OCCLoop*>& result_list )
+int OCCSurface::get_loops( DLIList<OCCLoop*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSFace, TopAbs_WIRE, M);
@@ -747,18 +746,22 @@ void OCCSurface::get_loops( DLIList<OCCLoop*>& result_list )
      TopologyBridge *loop = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
      result_list.append_unique(dynamic_cast<OCCLoop*>(loop));
   }
+  return result_list.size();
 }
 
-void OCCSurface::get_coedges( DLIList<OCCCoEdge*>& result_list )
+int OCCSurface::get_coedges( DLIList<OCCCoEdge*>& result_list )
 {
   DLIList<OCCLoop*> loop_list;
   get_loops( loop_list );
   loop_list.reset();
   for ( int i = 0; i < loop_list.size(); i++ )
+  {
     result_list += loop_list.next(i)->coedges( );
+  }
+  return result_list.size();
 }
 
-void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
+int OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 {
   DLIList<OCCCoEdge*> coedge_list;
   get_coedges( coedge_list );
@@ -770,6 +773,7 @@ void OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
     if (curve)
       result_list.append_unique(curve);
   }
+  return result_list.size();
 }
 
 //----------------------------------------------------------------

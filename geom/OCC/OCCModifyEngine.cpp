@@ -12,7 +12,6 @@
 // Creation Date : 1/08
 //
 //-------------------------------------------------------------------------
-#include "config.h"
 #include "gp_Pnt.hxx"
 #include "gp_Ax2.hxx"
 #include "gp_Dir.hxx"
@@ -26,6 +25,8 @@
 #include "gp_Torus.hxx"
 #include "BRepBuilderAPI_MakeShell.hxx"
 #include "BRepBuilderAPI_MakeSolid.hxx"
+#include "BRepOffsetAPI_MakeDraft.hxx"
+#include "BRepBuilderAPI_TransitionMode.hxx"
 #include "BRepBuilderAPI_MakeWire.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TopAbs_Orientation.hxx"
@@ -1072,13 +1073,40 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   //check to make sure the aShell is closed.
   int num_edges = 0;
   int pairs = 0;
+  //sometimes there's duplicate TopoDS_Edges in the shell.
+  DLIList<TopoDS_Edge*> edge_list;
   for (Ex.Init(aShell, TopAbs_EDGE); Ex.More()&& stat; Ex.Next())
   {
     TopoDS_Edge edge1 = TopoDS::Edge(Ex.Current());
-    num_edges++;
-    for (Ex2.Init(aShell, TopAbs_EDGE); Ex2.More(); Ex2.Next())  
+    edge_list.append(&edge1);
+  }
+
+  int size = edge_list.size();
+  for (int i = 0; i < size; i++)
+  {
+    TopoDS_Edge edge1 = *edge_list[i];
+    int same = 0;
+    for (int j = i+1; j < edge_list.size(); j++)
     {
-      TopoDS_Edge edge2 = TopoDS::Edge(Ex2.Current());    
+      TopoDS_Edge edge2 = *edge_list[j];
+      if(edge1.IsEqual(edge2))
+      {
+           same ++;
+           edge_list.remove(&edge1);
+           i--;
+           size--;
+           break;
+      }
+    }
+    if(same > 0)
+      continue;
+
+    else
+      num_edges++;
+  
+    for (int j = 0; j < size; j++)  
+    {
+      TopoDS_Edge edge2 = *edge_list[j];    
       if (!edge1.IsEqual(edge2)&& edge1.IsSame(edge2))
       {
         pairs++;
@@ -1086,7 +1114,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
       }
     }
   }
-  if (num_edges == pairs)
+  if (num_edges == pairs )
     aShell.Closed(CUBIT_TRUE);
 
   else
@@ -1749,7 +1777,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
 
       //compare to see if the from_shape has gotten cut.
       CubitBoolean has_changed;
-      check_operation(cut_shape, from_shape, is_volume[i], has_changed, &cutter);
+      check_operation(cut_shape, from_shape, is_volume[i], has_changed, &cutter, keep_old);
 
       CubitStatus stat;
       if(!has_changed && !from_shape->IsNull())
@@ -3324,7 +3352,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopoDS_Shape common_shape = intersector.Shape();
     check_operation(common_shape, from_shape, is_volume[i], has_changed, 
-                    &intersector); 
+                    &intersector, keep_old); 
 
     if(from_shape->IsNull())
     {
@@ -3376,7 +3404,8 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
                                       TopoDS_Shape*& from_shape, //output
                                       CubitBoolean  is_volume,
                                       CubitBoolean& has_changed, //output
-                                      BRepAlgoAPI_BooleanOperation* op) const
+                                      BRepAlgoAPI_BooleanOperation* op,
+                                      CubitBoolean keep_old) const
 {
    //compare to see if the from_shape has gotten cut.
    double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
@@ -3429,7 +3458,8 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
        OCCSurface::update_OCC_entity(old_face,cut_shape, op);
      }
   }
-  delete from_shape;
+  if(keep_old)
+    delete from_shape;
   from_shape = new TopoDS_Shape(cut_shape);
 }
 
@@ -3455,15 +3485,16 @@ CubitStatus  OCCModifyEngine::chop(DLIList<BodySM*>& bodies,
   leftoversBody = 0;
 
   //there's no effect of nonreg. keep_old mean if to keep the tool_body
-  if(bodies.size() < 2)
+  if(bodies.size() != 2)
   {
-    PRINT_WARNING("There is only one volume in the list. Nothing modified\n");  
+    PRINT_WARNING("Chop operation works only on two bodies. Nothing modified\n");  
     return CUBIT_FAILURE; 
   }
   
   //outsideBodies keeps the surface, curve ids if keep_old is false.
   BodySM* blank_body = bodies.get();
   
+  //copy blank_body for intersect operation, because it will get changed.
   DLIList<BodySM*> tool_bodies, from_bodies;
   from_bodies.append(blank_body);
   BodySM* tool_body = bodies.step_and_get();
@@ -3544,9 +3575,9 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     TopoDS_Shape new_shape = fuser.Shape();
 
     CubitBoolean has_changed;
-    check_operation(new_shape, first_shape, first_is_volume, has_changed, &fuser);
+    check_operation(new_shape, first_shape, first_is_volume, has_changed, &fuser, keep_old);
  
-    check_operation(new_shape,second_shape, is_volume[i], has_changed, &fuser);
+    check_operation(new_shape,second_shape, is_volume[i], has_changed, &fuser, keep_old);
   }      
 
   //ok, we're done with all unites, construct new Body'
@@ -3681,6 +3712,7 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
 //===============================================================================
 CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) const
 {
+  DLIList<Surface*> surface_list;
   while (face_list.size())
   {
     OCCSurface* occ_surface = CAST_TO(face_list.pop(), OCCSurface);
@@ -3689,11 +3721,14 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
     surfaces.append(occ_surface);
     if(occ_shell) //find all surfaces in face_list that belong to this shell
     {
-      while ( face_list.size())
+      int size = face_list.size();
+      for ( int i = 0; i < size; i++)
       {
         occ_surface = CAST_TO(face_list.get(), OCCSurface); 
         if(occ_shell == occ_surface->my_shell())
           surfaces.append(CAST_TO(face_list.remove(),OCCSurface));
+        else
+          face_list.step();
       } 
       
       if (!occ_shell->is_sheet())
@@ -3713,6 +3748,7 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
             occ_surface->set_TopoDS_Face(*topoface);
             coface->set_sense(coface->sense() == CUBIT_FORWARD ? 
                                  CUBIT_REVERSED : CUBIT_FORWARD);
+            surface_list.append(occ_surface);
           }
         }
       }
@@ -3723,12 +3759,14 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
         topoface->Orientation(ori == TopAbs_FORWARD ? TopAbs_REVERSED :
                                                     TopAbs_FORWARD);
         occ_surface->set_TopoDS_Face(*topoface);
+        surface_list.append(occ_surface);
       }
       PRINT_INFO( "Modified volume\n" );
     }
     else
       PRINT_WARNING( "Volume was not modified\n" );
   }
+  face_list = surface_list;
   return CUBIT_SUCCESS;
 }
 
@@ -3738,25 +3776,128 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
 // Member Type: PUBLIC
 // Description: 
 // Author     : Jane Hu
-// Date       : 06/08
+// Date       : 09/08
 //===============================================================================
 CubitStatus OCCModifyEngine:: sweep_translational(
-  DLIList<GeometryEntity*>& /*ref_ent_list*/,
-  DLIList<BodySM*>& /*result_body_list*/,
-  const CubitVector& /*sweep_vector*/,
-  double /*draft_angle*/,
-  int /*draft_type*/,
-  bool /*switchside*/,
-  bool /*rigid*/,
+  DLIList<GeometryEntity*>& ref_ent_list,
+  DLIList<BodySM*>& result_body_list,
+  const CubitVector& sweep_vector,
+  double draft_angle, //in Radius
+  int draft_type, //RightCorner=1 or RoundCorner =2
+  bool switchside,//not used, shell and surfaces are one sided, not like Acis
+  bool rigid, //not used here, in Acis, it means whether the end surface is
+              // parallel to the starting surface, or perpendicular to the path
   Surface* stop_surf,
   BodySM* to_body) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //in OCC, there's no sweep surface with draft option, this can be done by
+  //creating draft shell then make solid to achieve.
+/*
+  TopoDS_Shape *stop_shape = NULL;
+  if(stop_surf)
+  {
+     OCCSurface* occ_surface = CAST_TO(stop_surf, OCCSurface);
+     stop_shape = occ_surface->get_TopoDS_Face();
+  }
+  else if(to_body)
+  {
+     OCCBody* occ_body = CAST_TO(to_body, OCCBody);
+     if(occ_body->is_sheet_body())
+       stop_shape = occ_body->my_sheet_surface()->get_TopoDS_Face();
+     else if(occ_body->shell())
+       stop_shape = occ_body->shell()->get_TopoDS_Shell();
+     else
+       stop_shape = occ_body->get_TopoDS_Shape();
+  }
+
+  gp_Dir adir(sweep_vector.x(), sweep_vector.y(), sweep_vector.z());
+  for (int i = ref_ent_list.size(); i > 0; i--)
+  {
+    GeometryEntity *ref_ent = ref_ent_list.get_and_step();
+    TopoDS_Shape* toposhape = 
+          OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
+    TopoDS_Wire wire;
+    if(!toposhape)
+    {
+      PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
+      continue;
+    }
+    OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
+    if(curve != NULL)
+    {
+      DLIList<OCCLoop*> loops;
+      loops =  curve->loops();
+      if( loops.size())
+        continue;  //not a free curve
+      TopoDS_Edge edge = TopoDS::Edge(*toposhape);
+      wire = BRepBuilderAPI_MakeWire(edge);
+      toposhape = &wire;
+    }
+
+    //check if the ref_ent has free boundary, if not, bail out
+    OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
+    if(surface != NULL)
+    {
+      if(surface->my_body() == NULL)
+        continue;
+    } 
+    //create the draft
+    BRepOffsetAPI_MakeDraft draft(*toposhape, adir, draft_angle);
+    BRepBuilderAPI_TransitionMode Cornertype;
+    if(draft_type == 1)
+      Cornertype = BRepBuilderAPI_RightCorner;
+    else if(draft_type == 2)
+      Cornertype = BRepBuilderAPI_RoundCorner;
+
+    draft.SetOptions(Cornertype);
+    if(stop_shape)
+      draft.Perform(*stop_shape);    
+    else
+      draft.Perform(sweep_vector.length());
+    TopoDS_Shape new_shape = draft.Shape();
+
+    DLIList<TopologyBridge*> tbs;
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+
+    assert(tbs.size() == 1);
+
+    BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+    if(surface != NULL) //only gets swept side and top surfaces
+    {
+       //get surfaces from the shell body and add the original surface to 
+       //make a swept solid.
+       OCCShell* occ_shell = CAST_TO(bodysm, OCCBody)->shell();
+       if(!occ_shell)
+       {
+         PRINT_WARNING("Sweep surface failed inside OCC engine.\n");
+         return CUBIT_FAILURE;
+       }
+       DLIList<OCCCoFace*> cofaces = occ_shell->cofaces(); 
+       DLIList<Surface*> surface_list;
+       surface_list.append(surface);
+       for(int i = 0; i < cofaces.size(); i++)
+         surface_list.append(cofaces.get_and_step()->surface());
+
+       flip_normals(surface_list);
+       DLIList<BodySM*> bodies;
+       create_solid_bodies_from_surfs(surface_list, bodies);
+
+       if(bodies.size() == 1)
+         bodysm = bodies.get();
+       else
+       {
+         PRINT_WARNING("Sweep surface failed in creating solid.\n");
+         return CUBIT_FAILURE;
+       }
+    }
+    if (bodysm)
+      result_body_list.append(bodysm);
+  }
+*/
+  return CUBIT_SUCCESS; 
 }
 
 //===============================================================================
-// Function   : sweep_perpendicular
 // Member Type: PUBLIC
 // Description: 
 // Author     : John Fowler

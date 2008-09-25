@@ -2906,6 +2906,7 @@ CubitStatus GeometryModifyTool::sweep_translational(
   if (!sweep_finish("translational", body_list, result_list, change_newids))
     status = CUBIT_FAILURE;
 
+  CAST_LIST( body_list, ref_ent_list, RefEntity);
   return status;
 }
 

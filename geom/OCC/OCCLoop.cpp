@@ -11,7 +11,6 @@
 //
 // Owner         : Steven J. Owen
 //-------------------------------------------------------------------------
-#include "config.h"
 
 #include "CastTo.hpp"
 #include "OCCLoop.hpp"

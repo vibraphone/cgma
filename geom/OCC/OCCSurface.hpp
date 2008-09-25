@@ -310,11 +310,11 @@ public :
   TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
   void set_TopoDS_Face(TopoDS_Face& face); 
 
-  void get_loops(DLIList<OCCLoop*>&);
+  int get_loops(DLIList<OCCLoop*>&);
 
-  void get_coedges(DLIList<OCCCoEdge*>&);
+  int get_coedges(DLIList<OCCCoEdge*>&);
 
-  void get_curves(DLIList<OCCCurve*>&); 
+  int get_curves(DLIList<OCCCurve*>&); 
 
   void set_shell(OCCShell* shell)
   { myShell = shell;}

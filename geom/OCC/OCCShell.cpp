@@ -14,7 +14,6 @@
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <stddef.h>
 // ********** END STANDARD INCLUDES        **********
-#include "config.h"
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CastTo.hpp"
 #include "CubitUtil.hpp"

@@ -6,8 +6,6 @@
 //
 //===================================================================================
 
-#include "config.h"
-
 #include "OCCParamTool.hpp"
 #include "CastTo.hpp"
 #include "Surface.hpp"

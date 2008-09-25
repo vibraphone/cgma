@@ -698,7 +698,8 @@ private:
                       TopoDS_Shape*& from_shape, //output
                       CubitBoolean  is_volume,
                       CubitBoolean& has_changed, //output
-                      BRepAlgoAPI_BooleanOperation* op) const;
+                      BRepAlgoAPI_BooleanOperation* op,
+                      CubitBoolean keep_old) const;
 
 } ;
 

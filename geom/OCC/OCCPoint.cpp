@@ -17,7 +17,6 @@
 // ********** END STANDARD INCLUDES        **********
 
 // ********** BEGIN CUBIT INCLUDES         **********
-#include "config.h"
 #include "OCCPoint.hpp"
 #include "OCCCurve.hpp"
 #include "OCCQueryEngine.hpp"

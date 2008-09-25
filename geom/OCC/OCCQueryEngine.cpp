@@ -13,7 +13,6 @@
 // Creation Date : 7/17/00
 //
 //-------------------------------------------------------------------------
-#include "config.h"
 #include <Standard_Stream.hxx>
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
@@ -1650,6 +1649,7 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   if(occ_surface)
   { 
     delete occ_surface->my_body();
+    occ_surface->set_body((OCCBody*)NULL);
     delete occ_surface->my_shell();
     delete occ_surface->my_lump();
     return delete_solid_model_entities(occ_surface);
@@ -1659,6 +1659,7 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   if(occ_shell)
   {
     delete occ_shell->my_body();
+    occ_shell->set_body((OCCBody*)NULL);
     delete occ_shell->my_lump();
     DLIList<TopologyBridge*> tb_surfaces;
     occ_shell->get_children_virt(tb_surfaces);

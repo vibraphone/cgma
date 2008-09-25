@@ -15,7 +15,6 @@
 
 // ********** BEGIN STANDARD INCLUDES      **********
 // ********** END STANDARD INCLUDES        **********
-#include "config.h"
 
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"

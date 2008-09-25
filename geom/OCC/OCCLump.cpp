@@ -12,7 +12,6 @@
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <assert.h>
 // ********** END STANDARD INCLUDES        **********
-#include "config.h"
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "OCCQueryEngine.hpp"
 #include "OCCLump.hpp"
