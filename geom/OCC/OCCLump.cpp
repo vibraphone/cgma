@@ -361,6 +361,8 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Solid()));
+    if(shapes.Extent() == 0)
+      shapes.Assign(op->Generated(*get_TopoDS_Solid()));
     if(shapes.Extent() > 1)
     { 
       //update all attributes first.
@@ -435,7 +437,11 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
 
     TopTools_ListOfShape shapes;
     if (op)
+    {
       shapes.Assign(op->Modified(shell));
+      if(shapes.Extent() == 0)
+         shapes.Assign(op->Generated(shell));
+    }
     else if(sp)
       shapes.Assign(sp->DescendantShapes(shell));
 

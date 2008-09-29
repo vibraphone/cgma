@@ -4155,7 +4155,91 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*>& bodies,
   do_attribute_cleanup();
   return CUBIT_SUCCESS;
 }
+CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
+                                        DLIList<RefFace*> faces_to_remove,
+                                        DLIList<Body*>& new_bodies,
+                                        double depth)
+{
+  if (bodies.size() <= 0 || faces_to_remove.size() <= 0)
+  {
+     PRINT_WARNING("Needs at least one body and one face. Nothing modified\n");
+     return CUBIT_FAILURE;
+  }
 
+  if (!okay_to_modify( bodies, "HOLLOW" ))
+    return CUBIT_FAILURE;
+
+  // Get the GeometryEngine for each Body of the list to check
+  // if they are the same and if they are GeometryModifyEngine
+
+  const int count = bodies.size();
+  DLIList<TopologyEntity*> entity_list(count);
+  DLIList<TopologyBridge*> bridge_list(count);
+  CAST_LIST_TO_PARENT(bodies, entity_list);
+  GeometryModifyEngine* gme = common_modify_engine( entity_list, bridge_list );
+
+  if (!gme)
+  {
+     PRINT_ERROR("Performing THICKEN with volumes containing geometry\n"
+                 " from different modeling engines is not allowed.\n"
+                 "Delete uncommon geometry on these volumes before operation.\n\n");
+     return CUBIT_FAILURE;
+  }
+
+  DLIList<BodySM*> new_sms(count);
+  DLIList<BodySM*> body_sms(count);
+  CAST_LIST(bridge_list, body_sms, BodySM);
+
+  DLIList <Surface*> surfs_to_remove;
+  for(int i = 0 ; i < faces_to_remove.size(); i++)
+  {
+    Surface* surf = faces_to_remove.get_and_step()->get_surface_ptr();
+    if(surf)
+      surfs_to_remove.append(surf); 
+  }
+
+  CubitStatus result = gme->hollow( body_sms, surfs_to_remove, new_sms, depth);
+
+  // check for resued entities, they have been moved and we need to notify observers
+  DLIList<RefEntity*> entities_to_update;
+  int i;
+  for(i=0; i<new_sms.size(); i++)
+  {
+    BodySM* bodysm = new_sms.get_and_step();
+    DLIList<TopologyBridge*> to_check;
+    DLIList<TopologyBridge*> tmp;
+    DLIList<Surface*> surfs;
+    bodysm->surfaces(surfs);
+    DLIList<Curve*> curves;
+    bodysm->curves(curves);
+    DLIList<Point*> points;
+    bodysm->points(points);
+    to_check.append(bodysm);
+    to_check.append(bodysm->lump());
+    CAST_LIST_TO_PARENT(surfs, tmp);
+    to_check += tmp;
+    CAST_LIST_TO_PARENT(curves, tmp);
+    to_check += tmp;
+    CAST_LIST_TO_PARENT(points, tmp);
+    to_check += tmp;
+
+    int k;
+    for(k=0; k<to_check.size(); k++)
+      if(BridgeManager* m = to_check.get_and_step()->bridge_manager())
+        if(TopologyEntity* t = m->topology_entity())
+          entities_to_update.append(CAST_TO(t, RefEntity));
+
+  }
+
+  if (!finish_sm_op(bodies, new_sms, new_bodies))
+    result = CUBIT_FAILURE;
+
+  // Update graphics
+  while (entities_to_update.size())
+    entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+
+  return result; 
+}
 CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
                                          DLIList<Body*>& new_bodies,
                                          double depth,

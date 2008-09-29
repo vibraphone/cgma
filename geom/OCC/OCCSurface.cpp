@@ -793,6 +793,8 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Face()));
+    if(shapes.Extent() == 0)
+         shapes.Assign(op->Generated(*get_TopoDS_Face()));
     if (shapes.Extent() == 1)
       shape = shapes.First();
     else if(shapes.Extent() > 1)
@@ -858,7 +860,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      TopoDS_Wire wire = TopoDS::Wire(M(ii));
      TopTools_ListOfShape shapes;
      if(op)
+     {
        shapes.Assign(op->Modified(wire));
+       if(shapes.Extent() == 0)
+         shapes.Assign(op->Generated(wire));
+     }
      else if(sp)
        shapes.Assign(sp->DescendantShapes(wire));
 

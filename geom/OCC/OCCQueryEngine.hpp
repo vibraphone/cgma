@@ -1,7 +1,7 @@
 //-------------------------------------------------------------------------
 // Filename      : OCCQueryEngine.hpp
 //
-// Purpose       : Facet geometry engine.
+// Purpose       : OCC geometry engine.
 //
 //                 This class is implemented as a Singleton pattern. Only
 //                 one instance is created and it is accessed through the 
@@ -9,9 +9,9 @@
 //
 // Special Notes :
 //
-// Creator       : David R. White
+// Creator       : Jane Hu
 //
-// Creation Date : 6/29/00
+// Creation Date : 10/07
 //
 //-------------------------------------------------------------------------
 

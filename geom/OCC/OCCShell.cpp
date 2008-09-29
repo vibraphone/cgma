@@ -220,6 +220,8 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Shell()));
+    if(shapes.Extent() == 0)
+      shapes.Assign(op->Generated(*get_TopoDS_Shell()));
     if (shapes.Extent())
     {
       if(shapes.Extent() > 1)
@@ -286,7 +288,11 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
   {
     TopoDS_Face face = TopoDS::Face(M(ii));
     if (op)
+    {
       shapes.Assign(op->Modified(face));
+      if(shapes.Extent() == 0)
+         shapes.Assign(op->Generated(face));
+    }
     else if(sp)
       shapes.Assign(sp->DescendantShapes(face));
 

@@ -461,7 +461,11 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
 
     TopTools_ListOfShape shapes;
     if(op)
+    {
       shapes.Assign(op->Modified(solid));
+      if(shapes.Extent() == 0)
+         shapes.Assign(op->Generated(solid));
+    }
     else if(sp)
       shapes.Assign(sp->DescendantShapes(solid));
 

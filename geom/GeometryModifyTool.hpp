@@ -37,7 +37,6 @@ class RefFace;
 class RefVolume;
 class RefVertex;
 class RefEdge;
-class RefFace;
 class RefVolume;
 template <class X> class DLIList;
 class Loop;
@@ -224,6 +223,11 @@ public :
                     Body*& leftoversBody,
                     bool keep_old = false,
                     bool nonreg = false );
+
+  CubitStatus hollow( DLIList<Body*>& bodies,
+                      DLIList<RefFace*> faces_to_remove,
+                      DLIList<Body*>& new_bodies,
+                      double depth);
 
   CubitStatus thicken( DLIList<Body*>& bodies,
                        DLIList<Body*>& new_bodies,

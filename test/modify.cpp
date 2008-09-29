@@ -720,9 +720,9 @@ CubitStatus make_Point()
   faces_to_remove.append(ref_faces.get());
   from_bodies = new_bodies;
   new_bodies.clean_out();
-  //stat = gmti->make_thick_solid(from_bodies, faces_to_remove, new_bodies, -.2);
-  //n = new_bodies.get()->num_ref_faces(); //n = 10
-  //d = new_bodies.get()->measure(); //d = 72.3618
+  stat = gmti->hollow(from_bodies, faces_to_remove, new_bodies, -.2);
+  n = new_bodies.get()->num_ref_faces(); //n = 10
+  d = new_bodies.get()->measure(); //d = 72.3618
 
   RefFace* sweep_face = gmti->make_RefFace(ref_faces.get()); 
   DLIList<RefEntity*> refentities;

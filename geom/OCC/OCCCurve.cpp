@@ -924,6 +924,8 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   {
     TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Edge()));
+    if(shapes.Extent() == 0)
+      shapes.Assign(op->Generated(*get_TopoDS_Edge()));
     if(shapes.Extent() == 1)
       shape = shapes.First();
     else if(shapes.Extent() > 1)

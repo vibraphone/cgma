@@ -1419,7 +1419,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
     for(int i = 0; i < size; i++)
     {
       coedge = coedges_old.get_and_step();
-      if(coedge->curve() == curve)
+      if(coedge->curve() == curve && coedge->sense() ==  sense)
       {
         coedge->set_mark(1);
         exist = CUBIT_TRUE;
@@ -1449,6 +1449,18 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
             }
           }
           delete loop;
+        }
+      }
+      //for the cylinder side face, there are 4 coedges, 2 of them are seam
+      //edges and should have opposite sense.
+      for(int i = 0; i < coedges_new.size(); i++)
+      {
+        coedge =  coedges_new.get_and_step();
+        Curve* test_c = coedge->curve();
+        if(test_c == curve)
+        {
+          sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+          break;
         }
       }
       coedge = new OCCCoEdge( curve, loop, sense);
