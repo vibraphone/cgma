@@ -14,7 +14,7 @@ INCLUDES = -I$(top_srcdir)/geom \
 LINK_FLAGS = 
 TESTS = sheet
 if build_ACIS
-  TESTS += webcut
+  TESTS += webcut hollow_acis
   LINK_FLAGS += -R$(ACIS_LIB_DIR)
 endif
 if WITH_OCC
@@ -27,12 +27,14 @@ AM_CPPFLAGS += -DSRCDIR=@srcdir@ $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 check_PROGRAMS = $(TESTS)
 
 webcut_SOURCES = webcut.cpp
+hollow_acis_SOURCES = hollow_acis.cpp
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 LDADD = ../libcgm.la
 webcut_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+hollow_acis_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 makept_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
@@ -58,6 +60,7 @@ EXTRA_DIST = 62_shaver1.brep \
              model5.sat \
              model6.sat \
              model7.sat \
+             hollow.sat \
              stitch.occ_name \
              webcut_with_brick.sat \
              webcut_with_curve_loop.sat \
