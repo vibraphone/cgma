@@ -145,6 +145,8 @@ CubitStatus hollow()
   from_bodies = new_bodies;
   new_bodies.clean_out();
   CubitStatus stat = gmti->hollow(from_bodies, faces_to_remove, new_bodies, -.2);
+  //Created volume(s): 2
+  //Destroyed volume(s): 1
   n = new_bodies.get()->num_ref_faces(); //n = 9
   d = new_bodies.get()->measure(); //d = 72.4074
   return CUBIT_SUCCESS;
