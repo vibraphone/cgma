@@ -405,7 +405,7 @@ CubitStatus OCCSurface::u_v_from_position( CubitVector const& location,
   gp_Pnt p(location.x(), location.y(), location.z()), newP(0.0, 0.0, 0.0);
   double minDist=0.0;
   int i;
-  Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
+  Extrema_ExtPS ext(p, asurface, Precision::Confusion(), Precision::Confusion());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
 	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
 		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {

@@ -3792,7 +3792,6 @@ CubitStatus OCCModifyEngine:: sweep_translational(
 {
   //in OCC, there's no sweep surface with draft option, this can be done by
   //creating draft shell then make solid to achieve.
-/*
   TopoDS_Shape *stop_shape = NULL;
   if(stop_surf)
   {
@@ -3814,6 +3813,31 @@ CubitStatus OCCModifyEngine:: sweep_translational(
   for (int i = ref_ent_list.size(); i > 0; i--)
   {
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
+    //check if the ref_ent has free boundary, if not, bail out
+    OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
+    if(surface != NULL)
+    {
+      if(surface->my_body() == NULL)
+        continue;
+    }
+    CubitVector center = surface->center_point();
+    CubitVector normal;
+    surface->closest_point(center,NULL,&normal);
+    if(normal % sweep_vector > 0)
+    {
+      DLIList<Surface*> surfaces;
+      surfaces.append(surface);
+      flip_normals(surfaces);
+      surface = CAST_TO(surfaces.get(), OCCSurface);
+      ref_ent = (GeometryEntity *)surface;
+    }
+
+    else if(normal % sweep_vector == 0)
+    {
+      PRINT_ERROR("Sweeping direction should not be on the surface.\n");
+      continue;
+    }
+
     TopoDS_Shape* toposhape = 
           OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
     TopoDS_Wire wire;
@@ -3833,14 +3857,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
       wire = BRepBuilderAPI_MakeWire(edge);
       toposhape = &wire;
     }
-
-    //check if the ref_ent has free boundary, if not, bail out
-    OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
-    if(surface != NULL)
-    {
-      if(surface->my_body() == NULL)
-        continue;
-    } 
+  
     //create the draft
     BRepOffsetAPI_MakeDraft draft(*toposhape, adir, draft_angle);
     BRepBuilderAPI_TransitionMode Cornertype;
@@ -3862,9 +3879,9 @@ CubitStatus OCCModifyEngine:: sweep_translational(
     assert(tbs.size() == 1);
 
     BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
-    if(surface != NULL) //only gets swept side and top surfaces
+    if(bodysm && surface != NULL) //only gets swept side and top surfaces
     {
-       //get surfaces from the shell body and add the original surface to 
+       //get surfaces from the shell body and add the original surface to
        //make a swept solid.
        OCCShell* occ_shell = CAST_TO(bodysm, OCCBody)->shell();
        if(!occ_shell)
@@ -3872,13 +3889,12 @@ CubitStatus OCCModifyEngine:: sweep_translational(
          PRINT_WARNING("Sweep surface failed inside OCC engine.\n");
          return CUBIT_FAILURE;
        }
-       DLIList<OCCCoFace*> cofaces = occ_shell->cofaces(); 
+       DLIList<OCCCoFace*> cofaces = occ_shell->cofaces();
        DLIList<Surface*> surface_list;
        surface_list.append(surface);
        for(int i = 0; i < cofaces.size(); i++)
          surface_list.append(cofaces.get_and_step()->surface());
 
-       flip_normals(surface_list);
        DLIList<BodySM*> bodies;
        create_solid_bodies_from_surfs(surface_list, bodies);
 
@@ -3893,7 +3909,6 @@ CubitStatus OCCModifyEngine:: sweep_translational(
     if (bodysm)
       result_body_list.append(bodysm);
   }
-*/
   return CUBIT_SUCCESS; 
 }
 
