@@ -5148,7 +5148,28 @@ iGeom_createSphere( iGeom_Instance instance,
   *geom_entity = tmp_body;
   RETURN ((tmp_body ? iBase_SUCCESS : iBase_FAILURE));
 }
+
+
+void
+iGeom_createPrism( iGeom_Instance instance,
+                   /*in*/ double height,
+		   /*in*/ int n_sides,
+		   /*in*/ double major_rad,
+		   /*in*/ double minor_rad,
+		   /*out*/ iBase_EntityHandle *geom_entity,
+		   int* err )
+{
+  if ( 0.0>=height ) {
+    ERROR(iBase_INVALID_ARGUMENT, "Prism height must be positive.");
+  } else if ( 3>n_sides ) {
+    ERROR(iBase_INVALID_ARGUMENT, "Prism must have at least three sides.");
+  }
   
+  RefEntity* tmp_body = gmt->prism( height, n_sides, major_rad, minor_rad );
+  *geom_entity = tmp_body;
+  RETURN ((tmp_body ? iBase_SUCCESS :iBase_FAILURE));
+}
+
 
 void
 iGeom_createBrick (iGeom_Instance instance,
@@ -5482,6 +5503,44 @@ iGeom_subtractEnts (iGeom_Instance instance,
     *geom_entity = new_body;
     gqt->delete_RefEntity(this_blank);
     gqt->delete_RefEntity(this_tool);
+  }
+
+  RETURN(iBase_SUCCESS);
+}
+
+void
+iGeom_intersectEnt ( iGeom_Instance instance,
+                     /*in*/ iBase_EntityHandle ent1,
+		     /*in*/ iBase_EntityHandle ent2,
+		     /*out*/ iBase_EntityHandle *geom_entity,
+		     int* err )
+{
+  Body *this_ent1 = dynamic_cast<Body*>(ENTITY_HANDLE(ent1));
+  Body *ent1_copy = gmt->copy_body(this_ent1);
+  if (NULL == ent1_copy) {
+    ERROR(iBase_FAILURE, "Trouble copying blank.");
+  }
+  Body *this_ent2 = dynamic_cast<Body*>(ENTITY_HANDLE(ent2));
+  Body *ent2_copy = gmt->copy_body(this_ent2);
+  if (NULL == ent2_copy) {
+    ERROR(iBase_FAILURE, "Trouble copying tool.");
+    gqt->delete_RefEntity(ent1_copy);
+    RETURN(iBase_FAILURE);
+  }
+
+  DLIList<Body*> ent1_list, new_body_list;
+  ent1_list.append(ent1_copy);
+  
+  RefEntity *new_body = NULL;
+  CubitStatus result = gmt->intersect(ent2_copy, ent1_list, new_body_list);
+  if (CUBIT_SUCCESS != result || 0 == new_body_list.size()) {
+    ERROR(iBase_FAILURE, "Intersect failed.");
+  }
+  else {
+    new_body = new_body_list.get();
+    *geom_entity = new_body;
+    gqt->delete_RefEntity(this_ent2);
+    gqt->delete_RefEntity(this_ent1);
   }
 
   RETURN(iBase_SUCCESS);

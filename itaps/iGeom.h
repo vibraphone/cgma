@@ -2066,6 +2066,15 @@ extern "C" {
                            iBase_EntityHandle* sphere_handle_out,
                            int* err );
 
+/**\brief Create a prism centered on the origin
+ */
+void iGeom_createPrism( iGeom_Instance,
+                   double height,
+		   int n_sides,
+		   double major_rad,
+	           double minor_rad,
+	           iBase_EntityHandle* prism_handle_out,									          int* err );
+
 /**\brief 
  *
  */
@@ -2153,6 +2162,14 @@ extern "C" {
                            iBase_EntityHandle tool,
                            iBase_EntityHandle* geom_entity,
                            int* err );
+
+/**\brief
+ */
+  void iGeom_intersectEnts( iGeom_Instance,
+                            iBase_EntityHandle entity2,
+			    iBase_EntityHandle entity1,
+			    iBase_EntityHandle* geom_entity,
+			    int* err );
 
 /**\brief 
  *
