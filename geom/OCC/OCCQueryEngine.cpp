@@ -1459,7 +1459,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
         Curve* test_c = coedge->curve();
         if(test_c == curve)
         {
-          sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+          if(sense == coedge->sense())
+            sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
           break;
         }
       }

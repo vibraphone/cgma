@@ -18,7 +18,7 @@ if build_ACIS
   LINK_FLAGS += -R$(ACIS_LIB_DIR)
 endif
 if WITH_OCC
-  TESTS += modify makept r_w
+  TESTS += modify makept r_w test_occ
   LINK_FLAGS += -R$(OCC_LIB_DIR)
 endif
 
@@ -32,6 +32,7 @@ makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
+test_occ_SOURCES = test_occ.cpp
 LDADD = ../libcgm.la
 webcut_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 hollow_acis_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
@@ -43,6 +44,7 @@ r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 EXTRA_DIST = 62_shaver1.brep \
              66_shaver3.brep \
              72_shaver6.brep \
+             LeverArm.brep\ 
              aftersub.occ_ref \
              beforesub.occ_ref \
              beforesub2.occ_ref \

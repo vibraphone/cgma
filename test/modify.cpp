@@ -716,6 +716,7 @@ CubitStatus make_Point()
        ref_faces.get()->center_point() == center )
       break;
   }
+  RefFace* sweep_face = gmti->make_RefFace(ref_faces.get());
   DLIList<RefFace*> faces_to_remove;
   faces_to_remove.append(ref_faces.get());
   from_bodies = new_bodies;
@@ -725,11 +726,26 @@ CubitStatus make_Point()
   n = new_bodies.get()->num_ref_faces(); //n = 10
   d = new_bodies.get()->measure(); //d = 72.3618
 
-  RefFace* sweep_face = gmti->make_RefFace(ref_faces.get()); 
   DLIList<RefEntity*> refentities;
   refentities.append(sweep_face);
-//  gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
-//  body = CAST_TO(refentities.get(), Body);
-//  d = body->measure();
+  RefFace* draft_face = gmti->make_RefFace(sweep_face);
+  gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 31.4159
+  refentities.clean_out();
+  refentities.append(draft_face);
+  gmti->sweep_translational(refentities, v_move8, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE); 
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
+  DLIList<RefEdge*> edges;
+  body->ref_edges(edges);
+  refentities.clean_out();
+  refentities.append(edges.get());
+  gmti->sweep_translational(refentities, v_move8, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = area = 90.1292 theoretica calculation is 90.5754, error 0.49%
   return CUBIT_SUCCESS;
 }

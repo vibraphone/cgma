@@ -2906,6 +2906,13 @@ CubitStatus GeometryModifyTool::sweep_translational(
   if (!sweep_finish("translational", body_list, result_list, change_newids))
     status = CUBIT_FAILURE;
 
+  body_list.clean_out();
+  for(int i = 0; i < result_list.size(); i++)
+  {
+    Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body ); 
+    if(body)
+      body_list.append(body);
+  }
   CAST_LIST( body_list, ref_ent_list, RefEntity);
   return status;
 }
