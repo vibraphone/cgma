@@ -4010,22 +4010,55 @@ CubitStatus OCCModifyEngine:: sweep_translational(
 //===============================================================================
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 10/08
 //===============================================================================
 CubitStatus OCCModifyEngine:: sweep_perpendicular(
-  DLIList<GeometryEntity*>& /*ref_ent_list*/,
-  DLIList<BodySM*>& /*result_body_list*/,
-  double /*distance*/,
-  double /*draft_angle*/,
-  int /*draft_type*/,
-  bool /*switchside*/,
-  bool /*rigid*/,
+  DLIList<GeometryEntity*>& ref_ent_list,
+  DLIList<BodySM*>& result_body_list,
+  double distance,
+  double draft_angle,
+  int draft_type,
+  bool switchside, //has no effect
+  bool rigid, //has no effect
   Surface* stop_surf,
   BodySM* to_body) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //find the vector perpendicular to the ref_ent normal, and sweep_translate
+  //the 'distance' along this vector
+  DLIList<GeometryEntity*> edge_list;
+  CubitVector vec;
+  for(int i = 0; i < ref_ent_list.size(); i++)
+  {
+     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
+     Surface *face = CAST_TO(ref_ent, Surface);
+     Curve* edge = CAST_TO(ref_ent, Curve);
+     DLIList<GeometryEntity*> face_list;
+     if(face != NULL)
+     {
+        OCCSurface* occ_face = CAST_TO(face, OCCSurface);
+        CubitVector center = occ_face->center_point();
+        CubitVector closest_p, unit_normal;
+        CubitStatus stat = 
+                    occ_face->closest_point(center, &closest_p, &unit_normal);
+        if(stat)
+        {
+          vec = distance * unit_normal;
+          face_list.append(ref_ent);
+          stat = sweep_translational(face_list, result_body_list, vec, 
+                                     draft_angle, draft_type, switchside,
+                                     rigid, stop_surf, to_body);
+       }
+     }
+     else if (edge != NULL)
+     {
+        edge_list.append(ref_ent);
+     }
+  }
+  if(edge_list.size())
+    PRINT_ERROR("Curves cannot be swept perpendicularly, please use the vector sweep.\n");
+
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================

@@ -729,6 +729,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*> refentities;
   refentities.append(sweep_face);
   RefFace* draft_face = gmti->make_RefFace(sweep_face);
+  RefFace* perp_face = gmti->make_RefFace(sweep_face);
   gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
@@ -747,5 +748,12 @@ CubitStatus make_Point()
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
   //d = area = 90.1292 theoretica calculation is 90.5754, error 0.49%
+  refentities.clean_out();
+  refentities.append(perp_face);
+  gmti->sweep_perpendicular(refentities, 10, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
+  
   return CUBIT_SUCCESS;
 }
