@@ -28,6 +28,7 @@
 #include "TDataStd_Shape.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TDF_ChildIterator.hxx"
+#include <vector>
 
 void OCCAttribSet::FindShape(TopoDS_Shape& shape,
                              TDF_Label& aLabel,
@@ -330,15 +331,14 @@ void OCCAttribSet::get_attributes(TDF_Label &lab,
   {
     name_string = attr_name->Get();
     int length = name_string.Length();
-    char temp_type[length];
+    std::vector<char> temp_type(length+1);
     for (int i = 1 ;  i <= length; i++)
     {
       Standard_ExtCharacter c = name_string.Value(i);
       temp_type[i-1] = ToCharacter(c);
     }
-    CubitString temp_string(temp_type);
-    temp_string = temp_string.substr(0, length);
-    string = new CubitString(temp_string);
+    temp_type[length] = '\0';
+    string = new CubitString(&temp_type[0]);
     strings.append(string);
   }
   if(lab.FindAttribute(TDataStd_ExtStringArray::GetID(), attr_string))
@@ -348,15 +348,14 @@ void OCCAttribSet::get_attributes(TDF_Label &lab,
     {
       name_string = attr_string->Value(i);
       int length2 = name_string.Length();
-      char temp_string[length2];
+      std::vector<char> temp_string(length2+1);
       for(int j = 1; j <= length2; j ++)
       {
         Standard_ExtCharacter c = name_string.Value(j);
         temp_string[j-1] = ToCharacter(c);
       }
-      CubitString tmp_string(temp_string);
-      tmp_string = tmp_string.substr(0, length2);
-      string = new CubitString(tmp_string);
+      temp_string[length2] = '\0';
+      string = new CubitString(&temp_string[0]);
       strings.append(string);
     }
   }
