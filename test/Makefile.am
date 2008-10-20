@@ -44,7 +44,7 @@ r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 EXTRA_DIST = 62_shaver1.brep \
              66_shaver3.brep \
              72_shaver6.brep \
-             LeverArm.brep\ 
+             LeverArm.brep \
              aftersub.occ_ref \
              beforesub.occ_ref \
              beforesub2.occ_ref \
