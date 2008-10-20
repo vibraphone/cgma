@@ -777,7 +777,7 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
 {
   topo_edges_loops.clean_out();
   CubitStatus stat = CUBIT_SUCCESS;
-  DLIList<TopoDS_Edge*>* topo_edges[curve_list.size()];
+  std::vector< DLIList<TopoDS_Edge*>* > topo_edges(curve_list.size());
   int size_in = curve_list.size();
   for(int i = 0; i < size_in; i++)
     topo_edges[i] = new DLIList<TopoDS_Edge*>;
@@ -1822,7 +1822,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
        if ((100 - frac_done) < fraction_remaining)
        {
           fraction_remaining = 100 - frac_done;
-          PRINT_INFO("%d\% remaining.\n ", fraction_remaining+1);
+          PRINT_INFO("%d%% remaining.\n ", fraction_remaining+1);
        }
     }
   }
