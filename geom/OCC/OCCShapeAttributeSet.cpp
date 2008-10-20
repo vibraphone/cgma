@@ -416,91 +416,57 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
                                           Standard_IStream&   IS,
                                           TDF_Label& l_attr)
 {
-  char buffer[255];
+  std::string buffer, type, stringdata;
   DLIList<CubitString*> strings;
   DLIList<double> doubles;
   DLIList<int> ints;
   do {
     IS >> buffer; 
-    int i = 0;
-    while(buffer[i] != '*')
-      i++;
-    strings.clean_out(); 
-    char type[i];
-  
-    i = 0;
-    while(buffer[i] != '*')
-    {
-      type[i] = buffer[i];
-      i++;
-    }
-    CubitString string(type);
-    string = string.substr(0, i );
-    CubitString* string_prt = new CubitString(string);
+    std::string::size_type i = buffer.find_first_of("*");
+    type = buffer.substr( 0, i );
+
+    CubitString* string_prt = new CubitString(type.c_str());
     strings.append(string_prt);
 
     IS >> buffer;
     //consider there's only one string in the stringdata field
-    i = 0;
-    while(buffer[i] != '*')
-      i++;
-    char* stringdata = NULL;
+    i = buffer.find_first_of("*");
     if(i > 0)
     {
-      stringdata = new char[i];
-      i = 0;
-      while(buffer[i] != '*')
-      {
-        stringdata[i] = buffer[i];
-        i++;
-      }
-      CubitString string2(stringdata);
-      string2 = string2.substr(0, i );
-      CubitString* string_prt2 = new CubitString(string2);
+      stringdata = buffer.substr( 0, i );
+      CubitString* string_prt2 = new CubitString(stringdata.c_str());
       strings.append(string_prt2);
     }
 
     IS.get(); //' '
-    int  ints_[10];
-    double  doubles_[10]; 
+    int tmp_int;
+    double  tmp_dbl; 
     doubles.clean_out();
     ints.clean_out();
     char s;
     IS.get(s); //either '*' or 'number'
-    i = 0;
     while (s != '\n')
     {
       while(s != '*') // integer attributes
       {
         IS.unget(); 
-        IS >> ints_[i];
-        i++;
+        IS >> tmp_int;
+        ints.append( tmp_int );
         IS.get(); //' '
         IS.get(s); //either '*' or 'number'
       }
 
-      if(i > 0)
-      {
-        for(int j = 0; j < i; j++)
-          ints.append( ints_[j] );
-      }
-      i = 0;
       IS.get(); //' '
       IS.get(s); //either '*' or 'number'
       while(s != '*') // double attributes
       {
         IS.unget();
-        IS >> doubles_[i];
-        i++;
+        IS >> tmp_dbl;
+        doubles.append( tmp_dbl );
         IS.get(); //' '
         IS.get(s); //either '*' or 'number' 
       }
 
-      if(i > 0)
-      {
-        for(int j = 0; j < i; j++)
-          doubles.append(doubles_[j]);
-      }
       IS.get(s); //'\n' 
     }
     
