@@ -11,6 +11,7 @@
 #define MY_INLINE
 #endif
 
+#include "CubitMessage.hpp"
 #include "TDDelaunay.hpp"
 #ifndef SQR
 #define SQR(x) ((x) * (x))
