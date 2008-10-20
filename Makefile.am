@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = foreign
 SUBDIRS = util geom init itaps . test cgm_apps
+# Don't loose the autoconf include path
+ACLOCAL_AMFLAGS = -I m4
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 
