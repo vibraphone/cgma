@@ -127,6 +127,7 @@
 #include "AppUtil.hpp"
 #include "SphereEvaluator.hpp"
 #include "CylinderEvaluator.hpp"
+#include <vector>
 OCCModifyEngine* OCCModifyEngine::instance_ = 0;
 #define DEBUG
 //===============================================================================
@@ -4065,26 +4066,26 @@ CubitStatus OCCModifyEngine:: sweep_perpendicular(
 // Function   : sweep_rotational
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu 
+// Date       : 10/08
 //===============================================================================
 CubitStatus OCCModifyEngine:: sweep_rotational(
-  DLIList<GeometryEntity*>& /*ref_ent_list*/,
-  DLIList<BodySM*>& /*result_body_list*/,
-  const CubitVector& /*point*/,
-  const CubitVector& /*direction*/,
-  double /*angle*/,
-  int /*steps*/,
-  double /*draft_angle*/,
-  int /*draft_type*/,
-  bool /*switchside*/,
-  bool /*make_solid*/,
-  bool /*rigid*/,
-  Surface* stop_surf,
-  BodySM* to_body) const
+  DLIList<GeometryEntity*>& ref_ent_list,
+  DLIList<BodySM*>& result_body_list,
+  const CubitVector& point,
+  const CubitVector& direction,
+  double angle,
+  int steps,  //not used
+  double draft_angle, //not used
+  int draft_type,  //not used
+  bool switchside, //not used
+  bool make_solid,
+  bool rigid,  //not used
+  Surface* stop_surf,  //not used
+  BodySM* to_body ) const  //not used
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+ 
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
