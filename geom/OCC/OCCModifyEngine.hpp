@@ -24,6 +24,7 @@ class CoEdgeSM;
 class ShellSM;
 class OCCBody;
 class OCCSurface;
+class OCCCurve;
 class TopoDS_Shape;
 class TopoDS_Edge;
 class TopoDS_Face;
@@ -701,6 +702,12 @@ private:
                       BRepAlgoAPI_BooleanOperation* op,
                       CubitBoolean keep_old) const;
 
+ CubitStatus get_sweepable_toposhape(OCCSurface*& surface,
+                                     const CubitVector* sweep_v_p,
+                                     TopoDS_Shape*& toposhape)const;
+
+ CubitStatus get_sweepable_toposhape(OCCCurve*& curve,
+                                     TopoDS_Shape*& toposhape)const;
 } ;
 
 #endif

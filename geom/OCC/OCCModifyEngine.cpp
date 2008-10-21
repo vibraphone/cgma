@@ -44,6 +44,7 @@
 #include "BRepExtrema_DistShapeShape.hxx"
 #include "Extrema_ExtPC.hxx"
 #include "BRepPrimAPI_MakePrism.hxx"
+#include "BRepSweep_Revol.hxx"
 #include "BRepPrimAPI_MakeCone.hxx"
 #include "BRepOffsetAPI_ThruSections.hxx"
 #include "BRepPrimAPI_MakeTorus.hxx"
@@ -3829,78 +3830,19 @@ CubitStatus OCCModifyEngine:: sweep_translational(
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
     //Make copy of the surface for later to build solid.
     OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
-    Surface* c_surface = NULL;
     TopoDS_Shape* toposhape = NULL;
     if(surface != NULL)
     {
-      //check if the surface is sheet body, if not, copy it.
-      if(surface->my_body() == NULL) //not a sheet body
-      {
-        c_surface = make_Surface(surface);
-        if (c_surface == NULL)
-        {
-           PRINT_ERROR("Cannot copy surface in sweep_translational.\n");
-           continue;
-        }
-        surface = CAST_TO(c_surface, OCCSurface);
-      
-        CubitVector center = surface->center_point();
-        CubitVector normal;
-        surface->closest_point(center,NULL,&normal);
-        if(normal % sweep_vector > 0)
-        {
-          DLIList<Surface*> surfaces;
-          surfaces.append(surface);
-          flip_normals(surfaces);
-          surface = CAST_TO(surfaces.get(), OCCSurface);
-          ref_ent = (GeometryEntity *)surface;
-        }
-
-        else if(normal % sweep_vector == 0)
-        {
-          PRINT_ERROR("Sweeping direction should not be on the surface.\n");
-          continue;
-        }
-      }
-      else //sheet body
-      {
-        delete surface->my_body();
-        delete surface->my_shell();
-        delete surface->my_lump();
-        surface->set_shell(NULL);
-        surface->set_lump(NULL);
-        surface->set_body(NULL);
-        ref_ent = (GeometryEntity *)surface;
-      }
-      toposhape = OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
-
-      if(!toposhape)
-      {
-        PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
+      CubitStatus stat = get_sweepable_toposhape(surface, &sweep_vector, toposhape);   
+      if(!stat)
         continue;
-      }
     }
-    TopoDS_Wire wire;
     OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
     if(curve != NULL)
     {
-      DLIList<OCCLoop*> loops;
-      loops =  curve->loops();
-      if( loops.size()) //not a free curve
-      {
-        //copy the curve
-        Curve* c_curve = make_Curve(curve);
-        if(c_curve)
-          curve = CAST_TO(c_curve, OCCCurve);
-        else
-        {
-          PRINT_ERROR("Can't copy the curve for sweep.\n");
-          continue;
-        }
-      }
-      TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
-      wire = BRepBuilderAPI_MakeWire(*edge);
-      toposhape = &wire;
+      CubitStatus stat = get_sweepable_toposhape(curve, toposhape);
+      if(!stat)
+        continue;
     }
   
     DLIList<TopologyBridge*> tbs;
@@ -4008,6 +3950,93 @@ CubitStatus OCCModifyEngine:: sweep_translational(
   return CUBIT_SUCCESS; 
 }
 
+CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
+                                              TopoDS_Shape*& toposhape)const
+{
+  DLIList<OCCLoop*> loops;
+  loops =  curve->loops();
+  if( loops.size()) //not a free curve
+  {
+    //copy the curve
+    Curve* c_curve = make_Curve(curve);
+    if(c_curve)
+     curve = CAST_TO(c_curve, OCCCurve);
+    else
+    {
+      PRINT_ERROR("Can't copy the curve for sweep.\n");
+      return CUBIT_FAILURE;
+    }
+  }
+  TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
+  TopoDS_Wire wire = BRepBuilderAPI_MakeWire(*edge);
+  
+  toposhape = new TopoDS_Wire(wire);
+}
+
+CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
+                                                  const CubitVector* sweep_v_p,
+                                                  TopoDS_Shape*& toposhape)const
+{
+  GeometryEntity* ref_ent = NULL;
+  //Make copy of the surface if it's not a sheet surface.
+  Surface* c_surface = NULL;
+  if(surface != NULL)
+  {
+    //check if the surface is sheet body, if not, copy it.
+    if(surface->my_body() == NULL) //not a sheet body
+    {
+      c_surface = make_Surface(surface);
+      if (c_surface == NULL)
+      {
+         PRINT_ERROR("Cannot copy surface in sweep_translational.\n");
+         return CUBIT_FAILURE;
+      }
+      surface = CAST_TO(c_surface, OCCSurface);
+    }
+    else //sheet body
+    {
+      delete surface->my_body();
+      delete surface->my_shell();
+      delete surface->my_lump();
+      surface->set_shell(NULL);
+      surface->set_lump(NULL);
+      surface->set_body(NULL);
+    }
+
+    if(sweep_v_p)
+    {
+      CubitVector center = surface->center_point();
+      CubitVector normal;
+      surface->closest_point(center,NULL,&normal);
+      CubitVector sweep_vector = *sweep_v_p;
+      if(normal % sweep_vector > 0)
+      {
+        DLIList<Surface*> surfaces;
+        surfaces.append(surface);
+        flip_normals(surfaces);
+        surface = CAST_TO(surfaces.get(), OCCSurface);
+        ref_ent = (GeometryEntity *)surface;
+      }
+
+      else if(normal % sweep_vector == 0)
+      {
+        PRINT_ERROR("Sweeping direction should not be on the surface.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+    else
+      ref_ent = (GeometryEntity *)surface;
+
+    toposhape = OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
+
+    if(!toposhape)
+    {
+      PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
+      return CUBIT_FAILURE;
+    }
+  }
+  return CUBIT_SUCCESS;
+}
 //===============================================================================
 // Member Type: PUBLIC
 // Description: 
@@ -4074,7 +4103,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
   DLIList<BodySM*>& result_body_list,
   const CubitVector& point,
   const CubitVector& direction,
-  double angle,
+  double angle, //in radians
   int steps,  //not used
   double draft_angle, //not used
   int draft_type,  //not used
@@ -4084,7 +4113,49 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
   Surface* stop_surf,  //not used
   BodySM* to_body ) const  //not used
 {
- 
+  gp_Dir adir(direction.x(), direction.y(), direction.z()); 
+  gp_Pnt pt = gp_Pnt( point.x(), point.y(), point.z());
+  gp_Ax1 axis = gp_Ax1(pt, adir);
+
+  for (int i = ref_ent_list.size(); i > 0; i--)
+  {
+    GeometryEntity *ref_ent = ref_ent_list.get_and_step();
+    //Make copy of the surface for later to build solid.
+    OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
+    TopoDS_Shape* toposhape = NULL;
+    if(surface != NULL)
+    {
+      CubitStatus stat = get_sweepable_toposhape(surface, (CubitVector*)NULL, toposhape);
+      if(!stat)
+        continue;
+    }
+    OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
+    if(curve != NULL)
+    {
+      CubitStatus stat = get_sweepable_toposhape(curve, toposhape);
+      if(!stat)
+        continue;
+    } 
+    TopoDS_Shape new_shape;
+    DLIList<TopologyBridge*> tbs;
+    if(!make_solid || surface != NULL)
+    {
+      BRepSweep_Revol revol(*toposhape, axis, angle);
+      new_shape = revol.Shape();
+    
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+      assert(tbs.size() == 1);
+
+      BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+      if (bodysm)
+        result_body_list.append(bodysm);
+      continue;
+    }
+
+    else //giving a wire and want a solid
+    {
+    }
+  }
   return CUBIT_SUCCESS;
 }
 
