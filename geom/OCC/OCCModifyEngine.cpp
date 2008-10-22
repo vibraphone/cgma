@@ -3830,7 +3830,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
     //Make copy of the surface for later to build solid.
     OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
-    TopoDS_Shape* toposhape = NULL;
+    TopoDS_Shape toposhape ;
     if(surface != NULL)
     {
       CubitStatus stat = get_sweepable_toposhape(surface, &sweep_vector, toposhape);   
@@ -3849,7 +3849,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
     //create the draft or the sweep
     if(stop_shape == NULL && draft_angle == 0.)
     {
-      BRepSweep_Prism swept(*toposhape, aVec);
+      BRepSweep_Prism swept(toposhape, aVec);
       TopoDS_Shape new_shape = swept.Shape();
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
       assert(tbs.size() == 1);
@@ -3860,7 +3860,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
       continue;
     }
 
-    BRepOffsetAPI_MakeDraft draft(*toposhape, adir, draft_angle);
+    BRepOffsetAPI_MakeDraft draft(toposhape, adir, draft_angle);
     BRepBuilderAPI_TransitionMode Cornertype;
     if(draft_type == 1)
       Cornertype = BRepBuilderAPI_RightCorner;
@@ -3951,7 +3951,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
 }
 
 CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
-                                              TopoDS_Shape*& toposhape)const
+                                              TopoDS_Shape& toposhape)const
 {
   DLIList<OCCLoop*> loops;
   loops =  curve->loops();
@@ -3968,14 +3968,12 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
     }
   }
   TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
-  TopoDS_Wire wire = BRepBuilderAPI_MakeWire(*edge);
-  
-  toposhape = new TopoDS_Wire(wire);
+  toposhape = BRepBuilderAPI_MakeWire(*edge);
 }
 
 CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
                                                   const CubitVector* sweep_v_p,
-                                                  TopoDS_Shape*& toposhape)const
+                                                  TopoDS_Shape& toposhape)const
 {
   GeometryEntity* ref_ent = NULL;
   //Make copy of the surface if it's not a sheet surface.
@@ -3993,16 +3991,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
       }
       surface = CAST_TO(c_surface, OCCSurface);
     }
-    else //sheet body
-    {
-      delete surface->my_body();
-      delete surface->my_shell();
-      delete surface->my_lump();
-      surface->set_shell(NULL);
-      surface->set_lump(NULL);
-      surface->set_body(NULL);
-    }
-
+ 
     if(sweep_v_p)
     {
       CubitVector center = surface->center_point();
@@ -4027,13 +4016,25 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
     else
       ref_ent = (GeometryEntity *)surface;
 
-    toposhape = OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
+    if(surface->my_body() != NULL) //sheet body
+    {
+      delete surface->my_body();
+      delete surface->my_shell();
+      delete surface->my_lump();
+      surface->set_shell(NULL);
+      surface->set_lump(NULL);
+      surface->set_body(NULL);
+    }
 
-    if(!toposhape)
+    TopoDS_Shape* toposhape_prt = 
+          OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
+
+    if(!toposhape_prt)
     {
       PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
       return CUBIT_FAILURE;
     }
+    toposhape = *toposhape_prt;
   }
   return CUBIT_SUCCESS;
 }
@@ -4122,39 +4123,104 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
     //Make copy of the surface for later to build solid.
     OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
-    TopoDS_Shape* toposhape = NULL;
+    OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
+    TopoDS_Shape toposhape ;
     if(surface != NULL)
     {
       CubitStatus stat = get_sweepable_toposhape(surface, (CubitVector*)NULL, toposhape);
       if(!stat)
         continue;
     }
-    OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
-    if(curve != NULL)
+    else if(curve != NULL)
     {
       CubitStatus stat = get_sweepable_toposhape(curve, toposhape);
       if(!stat)
         continue;
     } 
-    TopoDS_Shape new_shape;
-    DLIList<TopologyBridge*> tbs;
-    if(!make_solid || surface != NULL)
+    else
     {
-      BRepSweep_Revol revol(*toposhape, axis, angle);
-      new_shape = revol.Shape();
-    
-      tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
-      assert(tbs.size() == 1);
-
-      BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
-      if (bodysm)
-        result_body_list.append(bodysm);
+      PRINT_ERROR("Only surface or curve can be revolve-swept.\n");
       continue;
     }
-
-    else //giving a wire and want a solid
+    TopoDS_Shape new_shape;
+    DLIList<TopologyBridge*> tbs;
+    if(make_solid && curve != NULL )
+    //giving an open wire and want a solid
     {
+      if(!toposhape.Closed())
+      {
+        //project the start and end points onto the axis
+        gp_Lin line = gp_Lin(axis);
+        TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(line);
+        OCCCurve* acurve = new OCCCurve(&edge);
+        assert(acurve);
+      
+        //get start and end points
+        DLIList<OCCPoint*> point_list;
+        curve->get_points(point_list);
+        assert(2 == point_list.size());
+        CubitVector start = point_list.get_and_step()->coordinates();
+        CubitVector end = point_list.get()->coordinates();
+        CubitBoolean start_closed = CUBIT_FALSE;
+        CubitBoolean end_closed = CUBIT_FALSE;
+        if(acurve->point_containment(start) != CUBIT_PNT_OFF)
+          start_closed = CUBIT_TRUE;
+        if(acurve->point_containment(end) != CUBIT_PNT_OFF)
+          end_closed = CUBIT_TRUE; 
+        CubitVector start_proj, end_proj;
+        TopoDS_Edge edge1, edge2;
+        BRepBuilderAPI_MakeWire m_wire;
+        if(!start_closed)
+        {
+          acurve->closest_point(start, start_proj);
+          gp_Pnt pt1 = gp_Pnt( start.x(), start.y(), start.z()); 
+          gp_Pnt pt2 = gp_Pnt( start_proj.x(), start_proj.y(), start_proj.z());
+          edge1 = BRepBuilderAPI_MakeEdge(pt1, pt2);
+          m_wire.Add(edge1);
+          m_wire.Add(TopoDS::Wire(toposhape));
+        }
+        else
+        {
+          m_wire.Add(TopoDS::Wire(toposhape));
+          start_proj = start;
+        }
+ 
+        if(!end_closed)
+        {
+          acurve->closest_point(end,end_proj);
+          gp_Pnt pt1 = gp_Pnt( end.x(), end.y(), end.z());
+          gp_Pnt pt2 = gp_Pnt( end_proj.x(), end_proj.y(), end_proj.z());
+          edge2 = BRepBuilderAPI_MakeEdge(pt1, pt2);
+          m_wire.Add(edge2);
+        }
+      
+        else
+          end_proj = end;
+        
+        gp_Pnt pt1 = gp_Pnt( end_proj.x(), end_proj.y(), end_proj.z());
+        gp_Pnt pt2 = gp_Pnt( start_proj.x(), start_proj.y(), start_proj.z());
+        TopoDS_Edge edge3 = BRepBuilderAPI_MakeEdge(pt1, pt2);
+        m_wire.Add(edge3);
+      
+        TopoDS_Wire wire = m_wire.Wire();
+        toposhape = BRepBuilderAPI_MakeFace(wire);
+      }
+      else //closed
+      {
+        TopoDS_Wire wire = TopoDS::Wire(toposhape);
+        toposhape = BRepBuilderAPI_MakeFace(wire);
+      }
     }
+    BRepSweep_Revol revol(toposhape, axis, angle);
+    new_shape = revol.Shape();
+
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+    assert(tbs.size() == 1);
+
+    BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+    if (bodysm)
+      result_body_list.append(bodysm);
+    continue;
   }
   return CUBIT_SUCCESS;
 }

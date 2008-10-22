@@ -704,10 +704,10 @@ private:
 
  CubitStatus get_sweepable_toposhape(OCCSurface*& surface,
                                      const CubitVector* sweep_v_p,
-                                     TopoDS_Shape*& toposhape)const;
+                                     TopoDS_Shape& toposhape)const;
 
  CubitStatus get_sweepable_toposhape(OCCCurve*& curve,
-                                     TopoDS_Shape*& toposhape)const;
+                                     TopoDS_Shape& toposhape)const;
 } ;
 
 #endif
