@@ -3969,6 +3969,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
   }
   TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
   toposhape = BRepBuilderAPI_MakeWire(*edge);
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
@@ -4118,10 +4119,18 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
   gp_Pnt pt = gp_Pnt( point.x(), point.y(), point.z());
   gp_Ax1 axis = gp_Ax1(pt, adir);
 
+  gp_Lin line = gp_Lin(axis);
+  TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(line);
+  OCCCurve* acurve = new OCCCurve(&edge);
+  assert(acurve);
+
+  CubitVector start;
+  CubitVector end;
+
   for (int i = ref_ent_list.size(); i > 0; i--)
   {
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
-    //Make copy of the surface for later to build solid.
+    //Make copy of the surface or curve for later to build solid.
     OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
     OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
     TopoDS_Shape toposhape ;
@@ -4130,12 +4139,64 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       CubitStatus stat = get_sweepable_toposhape(surface, (CubitVector*)NULL, toposhape);
       if(!stat)
         continue;
+      //only non-intersecting of surface and axis can be swept.
+      DLIList<CubitVector*> intersect_pts;
+      OCCQueryEngine::instance()->get_intersections(acurve, surface,
+                                    intersect_pts, CUBIT_TRUE);
+      if(intersect_pts.size() > 0)
+      { 
+        PRINT_ERROR("Only surfaces with no intersection point with the axis can be revolve-swept.\n");
+        continue;
+      } 
     }
     else if(curve != NULL)
     {
       CubitStatus stat = get_sweepable_toposhape(curve, toposhape);
       if(!stat)
         continue;
+      //closed curve can't intersect with the axis, while open curve can only
+      //intersect the axis at the end points. 
+      //only curve not intersecting with axis in curve's middle locations
+      //can be revolved
+      DLIList<CubitVector*> intersect_pts;
+      OCCQueryEngine::instance()->get_intersections(curve, acurve,
+                                  intersect_pts, CUBIT_TRUE, CUBIT_TRUE);
+      if(!toposhape.Closed())
+      {
+        //get start and end points
+        DLIList<OCCPoint*> point_list;
+        curve->get_points(point_list);
+        assert(2 == point_list.size());
+        start = point_list.get_and_step()->coordinates();
+        end = point_list.get()->coordinates();
+
+        if(intersect_pts.size() > 0)
+        {
+          CubitBoolean non_int = CUBIT_FALSE;
+          double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+          for(int i = 0; i < intersect_pts.size(); i++)
+          {
+             CubitVector prt = *(intersect_pts.get_and_step());
+             if(prt.distance_between(start) > tol &&
+                prt.distance_between(end) > tol)
+             {
+                non_int = CUBIT_TRUE;
+                PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
+                break;
+              }
+          }
+          if(non_int)
+            continue;
+        }
+      }
+      else
+      {
+        if(intersect_pts.size() > 0)
+        {
+          PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
+          continue;
+        }  
+      }
     } 
     else
     {
@@ -4150,17 +4211,6 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       if(!toposhape.Closed())
       {
         //project the start and end points onto the axis
-        gp_Lin line = gp_Lin(axis);
-        TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(line);
-        OCCCurve* acurve = new OCCCurve(&edge);
-        assert(acurve);
-      
-        //get start and end points
-        DLIList<OCCPoint*> point_list;
-        curve->get_points(point_list);
-        assert(2 == point_list.size());
-        CubitVector start = point_list.get_and_step()->coordinates();
-        CubitVector end = point_list.get()->coordinates();
         CubitBoolean start_closed = CUBIT_FALSE;
         CubitBoolean end_closed = CUBIT_FALSE;
         if(acurve->point_containment(start) != CUBIT_PNT_OFF)
@@ -4199,7 +4249,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
         
         gp_Pnt pt1 = gp_Pnt( end_proj.x(), end_proj.y(), end_proj.z());
         gp_Pnt pt2 = gp_Pnt( start_proj.x(), start_proj.y(), start_proj.z());
-        TopoDS_Edge edge3 = BRepBuilderAPI_MakeEdge(pt1, pt2);
+        TopoDS_Edge edge3 = BRepBuilderAPI_MakeEdge(pt2, pt1);
         m_wire.Add(edge3);
       
         TopoDS_Wire wire = m_wire.Wire();

@@ -730,6 +730,8 @@ CubitStatus make_Point()
   refentities.append(sweep_face);
   RefFace* draft_face = gmti->make_RefFace(sweep_face);
   RefFace* perp_face = gmti->make_RefFace(sweep_face);
+  RefFace* rotate_face = gmti->make_RefFace(sweep_face);
+  RefFace* rotate_face2 = gmti->make_RefFace(sweep_face);
   gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
@@ -755,5 +757,75 @@ CubitStatus make_Point()
   d = body->measure();
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
   
+  //Testing for sweep_rotational function
+  //1. Negative testing: surface rotates along an intersection axis, fails.
+  refentities.clean_out();
+  refentities.append(rotate_face); 
+  DLIList<RefEdge*> rotate_edges;
+  rotate_face->ref_edges(rotate_edges);
+  CubitVector sweep_axis(1,0,0);   
+  CubitVector point(0, 2, 15);
+  double angle = 1.57;
+  gmti->sweep_rotational(refentities, center, sweep_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+
+  //2. surface rotates along a non-intersection axis
+  refentities.append(rotate_face);
+  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 9.8646
+
+  //3. closed curve rotates along an intersecting axis, fails
+  refentities.clean_out();
+  refentities.append(rotate_edges.get());
+  gmti->sweep_rotational(refentities, center, sweep_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE); 
+
+  //4. closed curve rotates along a non-intersecting axis with make_solid
+  //   option set to be true.
+  refentities.append(rotate_edges.get());
+  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 9.8646
+
+  //5. closed curve rotates along a non-intersecting axis with make_solid
+  //   option set to be false.
+  refentities.clean_out();
+  refentities.append(rotate_edges.get());
+  gmti->sweep_rotational(refentities, point, sweep_axis, -angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 19.7292
+
+  //6. open curve rotates along an intersecting axis with make_solid
+  //   option set to be true. Failed
+  CubitVector pt1(0,1,15);
+  CubitVector pt2(0,-1,15);
+  CubitVector pt3(-1,0,15);
+  RefVertex* vt1 = gmti->make_RefVertex(pt1);
+  RefVertex* vt2 = gmti->make_RefVertex(pt2);
+  RefVertex* vt3 = gmti->make_RefVertex(pt3);
+  RefEdge* edge1 = gmti->make_RefEdge(vt1, vt2, rotate_face, vt3);
+  CubitVector apoint(0,-0.5,15);
+  refentities.clean_out();
+  refentities.append(edge1);
+  gmti->sweep_rotational(refentities, apoint, sweep_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+
+  //7. open curve rotates along an intersecting axis at end points with 
+  //   make_solid option set to be true.
+  refentities.append(edge1);
+  CubitVector rotate_axis(0, 1, 0);
+  //  gmti->sweep_rotational(refentities, center, rotate_axis, angle, 0, 0, 1,
+                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+    //body = CAST_TO(refentities.get(), Body);
+    //d = body->measure();
+  //d = 19.7292
+
   return CUBIT_SUCCESS;
 }
