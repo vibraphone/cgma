@@ -4167,13 +4167,15 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
         DLIList<OCCPoint*> point_list;
         curve->get_points(point_list);
         assert(2 == point_list.size());
+        GeometryType type = curve->geometry_type();
         start = point_list.get_and_step()->coordinates();
         end = point_list.get()->coordinates();
-
+        CubitBoolean start_int = CUBIT_FALSE;
+        CubitBoolean end_int = CUBIT_FALSE;
         if(intersect_pts.size() > 0)
         {
-          CubitBoolean non_int = CUBIT_FALSE;
           double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+          CubitBoolean non_int = CUBIT_FALSE;
           for(int i = 0; i < intersect_pts.size(); i++)
           {
              CubitVector prt = *(intersect_pts.get_and_step());
@@ -4183,10 +4185,19 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
                 non_int = CUBIT_TRUE;
                 PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
                 break;
-              }
+             }
+             else if(prt.distance_between(start) <= tol)
+                start_int = CUBIT_TRUE;
+             else if(prt.distance_between(end) <= tol)
+                end_int = CUBIT_TRUE;
           }
           if(non_int)
             continue;
+          if(start_int && end_int && type == STRAIGHT_CURVE_TYPE)
+          {
+            PRINT_ERROR("Sweep along curve itself is not allowed.\n");
+            continue;
+          } 
         }
       }
       else
