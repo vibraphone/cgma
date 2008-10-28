@@ -53,7 +53,7 @@ namespace CubitDynamicLoader
   // handle to check for load failures
   extern CUBIT_UTIL_EXPORT LibraryHandle InvalidLibraryHandle;
 
-};
+}
 
 #endif
 
