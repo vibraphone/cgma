@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = util geom init itaps . test cgm_apps
+SUBDIRS = util geom init . itaps test cgm_apps
 # Don't loose the autoconf include path
 ACLOCAL_AMFLAGS = -I m4
 
@@ -59,7 +59,6 @@ endif
 
 
 libcgm_la_LIBADD = init/libcgma_init.la \
-                   itaps/libiGeom.la \
                    $(CORE_CGM_LIBS) \
                    $(EXT_LINK_FLAGS) \
                    $(EXT_LIBS)
