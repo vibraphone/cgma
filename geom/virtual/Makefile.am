@@ -2,7 +2,7 @@
 AUTOMAKE_OPTIONS = foreign
 
 # Override default defines with the ones we want from the configure script
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
+DEFS = $(TEMPLATE_DEFS_INCLUDED)
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/facet \
