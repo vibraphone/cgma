@@ -4,7 +4,7 @@ IGEOM_FCDEFS = @DEFS@
 IGEOM_CXX_LDFLAGS = @CGM_CXX_LINKFLAGS@
 IGEOM_CXX_LIBS = @CGM_CXX_LIBS@
 
-include @abs_builddir@/cgm.make
+include @abs_builddir@/../cgm.make
 IGEOM_LDFLAGS  = $(CGM_LDFLAGS) $(IGEOM_CXX_LDFLAGS)
 IGEOM_LTFLAGS  = $(CGM_LTFLAGS)
 IGEOM_LIBS     = $(CGM_LIBS) $(IGEOM_CXX_LIBS)
