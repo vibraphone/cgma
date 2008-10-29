@@ -18,6 +18,7 @@
 #include "iGeom.h"
 #include <iostream>
 #include <set>
+#include <algorithm>
 #include <vector>
 #include <iterator>
 #include <algorithm>
@@ -433,9 +434,9 @@ bool tag_get_set_test(iGeom_Instance geom)
 bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
 {
   int num_type = 4;
+  iBase_EntitySetHandle ges_array[4];
+  int number_array[4];
   int num_all_gentities_super = 0;
-  iBase_EntitySetHandle ges_array[num_type];
-  int number_array[num_type];
   int ent_type = iBase_VERTEX;
 
   int err;

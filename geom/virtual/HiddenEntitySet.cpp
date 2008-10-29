@@ -29,6 +29,8 @@
 #include "CompositeCoEdge.hpp"
 #include "CompositeSurface.hpp"
 
+#include <algorithm>
+
 
 HiddenEntitySet::~HiddenEntitySet()
 {

@@ -26,6 +26,15 @@ fi
 
 
 ################################################################################
+#                              Extract libtool config
+################################################################################
+ITAPS_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
+ITAPS_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
+AC_SUBST(CGM_CXX_LINKFLAGS)
+AC_SUBST(CGM_CXX_LIBS)
+
+
+################################################################################
 #                              MPI OPTIONS
 ################################################################################
 
@@ -391,6 +400,7 @@ AC_CONFIG_FILES(Makefile
            init/Makefile
            cgm.make
            itaps/Makefile
+           itaps/iGeom-Defs.inc
 	   itaps/SIDL/Makefile
            test/Makefile
            cgm_apps/Makefile

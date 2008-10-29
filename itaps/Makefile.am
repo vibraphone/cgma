@@ -40,7 +40,9 @@ libiGeom_la_include_HEADERS = \
 	iBase.h \
 	iGeom.h \
 	iBase_FCDefs.h \
-	iGeom_protos.h 
+	iGeom_protos.h \
+	iBase_f.h \
+	iGeom_f.h
 
 TESTS = testgeom
 
@@ -63,14 +65,14 @@ cfg_DATA = iGeom-Defs.inc
 # that the correct values are set (e.g. if someone does 
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
-iGeom-Defs.inc: Makefile.am
-	@echo "include $(cfgdir)/cgm.make"         > $@
-	@echo 'iGeom_LDFLAGS  = $$(CGM_LDFLAGS)'  >> $@
-	@echo 'iGeom_LTFLAGS  = $$(CGM_LTFLAGS)'  >> $@
-	@echo 'iGeom_LIBS     = $$(CGM_LIBS)'     >> $@
-	@echo 'iGeom_DEFINES  = $$(CGM_DEFINES)'  >> $@
-	@echo 'iGeom_INCLUDES = $$(CGM_INCLUDES)' >> $@
-	@echo 'iGeom_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $@
+install-data-hook:
+	echo "include $(libdir)/cgm.make"        >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_LDFLAGS  = $$(CGM_LDFLAGS) $$(IGEOM_CXX_LDFLAGS)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_LTFLAGS  = $$(CGM_LTFLAGS)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_LIBS     = $$(CGM_LIBS) $$(IGEOM_CXX_LIBS)'     >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_DEFINES  = $$(CGM_DEFINES)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_INCLUDES = $$(CGM_INCLUDES)' >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo 'IGEOM_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 
 EXTRA_DIST = testgeom.sat
 
