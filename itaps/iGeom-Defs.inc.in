@@ -1,13 +1,19 @@
 IGEOM_FC = @FC@
 IGEOM_FCFLAGS = @FCFLAGS@
 IGEOM_FCDEFS = @DEFS@
-IGEOM_CXX_LDFLAGS = @CGM_CXX_LINKFLAGS@
-IGEOM_CXX_LIBS = @CGM_CXX_LIBS@
 
-include @abs_builddir@/../cgm.make
-IGEOM_LDFLAGS  = $(CGM_LDFLAGS) $(IGEOM_CXX_LDFLAGS)
-IGEOM_LTFLAGS  = $(CGM_LTFLAGS)
-IGEOM_LIBS     = $(CGM_LIBS) $(IGEOM_CXX_LIBS)
-IGEOM_DEFINES  = $(CGM_DEFINES)
-IGEOM_INCLUDES = $(CGM_INCLUDES)
-IGEOM_CPPFLAGS = $(CGM_CPPFLAGS)
+# These should never be required for the iGeom interface
+IGEOM_INCLUDES = -I@abs_srcdir@ -I@abs_builddir@
+IGEOM_DEFINES =
+IGEOM_CPPFLAGS = $(IGEOM_DEFINES) $(IGEOM_INCLUDES)
+
+# The useful flags we are providing
+IGEOM_LDFLAGS = $(IGEOM_CXX_LDFLAGS) @CGM_EXT_LDFLAGS@ @CGM_CXX_LINKFLAGS@
+IGEOM_LTFLAGS = $(IGEOM_CXX_LTFLAGS) @CGM_EXT_LTFLAGS@ 
+IGEOM_LIBS    = -liGeom -lcgm @CGM_EXT_LIBS@ @CGM_CXX_LIBS@
+
+# These are overridden after this file in installed
+IGEOM_CXX_LDFLAGS = -L@abs_top_builddir@/.libs -L@abs_builddir@/.libs
+IGEOM_CXX_LTFLAGS = -R@abs_top_builddir@/.libs -R@abs_builddir@/.libs
+
+# Below here goes the overrides that happen during installation

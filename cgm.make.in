@@ -11,24 +11,33 @@
 #
 #==================================================================
 
-# The following variables are overridden when this file is installed
-CGM_EXT_INCLUDE = 
-CGM_EXT_LIBS    = 
-CGM_EXT_LDFLAGS = 
-CGM_EXT_LTFLAGS = 
-CGM_INCLUDEDIR  = @abs_srcdir@
-CGM_LIBDIR      = @abs_builddir@/.libs
+# The following are initialized here for a non-installed CGM.
+# These values will be overridden when this file is installed.
+CGM_INT_LDFLAGS = -L@abs_top_builddir@/.libs
+CGM_INT_LTFLAGS = -R@abs_top_builddir@/.libs
+CGM_INT_INCLUDE = -I@abs_top_srcdir@ \
+                  -I@abs_top_srcdir@/util \
+                  -I@abs_top_builddir@/util \
+                  -I@abs_top_srcdir@/init \
+                  -I@abs_top_builddir@/init \
+                  -I@abs_top_srcdir@/geom \
+                  -I@abs_top_builddir@/geom \
+                  -I@abs_top_srcdir@/geom/ACIS \
+                  -I@abs_top_srcdir@/geom/virtual \
+                  -I@abs_top_srcdir@/geom/facet \
+                  -I@abs_top_srcdir@/geom/facetbool \
+                  -I@abs_top_srcdir@/geom/Cholla 
 
 # Pre-processor flags
 CGM_DEFINES = @CANT_USE_STD@ @CANT_USE_STD_IO@ @TEMPLATE_DEFS_INCLUDED@
-CGM_INCLUDES = $(CGM_EXT_INCLUDE) -I$(CGM_INCLUDEDIR)
+CGM_INCLUDES = @CGM_EXT_INCLUDE@ $(CGM_INT_INCLUDE)
 CGM_CPPFLAGS = $(CGM_DEFINES) $(CGM_INCLUDES)
 
 # Link flags
-CGM_LDFLAGS = -L$(CGM_LIBDIR) $(CGM_EXT_LDFLAGS)
-CGM_LTFLAGS = -R$(CGM_LIBDIR) $(CGM_EXT_LTFLAGS)
-CGM_LIBS = -lcgm $(CGM_EXT_LIBS)
-CGM_LIBS_LINK = $(CGM_LDFLAGS) $(CGM_LIBS)
+CGM_LIBS = -lcgm @CGM_EXT_LIBS@
+CGM_LDFLAGS = $(CGM_INT_LDFLAGS) @CGM_EXT_LDFLAGS@
+CGM_LTFLAGS = $(CGM_INT_LTFLAGS) @CGM_EXT_LTFLAGS@
+CGM_LIBS_LINK = $(CGM_LTFLAGS) $(CGM_LIBS)
 
 # Build-generated values appended after this line
 

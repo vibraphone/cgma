@@ -60,6 +60,14 @@ AC_SUBST(CANT_USE_STD_IO)
 AC_SUBST(TEMPLATE_DEFS_INCLUDED)
 AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
 
+################################################################################
+#                           Define variables for linking
+################################################################################
+AC_SUBST(CGM_EXT_LIBS)
+AC_SUBST(CGM_EXT_LDFLAGS)
+AC_SUBST(CGM_EXT_LTFLAGS)
+AC_SUBST(CGM_EXT_INCLUDE)
+
 
 ################################################################################
 #                         Use Cubit shared libraries
@@ -123,9 +131,9 @@ EOCUBITCT
   if test "x$CUBIT_LIBS" = "xno"; then
     AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
   fi
-  CGM_LIBS_LINK='$(CUBIT_LDFLAGS) $(CUBIT_LIBS)'
-  CGM_LIBS_FILES='$(CUBIT_FILE)'
-  CGM_LIBS_LTFLAGS="$CGM_LIBS_LTFLAGS $CUBIT_LTFLAGS"
+  CGM_EXT_LIBS="$CGM_EXT_LIBS $CUBIT_LIBS"
+  CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $CUBIT_LDFLAGS"
+  CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $CUBIT_LTFLAGS"
   CUBIT_CGM="-DCUBIT_CGM"
 dnl  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
   HAVE_ACIS_DEF=-DHAVE_ACIS
@@ -137,9 +145,6 @@ AC_SUBST(CUBIT_LTFLAGS)
 AC_SUBST(CUBIT_LIBS)
 AC_SUBST(CUBIT_FILE)
 AC_SUBST(CUBIT_CGM)
-AC_SUBST(CGM_LIBS_LINK)
-AC_SUBST(CGM_LIBS_FILES)
-AC_SUBST(CGM_LIBS_LTFLAGS)
 
 AM_CONDITIONAL(BUILD_CGM,[test x"$CUBIT_DIR" == x"no"])
 
@@ -200,7 +205,9 @@ if test "x$ACIS_DIR" != "xno"; then
   ACIS_HEALER="-DACIS_HEALER"
   ACIS_INCLUDES="-I$ACIS_DIR/include"
   ACIS_LTFLAGS="-R$ACIS_LIB_DIR"
-  CGM_LIBS_LTFLAGS="$CGM_LIBS_LTFLAGS $ACIS_LTFLAGS"
+  CGM_EXT_LIBS="$CGM_EXT_LIBS $ACIS_LIBS"
+  CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $ACIS_LINK_FLAGS"
+  CGM_EXT_INCLUDE="$CGM_EXT_INCLUDE $ACIS_INCLUDES"
   if test "x$GXX" = "xyes"; then
     CPPFLAGS="$CPPFLAGS -isystem $ACIS_DIR/include"
   fi
@@ -366,6 +373,12 @@ if test "x$occ_DIR" != "xno"; then
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
   HAVE_OCC_DEF="-DHAVE_OCC"
+  
+  # Append to CGM global values
+  CGM_EXT_LIBS="$CGM_EXT_LIBS $OCC_LIBS"
+  CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $OCC_LIB_FLAG"
+  CGM_EXT_INCLUDE="$CGM_EXT_INCLUDE $OCC_INC_FLAG"
+  # NOTE: No CGM_EXT_LTFLAGS because OCC libs are .la files (not needed)
 fi
 
 # Export these variables as variables in Makefiles

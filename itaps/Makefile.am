@@ -59,14 +59,11 @@ cfg_DATA = iGeom-Defs.inc
 # that the correct values are set (e.g. if someone does 
 # 'make prefix=/foo install', we don't know the correct install
 # directory until we're doing the install.
+CFG_FILE = $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 install-data-hook:
-	echo "include $(libdir)/cgm.make"        >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_LDFLAGS  = $$(CGM_LDFLAGS) $$(IGEOM_CXX_LDFLAGS)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_LTFLAGS  = $$(CGM_LTFLAGS)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_LIBS     = $$(CGM_LIBS) $$(IGEOM_CXX_LIBS)'     >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_DEFINES  = $$(CGM_DEFINES)'  >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_INCLUDES = $$(CGM_INCLUDES)' >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
-	echo 'IGEOM_CPPFLAGS = $$(CGM_CPPFLAGS)' >> $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
+	echo "IGEOM_CXX_LDFLAGS = -L${libdir}" >> $(CFG_FILE)
+	echo "IGEOM_CXX_LTFLAGS = -R${libdir}" >> $(CFG_FILE)
+	echo "IGEOM_INCLUDES = -I${includedir}" >> $(CFG_FILE)
 
 EXTRA_DIST = testgeom.sat
 

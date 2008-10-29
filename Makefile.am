@@ -12,10 +12,6 @@ cfg_DATA = cgm.make
 
 lib_LTLIBRARIES = libcgm.la
 
-EXT_LINK_FLAGS =
-EXT_LIBTOOL_FLAGS = 
-EXT_LIBS = 
-EXT_INCLUDE = 
 if build_parallel
   CGM_ll_LIB = geom/parallel/libcubit_parallel.la
 else
@@ -23,19 +19,12 @@ else
 endif
 if build_ACIS
   CGM_ACIS_LIB = $(CGM_ll_LIB) geom/ACIS/libcubit_ACIS.la 
-  EXT_LINK_FLAGS += -L$(ACIS_LIB_DIR)
-  EXT_LIBTOOL_FLAGS += -R$(ACIS_LIB_DIR)
-  EXT_LIBS += $(ACIS_LIBS)
-  EXT_INCLUDE += $(ACIS_INCLUDES) $(ACIS_DEFINES)
+  
 else
   CGM_ACIS_LIB = 
 endif
 if WITH_OCC
   CGM_OCC_LIB = geom/OCC/libcubit_OCC.la
-  EXT_LINK_FLAGS += -L$(OCC_LIB_DIR)
-  EXT_LIBTOOL_FLAGS += -R$(OCC_LIB_DIR)
-  EXT_LIBS += $(OCC_LIBS)
-  EXT_INCLUDE += $(OCC_INC_FLAG)
 else
   CGM_OCC_LIB =
 endif
@@ -51,17 +40,12 @@ if BUILD_CGM
                   geom/libcubit_geom.la \
                   util/libcubit_util.la
 else
-  CORE_CGM_LIBS = $(CUBIT_LTFLAGS) $(CUBIT_LDFLAGS) $(CUBIT_LIBS)
-  EXT_LINK_FLAGS += $(CUBIT_LDFLAGS)
-  EXT_LIBTOOL_FLAGS += $(CUBIT_LTFLAGS)
+  CORE_CGM_LIBS = 
 endif
 
 
 
-libcgm_la_LIBADD = init/libcgma_init.la \
-                   $(CORE_CGM_LIBS) \
-                   $(EXT_LINK_FLAGS) \
-                   $(EXT_LIBS)
+libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LINK)
 
 libcgm_la_SOURCES = 
 
@@ -73,9 +57,6 @@ libcgm_la_SOURCES =
 # directory until we're doing the install.
 CFG_FILE = $(DESTDIR)$(cfgdir)/cgm.make
 install-data-hook:
-	echo "CGM_EXT_INCLUDE = $(EXT_INCLUDE)"       >> $(CFG_FILE)
-	echo "CGM_EXT_LIBS    = $(EXT_LIBS)"          >> $(CFG_FILE)
-	echo "CGM_EXT_LDFLAGS = $(EXT_LINK_FLAGS)"    >> $(CFG_FILE)
-	echo "CGM_EXT_LTFLAGS = $(EXT_LIBTOOL_FLAGS)" >> $(CFG_FILE)
-	echo "CGM_LIBDIR      = $(libdir)"            >> $(CFG_FILE)
-	echo "CGM_INCLUDEDIR  = $(includedir)"        >> $(CFG_FILE)
+	echo "CGM_INT_INCLUDE = -I$(includedir)"  >> $(CFG_FILE)
+	echo "CGM_INT_LDFLAGS = -L$(libdir)"      >> $(CFG_FILE)
+	echo "CGM_INT_LTFLAGS = -R$(libdir)"      >> $(CFG_FILE)
