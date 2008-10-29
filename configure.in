@@ -201,7 +201,7 @@ if test "x$ACIS_DIR" != "xno"; then
   fi
   CGM_ACIS_LIBS='-lcubit_ACIS'
   ACIS_LIBS="$ACIS_LIBS $ACIS_XLIBS $ACIS_BASE_LIBS"
-  ACIS_LINK_FLAGS='-L$(ACIS_LIB_DIR)'
+  ACIS_LINK_FLAGS="-L$ACIS_LIB_DIR"
   ACIS_HEALER="-DACIS_HEALER"
   ACIS_INCLUDES="-I$ACIS_DIR/include"
   ACIS_LTFLAGS="-R$ACIS_LIB_DIR"
@@ -325,7 +325,7 @@ if test "x$occ_DIR" != "xno"; then
       AC_MSG_ERROR([Count not find lib dir in: $occ_DIR])
     else
       OCC_LIB_DIR="$occ_DIR/$ac_cv_occ_lib_dir"
-      OCC_LIB_FLAG='-L$(OCC_LIB_DIR)'
+      OCC_LIB_FLAG="-L$OCC_LIB_DIR"
     fi
   fi
 
