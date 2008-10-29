@@ -47,6 +47,8 @@
 #include "BRepSweep_Revol.hxx"
 #include "BRepPrimAPI_MakeCone.hxx"
 #include "BRepOffsetAPI_ThruSections.hxx"
+#include "BRepLib_FuseEdges.hxx"
+#include "BRepOffsetAPI_MakePipe.hxx"
 #include "BRepPrimAPI_MakeTorus.hxx"
 #include "BRepPrimAPI_MakeCylinder.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
@@ -4289,22 +4291,112 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
 //===============================================================================
 // Function   : sweep_along_curve
 // Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Description: The ref_edge_list must provide a list of curves which are
+//              connected, and making G1 continuous wire.
+// Author     : Jane Hu
+// Date       : 10/08
 //===============================================================================
 CubitStatus OCCModifyEngine::sweep_along_curve(
-  DLIList<GeometryEntity*>& /*ref_ent_list*/,
-  DLIList<BodySM*>& /*result_body_list*/,
-  DLIList<Curve*>& /*ref_edge_list*/,
-  double /*draft_angle*/,
-  int /*draft_type*/,
-  bool /*rigid*/,
-  Surface* stop_surf,
-  BodySM* to_body) const
+  DLIList<GeometryEntity*>& ref_ent_list,
+  DLIList<BodySM*>& result_body_list,
+  DLIList<Curve*>& ref_edge_list,
+  double draft_angle, //only used for straight curve case
+  int draft_type, //only used for straight curve case
+  bool rigid, //not used
+  Surface* stop_surf, //not used
+  BodySM* to_body) const //not used
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //make wire out of ref_edge_list
+  BRepBuilderAPI_MakeWire awire;
+  TopTools_ListOfShape L;
+  OCCCurve* occ_curve = NULL;
+  GeometryType type;
+  int num_curve = 0;
+  for(int i = 0; i < ref_edge_list.size(); i++)
+  {
+    Curve* curve = ref_edge_list.get_and_step();
+    occ_curve = CAST_TO(curve, OCCCurve);
+    if(!occ_curve)
+      continue;
+    TopoDS_Edge* topoedge = occ_curve->get_TopoDS_Edge( );
+    BRepBuilderAPI_Copy api_copy(*topoedge);
+    TopoDS_Shape newShape = api_copy.ModifiedShape(*topoedge);
+    L.Append(newShape);
+    type = occ_curve->geometry_type();
+    num_curve++;
+  }
+  if(L.IsEmpty())
+  {
+    PRINT_ERROR("There's no valid sweeping path.\n");
+    return CUBIT_FAILURE;
+  }
+  
+  if(num_curve == 1 && type == STRAIGHT_CURVE_TYPE && draft_angle != 0.0)
+  {
+    DLIList<OCCPoint*> point_list;
+    occ_curve->get_points(point_list);
+    CubitVector v1 = point_list.get_and_step()->coordinates();
+    CubitVector v2 = point_list.get()->coordinates();
+    CubitVector sweep_vector = v2-v1;
+    return sweep_translational(ref_ent_list,result_body_list,sweep_vector,
+                               draft_angle, draft_type, CUBIT_FALSE, 
+                               rigid, stop_surf, to_body); 
+  }
+  awire.Add(L);
+  TopoDS_Wire wire;
+  wire = awire.Wire();
+
+  BRepTools_WireExplorer it(wire);
+  int num_edges = 0;
+  for(it; it.More(); it.Next())
+    num_edges++; 
+  
+  BRepLib_FuseEdges fuser(wire);
+  fuser.SetConcatBSpl();
+  fuser.Perform();
+  int removed_vertices = fuser.NbVertices();
+  if(removed_vertices < num_edges - 1)
+  {
+    PRINT_ERROR("The curve_list provided has to form a G1 continuous spline.\n");
+    return CUBIT_FAILURE;
+  }
+  TopoDS_Shape  spline = fuser.Shape();
+  wire = TopoDS::Wire(spline);
+
+  DLIList<TopologyBridge*> tbs;
+  for (int i = ref_ent_list.size(); i > 0; i--)
+  {
+    GeometryEntity *ref_ent = ref_ent_list.get_and_step();
+    //Make copy of the surface or curve for later to build solid.
+    OCCSurface* surface = CAST_TO(ref_ent, OCCSurface);
+    OCCCurve* curve = CAST_TO(ref_ent, OCCCurve);
+    TopoDS_Shape toposhape ;
+    if(surface != NULL)
+    {
+      CubitStatus stat = get_sweepable_toposhape(surface, (CubitVector*)NULL, toposhape);
+      if(!stat)
+        continue;
+    } 
+    else if(curve != NULL)
+    {
+      CubitStatus stat = get_sweepable_toposhape(curve, toposhape);
+      if(!stat)
+        continue;
+    }
+
+    //sweep along the wire
+    BRepOffsetAPI_MakePipe maker(wire, toposhape);
+    TopoDS_Shape newShape = maker.Shape();
+    
+    tbs += OCCQueryEngine::instance()->populate_topology_bridge(newShape);
+    assert(tbs.size() == 1);
+
+    BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+    if (bodysm)
+      result_body_list.append(bodysm);
+    continue;
+  }
+  return CUBIT_SUCCESS;
 }
 
 //HEADER- Webcut-related functions
