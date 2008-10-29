@@ -20,7 +20,7 @@ endif
 
 libiGeom_la_includedir = $(includedir)
 
-libiGeom_la_libadd = $(top_builddir)/libcgm.la
+libiGeom_la_LIBADD = ../libcgm.la
 
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \

@@ -410,3 +410,8 @@ AC_CONFIG_FILES(Makefile
 	   )
 
 AC_OUTPUT
+if test "x$CUBIT_DIR" != "xno" && test "x$CUBIT_DIR" != "x"; then
+   AC_MSG_WARN([Linking against Cubit-based CGM; you'll need to add Cubit's 'bin' directory
+                to your LD_LIBRARY_PATH before linking, or add -R (linux) or equivalent (non-linux)
+                to your link statement to link applications.])
+fi
