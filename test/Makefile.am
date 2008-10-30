@@ -3,6 +3,7 @@
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN) $(HAVE_ACIS_DEF) $(CUBIT_CGM)
 INCLUDES = -I$(top_srcdir)/geom \
            -I$(top_srcdir)/util \
+           -I$(top_srcdir)/init \
            -I$(top_srcdir)/geom/ACIS \
            -I$(top_srcdir)/geom/virtual \
            -I$(top_srcdir)/geom/facet \

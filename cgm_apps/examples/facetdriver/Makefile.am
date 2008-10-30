@@ -1,4 +1,7 @@
-TESTS = facets_90
+# Override default defines with the ones we want from the configure script
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN) $(HAVE_ACIS_DEF) $(CUBIT_CGM)
+
+TESTS = facets
 EXTRA_DIST = README $(TESTS)
 
 check_PROGRAMS = facets

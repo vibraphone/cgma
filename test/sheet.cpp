@@ -13,13 +13,14 @@
 #include "Body.hpp"
 #include "RefFace.hpp"
 #include "CubitObserver.hpp"
+#include "InitCGMA.hpp"
 
 #include <typeinfo>
 #include <assert.h>
 
 #ifdef HAVE_ACIS
-#include "AcisModifyEngine.hpp"
-#include "AcisQueryEngine.hpp"
+//#include "AcisModifyEngine.hpp"
+//#include "AcisQueryEngine.hpp"
 #endif
 
 #ifdef HAVE_OCC
@@ -32,15 +33,15 @@ int test_sheet_query( GeometryModifyEngine* engine );
 // main program - initialize, then send to proper function
 int main (int argc, char **argv)
 {
-  CubitObserver::init_static_observers();
-  CGMApp::instance()->startup( argc, argv );
-
+  CubitStatus result = InitCGMA::initialize_cgma();
+  if (CUBIT_SUCCESS != result) return 1;
+  
   GeometryQueryEngine* const gqe_list[] = {
 #ifdef HAVE_ACIS
-    AcisQueryEngine::instance(),
+//    AcisQueryEngine::instance(),
 #endif
 #ifdef HAVE_OCC
-    OCCQueryEngine::instance(),
+//    OCCQueryEngine::instance(),
 #endif
     NULL
   };
@@ -48,10 +49,10 @@ int main (int argc, char **argv)
 
   GeometryModifyEngine* const gme_list[] = {
 #ifdef HAVE_ACIS
-    AcisModifyEngine::instance(),
+//    AcisModifyEngine::instance(),
 #endif
 #ifdef HAVE_OCC
-    OCCModifyEngine::instance(),
+//    OCCModifyEngine::instance(),
 #endif
     NULL
   };
@@ -66,8 +67,8 @@ int main (int argc, char **argv)
 
 int test_sheet_query( GeometryModifyEngine* engine )
 {
-  CubitStatus rval = GeometryModifyTool::instance()->set_default_gme( engine );
-  assert(rval);
+//  CubitStatus rval = GeometryModifyTool::instance()->set_default_gme( engine );
+//  assert(rval);
   
   Body *sphere = 0, *sheet = 0;
   
