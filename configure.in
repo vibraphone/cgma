@@ -386,8 +386,8 @@ AC_SUBST(CGM_EXT_LDFLAGS)
 AC_SUBST(CGM_EXT_LTFLAGS)
 AC_SUBST(CGM_EXT_INCLUDE)
 
-# Allow "if WITH_OCC" in Makefile.am
-AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )
+# Allow "if build_OCC" in Makefile.am
+AM_CONDITIONAL( build_OCC, [test "x$occ_DIR" != "xno"] )
 
 
 ################################################################################

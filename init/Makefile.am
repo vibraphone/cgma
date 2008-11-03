@@ -7,10 +7,12 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN) $(HAVE_ACIS_DEF) $(HAVE_OCC_DE
 INCLUDES = -I$(top_srcdir)/geom \
            -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom/ACIS \
+           -I$(top_srcdir)/geom/OCC \
            -I$(top_srcdir)/geom/virtual \
            -I$(top_srcdir)/geom/facet \
            -I$(top_srcdir)/geom/cholla \
-           -I$(srcdir)
+           -I$(srcdir) \
+           $(OCC_INC_FLAG)
 
 noinst_LTLIBRARIES = libcgma_init.la
 libcgma_init_la_includedir = $(includedir)

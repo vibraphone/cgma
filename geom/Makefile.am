@@ -11,7 +11,7 @@ endif
 if build_parallel
   SUBDIRS += parallel
 endif
-if WITH_OCC
+if build_OCC
   SUBDIRS += OCC
 endif
 

@@ -23,7 +23,7 @@ if build_ACIS
 else
   CGM_ACIS_LIB = 
 endif
-if WITH_OCC
+if build_OCC
   CGM_OCC_LIB = geom/OCC/libcubit_OCC.la
 else
   CGM_OCC_LIB =

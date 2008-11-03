@@ -18,7 +18,7 @@ if build_ACIS
   TESTS += webcut hollow_acis
   LINK_FLAGS += -R$(ACIS_LIB_DIR)
 endif
-if WITH_OCC
+if build_OCC
   TESTS += modify makept r_w test_occ
   LINK_FLAGS += -R$(OCC_LIB_DIR)
 endif
