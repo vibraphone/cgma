@@ -1,0 +1,39 @@
+                    GM on OCC6.3 capabilities
+
+1.	Query
+
+•	Import/Export OpenCascade  b-rep files, create CGM geometry/topology entities.
+
+•	Import/Export OpenCascade b-rep plus CGM attribute files.
+
+•	Delete entities build on OCC engine.
+
+•	Translate/Rotate/Scale/Reflect objects.
+
+•	Detect body overlap
+
+•	Get iso-parametric points on surfaces and curves.
+
+•	Get curve-curve, curve-surface intersection points.
+
+•	Get distance between entities.
+
+•	Get bounding boxes for entities.
+
+2.	Modify
+
+•	Create CGM geometry entities using OpenCascade engine. Top-Down method: directly create points, curves, surfaces or solid primitives.
+
+•	Create CGM geometry entities using OpenCascade engine, Bottom-Up method: curve generates by points, surface generates by curves and solid generates by surfaces.
+
+•	Boolean operations: subtract, unite, intersect.
+
+•	Project curve on surface
+
+•	Imprint object: body-body imprint, surface-body imprint, curve-surface imprint.
+
+•	Make thick body by hollowing existing solid.
+
+•	Sweep surface or curve along a vector, an edge, perpendicularly or revolutionarily.(alpha testing)
+
+
