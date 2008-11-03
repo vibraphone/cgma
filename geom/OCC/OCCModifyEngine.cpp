@@ -4354,12 +4354,6 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
   BRepLib_FuseEdges fuser(wire);
   fuser.SetConcatBSpl();
   fuser.Perform();
-  int removed_vertices = fuser.NbVertices();
-  if(removed_vertices < num_edges - 1)
-  {
-    PRINT_ERROR("The curve_list provided has to form a G1 continuous spline.\n");
-    return CUBIT_FAILURE;
-  }
   TopoDS_Shape  spline = fuser.Shape();
   wire = TopoDS::Wire(spline);
 
@@ -4386,6 +4380,11 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
 
     //sweep along the wire
     BRepOffsetAPI_MakePipe maker(wire, toposhape);
+    if(!maker.IsDone())
+    {
+      PRINT_ERROR("Can't sweep along the provided curve(s).\n");
+      continue;
+    }
     TopoDS_Shape newShape = maker.Shape();
     
     tbs += OCCQueryEngine::instance()->populate_topology_bridge(newShape);

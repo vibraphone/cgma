@@ -865,5 +865,40 @@ CubitStatus make_Point()
   d = body->measure();
   //d = 8.07227
 
+  //test sweep_along_curve function
+  //sweep along a staight curve with draft
+  refentities.clean_out();
+  refentities.append(rotate_face);
+  CubitVector pt4(0,1,0);
+  RefVertex* vt4 = gmti->make_RefVertex(pt4);
+  RefEdge* edge3 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vt1, vt4);
+  edges.clean_out();
+  edges.append(edge3);
+  gmti->sweep_along_curve(refentities, edges, 0.087,1);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 134.7152, theoretical calculation is 135.66363, error 0.67%
+
+  //sweep along two curves which make a G1 continous wire, no draft is performed
+  refentities.clean_out();
+  refentities.append(rotate_face);
+  CubitVector pt5(0,2,7.5);
+  CubitVector pt6(0,0,-7.5);
+  CubitVector pt7(0,1,-15);
+  RefVertex* vt5 = gmti->make_RefVertex(pt7);
+  DLIList<CubitVector*> vector_list;
+  vector_list.append(&pt5);
+  
+  RefEdge* edge4 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt1, vt4, vector_list);
+  vector_list.clean_out();
+  vector_list.append(&pt6);
+  RefEdge* edge5 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt4, vt5, vector_list);  
+  edges.clean_out();
+  edges.append(edge4);
+  edges.append(edge5);
+  gmti->sweep_along_curve(refentities, edges, 0.087,1);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 93.697, no effect of draft angle.
   return CUBIT_SUCCESS;
 }

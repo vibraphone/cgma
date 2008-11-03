@@ -3568,6 +3568,14 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
    if (!sweep_finish("along_curve", body_list, result_list, changed_new_ids))
     status = CUBIT_FAILURE;
 
+   body_list.clean_out();
+   for(int i = 0; i < result_list.size(); i++)
+   {
+     Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body );
+     if(body)
+       body_list.append(body);
+   }
+   CAST_LIST( body_list, ref_ent_list, RefEntity);
    return status;
 
 }
