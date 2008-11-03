@@ -45,7 +45,7 @@ check_PROGRAMS = $(TESTS)
 testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = libiGeom.la
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
-testgeom_LDFLAGS = $(CGM_LIBS_LTFLAGS)
+testgeom_LDFLAGS = $(CGM_EXT_LTFLAGS)
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 

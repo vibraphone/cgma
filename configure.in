@@ -72,9 +72,6 @@ AC_SUBST(CGM_EXT_INCLUDE)
 ################################################################################
 #                         Use Cubit shared libraries
 ################################################################################
-CGM_LIBS_LINK='$(CGM_LIBS_LINK_INTERNAL)'
-CGM_LIBS_FILES='$(CGM_LIBS_FILES_INTERNAL)'
-CGM_LIBS_LTFLAGS=
 CUBIT_FILE=no
 CUBIT_BIN_DIR=no
 HAVE_ACIS_DEF=
@@ -208,6 +205,7 @@ if test "x$ACIS_DIR" != "xno"; then
   CGM_EXT_LIBS="$CGM_EXT_LIBS $ACIS_LIBS"
   CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $ACIS_LINK_FLAGS"
   CGM_EXT_INCLUDE="$CGM_EXT_INCLUDE $ACIS_INCLUDES"
+  CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $ACIS_LTFLAGS"
   if test "x$GXX" = "xyes"; then
     CPPFLAGS="$CPPFLAGS -isystem $ACIS_DIR/include"
   fi
