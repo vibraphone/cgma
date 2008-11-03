@@ -41,6 +41,7 @@ makept_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+test_occ_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 
 EXTRA_DIST = 62_shaver1.brep \
              66_shaver3.brep \
