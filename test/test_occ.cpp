@@ -20,6 +20,12 @@
 #include "RefFace.hpp"
 #include "RefVolume.hpp"
 
+#define STRINGIFY(S) XSTRINGIFY(S)
+#define XSTRINGIFY(S) #S
+#ifndef SRCDIR
+#  define SRCDIR "."
+#endif
+
 using std::list;
 using std::pair;
 using std::set;
@@ -37,14 +43,15 @@ int main( int argc, char** argv ) {
   OCCModifyEngine::instance();
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
+  assert(gti);
   
   // Read in the geometry from files specified on the command line
-  std::string filename("./LeverArm.brep");
-  assert(gti);
-
-  CubitStatus status = gti->import_solid_model(filename.c_str(), "OCC");
-  if (status != CUBIT_SUCCESS)
-    PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
+  const char* filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
+  CubitStatus status = gti->import_solid_model(filename, "OCC");
+  if (status != CUBIT_SUCCESS) {
+    PRINT_ERROR("Problems reading geometry file %s.\n", filename);
+    return 1;
+  }
  
   DLIList<RefEdge*> my_curvs;
   DLIList<RefFace*> my_surfs;
@@ -101,6 +108,7 @@ int main( int argc, char** argv ) {
 	printf("  point coords:     %e %e %e\n", coord0.x(), coord0.y(), coord0.z());
 	printf("  projected coords: %e %e %e\n", coord1.x(), coord1.y(), coord1.z());
 	printf("  params returned:  %e %e\n\n", u, v);
+        return 1;
       }
 
     }
@@ -126,6 +134,7 @@ int main( int argc, char** argv ) {
 	  printf("  point coords:     %e %e %e\n", coord0.x(), coord0.y(), coord0.z());
 	  printf("  projected coords: %e %e %e\n", coord1.x(), coord1.y(), coord1.z());
 	  printf("  params returned:  %e %e\n\n", u, v);
+          return 1;
 	}
 
       }
