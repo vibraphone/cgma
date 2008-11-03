@@ -33,6 +33,11 @@ class dummym
 #  include "AcisModifyEngine.hpp"
 #endif
 
+#if defined(HAVE_OCC) 
+#  include "OCCQueryEngine.hpp"
+#  include "OCCModifyEngine.hpp"
+#endif
+
 
 static bool streq_nocase( const char* s, const char* t )
 {
@@ -69,7 +74,12 @@ CubitStatus InitCGMA::initialize_engine( const char* name )
   else if (streq_nocase(name,"VIRTUAL") || streq_nocase(name,"vg")) {
     VirtualQueryEngine::instance();
   }
-  
+#ifdef HAVE_OCC  
+  else if (streq_nocase(name,"OCC") || streq_nocase(name,"occ")) {
+    OCCQueryEngine::instance();
+    OCCModifyEngine::instance();
+  }
+#endif  
   else if (streq_nocase(name,"facet")) {
     FacetQueryEngine::instance();
     FacetModifyEngine::instance();

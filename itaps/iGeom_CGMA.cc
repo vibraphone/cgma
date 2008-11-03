@@ -237,8 +237,17 @@ void iGeom_newGeom( const char* ,
     ERROR(iBase_NOT_SUPPORTED, "No options for iGeom factory have been implemented.");
   }
   
-  InitCGMA::initialize_cgma();
-  InitCGMA::initialize_engine("ACIS");
+  CubitStatus status = InitCGMA::initialize_cgma();
+  if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
+
+#ifdef HAVE_ACIS  
+  status = InitCGMA::initialize_engine("ACIS");
+  if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
+#endif
+
+#ifdef HAVE_OCC
+  InitCGMA::initialize_engine("OCC");
+#endif
 
 // sometimes can't have following, depending on CGM version
   // CGMApp::instance()->attrib_manager()->silent_flag(true);

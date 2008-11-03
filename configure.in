@@ -61,15 +61,6 @@ AC_SUBST(TEMPLATE_DEFS_INCLUDED)
 AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
 
 ################################################################################
-#                           Define variables for linking
-################################################################################
-AC_SUBST(CGM_EXT_LIBS)
-AC_SUBST(CGM_EXT_LDFLAGS)
-AC_SUBST(CGM_EXT_LTFLAGS)
-AC_SUBST(CGM_EXT_INCLUDE)
-
-
-################################################################################
 #                         Use Cubit shared libraries
 ################################################################################
 CUBIT_FILE=no
@@ -386,6 +377,14 @@ AC_SUBST(OCC_LIB_FLAG)
 AC_SUBST(OCC_LIBS)
 AC_SUBST(CUBIT_OCC_LIB)
 AC_SUBST(HAVE_OCC_DEF)
+
+################################################################################
+#                           Define variables for linking
+################################################################################
+AC_SUBST(CGM_EXT_LIBS)
+AC_SUBST(CGM_EXT_LDFLAGS)
+AC_SUBST(CGM_EXT_LTFLAGS)
+AC_SUBST(CGM_EXT_INCLUDE)
 
 # Allow "if WITH_OCC" in Makefile.am
 AM_CONDITIONAL( WITH_OCC, [test "x$occ_DIR" != "xno"] )

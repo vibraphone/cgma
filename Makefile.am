@@ -45,10 +45,9 @@ endif
 
 
 
-libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LINK)
+libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
 
 libcgm_la_SOURCES = 
-
 
 # By default, cmg.make will define these to $(srcdir).  We
 # want to override that during the INSTALL of the file so
