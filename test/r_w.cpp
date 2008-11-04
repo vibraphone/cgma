@@ -153,7 +153,7 @@ CubitStatus make_Point()
     }
 
   argv = "beforesub.occ";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -198,7 +198,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   argv = "unite1.occ";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -224,7 +224,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   argv = "unite1.occ";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -254,7 +254,7 @@ CubitStatus make_Point()
 
     // Read in the geometry from files specified on the command line
   argv = "unite4.occ";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -280,7 +280,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   argv = "unite4.occ";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
