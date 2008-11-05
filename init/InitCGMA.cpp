@@ -57,6 +57,18 @@ CubitStatus InitCGMA::initialize_cgma()
 
 CubitStatus InitCGMA::initialize_engine( const char* name )
 {
+  if (!name) {
+#if defined(CUBIT_CGM) || defined(ACIS)
+    name = "ACIS";
+#elif defined (HAVE_OCC)
+    name = "OCC";
+#else
+    PRINT_INFO("No engine to default to in InitCGMA");
+    return CUBIT_FAILURE;
+#endif
+  }
+
+
   if (streq_nocase(name,"ACIS")) {
 #ifdef CUBIT_CGM
     if (!AcisQueryEngine::instance_)
@@ -75,7 +87,7 @@ CubitStatus InitCGMA::initialize_engine( const char* name )
     VirtualQueryEngine::instance();
   }
 #ifdef HAVE_OCC  
-  else if (streq_nocase(name,"OCC") || streq_nocase(name,"occ")) {
+  else if (streq_nocase(name,"OCC")) {
     OCCQueryEngine::instance();
     OCCModifyEngine::instance();
   }
