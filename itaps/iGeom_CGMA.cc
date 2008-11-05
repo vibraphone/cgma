@@ -228,7 +228,7 @@ void iGeom_getDescription( iGeom_Instance geom,
   iGeom_getLastError( *err, descr, descr_len );
 }
 
-void iGeom_newGeom( const char* ,
+void iGeom_newGeom( const char* options,
                     iGeom_Instance* instance_out,
                     int* err,
                     const int options_size) 
@@ -239,15 +239,28 @@ void iGeom_newGeom( const char* ,
   
   CubitStatus status = InitCGMA::initialize_cgma();
   if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
-
-#ifdef HAVE_ACIS  
-  status = InitCGMA::initialize_engine("ACIS");
-  if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
-#endif
-
-#ifdef HAVE_OCC
-  InitCGMA::initialize_engine("OCC");
-#endif
+  
+    // scan options for engine to use
+  std::string engine;
+  if (options && options_size) {
+    char* opt = (char*)malloc( options_size + 1 );
+    memcpy(opt, options, options_size);
+    opt[options_size] = '\0';
+    const char delim[] = { opt[0], '\0' };
+    for (char* s = strtok(opt+1, delim); s; s = strtok(0,delim)) {
+      char* v = strchr( s, '=' );
+      if (v) {
+        *v = '\0';
+        ++v;
+      }
+      if (!strcmp(s,"engine")) {
+        engine = std::string(v);
+        break;
+      }
+    }
+    free(opt);
+  }
+  InitCGMA::initialize_engine(engine.empty() ? 0 : engine.c_str());
 
 // sometimes can't have following, depending on CGM version
   // CGMApp::instance()->attrib_manager()->silent_flag(true);
