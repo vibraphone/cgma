@@ -16,7 +16,7 @@ else
     TESTS += testgeom
   endif
 endif
-if WITH_OCC
+if build_OCC
   TESTS += testgeom_occ
 endif
 
