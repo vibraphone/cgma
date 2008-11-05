@@ -233,10 +233,6 @@ void iGeom_newGeom( const char* options,
                     int* err,
                     const int options_size) 
 {
-  if (0 != options_size) {
-    ERROR(iBase_NOT_SUPPORTED, "No options for iGeom factory have been implemented.");
-  }
-  
   CubitStatus status = InitCGMA::initialize_cgma();
   if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
   
