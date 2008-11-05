@@ -135,7 +135,7 @@ AC_SUBST(CUBIT_FILE)
 AC_SUBST(CUBIT_CGM)
 
 AM_CONDITIONAL(BUILD_CGM,[test x"$CUBIT_DIR" == x"no"])
-
+AM_CONDITIONAL(WITH_CUBIT,[test x"$CUBIT_DIR" != x"no"])
 
 ################################################################################
 #                           ACIS OPTIONS

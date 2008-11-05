@@ -116,7 +116,22 @@ void handle_error_code(const bool result,
 int main( int argc, char *argv[] )
 {
     // Check command line arg
-  std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
+  #ifdef FORCE_OCC
+    #ifndef HAVE_OCC
+      #error "Cannot force use of OCC w/out OCC support"
+    #endif
+    std::string filename = STRINGIFY(SRCDIR) "/testgeom.brep";
+    std::string engine_opt = ";engine=OCC";
+  #elif defined(HAVE_ACIS)
+    std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
+    std::string engine_opt = ";engine=ACIS";
+  #elif defined(USE_OCC)
+    std::string filename = STRINGIFY(SRCDIR) "/testgeom.brep";
+    std::string engine_opt = ";engine=OCC;
+  #else
+    std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
+    std::string engine_opt;
+  #endif
   
   if (argc == 1) {
     std::cout << "Using default input file: " << filename << std::endl;
@@ -138,7 +153,7 @@ int main( int argc, char *argv[] )
     // initialize the Mesh
   int err;
   iGeom_Instance geom;
-  iGeom_newGeom( 0, &geom, &err, 0 );
+  iGeom_newGeom( engine_opt.c_str(), &geom, &err, engine_opt.length() );
 
     // Print out Header information
   std::cout << "\n\nITAPS GEOMETRY INTERFACE TEST PROGRAM:\n\n";

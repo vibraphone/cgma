@@ -1,12 +1,25 @@
 AUTOMAKE_OPTIONS = foreign
 
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) 
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 
 if USE_BABEL
   SIDL_DIR = SIDL
 else
   SIDL_DIR = 
 endif 
+
+TESTS =
+if build_ACIS
+  TESTS += testgeom
+else
+  if WITH_CUBIT
+    TESTS += testgeom
+  endif
+endif
+if WITH_OCC
+  TESTS += testgeom_occ
+endif
+
 
 SUBDIRS = . $(SIDL_DIR)
 
@@ -19,7 +32,6 @@ libiGeom_la_LIBADD = ../libcgm.la
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
 	   -I$(top_srcdir)/init \
-           -I$(top_srcdir)/geom/ACIS \
            -I.
 
 libiGeom_la_SOURCES = \
@@ -38,7 +50,6 @@ libiGeom_la_include_HEADERS = \
 	iBase_f.h \
 	iGeom_f.h
 
-TESTS = testgeom
 
 check_PROGRAMS = $(TESTS)
 
@@ -46,6 +57,10 @@ testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = libiGeom.la
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 testgeom_LDFLAGS = $(CGM_EXT_LTFLAGS)
+testgeom_occ_SOURCES = $(testgeom_SOURCES)
+testgeom_occ_LDADD = $(testgeom_LDADD)
+testgeom_occ_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
+testgeom_occ_LDFLAGS = $(testgeom_LDFLAGS)
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 
