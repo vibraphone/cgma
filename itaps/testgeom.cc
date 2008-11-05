@@ -127,7 +127,7 @@ int main( int argc, char *argv[] )
     std::string engine_opt = ";engine=ACIS";
   #elif defined(USE_OCC)
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.brep";
-    std::string engine_opt = ";engine=OCC;
+    std::string engine_opt = ";engine=OCC";
   #else
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
     std::string engine_opt;
@@ -239,7 +239,7 @@ int main( int argc, char *argv[] )
             << "   Number Failed:          " << number_tests_failed 
             << "\n\n" << std::endl;
   
-  return 0;
+  return number_tests_failed;
 }
 
 /*!
