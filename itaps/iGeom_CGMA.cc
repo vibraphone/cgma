@@ -233,10 +233,7 @@ void iGeom_newGeom( const char* options,
                     int* err,
                     const int options_size) 
 {
-  CubitStatus status = InitCGMA::initialize_cgma();
-  if (CUBIT_SUCCESS != status) RETURN(iBase_FAILURE);
-  
-    // scan options for engine to use
+    // scan options for default engine option
   std::string engine;
   if (options && options_size) {
     char* opt = (char*)malloc( options_size + 1 );
@@ -256,7 +253,14 @@ void iGeom_newGeom( const char* options,
     }
     free(opt);
   }
-  InitCGMA::initialize_engine(engine.empty() ? 0 : engine.c_str());
+  
+  CubitStatus status;
+  if (engine.empty()) 
+    status = InitCGMA::initialize_cgma();
+  else
+    status = InitCGMA::initialize_cgma( engine.c_str() );
+  if (CUBIT_SUCCESS != status)
+    RETURN (iBase_FAILURE);
 
 // sometimes can't have following, depending on CGM version
   // CGMApp::instance()->attrib_manager()->silent_flag(true);

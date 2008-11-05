@@ -7,9 +7,7 @@ class InitCGMA
 {
 public:
 
-  static CubitStatus initialize_cgma();
-  
-  static CubitStatus initialize_engine( const char* name );
+  static CubitStatus initialize_cgma( const char* default_engine_name = 0 );
 };
 
 #endif
