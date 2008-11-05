@@ -153,7 +153,7 @@ CubitStatus make_Point()
     }
 
   argv = "beforesub.occ";
-  status = read_geometry(1, &argv, false);
+  status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
