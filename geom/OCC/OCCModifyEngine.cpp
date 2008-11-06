@@ -1266,7 +1266,10 @@ BodySM* OCCModifyEngine::brick( double wid, double dep, double hi ) const
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->get_body();
+  BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+  if(body)
+    CAST_TO(body,OCCBody)->move(-wid/2.0, -dep/2.0, -hi/2.0);
+  return body;
 }
 
 
@@ -1342,7 +1345,10 @@ BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->get_body();
+  BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+  if(body)
+    CAST_TO(body, OCCBody)->move(-major, -minor, -height/2.0);
+  return body;
   
 }
 
@@ -1410,7 +1416,10 @@ BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) 
     return (BodySM*)NULL;
   }
 
-  return CAST_TO(lump, OCCLump)->get_body();
+  BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+  if(body)
+    CAST_TO(body, OCCBody)->move(0, 0, -hi/2.0);
+  return body;
 }
 
 //===============================================================================
