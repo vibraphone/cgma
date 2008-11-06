@@ -144,7 +144,7 @@ CubitStatus make_Point()
   DLIList<Surface*> surface_list;
   test_face = gmti->make_RefFace(ref_faces.get());
   surface_list.append(test_face->get_surface_ptr());
-  CubitVector v_test(0,5,5);
+  CubitVector v_test(-5,0,0);
   CubitVector normal;
   normal = test_face->normal_at(v_test); //(-1,0,0)
   ome->flip_normals(surface_list);
@@ -266,10 +266,12 @@ CubitStatus make_Point()
   int width = 10; //we can also test for width < 10
   from_body2 = gmti->brick(4, width, 4);
   tool_body = gmti->brick(10, 10, 10);  
-  CubitVector v_move(1,0,-1);
-  CubitVector v_movei(0,0,1);
+  CubitVector v_move(3,width/2.0,1);
+  CubitVector v_movei(5,5,6);
+  CubitVector v_moveii(5,5,5);
   gti->translate(from_body2,v_move);
   gti->translate(tool_body, v_movei);
+  gti->translate(from_body, v_moveii);
   DLIList<Body*> from_bodies;
   from_bodies.append(from_body);
   new_bodies.clean_out();
@@ -286,8 +288,8 @@ CubitStatus make_Point()
                        CUBIT_TRUE, CUBIT_FALSE);
   //Created volume(s): 22, 23
   //Destroyed volume(s): 19, 21
-  d = new_bodies.step_and_get()->measure();
-  v = new_bodies.get()->center_point();
+  d = new_bodies.step_and_get()->measure(); //d = 50
+  v = new_bodies.get()->center_point(); //v = (7.5, 5, .05)
   int n = new_bodies.get()->num_ref_faces();
   // n = 6
   //new bodies has 2 bodies, one has a volume = 10 and the other has a 
@@ -306,8 +308,10 @@ CubitStatus make_Point()
 
   from_body = gmti->brick(10, 10, 10);
   tool_body = gmti->brick(11, 1, 1);
-  CubitVector v_move4(0,1,-1);
+  CubitVector v_move4(5,6,4);
+  CubitVector v_move4i(5.5,0.5,0.5);
   gti->translate(from_body,v_move4);
+  gti->translate(tool_body,v_move4i);
   Body* cp_from_body = gmti->copy_body(from_body);
   Body* cp_from_body2 = gmti->copy_body(cp_from_body);
 
@@ -399,6 +403,8 @@ CubitStatus make_Point()
 
   //test for shell body subtract.
   tool_body = gmti->brick(1, 1, 1);
+  CubitVector new_move(0.5,0.5,0.5);
+  gti->translate(tool_body,new_move);
   //just need two surfaces.
   DLIList<RefFace*> reffaces;
   tool_body->ref_faces(reffaces);
@@ -446,7 +452,7 @@ CubitStatus make_Point()
    
 
   tool_body  = gmti->brick(4, 4, 4);
-  CubitVector v_move3(0,1,0);
+  CubitVector v_move3(2,3,2);
   gti->translate(tool_body,v_move3);
   Body* copy_tool_body = gmti->copy_body(tool_body);
   Body* copy_tool_body2 = gmti->copy_body(tool_body);
@@ -493,9 +499,10 @@ CubitStatus make_Point()
 
   //test solid solid imprint
   tool_body  = gmti->brick(4, 4, 4);
-  CubitVector v_move5(0,0.5,0);
+  CubitVector v_move5(2,2.5,2);
   gti->translate(tool_body,v_move5);
   from_body = gmti->brick(1,1,1);
+  gti->translate(from_body, new_move);
   from_bodies.clean_out();
   new_bodies.clean_out();
   from_bodies.append(from_body);
@@ -519,11 +526,12 @@ CubitStatus make_Point()
   DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
 
   from_body  = gmti->brick(4, 4, 4);
-  CubitVector v_move9(0,3,0);
+  CubitVector v_move9(2,5,2);
   gti->translate(from_body,v_move9); 
   ref_faces.clean_out();
   from_body->ref_faces(ref_faces);
   tool_body = gmti->brick(11, 1, 1);  
+  gti->translate(tool_body, v_move4i);
   ref_edges.clean_out();
   tool_body->ref_edges(ref_edges);
   new_bodies.clean_out();
@@ -546,6 +554,9 @@ CubitStatus make_Point()
   //1. from body is the commom body, no update
   tool_body  = gmti->brick(4, 4, 4);
   from_body = gmti->brick(1,1,1);
+  gti->translate(from_body, new_move);
+  CubitVector new_move2(2, 2, 2);
+  gti->translate(tool_body, new_move2);
   from_bodies.clean_out();
   new_bodies.clean_out();
   from_bodies.append(from_body);
@@ -556,8 +567,7 @@ CubitStatus make_Point()
   
   //2. common body is part of from body, update the correponding face
   tool_body  = gmti->brick(4, 4, 4);
-  CubitVector v_move7(0,0.5,0);
-  gti->translate(tool_body,v_move7);
+  gti->translate(tool_body,v_move5);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   new_bodies.clean_out();
@@ -569,8 +579,9 @@ CubitStatus make_Point()
   //3. there's no common body, from body is deleted or kept depending on
   //keep-old flag. 
   tool_body  = gmti->brick(4, 4, 4);
-  gti->translate(tool_body,v_move7);
-  gti->translate(tool_body,v_move7);
+  gti->translate(tool_body,v_move5);
+  CubitVector v_m(0, 0.5, 0);
+  gti->translate(tool_body,v_m);
   from_bodies.clean_out();
   new_bodies.clean_out();
   from_bodies.append(from_body);
@@ -595,7 +606,8 @@ CubitStatus make_Point()
   //test chop operation
   tool_body  = gmti->brick(4, 4, 4);
   from_body = gmti->brick(1,1,1);
-  gti->translate(tool_body,v_move7);
+  gti->translate(tool_body,v_move5);
+  gti->translate(from_body, new_move);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
@@ -619,7 +631,9 @@ CubitStatus make_Point()
   //test chop 2
   from_body = gmti->brick(4, 4, 4);
   tool_body = gmti->brick(1,1,1);
+  CubitVector v_move7(0.5, 1, 0.5);
   gti->translate(tool_body,v_move7);
+  gti->translate(from_body, new_move2);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
@@ -643,8 +657,9 @@ CubitStatus make_Point()
   //test unite 1
   tool_body = gmti->brick(1,1,1);
   gti->translate(tool_body,v_move7);
-  gti->translate(tool_body,v_move7);
+  gti->translate(tool_body,v_m);
   from_body = gmti->brick(1,1,1);
+  gti->translate(from_body, new_move); 
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
   new_bodies.clean_out();
@@ -665,9 +680,10 @@ CubitStatus make_Point()
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
   assert(free_entities.size() == 0);
   //test unite 2
-  tool_body = gmti->brick(4, 4,4);
-  gti->translate(tool_body,v_move7);
+  tool_body = gmti->brick(4, 4, 4);
+  gti->translate(tool_body,v_move5);
   from_body = gmti->brick(1,1,1);
+  gti->translate(from_body, new_move);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
@@ -693,10 +709,10 @@ CubitStatus make_Point()
   //test making thick body.
   from_body = gmti->cylinder(10, 4, 4, 4); 
   tool_body = gmti->cylinder(5,1,1,1);
-  //  v = from_body->center_point();
-  //v = tool_body->center_point();
-  CubitVector v_move8(0,0,10);
+  CubitVector v_move8(0,0,12.5);
+  CubitVector v_move8i(0 , 0 , 5);
   gti->translate(tool_body,v_move8);  
+  gti->translate(from_body, v_move8i);
   from_bodies.clean_out();
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
@@ -735,10 +751,11 @@ CubitStatus make_Point()
   gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
-  //d = 31.4159
+  //d = 39.2699
   refentities.clean_out();
   refentities.append(draft_face);
-  gmti->sweep_translational(refentities, v_move8, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE); 
+  CubitVector v_move8ii(0,0,10);
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE); 
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
@@ -746,7 +763,7 @@ CubitStatus make_Point()
   body->ref_edges(edges);
   refentities.clean_out();
   refentities.append(edges.get());
-  gmti->sweep_translational(refentities, v_move8, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
   //d = area = 90.1292 theoretica calculation is 90.5754, error 0.49%
