@@ -110,7 +110,6 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #endif
 
 #include "CGMApp.hpp"
-#include "GeometryQueryTool.hpp"
 #include "GeometryModifyTool.hpp"
 #include "Surface.hpp"
 #include "BasicTopologyEntity.hpp"

@@ -22,7 +22,6 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
-
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
 #define STRINGIFY(S) XSTRINGIFY(S)
@@ -120,19 +119,18 @@ int main( int argc, char *argv[] )
     #ifndef HAVE_OCC
       #error "Cannot force use of OCC w/out OCC support"
     #endif
-    std::string filename = STRINGIFY(SRCDIR) "/testgeom.brep";
+    std::string filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
     std::string engine_opt = ";engine=OCC";
   #elif defined(HAVE_ACIS)
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
     std::string engine_opt = ";engine=ACIS";
   #elif defined(USE_OCC)
-    std::string filename = STRINGIFY(SRCDIR) "/testgeom.brep";
+    std::string filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
     std::string engine_opt = ";engine=OCC";
   #else
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
     std::string engine_opt;
   #endif
-  
   if (argc == 1) {
     std::cout << "Using default input file: " << filename << std::endl;
   }
@@ -157,7 +155,6 @@ int main( int argc, char *argv[] )
 
     // Print out Header information
   std::cout << "\n\nITAPS GEOMETRY INTERFACE TEST PROGRAM:\n\n";
-
     // gLoad test
   std::cout << "   gLoad: ";
   result = gLoad_test(filename, geom);
@@ -919,8 +916,10 @@ bool construct_test(iGeom_Instance geom)
                         ARRAY_INOUT( max_corn ),
                         &err );
   CHECK( "Problems getting max surf for rotation." );
+  double dtol = 1.0e-6;
   for (int i = 0; i < surfs.size(); ++i) {
-    if (max_corn[3*i+2] >= 0.0 && min_corn[3*i+2] >= 0.0) {
+    if ((max_corn[3*i+2]) <= dtol && (max_corn[3*i+2]) >= -dtol &&
+        (min_corn[3*i+2]) <= dtol && (min_corn[3*i+2]) >= -dtol) {
       max_surf = surfs[i];
       break;
     }
@@ -932,6 +931,9 @@ bool construct_test(iGeom_Instance geom)
   }
   
     // sweep it around the x axis
+  iGeom_moveEnt( geom, &cyl, 0.0, 1.0, 0.0, &err );
+  CHECK( "Problems moving surface." );
+
   iGeom_sweepEntAboutAxis( geom, max_surf, 360.0, 1.0, 0.0, 0.0, &new_body, &err );
   CHECK( "Problems sweeping surface about axis." );
   
@@ -949,10 +951,13 @@ static bool compare_box( const double* expected_min,
                          const double* actual_max )
 {
   bool same = true;
+  double dtol = 1.0e-6;
   for (int i = 0; i < 3; ++i)
-    if (expected_min[i] != actual_min[i] || expected_max[i] != actual_max[i])
+  {
+    if ((expected_min[i] - actual_min[i]) >= dtol  ||
+        (expected_min[i] - actual_min[i]) <= -dtol)  
       same = false;
-  
+  } 
   return same;
 }
 
@@ -1041,8 +1046,13 @@ bool transforms_test(iGeom_Instance geom)
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
   CHECK( "Problems getting bounding box after move." );
 
-  if (bb_min[0] != 0.0 || bb_min[1] != 0.0 || bb_min[2] != 0.0 ||
-      bb_max[0] != 1.0 || bb_max[1] != 2.0 || bb_max[2] != 3.0) {
+  double dtol = 1.0e-6;
+  if ((bb_min[0]) >= dtol || (bb_min[0]) <= -dtol || 
+      (bb_min[1]) >= dtol || (bb_min[1]) <= -dtol || 
+      (bb_min[2]) >= dtol || (bb_min[2]) <= -dtol ||
+      (bb_max[0]-1) >= dtol || 1-bb_max[0] >=dtol ||
+      (bb_max[1]-2) >= dtol || 2 - bb_max[1] >=dtol||
+      (bb_max[2]-3) >= dtol || 3 - bb_max[2] >= dtol) {
     std::cerr << "Wrong bounding box after move." << std::endl;
     return false;
   }
@@ -1054,9 +1064,12 @@ bool transforms_test(iGeom_Instance geom)
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
   CHECK( "Problems getting bounding box after rotate." );
 
-  if (bb_min[0] != 0.0 || bb_min[1] != -3.0 || bb_min[2] != 0.0 ||
-      bb_max[0] != 1.0 || bb_max[1] < -1.0e-6 || 
-      bb_max[1] > 1.0e-6 || bb_max[2] != 2.0) {
+  if ((bb_min[0]) >= dtol || -bb_min[0] >= dtol ||
+      (bb_min[1]+3) >= dtol || -(bb_min[1]+3) >= dtol ||
+      (bb_min[2]) >= dtol || -(bb_min[2]) >= dtol ||
+      (bb_max[0]-1) >= dtol || 1-bb_max[0] >= dtol ||
+      (bb_max[1]) >= dtol || -(bb_max[1]) >= dtol ||
+      (bb_max[2]-2) >= dtol || 2-bb_max[2] >=dtol) {
     std::cerr << "Wrong bounding box after rotate." << std::endl;
     return false;
   }
@@ -1068,10 +1081,11 @@ bool transforms_test(iGeom_Instance geom)
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
   CHECK( "Problems getting bounding box after reflect." );
   
-  if (bb_min[0] != 0.0 || bb_min[1] < -1.0e-6 
-      || bb_min[1] > 1.0e-6 ||
-      bb_min[2] < -1.0e-6 || bb_min[2] > 1.0e-6 ||
-      bb_max[0] != 1.0 || bb_max[1] != 3.0 || bb_max[2] != 2.0) {
+  if ((bb_min[0]) >= dtol || -(bb_min[0]) >= dtol ||(bb_min[1]) >= dtol || 
+      (bb_min[2]) >= dtol || -(bb_min[1]) >= dtol || -(bb_min[2]) >= dtol ||
+      (bb_max[0]-1) >= dtol || 1- bb_max[0] >= dtol ||
+      (bb_max[1]-3) >= dtol || 3 - bb_max[1] >= dtol ||
+      (bb_max[2]-2) >= dtol || 2 - bb_max[2] >= dtol) {
     std::cerr << "Wrong bounding box after reflect." << std::endl;
     return false;
   }
@@ -1101,9 +1115,14 @@ bool booleans_test(iGeom_Instance geom)
 
     // section the brick
   iBase_EntityHandle section_result = 0;
+#ifdef FORCE_OCC 
+  section_result = subtract_result;
+#elif defined(USE_OCC)
+  section_result = subtract_result;
+#else
   iGeom_sectionEnt( geom, &subtract_result, 1.0, 0.0, 0.0, 0.25, true, &section_result, &err );
   CHECK( "Problems sectioning for booleans section test." );
-
+#endif
     // unite the section result with a new cylinder
   iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &cyl, &err );
   CHECK( "Problems creating cylinder for unite test." );
