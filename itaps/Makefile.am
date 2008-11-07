@@ -12,9 +12,9 @@ TESTS =
 if build_ACIS
   TESTS += testgeom
 else
-  if WITH_CUBIT
-    TESTS += testgeom
-  endif
+if WITH_CUBIT
+  TESTS += testgeom
+endif
 endif
 if build_OCC
   TESTS += testgeom_occ
