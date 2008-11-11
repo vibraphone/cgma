@@ -2422,7 +2422,9 @@ CubitStatus OCCQueryEngine::translate( BodySM* body, const CubitVector& d )
 }
 CubitStatus OCCQueryEngine::rotate( BodySM* body, const CubitVector& v, double a )
 {
+  // a is in degree.
   OCCBody* occ_bod = dynamic_cast<OCCBody*>(body);
+  a *= CUBIT_PI/180;
   return occ_bod ? occ_bod->rotate( v.x(), v.y(), v.z(), a ) : CUBIT_FAILURE;
 }
 CubitStatus OCCQueryEngine::scale( BodySM* body, double factor )

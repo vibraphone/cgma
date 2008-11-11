@@ -16,6 +16,9 @@
  *
  */
 #include "iGeom.h"
+#include "CubitDefines.h"
+#include "CubitVector.hpp"
+#include "DLIList.hpp"
 #include <iostream>
 #include <set>
 #include <algorithm>
@@ -895,7 +898,8 @@ bool construct_test(iGeom_Instance geom)
 
     // construct a cylinder, sweep it about an axis, and delete the result
   iBase_EntityHandle cyl = 0;
-  iGeom_createCylinder( geom, 1.0, 1.0, 0.0, &cyl, &err );
+  CubitVector center;
+  iGeom_createCylinder( geom, 1.0, 1.0, 0.0, &center , &cyl, &err );
     // Is the minor radius really supposed to be zero??? - JK
   CHECK( "Creating cylinder failed." );
   
@@ -945,6 +949,28 @@ bool construct_test(iGeom_Instance geom)
   return true;
 }
 
+static bool compare_center_volume(int i, double volume, CubitVector * center)
+{
+  bool same = true;
+  double dtol = 1.0e-6;
+  double control_volume;
+  switch (i) {
+    case 0 :
+      control_volume = 6;
+      break;
+    case 1:
+      control_volume = 8 * CUBIT_PI;
+      break;
+    case 2:
+      control_volume = 4 * CUBIT_PI * CUBIT_PI; 
+  }
+  if((volume-control_volume) > dtol  ||
+     (control_volume - volume) > dtol)
+    return false;
+  if(center->length() > dtol)
+    return false;
+  return same;
+}
 static bool compare_box( const double* expected_min,
                          const double* expected_max,
                          const double* actual_min,
@@ -966,20 +992,50 @@ bool primitives_test(iGeom_Instance geom)
   int err;
   SimpleArray<iBase_EntityHandle> prims(3);
   iBase_EntityHandle prim;
-  
-  iGeom_createBrick( geom, 1.0, 2.0, 3.0, &prim, &err );
+  CubitVector center1, center2, center3;
+ 
+  iGeom_createBrick( geom, 1.0, 2.0, 3.0, &center1, &prim, &err );
   CHECK( "createBrick failed." );
   prims[0] = prim;
   
-  iGeom_createCylinder( geom, 1.0, 4.0, 2.0, &prim, &err );
+  iGeom_createCylinder( geom, 1.0, 4.0, 2.0, &center2, &prim, &err );
   CHECK( "createCylinder failed." );
   prims[1] = prim;
   
-  iGeom_createTorus( geom, 2.0, 1.0, &prim, &err );
+  iGeom_createTorus( geom, 2.0, 1.0, &center3, &prim, &err );
   CHECK( "createTorus failed." );
   prims[2] = prim;
   
-    // verify the bounding boxes
+  //For OCC based enities, non-planar entities gives enlarged bounding box which
+  //is larger than the linear tolerance, so checking geometry center and volume
+  //in stead of bounding boxes
+  const char* names[3] = {"brick","cylinder","torus"};
+  DLIList <CubitVector*> centers;
+  centers.append(&center1);
+  centers.append(&center2);
+  centers.append(&center3);
+#ifdef FORCE_OCC
+  SimpleArray<double> volume;
+
+  iGeom_measure(geom, ARRAY_IN(prims), ARRAY_INOUT(volume), &err);
+  for(int i = 0; i < 3; i++)
+    if(!compare_center_volume(i, volume[i], centers[i]))
+    {
+      std::cerr << "Box check failed for " << names[i] << std::endl;
+      return false;
+    }
+#elif defined(USE_OCC)
+  SimpleArray<double> volume;
+
+  iGeom_measure(geom, ARRAY_IN(prims), ARRAY_INOUT(volume), err);
+  for(int i = 0; i < 3; i++)
+    if(!compare_center_volume(i, volume[i), centers[i]))
+    {
+      std::cerr << "Box check failed for " << names[i] << std::endl;
+      return false;
+    }
+#else    
+    // verify the bounding boxes for Acis based entities
   SimpleArray<double> max_corn, min_corn;
   int so = iBase_INTERLEAVED;
   iGeom_getArrBoundBox( geom, ARRAY_IN(prims), &so, ARRAY_INOUT(min_corn), ARRAY_INOUT(max_corn), &err );
@@ -1019,7 +1075,7 @@ bool primitives_test(iGeom_Instance geom)
     std::cerr << "Box check failed for torus" << std::endl;
     return false;
   }
-  
+#endif  
     // must have worked; delete the entities then return
   for (int i = 0; i < 3; ++i) {
     iGeom_deleteEnt( geom, prims[i], &err );
@@ -1035,7 +1091,8 @@ bool transforms_test(iGeom_Instance geom)
   
     // construct a brick
   iBase_EntityHandle brick = 0;
-  iGeom_createBrick( geom, 1.0, 2.0, 3.0, &brick, &err );
+  CubitVector center;
+  iGeom_createBrick( geom, 1.0, 2.0, 3.0, &center, &brick, &err );
   CHECK( "Problems creating brick for transforms test." );
   
     // move it, then test bounding box
@@ -1103,9 +1160,10 @@ bool booleans_test(iGeom_Instance geom)
 
     // construct a brick size 1, and a cylinder rad 0.25 height 2
   iBase_EntityHandle brick = 0, cyl = 0;
-  iGeom_createBrick( geom, 1.0, 0.0, 0.0, &brick, &err );
+  CubitVector center;
+  iGeom_createBrick( geom, 1.0, 0.0, 0.0, &center, &brick, &err );
   CHECK( "Problems creating brick for booleans test." );
-  iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &cyl, &err );
+  iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &center, &cyl, &err );
   CHECK( "Problems creating cylinder for booleans test." );
 
     // subtract the cylinder from the brick
@@ -1124,7 +1182,7 @@ bool booleans_test(iGeom_Instance geom)
   CHECK( "Problems sectioning for booleans section test." );
 #endif
     // unite the section result with a new cylinder
-  iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &cyl, &err );
+  iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &center, &cyl, &err );
   CHECK( "Problems creating cylinder for unite test." );
   iBase_EntityHandle unite_results;
   iBase_EntityHandle unite_input[] = { section_result, cyl };

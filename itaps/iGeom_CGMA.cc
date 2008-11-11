@@ -22,11 +22,12 @@
  */
 #include "iGeom.h"
 #include "InitCGMA.hpp"
+#include "CastTo.hpp"
 
 #include <iostream>
 #include <math.h>
 #include "GeometryQueryTool.hpp"
-
+#include "DLIList.hpp"
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -5197,6 +5198,7 @@ iGeom_createBrick (iGeom_Instance instance,
                    /*in*/ double x,
                    /*in*/ double y,
                    /*in*/ double z,
+                   /*out*/ CubitVector* center, 
                    /*out*/ iBase_EntityHandle *geom_entity,
                    int* err)
 {
@@ -5219,7 +5221,7 @@ iGeom_createBrick (iGeom_Instance instance,
   if (NULL == *geom_entity) {
     RETURN(iBase_FAILURE);
   }
-  
+  *center = temp_body->center_point();  
   RETURN(iBase_SUCCESS);
 }
           
@@ -5228,6 +5230,7 @@ iGeom_createCylinder (iGeom_Instance instance,
                       /*in*/ double height,
                       /*in*/ double major_rad,
                       /*in*/ double minor_rad,
+                      /*out*/ CubitVector* center,
                       /*out*/ iBase_EntityHandle *geom_entity,
                       int* err)
 {
@@ -5236,11 +5239,34 @@ iGeom_createCylinder (iGeom_Instance instance,
     gmt->cylinder(height, major_rad, tmp_minor, major_rad);
   *geom_entity = temp_body;
 
-
   if (NULL == *geom_entity) {
     RETURN(iBase_FAILURE);
   }
-  
+  Body *body = NULL;
+  body = CAST_TO(temp_body,Body);
+  DLIList<RefFace*> ref_faces;
+  body->ref_faces(ref_faces);
+  DLIList <CubitVector*> centers;
+  int i;
+  for ( i = 0; i < ref_faces.size(); i ++)
+  {
+    if (ref_faces.get()->num_ref_edges() > 1)
+    {
+      ref_faces.step();
+      continue;
+    }
+    CubitVector v = ref_faces.get_and_step()->center_point();
+    CubitVector *new_v = new CubitVector(v);
+    centers.append(new_v);
+  }
+
+  for( i = 0; i < centers.size(); i++)
+  {
+    *center += *centers.get() ;
+    delete centers.get();
+    centers.step();
+  }
+  *center /= i;
   RETURN(iBase_SUCCESS);
 }
           
@@ -5248,6 +5274,7 @@ void
 iGeom_createTorus (iGeom_Instance instance,
                    /*in*/ double major_rad,
                    /*in*/ double minor_rad,
+                   /*out*/ CubitVector* center,
                    /*out*/ iBase_EntityHandle *geom_entity,
                    int* err)
 {
@@ -5257,11 +5284,11 @@ iGeom_createTorus (iGeom_Instance instance,
   
   RefEntity *temp_body = gmt->torus(major_rad, minor_rad);
   *geom_entity = temp_body;
-
+   
   if (NULL == *geom_entity) {
     RETURN(iBase_FAILURE);
   }
-  
+  *center = temp_body->center_point(); 
   RETURN(iBase_SUCCESS);
 }
 
