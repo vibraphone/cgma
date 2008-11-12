@@ -63,7 +63,6 @@
 
 #include "iBase.h"
 #include "iGeom_protos.h"
-class CubitVector;
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2082,7 +2081,6 @@ void iGeom_createPrism( iGeom_Instance,
                           double x,
                           double y,
                           double z,
-                          CubitVector* center,
                           iBase_EntityHandle* geom_entity,
                           int* err );
 
@@ -2093,7 +2091,6 @@ void iGeom_createPrism( iGeom_Instance,
                              double height,
                              double major_rad,
                              double minor_rad,
-                             CubitVector* center,
                              iBase_EntityHandle* geom_entity,
                              int* err );
 
@@ -2103,7 +2100,6 @@ void iGeom_createPrism( iGeom_Instance,
   void iGeom_createTorus( iGeom_Instance,
                           double major_rad,
                           double minor_rad,
-                          CubitVector* center,
                           iBase_EntityHandle* geom_entity,
                           int* err );
 
