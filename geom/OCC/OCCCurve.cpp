@@ -644,7 +644,7 @@ CubitStatus OCCCurve::get_point_direction( CubitVector& point,
     direction.set(dir.X(), dir.Y(), dir.Z());
   else if(myTopoDSEdge->Orientation() == TopAbs_REVERSED)
     direction.set(-dir.X(), -dir.Y(), -dir.Z());
-  
+  return CUBIT_SUCCESS;  
 }
 
 //-------------------------------------------------------------------------
@@ -792,7 +792,7 @@ CubitBoolean OCCCurve::G1_discontinuous(
   if (gCurve->Continuity() < GeomAbs_G1)
      return is_discon;
 
-  assert(first <= param <= last );
+  assert(first <= param && param <= last );
   
   gp_Pnt P;
   gp_Vec V1;
@@ -933,7 +933,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Edge(), shape);
@@ -1148,6 +1148,7 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
       }
    }
+   return (Curve*) NULL;
 }
 
 // ********** END PRIVATE FUNCTIONS        **********

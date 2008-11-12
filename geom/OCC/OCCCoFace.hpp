@@ -77,8 +77,8 @@ public:
 protected: 
   
 private:
-  OCCShell *myShell;
   OCCSurface *mySurface;
+  OCCShell *myShell;
   CubitSense faceSense;
 };
 

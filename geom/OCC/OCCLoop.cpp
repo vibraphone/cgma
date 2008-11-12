@@ -146,6 +146,7 @@ void OCCLoop::remove_all_simple_attribute_virt()
 CubitStatus OCCLoop::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
                                                  /*cubit_simple_attrib_list*/)
 {
+  return CUBIT_FAILURE;
 }
 CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
                                           DLIList<CubitSimpleAttrib*>&)
@@ -255,5 +256,6 @@ CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
     loop = TopoDS::Wire(shape);
     OCCQueryEngine::instance()->update_OCC_map(*myTopoDSWire, loop);
   }
+  return CUBIT_SUCCESS;
 }
 

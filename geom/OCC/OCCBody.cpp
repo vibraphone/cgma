@@ -436,7 +436,7 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 
   for(int i = 0; i < points.size(); i++)
     points.get_and_step()->set_myMarked(CUBIT_FALSE);
-
+  return CUBIT_SUCCESS;
 }
 
 //----------------------------------------------------------------
@@ -477,7 +477,7 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(old_shape, shape);
@@ -504,6 +504,7 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
   }
   if(!old_shape.IsSame(new_shape))
     OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);
+  return CUBIT_SUCCESS;
 }
 //----------------------------------------------------------------
 // Function: update_bounding_box

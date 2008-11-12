@@ -4357,7 +4357,7 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
 
   BRepTools_WireExplorer it(wire);
   int num_edges = 0;
-  for(it; it.More(); it.Next())
+  for(; it.More(); it.Next())
     num_edges++; 
   
   BRepLib_FuseEdges fuser(wire);

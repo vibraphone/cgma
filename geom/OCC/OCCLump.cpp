@@ -368,7 +368,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Solid(), 
@@ -397,7 +397,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      shell->update_OCC_entity(aBRepTrsf, op);
   }
   OCCQueryEngine::instance()->update_OCC_map(*myTopoDSSolid, solid);
-
+  return CUBIT_SUCCESS;
 }
 
 //----------------------------------------------------------------
@@ -453,7 +453,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(shell, shape);
@@ -480,4 +480,5 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   }
   if(!old_solid.IsSame(new_shape))
     OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
+  return CUBIT_SUCCESS;
 }

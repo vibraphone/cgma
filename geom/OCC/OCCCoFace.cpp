@@ -60,6 +60,7 @@ OCCCoFace::~OCCCoFace()
 GeometryQueryEngine*
 OCCCoFace::get_geometry_query_engine() const
 {
+  return OCCQueryEngine::instance();
 }
 
 

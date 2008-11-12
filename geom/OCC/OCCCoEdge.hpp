@@ -120,10 +120,10 @@ public:
 protected: 
   
 private:
-  LoopSM *myLoop;
-  Curve *myCurve;
-  CubitSense edgeSense;
   int myMark;
+  Curve *myCurve;
+  LoopSM *myLoop;
+  CubitSense edgeSense;
 };
 
 
