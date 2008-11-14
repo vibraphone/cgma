@@ -640,7 +640,6 @@ VirtualQueryEngine::VirtualQueryEngine()
    //GeometryQueryTool::instance()->set_default_engine(this); 
   CompositeEngine::instance();
   PartitionEngine::instance();
-  register_attributes();
 }
 
 

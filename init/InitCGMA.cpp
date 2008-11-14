@@ -54,23 +54,25 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
 {
   CGMApp::instance()->startup( 0, NULL );
   GeometryModifyEngine* default_engine = 0;
+  bool ignore_default = false;
 
-#if defined(CUBIT_CGM) || defined(HAVE_ACIS)
-  GeometryModifyEngine* acis_engine_ptr;
-  #ifdef CUBIT_CGM
-    if (!AcisQueryEngine::instance_)
-      AcisQueryEngine::instance_ = new (reinterpret_cast<AcisQueryEngine*>(new dummym)) AcisQueryEngine;
-    if (!AcisModifyEngine::instance_)
-      AcisModifyEngine::instance_ = new (reinterpret_cast<AcisModifyEngine*>(new dummym)) AcisModifyEngine;
-    acis_engine_ptr = reinterpret_cast<GeometryModifyEngine*>
-                         (AcisModifyEngine::instance_);
-  #else
-    AcisQueryEngine::instance();
-    AcisModifyEngine::instance();
-    acis_engine_ptr = AcisModifyEngine::instance();
-  #endif
+#ifdef CUBIT_CGM
+  if (!AcisQueryEngine::instance_)
+    AcisQueryEngine::instance_ = new (reinterpret_cast<AcisQueryEngine*>(new dummym)) AcisQueryEngine;
+  if (!AcisModifyEngine::instance_)
+    AcisModifyEngine::instance_ = new (reinterpret_cast<AcisModifyEngine*>(new dummym)) AcisModifyEngine;
   if (default_engine_name && streq_nocase("ACIS",default_engine_name))
-    default_engine = acis_engine_ptr;
+    ignore_default = true; // We cannot set the default engine correctly
+                       // because we cannot safely cast to GeometryModifyEngine
+                       // without the complete definition of AcisModifyEngine.
+                       // But it shouldn't matter, as ACIS is the default for
+                       // Cubit anyway.
+#elif defined(HAVE_ACIS)
+  AcisQueryEngine::instance();
+  AcisModifyEngine::instance();
+  acis_engine_ptr = AcisModifyEngine::instance();
+  if (default_engine_name && streq_nocase("ACIS",default_engine_name))
+    default_engine = AcisModifyEngine::instance();
 #endif
 
 #ifdef HAVE_OCC  
@@ -82,12 +84,12 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
 
   FacetQueryEngine::instance();
   FacetModifyEngine::instance();
-  VirtualQueryEngine::instance();
+  VirtualQueryEngine::instance()->register_attributes();
 
   if (default_engine_name && streq_nocase("FACET",default_engine_name))
     default_engine = FacetModifyEngine::instance();
 
-  if(default_engine_name) {
+  if(default_engine_name && !ignore_default) {
     if (!default_engine) {
       PRINT_ERROR("Invalid or unsupported engine: '%s'\n", default_engine_name);
       return CUBIT_FAILURE;
