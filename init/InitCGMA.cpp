@@ -62,7 +62,8 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
       AcisQueryEngine::instance_ = new (reinterpret_cast<AcisQueryEngine*>(new dummym)) AcisQueryEngine;
     if (!AcisModifyEngine::instance_)
       AcisModifyEngine::instance_ = new (reinterpret_cast<AcisModifyEngine*>(new dummym)) AcisModifyEngine;
-    acis_engine_ptr = AcisModfyEngine::instance();
+    acis_engine_ptr = reinterpret_cast<GeometryModifyEngine*>
+                         (AcisModifyEngine::instance_);
   #else
     AcisQueryEngine::instance();
     AcisModifyEngine::instance();

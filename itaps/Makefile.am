@@ -56,7 +56,7 @@ check_PROGRAMS = $(TESTS)
 testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = libiGeom.la
 testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
-testgeom_LDFLAGS = $(CGM_EXT_LTFLAGS)
+testgeom_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_occ_SOURCES = $(testgeom_SOURCES)
 testgeom_occ_LDADD = $(testgeom_LDADD)
 testgeom_occ_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
