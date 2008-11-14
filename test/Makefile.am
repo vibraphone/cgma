@@ -12,20 +12,23 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-LINK_FLAGS = 
 TESTS = sheet
 if build_ACIS
   TESTS += webcut hollow_acis
-  LINK_FLAGS += -R$(ACIS_LIB_DIR)
+else
+if WITH_CUBIT
+  TESTS += webcut
+endif
 endif
 if build_OCC
   TESTS += modify makept r_w test_occ
-  LINK_FLAGS += -R$(OCC_LIB_DIR)
 endif
 
 AM_CPPFLAGS =
 AM_CPPFLAGS += -DSRCDIR=@srcdir@ $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 check_PROGRAMS = $(TESTS)
+
+LINK_FLAGS = $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
