@@ -13,4 +13,4 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom/Cholla \
                -I$(top_srcdir)/geom/facet
 
-LDADD = $(top_builddir)/libcgm.la
+LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
