@@ -70,7 +70,6 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
 #elif defined(HAVE_ACIS)
   AcisQueryEngine::instance();
   AcisModifyEngine::instance();
-  acis_engine_ptr = AcisModifyEngine::instance();
   if (default_engine_name && streq_nocase("ACIS",default_engine_name))
     default_engine = AcisModifyEngine::instance();
 #endif
