@@ -42,7 +42,7 @@ int main( int argc, char** argv ) {
   OCCQueryEngine::instance();
   OCCModifyEngine::instance();
   GeometryQueryTool *gti = GeometryQueryTool::instance();
-  GeometryModifyTool *gmti = GeometryModifyTool::instance();
+  GeometryModifyTool::instance();
   assert(gti);
   
   // Read in the geometry from files specified on the command line

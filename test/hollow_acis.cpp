@@ -53,7 +53,7 @@ int main (int argc, char **argv)
     // Initialize the GeometryTool
   
   CGMApp::instance()->startup( argc, argv );
-  GeometryQueryTool *gti = GeometryQueryTool::instance();
+  GeometryQueryTool::instance();
   AcisQueryEngine::instance();
   AcisModifyEngine::instance();
 
@@ -85,7 +85,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv) 
+CubitStatus read_geometry(int num_files, const char **argv) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -93,8 +93,6 @@ CubitStatus read_geometry(int num_files, char **argv)
   int i;
   
     // For each file, open and read the geometry
-  FILE *file_ptr;
-
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
@@ -114,7 +112,7 @@ CubitStatus hollow()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/hollow.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/hollow.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -149,6 +147,6 @@ CubitStatus hollow()
   //Destroyed volume(s): 1
   n = new_bodies.get()->num_ref_faces(); //n = 9
   d = new_bodies.get()->measure(); //d = 72.4074
-  return CUBIT_SUCCESS;
+  return stat ;
 }
 

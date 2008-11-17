@@ -46,7 +46,7 @@
 #define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **, bool local = false);
+CubitStatus read_geometry(int, const char **, bool local = false);
 CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
@@ -91,7 +91,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv, bool local) 
+CubitStatus read_geometry(int num_files, const char **argv, bool local)
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -116,7 +116,6 @@ CubitStatus read_geometry(int num_files, char **argv, bool local)
 
 CubitStatus make_Point()
 {
-  RefEntityFactory* ref = RefEntityFactory::instance();
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
@@ -176,8 +175,7 @@ CubitStatus make_Point()
   }
 
   //create solid from surfaces 
-  GeometryModifyEngine *gme = gmti->get_engine(occ_surfaces.get());
-  BodySM* stitched_body = NULL;
+  //GeometryModifyEngine *gme = gmti->get_engine(occ_surfaces.get());
   DLIList<Body*> new_bodies;
   gmti->create_solid_bodies_from_surfs(face_list, new_bodies);
   //Created volume(s): 9 
@@ -205,7 +203,7 @@ CubitStatus make_Point()
     }
 
   // Read in the geometry from files specified on the command line
-  char *argv = "stitch.occ";
+  const char *argv = "stitch.occ";
   CubitStatus status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 1 volume.
@@ -229,8 +227,12 @@ CubitStatus make_Point()
   Body* tool_body = gmti->cylinder(10, 1, 1, 1);
   double d;
   d = from_body->measure(); //d = 219.91
+  bodysm = from_body->get_body_sm_ptr();
+  CubitVector center1;
+  CAST_TO(bodysm, OCCBody)->mass_properties(center1, d);
   d = from_body2->measure();//d = 67.02
   d = tool_body->measure(); //d = 31.41
+  
 
   // test for sphere making
   Body* test_body = gmti->sphere(5);
@@ -522,9 +524,6 @@ CubitStatus make_Point()
   gti->get_free_ref_entities(free_entities);  
   assert(free_entities.size() == 0);
  
-  OCCQueryEngine* oqe = OCCQueryEngine::instance();
-  DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
-
   from_body  = gmti->brick(4, 4, 4);
   CubitVector v_move9(2,5,2);
   gti->translate(from_body,v_move9); 
@@ -747,7 +746,6 @@ CubitStatus make_Point()
   RefFace* draft_face = gmti->make_RefFace(sweep_face);
   RefFace* perp_face = gmti->make_RefFace(sweep_face);
   RefFace* rotate_face = gmti->make_RefFace(sweep_face);
-  RefFace* rotate_face2 = gmti->make_RefFace(sweep_face);
   gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();

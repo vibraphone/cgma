@@ -64,7 +64,7 @@ int main (int argc, char **argv)
     // Initialize the GeometryTool
   
   CGMApp::instance()->startup( argc, argv );
-  GeometryQueryTool *gti = GeometryQueryTool::instance();
+  GeometryQueryTool::instance();
   AcisQueryEngine::instance();
   AcisModifyEngine::instance();
 
@@ -107,7 +107,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv) 
+CubitStatus read_geometry(int num_files, const char **argv) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -115,8 +115,6 @@ CubitStatus read_geometry(int num_files, char **argv)
   int i;
   
     // For each file, open and read the geometry
-  FILE *file_ptr;
-
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
@@ -136,7 +134,7 @@ CubitStatus webcut_with_brick()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model2.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -191,7 +189,7 @@ CubitStatus webcut_with_cylinder()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model2.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -242,7 +240,7 @@ CubitStatus webcut_with_planar_sheet()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model2.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -296,7 +294,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/huge.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/huge.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -362,7 +360,7 @@ CubitStatus webcut_with_sweep_curves()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model3.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model3.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -422,7 +420,7 @@ CubitStatus webcut_with_sweep_along_curve()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model3.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model3.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -493,7 +491,7 @@ CubitStatus webcut_with_curve_loop()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model4.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model4.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -550,7 +548,7 @@ CubitStatus webcut_with_extended_surf()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model5.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model5.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -597,7 +595,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model7.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model7.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -648,7 +646,7 @@ CubitStatus webcut_with_sweep_surfaces()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model6.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -698,7 +696,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model6.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {
@@ -758,7 +756,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = STRINGIFY(SRCDIR) "/model6.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   else if (gti->num_bodies() == 0) {

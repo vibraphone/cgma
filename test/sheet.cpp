@@ -36,17 +36,6 @@ int main (int argc, char **argv)
   CubitStatus result = InitCGMA::initialize_cgma();
   if (CUBIT_SUCCESS != result) return 1;
   
-  GeometryQueryEngine* const gqe_list[] = {
-#ifdef HAVE_ACIS
-//    AcisQueryEngine::instance(),
-#endif
-#ifdef HAVE_OCC
-//    OCCQueryEngine::instance(),
-#endif
-    NULL
-  };
-
-
   GeometryModifyEngine* const gme_list[] = {
 #ifdef HAVE_ACIS
 //    AcisModifyEngine::instance(),

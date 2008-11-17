@@ -39,7 +39,7 @@
 #define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **);
+CubitStatus read_geometry(int, const char **, bool local = false);
 CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
@@ -84,7 +84,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv) 
+CubitStatus read_geometry(int num_files, const char **argv, bool local) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -94,7 +94,7 @@ CubitStatus read_geometry(int num_files, char **argv)
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
-    std::string filename( SRCPATH );
+    std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
     status = gti->import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
@@ -115,16 +115,16 @@ CubitStatus make_Point()
   OCCModifyEngine::instance();
 
   // Read in the geometry from files specified on the command line
-  char *argv = "./66_shaver3.brep";
+  const char *argv = "66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
 
-  argv = "./62_shaver1.brep";
-  status = read_geometry(1, &argv);
+  const char *argv2 = "62_shaver1.brep";
+  status = read_geometry(1, &argv2);
   if (status == CUBIT_FAILURE) exit(1);
 
-  argv = "./72_shaver6.brep";
-  status = read_geometry(1, &argv);
+  const char *argv3 = "72_shaver6.brep";
+  status = read_geometry(1, &argv3);
   if (status == CUBIT_FAILURE) exit(1);
   
   // test create a Compound body.

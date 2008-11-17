@@ -91,7 +91,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, char **argv, bool local) 
+CubitStatus read_geometry(int num_files, const char **argv, bool local) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -125,7 +125,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*>  free_entities;
 
   // Read in the geometry from files specified on the command line
-  char *argv = "stitch.occ_name";
+  const char *argv = "stitch.occ_name";
   CubitStatus status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
@@ -152,8 +152,8 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
-  argv = "beforesub.occ";
-  status = read_geometry(1, &argv, true);
+  const char *argv1 = "beforesub.occ";
+  status = read_geometry(1, &argv1, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -197,8 +197,8 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  argv = "unite1.occ";
-  status = read_geometry(1, &argv, false);
+  const char *argv2 = "unite1.occ";
+  status = read_geometry(1, &argv2, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -223,8 +223,8 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  argv = "unite1.occ";
-  status = read_geometry(1, &argv, false);
+  const char *argv3 = "unite1.occ";
+  status = read_geometry(1, &argv3, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -253,8 +253,8 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
     // Read in the geometry from files specified on the command line
-  argv = "unite4.occ";
-  status = read_geometry(1, &argv, false);
+  const char *argv4 = "unite4.occ";
+  status = read_geometry(1, &argv4, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -279,8 +279,7 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  argv = "unite4.occ";
-  status = read_geometry(1, &argv, false);
+  status = read_geometry(1, &argv4, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
