@@ -28,6 +28,8 @@
 #include "BRepOffsetAPI_MakeDraft.hxx"
 #include "BRepBuilderAPI_TransitionMode.hxx"
 #include "BRepBuilderAPI_MakeWire.hxx"
+#include "BRepPrimAPI_MakeHalfSpace.hxx"
+#include "BRepBndLib.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TopAbs_Orientation.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -336,7 +338,9 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     Geom_BezierCurve BezierCurve(points);
     Geom_BezierCurve* curve =  new Geom_BezierCurve(BezierCurve);
     Handle(Geom_BoundedCurve) curve_ptr(curve);
-    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+    TopoDS_Vertex * vt1 = occ_point1->get_TopoDS_Vertex();
+    TopoDS_Vertex * vt2 = occ_point2->get_TopoDS_Vertex(); 
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, *vt1, *vt2);
     return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
   }
 
@@ -405,7 +409,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   else if (curve_type == ARC_CURVE_TYPE)
   {
      assert(intermediate_point_ptr != NULL);
-     curve_ptr = GC_MakeArcOfCircle(pt1, pt2, pt3);
+     curve_ptr = GC_MakeArcOfCircle(pt1, pt3, pt2);
   }
 
   else if (curve_type == ELLIPSE_CURVE_TYPE)
@@ -532,7 +536,11 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
       return (Curve *)NULL;
   }
 
-  TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+  OCCPoint* occ_pt1 = CAST_TO(const_cast<Point*>(point1_ptr),OCCPoint);
+  OCCPoint* occ_pt2 = CAST_TO(const_cast<Point*>(point2_ptr),OCCPoint);
+  TopoDS_Vertex * vt1 = occ_pt1->get_TopoDS_Vertex();
+  TopoDS_Vertex * vt2 = occ_pt2->get_TopoDS_Vertex();
+  TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, *vt1, *vt2);
   return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
 }
 
@@ -1718,8 +1726,6 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
 {
   // copy the bodies in case keep_old is true
   DLIList<TopoDS_Shape*> tool_bodies_copy;
-  DLIList<TopoDS_Shape*> from_bodies_copy;
-  DLIList<CubitBoolean> is_volume;
 
   //for subtract function, tool-body has to be solid, 
   //otherwise it's just imprint
@@ -1745,8 +1751,32 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
      return CUBIT_FAILURE;
   }
 
+  stat = do_subtract(from_bodies, tool_bodies_copy, is_tool_volume,
+                     tool_boxes, new_bodies, keep_old, imprint) ;
+
+  //ok, we're done wih all cuts, delete unnecessaries.
+  while (tool_boxes->size())
+    delete tool_boxes->pop();
+  delete tool_boxes;
+  while (tool_bodies_copy.size())
+    delete tool_bodies_copy.pop();
+  if(!keep_old) //delete tool_bodies
+    OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_list);
+  return stat;
+}
+
+CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
+                                      DLIList<TopoDS_Shape*> &tool_bodies_copy,
+                                      DLIList<CubitBoolean> &is_tool_volume,
+                                      DLIList<CubitBox*>* tool_boxes,
+                                      DLIList<BodySM*> &new_bodies,
+                                      bool keep_old,
+                                      bool imprint) const
+{
+  DLIList<TopoDS_Shape*> from_bodies_copy;
+  DLIList<CubitBoolean> is_volume;
   //get the from_bodies underling shapes
-  stat = get_shape_list(from_bodies, from_bodies_copy, is_volume, keep_old);
+  CubitStatus stat = get_shape_list(from_bodies, from_bodies_copy, is_volume, keep_old);
   if(!stat)
   {
     for (int i = 0; i < tool_bodies_copy.size(); i++)
@@ -1771,7 +1801,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     BodySM* from_body = from_bodies.get();
     CubitBox box1 = CAST_TO(from_body, OCCBody)->get_bounding_box();
     int count = 0;  //count for not preforming cut
-    for(int j = 0; j < tool_body_list.size(); j ++)
+    for(int j = 0; j < tool_bodies_copy.size(); j ++)
     {
       if (cmi->Interrupt())
       {
@@ -1817,8 +1847,8 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       }
     }
 
-    //ok, we're done wih all cuts, construct new Body'
-    if (count < tool_body_list.size() )
+    //ok, we're done with all cuts, construct new Body'
+    if (count < tool_bodies_copy.size() )
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
     else
     {
@@ -1829,7 +1859,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     from_shape = from_bodies_copy.step_and_get();
 
     // done with this j iteration; write out count, if necessary
-    if (from_bodies.size() * tool_body_list.size() > 1)
+    if (from_bodies.size() * tool_bodies_copy.size() > 1)
     {
        int frac_done = (100 * (i+1)) / (from_bodies.size());
        if ((100 - frac_done) < fraction_remaining)
@@ -1848,11 +1878,6 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   }    
 
   //ok, we're done wih all cuts, delete unnecessaries. 
-  while (tool_boxes->size())
-    delete tool_boxes->pop();
-  delete tool_boxes;
-  while (tool_bodies_copy.size())
-    delete tool_bodies_copy.pop();
   if(keep_old)
   {
     int size  = from_bodies_copy.size();
@@ -1863,8 +1888,6 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
       delete shape;
     }
   } 
-  if(!keep_old) //delete tool_bodies
-    OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_list); 
   return CUBIT_SUCCESS; 
 }
 
@@ -4571,20 +4594,62 @@ CubitStatus OCCModifyEngine::webcut_with_curve_loop(
 // Function   : section
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 11/08
 //===============================================================================
-CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &/*section_body_list*/,
-                                        const CubitVector &/*point_1*/,
-                                        const CubitVector &/*point_2*/,
-                                        const CubitVector &/*point_3*/,
-                                        DLIList<BodySM*>& /*new_body_list*/,
-                                        bool /*keep_normal_side*/,
-                                        bool /*keep_old*/,
-                                        bool /*keep_both_sides*/)
+CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
+                                      const CubitVector &point_1,
+                                      const CubitVector &point_2,
+                                      const CubitVector &point_3,
+                                      DLIList<BodySM*>& new_body_list,
+                                      bool keep_normal_side,
+                                      bool keep_old,
+                                      bool keep_both_sides)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  if (keep_both_sides == CUBIT_TRUE )
+  {
+     PRINT_ERROR("keeping both sides of section is not implemented.\n");
+     return CUBIT_FAILURE;
+  }
+ 
+  //Calculate normal of the section plan
+  CubitVector v1, v2, normal;
+  v1 = point_2 - point_1;
+  v2 = point_3 - point_1; 
+  normal = ~(v1 * v2); 
+  if(normal.length() != 1)
+  {
+     PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
+     return CUBIT_FAILURE;
+  }
+  
+  if(keep_normal_side)
+    normal *= -1;
+
+  gp_Pnt pt = gp_Pnt( point_1.x(), point_1.y(), point_1.z());
+  gp_Dir normal_dir(normal.x(), normal.y(), normal.z()); 
+  gp_Pln plane(pt, normal_dir);
+  gp_Vec vec(normal_dir);
+  pt.Translated(vec);
+  TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
+  TopoDS_Solid solid = BRepPrimAPI_MakeHalfSpace(face, pt);
+   
+  DLIList<CubitBoolean> is_tool_volume;
+  is_tool_volume.append(CUBIT_TRUE);
+  DLIList<CubitBox*> tool_boxes ;
+  Bnd_Box box;
+  BRepBndLib::Add(solid, box);
+  double min[3], max[3];
+  box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+  CubitBox* cBox = new CubitBox(min, max);
+  
+  tool_boxes.append(cBox);
+  DLIList<TopoDS_Shape*> solids;
+  solids.append(&solid);
+  CubitStatus stat = do_subtract(section_body_list, solids, is_tool_volume,
+                     &tool_boxes, new_body_list, keep_old) ;
+  delete cBox;
+  return stat;
 }
 
 //===============================================================================

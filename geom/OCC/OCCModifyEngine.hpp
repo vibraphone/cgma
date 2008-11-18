@@ -708,6 +708,15 @@ private:
 
  CubitStatus get_sweepable_toposhape(OCCCurve*& curve,
                                      TopoDS_Shape& toposhape)const;
+
+ CubitStatus do_subtract(DLIList<BodySM*> &from_bodies,
+                         DLIList<TopoDS_Shape*> &tool_bodies_copy, 
+                         DLIList<CubitBoolean> &is_tool_volume,
+                         DLIList<CubitBox*>* tool_boxes,
+                         DLIList<BodySM*> &new_bodies,
+                         bool keep_old,
+                         bool imprint = CUBIT_FALSE) const;
+
 } ;
 
 #endif
