@@ -170,9 +170,9 @@ OCCQueryEngine::~OCCQueryEngine()
   delete OCCMap;
   delete OccToCGM;
   while( BodyList->size() ) delete BodyList->pop();
-  delete[] WireList;
-  delete[] SurfaceList;
-  delete[] CurveList;
+  delete WireList;
+  delete SurfaceList;
+  delete CurveList;
 }
 
 int OCCQueryEngine::get_major_version()
