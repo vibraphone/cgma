@@ -96,6 +96,7 @@ bool construct_test(iGeom_Instance geom);
 bool primitives_test(iGeom_Instance geom);
 bool transforms_test(iGeom_Instance geom);
 bool booleans_test(iGeom_Instance geom);
+bool shutdown_test(iGeom_Instance geom);
 
 void handle_error_code(const bool result,
                        int &number_failed,
@@ -227,6 +228,15 @@ int main( int argc, char *argv[] )
   number_tests++;
   std::cout << "\n";
 
+    // shutdown test
+  std::cout << "   shutdown: ";
+  result = shutdown_test(geom);
+  handle_error_code(result, number_tests_failed,
+                    number_tests_not_implemented,
+                    number_tests_successful);
+  number_tests++;
+  std::cout << "\n";
+  
     // summary
 
   std::cout << "\nTSTT TEST SUMMARY: \n"
@@ -1135,5 +1145,19 @@ bool booleans_test(iGeom_Instance geom)
   
   iGeom_deleteEnt( geom, unite_results, &err );
   CHECK( "Problems deleting for booleans unite test." );
+  return true;
+}
+
+bool shutdown_test(iGeom_Instance geom) 
+{
+  int err;
+
+    // test shutdown & startup of interface
+  iGeom_dtor(geom, &err);
+  CHECK( "Interface destruction didn't work properly." );
+  
+  iGeom_newGeom(NULL, &geom, &err, 0);
+  CHECK( "Interface re-construction didn't work properly." );
+  
   return true;
 }
