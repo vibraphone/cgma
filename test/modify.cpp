@@ -122,6 +122,47 @@ CubitStatus make_Point()
   OCCQueryEngine::instance();
   OCCModifyEngine* ome = OCCModifyEngine::instance();
 
+  //bug fixing for creating arc curve.
+   CubitVector vti(6.0, 0.0, 0.0);
+   RefVertex* vert1 = GeometryModifyTool::instance()->make_RefVertex(vti);
+   CubitVector vtii(6.0, 8.0, 0.0);
+   RefVertex* vert2 = GeometryModifyTool::instance()->make_RefVertex(vtii);
+   CubitVector v3(0, 8.0, 0.0);
+   RefEdge* edge6 = gmti->make_RefEdge(ARC_CURVE_TYPE, vert1, vert2, &v3, CUBIT_FORWARD );
+   double d = edge6->measure();
+   DLIList<RefEntity*> listVertexEdge;
+   edge6->get_child_ref_entities(listVertexEdge);
+   int numVertexEdge = listVertexEdge.size();
+   RefVertex* tmpVertex = NULL;
+   CubitVector coord;
+   for (int i = 0; i < numVertexEdge; i++)
+   {
+       tmpVertex = CAST_TO(listVertexEdge.get_and_step(), RefVertex);
+       coord = tmpVertex->coordinates();
+   }
+   int numTotalVertex  = GeometryQueryTool::instance()->num_ref_vertices();
+   DLIList<RefVertex*> ref_v;
+   GeometryQueryTool::instance()->ref_vertices(ref_v);
+   for (int i = 0; i < numTotalVertex; i++)
+   {
+       tmpVertex = ref_v.get_and_step();
+       coord = tmpVertex->coordinates();
+   }
+
+  DLIList<Body*> bodies;
+  DLIList<RefEntity*>  free_entities;
+  gti->bodies(bodies);
+  gti->get_free_ref_entities(free_entities);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  for (int j = free_entities.size(); j--;)
+    {
+      gti->delete_RefEntity( free_entities.get_and_step());
+    }
+
+  //other tests
   Body* body = gmti->brick(10, 10, 10);
   CubitVector v(15,0,0);
   BodySM* bodysm = body->get_body_sm_ptr();
@@ -148,7 +189,7 @@ CubitStatus make_Point()
   normal = test_face->normal_at(v_test); //(-1,0,0)
   ome->flip_normals(surface_list);
   normal = test_face->normal_at(v_test); //(1,0, 0)
-  DLIList<Body*> bodies;
+  bodies.clean_out();
   test_face->bodies(bodies);
   gti->delete_Body(bodies);
   surface_list.clean_out();
@@ -191,8 +232,8 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  DLIList<RefEntity*>  free_entities;
   gti->bodies(bodies);
+  free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
   //delete all entities
   gti->delete_Body(bodies);
@@ -225,7 +266,6 @@ CubitStatus make_Point()
   Body* from_body = gmti->cylinder(10, 4, 3, 2);
   Body* from_body2 = gmti->cylinder(8, 4, 2, 0);
   Body* tool_body = gmti->cylinder(10, 1, 1, 1);
-  double d;
   d = from_body->measure(); //d = 219.91
   bodysm = from_body->get_body_sm_ptr();
   CubitVector center1;
@@ -825,7 +865,7 @@ CubitStatus make_Point()
   RefVertex* vt1 = gmti->make_RefVertex(pt1);
   RefVertex* vt2 = gmti->make_RefVertex(pt2);
   RefVertex* vt3 = gmti->make_RefVertex(pt3);
-  RefEdge* edge1 = gmti->make_RefEdge(ARC_CURVE_TYPE, vt1, vt3, &pt2, 
+  RefEdge* edge1 = gmti->make_RefEdge(ARC_CURVE_TYPE, vt1, vt2, &pt3, 
                   CUBIT_FORWARD );
   CubitVector apoint(0,-0.5,15);
   refentities.clean_out();
@@ -915,5 +955,16 @@ CubitStatus make_Point()
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();
   //d = 93.697, no effect of draft angle.
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  for(int i = 0; i < free_entities.size(); i++)
+    gti->delete_RefEntity(free_entities.get_and_step());
+
   return CUBIT_SUCCESS;
 }
