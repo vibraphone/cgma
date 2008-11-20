@@ -274,8 +274,8 @@ private:
 
   CubitStatus unhook_Lump_from_OCC( Lump* lump ) const;
   CubitStatus unhook_ShellSM_from_OCC( ShellSM* shell ) const;
-  CubitStatus unhook_CoEdges_from_OCC( DLIList<OCCCoEdge*> coedges) const;
-  CubitStatus unhook_CoFaces_from_OCC( DLIList<OCCCoFace*> cofaces) const;
+  CubitStatus unhook_CoEdges_from_OCC( DLIList<OCCCoEdge*>& coedges) const;
+  CubitStatus unhook_CoFaces_from_OCC( DLIList<OCCCoFace*>& cofaces) const;
   CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm) const;
   CubitStatus delete_loop( LoopSM* loopsm)const;
   void unhook_cofaces_of_a_surface(OCCSurface* surface)const;

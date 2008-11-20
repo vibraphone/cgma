@@ -70,7 +70,7 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
     for (ii=1; ii<=M.Extent(); ii++) 
     {
           TopologyBridge *face = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCSurface *occ_face = CAST_TO(occ_face, OCCSurface);
+          OCCSurface *occ_face = CAST_TO(face, OCCSurface);
           Face_list.append_unique(occ_face->get_TopoDS_Face());
     } 
     int i;
@@ -181,6 +181,9 @@ OCCDrawTool::draw_curve( Curve *curve, int color , CubitBoolean flush )
   GMem g_mem;
   int num_points;
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
+  double tol = OQE->get_sme_resabs_tolerance();
+  if (curve->get_arc_length() < tol)
+    return CUBIT_SUCCESS;
   // get the graphics
   CubitStatus stat;
   stat = OQE->get_graphics( curve, num_points, &g_mem );

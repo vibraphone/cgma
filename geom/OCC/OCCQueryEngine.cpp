@@ -31,8 +31,11 @@
 #include "Poly_Triangle.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "Handle_Poly_Triangulation.hxx"
+#include "BRepAdaptor_Curve.hxx"
+#include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
 #include "Handle_Poly_Polygon3D.hxx"
+#include "BRepMesh_FastDiscret.hxx"
 #include "OCCQueryEngine.hpp"
 #include "OCCModifyEngine.hpp"
 #include "Poly_Triangulation.hxx"
@@ -269,15 +272,32 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   TopLoc_Location L;
   Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*Topo_Face, L);
 
+  if(facets.IsNull())
+  {
+    //do triangulation
+    double deflection = 0.01;
+    double angle  = 0.5;
+    BRepAdaptor_Surface asurface(*Topo_Face);
+    Bnd_Box aBox;
+    BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
+    BRepMesh_FastDiscret *myMesh =
+    new BRepMesh_FastDiscret(deflection, *Topo_Face, aBox, angle, Standard_True, Standard_True);
+    if (myMesh != NULL) delete myMesh;
+    facets = BRep_Tool::Triangulation(*Topo_Face, L);
+    if(facets.IsNull())
+    {
+      PRINT_ERROR("Can't get triangulation representation for this surface.\n");
+      return CUBIT_FAILURE;
+    }
+  }
   //if necessary, the face tolerance can be returned. now, no use.
   //double tol = BRep_Tool::Tolerance(*Topo_Face);   
 
   number_points = facets->NbNodes();
   number_triangles = facets->NbTriangles();
-  assert(number_points == 3 * number_triangles);
   number_facets = 4 * number_triangles; 
   
-  Poly_Array1OfTriangle triangles(0, number_facets-1);
+  Poly_Array1OfTriangle triangles(0, number_triangles-1);
   triangles.Assign( facets->Triangles() );
   int *facetList =  new int[number_facets];
   //needs to test that N1, N2, N3 index are starting from 0 to number_points-1
@@ -337,20 +357,28 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
   if (!Topo_Edge)
     return CUBIT_FAILURE;
 
-  TopLoc_Location L;
-  Handle_Poly_Polygon3D facets = BRep_Tool::Polygon3D(*Topo_Edge, L);
-
-  num_points = facets->NbNodes();
-  TColgp_Array1OfPnt points(0, num_points-1);
-  points.Assign(facets->Nodes());
+  //do triangulation
+  double deflection = 0.01;
+  double angle  = 0.5;
+  BRepAdaptor_Curve acurve(*Topo_Edge);
+  Bnd_Box aBox;
+  BndLib_Add3dCurve::Add(acurve, Precision::Approximation(), aBox);
+  BRepMesh_FastDiscret *myMesh =
+  new BRepMesh_FastDiscret(deflection, *Topo_Edge, aBox, angle, Standard_True, Standard_True);
+  if (myMesh == NULL) 
+  {
+    PRINT_ERROR("Can't get triangulation representation for this curve.\n");
+    return CUBIT_FAILURE;
+  }
+  num_points = myMesh->NbVertices();
 
   //! Note: If the polygon is closed, the point of closure is 
   //! repeated at the end of its table of nodes. Thus, on a closed 
   //! triangle the function NbNodes returns 4. 
   GPoint *gPnts= new GPoint[num_points];
-  for (int i = 0; i < num_points ; i ++)
+  for (int i = 1; i <= num_points ; i ++)
     {
-      gp_Pnt gp_pnt = points.Value(i);
+      gp_Pnt gp_pnt = myMesh->Pnt(i);
       GPoint gPnt;
       gPnt.x = gp_pnt.X();
       gPnt.y = gp_pnt.Y();
@@ -359,6 +387,7 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
     }
   gMem->replace_point_list( gPnts, num_points, num_points );
  
+  delete myMesh;
   return CUBIT_SUCCESS;
 }
 
@@ -1871,7 +1900,7 @@ OCCQueryEngine::unhook_ShellSM_from_OCC( ShellSM* shell) const
 // Creation Date : 12/12/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::unhook_CoFaces_from_OCC( DLIList<OCCCoFace*> cofaces) const
+OCCQueryEngine::unhook_CoFaces_from_OCC( DLIList<OCCCoFace*>& cofaces) const
 {
   int size = cofaces.size();
   while(size > 0)
@@ -2051,7 +2080,7 @@ OCCQueryEngine::unhook_LoopSM_from_OCC( LoopSM* loopsm) const
 // Creation Date : 12/12/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::unhook_CoEdges_from_OCC( DLIList<OCCCoEdge*> coedges) const
+OCCQueryEngine::unhook_CoEdges_from_OCC( DLIList<OCCCoEdge*>& coedges) const
 {
   int size = coedges.size();
   while(size > 0)
