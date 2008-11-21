@@ -5530,7 +5530,7 @@ iGeom_subtractEnts (iGeom_Instance instance,
 }
 
 void
-iGeom_intersectEnt ( iGeom_Instance instance,
+iGeom_intersectEnts ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle ent1,
 		     /*in*/ iBase_EntityHandle ent2,
 		     /*out*/ iBase_EntityHandle *geom_entity,
