@@ -1318,6 +1318,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     Surface* face =
       populate_topology_bridge(topo_face, build_body);
     
+    if(!face)
+      continue;
     OCCSurface *occ_surface = CAST_TO(face, OCCSurface);
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoFace * coface = NULL;
@@ -1364,6 +1366,12 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
     *poface = aShape;
     surface = new OCCSurface(poface);
 
+    double tol = get_sme_resabs_tolerance();
+    if(surface->measure() < tol * tol)
+    {
+      delete surface;
+      return (Surface*) NULL;
+    } 
     if(PRINT_RESULT)
       PRINT_INFO("Adding faces.\n");
     iTotalTBCreated++;
@@ -1434,6 +1442,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   for (Ex.Init(aShape); Ex.More(); Ex.Next())
   {
     Curve* curve = populate_topology_bridge(Ex.Current());
+    if(!curve)
+      continue;
     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
     DLIList<OCCLoop*> loops = occ_curve->loops();
     CubitBoolean exist = CUBIT_FALSE;
@@ -1524,6 +1534,11 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
       *poedge = aShape;
       iTotalTBCreated++;
       curve = new OCCCurve(poedge);
+      if(curve->measure() < get_sme_resabs_tolerance())
+      {
+        delete curve;
+        return (Curve*) NULL;
+      }
       OCCMap->Bind(*poedge, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)curve));
