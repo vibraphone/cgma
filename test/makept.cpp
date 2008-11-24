@@ -29,6 +29,7 @@
 #include "OCCBody.hpp"
 #include "OCCSurface.hpp"
 #include "OCCCurve.hpp"
+#include "OCCDrawTool.hpp"
 
 #ifndef SRCDIR
 # define SRCDIR .
@@ -113,6 +114,26 @@ CubitStatus make_Point()
 
   OCCQueryEngine::instance();
   OCCModifyEngine::instance();
+
+  //Create sphere
+  RefEntity* sphereEnt= GeometryModifyTool::instance()->sphere(1.5);
+  sphereEnt->entity_name("sphere");
+
+  TopoDS_CompSolid* objOCC;
+  Body* tmpBd = GeometryQueryTool::instance()->get_first_body();
+  DLIList<RefVertex*> vertices;
+  tmpBd->ref_vertices(vertices);
+  DLIList<RefEdge*> ref_edges;
+  tmpBd->ref_edges(ref_edges);
+  for(int i = 0; i < ref_edges.size(); i++) 
+  {
+    vertices.clean_out();
+    ref_edges.get()->ref_vertices(vertices);
+    ref_edges.get_and_step()->measure();
+  }
+  BodySM* tmpBdSM = tmpBd->get_body_sm_ptr();
+  objOCC = ( (OCCBody*) tmpBdSM )->get_TopoDS_Shape(); //Opencascade Object
+  OCCDrawTool::instance()->draw_TopoDS_Shape(objOCC, 200);
 
   // Read in the geometry from files specified on the command line
   const char *argv = "66_shaver3.brep";
@@ -417,7 +438,7 @@ CubitStatus make_Point()
      gti->delete_RefEntity( free_entities.get_and_step());
   }
 
-  DLIList<RefEdge *> ref_edges;
+  ref_edges.clean_out();
   gti->ref_edges(ref_edges);
 
   //make a new refedge out of existing refedge.

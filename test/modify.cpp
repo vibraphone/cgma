@@ -781,6 +781,17 @@ CubitStatus make_Point()
   n = new_bodies.get()->num_ref_faces(); //n = 10
   d = new_bodies.get()->measure(); //d = 72.3618
 
+  bodies.clean_out();
+  gti->bodies(bodies); //bodies.size() = 2
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  assert(free_entities.size() == 0);
+  //delete hollowed body and keep sweep_face. 
+  gti->delete_Body(new_bodies);
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
+  assert(free_entities.size() == 0);
+
   DLIList<RefEntity*> refentities;
   refentities.append(sweep_face);
   RefFace* draft_face = gmti->make_RefFace(sweep_face);

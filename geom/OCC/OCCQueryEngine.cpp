@@ -31,6 +31,7 @@
 #include "Poly_Triangle.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "Handle_Poly_Triangulation.hxx"
+#include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
@@ -357,33 +358,31 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
   if (!Topo_Edge)
     return CUBIT_FAILURE;
 
-  //do triangulation
-  double deflection = 0.01;
-  double angle  = 0.5;
+  //do tessellation
+  double deflection = 0.2;
+  double angle  = 0.2;
   BRepAdaptor_Curve acurve(*Topo_Edge);
-  Bnd_Box aBox;
-  BndLib_Add3dCurve::Add(acurve, Precision::Approximation(), aBox);
-  BRepMesh_FastDiscret *myMesh =
-  new BRepMesh_FastDiscret(deflection, *Topo_Edge, aBox, angle, Standard_True, Standard_True);
+  GCPnts_TangentialDeflection *myMesh = 
+        new GCPnts_TangentialDeflection(acurve, angle, deflection);
   if (myMesh == NULL) 
   {
-    PRINT_ERROR("Can't get triangulation representation for this curve.\n");
+    PRINT_ERROR("Can't tessellate for this curve.\n");
     return CUBIT_FAILURE;
   }
-  num_points = myMesh->NbVertices();
+  num_points = myMesh->NbPoints();
 
   //! Note: If the polygon is closed, the point of closure is 
   //! repeated at the end of its table of nodes. Thus, on a closed 
-  //! triangle the function NbNodes returns 4. 
+  //! triangle the function NbNodes returns 4? 
   GPoint *gPnts= new GPoint[num_points];
   for (int i = 1; i <= num_points ; i ++)
     {
-      gp_Pnt gp_pnt = myMesh->Pnt(i);
+      gp_Pnt gp_pnt = myMesh->Value(i);
       GPoint gPnt;
       gPnt.x = gp_pnt.X();
       gPnt.y = gp_pnt.Y();
       gPnt.z = gp_pnt.Z();
-      gPnts[i] = gPnt;
+      gPnts[i-1] = gPnt;
     }
   gMem->replace_point_list( gPnts, num_points, num_points );
  
