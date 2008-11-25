@@ -216,6 +216,22 @@ static CubitStatus iGeom_is_periodic( RefEntity* entity, int& u, int& v );
 static bool iGeom_is_face_degenerate( RefFace* face );
 
 
+static CubitStatus init_cgm( const std::string& engine )
+{
+  CubitStatus status;
+  if (engine.empty()) 
+    status = InitCGMA::initialize_cgma();
+  else
+    status = InitCGMA::initialize_cgma( engine.c_str() );
+ 
+// sometimes can't have following, depending on CGM version
+  // CGMApp::instance()->attrib_manager()->silent_flag(true);
+
+  CGMApp::instance()->attrib_manager()->auto_flag(true);
+  
+  return status;
+}
+
 
 extern "C" {
 
@@ -253,18 +269,11 @@ void iGeom_newGeom( const char* options,
     free(opt);
   }
   
-  CubitStatus status;
-  if (engine.empty()) 
-    status = InitCGMA::initialize_cgma();
-  else
-    status = InitCGMA::initialize_cgma( engine.c_str() );
+    // initialize static var with result so that call happens only once
+  static const CubitStatus status = init_cgm( engine );
+    // but check the result for every call
   if (CUBIT_SUCCESS != status)
     RETURN (iBase_FAILURE);
-
-// sometimes can't have following, depending on CGM version
-  // CGMApp::instance()->attrib_manager()->silent_flag(true);
-
-  CGMApp::instance()->attrib_manager()->auto_flag(true);
 
     // return the tagmanager as the instance
   *instance_out = &CGMTagManager::instance();
