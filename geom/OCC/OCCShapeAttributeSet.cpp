@@ -209,7 +209,7 @@ static void PrintOrientation(const TopAbs_Orientation O,
 
 static TopAbs_ShapeEnum ReadShapeEnum(Standard_IStream& IS)
 {
-  char buffer[255];
+  std::string buffer;
   IS >> buffer;
 
   switch (buffer[0]) {
@@ -249,7 +249,7 @@ static TopAbs_ShapeEnum ReadShapeEnum(Standard_IStream& IS)
 
 static GeomAbs_Shape ReadRegularity(Standard_IStream& IS)
 {
-  char buffer[255];
+  std::string buffer;
   IS >> buffer;
   switch (buffer[0]) {
 
@@ -1478,13 +1478,14 @@ void  OCCShapeAttributeSet::ReadGeometry(const TopAbs_ShapeEnum T,
     }
 
     // BUC60769
-    char string[260];
-    IS.getline ( string, 256, '\n' );
-    IS.getline ( string, 256, '\n' );
+    std::string line;
+    std::getline( IS, line );
+    std::getline( IS, line );
+    std::istringstream str( line );
 
-    if (string[0] == '2') {
+    if (str.get() == '2') {
       // cas triangulation
-      s = atoi ( &string[2] );
+      str >> s;
       myBuilder.UpdateFace(TopoDS::Face(S),
                            Handle(Poly_Triangulation)::DownCast(myTriangulations(s)));
     }
@@ -1541,9 +1542,11 @@ void  OCCShapeAttributeSet::ReadGeometry(const TopAbs_ShapeEnum T,
 
 void OCCShapeAttributeSet::ReadPolygonOnTriangulation(Standard_IStream& IS)
 {
-  char buffer[255];
-  IS >> buffer;
-  if (strstr(buffer,"PolygonOnTriangulations") == NULL) return;
+    std::string buffer;
+    IS >> buffer;
+    if (buffer.find("PolygonOnTriangulations") == std::string::npos)
+      return;
+
     Standard_Integer i, j, val, nbpol = 0, nbnodes =0;
     Standard_Integer hasparameters;
     Standard_Real par;
@@ -1582,12 +1585,14 @@ void OCCShapeAttributeSet::ReadPolygonOnTriangulation(Standard_IStream& IS)
 
 void OCCShapeAttributeSet::ReadPolygon3D(Standard_IStream& IS)
 {
-  char buffer[255];
-  //  Standard_Integer i, j, p, val, nbpol, nbnodes, hasparameters;
-  Standard_Integer i, j, p, nbpol=0, nbnodes =0, hasparameters = Standard_False;  Standard_Real d, x, y, z;
+    std::string buffer;
+    //  Standard_Integer i, j, p, val, nbpol, nbnodes, hasparameters;
+    Standard_Integer i, j, p, nbpol=0, nbnodes =0, hasparameters = Standard_False;  Standard_Real d, x, y, z;
 
-  IS >> buffer;
-  if (strstr(buffer,"Polygon3D") == NULL) return;
+    IS >> buffer;
+    if (buffer.find("Polygon3D") == std::string::npos)
+      return;
+  
     Handle(Poly_Polygon3D) P;
     IS >> nbpol;
     for (i=1; i<=nbpol; i++) {
@@ -1619,7 +1624,7 @@ void OCCShapeAttributeSet::ReadPolygon3D(Standard_IStream& IS)
 
 void OCCShapeAttributeSet::ReadTriangulation(Standard_IStream& IS)
 {
-  char buffer[255];
+  std::string buffer;
   //  Standard_Integer i, j, val, nbtri;
   Standard_Integer i, j, nbtri =0;
   Standard_Real d, x, y, z;
@@ -1629,7 +1634,7 @@ void OCCShapeAttributeSet::ReadTriangulation(Standard_IStream& IS)
   Handle(Poly_Triangulation) T;
 
   IS >> buffer;
-  if (strstr(buffer,"Triangulations") != NULL) {
+  if (buffer.find("Triangulations") != std::string::npos) {
     IS >> nbtri;
     for (i=1; i<=nbtri; i++) {
       IS >> nbNodes >> nbTriangles >> hasUV;
@@ -1696,13 +1701,17 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
                                  Standard_IStream& IS,
                                  const int nbshapes)const
 {
-  char buffer[255];
+  std::string buffer;
   IS >> buffer;
   if (buffer[0] == '*')
     S = TopoDS_Shape();
   else {
-    S = myShapes(nbshapes - atoi(buffer+1) + 1);
-    switch (buffer[0]) {
+    char type;
+    int num;
+    std::istringstream buffstr(buffer);
+    buffstr >> type >> num;
+    S = myShapes(nbshapes - num + 1);
+    switch (type) {
 
     case '+' :
       S.Orientation(TopAbs_FORWARD);
