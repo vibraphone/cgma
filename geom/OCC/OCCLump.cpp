@@ -412,7 +412,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
 {
   //set the Shells
   TopTools_IndexedMapOfShape M;
-  TopoDS_Shape shape;
+  TopoDS_Shape shape, shape2;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
   TopoDS_Solid new_solid;
   if(M.Extent() > 1)
@@ -436,17 +436,29 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
     TopoDS_Shell shell = TopoDS::Shell(M(ii));
 
     TopTools_ListOfShape shapes;
+    TopTools_IndexedMapOfShape M2;
     if (op)
     {
       shapes.Assign(op->Modified(shell));
       if(shapes.Extent() == 0)
          shapes.Assign(op->Generated(shell));
+      // bug fix for hollow operation, in which a new shell is genearted
+      // but the shapes we get from old_shell->Generated() is still old_shell
+      // not the new one.
+      if(!new_solid.IsNull())  
+         TopExp::MapShapes(new_solid, TopAbs_SHELL, M2);
     }
     else if(sp)
       shapes.Assign(sp->DescendantShapes(shell));
 
     if (shapes.Extent() == 1)
-      shape = shapes.First();
+    {
+      shape = shapes.First(); 
+      if(M2.Extent() > 0)
+        shape2 = TopoDS::Shell(M2(1)); 
+      if(M2.Extent() == 1 && !shape.IsSame(shape2))
+         shape = shape2;
+    }
 
     else if(shapes.Extent() > 1)
     {

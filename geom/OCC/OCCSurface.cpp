@@ -849,8 +849,8 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
                                           LocOpe_SplitShape* sp) 
 {
   //set the Wires
-  TopTools_IndexedMapOfShape M;
-  TopoDS_Shape shape, shape_edge, shape_vertex;
+  TopTools_IndexedMapOfShape M, M2;
+  TopoDS_Shape shape, shape2, shape_edge, shape_vertex;
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
 
   TopTools_ListOfShape shapes;  
@@ -864,12 +864,22 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        shapes.Assign(op->Modified(wire));
        if(shapes.Extent() == 0)
          shapes.Assign(op->Generated(wire));
+       if(!new_surface.IsNull())
+       TopExp::MapShapes(new_surface,TopAbs_WIRE, M2);
      }
      else if(sp)
        shapes.Assign(sp->DescendantShapes(wire));
 
      if (shapes.Extent() == 1)
+     {
        shape = shapes.First();
+       if(M2.Extent() == 1)
+       {
+         shape2 = TopoDS::Wire(M2(1));
+         if(!shape.IsSame(shape2))
+           shape = shape2;
+       }
+     }
      else if(shapes.Extent() > 1)
        shape.Nullify();
      else if(op->IsDeleted(wire))
