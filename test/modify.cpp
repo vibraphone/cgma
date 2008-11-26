@@ -778,8 +778,8 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   stat = gmti->hollow(from_bodies, faces_to_remove, new_bodies, -.2);
   //Updated volume(s): 54
-  n = new_bodies.get()->num_ref_faces(); //n = 10
-  d = new_bodies.get()->measure(); //d = 72.3618
+  n = new_bodies.get()->num_ref_faces(); //n = 9
+  d = new_bodies.get()->measure(); //d = 72.4074
 
   bodies.clean_out();
   gti->bodies(bodies); //bodies.size() = 2
