@@ -114,6 +114,10 @@ public:
      //-    "ACIS_SAB"    --  ACIS BINARY (SAB) file format
      //-    "IGES"        --  IGES file
      //-    "STEP"        --  STEP file
+     //O imported_entities
+     //O- List of top-level entities read from file
+     //I print_results
+     //I- If false, fail silently (don't write error messages to stdout or stderr)
      //I heal_step - auto-healing of step bodies on import.  This is recommended
      //              because they always need it.
      //I import_bodies (etc...)

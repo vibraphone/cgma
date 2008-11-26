@@ -87,7 +87,7 @@ Standard_Integer Add(const TopoDS_Shape& S) ;
 void Write(Standard_OStream& OS,
            TDF_Label l_attr)const;
 
-void Read(Standard_IStream& IS, TDF_Label& l_attr);
+void Read(Standard_IStream& IS, TDF_Label& l_attr, bool print);
 
 void Read(TopoDS_Shape& S,Standard_IStream& IS, const int nbshapes)const;
 

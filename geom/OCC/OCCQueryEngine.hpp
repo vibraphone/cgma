@@ -392,9 +392,8 @@ private:
 
   CubitBoolean Read(TopoDS_Shape& Sh,
                     const Standard_CString File,
-                    TDF_Label label);
-
-  static CubitBoolean PRINT_RESULT;
+                    TDF_Label label,
+                    bool print_results);
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class

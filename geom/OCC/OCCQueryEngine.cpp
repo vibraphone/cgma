@@ -128,7 +128,6 @@ const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
-CubitBoolean OCCQueryEngine::PRINT_RESULT = CUBIT_FALSE;
 //================================================================================
 // Description:
 // Author     :
@@ -1080,15 +1079,18 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
                                    
 CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
                                   const Standard_CString File,
-                                  TDF_Label label)
+                                  TDF_Label label,
+                                  CubitBoolean print_results)
 {
-  filebuf fic;
-  istream in(&fic);
-  //  if (!fic.open(File,input)) return Standard_False;
-  if (!fic.open(File, ios::in)) return Standard_False;
+  ifstream in( File );
+  if (!in) {
+    if (print_results) 
+      PRINT_INFO("%s: Cannot open file", File );
+    return CUBIT_FAILURE;
+  }
 
   OCCShapeAttributeSet SS;
-  SS.Read(in, label);
+  SS.Read(in, label, print_results);
   int nbshapes = SS.NbShapes();
   if(!nbshapes) return CUBIT_FALSE;
   SS.Read(Sh,in,nbshapes);
@@ -1131,14 +1133,10 @@ CubitStatus OCCQueryEngine::import_solid_model(
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
   BRep_Builder aBuilder;
-  Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel);
+  Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
   if (result==0) return CUBIT_FAILURE;
   
-  CubitBoolean prev_global_val = PRINT_RESULT;
-  PRINT_RESULT = print_results;
-  
   imported_entities = populate_topology_bridge(*aShape);
-  PRINT_RESULT = prev_global_val;
   return CUBIT_SUCCESS;
 }
 
@@ -1197,8 +1195,6 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
     {
-      if(PRINT_RESULT)
-	PRINT_INFO("Adding Bodies.\n");
       TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
       *posolid = aShape;
       (iTotalTBCreated)++;
@@ -1236,8 +1232,6 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
   {
-    if(PRINT_RESULT)
-      PRINT_INFO("Adding solids.\n");
     TopoDS_Solid *posolid =  new TopoDS_Solid;
     *posolid = aShape;
     iTotalTBCreated++;
@@ -1282,8 +1276,6 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
   DLIList<OCCCoFace*> cofaces_old, cofaces_new;
   if (!OCCMap->IsBound(aShape))
   {
-    if(PRINT_RESULT)
-      PRINT_INFO("Adding shells.\n");
     TopoDS_Shell *poshell = new TopoDS_Shell;
     *poshell = aShape;
     iTotalTBCreated++;
@@ -1372,8 +1364,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
       delete surface;
       return (Surface*) NULL;
     } 
-    if(PRINT_RESULT)
-      PRINT_INFO("Adding faces.\n");
+
     iTotalTBCreated++;
     OCCMap->Bind(*poface, iTotalTBCreated);
     OccToCGM->insert(valType(iTotalTBCreated,
@@ -1417,8 +1408,6 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   OCCLoop *loop ;
   if (!OCCMap->IsBound(aShape))
     {
-      if(PRINT_RESULT)
-	PRINT_INFO("Adding loops.\n");
       TopoDS_Wire *powire = new TopoDS_Wire;
       *powire = aShape;
       iTotalTBCreated++;
@@ -1528,8 +1517,6 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
   Curve *curve;
   if (!OCCMap->IsBound(aShape)) 
     {
-      if(PRINT_RESULT)
-	PRINT_INFO("Adding edges.\n");
       TopoDS_Edge *poedge = new TopoDS_Edge;
       *poedge = aShape;
       iTotalTBCreated++;
@@ -1563,8 +1550,6 @@ Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape)
   OCCPoint *point;
   if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape)) 
     {
-      if(PRINT_RESULT)
-	PRINT_INFO("Adding vertices.\n");
       TopoDS_Vertex *povertex = new TopoDS_Vertex;
       *povertex = aShape;
       iTotalTBCreated++;

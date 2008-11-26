@@ -678,7 +678,8 @@ void  OCCShapeAttributeSet::Write(Standard_OStream& OS,
 //=======================================================================
 
 void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
-                                 TDF_Label& l_attr) 
+                                 TDF_Label& l_attr,
+                                 bool print_results) 
 {
  // on sauvegarde l'ancien LC_NUMERIC
   char *oldnum,*plocal ;
@@ -703,7 +704,8 @@ void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
 
   } while ( ! IS.fail() && strcmp(vers,dVersion) && strcmp(vers,dVersion2) );
   if (IS.fail()) {
-    cout << "File was not written with this version of the topology"<<endl;
+    if (print_results)
+      cout << "File was not written with this version of the topology"<<endl;
     setlocale(LC_NUMERIC, oldnum) ;
     delete[] oldnum;
     return;
@@ -727,10 +729,11 @@ void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
   // read the shapes
   //-----------------------------------------
 
-  char buffer[255];
+  std::string buffer;
   IS >> buffer;
-  if (strcmp(buffer,"TShapes")) {
-    cout << "Not a TShape table"<<endl;
+  if (buffer != "TShapes") {
+    if (print_results)
+      cout << "Not a TShape table"<<endl;
     setlocale(LC_NUMERIC, oldnum) ;
     delete[] oldnum;
     return;
