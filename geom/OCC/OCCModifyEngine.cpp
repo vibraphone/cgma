@@ -3728,7 +3728,9 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
   
   double tol = 1.e-3; //hard coded for now, can be changed by application
   TopoDS_Shape* solid = shape_list.get();
-  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, tol);
+  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, tol,
+                                        BRepOffset_Skin, Standard_False,
+                                        Standard_False, GeomAbs_Intersection);
   TopoDS_Shape new_shape = hollower.Shape();
   TopoDS_Solid old_solid = TopoDS::Solid(*solid);
   OCCLump::update_OCC_entity(old_solid , new_shape, &hollower); 
