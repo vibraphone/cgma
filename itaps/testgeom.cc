@@ -129,13 +129,13 @@ int main( int argc, char *argv[] )
     #ifndef HAVE_OCC
       #error "Cannot force use of OCC w/out OCC support"
     #endif
-    std::string filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
+    std::string filename = STRINGIFY(SRCDIR) "/../test/LeverArm.brep";
     std::string engine_opt = ";engine=OCC";
   #elif defined(HAVE_ACIS)
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
     std::string engine_opt = ";engine=ACIS";
   #elif defined(USE_OCC)
-    std::string filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
+    std::string filename = STRINGIFY(SRCDIR) "/../test/LeverArm.brep";
     std::string engine_opt = ";engine=OCC";
   #else
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
