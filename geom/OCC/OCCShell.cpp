@@ -228,7 +228,7 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
       {
         TopTools_ListIteratorOfListOfShape it;
         it.Initialize(shapes);
-        for(it; it.More(); it.Next())
+        for(; it.More(); it.Next())
         {
           shape = it.Value();
           OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Shell(), 
@@ -302,7 +302,7 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
     {
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(face, shape);

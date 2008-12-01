@@ -458,6 +458,12 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
         shape2 = TopoDS::Shell(M2(1)); 
       if(M2.Extent() == 1 && !shape.IsSame(shape2))
          shape = shape2;
+      else if(M2.Extent() > 1)
+      {
+         shapes.Clear(); 
+         for(int jj = 0; jj < M2.Extent(); jj++) 
+           shapes.Append(M2(jj));
+      }
     }
 
     else if(shapes.Extent() > 1)

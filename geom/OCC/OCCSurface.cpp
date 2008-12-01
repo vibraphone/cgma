@@ -865,7 +865,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        if(shapes.Extent() == 0)
          shapes.Assign(op->Generated(wire));
        if(!new_surface.IsNull())
-       TopExp::MapShapes(new_surface,TopAbs_WIRE, M2);
+         TopExp::MapShapes(new_surface,TopAbs_WIRE, M2);
      }
      else if(sp)
        shapes.Assign(sp->DescendantShapes(wire));
@@ -879,6 +879,8 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          if(!shape.IsSame(shape2))
            shape = shape2;
        }
+       else if(M2.Extent() > 1)
+         shape.Nullify();
      }
      else if(shapes.Extent() > 1)
        shape.Nullify();
