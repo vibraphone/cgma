@@ -790,7 +790,7 @@ CubitStatus make_Point()
   gti->delete_Body(new_bodies);
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities); //free_entities.size() = 0
-  assert(free_entities.size() == 5);
+  assert(free_entities.size() == 0);
 
   DLIList<RefEntity*> refentities;
   refentities.append(sweep_face);
