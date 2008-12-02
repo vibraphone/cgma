@@ -135,6 +135,15 @@ CubitStatus make_Point()
   objOCC = ( (OCCBody*) tmpBdSM )->get_TopoDS_Shape(); //Opencascade Object
   OCCDrawTool::instance()->draw_TopoDS_Shape(objOCC, 200);
 
+  DLIList<Body*> bodies;
+  DLIList<RefEntity*>  free_entities;
+  gti->bodies(bodies);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() == 0);
+
   // Read in the geometry from files specified on the command line
   const char *argv = "66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
@@ -173,7 +182,7 @@ CubitStatus make_Point()
   CubitVector vector1(10,10,10);
   CubitVector vector2(-10,-10,10);
   CubitVector vector3(10, -10, 10);
-  DLIList<RefEntity*> free_entities;
+  free_entities.clean_out();
 
   // Make two vertices.
   gmti->make_RefVertex(vector1,5);
@@ -192,7 +201,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
  
   //check for vertex
-  DLIList<Body*> bodies;
+  bodies.clean_out();
   gti->bodies(bodies);
   free_entities.clean_out();// get_free_ref_entities directly append
   //without checking for duplicates, so clean_out first. 
@@ -413,6 +422,7 @@ CubitStatus make_Point()
   RefEdge* new_edge_4 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
                                         vertex3, &center_pnt);
   d = new_edge_4->measure();
+  //d = 22.21
   new_edge_4->closest_point_trimmed(vi, c_point);
 
   RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
