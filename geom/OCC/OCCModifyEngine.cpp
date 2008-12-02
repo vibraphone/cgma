@@ -40,6 +40,7 @@
 #include "GC_MakeSegment.hxx"
 #include "GC_MakeTrimmedCone.hxx"
 #include "GC_MakeTrimmedCylinder.hxx"
+#include "gce_MakeElips.hxx"
 #include "Geom_BezierCurve.hxx"
 #include "BndLib_AddSurface.hxx"
 #include "Handle_Geom_Plane.hxx"
@@ -362,8 +363,8 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 //
 // For ELLIPSE_CURVE_TYPE
 //    intermediate_point_ptr is the center of the ellipse
-//    the point who is farther away to the center is the vertex of the ellipse
-//    the others point projects to major axis at focus.
+//    the two points are vertices, one gives the major radius, 
+//    the other point gives the minor radius.
 //    sense is used to determine which part of the ellipse is required
 //
 // For ARC_CURVE_TYPE
@@ -416,36 +417,28 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   {
      assert(intermediate_point_ptr != NULL);
      
-     //calculate for the axis
-     double d1 = (v1 - v3).length_squared(); 
-     double d2 = (v2 - v3).length_squared();
-
-     CubitVector x = d1 >= d2 ? v1-v3 : v2-v3;
-     x.normalize();
-     gp_Dir x_dir(x.x(), x.y(), x.z());
-
-     CubitVector N = (v1 - v3) * (v2 - v3); 
-     if(N.length_squared() < tol * tol)
-     {
-       PRINT_ERROR("Cannot create an ellipse curve from the given points.\n"
-                 "3 points are in the same line.\n");
-       return (Curve *)NULL;
-     }
-     N.normalize();
-     if (sense == CUBIT_REVERSED)
-       N = -N;
-     gp_Dir N_dir(N.x(), N.y(), N.z());
-
      gp_Pnt center(v3.x(), v3.y(), v3.z());
-     gp_Ax2 axis(center, N_dir, x_dir); 
 
-     //calculate for the major and minor radius.
-     double major = d1 >= d2 ? sqrt(d1): sqrt(d2);
-     double other_d = d1 >= d2 ? sqrt(d2) : sqrt(d1);
-     double c = cos((v1 - v3).interior_angle(v2 - v3)) * other_d;
-     double minor = sqrt(major * major - c * c);
-
-     gp_Elips ellipse(axis, major, minor);
+     gp_Elips ellipse;
+     gce_MakeElips ellipse1(pt1	, pt2	, center);
+     if(ellipse1.IsDone())
+       ellipse = ellipse1.Value();
+     else if(!ellipse1.IsDone() && ellipse1.Status() == gce_InvertRadius)
+     {
+        gce_MakeElips ellipse2(pt2, pt1, center);
+        if(ellipse2.IsDone())
+          ellipse = ellipse2.Value();
+        else
+        {
+          PRINT_ERROR("Can't create an ellipse from give 3 points.\n");
+          return (Curve *)NULL;
+        }      
+     } 
+     else
+     {
+        PRINT_ERROR("Can't create an ellipse from give 3 points.\n");
+        return (Curve *)NULL;
+     }
      CubitBoolean use_sense = (sense == CUBIT_FORWARD ? CUBIT_TRUE : CUBIT_FALSE); 
      curve_ptr = GC_MakeArcOfEllipse(ellipse, pt1, pt2, use_sense);
   }
