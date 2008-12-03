@@ -47,7 +47,7 @@ public:
    static CGMApp* instance();
      //- Access to the application object
 
-  static void delete_instance() {if (instance_) delete instance_;};
+   static void delete_instance() {if (instance_) {delete instance_; instance_ = NULL;}};
         
    ~CGMApp();
 

@@ -96,7 +96,10 @@ void CGMApp::shutdown()
    delete GeometryModifyTool::instance();
    delete GeometryQueryTool::instance();
 
-mAppStarted = CUBIT_FALSE;
+   CGMApp::delete_instance();
+
+   AppUtil::instance()->shutdown();
+   AppUtil::delete_instance();
 }
 
 void CGMApp::initialize_settings()
