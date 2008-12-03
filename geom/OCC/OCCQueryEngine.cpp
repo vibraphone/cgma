@@ -172,10 +172,11 @@ OCCQueryEngine::~OCCQueryEngine()
   instance_ = NULL;
   delete OCCMap;
   delete OccToCGM;
-  while( BodyList->size() ) delete BodyList->pop();
+  delete BodyList;
   delete WireList;
   delete SurfaceList;
   delete CurveList;
+  delete MyDF;
 }
 
 int OCCQueryEngine::get_major_version()

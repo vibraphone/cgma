@@ -365,7 +365,7 @@ public:
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
-  Handle(TDocStd_Document) MyDF;
+  TDocStd_Document* MyDF;
   TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;

@@ -4312,6 +4312,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       result_body_list.append(bodysm);
     continue;
   }
+  delete acurve;
   return CUBIT_SUCCESS;
 }
 
