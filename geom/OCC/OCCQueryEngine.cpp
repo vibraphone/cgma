@@ -273,7 +273,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   TopLoc_Location L;
   Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*Topo_Face, L);
 
-  if(facets.IsNull())
+  if(facets.IsNull() || facets->NbTriangles() == 0)
   {
     //do triangulation
     double deflection = 0.01;
@@ -285,7 +285,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
     new BRepMesh_FastDiscret(deflection, *Topo_Face, aBox, angle, Standard_True, Standard_True);
     if (myMesh != NULL) delete myMesh;
     facets = BRep_Tool::Triangulation(*Topo_Face, L);
-    if(facets.IsNull())
+    if(facets.IsNull() || facets->NbTriangles() == 0)
     {
       PRINT_ERROR("Can't get triangulation representation for this surface.\n");
       return CUBIT_FAILURE;
@@ -304,7 +304,6 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   //needs to test that N1, N2, N3 index are starting from 0 to number_points-1
   //otherwise needs to update either facetList or gPnts to make consistent.
   //It's possible also that N's starting from 1.
-  int minN = 0;
   for (int i = 0; i < triangles.Length(); i++)
     {
       Poly_Triangle triangle = triangles.Value( i );
@@ -312,18 +311,15 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
       triangle.Get(N1, N2, N3); 
       facetList[4 * i] = 3;
       facetList[4 * i + 1] = N1;
-      minN = (minN < N1 ? minN : N1);
       facetList[4 * i + 2] = N2;
-      minN = (minN < N2 ? minN : N2);
       facetList[4 * i + 3] = N3;
-      minN = (minN < N3 ? minN : N3);
     } 
   g_mem->replace_facet_list( facetList, number_facets, number_facets); 
 
-  TColgp_Array1OfPnt points(minN, minN + number_points-1);
+  TColgp_Array1OfPnt points(0,  number_points-1);
   points.Assign(facets->Nodes());
-  GPoint *gPnts= new GPoint[number_points + minN];
-  for (int i = minN; i < number_points + minN; i ++)
+  GPoint *gPnts= new GPoint[number_points];
+  for (int i = 0; i < number_points ; i ++)
     {
       gp_Pnt gp_pnt = points.Value(i);
       GPoint gPnt;
@@ -332,7 +328,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
       gPnt.z = gp_pnt.Z();
       gPnts[i] = gPnt;
     }
-  g_mem->replace_point_list( gPnts, number_points, number_points + minN);
+  g_mem->replace_point_list( gPnts, number_points, number_points );
 
   return CUBIT_SUCCESS;
 }
