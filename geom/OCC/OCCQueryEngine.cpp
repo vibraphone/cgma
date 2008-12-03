@@ -304,6 +304,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   //needs to test that N1, N2, N3 index are starting from 0 to number_points-1
   //otherwise needs to update either facetList or gPnts to make consistent.
   //It's possible also that N's starting from 1.
+  int minN = 100;
   for (int i = 0; i < triangles.Length(); i++)
     {
       Poly_Triangle triangle = triangles.Value( i );
@@ -311,9 +312,22 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
       triangle.Get(N1, N2, N3); 
       facetList[4 * i] = 3;
       facetList[4 * i + 1] = N1;
+      minN = (minN < N1 ? minN : N1);
       facetList[4 * i + 2] = N2;
+      minN = (minN < N2 ? minN : N2);
       facetList[4 * i + 3] = N3;
+      minN = (minN < N3 ? minN : N3);
     } 
+  if(minN != 0)
+  {
+    //subtract the minN from the facetList for all i+1, i+2, i+3 points
+    for (int i = 0; i < triangles.Length(); i++)
+    {
+      facetList[4 * i + 1] -= minN;
+      facetList[4 * i + 2] -= minN;
+      facetList[4 * i + 3] -= minN;
+    }
+  }
   g_mem->replace_facet_list( facetList, number_facets, number_facets); 
 
   TColgp_Array1OfPnt points(0,  number_points-1);
