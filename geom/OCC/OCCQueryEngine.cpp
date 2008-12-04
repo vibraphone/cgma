@@ -273,6 +273,8 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   TopLoc_Location L;
   Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*Topo_Face, L);
 
+  gp_Trsf tf = L.Transformation();
+
   if(facets.IsNull() || facets->NbTriangles() == 0)
   {
     //do triangulation
@@ -336,6 +338,9 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   for (int i = 0; i < number_points ; i ++)
     {
       gp_Pnt gp_pnt = points.Value(i);
+      if( !L.IsIdentity())
+        gp_pnt.Transform(tf);
+
       GPoint gPnt;
       gPnt.x = gp_pnt.X();
       gPnt.y = gp_pnt.Y();
