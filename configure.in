@@ -70,10 +70,13 @@ HAVE_ACIS_DEF=
 
 AC_ARG_WITH( cubit,
              AC_HELP_STRING([--with-cubit=<dir>],[Use CGM from CUBIT shared library]),
-             [CUBIT_DIR="$withval"],[CUBIT_DIR=no])
+             [CUBIT_DIR="$withval"
+              DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-cubit=\"${withval}\""],
+             [CUBIT_DIR=no])
 AC_ARG_WITH( CUBIT,
              AC_HELP_STRING([--with-CUBIT=<dir>],[DEPRECATED.  Use --with-cubit (small case)]),
-             [CUBIT_DIR="$withval"])
+             [CUBIT_DIR="$withval"
+              DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-cubit=\"${withval}\""])
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
 elif test "x$CUBIT_DIR" != "xno"; then
@@ -147,10 +150,13 @@ ACIS_IGES_LIBS='-lacisiges -lxiges'
 
 AC_ARG_WITH( acis, 
              AC_HELP_STRING([--with-acis=<dir>],[Build with ACIS support, specify directory where ACIS is installed.]),
-             [ACIS_DIR=$withval],[ACIS_DIR=no] )
+             [ACIS_DIR=$withval
+              DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-acis=\"${withval}\""],
+              [ACIS_DIR=no] )
 AC_ARG_WITH( ACIS, 
              AC_HELP_STRING([--with-ACIS],[DEPRECATED.  Use --wtih-acis (small case)]),
-             [ACIS_DIR=$withval] )
+             [ACIS_DIR=$withval
+              DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-acis=\"${withval}\""] )
 AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-acis-system=SYS], 
           [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
              [ACIS_SYSTEM=$withval],[ACIS_SYSTEM=] )
@@ -264,7 +270,8 @@ AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 
 AC_ARG_WITH( occ,
              [AC_HELP_STRING([--with-occ=<dir>],[OpenCascade shared library directory])],
-             [occ_DIR="$withval"],
+             [occ_DIR="$withval"
+              DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-occ=\"${withval}\""],
              [occ_DIR=no] )
 
 # if user specified option (other than --without-occ)
@@ -395,6 +402,7 @@ AM_CONDITIONAL( build_OCC, [test "x$occ_DIR" != "xno"] )
 #                           Output Files
 ################################################################################
 AC_SUBST(AM_CPPFLAGS)
+AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
@@ -411,6 +419,7 @@ AC_CONFIG_FILES(Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
            init/Makefile
+           compat/Makefile
            cgm.make
            itaps/Makefile
            itaps/iGeom-Defs.inc

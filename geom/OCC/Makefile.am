@@ -43,6 +43,7 @@ libcubit_OCC_la_include_HEADERS = \
     OCCAttribSet.hpp \
     OCCBody.hpp \
     OCCCoEdge.hpp \
+    OCCCoFace.hpp \
     OCCCurve.hpp \
     OCCGeometryCreator.hpp \
     OCCLoop.hpp \
