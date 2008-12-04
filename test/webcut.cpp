@@ -162,7 +162,7 @@ CubitStatus webcut_with_brick()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_brick.sat";
+  const char * filename = "webcut_with_brick.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
@@ -213,7 +213,7 @@ CubitStatus webcut_with_cylinder()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "webcut_with_cylinder.sat";
+  const char * filename = "webcut_with_cylinder.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -266,7 +266,7 @@ CubitStatus webcut_with_planar_sheet()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_sheet.sat";
+  const char * filename = "webcut_with_sheet.sat";
   const char * filetype = "ACIS_SAT";
   rsl =  gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
@@ -334,7 +334,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "webcut_with_sweep_rotational.sat";
+  const char * filename = "webcut_with_sweep_rotational.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -394,7 +394,7 @@ CubitStatus webcut_with_sweep_curves()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "webcut_with_sweep_curves.sat";
+  const char * filename = "webcut_with_sweep_curves.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -465,7 +465,7 @@ CubitStatus webcut_with_sweep_along_curve()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_sweep_along_curve.sat";
+  const char * filename = "webcut_with_sweep_along_curve.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -522,7 +522,7 @@ CubitStatus webcut_with_curve_loop()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_curve_loop.sat";
+  const char * filename = "webcut_with_curve_loop.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -575,7 +575,7 @@ CubitStatus webcut_with_extended_surf()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_extended_surf.sat";
+  const char * filename = "webcut_with_extended_surf.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -626,7 +626,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_sweep_surfaces_rotated.sat";
+  const char * filename = "webcut_with_sweep_surfaces_rotated.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -676,7 +676,7 @@ CubitStatus webcut_with_sweep_surfaces()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_sweep_surfaces.sat";
+  const char * filename = "webcut_with_sweep_surfaces.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -736,7 +736,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = STRINGIFY(SRCDIR) "/webcut_with_sweep_surfaces_along_curve.sat";
+  const char * filename = "webcut_with_sweep_surfaces_along_curve.sat";
   const char * filetype = "ACIS_SAT";
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);

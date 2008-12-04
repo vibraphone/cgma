@@ -46,6 +46,8 @@ sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 test_occ_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 
+# Files that are used as input to tests, and therefore
+# must be included in tarball for tests to run.
 EXTRA_DIST = 62_shaver1.brep \
              66_shaver3.brep \
              72_shaver6.brep \
@@ -54,11 +56,6 @@ EXTRA_DIST = 62_shaver1.brep \
              beforesub.occ_ref \
              beforesub2.occ_ref \
              unite1.occ\
-             unite2.occ\
-             unite3.occ\
-             unite4.occ\
-             unite5.occ\
-             unite6.occ\
              huge.sat \
              model1.sat \
              model2.sat \
@@ -68,13 +65,31 @@ EXTRA_DIST = 62_shaver1.brep \
              model6.sat \
              model7.sat \
              hollow.sat \
-             stitch.occ_name \
-             webcut_with_brick.sat \
-             webcut_with_curve_loop.sat \
-             webcut_with_extended_surf.sat \
-             webcut_with_sheet.sat \
-             webcut_with_sweep_along_curve.sat \
-             webcut_with_sweep_surfaces.sat \
-             webcut_with_sweep_surfaces_along_curve.sat \
-             webcut_with_sweep_surfaces_rotated.sat
+             stitch.occ_name 
+
+# Files that are created by tests, and that therefore 
+#  - should be removed during 'make clean'
+#  - should not be included in tarball
+MOSTLYCLEANFILES = \
+	webcut_with_brick.sat \
+	webcut_with_cylinder.sat \
+	webcut_with_sheet.sat \
+	webcut_with_sweep_rotational.sat \
+	webcut_with_sweep_curves.sat \
+	webcut_with_sweep_along_curve.sat \
+	webcut_with_curve_loop.sat \
+	webcut_with_extended_surf.sat \
+	webcut_with_sweep_surfaces_rotated.sat \
+	webcut_with_sweep_surfaces.sat \
+	webcut_with_sweep_surfaces_along_curve.sat \
+	webcut_with_sweep_surfaces_perp.sat \
+	point.occ \
+	stitch.occ \
+	beforesub.occ \
+	beforesub2.occ \
+	aftersub.occ \
+	unite2.occ \
+	unite3.occ \
+	unite5.occ \
+	unite6.occ 
 
