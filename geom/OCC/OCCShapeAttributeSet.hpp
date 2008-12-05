@@ -67,6 +67,8 @@ OCCShapeAttributeSet();
 
 OCCShapeAttributeSet(const BRep_Builder& B);
 
+~OCCShapeAttributeSet(){Clear();} ;
+
 //! Stores the goemetry of <S>. <br>
 void AddGeometry(const TopoDS_Shape& S) ;
 
@@ -132,6 +134,7 @@ Standard_EXPORT   void WriteTriangulation(Standard_OStream& OS,const Standard_Bo
 
 void ReadTriangulation(Standard_IStream& IS);
 
+//! Clears the content of the set.
 void  Clear();
 
 void Check(const TopAbs_ShapeEnum T,TopoDS_Shape& S);

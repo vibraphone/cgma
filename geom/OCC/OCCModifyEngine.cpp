@@ -4312,7 +4312,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       result_body_list.append(bodysm);
     continue;
   }
-  delete acurve;
+  OCCQueryEngine::instance()->delete_solid_model_entities(acurve);
   return CUBIT_SUCCESS;
 }
 
