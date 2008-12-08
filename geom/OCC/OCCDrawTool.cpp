@@ -215,7 +215,6 @@ OCCDrawTool::draw_FACE( TopoDS_Face *FACE_ptr, int color,
 
   CubitStatus stat;
   stat = draw_surface(surf_ptr, color, tessellate, flush);
-  OQE->delete_solid_model_entities( surf_ptr );
 
   return stat;
 }

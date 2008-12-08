@@ -25,6 +25,8 @@
 #include "BRepBuilderAPI_MakeSolid.hxx"
 #include "OCCShapeAttributeSet.hpp"
 #include "BRepBuilderAPI_MakeShell.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "Poly_Array1OfTriangle.hxx"
@@ -1368,18 +1370,18 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
                                                   CubitBoolean build_body)
 {
   OCCSurface *surface = NULL;
+  GProp_GProps myProps;
+  BRepGProp::SurfaceProperties(aShape, myProps);
+  double area = myProps.Mass();
+  double tol = get_sme_resabs_tolerance();
+  if(area < tol * tol)
+    return (Surface*) NULL;
+
   if (!OCCMap->IsBound(aShape))
   {
     TopoDS_Face *poface = new TopoDS_Face;
     *poface = aShape;
     surface = new OCCSurface(poface);
-
-    double tol = get_sme_resabs_tolerance();
-    if(surface->measure() < tol * tol)
-    {
-      delete surface;
-      return (Surface*) NULL;
-    } 
 
     iTotalTBCreated++;
     OCCMap->Bind(*poface, iTotalTBCreated);
@@ -1531,17 +1533,19 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
 {
   Curve *curve;
+  GProp_GProps myProps;
+  BRepGProp::LinearProperties(aShape, myProps);
+  double length =  myProps.Mass();
+  if(length < get_sme_resabs_tolerance())
+    return (Curve*) NULL;
+
   if (!OCCMap->IsBound(aShape)) 
     {
       TopoDS_Edge *poedge = new TopoDS_Edge;
       *poedge = aShape;
       iTotalTBCreated++;
       curve = new OCCCurve(poedge);
-      if(curve->measure() < get_sme_resabs_tolerance())
-      {
-        delete curve;
-        return (Curve*) NULL;
-      }
+      
       OCCMap->Bind(*poedge, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
 			       (TopologyBridge*)curve));
