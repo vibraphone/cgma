@@ -125,6 +125,8 @@ CubitStatus make_Point()
   tmpBd->ref_vertices(vertices);
   DLIList<RefEdge*> ref_edges;
   tmpBd->ref_edges(ref_edges);
+  DLIList<RefFace*> sphere_faces;
+  tmpBd->ref_faces(sphere_faces);
   for(int i = 0; i < ref_edges.size(); i++) 
   {
     vertices.clean_out();
@@ -134,15 +136,6 @@ CubitStatus make_Point()
   BodySM* tmpBdSM = tmpBd->get_body_sm_ptr();
   objOCC = ( (OCCBody*) tmpBdSM )->get_TopoDS_Shape(); //Opencascade Object
   OCCDrawTool::instance()->draw_TopoDS_Shape(objOCC, 200);
-
-  DLIList<Body*> bodies;
-  DLIList<RefEntity*>  free_entities;
-  gti->bodies(bodies);
-
-  //delete all entities
-  gti->delete_Body(bodies);
-  gti->get_free_ref_entities(free_entities);
-  assert(free_entities.size() == 0);
 
   // Read in the geometry from files specified on the command line
   const char *argv = "66_shaver3.brep";
@@ -182,7 +175,7 @@ CubitStatus make_Point()
   CubitVector vector1(10,10,10);
   CubitVector vector2(-10,-10,10);
   CubitVector vector3(10, -10, 10);
-  free_entities.clean_out();
+  DLIList<RefEntity*> free_entities;
 
   // Make two vertices.
   gmti->make_RefVertex(vector1,5);
@@ -201,7 +194,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
  
   //check for vertex
-  bodies.clean_out();
+  DLIList<Body*> bodies;
   gti->bodies(bodies);
   free_entities.clean_out();// get_free_ref_entities directly append
   //without checking for duplicates, so clean_out first. 
@@ -271,8 +264,8 @@ CubitStatus make_Point()
 
   DLIList<RefFace*> ref_faces;
   gti->ref_faces(ref_faces);
-  //RefFace* ref_face = ref_faces.step_and_get();
-  RefFace* ref_face = ref_faces.get();
+  RefFace* ref_face = ref_faces.step_and_get();
+  //RefFace* ref_face = ref_faces.get();
 
   //make a new refface out of existing refface.
   CubitBoolean extended_from = CUBIT_TRUE;
