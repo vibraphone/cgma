@@ -65,6 +65,7 @@ EXTRA_DIST = 62_shaver1.brep \
              model6.sat \
              model7.sat \
              hollow.sat \
+	     unite4.occ \
              stitch.occ_name 
 
 # Files that are created by tests, and that therefore 
