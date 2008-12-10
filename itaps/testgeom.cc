@@ -1136,14 +1136,9 @@ bool booleans_test(iGeom_Instance geom)
 
     // section the brick
   iBase_EntityHandle section_result = 0;
-#ifdef FORCE_OCC 
-  section_result = subtract_result;
-#elif defined(USE_OCC)
-  section_result = subtract_result;
-#else
   iGeom_sectionEnt( geom, &subtract_result, 1.0, 0.0, 0.0, 0.25, true, &section_result, &err );
   CHECK( "Problems sectioning for booleans section test." );
-#endif
+
     // unite the section result with a new cylinder
   iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &cyl, &err );
   CHECK( "Problems creating cylinder for unite test." );
