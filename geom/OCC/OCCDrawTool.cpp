@@ -129,7 +129,6 @@ OCCDrawTool::draw_EDGE( TopoDS_Edge *EDGE_ptr, int color, CubitBoolean flush )
 
   CubitStatus stat;
   stat = draw_curve(curve_ptr, color, flush);
-  OQE->delete_solid_model_entities( curve_ptr );
 
   return stat;
 }
