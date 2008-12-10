@@ -4626,7 +4626,8 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
   gp_Dir normal_dir(normal.x(), normal.y(), normal.z()); 
   gp_Pln plane(pt, normal_dir);
   gp_Vec vec(normal_dir);
-  pt.Translated(vec);
+  pt =  pt.Translated(vec);
+
   TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
   TopoDS_Solid solid = BRepPrimAPI_MakeHalfSpace(face, pt);
    
