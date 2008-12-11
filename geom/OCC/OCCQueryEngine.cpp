@@ -1210,6 +1210,8 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
 
 BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
 {
+  if(aShape.IsNull())
+    return (BodySM*)NULL;
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
     {
@@ -1245,6 +1247,8 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
 Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
 		 			       CubitBoolean build_body)
 {
+  if(aShape.IsNull())
+    return (Lump*)NULL;
   //one OCCBody corresponds one OCCLump
   OCCLump *lump;
   OCCBody *body;
@@ -1289,6 +1293,8 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
 OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
 						   CubitBoolean standalone)
 {
+  if(aShape.IsNull())
+    return (OCCShell*)NULL;
   OCCShell *shell ;
   CubitBoolean build_body = CUBIT_FALSE;
   DLIList<OCCCoFace*> cofaces_old, cofaces_new;
@@ -1369,6 +1375,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
 Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
                                                   CubitBoolean build_body)
 {
+  if(aShape.IsNull())
+    return (Surface*)NULL;
   OCCSurface *surface = NULL;
   GProp_GProps myProps;
   BRepGProp::SurfaceProperties(aShape, myProps);
@@ -1423,6 +1431,8 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
 OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 						  CubitBoolean standalone)
 {
+  if(aShape.IsNull())
+    return (OCCLoop*)NULL;
   OCCLoop *loop ;
   if (!OCCMap->IsBound(aShape))
     {
@@ -1479,21 +1489,21 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       //search through the curve loops
       for(int i = 0; i < loops.size() ; i++)
       {
-        OCCLoop* loop = loops.get_and_step();
-        if (!OCCMap->IsBound(*loop->get_TopoDS_Wire()))
+        OCCLoop* occ_loop = loops.get_and_step();
+        if (!OCCMap->IsBound(*occ_loop->get_TopoDS_Wire()))
         { 
-          DLIList<OCCCoEdge*> coedge_list = loop->coedges();
+          DLIList<OCCCoEdge*> coedge_list = occ_loop->coedges();
           for(int j = 0; j < coedge_list.size(); j++)
           {
             OCCCoEdge * test_coedge = coedge_list.get_and_step();
             if (test_coedge->curve() == curve)
             {
-              loop->remove_coedge(test_coedge);
-              occ_curve->remove_loop(loop);
+              occ_loop->remove_coedge(test_coedge);
+              occ_curve->remove_loop(occ_loop);
               delete test_coedge;
             }
           }
-          delete loop;
+          delete occ_loop;
         }
       }
       //for the cylinder side face, there are 4 coedges, 2 of them are seam
@@ -1509,6 +1519,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
           break;
         }
       }
+
+      assert(occ_curve->loops().size() <2);
       coedge = new OCCCoEdge( curve, loop, sense);
       coedges_new.append(coedge);
       occ_curve->add_loop(loop);
@@ -1532,6 +1544,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 
 Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
 {
+  if(aShape.IsNull())
+    return (Curve*)NULL;
   Curve *curve;
   GProp_GProps myProps;
   BRepGProp::LinearProperties(aShape, myProps);
@@ -1567,6 +1581,8 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
 
 Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape)
 {
+  if(aShape.IsNull())
+    return (Point*)NULL;
   OCCPoint *point;
   if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape)) 
     {

@@ -67,7 +67,18 @@ OCCLoop::~OCCLoop()
 
 void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
 {
+   if(loop.IsEqual(*myTopoDSWire))
+     return;
    TopoDS_Wire* the_wire = new TopoDS_Wire(loop);
+   DLIList<OCCCoEdge *> coedges = this->coedges();
+   for(int i = 0; i < coedges.size(); i++)
+   {
+     OCCCoEdge *coedge = coedges.get_and_step();
+     Curve* curve = coedge->curve();
+     CAST_TO(curve, OCCCurve)->remove_loop(this);
+     this->remove_coedge(coedge);
+     delete coedge;
+   }
    if(myTopoDSWire)
      delete myTopoDSWire;
    myTopoDSWire = the_wire;
