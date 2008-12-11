@@ -116,6 +116,9 @@ OCCCurve::~OCCCurve()
 
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 {
+  if(edge.IsEqual(*myTopoDSEdge))
+    return;
+
   TopoDS_Edge* the_edge = new TopoDS_Edge(edge);
   if(myTopoDSEdge)
     delete myTopoDSEdge;

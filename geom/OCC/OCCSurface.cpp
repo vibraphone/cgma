@@ -99,6 +99,9 @@ OCCSurface::~OCCSurface()
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 {
+  if(face.IsEqual(*myTopoDSFace))
+    return;
+
   TopoDS_Face* face_ptr = new TopoDS_Face(face);
   if(myTopoDSFace)
     delete myTopoDSFace;
@@ -906,7 +909,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      {
        TopoDS_Edge edge = Ex.Current();
        if(op)
+       {
          shapes.Assign(op->Modified(edge));
+         if(shapes.Extent() == 0)
+           shapes.Assign(op->Generated(edge));
+       }
        else if(sp)
          shapes.Assign(sp->DescendantShapes(edge));
 

@@ -82,6 +82,9 @@ OCCLump::~OCCLump()
 
 void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
 {
+  if(solid.IsEqual(*myTopoDSSolid) )
+    return;
+
   TopoDS_Solid* the_solid = new TopoDS_Solid(solid);
   if(myTopoDSSolid)
     delete myTopoDSSolid ;

@@ -85,6 +85,9 @@ void OCCBody::lumps(DLIList<Lump*>& my_lumps)
 
 void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
 {
+  if(theshape.IsEqual(*myTopoDSShape))
+    return;
+
   TopoDS_CompSolid * the_comp = new TopoDS_CompSolid(theshape);
   if(myTopoDSShape)
     delete myTopoDSShape;

@@ -1358,6 +1358,25 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     }
     if(!exist)
     {
+      DLIList<OCCShell*> shells = occ_surface->shells();
+      for(int i = 0; i < shells.size() ; i++)
+      {
+        OCCShell* shell = shells.get_and_step();
+        TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
+        if (!OCCMap->IsBound(*topo_shell))
+        {
+          DLIList<OCCCoFace*> coface_list = shell->cofaces();
+          for(int j = 0; j < coface_list.size(); j++)
+          {
+            OCCCoFace * test_coface = coface_list.get_and_step();
+            occ_surface->remove_shell(shell);
+            shell->remove_coface(test_coface);
+            delete test_coface;
+          }
+          if(!topo_shell->IsNull())
+            topo_shell->Nullify();
+        }
+      } 
       OCCCoFace * coface = new OCCCoFace( occ_surface, shell, sense);
       cofaces_new.append(coface);
       occ_surface->add_shell(shell);
@@ -1490,20 +1509,20 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       for(int i = 0; i < loops.size() ; i++)
       {
         OCCLoop* occ_loop = loops.get_and_step();
-        if (!OCCMap->IsBound(*occ_loop->get_TopoDS_Wire()))
+        TopoDS_Wire* wire = occ_loop->get_TopoDS_Wire();
+        if (wire->IsNull() || !OCCMap->IsBound(*wire))
         { 
           DLIList<OCCCoEdge*> coedge_list = occ_loop->coedges();
           for(int j = 0; j < coedge_list.size(); j++)
           {
             OCCCoEdge * test_coedge = coedge_list.get_and_step();
-            if (test_coedge->curve() == curve)
-            {
-              occ_loop->remove_coedge(test_coedge);
-              occ_curve->remove_loop(occ_loop);
-              delete test_coedge;
-            }
+            occ_loop->remove_coedge(test_coedge);
+            occ_curve->remove_loop(occ_loop);
+            delete test_coedge;
           }
-          delete occ_loop;
+          if(!wire->IsNull())
+            wire->Nullify();
+          WireList->remove(occ_loop);
         }
       }
       //for the cylinder side face, there are 4 coedges, 2 of them are seam
@@ -1520,7 +1539,31 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
         }
       }
 
-      assert(occ_curve->loops().size() <2);
+      if(occ_curve->loops().size() == 2)
+      {
+        //there must be a loop which doesn't have this curve anymore
+        //this is been found in subtract cases while one solid becomes
+        //2 solid, and one face becomes two faces. One face uses/updates
+        //the old face while the other face generates face and wire from
+        //new. However, in order to uses the curves, the old curve is kept
+        //as possible, so curve's loops get kept, but since it's going to 
+        //associate with new loop, the old loop should be removed from the 
+        //loop list.
+        DLIList<OCCLoop*> old_loops = occ_curve->loops();
+        for (int i = 0; i < 2; i++)
+        {
+          OCCLoop* old_loop = old_loops.get_and_step();
+          DLIList<OCCCoEdge*> test_coedges = old_loop->coedges();
+          int found = 0;
+          if(test_coedges.get()->curve() != curve)
+            test_coedges.step();
+          else
+            found = 1;
+          if(!found)
+            occ_curve->remove_loop(old_loop); 
+        }  
+      }
+      assert(occ_curve->loops().size() < 2);
       coedge = new OCCCoEdge( curve, loop, sense);
       coedges_new.append(coedge);
       occ_curve->add_loop(loop);

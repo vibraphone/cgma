@@ -86,6 +86,8 @@ OCCPoint::~OCCPoint()
 
 void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 {
+  if(vertex.IsEqual(*myTopoDSVertex))
+    return;
   TopoDS_Vertex* the_vertex = new TopoDS_Vertex(vertex);
   if(myTopoDSVertex)
     delete myTopoDSVertex;
@@ -282,7 +284,7 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
       //update all attributes first.
       TopTools_ListIteratorOfListOfShape it;
       it.Initialize(shapes);
-      for(it; it.More(); it.Next())
+      for(; it.More(); it.Next())
       {
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Vertex(),shape);
