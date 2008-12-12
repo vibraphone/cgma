@@ -310,7 +310,7 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(face, shape);
       }
-      shape = shapes.First();
+      shape.Nullify() ;
     }
     else 
       shape.Nullify();

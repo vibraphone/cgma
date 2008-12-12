@@ -1555,15 +1555,22 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
           OCCLoop* old_loop = old_loops.get_and_step();
           DLIList<OCCCoEdge*> test_coedges = old_loop->coedges();
           int found = 0;
-          if(test_coedges.get()->curve() != curve)
-            test_coedges.step();
-          else
-            found = 1;
+          for(int j = 0; j < test_coedges.size() ; j++)
+          {
+            if(test_coedges.get()->curve() != curve)
+              test_coedges.step();
+            else
+            {
+              found = 1;
+              break;
+            }
+          }
           if(!found)
             occ_curve->remove_loop(old_loop); 
         }  
       }
-      assert(occ_curve->loops().size() < 2);
+      //for unite case, it's possible that the a curve has 3 coedges because
+      //opencascade do not perform unite on surfaces.
       coedge = new OCCCoEdge( curve, loop, sense);
       coedges_new.append(coedge);
       occ_curve->add_loop(loop);

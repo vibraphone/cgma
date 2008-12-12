@@ -3562,8 +3562,10 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
                                        bool keep_old) const
 {
   if(bodies.size() < 2)
+  {
+    newBodies = bodies;
     return CUBIT_SUCCESS;
-
+  }
   //all bodies must have only one lump in order for boolean operation to work.
   DLIList<Lump*> lumps;
   for (int i = 0; i < bodies.size(); i++)
