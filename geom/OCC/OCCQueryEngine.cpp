@@ -35,6 +35,9 @@
 #include "Handle_Poly_Triangulation.hxx"
 #include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
+#include "STEPControl_Reader.hxx"
+#include "IGESControl_Reader.hxx"
+#include "IFSelect_ReturnStatus.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
 #include "Handle_Poly_Polygon3D.hxx"
@@ -1122,7 +1125,8 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                       DLIList<TopologyBridge*> &bridge_list )
 {
   //make sure that file_type == "OCC"
-  if( !strcmp( file_type,"OCC") )
+  if( !strcmp( file_type,"OCC") || !strcmp( file_type,"IGES") ||
+      !strcmp( file_type,"STEP") )
     return import_solid_model( file_name, file_type, bridge_list );
   else
     return CUBIT_FAILURE;
@@ -1150,10 +1154,38 @@ CubitStatus OCCQueryEngine::import_solid_model(
 					       CubitBoolean free_surfaces)
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
-  BRep_Builder aBuilder;
-  Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
-  if (result==0) return CUBIT_FAILURE;
-  
+  //BRep_Builder aBuilder;
+  if(strcmp(file_type ,"OCC") == 0)
+  {
+    Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
+    if (result==0) return CUBIT_FAILURE;
+  }
+ 
+  else if (strcmp(file_type, "STEP") == 0)
+  {
+    STEPControl_Reader reader;
+    IFSelect_ReturnStatus stat = reader.ReadFile( (char*) file_name);
+    if (stat  != IFSelect_RetDone)
+    {
+       PRINT_INFO("%s: Cannot open file", file_name );
+       return CUBIT_FAILURE;
+    } 
+    reader.TransferRoots();
+    *aShape = reader.OneShape(); 
+  }
+
+  else if(strcmp(file_type, "IGES") == 0)
+  {
+    IGESControl_Reader reader;
+    IFSelect_ReturnStatus stat = reader.ReadFile( (char*) file_name);
+    if (stat  != IFSelect_RetDone)
+    {
+       PRINT_INFO("%s: Cannot open file", file_name );
+       return CUBIT_FAILURE;
+    } 
+    reader.TransferRoots(); 
+    *aShape = reader.OneShape();
+  } 
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
