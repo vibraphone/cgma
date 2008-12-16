@@ -66,7 +66,10 @@ EXTRA_DIST = 62_shaver1.brep \
              model7.sat \
              hollow.sat \
 	     unite4.occ \
-             stitch.occ_name 
+             proe.stp   \
+             ex2.iges   \
+             ex3.iges   \
+             stitch.name_occ 
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'

@@ -103,7 +103,31 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
   for (i = 0; i < num_files; i++) {
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    status = gti->import_solid_model(filename.c_str(), "OCC");
+    int length = filename.length();
+    std::string sub1 = filename.substr(length - 3);
+    std::string sub2 = filename.substr(length - 4);
+    char * cstr1;
+    cstr1 = new char [length+1];
+    char * cstr2;
+    cstr2 = new char [length+1];
+    strcpy (cstr1, sub1.c_str());
+    strcpy (cstr2, sub2.c_str());
+
+    if(!strcmp("OCC", cstr1) || 
+       !strcmp("occ", cstr1 )||
+       !strcmp("brep", cstr2)||
+       !strcmp("BREP", cstr2) )
+      status = gti->import_solid_model(filename.c_str(), "OCC");
+    else if(!strcmp("step", cstr2) ||
+            !strcmp("STEP", cstr2)||
+            !strcmp("stp", cstr1)  ||
+            !strcmp("STP", cstr1))
+      status = gti->import_solid_model(filename.c_str(), "STEP");
+    else if(!strcmp("iges", cstr2) ||
+            !strcmp("IGES", cstr2) ||
+            !strcmp("igs", cstr1)  ||
+            !strcmp("IGS", cstr1))
+      status = gti->import_solid_model(filename.c_str(), "IGES");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
@@ -124,18 +148,89 @@ CubitStatus make_Point()
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
 
-  // Read in the geometry from files specified on the command line
-  const char *argv = "stitch.occ_name";
-  CubitStatus status = read_geometry(1, &argv, false);
+  //Read in the geometry from iges file
+  const char *argiges = "ex3.iges";
+  CubitStatus status = read_geometry(1, &argiges, false);
   if (status == CUBIT_FAILURE) exit(1);
-  //Read in 2 volumes.
 
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = "beforesub.occ";
+  const char * filename = "ex3.occ";
   const char * filetype = "OCC";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  gti->bodies(bodies);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+
+  for (int j = free_entities.size(); j--;)
+    {
+      gti->delete_RefEntity( free_entities.get_and_step());
+    }
+
+  const char *argiges2 = "ex2.iges";
+  status = read_geometry(1, &argiges2, false);
+  if (status == CUBIT_FAILURE) exit(1);
+
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "ex2.occ";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  gti->bodies(bodies);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+
+  for (int j = free_entities.size(); j--;)
+    {
+      gti->delete_RefEntity( free_entities.get_and_step());
+    }
+
+  const char *argstep = "proe.stp";
+  status = read_geometry(1, &argstep, false);
+  if (status == CUBIT_FAILURE) exit(1);
+  
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "proe.occ";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  gti->bodies(bodies);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+
+  for (int j = free_entities.size(); j--;)
+    {
+      gti->delete_RefEntity( free_entities.get_and_step());
+    }
+
+  // Read in the geometry from files specified on the command line
+  const char *argv = "stitch.name_occ";
+  status = read_geometry(1, &argv, false);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "beforesub.occ";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -145,6 +240,7 @@ CubitStatus make_Point()
   //delete all entities
   gti->delete_Body(bodies);
 
+  free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
 
   for (int j = free_entities.size(); j--;)
