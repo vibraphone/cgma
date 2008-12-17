@@ -381,6 +381,7 @@ private:
 				    CubitBoolean standalone = CUBIT_FALSE);  
 
   CubitStatus write_topology( const char* file_name, 
+                              const char* file_type,
                               DLIList<OCCBody*> &facet_bodies,
                               DLIList<OCCSurface*> &facet_surfaces,
                               DLIList<OCCCurve*> &facet_curves,

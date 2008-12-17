@@ -37,6 +37,9 @@
 #include "BRepAdaptor_Curve.hxx"
 #include "STEPControl_Reader.hxx"
 #include "IGESControl_Reader.hxx"
+#include "STEPControl_Writer.hxx"
+#include "IGESControl_Writer.hxx"
+#include "STEPControl_StepModelType.hxx"
 #include "IFSelect_ReturnStatus.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
@@ -854,7 +857,9 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 						const CubitString &,
 						const char*)
 {
-  if( strcmp( file_type, "OCC" ) != 0 )
+  if( strcmp( file_type, "OCC" ) != 0 && 
+      strcmp( file_type, "STEP") != 0 &&
+      strcmp( file_type, "IGES") != 0)
     {
       //PRINT_ERROR("The specified file type, %s, is not supported!\n", filetype );
       return CUBIT_FAILURE;
@@ -919,7 +924,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   CubitStatus status;
 
   //write out topology and attributes
-  status = write_topology( file_name,
+  status = write_topology( file_name, file_type,
                            OCC_bodies, OCC_surfaces,
                            OCC_curves, OCC_points );
   if( status == CUBIT_FAILURE ) return CUBIT_FAILURE;
@@ -934,36 +939,36 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
     {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_body_count == 1 )
-         PRINT_INFO( "%4d OCC Body\n", free_body_count );
+         PRINT_INFO( "%4d OCC Body to %s\n", free_body_count, file_name );
       else
-         PRINT_INFO( "%4d OCC Bodies\n", free_body_count );
+         PRINT_INFO( "%4d OCC Bodies to %s\n", free_body_count, file_name );
     }
 
   if( free_surface_count )
     {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_surface_count == 1 )
-	PRINT_INFO( "%4d OCC Surface\n", free_surface_count );
+	PRINT_INFO( "%4d OCC Surface to %s\n", free_surface_count, file_name );
       else
-	PRINT_INFO( "%4d OCC Surface\n", free_surface_count );
+	PRINT_INFO( "%4d OCC Surface to %s\n", free_surface_count, file_name );
     }
 
   if( free_curve_count )
     {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_curve_count == 1 )
-	PRINT_INFO( "%4d OCC Curve\n", free_curve_count );
+	PRINT_INFO( "%4d OCC Curve to %s\n", free_curve_count, file_name );
       else
-	PRINT_INFO( "%4d OCC Curves\n", free_curve_count );
+	PRINT_INFO( "%4d OCC Curves to %s\n", free_curve_count, file_name );
     }
 
   if( free_point_count )
     {
       if( flg )PRINT_INFO( "         " );else flg=1;
       if( free_point_count == 1 )
-	PRINT_INFO( "%4d OCC Point\n", free_point_count );
+	PRINT_INFO( "%4d OCC Point to %s\n", free_point_count, file_name );
       else
-	PRINT_INFO( "%4d OCC Points\n", free_point_count );
+	PRINT_INFO( "%4d OCC Points to %s\n", free_point_count, file_name );
     }
   PRINT_INFO( "\n" );
 
@@ -980,6 +985,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
 CubitStatus
 OCCQueryEngine::write_topology( const char* file_name,
+                                const char* file_type,
                                 DLIList<OCCBody*> &OCC_bodies,
                                 DLIList<OCCSurface*> &OCC_surfaces,
                                 DLIList<OCCCurve*> &OCC_curves,
@@ -1058,14 +1064,41 @@ OCCQueryEngine::write_topology( const char* file_name,
       B.Add(Co, *vertex);
     }
  
-  TDF_Label label;
-  if(EXPORT_ATTRIB)
-    label = mainLabel;
+  if(strcmp(file_type, "OCC") == 0)
+  {
+    TDF_Label label;
+    if(EXPORT_ATTRIB)
+      label = mainLabel;
 
-  if(!Write(Co, const_cast<char*>(file_name),label))
-  //if(!BRepTools::Write(Co, const_cast<char*>(file_name)))
-    return CUBIT_FAILURE;
- 
+    if(!Write(Co, const_cast<char*>(file_name),label))
+      return CUBIT_FAILURE;
+  } 
+  else if(strcmp(file_type, "STEP") == 0)
+  {
+    STEPControl_Writer writer;
+    writer.Model( Standard_True);
+    writer.Transfer(Co, STEPControl_AsIs );
+    IFSelect_ReturnStatus stat = writer.Write( (char*) file_name);
+    if (stat  != IFSelect_RetDone)
+    {
+       PRINT_INFO("%s: Cannot open file", file_name );
+       return CUBIT_FAILURE;
+    }
+  }
+
+  else // IGES file
+  {
+    IGESControl_Writer writer;
+    writer.AddShape(Co);
+    writer.ComputeModel();
+    Standard_Boolean  stat = writer.Write( (char*) file_name);
+    if (!stat )
+    {
+       PRINT_INFO("%s: Cannot open file", file_name );
+       return CUBIT_FAILURE;
+    }
+  }
+
   return CUBIT_SUCCESS;
 }
 
