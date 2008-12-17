@@ -34,6 +34,7 @@
 #include "TopAbs_Orientation.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
+#include "GC_MakeCircle.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
@@ -4780,29 +4781,52 @@ CubitStatus OCCModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> & 
 // Function   : create_arc_three
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
-Curve* OCCModifyEngine::create_arc_three( Point* /*ref_vertex1*/, 
-                                            Point* /*ref_vertex2*/,
-                                            Point* /*ref_vertex3*/, 
-                                            bool /*full*/ )
-{ return NULL;
+Curve* OCCModifyEngine::create_arc_three( Point* pt1, 
+                                          Point* pt2,
+                                          Point* pt3, 
+                                          bool full )
+{ 
+  if(!full)
+  {
+    CubitVector v2(pt2->coordinates());
+    return make_Curve(ARC_CURVE_TYPE,pt1,pt3, &v2, CUBIT_FORWARD);
+  }
+  else
+  {
+    CubitVector v1(pt1->coordinates());
+    CubitVector v2(pt2->coordinates());
+    CubitVector v3(pt3->coordinates());
 
+    gp_Pnt gp_pt1(v1.x(),v1.y(), v1.z());
+    gp_Pnt gp_pt2(v2.x(),v2.y(), v2.z());
+    gp_Pnt gp_pt3(v3.x(),v3.y(), v3.z());
+
+    Handle(Geom_Circle) curve_ptr;
+    curve_ptr = GC_MakeCircle(gp_pt1,gp_pt2,gp_pt3); 
+
+    OCCPoint* occ_pt1 = CAST_TO(const_cast<Point*>(pt1),OCCPoint);
+    TopoDS_Vertex * vt1 = occ_pt1->get_TopoDS_Vertex();
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, *vt1, *vt1);
+    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+  }
 }
 
 //===============================================================================
 // Function   : create_arc_three
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
-Curve* OCCModifyEngine::create_arc_three( Curve* /*ref_edge1*/, 
-                                            Curve* /*ref_edge2*/,
-                                            Curve* /*ref_edge3*/, 
-                                            bool /*full*/  )
-{ return NULL;
+Curve* OCCModifyEngine::create_arc_three( Curve* curve1, 
+                                          Curve* curve2,
+                                          Curve* curve3, 
+                                          bool full  )
+{ 
+  
 }
 
 //===============================================================================
