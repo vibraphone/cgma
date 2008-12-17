@@ -37,6 +37,8 @@
 #include "RefEntityName.hpp"
 #include "RefEntityFactory.hpp"
 
+#include <algorithm>
+
 #ifndef SRCDIR
 # define SRCDIR .
 #endif
@@ -87,6 +89,24 @@ int main (int argc, char **argv)
   
 }
 
+std::string type_from_file_name( const std::string& filename )
+{
+  size_t dot_pos = filename.find_last_of( '.' );
+  if (dot_pos == std::string::npos)
+    return std::string();
+ 
+  std::string extension = filename.substr( dot_pos + 1 );
+  std::transform( extension.begin(), extension.end(), extension.begin(), tolower );
+  if (extension == "occ" || extension == "brep")
+    return "OCC";
+  else if (extension == "step" || extension == "stp")
+    return "STEP";
+  else if (extension == "iges" || extension == "igs")
+    return "IGES";
+  else
+    return std::string();
+}
+
 /// attribs module: list, modify attributes in a give model or models
 /// 
 /// Arguments: file name(s) of geometry files in which to look
@@ -101,33 +121,12 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
   PRINT_SEPARATOR;
 
   for (i = 0; i < num_files; i++) {
+    std::string type = type_from_file_name( argv[i] );
+    if (type.empty()) // just guess OCC
+      type = "OCC";
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    int length = filename.length();
-    std::string sub1 = filename.substr(length - 3);
-    std::string sub2 = filename.substr(length - 4);
-    char * cstr1;
-    cstr1 = new char [length+1];
-    char * cstr2;
-    cstr2 = new char [length+1];
-    strcpy (cstr1, sub1.c_str());
-    strcpy (cstr2, sub2.c_str());
-
-    if(!strcmp("OCC", cstr1) || 
-       !strcmp("occ", cstr1 )||
-       !strcmp("brep", cstr2)||
-       !strcmp("BREP", cstr2) )
-      status = gti->import_solid_model(filename.c_str(), "OCC");
-    else if(!strcmp("step", cstr2) ||
-            !strcmp("STEP", cstr2)||
-            !strcmp("stp", cstr1)  ||
-            !strcmp("STP", cstr1))
-      status = gti->import_solid_model(filename.c_str(), "STEP");
-    else if(!strcmp("iges", cstr2) ||
-            !strcmp("IGES", cstr2) ||
-            !strcmp("igs", cstr1)  ||
-            !strcmp("IGS", cstr1))
-      status = gti->import_solid_model(filename.c_str(), "IGES");
+    status = gti->import_solid_model(filename.c_str(), type.c_str());
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
