@@ -67,7 +67,7 @@ EXTRA_DIST = 62_shaver1.brep \
              hollow.sat \
 	     unite4.occ \
              proe.stp   \
-             ex2.iges   \
+             diffuser.iges   \
              ex3.iges   \
              stitch.name_occ 
 

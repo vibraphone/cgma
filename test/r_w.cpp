@@ -150,6 +150,7 @@ CubitStatus make_Point()
   //Read in the geometry from iges file
   const char *argiges = "ex3.iges";
   CubitStatus status = read_geometry(1, &argiges, false);
+  //Constructed 18 Free Curves: 1 to 18
   if (status == CUBIT_FAILURE) exit(1);
 
   CubitStatus rsl = CUBIT_SUCCESS;
@@ -161,6 +162,23 @@ CubitStatus make_Point()
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+
+  //Exported:  18 OCC Curves to ex3.occ
+
+  filetype = "IGES";
+  filename = "ex3export.iges";
+  num_ents_exported=0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  //Exported:  18 OCC Curves to ex3export.iges
+
+  filetype = "STEP";
+  filename = "ex3export.step";
+  num_ents_exported=0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  //Exported:  18 OCC Curves to ex3export.step
 
   gti->bodies(bodies);
 
@@ -174,16 +192,21 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
-  const char *argiges2 = "ex2.iges";
+  
+  const char *argiges2 = "diffuser.iges";
   status = read_geometry(1, &argiges2, false);
+  //Constructed 7 Volumes: 1 to 7
   if (status == CUBIT_FAILURE) exit(1);
 
+  filetype = "OCC";
   ref_entity_list.clean_out();
   num_ents_exported=0;
-  filename = "ex2.occ";
+  filename = "diffuser.occ";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+
+  //Exported:   7 OCC Bodies to diffuser.occ
 
   gti->bodies(bodies);
 
@@ -200,14 +223,31 @@ CubitStatus make_Point()
 
   const char *argstep = "proe.stp";
   status = read_geometry(1, &argstep, false);
+  //Constructed 12 Volumes: 8 to 19
   if (status == CUBIT_FAILURE) exit(1);
   
+  filetype = "OCC";
   ref_entity_list.clean_out();
   num_ents_exported=0;
   filename = "proe.occ";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  //Exported:  12 OCC Bodies to proe.occ
+
+  filetype = "IGES";
+  filename = "proeexport.iges";
+  num_ents_exported=0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  //Exported:  12 OCC Bodies to proeexport.iges
+
+  filetype = "STEP";
+  filename = "proeexport.step";
+  num_ents_exported=0;
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  //Exported:  12 OCC Bodies to proeexport.step
 
   gti->bodies(bodies);
 
@@ -227,6 +267,7 @@ CubitStatus make_Point()
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
+  filetype = "OCC";
   ref_entity_list.clean_out();
   num_ents_exported=0;
   filename = "beforesub.occ";
