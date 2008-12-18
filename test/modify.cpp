@@ -79,10 +79,13 @@ int main (int argc, char **argv)
      PRINT_INFO("Operation Failed");
 
   int ret_val = ( CubitMessage::instance()->error_count() );
-  if ( ret_val > 0 )
+  if ( ret_val != 5 )
   {
     PRINT_ERROR("Errors found during Mergechk session.\n");
   }
+  else
+    ret_val = 0;
+
   return ret_val;
   
 }
@@ -932,7 +935,7 @@ CubitStatus make_Point()
   //d = 8.07227
 
   //test sweep_along_curve function
-  //sweep along a staight curve with draft
+  //sweep along a straight curve with draft
   refentities.clean_out();
   refentities.append(rotate_face);
   CubitVector pt4(0,1,0);
