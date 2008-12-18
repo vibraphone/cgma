@@ -4559,7 +4559,7 @@ CubitStatus GeometryModifyTool::subtract( DLIList<Body*>  &tool_body_list,
 
    if ( result == CUBIT_FAILURE )
    {
-     PRINT_ERROR("Subtract FAILED\n" );
+     PRINT_WARNING("Subtract FAILED\n" );
      return CUBIT_FAILURE;
    }
 

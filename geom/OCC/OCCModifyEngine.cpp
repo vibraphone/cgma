@@ -1,4 +1,4 @@
-//-------------------------------------------------------------------------
+
 //-------------------------------------------------------------------------
 
 // Filename      : OCCModifyEngine.cpp
@@ -194,7 +194,7 @@ Curve* OCCModifyEngine::make_Curve(Curve * curve_ptr) const
   OCCCurve* occ_curve = CAST_TO(curve_ptr, OCCCurve);
   if (!occ_curve)
   {
-     PRINT_ERROR("Cannot create an OCC curve from the given curve.\n"
+     PRINT_WARNING("Cannot create an OCC curve from the given curve.\n"
                  "Possible incompatible geometry engines.\n");
      return (Curve *)NULL;
   }
@@ -242,7 +242,7 @@ Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
     }
     else
     {
-       PRINT_ERROR("Cannot create an OCC curve from the given duplicated points.\n");
+       PRINT_WARNING("Cannot create an OCC curve from the given duplicated points.\n");
        return (Curve *)NULL;
     }
   }
@@ -277,7 +277,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   if (curve_type != SPLINE_CURVE_TYPE
       && curve_type != STRAIGHT_CURVE_TYPE)
   {
-     PRINT_ERROR("Cannot create an OCC curve from the given curve_type.\n"
+     PRINT_WARNING("Cannot create an OCC curve from the given curve_type.\n"
                  "Candidates are SPLINE_CURVE_TYPE and STRAIGHT_CURVE_TYPE.\n");
      return (Curve *)NULL;
   }
@@ -290,7 +290,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
   if (occ_point1 == NULL || occ_point2 == NULL)
   {
-     PRINT_ERROR("Cannot create an OCC curve from the given points.\n"
+     PRINT_WARNING("Cannot create an OCC curve from the given points.\n"
                  "Possible incompatible geometry engines.\n");
      return (Curve *)NULL;
   }
@@ -431,13 +431,13 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
           ellipse = ellipse2.Value();
         else
         {
-          PRINT_ERROR("Can't create an ellipse from give 3 points.\n");
+          PRINT_WARNING("Can't create an ellipse from give 3 points.\n");
           return (Curve *)NULL;
         }      
      } 
      else
      {
-        PRINT_ERROR("Can't create an ellipse from give 3 points.\n");
+        PRINT_WARNING("Can't create an ellipse from give 3 points.\n");
         return (Curve *)NULL;
      }
      CubitBoolean use_sense = (sense == CUBIT_FORWARD ? CUBIT_TRUE : CUBIT_FALSE); 
@@ -454,7 +454,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     CubitVector width_vec = v2 - v1;
     if(width_vec.length_squared() < tol * tol)
     {
-       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+       PRINT_WARNING("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "2 end points are the same.\n");
        return (Curve *)NULL;
     }
@@ -465,7 +465,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
  
     if (height_vec.length_squared() < tol * tol)
     { 
-       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+       PRINT_WARNING("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "3 points are in the same line.\n");
        return (Curve *)NULL;
     }
@@ -476,7 +476,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     CubitVector N = x * (v2 - v1);  
     if (N.length_squared() < tol * tol)
     {
-       PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
+       PRINT_WARNING("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "3 points are in the same line.\n");
        return (Curve *)NULL;
     }
@@ -525,7 +525,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
   else
   {
-      PRINT_ERROR("In OCCModifyEngine::make_Curve\n"
+      PRINT_WARNING("In OCCModifyEngine::make_Curve\n"
                   "       Invalid curve type.\n");
       return (Curve *)NULL;
   }
@@ -555,7 +555,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   OCCSurface* occ_surface = CAST_TO(surface_ptr, OCCSurface);
   if (!occ_surface)
   {
-     PRINT_ERROR("Cannot create an OCC surface from the given surface.\n"
+     PRINT_WARNING("Cannot create an OCC surface from the given surface.\n"
                  "Possible incompatible geometry engines.\n");
      return (Surface *)NULL;
   }
@@ -568,7 +568,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
   if( !theFace)
   {
-     PRINT_ERROR("Cannot create an OCC surface from the given surface.\n"
+     PRINT_WARNING("Cannot create an OCC surface from the given surface.\n"
                  "Possible incompatible geometry engines.\n");
      return (Surface *)NULL;
   }
@@ -703,7 +703,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
            //check intscts point should be vertex or outside boundary.
  	   if (intscts.size() > 2 )  
 	   {
-	     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+	     PRINT_WARNING("In OCCModifyEngine::make_Surface\n"
                  "       Cannot make Surface with intersecting curves.\n");
              return (Surface *)NULL;
            }
@@ -723,7 +723,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
                }
                else if(is_on == CUBIT_PNT_INSIDE)
                {
-                 PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+                 PRINT_WARNING("In OCCModifyEngine::make_Surface\n"
                  "       Cannot make Surface with intersecting curves.\n");
                  return (Surface *)NULL;
                }
@@ -735,7 +735,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
  
   if (count > curve_list.size()) 
   {
-      PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+      PRINT_WARNING("In OCCModifyEngine::make_Surface\n"
                 "       Cannot make Surface with intersecting curves.\n");
       return (Surface *)NULL;
   }
@@ -758,7 +758,7 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   
   if(!topo_face)
   {
-     PRINT_ERROR("In OCCModifyEngine::make_Surface\n"
+     PRINT_WARNING("In OCCModifyEngine::make_Surface\n"
                  "       Cannot make Surface object.\n");
      return (Surface *)NULL;
   }
@@ -812,7 +812,7 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
 
         if(occ_curve ==  NULL)
         {
-           PRINT_ERROR("In OCCModifyEngine::sort_curves\n"
+           PRINT_WARNING("In OCCModifyEngine::sort_curves\n"
                        "       Got a NULL pointer to OCCCurve\n") ;
            return CUBIT_FAILURE;
         }
@@ -949,7 +949,7 @@ TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 
     if (!made_face.IsDone())
     {
-       PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
+       PRINT_WARNING("In OCCModifyEngine::make_TopoDS_Face\n"
                    "   Cannot find the best fit surface for given curves.\n");
        return topo_face;
     }
@@ -1013,7 +1013,7 @@ TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
 
   if(error)
   {
-    PRINT_ERROR("In OCCModifyEngine::make_TopoDS_Face\n"
+    PRINT_WARNING("In OCCModifyEngine::make_TopoDS_Face\n"
                  "   Cannot find the best fit surface for given curves.\n");
     return (TopoDS_Face*) NULL;
   }
@@ -1039,14 +1039,14 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
     OCCSurface* occ_surface = CAST_TO(surface_list.get_and_step(), OCCSurface);
     if (occ_surface == NULL)
     {
-       PRINT_ERROR("Cannot create an OCC lump from the given surfaces.\n"
+       PRINT_WARNING("Cannot create an OCC lump from the given surfaces.\n"
                  "Possible incompatible geometry engines.\n");
        return (Lump *)NULL;
     }
     OCCBody* occ_body = occ_surface->my_body();
     if(occ_body && occ_body->my_sheet_surface() == NULL)
     {
-      PRINT_ERROR("Cannot create an OCC lump from the given surfaces.\n"
+      PRINT_WARNING("Cannot create an OCC lump from the given surfaces.\n"
                  "The surfaces are not free.\n");
       return (Lump *)NULL;
     }
@@ -1055,7 +1055,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
       OCCShell* shell = occ_surface->my_shell();
       if(!shell)
       {
-        PRINT_ERROR("This is a bug, please report it. \n");
+        PRINT_WARNING("This is a bug, please report it. \n");
         return (Lump*)NULL;
       }
       occ_body = shell->my_body();
@@ -1067,7 +1067,7 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
   CubitStatus stat = stitch_surfs(body_list, aShape);
   if(!stat)
   {
-    PRINT_ERROR("The surfaces are not all connected, can't make a lump. \n");
+    PRINT_WARNING("The surfaces are not all connected, can't make a lump. \n");
     return (Lump*)NULL;
   }
 
@@ -1133,14 +1133,14 @@ Lump* OCCModifyEngine::make_Lump( DLIList<Surface*>& surface_list ) const
     aShell.Closed(CUBIT_TRUE);
 
   else
-    PRINT_ERROR("Surfaces must make a water-tight shape to make a lump.\n");
+    PRINT_WARNING("Surfaces must make a water-tight shape to make a lump.\n");
   
   if(aShell.Closed())
   {
     BRepBuilderAPI_MakeSolid aMakeSolid(aShell);
     if (!aMakeSolid.IsDone())
     {
-       PRINT_ERROR("Cannot create an OCC Lump from the given surfaces.\n"
+       PRINT_WARNING("Cannot create an OCC Lump from the given surfaces.\n"
                    "OCC internal error.\n");
        return (Lump *)NULL;
     }
@@ -1166,7 +1166,7 @@ BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
   OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
   if(!occ_surface)
   {
-     PRINT_ERROR("Cannot create an OCC body from the given surface.\n"
+     PRINT_WARNING("Cannot create an OCC body from the given surface.\n"
                  "Possible incompatible geometry engines.\n");
      return (BodySM *)NULL;
   }
@@ -1208,7 +1208,7 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
      OCCLump* occ_lump = CAST_TO(lump, OCCLump);
      if(!occ_lump)
      {
-        PRINT_ERROR("Cannot create an OCC BodySM from the given lumps.\n"
+        PRINT_WARNING("Cannot create an OCC BodySM from the given lumps.\n"
                     "Possible incompatible geometry engines.\n");
         return (BodySM *)NULL;
      }
@@ -1315,7 +1315,7 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
   //currently OCC only support 4 sided prism
   if (sides != 4)
   {
-    PRINT_ERROR("Option not supported for OCC based geometry.\n");
+    PRINT_WARNING("Option not supported for OCC based geometry.\n");
     return (BodySM*) NULL;
   }
 
@@ -1335,7 +1335,7 @@ BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
   //currently OCC only support 4 sided pyramid
   if (sides != 4)
   {
-    PRINT_ERROR("Option not supported for OCC based geometry.\n");
+    PRINT_WARNING("Option not supported for OCC based geometry.\n");
     return (BodySM*) NULL;
   }
   
@@ -1413,7 +1413,7 @@ BodySM* OCCModifyEngine::cylinder( double hi, double r1, double r2, double r3 ) 
 
   if (lump == NULL)
   {
-    PRINT_ERROR("In OCCModifyEngine::cylinder\n"
+    PRINT_WARNING("In OCCModifyEngine::cylinder\n"
                 "   Cannot create a cylinder for given radii.\n");
     return (BodySM*)NULL;
   }
@@ -1443,7 +1443,7 @@ BodySM* OCCModifyEngine::torus( double r1, double r2 ) const
 
   if (lump == NULL)
   {
-    PRINT_ERROR("In OCCModifyEngine::torus\n"
+    PRINT_WARNING("In OCCModifyEngine::torus\n"
                 "   Cannot create a torus for given radii.\n");
     return (BodySM*)NULL;
   }
@@ -1502,7 +1502,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
   OCCBody* occ_body = CAST_TO(bodyPtr, OCCBody);
   if (!occ_body)
   {
-     PRINT_ERROR("Cannot create an OCC bodySM from the given bodySM.\n"
+     PRINT_WARNING("Cannot create an OCC bodySM from the given bodySM.\n"
                  "Possible incompatible geometry engines.\n");
      return (BodySM *)NULL;
   }
@@ -1524,7 +1524,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
     Surface* surface = make_Surface(occ_body->my_sheet_surface());
     if (surface == NULL)
     {
-       PRINT_ERROR("Cannot create an OCC sheet bodySM from the given bodySM.\n");
+       PRINT_WARNING("Cannot create an OCC sheet bodySM from the given bodySM.\n");
        return (BodySM *)NULL;
     }
 
@@ -1623,7 +1623,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
      OCCShell* shell = occ_body->shell();
      if (surface == NULL && shell == NULL)
      {
-       PRINT_ERROR("Can't stitch non-sheet bodySM's. \n");
+       PRINT_WARNING("Can't stitch non-sheet bodySM's. \n");
        return CUBIT_FAILURE;
      }
 
@@ -1699,7 +1699,7 @@ CubitStatus OCCModifyEngine::stitch_surfs(
 
   if ( count_shell != 1)
   {
-     PRINT_ERROR("Can't stitch all surfaces into one BodySM's. \n");
+     PRINT_WARNING("Can't stitch all surfaces into one BodySM's. \n");
      return CUBIT_FAILURE;
   }
   return CUBIT_SUCCESS;
@@ -1799,7 +1799,7 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
     {
       if (cmi->Interrupt())
       {
-         PRINT_ERROR("Subtraction interrupted.  Aborting...\n");
+         PRINT_WARNING("Subtraction interrupted.  Aborting...\n");
          while (tool_boxes->size())
            delete tool_boxes->pop();
          delete tool_boxes;
@@ -1834,7 +1834,7 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
           stat = imprint_toposhapes(from_shape, tool_shape);
         if(!stat)
         {
-          PRINT_ERROR("Can't do imprint operation on the body. \n");
+          PRINT_WARNING("Can't do imprint operation on the body. \n");
           count++;
         }
         continue;
@@ -2408,7 +2408,7 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
       continue;
     if ( shapes.Extent() > 1)
     {
-      PRINT_ERROR("Edge has multiple intersection with the shape, make it simpler. \n");
+      PRINT_WARNING("Edge has multiple intersection with the shape, make it simpler. \n");
       continue;
     }
     if (shapes.First().TShape()->ShapeType() != TopAbs_EDGE)
@@ -2653,7 +2653,7 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
       DLIList<Lump*> lumps = occ_body->lumps();
       if (lumps.size() > 1)
       {
-        PRINT_ERROR("Can't do boolean operation on CompSolid types. \n");
+        PRINT_WARNING("Can't do boolean operation on CompSolid types. \n");
         stat = CUBIT_FAILURE;
         break;
       }
@@ -3244,7 +3244,7 @@ OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &ref_face_list,
     stat = OCCQueryEngine::instance()->delete_solid_model_entities( curve );
     if (stat == CUBIT_FAILURE)
     {
-       PRINT_ERROR("In OCCQueryEngine::delete_geometry\n"
+       PRINT_WARNING("In OCCQueryEngine::delete_geometry\n"
                  "       Could not delete OCCCurve.\n"
                  "       The Model database is likely corrupted "
                  "due to\n       this unsuccessful deletion.\n" );
@@ -3283,7 +3283,7 @@ CubitStatus OCCModifyEngine::project_edges( DLIList<Surface*> &ref_face_list,
       if(surface->is_closed_in_U() || surface->is_closed_in_V())
       {
         if(print_error)
-          PRINT_ERROR("This function can't project curves on closed surfaces.\n");
+          PRINT_WARNING("This function can't project curves on closed surfaces.\n");
         return CUBIT_FAILURE;
       }
       
@@ -3336,7 +3336,7 @@ OCCModifyEngine::imprint_projected_edges(DLIList<Surface*> &ref_face_list,
           delete_solid_model_entities( curve );
     if (stat == CUBIT_FAILURE)
     {
-       PRINT_ERROR("In OCCModifyEngine::delete_geometry\n"
+       PRINT_WARNING("In OCCModifyEngine::delete_geometry\n"
                    "       Could not delete Curve.\n"
                    "       The Model database is likely corrupted "
                    "due to\n       this unsuccessful deletion.\n" );
@@ -3653,7 +3653,7 @@ CubitStatus OCCModifyEngine::thicken( DLIList<BodySM*>& bodies,
                                       double depth,
                                       CubitBoolean both) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  PRINT_WARNING("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -3674,7 +3674,7 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
 {
   if(bodies.size() != 1 || surfs_to_remove.size() < 1)
   {
-    PRINT_ERROR("Making thick solid in OCC will take one body and at least one surface at a time.\n"); 
+    PRINT_WARNING("Making thick solid in OCC will take one body and at least one surface at a time.\n"); 
     return CUBIT_FAILURE;
   }
 
@@ -3687,7 +3687,7 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
 
   if(!is_volume.get())//sheet body
   {
-    PRINT_ERROR("Making thick solid in OCC needs an initial solid body to hollow with.\n");
+    PRINT_WARNING("Making thick solid in OCC needs an initial solid body to hollow with.\n");
     return CUBIT_FAILURE;
   }
 
@@ -3697,7 +3697,7 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
   lumps = occ_body->lumps();
   if(lumps.size()!=1)
   {
-    PRINT_ERROR("bodies with more than one lump can't be hollowed to make a thick body.\n");
+    PRINT_WARNING("bodies with more than one lump can't be hollowed to make a thick body.\n");
     return CUBIT_FAILURE;
   }
 
@@ -3718,7 +3718,7 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
 
   if(face_shapes.IsEmpty())
   {
-    PRINT_ERROR("The surfaces provided should be from the body to be hollowed.\n");
+    PRINT_WARNING("The surfaces provided should be from the body to be hollowed.\n");
     return CUBIT_FAILURE;
   }
   
@@ -3961,7 +3961,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
          surf = make_Surface(BEST_FIT_SURFACE_TYPE, curves);
        if(!surf)
        {
-         PRINT_ERROR("Can't calculate for the top surface.\n");
+         PRINT_WARNING("Can't calculate for the top surface.\n");
          continue;
        }
        surface_list.append(surf);
@@ -3995,7 +3995,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
      curve = CAST_TO(c_curve, OCCCurve);
     else
     {
-      PRINT_ERROR("Can't copy the curve for sweep.\n");
+      PRINT_WARNING("Can't copy the curve for sweep.\n");
       return CUBIT_FAILURE;
     }
   }
@@ -4019,7 +4019,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
       c_surface = make_Surface(surface);
       if (c_surface == NULL)
       {
-         PRINT_ERROR("Cannot copy surface in sweep_translational.\n");
+         PRINT_WARNING("Cannot copy surface in sweep_translational.\n");
          return CUBIT_FAILURE;
       }
       surface = CAST_TO(c_surface, OCCSurface);
@@ -4042,7 +4042,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
 
       else if(normal % sweep_vector == 0)
       {
-        PRINT_ERROR("Sweeping direction should not be on the surface.\n");
+        PRINT_WARNING("Sweeping direction should not be on the surface.\n");
         return CUBIT_FAILURE;
       }
     }
@@ -4120,7 +4120,7 @@ CubitStatus OCCModifyEngine:: sweep_perpendicular(
      }
   }
   if(edge_list.size())
-    PRINT_ERROR("Curves cannot be swept perpendicularly, please use the vector sweep.\n");
+    PRINT_WARNING("Curves cannot be swept perpendicularly, please use the vector sweep.\n");
 
   return CUBIT_SUCCESS;
 }
@@ -4177,7 +4177,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
                                     intersect_pts, CUBIT_TRUE);
       if(intersect_pts.size() > 0)
       { 
-        PRINT_ERROR("Only surfaces with no intersection point with the axis can be revolve-swept.\n");
+        PRINT_WARNING("Only surfaces with no intersection point with the axis can be revolve-swept.\n");
         continue;
       } 
     }
@@ -4215,7 +4215,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
                 prt.distance_between(end) > tol)
              {
                 non_int = CUBIT_TRUE;
-                PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
+                PRINT_WARNING("Only curves with no intersection point with the axis can be revolve-swept.\n");
                 break;
              }
              else if(prt.distance_between(start) <= tol)
@@ -4227,7 +4227,7 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
             continue;
           if(start_int && end_int && type == STRAIGHT_CURVE_TYPE)
           {
-            PRINT_ERROR("Sweep along curve itself is not allowed.\n");
+            PRINT_WARNING("Sweep along curve itself is not allowed.\n");
             continue;
           } 
         }
@@ -4236,14 +4236,14 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       {
         if(intersect_pts.size() > 0)
         {
-          PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
+          PRINT_WARNING("Only curves with no intersection point with the axis can be revolve-swept.\n");
           continue;
         }  
       }
     } 
     else
     {
-      PRINT_ERROR("Only surface or curve can be revolve-swept.\n");
+      PRINT_WARNING("Only surface or curve can be revolve-swept.\n");
       continue;
     }
     TopoDS_Shape new_shape;
@@ -4358,7 +4358,7 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
   }
   if(L.IsEmpty())
   {
-    PRINT_ERROR("There's no valid sweeping path.\n");
+    PRINT_WARNING("There's no valid sweeping path.\n");
     return CUBIT_FAILURE;
   }
   
@@ -4413,7 +4413,7 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
     BRepOffsetAPI_MakePipe maker(wire, toposhape);
     if(!maker.IsDone())
     {
-      PRINT_ERROR("Can't sweep along the provided curve(s).\n");
+      PRINT_WARNING("Can't sweep along the provided curve(s).\n");
       continue;
     }
     TopoDS_Shape newShape = maker.Shape();
@@ -4445,7 +4445,7 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               DLIList<BodySM*>& results_list,
                               bool imprint ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4461,7 +4461,7 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& /*webcut_body_list*/,
                                  DLIList<BodySM*>& /*results_list*/,
                                  bool /*imprint*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4478,7 +4478,7 @@ CubitStatus    OCCModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*bod
                                                           DLIList<BodySM*>& /*results_list*/,
                                                           bool /*imprint*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4494,7 +4494,7 @@ CubitStatus OCCModifyEngine::webcut_with_sheet(DLIList<BodySM*> & /*webcut_body_
                                                  DLIList<BodySM*> & /*new_bodies*/,
                                                  bool /*imprint*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4511,7 +4511,7 @@ CubitStatus OCCModifyEngine::webcut_with_extended_surf(DLIList<BodySM*> & /*webc
                                                          int & /*num_cut*/,
                                                          bool /*imprint*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4529,7 +4529,7 @@ CubitStatus OCCModifyEngine::webcut_with_cylinder(DLIList<BodySM*> &webcut_body_
                                             DLIList<BodySM*>& results_list,
                                             bool imprint )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4548,7 +4548,7 @@ CubitStatus OCCModifyEngine::webcut_with_brick(
                                       DLIList<BodySM*> &/*results_list*/,
                                       bool /*imprint*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4568,7 +4568,7 @@ CubitStatus OCCModifyEngine::webcut_with_planar_sheet(
                                           DLIList<BodySM*> &/*results_list*/,
                                           bool /*imprint*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4585,7 +4585,7 @@ CubitStatus OCCModifyEngine::webcut_with_curve_loop(
                                               DLIList<BodySM*>& /*results_list*/,
                                               bool /*imprint*/)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4607,7 +4607,7 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
 {
   if (keep_both_sides == CUBIT_TRUE )
   {
-     PRINT_ERROR("keeping both sides of section is not implemented.\n");
+     PRINT_WARNING("keeping both sides of section is not implemented.\n");
      return CUBIT_FAILURE;
   }
  
@@ -4618,7 +4618,7 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
   normal = ~(v1 * v2); 
   if(normal.length() != 1)
   {
-     PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
+     PRINT_WARNING("The three points are co-linear, and can't be used as a cutting plane.\n");
      return CUBIT_FAILURE;
   }
   
@@ -4690,7 +4690,7 @@ CubitStatus OCCModifyEngine::reverse_body( BodySM* body_ptr )
 CubitStatus OCCModifyEngine::split_periodic( BodySM * /*body_ptr*/,
                                                BodySM *& /*new_body*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4704,7 +4704,7 @@ CubitStatus OCCModifyEngine::split_periodic( BodySM * /*body_ptr*/,
 CubitStatus    OCCModifyEngine::regularize_body( BodySM * /*body_ptr*/,
                                                    BodySM *& /*new_body_ptr*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4718,7 +4718,7 @@ CubitStatus    OCCModifyEngine::regularize_body( BodySM * /*body_ptr*/,
 CubitStatus  OCCModifyEngine::regularize_entity( GeometryEntity * /*old_entity_ptr*/,  
                                                       BodySM *& /*new_body_ptr*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4735,7 +4735,7 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& /*ref_edge_list*/,
                                               const CubitVector& /*offset_direction*/, 
                                               int /*gap_type*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4751,7 +4751,7 @@ Curve* OCCModifyEngine::trim_curve( Curve* /*trim_curve*/,
                                       const CubitVector& /*keep_vector*/,
                                       bool )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return 0;
 }
 
@@ -4817,7 +4817,7 @@ Curve* OCCModifyEngine::create_arc_three( Point* pt1,
 //===============================================================================
 // Function   : create_arc_three
 // Member Type: PUBLIC
-// Description: 
+// Description: arc or circle tangent to all three straight curves. 
 // Author     : Jane Hu
 // Date       : 12/08
 //===============================================================================
@@ -4826,7 +4826,6 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
                                           Curve* curve3, 
                                           bool full  )
 { 
-  
 }
 
 //===============================================================================
@@ -4850,7 +4849,7 @@ CubitStatus
 OCCModifyEngine::create_curve_combine( DLIList<Curve*>& curve_list, 
                                     Curve *&new_curve_ptr )
 {
-  PRINT_ERROR("Curve combine is not implemented for facet based models\n");
+  PRINT_WARNING("Curve combine is not implemented for facet based models\n");
   return CUBIT_FAILURE;
 }
 
@@ -4891,7 +4890,7 @@ CubitStatus OCCModifyEngine::get_offset_intersections( Curve* /*ref_edge1*/,
                                                          double /*offset*/,
                                                          CubitBoolean /*ext_first*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4908,7 +4907,7 @@ CubitStatus OCCModifyEngine::get_offset_intersections( Curve* /*ref_edge_ptr*/,
                                                          double /*offset*/,
                                                          CubitBoolean /*ext_surf*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4924,7 +4923,7 @@ CubitStatus OCCModifyEngine::surface_intersection( Surface * /*surface1_ptr*/,
                                                      DLIList<Curve*> &/*inter_graph*/,
                                                      const double /*tol*/) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4941,7 +4940,7 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
                                               BodySM * /*body_to_trim_to*/,
                                               BodySM *& /*midplane_body*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4950,7 +4949,7 @@ CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
                                                         BodySM* body_to_trim_to,
                                                         BodySM*& midsurface_body ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4959,7 +4958,7 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
                                                         BodySM* body_to_trim_to,
                                                         BodySM*& midsurface_body ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4968,7 +4967,7 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
                                                         BodySM* body_to_trim_to,
                                                         BodySM*& midsurface_body ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4989,7 +4988,7 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & /*curve_list*/,
                                               CubitBoolean /*keep_old_body*/,
                                               CubitBoolean /*preview*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5016,7 +5015,7 @@ OCCModifyEngine::tweak_chamfer( DLIList<Point*> & /*point_list*/,
                                   CubitBoolean /*keep_old_body*/,
                                   CubitBoolean /*preview*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5034,7 +5033,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & /*curve_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5054,7 +5053,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * /*curve_ptr*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5073,7 +5072,7 @@ OCCModifyEngine::tweak_fillet( DLIList<Point*> & /*ref_vertex_list*/,
                                  CubitBoolean /*keep_old_body*/,
                                  CubitBoolean /*preview*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5090,7 +5089,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & /*surface_list*/,
                                            CubitBoolean /*keep_old_body*/ ,
                                            CubitBoolean show_preview) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5107,7 +5106,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5125,7 +5124,7 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5143,7 +5142,7 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5162,7 +5161,7 @@ CubitStatus OCCModifyEngine::tweak_remove( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5179,7 +5178,7 @@ CubitStatus OCCModifyEngine::tweak_remove( DLIList<Curve*> & /*curve_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5198,7 +5197,7 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5217,7 +5216,7 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5237,14 +5236,14 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
 CubitStatus OCCModifyEngine::remove_curve_slivers( BodySM* /*body*/,
                                                    double /*lengthlimit*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5260,7 +5259,7 @@ CubitStatus OCCModifyEngine::create_net_surface( DLIList<Surface*>& /*ref_face_l
                                                    double /*net_tol*/, 
                                                    CubitBoolean /*heal*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5275,7 +5274,7 @@ CubitStatus OCCModifyEngine::create_net_surface( DLIList<Curve*>& /*u_curves*/,
                                                    double /*net_tol*/, 
                                                    CubitBoolean /*heal*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5288,7 +5287,7 @@ CubitStatus OCCModifyEngine::create_offset_surface( Surface* /*ref_face_ptr*/,
                                                       BodySM*& /*new_body*/, 
                                                       double /*offset_distance*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5312,7 +5311,7 @@ CubitStatus OCCModifyEngine::create_offset_body( BodySM* body_ptr,
 CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& /*curves*/, 
                                                     BodySM*& /*new_body*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5332,7 +5331,7 @@ CubitStatus OCCModifyEngine::loft_surfaces( Surface * /*face1*/,
                                               CubitBoolean /*perpendicular*/,
                                               CubitBoolean /*simplify_option*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5352,7 +5351,7 @@ CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * /*face1*/,
                                                       CubitBoolean /*perpendicular*/,
                                                       CubitBoolean /*simplify_option*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
  
@@ -5366,7 +5365,7 @@ CubitStatus OCCModifyEngine::create_surface( DLIList<CubitVector*>& /*vec_list*/
                                                Surface * /*ref_face_ptr*/,
                                                CubitBoolean /*project_points*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5382,7 +5381,7 @@ CubitStatus OCCModifyEngine::create_weld_surface( CubitVector & /*root*/,
                                                     double /*leg2*/,
                                                     BodySM *& /*new_body*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_WARNING("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
@@ -5399,7 +5398,7 @@ CubitStatus OCCModifyEngine::webcut_with_sweep_surfaces(
                                  DLIList<BodySM*> &results_list,
                                  CubitBoolean imprint)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5413,7 +5412,7 @@ CubitStatus OCCModifyEngine::webcut_with_sweep_curves(
                                  DLIList<BodySM*> &results_list,
                                  CubitBoolean imprint)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5428,7 +5427,7 @@ CubitStatus OCCModifyEngine::webcut_with_sweep_surfaces_rotated(
                                  DLIList<BodySM*> &results_list,
                                  CubitBoolean imprint)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5442,7 +5441,7 @@ CubitStatus OCCModifyEngine::webcut_with_sweep_curves_rotated(
                                  DLIList<BodySM*> &results_list,
                                  CubitBoolean imprint)
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -5456,7 +5455,7 @@ CubitStatus OCCModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                                DLIList<TopologyBridge*>*,
                                                DLIList<TopologyBridge*>* )  const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_WARNING("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
