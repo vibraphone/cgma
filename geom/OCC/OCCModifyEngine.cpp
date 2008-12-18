@@ -4826,7 +4826,22 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
                                           Curve* curve3, 
                                           bool full  )
 { 
+  GeometryType type1 = CAST_TO(curve1, OCCCurve)->geometry_type();
+  GeometryType type2 = CAST_TO(curve2, OCCCurve)->geometry_type();
+  GeometryType type3 = CAST_TO(curve3, OCCCurve)->geometry_type();
+  if(type1 != STRAIGHT_CURVE_TYPE || type2 != STRAIGHT_CURVE_TYPE ||
+     type3 != STRAIGHT_CURVE_TYPE)
+  {
+    PRINT_WARNING("Need three straight curves to calculate incenter.\n");
+    return (Curve*) NULL;
+  } 
   
+  //0.check that non of the curves are parallel of each other.
+  //1.find the angle between each of the two curves
+  //2.create curves to bisection each of the angle passing through the vertices
+  //of the triangle
+  //3. find the intersection of each of the bisection curve with the third curve
+  //4. use the 3 intersection points to find the arc or circle.
 }
 
 //===============================================================================
