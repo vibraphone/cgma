@@ -4826,9 +4826,12 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
                                           Curve* curve3, 
                                           bool full  )
 { 
-  GeometryType type1 = CAST_TO(curve1, OCCCurve)->geometry_type();
-  GeometryType type2 = CAST_TO(curve2, OCCCurve)->geometry_type();
-  GeometryType type3 = CAST_TO(curve3, OCCCurve)->geometry_type();
+  OCCCurve* occ_crv1 = CAST_TO(curve1, OCCCurve);
+  OCCCurve* occ_crv2 = CAST_TO(curve2, OCCCurve);
+  OCCCurve* occ_crv3 = CAST_TO(curve3, OCCCurve);
+  GeometryType type1 = occ_crv1->geometry_type();
+  GeometryType type2 = occ_crv2->geometry_type();
+  GeometryType type3 = occ_crv3->geometry_type();
   if(type1 != STRAIGHT_CURVE_TYPE || type2 != STRAIGHT_CURVE_TYPE ||
      type3 != STRAIGHT_CURVE_TYPE)
   {
@@ -4837,11 +4840,147 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   } 
   
   //0.check that non of the curves are parallel of each other.
+  double u11, u12, u21, u22, u31, u32;
+  occ_crv1->get_param_range(u11, u12);
+  occ_crv2->get_param_range(u21, u22);
+  occ_crv3->get_param_range(u31, u32);
+  
+  CubitVector pt1, pt2, pt3;
+  occ_crv1->position_from_u(u11, pt1);
+  occ_crv2->position_from_u(u21, pt2);
+  occ_crv3->position_from_u(u31, pt3);
+
+  CubitVector tangent1, tangent2, tangent3;
+  occ_crv1->get_tangent(pt1, tangent1);
+  occ_crv2->get_tangent(pt2, tangent2);
+  occ_crv3->get_tangent(pt3, tangent3); 
+
+  CubitVector normal1 = tangent1 * tangent2;
+  CubitVector normal2 = tangent2 * tangent3;
+  CubitVector normal3 = tangent3 * tangent1;
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  if( normal1.length()< tol || normal2.length()< tol ||
+      normal3.length() < tol )
+  {
+    PRINT_WARNING("Three curves must be able to form a triangle.\n");
+    return (Curve*) NULL;
+  }
+
+  //normals must parallel to each other, meaning all curves must be on
+  //the same plane.
+  normal1.normalize();
+  normal2.normalize();
+  normal3.normalize();
+  
+  CubitVector parallel1 = normal1 * normal2;
+  CubitVector parallel2 = normal2 * normal3;
+  CubitVector parallel3 = normal3 * normal1;
+  if(parallel1.length() > tol || parallel2.length() > tol ||
+     parallel3.length() > tol)
+  {
+    PRINT_WARNING("Three curves must be able to form a triangle.\n");
+    return (Curve*) NULL;
+  }
   //1.find the angle between each of the two curves
-  //2.create curves to bisection each of the angle passing through the vertices
-  //of the triangle
+  double angle1, angle2, angle3;
+  angle1 = tangent1.interior_angle(tangent2);
+  angle2 = tangent2.interior_angle(tangent3);
+  angle3 = tangent3.interior_angle(tangent1);
+
+  //2.create curves to bisection each of the angle passing through the
+  // vertices of the triangle
+  DLIList<CubitVector*> intscts;
+  CubitVector vt1, vt2, vt3;
+  OCCQueryEngine::instance()->get_intersections(curve1, curve2, intscts,0,0);
+  vt1 = *intscts.get(); 
+  intscts.clean_out();
+  OCCQueryEngine::instance()->get_intersections(curve2,curve3, intscts,0,0);
+  vt2 = *intscts.get();
+  intscts.clean_out();
+  OCCQueryEngine::instance()->get_intersections(curve3, curve1, intscts,0,0);
+  vt3 = *intscts.get();
+  //Create 6 curves, find 3 of them which have intersection points inside
+  // the third curve
+  CubitVector t_curve11 = 
+         vectorRotate(angle1/2.0, normal1, tangent1);  
+  t_curve11.normalize();
+  CubitVector p11 = vt1+t_curve11;
+
+  CubitVector t_curve12 = 
+         vectorRotate(90.0 - angle1/2.0, -normal1, tangent1);
+  t_curve12.normalize();
+  CubitVector p12 = vt1 + t_curve12;
+
+  CubitVector t_curve21 =
+         vectorRotate(angle2/2.0, normal2, tangent2);
+  t_curve21.normalize();
+  CubitVector p21 = vt2 + t_curve21;
+
+  CubitVector t_curve22 = 
+         vectorRotate(90.0 - angle2/2.0, -normal2, tangent2);
+  t_curve22.normalize();
+  CubitVector p22 = vt2 + t_curve22;
+
+  CubitVector t_curve31 = 
+         vectorRotate(angle3/2.0, normal3, tangent3);
+  t_curve31.normalize();
+  CubitVector p31 = vt3 + t_curve31;
+
+  CubitVector t_curve32 =
+         vectorRotate(90.0 - angle3/2.0, -normal3, tangent3);
+  t_curve32.normalize();
+  CubitVector p32 = vt3 + t_curve32;
+
   //3. find the intersection of each of the bisection curve with the third curve
+  CubitVector int_pt1, int_pt2, int_pt3;
+  intscts.clean_out();
+  CubitBoolean none = CUBIT_FALSE;
+  OCCQueryEngine::instance()->get_intersections(curve3, vt1, p11, intscts,none,none);
+  CubitVector int_pt = *intscts.pop(); 
+  double u = occ_crv3->u_from_position (int_pt);
+  if(u >= u31-tol && u <= u32+tol) //found intersection point
+    int_pt1 = int_pt;
+  else
+  {
+    OCCQueryEngine::instance()->get_intersections(curve3, vt1, p12, intscts,none,none);
+    int_pt = *intscts.pop();
+    u = occ_crv3->u_from_position (int_pt);
+    assert(u >= u31-tol && u <= u32+tol);
+    int_pt1 = int_pt;
+  }
+
+  OCCQueryEngine::instance()->get_intersections(curve1, vt2, p21, intscts,none,none);
+  int_pt = *intscts.pop();
+  u = occ_crv1->u_from_position (int_pt);
+  if(u >= u11-tol && u <= u12+tol) //found intersection point
+    int_pt2 = int_pt;
+  else
+  {
+    OCCQueryEngine::instance()->get_intersections(curve1, vt2, p22, intscts,none,none);
+    int_pt = *intscts.pop();
+    u = occ_crv1->u_from_position (int_pt);
+    assert(u >= u11-tol && u <= u12+tol);
+    int_pt2 = int_pt;
+  }
+
+  OCCQueryEngine::instance()->get_intersections(curve2, vt3, p31, intscts,none,none);
+  int_pt = *intscts.pop();
+  u = occ_crv2->u_from_position (int_pt);
+  if(u >= u21-tol && u <= u22+tol) //found intersection point
+    int_pt3 = int_pt;
+  else
+  {
+    OCCQueryEngine::instance()->get_intersections(curve2, vt3, p32, intscts,none,none);
+    int_pt = *intscts.pop();
+    u = occ_crv2->u_from_position (int_pt);
+    assert(u >= u21-tol && u <= u22+tol);
+    int_pt3 = int_pt;
+  }
   //4. use the 3 intersection points to find the arc or circle.
+  OCCPoint occ_p1(int_pt1);
+  OCCPoint occ_p2(int_pt2);      
+  OCCPoint occ_p3(int_pt3);
+  return create_arc_three(&occ_p1, &occ_p2, &occ_p3, full); 
 }
 
 //===============================================================================

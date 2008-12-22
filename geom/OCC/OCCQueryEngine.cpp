@@ -582,7 +582,9 @@ CubitStatus OCCQueryEngine::get_intersections( Curve* curve,
     }
   
   OCCCurve *occ_curve2 = CAST_TO(curve2, OCCCurve);
-  return get_intersections(occ_curve, occ_curve2, intscts, bounded, closest);
+  CubitStatus stat = get_intersections(occ_curve, occ_curve2, intscts, bounded, closest);
+  delete_solid_model_entities(occ_curve2);
+  return stat;
 }
 
 CubitStatus OCCQueryEngine::get_intersections( Curve* curve1, 
