@@ -4656,12 +4656,58 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
 // Function   : split_body
 // Member Type: PUBLIC
 // Description: Splits multiple lumps in one body into separate bodies
-// Author     : Corey Ernst 
-// Date       : 08/04
+// Author     : Jane Hu 
+// Date       : 12/08
 //===============================================================================
 CubitStatus OCCModifyEngine::split_body( BodySM *body_ptr,
-                                           DLIList<BodySM*> &new_bodies )
+                                         DLIList<BodySM*> &new_bodies )
 {
+  OCCBody* occ_body = CAST_TO(body_ptr, OCCBody);
+  if(!occ_body)
+  {
+     PRINT_ERROR("This is not an OCC body to be split.\n");
+     return CUBIT_FAILURE;
+  }
+  DLIList<Lump*> lumps = occ_body->lumps();
+  if(lumps.size() == 1) 
+  {
+    new_bodies.append(body_ptr);
+    return CUBIT_SUCCESS;
+  }
+  for(int i = 0; i < lumps.size(); i++)
+  {
+    Lump* lump = lumps.get_and_step();
+    OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+    OCCSurface* occ_surface = occ_lump->my_sheet_surface();
+    if(occ_surface) 
+    {
+      TopoDS_Face* face = occ_surface->get_TopoDS_Face();
+      Surface* surface = 
+        OCCQueryEngine::instance()->populate_topology_bridge(*face,
+                                                             CUBIT_TRUE);
+      new_bodies.append(CAST_TO(surface, OCCSurface)->my_body()); 
+      continue;
+    }
+    OCCShell* occ_shell = occ_lump->my_shell();
+    if(occ_shell) 
+    {
+      TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
+      OCCShell* ashell = 
+         OCCQueryEngine::instance()->populate_topology_bridge(*shell,
+                                                              CUBIT_TRUE);
+      new_bodies.append(ashell->my_body());
+      continue;
+    }
+    else
+    {
+      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
+      Lump* alump = 
+        OCCQueryEngine::instance()->populate_topology_bridge(*solid,
+                                                             CUBIT_TRUE);
+      new_bodies.append(CAST_TO(alump,OCCLump)->get_body());
+      continue;
+    }
+  }
   return CUBIT_SUCCESS;
 }
 
