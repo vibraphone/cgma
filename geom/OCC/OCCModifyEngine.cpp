@@ -4840,20 +4840,47 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   } 
   
   //0.check that non of the curves are parallel of each other.
-  double u11, u12, u21, u22, u31, u32;
-  occ_crv1->get_param_range(u11, u12);
-  occ_crv2->get_param_range(u21, u22);
-  occ_crv3->get_param_range(u31, u32);
-  
-  CubitVector pt1, pt2, pt3;
-  occ_crv1->position_from_u(u11, pt1);
-  occ_crv2->position_from_u(u21, pt2);
-  occ_crv3->position_from_u(u31, pt3);
+  DLIList<CubitVector*> intscts;
+  CubitVector vt1, vt2, vt3;
+  CubitBoolean none = CUBIT_FALSE;
+  OCCQueryEngine::instance()->get_intersections(curve1, curve2, intscts,none,none);
+  vt1 = *intscts.get();
+  intscts.clean_out();
+  OCCQueryEngine::instance()->get_intersections(curve2,curve3, intscts,none,none);
+  vt2 = *intscts.get();
+  intscts.clean_out();
+  OCCQueryEngine::instance()->get_intersections(curve3, curve1, intscts,none,none);
+  vt3 = *intscts.get();
 
+  double u, u11, u12, u21, u22, u31, u32;
+  u12 = occ_crv1->u_from_position(vt1);
+  u11 = occ_crv1->u_from_position(vt3);
+  if(u12 < u11)
+  {
+    u = u12;
+    u12 = u11;
+    u11 = u;
+  }
+  u22 = occ_crv2->u_from_position(vt1);
+  u21 = occ_crv2->u_from_position(vt2);
+  if(u22 < u21)
+  {
+    u = u22;
+    u22 = u21;
+    u21 = u;
+  } 
+  u32 = occ_crv3->u_from_position(vt2);
+  u31 = occ_crv3->u_from_position(vt3);
+  if(u32 < u31)
+  {
+    u = u32;
+    u32 = u31;
+    u31 = u;
+  }
   CubitVector tangent1, tangent2, tangent3;
-  occ_crv1->get_tangent(pt1, tangent1);
-  occ_crv2->get_tangent(pt2, tangent2);
-  occ_crv3->get_tangent(pt3, tangent3); 
+  occ_crv1->get_tangent(vt1, tangent1);
+  occ_crv2->get_tangent(vt2, tangent2);
+  occ_crv3->get_tangent(vt3, tangent3); 
 
   CubitVector normal1 = tangent1 * tangent2;
   CubitVector normal2 = tangent2 * tangent3;
@@ -4889,18 +4916,6 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
 
   //2.create curves to bisection each of the angle passing through the
   // vertices of the triangle
-  DLIList<CubitVector*> intscts;
-  CubitVector vt1, vt2, vt3;
-  OCCQueryEngine::instance()->get_intersections(curve1, curve2, intscts,0,0);
-  vt1 = *intscts.get(); 
-  intscts.clean_out();
-  OCCQueryEngine::instance()->get_intersections(curve2,curve3, intscts,0,0);
-  vt2 = *intscts.get();
-  intscts.clean_out();
-  OCCQueryEngine::instance()->get_intersections(curve3, curve1, intscts,0,0);
-  vt3 = *intscts.get();
-  //Create 6 curves, find 3 of them which have intersection points inside
-  // the third curve
   CubitVector t_curve11 = 
          vectorRotate(angle1/2.0, normal1, tangent1);  
   t_curve11.normalize();
@@ -4934,10 +4949,9 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   //3. find the intersection of each of the bisection curve with the third curve
   CubitVector int_pt1, int_pt2, int_pt3;
   intscts.clean_out();
-  CubitBoolean none = CUBIT_FALSE;
   OCCQueryEngine::instance()->get_intersections(curve3, vt1, p11, intscts,none,none);
   CubitVector int_pt = *intscts.pop(); 
-  double u = occ_crv3->u_from_position (int_pt);
+  u = occ_crv3->u_from_position (int_pt);
   if(u >= u31-tol && u <= u32+tol) //found intersection point
     int_pt1 = int_pt;
   else
