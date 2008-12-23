@@ -4743,16 +4743,59 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& /*ref_edge_list*/,
 // Function   : trim_curve
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
-Curve* OCCModifyEngine::trim_curve( Curve* /*trim_curve*/, 
-                                      const CubitVector& /*trim_vector*/,
-                                      const CubitVector& /*keep_vector*/,
-                                      bool )
+Curve* OCCModifyEngine::trim_curve( Curve* trim_curve, 
+                                    const CubitVector& trim_vector,
+                                    const CubitVector& keep_vector,
+                                    bool keep )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return 0;
+  OCCCurve* occ_crv = CAST_TO(trim_curve, OCCCurve);
+  if(!occ_crv) 
+  {
+    PRINT_ERROR("This is not a OCC curve to be trimmed.\n");
+    return (Curve*)NULL;
+  }
+  
+  //Determine the trimmed curve's parameter range.
+  double u1, u2;
+  occ_crv->get_param_range(u1, u2);
+  double trim_u = occ_crv->u_from_position(trim_vector);
+  double keep_u = occ_crv->u_from_position(keep_vector);
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  if(trim_u > u2+tol || trim_u < u1 - tol)
+  {
+    PRINT_ERROR("The trim_vector is outside of the curve range.\n");
+    return (Curve*)NULL;
+  }
+ 
+  if(keep_u > trim_u )
+     u1 =  trim_u;
+  else if(keep_u < trim_u)
+     u2 = trim_u;
+
+  else
+  {
+    PRINT_ERROR("Can't determine which part of the curve to be kept.\n");
+    return (Curve*)NULL;
+  }
+  //get the Geom_Curve of the OCCCurve
+  TopoDS_Edge * edge = occ_crv->get_TopoDS_Edge();
+  Standard_Real first;
+  Standard_Real last;
+  Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last);
+ 
+  //Trim the curve
+  TopoDS_Edge t_edge = BRepBuilderAPI_MakeEdge(myCurve, u1, u2);
+  Curve* t_curve = OCCQueryEngine::instance()->populate_topology_bridge(t_edge);  
+  if(!keep)
+  {
+    DLIList<OCCLoop*> loops = occ_crv->loops();
+    if(loops.size() == 0)
+      OCCQueryEngine::instance()->delete_solid_model_entities(trim_curve);
+  }
+  return t_curve;
 }
 
 //===============================================================================
