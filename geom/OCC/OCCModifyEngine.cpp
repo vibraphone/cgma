@@ -4972,11 +4972,6 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   occ_crv2->get_param_range(u21, u22);
   occ_crv3->get_param_range(u31, u32);
 
-  CubitVector pt1, pt2, pt3;
-  occ_crv1->position_from_u(u11, pt1);
-  occ_crv2->position_from_u(u21, pt2);
-  occ_crv3->position_from_u(u31, pt3);
-  
   CubitVector tangent1, tangent2, tangent3;
   occ_crv1->get_tangent(vt1, tangent1);
   occ_crv2->get_tangent(vt2, tangent2);
