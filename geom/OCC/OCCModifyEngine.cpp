@@ -45,6 +45,8 @@
 #include "Geom_BezierCurve.hxx"
 #include "BndLib_AddSurface.hxx"
 #include "Handle_Geom_Plane.hxx"
+#include "Handle_Geom_OffsetCurve.hxx"
+#include "Geom_OffsetCurve.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
 #include "Extrema_ExtPC.hxx"
 #include "BRepPrimAPI_MakePrism.hxx"
@@ -4772,17 +4774,41 @@ CubitStatus  OCCModifyEngine::regularize_entity( GeometryEntity * /*old_entity_p
 // Function   : offset_curves
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
-CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& /*ref_edge_list*/, 
-                                              DLIList<Curve*>&,
-                                              double /*offset_distance*/,
-                                              const CubitVector& /*offset_direction*/, 
-                                              int /*gap_type*/ )
+CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves, 
+                                            DLIList<Curve*>& new_curves,
+                                            double offset_distance,
+                                            const CubitVector& offset_direction, 
+                                            int gap_type )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //gap_type has no effect here.
+  gp_Dir offset(offset_direction.x(), offset_direction.y(), offset_direction.z()); 
+  for(int i = 0 ; i < curves.size(); i++)
+  {
+    Curve* curve = curves.get_and_step();
+    OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+    if(!occ_curve)
+      continue;
+    TopoDS_Edge * edge = occ_curve->get_TopoDS_Edge();
+    Standard_Real first;
+    Standard_Real last;
+    Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last); 
+    Handle(Geom_OffsetCurve) new_curve = 
+      new Geom_OffsetCurve(myCurve,offset_distance, offset);
+    if(!new_curve)
+    {
+      TopologyEntity *entity = curve->topology_entity();
+      BasicTopologyEntity *bte = CAST_TO(entity, BasicTopologyEntity);
+      PRINT_ERROR("Can't create offset curve for curve %d.\n", bte->id());
+      continue;
+    }
+    *edge = BRepBuilderAPI_MakeEdge(new_curve);
+    Curve* offset_curve = OCCQueryEngine::instance()->populate_topology_bridge(*edge);
+    new_curves.append(offset_curve);
+  } 
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
