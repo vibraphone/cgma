@@ -30,6 +30,7 @@
 #include "BRepBuilderAPI_MakeWire.hxx"
 #include "BRepPrimAPI_MakeHalfSpace.hxx"
 #include "BRepBndLib.hxx"
+#include "IntersectionTool.hpp"
 #include "TopoDS_Shape.hxx"
 #include "TopAbs_Orientation.hxx"
 #include "TColgp_Array1OfPnt.hxx"
@@ -5042,68 +5043,211 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   CubitVector p32 = vt3 + t_curve32;
 
   //3. find the intersection of each of the bisection curve with the third curve
-  CubitVector int_pt1, int_pt2, int_pt3;
+  //Error out if there's multiple solutions,urge user to shorten the curves to 
+  //make the intention clear.
+
+  CubitVector int_pt11, int_pt12, int_pt21, int_pt22, int_pt31, int_pt32;
   intscts.clean_out();
   OCCQueryEngine::instance()->get_intersections(curve3, vt1, p11, intscts,none,none);
   CubitVector int_pt = *intscts.pop(); 
   u = occ_crv3->u_from_position (int_pt);
+  CubitBoolean found[6] = {CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE,
+                           CUBIT_FALSE, CUBIT_FALSE};
+
   if(u >= u31-tol && u <= u32+tol) //found intersection point
-    int_pt1 = int_pt;
-  else
   {
-    OCCQueryEngine::instance()->get_intersections(curve3, vt1, p12, intscts,none,none);
-    int_pt = *intscts.pop();
-    u = occ_crv3->u_from_position (int_pt);
-    if(u >= u31-tol && u <= u32+tol)
-      int_pt1 = int_pt;
+    int_pt11 = int_pt;
+    found[0] = CUBIT_TRUE;
+  }
+
+  OCCQueryEngine::instance()->get_intersections(curve3, vt1, p12, intscts,none,none);
+  int_pt = *intscts.pop();
+  u = occ_crv3->u_from_position (int_pt);
+  if(u >= u31-tol && u <= u32+tol)
+  {
+    if(found[0])
+    {
+      found[1] = CUBIT_TRUE;
+      int_pt12 = int_pt;
+    }
     else
     {
-       PRINT_ERROR("Can't find the intesection point to create circle.\n");
-       return (Curve*) NULL;
+      int_pt11 = int_pt;
+      found[0] = CUBIT_TRUE;
     }
+  }
+  if(!found[0] ) 
+  {
+     PRINT_ERROR("Can't find the intesection point to create circle.\n");
+     return (Curve*) NULL;
   }
 
   OCCQueryEngine::instance()->get_intersections(curve1, vt2, p21, intscts,none,none);
   int_pt = *intscts.pop();
   u = occ_crv1->u_from_position (int_pt);
   if(u >= u11-tol && u <= u12+tol) //found intersection point
-    int_pt2 = int_pt;
-  else
   {
-    OCCQueryEngine::instance()->get_intersections(curve1, vt2, p22, intscts,none,none);
-    int_pt = *intscts.pop();
-    u = occ_crv1->u_from_position (int_pt);
-    if(u >= u11-tol && u <= u12+tol)
-      int_pt2 = int_pt;
+    found[2] = CUBIT_TRUE;
+    int_pt21 = int_pt;
+  }
+
+  OCCQueryEngine::instance()->get_intersections(curve1, vt2, p22, intscts,none,none);
+  int_pt = *intscts.pop();
+  u = occ_crv1->u_from_position (int_pt);
+  if(u >= u11-tol && u <= u12+tol)
+  {
+    if(found[2])
+    {
+      int_pt22 = int_pt;
+      found[3] = CUBIT_TRUE;
+    }
     else
     {
-       PRINT_ERROR("Can't find the intesection point to create circle.\n");
-       return (Curve*) NULL;
+      found[2] = CUBIT_TRUE;
+      int_pt21 = int_pt;
     }
+  }
+  if(!found[2] )
+  {
+     PRINT_ERROR("Can't find the intesection point to create circle.\n");
+     return (Curve*) NULL;
   }
 
   OCCQueryEngine::instance()->get_intersections(curve2, vt3, p31, intscts,none,none);
   int_pt = *intscts.pop();
   u = occ_crv2->u_from_position (int_pt);
   if(u >= u21-tol && u <= u22+tol) //found intersection point
-    int_pt3 = int_pt;
-  else
   {
-    OCCQueryEngine::instance()->get_intersections(curve2, vt3, p32, intscts,none,none);
-    int_pt = *intscts.pop();
-    u = occ_crv2->u_from_position (int_pt);
-    if(u >= u21-tol && u <= u22+tol)
-      int_pt3 = int_pt;
+    found[4] = CUBIT_TRUE;
+    int_pt31 = int_pt;
+  }
+
+  OCCQueryEngine::instance()->get_intersections(curve2, vt3, p32, intscts,none,none);
+  int_pt = *intscts.pop();
+  u = occ_crv2->u_from_position (int_pt);
+  if(u >= u21-tol && u <= u22+tol)
+  {
+    if(found[4])
+    {
+      int_pt32 = int_pt;
+      found[5] = CUBIT_TRUE;
+    }
     else
     {
-       PRINT_ERROR("Can't find the intesection point to create circle.\n");
-       return (Curve*) NULL;
+      found[4] = CUBIT_TRUE;
+      int_pt31 = int_pt;
     }
   }
+  if(!found[4] )
+  {
+     PRINT_ERROR("Can't find the intesection point to create circle.\n");
+     return (Curve*) NULL;
+  }
+
+  //find the three intersection points which when connected with the vertices,
+  //intersect at same point.
+  CubitVector c_p11, c_p12, c_p21, c_p22, c_p31, c_p32, c_p;
+  double sc, tc;
+  CubitVector int_pt1, int_pt2, int_pt3;
+  CubitBoolean find = CUBIT_FALSE;
+
+  IntersectionTool int_tool;
+  for(int i = 0; i < 8 ; i++)
+  {
+    int_tool.closest_points_on_segments(vt1, int_pt11, vt2, int_pt21, c_p11, c_p12, sc, tc);
+    if(c_p11.distance_between(c_p12) < tol) //intersect 
+      c_p = c_p11;
+    else  
+      assert(0); 
+      
+    int_tool.closest_points_on_segments(vt1, int_pt11, vt3, int_pt31, c_p11, c_p12, sc, tc);
+    if(c_p11.distance_between(c_p12) < tol && sc < 1.0 && tc < 1.0) //intersect
+    {
+      if(c_p.distance_between(c_p12) < tol) //three line intersects at same point
+      {
+        find = CUBIT_TRUE;
+        break;
+      }
+    } 
+    else //not interscting at same points or parallel
+    {
+      if(i == 0)
+      {
+        if(found[1])
+        {
+          int_pt1 = int_pt11;
+          int_pt11 = int_pt12;
+        }
+        else
+          continue;
+      }
+      if(i == 1)
+      {
+        if(found[1])
+          int_pt11 = int_pt1;
+        if(found[3])
+        {
+          int_pt2 = int_pt21;
+          int_pt21 = int_pt22;
+        }
+        else
+          continue;
+      }
+      if(i == 2)
+      {
+        if(found[1] && found[3])
+          int_pt11 = int_pt12;
+        else 
+          continue;
+      }
+      if(i == 3)
+      {
+        if(found[1])
+          int_pt11 = int_pt1;
+        if(found[3])
+          int_pt21 = int_pt2;
+        if(found[5])
+        {
+          int_pt3 = int_pt31;
+          int_pt31 = int_pt32;
+        }
+        else
+          continue;
+      }
+      if(i == 4)
+      {
+        if(found[1] && found[5])
+          int_pt11 = int_pt12; 
+        else
+          continue;
+      }
+      if(i == 5)
+      {
+        if(found[1])
+          int_pt11 = int_pt1;
+        if(found[3] && found[5])
+          int_pt21 = int_pt22;
+        else
+          continue;
+      }
+      if(i == 6)
+      {  
+        if(found[1] && found[3] && found[5])
+          int_pt11 = int_pt12;
+        else
+          continue;
+      }
+    }
+  }
+  if(!find)
+  {
+    PRINT_ERROR("Can't find the intesection point to create circle.\n");
+    return (Curve*) NULL;
+  } 
   //4. use the 3 intersection points to find the arc or circle.
-  OCCPoint occ_p1(int_pt1);
-  OCCPoint occ_p2(int_pt2);      
-  OCCPoint occ_p3(int_pt3);
+  OCCPoint occ_p1(int_pt11);
+  OCCPoint occ_p2(int_pt21);      
+  OCCPoint occ_p3(int_pt31);
   return create_arc_three(&occ_p1, &occ_p2, &occ_p3, full); 
 }
 
