@@ -19,6 +19,7 @@
 #include "gp_Parab.hxx"
 #include "gp_Elips.hxx"
 #include "gp_Pln.hxx"
+#include "gp_Circ.hxx"
 #include "gp_Cylinder.hxx"
 #include "gp_Cone.hxx"
 #include "gp_Sphere.hxx"
@@ -36,6 +37,7 @@
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeCircle.hxx"
+#include "Geom_Circle.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
@@ -5161,7 +5163,7 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
       assert(0); 
       
     int_tool.closest_points_on_segments(vt1, int_pt11, vt3, int_pt31, c_p11, c_p12, sc, tc);
-    if(c_p11.distance_between(c_p12) < tol && sc < 1.0 && tc < 1.0) //intersect
+    if(c_p11.distance_between(c_p12) < tol ) //intersect
     {
       if(c_p.distance_between(c_p12) < tol) //three line intersects at same point
       {
@@ -5179,7 +5181,7 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
           int_pt11 = int_pt12;
         }
         else
-          continue;
+          i++;
       }
       if(i == 1)
       {
@@ -5191,14 +5193,14 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
           int_pt21 = int_pt22;
         }
         else
-          continue;
+          i += 2;
       }
       if(i == 2)
       {
         if(found[1] && found[3])
           int_pt11 = int_pt12;
         else 
-          continue;
+          assert(0);
       }
       if(i == 3)
       {
@@ -5212,7 +5214,7 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
           int_pt31 = int_pt32;
         }
         else
-          continue;
+          break;
       }
       if(i == 4)
       {
@@ -5255,17 +5257,99 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
 // Function   : create_arc_center_edge
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
-Curve* OCCModifyEngine::create_arc_center_edge( Point* /*ref_vertex1*/, 
-                                                  Point* /*ref_vertex2*/,
-                                                  Point* /*ref_vertex3*/,
-                                                  const CubitVector& /*normal*/, 
-                                                  double /*radius*/,
-                                                  bool /*full*/ ) 
+Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1, 
+                                                Point* pt2,
+                                                Point* pt3,
+                                                const CubitVector& normal, 
+                                                double radius,
+                                                bool full ) 
 { 
-  return NULL; 
+  CubitVector vec1 = pt1->coordinates(); // Center of arc
+  CubitVector vec2 = pt2->coordinates(); // Position on arc
+  CubitVector vec3 = pt3->coordinates(); // Position on arc
+
+  CubitVector dir1( vec1, vec2 );
+  CubitVector dir2( vec1, vec3 );
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  // Re-adjust vec2, vec3 if radius was given
+  if( radius != CUBIT_DBL_MAX )
+  {
+     CubitVector vec;
+     vec1.next_point( dir1, radius, vec );
+     if(vec.distance_between(vec2) > tol)
+     {
+       vec2 = vec;
+       pt2 = new OCCPoint(vec);
+     }
+     vec1.next_point( dir2, radius, vec );
+     if(vec.distance_between(vec3) > tol)
+     {
+       vec3 = vec;
+       pt3 = new OCCPoint(vec);
+     }
+  }
+ 
+  else
+  {
+    radius = vec1.distance_between(vec2);
+    CubitVector vec;
+    vec1.next_point( dir2, radius, vec );
+    if(vec.distance_between(vec3) > tol)
+    {
+       vec3 = vec;
+       pt3 = new OCCPoint(vec);
+    }
+  }
+ 
+  CubitVector normal_dir = normal;
+  if(normal_dir.length() > tol)
+  {
+    normal_dir.normalize();
+    //verify sense
+    if((dir1 * dir2) % normal_dir < 0.0)
+    {
+      Point* p = pt2;
+      pt2 = pt3;
+      pt3 = p;
+    }
+    else if((dir1 * dir2) % normal_dir == 0.0)
+    {
+      PRINT_ERROR("Normal can't be on the plan of the arc.\n");
+      return (Curve*) NULL;
+    }
+  } 
+  else 
+  {
+    normal_dir = dir1 * dir2;
+    normal_dir.normalize();
+  }
+ 
+  Handle(Geom_Circle) curve_ptr;
+  gp_Dir norm(normal_dir.x(), normal_dir.y(), normal_dir.z());
+  gp_Pnt center = gp_Pnt( vec1.x(), vec1.y(), vec1.z());
+  curve_ptr = GC_MakeCircle(center,norm,radius);
+
+  OCCPoint* occ_pt1 = CAST_TO(const_cast<Point*>(pt2),OCCPoint);
+  TopoDS_Vertex * vt1 = occ_pt1->get_TopoDS_Vertex();
+  if(full)
+  {
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, *vt1, *vt1);
+    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge); 
+  }
+  else
+  {
+    Handle(Geom_TrimmedCurve) arc;
+    gp_Pnt on_arc1 = gp_Pnt( vec2.x(), vec2.y(), vec2.z());
+    gp_Pnt on_arc2 = gp_Pnt( vec3.x(), vec3.y(), vec3.z());
+    arc = GC_MakeArcOfCircle(curve_ptr->Circ(), on_arc1, on_arc2, Standard_True);
+    OCCPoint* occ_pt2 = CAST_TO(const_cast<Point*>(pt3),OCCPoint); 
+    TopoDS_Vertex * vt2 = occ_pt2->get_TopoDS_Vertex();
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(arc, *vt1, *vt2);
+    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+  } 
 }
 
 CubitStatus 
