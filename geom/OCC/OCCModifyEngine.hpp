@@ -1,15 +1,14 @@
 //-------------------------------------------------------------------------
 // Filename      : OCCModifyEngine.hpp
 //
-// Purpose       : ModifyEngine for faceted geometry
+// Purpose       : ModifyEngine for OCC geometry
 //
 // Special Notes : Modeled after GeometryModifyEngine and AcisModifyEngine.
 //
-// Creator       : John Fowler
+// Creator       : Jane Hu
 //
-// Creation Date : 6/02
+// Creation Date : 6/08
 //
-// Owner         : John Fowler
 //-------------------------------------------------------------------------
 
 #ifndef OCC_MODIFY_ENGINE_HPP
@@ -312,7 +311,7 @@ public:
     const CubitVector &v2,
     const CubitVector &v3,
     DLIList<BodySM*>& results_list,
-    bool imprint = false ) const;
+    bool imprint = false ) ;
   
   virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list,
     BodySM const* tool_body,

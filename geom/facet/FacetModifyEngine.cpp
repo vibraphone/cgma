@@ -1883,7 +1883,7 @@ CubitStatus FacetModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v3,
                               DLIList<BodySM*>& results_list,
                               bool imprint
-                              ) const
+                              ) 
 {
 
   MODIFY_CHECK_RETURN_FAILURE;

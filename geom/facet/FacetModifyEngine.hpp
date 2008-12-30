@@ -325,7 +325,7 @@ public:
     const CubitVector &v3,
     DLIList<BodySM*>& results_list,
     bool imprint = false 
-    ) const;
+    ) ;
   
   virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list,
     BodySM const* tool_body,

@@ -534,7 +534,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
               const CubitVector &v3,
               DLIList<BodySM*>& results_list,
               bool imprint = false             
- ) const = 0;
+ )  = 0;
       //R int
       //R- Number of bodies that were webcut ( >= 0 )
       //I webcut_body_list

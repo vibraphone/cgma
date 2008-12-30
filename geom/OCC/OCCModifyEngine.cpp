@@ -1753,7 +1753,7 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   stat = do_subtract(from_bodies, tool_bodies_copy, is_tool_volume,
                      tool_boxes, new_bodies, keep_old, imprint) ;
 
-  //ok, we're done wih all cuts, delete unnecessaries.
+  //ok, we're done with all cuts, delete unnecessaries.
   while (tool_boxes->size())
     delete tool_boxes->pop();
   delete tool_boxes;
@@ -1876,7 +1876,7 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
       new_bodies.append(bodysm);
   }    
 
-  //ok, we're done wih all cuts, delete unnecessaries. 
+  //ok, we're done with all cuts, delete unnecessaries. 
   if(keep_old)
   {
     int size  = from_bodies_copy.size();
@@ -2582,7 +2582,7 @@ CubitStatus     OCCModifyEngine::imprint(BodySM* BodyPtr1, BodySM* BodyPtr2,
 }
 
 //===============================================================================
-// Function   : get_the_shape_list
+// Function   : get_shape_list
 // Member Type: PRIVATE
 // Description: get the TopoDS_Shape list for imprinting use. 
 // Author     : Jane Hu
@@ -3413,7 +3413,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
       new_bodies.append(bodysm);
   }
   
-  //ok, we're done wih all cuts, delete unnecessaries.
+  //ok, we're done with all cuts, delete unnecessaries.
   if(!keep_old)
     OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_ptr);   
 
@@ -4440,18 +4440,38 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
 // Function   : webcut
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 12/08
 //===============================================================================
 CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v1,
                               const CubitVector &v2,
                               const CubitVector &v3,
                               DLIList<BodySM*>& results_list,
-                              bool imprint ) const
+                              bool imprint ) 
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  CubitStatus stat;
+  DLIList<BodySM*> new_BodySMs;
+  stat = section(webcut_body_list, v1, v2, v3, new_BodySMs, true, true,false);
+  if(stat == CUBIT_FAILURE)
+  {
+    PRINT_ERROR("Can't webcut the bodies using a plane determined by 3 points.\n");
+    return stat;
+  }
+  
+  stat = section(webcut_body_list, v1, v2, v3, new_BodySMs, false, false, false);
+  if(stat == CUBIT_FAILURE)
+  {
+    PRINT_ERROR("Can't webcut the bodies using a plane determined by 3 points.\n");
+    return stat;
+  }
+
+  if(imprint)
+    stat =  this->imprint( new_BodySMs, results_list, false);
+
+  else
+    results_list = new_BodySMs;
+  return stat;  
 }
 
 //===============================================================================
@@ -4612,7 +4632,7 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
 {
   if (keep_both_sides == CUBIT_TRUE )
   {
-     PRINT_ERROR("keeping both sides of section is not implemented.\n");
+     PRINT_ERROR("Please use webcut to for keep both sides option.\n");
      return CUBIT_FAILURE;
   }
  
@@ -4769,7 +4789,7 @@ CubitStatus    OCCModifyEngine::regularize_body( BodySM * /*body_ptr*/,
 CubitStatus  OCCModifyEngine::regularize_entity( GeometryEntity * /*old_entity_ptr*/,  
                                                       BodySM *& /*new_body_ptr*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
