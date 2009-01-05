@@ -3458,8 +3458,18 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      GProp_GProps myProps;
      BRepGProp::VolumeProperties(*from_shape, myProps);
      double orig_mass = myProps.Mass();
-     BRepGProp::VolumeProperties(cut_shape, myProps);
-     double after_mass = myProps.Mass();
+     TopTools_IndexedMapOfShape M;
+     TopExp::MapShapes(cut_shape, TopAbs_SOLID, M);
+     double after_mass;
+     CubitBoolean no_volume = CUBIT_FALSE;
+     if(M.Extent() > 0)
+     {
+       BRepGProp::VolumeProperties(cut_shape, myProps);
+       after_mass = myProps.Mass();
+     }
+     else
+       no_volume = CUBIT_TRUE;
+ 
      if(fabs(-after_mass + orig_mass) <= tol)
      {
         has_changed= CUBIT_FALSE; //common is itself
@@ -3467,7 +3477,7 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      }
 
      //got cut. Update the entities
-     if(after_mass < tol) //no common section
+     if(after_mass < tol && !no_volume) //no common section
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
      TopExp_Explorer Ex;
@@ -5300,17 +5310,50 @@ CubitStatus OCCModifyEngine::surface_intersection( Surface * /*surface1_ptr*/,
 // Function   : get_mid_plane
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 01/09
 //===============================================================================
-CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
-                                              const CubitVector & /*point_2*/,
-                                              const CubitVector & /*point_3*/,
-                                              BodySM * /*body_to_trim_to*/,
-                                              BodySM *& /*midplane_body*/ ) const
+CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
+                                            const CubitVector & point_2,
+                                            const CubitVector & point_3,
+                                            BodySM * body_to_trim_to,
+                                            BodySM *& midplane_body ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //Calculate normal of the mid  plane
+  CubitVector v1, v2, normal;
+  v1 = point_2 - point_1;
+  v2 = point_3 - point_1;
+  normal = ~(v1 * v2);
+  if(normal.length() != 1)
+  {
+     PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
+     return CUBIT_FAILURE;
+  }
+ 
+  gp_Pnt pt = gp_Pnt( point_1.x(), point_1.y(), point_1.z());
+  gp_Dir normal_dir(normal.x(), normal.y(), normal.z());
+  gp_Pln plane(pt, normal_dir);
+
+  TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
+  Surface *surf = OCCQueryEngine::instance()->populate_topology_bridge(face,
+                                               CUBIT_TRUE);
+  if(!surf)
+  {
+    PRINT_ERROR("Can't create cutting plane.\n");
+    return CUBIT_FAILURE;
+  }
+  
+  BodySM* tool = CAST_TO(surf, OCCSurface)->my_body();
+  DLIList<BodySM*> from_bodies, new_bodies;
+  from_bodies.append(body_to_trim_to);
+   
+  CubitStatus stat = intersect(tool, from_bodies, new_bodies, 
+                               CUBIT_TRUE);
+  OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+
+  if(stat)
+    midplane_body = new_bodies.get(); 
+  return stat;
 }
 
 CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,

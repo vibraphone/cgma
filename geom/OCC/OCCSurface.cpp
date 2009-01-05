@@ -971,7 +971,24 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        OCCQueryEngine::instance()->update_OCC_map(wire, shape);
   }
   if (!old_surface.IsSame(new_surface))
-    OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
+  {
+    TopAbs_ShapeEnum shapetype;
+    if(!new_surface.IsNull())
+      shapetype = new_surface.TShape()->ShapeType();  
+    if(shapetype == TopAbs_FACE || new_surface.IsNull())
+      OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
+    else 
+    {
+      TopTools_IndexedMapOfShape M;
+      TopExp::MapShapes(new_surface, TopAbs_FACE, M);   
+      TopoDS_Shape new_shape;
+      if(M.Extent() > 0)
+        new_shape = M(1);
+      else
+        new_shape = new_surface;
+      OCCQueryEngine::instance()->update_OCC_map(old_surface, new_shape);
+    }
+  }
   return CUBIT_SUCCESS;
 }
 
