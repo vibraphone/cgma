@@ -21,7 +21,7 @@ if WITH_CUBIT
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ
+  TESTS += modify makept r_w test_occ operation
 endif
 
 AM_CPPFLAGS =
@@ -37,6 +37,7 @@ modify_SOURCES = modify.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
+operation_SOURCES = operation.cpp
 LDADD = ../libcgm.la
 webcut_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 hollow_acis_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
@@ -45,6 +46,7 @@ modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 test_occ_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+operation_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.
