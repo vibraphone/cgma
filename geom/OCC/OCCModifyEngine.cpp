@@ -4477,11 +4477,25 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   }
 
   if(imprint)
-    stat =  this->imprint( new_BodySMs, results_list, false);
+  {
+    BodySM* new_body1, *new_body2;
+    for(int i = 0; i < new_BodySMs.size()-1; i ++)
+    {
+      BodySM* body1 = new_BodySMs[i];
+      for(int j = i+1; j < new_BodySMs.size(); j++)
+      {
+        BodySM* body2 = new_BodySMs[j];
+        stat =  this->imprint( body1, body2, new_body1, new_body2, false);
+        if(new_body1 && body1 != new_body1)
+          new_BodySMs[i] = new_body1;
+        if(new_body2 && body2 != new_body2)
+          new_BodySMs[j] = new_body2; 
+      }
+    }
+  }
 
-  else
-    results_list = new_BodySMs;
-  return stat;  
+  results_list = new_BodySMs;
+  return CUBIT_SUCCESS;  
 }
 
 //===============================================================================
@@ -4651,7 +4665,8 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
   v1 = point_2 - point_1;
   v2 = point_3 - point_1; 
   normal = ~(v1 * v2); 
-  if(normal.length() != 1)
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
+  if(fabs(normal.length() - 1) > tol)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
      return CUBIT_FAILURE;
