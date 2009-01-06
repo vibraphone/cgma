@@ -200,13 +200,12 @@ CubitStatus make_Point()
   }
 
   status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, CUBIT_TRUE);
-  //double d = new_bodies.step_and_get()->measure();
-  //CubitVector v = new_bodies.get()->center_point();
-  //int n = new_bodies.get()->num_ref_faces();
-  // n = 6
-  //new bodies has 2 bodies, one has a volume = 10 and the other has a 
-  //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
-  //remaining (unchanged or modified).
+  double d = new_bodies.step_and_get()->measure();
+  CubitVector v = new_bodies.get()->center_point();
+  int n = new_bodies.get()->num_ref_faces();
+  // n = 8
+  //new bodies has 2 bodies, one has a volume = 170 and the other has a 
+  //volume = 710; each of them has 8 ref_faces. 
 
   bodies.clean_out();
   gti->bodies(bodies);
