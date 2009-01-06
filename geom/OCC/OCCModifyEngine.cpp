@@ -5317,14 +5317,15 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
                                             const CubitVector & point_2,
                                             const CubitVector & point_3,
                                             BodySM * body_to_trim_to,
-                                            BodySM *& midplane_body ) const
+                                            DLIList<BodySM*>& midplane_bodies ) const
 {
   //Calculate normal of the mid  plane
   CubitVector v1, v2, normal;
   v1 = point_2 - point_1;
   v2 = point_3 - point_1;
   normal = ~(v1 * v2);
-  if(normal.length() != 1)
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  if(fabs(normal.length() - 1) > tol)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
      return CUBIT_FAILURE;
@@ -5347,37 +5348,35 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   DLIList<BodySM*> from_bodies, new_bodies;
   from_bodies.append(body_to_trim_to);
    
-  CubitStatus stat = intersect(tool, from_bodies, new_bodies, 
+  CubitStatus stat = intersect(tool, from_bodies, midplane_bodies, 
                                CUBIT_TRUE);
   OCCQueryEngine::instance()->delete_solid_model_entities(tool);
 
-  if(stat)
-    midplane_body = new_bodies.get(); 
   return stat;
 }
 
 CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
-                                                        Surface* surface_ptr2,
-                                                        BodySM* body_to_trim_to,
-                                                        BodySM*& midsurface_body ) const
+                                    Surface* surface_ptr2,
+                                    BodySM* body_to_trim_to,
+                                    DLIList<BodySM *>&midsurface_bodies ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
 CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
-                                                        Surface* surface_ptr2,
-                                                        BodySM* body_to_trim_to,
-                                                        BodySM*& midsurface_body ) const
+                                    Surface* surface_ptr2,
+                                    BodySM* body_to_trim_to,
+                                    DLIList<BodySM *>&midsurface_bodies ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
 
 CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
-                                                        Surface* surface_ptr2,
-                                                        BodySM* body_to_trim_to,
-                                                        BodySM*& midsurface_body ) const
+                                     Surface* surface_ptr2,
+                                     BodySM* body_to_trim_to,
+                                     DLIList<BodySM *>&midsurface_bodies ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;

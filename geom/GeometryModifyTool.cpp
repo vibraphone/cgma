@@ -7348,11 +7348,11 @@ CubitStatus GeometryModifyTool::get_mid_plane( RefFace *ref_face1,
   CubitVector direction2 = direction1*n_mid;
   point_3 = point_1 + direction2;
 
-  BodySM* midplane_body_sm = NULL;
+  DLIList<BodySM*> midplane_bodysm_list ;
   CubitStatus ret = gme1_ptr->get_mid_plane(point_1, point_2, point_3,
-                                            body_sm_to_trim_to, midplane_body_sm );
+                                    body_sm_to_trim_to, midplane_bodysm_list );
 
-  if (midplane_body_sm)
+  if (midplane_bodysm_list.size() > 0)
   {
 #ifdef BOYD17
     DLIList<Body*> bodies;
@@ -7361,21 +7361,25 @@ CubitStatus GeometryModifyTool::get_mid_plane( RefFace *ref_face1,
 
     Body *midplane_body;
 
-    midplane_body = GeometryQueryTool::instance()->make_Body(midplane_body_sm);
-
-    DLIList<RefFace*> ref_faces;
-    midplane_body->ref_faces( ref_faces );
-
-    //make each surface of the body into its own body
-    int i;
-    for( i=0; i<ref_faces.size(); i++ )
+    for (int j = 0; j < midplane_bodysm_list.size(); j++)
     {
-      RefEntity *new_entity_ptr;
-      new_entity_ptr = GeometryModifyTool::instance()->copy_refentity(ref_faces.get_and_step());
-      RefFace *ref_face_ptr = CAST_TO(new_entity_ptr, RefFace);
-      mid_plane_surfs.append( ref_face_ptr );
+      BodySM* midplane_body_sm = midplane_bodysm_list.get_and_step();
+      midplane_body = GeometryQueryTool::instance()->make_Body(midplane_body_sm);
+
+      DLIList<RefFace*> ref_faces;
+      midplane_body->ref_faces( ref_faces );
+
+      //make each surface of the body into its own body
+      int i;
+      for( i=0; i<ref_faces.size(); i++ )
+      {
+        RefEntity *new_entity_ptr;
+        new_entity_ptr = GeometryModifyTool::instance()->copy_refentity(ref_faces.get_and_step());
+        RefFace *ref_face_ptr = CAST_TO(new_entity_ptr, RefFace);
+        mid_plane_surfs.append( ref_face_ptr );
+      }
+      GeometryQueryTool::instance()->delete_Body( midplane_body );
     }
-    GeometryQueryTool::instance()->delete_Body( midplane_body );
   }
   else
     return CUBIT_FAILURE;
@@ -7393,7 +7397,7 @@ CubitStatus GeometryModifyTool::get_mid_plane( RefFace *ref_face1,
 CubitStatus get_planar_mid_surface( RefFace* ref_face1,
 				    RefFace* ref_face2,
 				    BodySM* body_sm_to_trim_to,
-				    BodySM*& midsurface_body_sm,
+				    DLIList<BodySM*>& midsurface_bodysm_list,
 				    GeometryModifyEngine *gme_ptr )
 {
     CubitVector normal_1, normal_2, point_1, point_2, point_3;
@@ -7492,7 +7496,7 @@ CubitStatus get_planar_mid_surface( RefFace* ref_face1,
     point_3 = point_1 + direction2;
 
     CubitStatus ret = gme_ptr->get_mid_plane(point_1, point_2, point_3,
-					      body_sm_to_trim_to, midsurface_body_sm );
+					      body_sm_to_trim_to, midsurface_bodysm_list );
     return ret;
 }
 
@@ -7527,13 +7531,12 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
 
   bool found_case = false;
   CubitStatus ret;
-  BodySM* midsurface_body_sm = NULL;
-
+  DLIList<BodySM*> midsurfaces;
   // Plane to plane case
   if ( ( ref_face1->geometry_type() == PLANE_SURFACE_TYPE ) && ( ref_face2->geometry_type() == PLANE_SURFACE_TYPE ) )
   {
     found_case = true;
-    ret = get_planar_mid_surface( ref_face1, ref_face2, body_sm_to_trim_to, midsurface_body_sm, gme1_ptr );
+    ret = get_planar_mid_surface( ref_face1, ref_face2, body_sm_to_trim_to, midsurfaces, gme1_ptr );
   }
 
   // Quadric to quadric cases
@@ -7575,19 +7578,19 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
     // Sphere to sphere case
     if ( ( ref_face1->geometry_type() == SPHERE_SURFACE_TYPE ) && ( ref_face2->geometry_type() == SPHERE_SURFACE_TYPE ) )
     {
-      ret = gme2_ptr->get_spheric_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurface_body_sm );
+      ret = gme2_ptr->get_spheric_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurfaces );
     }
 
     // Cone to cone case
     if ( ( ref_face1->geometry_type() == CONE_SURFACE_TYPE ) && ( ref_face2->geometry_type() == CONE_SURFACE_TYPE ) )
     {
-      ret = gme2_ptr->get_conic_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurface_body_sm );
+      ret = gme2_ptr->get_conic_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurfaces );
     }
 
     // Torus to torus case
     if ( ( ref_face1->geometry_type() == TORUS_SURFACE_TYPE ) && ( ref_face2->geometry_type() == TORUS_SURFACE_TYPE ) )
     {
-      ret = gme2_ptr->get_toric_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurface_body_sm );
+      ret = gme2_ptr->get_toric_mid_surface( surface1_ptr, surface2_ptr, body_sm_to_trim_to, midsurfaces );
     }
   }
 
@@ -7599,25 +7602,28 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
     return CUBIT_FAILURE;
   }
 
-  if ( midsurface_body_sm )
+  if ( midsurfaces.size() > 0)
   {
     Body *midsurface_body;
-
-    midsurface_body = GeometryQueryTool::instance()->make_Body(midsurface_body_sm);
-
-    DLIList<RefFace*> ref_faces;
-    midsurface_body->ref_faces( ref_faces );
-
-    //make each surface of the body into its own body
-    int i;
-    for( i=0; i<ref_faces.size(); i++ )
+    for(int j = 0; j < midsurfaces.size()  ;j++)
     {
-      RefEntity *new_entity_ptr;
-      new_entity_ptr = GeometryModifyTool::instance()->copy_refentity(ref_faces.get_and_step());
-      RefFace *ref_face_ptr = CAST_TO(new_entity_ptr, RefFace);
-      mid_surface_surfs.append( ref_face_ptr );
+      BodySM* midsurface_body_sm = midsurfaces.get_and_step();
+      midsurface_body = GeometryQueryTool::instance()->make_Body(midsurface_body_sm);
+
+      DLIList<RefFace*> ref_faces;
+      midsurface_body->ref_faces( ref_faces );
+
+      //make each surface of the body into its own body
+      int i;
+      for( i=0; i<ref_faces.size(); i++ )
+      {
+        RefEntity *new_entity_ptr;
+        new_entity_ptr = GeometryModifyTool::instance()->copy_refentity(ref_faces.get_and_step());
+        RefFace *ref_face_ptr = CAST_TO(new_entity_ptr, RefFace);
+        mid_surface_surfs.append( ref_face_ptr );
+      }
+      GeometryQueryTool::instance()->delete_Body( midsurface_body );
     }
-    GeometryQueryTool::instance()->delete_Body( midsurface_body );
     return ret;
   }
   else

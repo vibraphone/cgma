@@ -718,10 +718,10 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- intersection graph.
 
   virtual CubitStatus get_mid_plane( const CubitVector &point_1,
-			                               const CubitVector &point_2,
+		                     const CubitVector &point_2,
                                      const CubitVector &point_3,
-			                               BodySM *body_to_trim_to,
-			                               BodySM *&midplane_body ) const = 0;
+		                     BodySM *body_to_trim_to,
+		                     DLIList<BodySM*>& midplane_bodies ) const = 0;
     //- Finds the mid plane described by the 3 points and trims
     //- it to the body.  It returns the mid planes as part of the 
     //- midplane_body
@@ -729,17 +729,17 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
   virtual CubitStatus get_spheric_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       BodySM *&midsurface_body ) const = 0;
+					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
 
   virtual CubitStatus get_conic_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       BodySM *&midsurface_body ) const = 0;
+					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
 
   virtual CubitStatus get_toric_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       BodySM *&midsurface_body ) const = 0;
+					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
 
   virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, 
                                      double left_offset,
