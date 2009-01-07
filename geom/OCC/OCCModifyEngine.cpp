@@ -142,6 +142,7 @@
 #include <vector>
 OCCModifyEngine* OCCModifyEngine::instance_ = 0;
 #define DEBUG
+double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
 //===============================================================================
 // Function   : OCCModifyEngine
 // Member Type: PUBLIC
@@ -401,7 +402,6 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
 
   CubitVector v3;
   gp_Pnt pt3;
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
 
   Handle(Geom_TrimmedCurve) curve_ptr;
   if(intermediate_point_ptr != NULL)
@@ -801,7 +801,6 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
   OCCPoint* start = NULL;
   OCCPoint* end = NULL;
   DLIList<OCCPoint*> point_list;
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   CubitBoolean new_end;
   int size = curve_list.size();
 
@@ -1787,7 +1786,6 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
     return CUBIT_FAILURE;
   } 
 
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
   int fraction_remaining = 100;
 
   // subtract the tool body from each body in the list
@@ -1913,7 +1911,6 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces; 
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   while( more_face)
   {
     TopoDS_Face from_face,tool_face;
@@ -2449,7 +2446,6 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
     double upper_bound = acurve.LastParameter();
     TopExp_Explorer Ex;
     gp_Pnt newP[2];
-    double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
     for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
     {
       TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
@@ -3452,7 +3448,6 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
                                       CubitBoolean keep_old) const
 {
    //compare to see if the from_shape has gotten cut.
-   double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
    if(is_volume)
    {
      GProp_GProps myProps;
@@ -3737,9 +3732,9 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
     return CUBIT_FAILURE;
   }
   
-  double tol = 1.e-3; //hard coded for now, can be changed by application
+  double dtol = 1.e-3; //hard coded for now, can be changed by application
   TopoDS_Shape* solid = shape_list.get();
-  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, tol,
+  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, dtol,
                                         BRepOffset_Skin, Standard_False,
                                         Standard_False, GeomAbs_Intersection);
   TopoDS_Shape new_shape = hollower.Shape();
@@ -4221,7 +4216,6 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
         CubitBoolean end_int = CUBIT_FALSE;
         if(intersect_pts.size() > 0)
         {
-          double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
           CubitBoolean non_int = CUBIT_FALSE;
           for(int i = 0; i < intersect_pts.size(); i++)
           {
@@ -4665,7 +4659,6 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
   v1 = point_2 - point_1;
   v2 = point_3 - point_1; 
   normal = ~(v1 * v2); 
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance(); 
   if(fabs(normal.length() - 1) > tol)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
@@ -4883,7 +4876,6 @@ Curve* OCCModifyEngine::trim_curve( Curve* trim_curve,
   occ_crv->get_param_range(u1, u2);
   double trim_u = occ_crv->u_from_position(trim_vector);
   double keep_u = occ_crv->u_from_position(keep_vector);
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   if(trim_u > u2+tol || trim_u < u1 - tol)
   {
     PRINT_ERROR("The trim_vector is outside of the curve range.\n");
@@ -5028,7 +5020,6 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   CubitVector normal1 = tangent1 * tangent2;
   CubitVector normal2 = tangent2 * tangent3;
   CubitVector normal3 = tangent3 * tangent1;
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   if( normal1.length()< tol || normal2.length()< tol ||
       normal3.length() < tol )
   {
@@ -5160,7 +5151,6 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
 
   CubitVector dir1( vec1, vec2 );
   CubitVector dir2( vec1, vec3 );
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   // Re-adjust vec2, vec3 if radius was given
   if( radius != CUBIT_DBL_MAX )
   {
@@ -5339,7 +5329,6 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   v1 = point_2 - point_1;
   v2 = point_3 - point_1;
   normal = ~(v1 * v2);
-  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   if(fabs(normal.length() - 1) > tol)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
@@ -5360,7 +5349,7 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   }
   
   BodySM* tool = CAST_TO(surf, OCCSurface)->my_body();
-  DLIList<BodySM*> from_bodies, new_bodies;
+  DLIList<BodySM*> from_bodies;
   from_bodies.append(body_to_trim_to);
    
   CubitStatus stat = intersect(tool, from_bodies, midplane_bodies, 
@@ -5370,31 +5359,236 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   return stat;
 }
 
+//=============================================================================
+// Function   : get_spheric_mid_surface
+// Member Type: PUBLIC
+// Description: Calculates a mid-surface between 2 spheric surfaces.
+// Author     : Jane Hu
+// Date       : 01/09
+//=============================================================================
 CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
                                     Surface* surface_ptr2,
                                     BodySM* body_to_trim_to,
                                     DLIList<BodySM *>&midsurface_bodies ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
+  OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
+  if(occ_surf1->geometry_type() != SPHERE_SURFACE_TYPE ||
+     occ_surf2->geometry_type() != SPHERE_SURFACE_TYPE)
+  {
+    PRINT_ERROR( "Both surfaces provided should be sphere type.\n");
+    return CUBIT_FAILURE;
+  }
+ 
+  BRepAdaptor_Surface asurface1(*occ_surf1->get_TopoDS_Face());
+  BRepAdaptor_Surface asurface2(*occ_surf2->get_TopoDS_Face());
+
+  gp_Sphere sphere1 = asurface1.Sphere();
+  gp_Sphere sphere2 = asurface2.Sphere();
+
+  gp_Pnt center1 = sphere1.Location();
+  gp_Pnt center2 = sphere2.Location();
+
+  if(!center1.IsEqual(center2, tol))
+  {
+    PRINT_ERROR( "Spheres need to have the same center.\n");
+    return CUBIT_FAILURE;
+  }
+
+  double radius = sphere1.Radius()/2.0 + sphere2.Radius()/2.0;
+  BodySM* tool = sphere(radius);
+  CubitVector center(center1.X(), center1.Y(), center1.Z());
+  OCCQueryEngine::instance()->translate(tool, center);
+
+  DLIList<BodySM*> from_bodies;
+  from_bodies.append(body_to_trim_to);
+  
+  CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
+                               CUBIT_TRUE);
+  OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+
+  return stat;  
 }
 
+//=============================================================================
+// Function   : get_conic_mid_surface
+// Member Type: PUBLIC
+// Description: Calculates a mid-surface between 2 conic surfaces.
+// Author     : Jane Hu
+// Date       : 01/09
+//=============================================================================
 CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
                                     Surface* surface_ptr2,
                                     BodySM* body_to_trim_to,
                                     DLIList<BodySM *>&midsurface_bodies ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
+  OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
+  if(occ_surf1->geometry_type() != CONE_SURFACE_TYPE ||
+     occ_surf2->geometry_type() != CONE_SURFACE_TYPE)
+  {
+    PRINT_ERROR( "Both surfaces provided should be conic type.\n");
+    return CUBIT_FAILURE;
+  }  
+
+  BRepAdaptor_Surface asurface1(*occ_surf1->get_TopoDS_Face());
+  BRepAdaptor_Surface asurface2(*occ_surf2->get_TopoDS_Face());
+
+  GeomAbs_SurfaceType  type1 = asurface1.GetType();
+  GeomAbs_SurfaceType  type2 = asurface2.GetType();
+  if(type1 != type2)
+  {
+    PRINT_ERROR( "Both surfaces provided should be both cylinder or cone type.\n");
+    return CUBIT_FAILURE;
+  }
+
+  CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+  double height = (bounding_box.diagonal()).length();
+  BodySM* tool;
+  if(type1 == GeomAbs_Cylinder)
+  {
+    gp_Cylinder cyl1 = asurface1.Cylinder();
+    gp_Cylinder cyl2 = asurface2.Cylinder(); 
+    gp_Ax1  axis1 = cyl1.Axis();
+    gp_Ax1  axis2 = cyl2.Axis();
+    if(!axis1.IsCoaxial(axis2, 0.001, tol))
+    {
+      PRINT_ERROR( "Cylinders need to have the same axis of symmetry.\n");
+      return CUBIT_FAILURE;
+    }
+    double radius = cyl1.Radius()/2.0 + cyl2.Radius()/2.0; 
+    gp_Ax2 axis;
+    axis.SetAxis(axis1);
+    TopoDS_Solid S = BRepPrimAPI_MakeCylinder(axis, radius, height);
+
+    Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S,
+                                                                CUBIT_TRUE);
+
+    if (lump == NULL)
+    {
+      PRINT_ERROR("In OCCModifyEngine::get_conic_mid_surface\n"
+                  "   Cannot create a cylinder for given radius.\n");
+      return CUBIT_FAILURE;
+    }
+
+    tool = CAST_TO(lump, OCCLump)->get_body();
+  }
+
+  else  //GeomAbs_Cone
+  {
+    gp_Cone cone1 = asurface1.Cone();
+    gp_Cone cone2 = asurface2.Cone();
+    double angle1 = cone1.SemiAngle();
+    double angle2 = cone2.SemiAngle();
+    if(fabs(angle1 - angle2) > 0.001)
+    {
+      PRINT_ERROR( "Cones do not have the same semi-angle.\n");
+      return CUBIT_FAILURE;
+    }
+    gp_Ax1  axis1 = cone1.Axis();
+    gp_Ax1  axis2 = cone2.Axis();
+    if(!axis1.IsCoaxial(axis2, 0.001, tol))
+    {
+      PRINT_ERROR( "Cones need to have the same axis of symmetry.\n");
+      return CUBIT_FAILURE;
+    } 
+    if(axis1.IsOpposite(axis2, 0.001))
+    {
+      PRINT_ERROR( "Cones need to have the same orientation of axis.\n");
+      return CUBIT_FAILURE;
+    }
+    double r1 = cone1.RefRadius()/2.0 + cone2.RefRadius()/2.0; 
+    gp_Pnt apex1 = cone1.Apex();
+    gp_Pnt apex2 = cone2.Apex();
+    double d = apex1.Distance(apex2);
+  } 
+  DLIList<BodySM*> from_bodies;
+  from_bodies.append(body_to_trim_to);
+
+  CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
+                               CUBIT_TRUE);
+  OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+
+  return stat;
 }
 
+//=============================================================================
+// Function   : get_toric_mid_surface
+// Member Type: PUBLIC
+// Description: Calculates a mid-surface between 2 toric surfaces.
+// Author     : Jane Hu
+// Date       : 01/09
+//=============================================================================
 CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
                                      Surface* surface_ptr2,
                                      BodySM* body_to_trim_to,
                                      DLIList<BodySM *>&midsurface_bodies ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
+  OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
+  if(occ_surf1->geometry_type() != TORUS_SURFACE_TYPE ||
+     occ_surf2->geometry_type() != TORUS_SURFACE_TYPE)
+  {
+    PRINT_ERROR( "Both surfaces provided should be toric type.\n");
+    return CUBIT_FAILURE;
+  }
+
+  BRepAdaptor_Surface asurface1(*occ_surf1->get_TopoDS_Face());
+  BRepAdaptor_Surface asurface2(*occ_surf2->get_TopoDS_Face());
+
+  gp_Torus torus1 = asurface1.Torus();
+  gp_Torus torus2 = asurface2.Torus();
+
+  gp_Pnt center1 = torus1.Location();
+  gp_Pnt center2 = torus2.Location();
+
+  if(!center1.IsEqual(center2, tol))
+  {
+    PRINT_ERROR( "Torii need to have the same center.\n");
+    return CUBIT_FAILURE;
+  }
+
+  double major_r1 = torus1.MajorRadius();
+  double major_r2 = torus2.MajorRadius();
+  if(fabs(major_r1 - major_r2) > tol)
+  {
+    PRINT_ERROR( "Torii need to have the same major radius.\n");
+    return CUBIT_FAILURE;
+  }
+
+  gp_Ax1 axis1 = torus1.Axis();
+  gp_Ax1 axis2 = torus2.Axis();
+  if(!axis1.IsCoaxial(axis2, 0.001, tol))
+  {
+    PRINT_ERROR( "Torii need to have the same axis of symmetry.\n");
+    return CUBIT_FAILURE;
+  }
+
+  double radius = torus1.MinorRadius()/2.0 + torus2.MinorRadius()/2.0;
+  gp_Ax2 axis;
+  axis.SetAxis(axis1);
+  TopoDS_Solid S = BRepPrimAPI_MakeTorus(axis, major_r1, radius);
+
+  Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(S,
+                                                                CUBIT_TRUE);
+
+  if (lump == NULL)
+  {
+    PRINT_ERROR("In OCCModifyEngine::get_toric_mid_surface\n"
+                "   Cannot create a torus for given radii.\n");
+    return CUBIT_FAILURE;
+  }
+
+  BodySM* tool = CAST_TO(lump, OCCLump)->get_body();
+
+  DLIList<BodySM*> from_bodies;
+  from_bodies.append(body_to_trim_to);
+
+  CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
+                               CUBIT_TRUE);
+  OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+
+  return stat; 
 }
 
 //=============================================================================
