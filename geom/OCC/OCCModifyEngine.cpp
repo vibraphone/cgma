@@ -5445,6 +5445,10 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
 
   CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
   double height = (bounding_box.diagonal()).length();
+  OCCBody* body = CAST_TO(body_to_trim_to, OCCBody);
+  CubitVector centroid;
+  double volume;
+  body->mass_properties(centroid, volume);
   BodySM* tool;
   if(type1 == GeomAbs_Cylinder)
   {
@@ -5473,6 +5477,10 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
     }
 
     tool = CAST_TO(lump, OCCLump)->get_body();
+    double z = centroid.z();
+    z -= height/2.0;
+    centroid.z(z);
+    OCCQueryEngine::instance()->translate(tool, centroid);  
   }
 
   else  //GeomAbs_Cone
@@ -5499,9 +5507,13 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
       return CUBIT_FAILURE;
     }
     double r1 = cone1.RefRadius()/2.0 + cone2.RefRadius()/2.0; 
-    gp_Pnt apex1 = cone1.Apex();
-    gp_Pnt apex2 = cone2.Apex();
-    double d = apex1.Distance(apex2);
+    gp_Ax3 axis;
+    axis.SetAxis(axis1);
+    gp_Cone cone(axis, angle1, r1);
+    TopoDS_Face face = BRepBuilderAPI_MakeFace(cone);
+    Surface* surface = 
+      OCCQueryEngine::instance()->populate_topology_bridge(face, CUBIT_TRUE);
+    tool = CAST_TO(surface,OCCSurface)->my_body();  
   } 
   DLIList<BodySM*> from_bodies;
   from_bodies.append(body_to_trim_to);
