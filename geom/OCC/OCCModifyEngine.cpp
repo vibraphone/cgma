@@ -5913,38 +5913,47 @@ CubitStatus OCCModifyEngine::create_net_surface( DLIList<Curve*>& /*u_curves*/,
 
 //================================================================================
 // Description: Creates an offset surface.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Author     : Jane Hu
+// Date       : 01/09
 //================================================================================
 CubitStatus OCCModifyEngine::create_offset_surface( Surface* /*ref_face_ptr*/, 
-                                                      BodySM*& /*new_body*/, 
-                                                      double /*offset_distance*/ ) const
+                                                    BodySM*& /*new_body*/, 
+                                                    double /*offset_distance*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_ERROR("Function not implemented because offset_distance \n"
+               "doesn't show offset direction.\n");
    return CUBIT_FAILURE;
 }
 
 //================================================================================
 // Description: Creates an offset body.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Author     : Jane Hu
+// Date       : 01/09
 //================================================================================
 CubitStatus OCCModifyEngine::create_offset_body( BodySM* body_ptr, 
-                                                   BodySM*& new_bodysm, 
-                                                   double offset_distance ) const
+                                                 BodySM*& new_bodysm, 
+                                                 double offset_distance ) const
 {
+  PRINT_ERROR("Function not implemented because offset_distance \n"
+               "doesn't show offset direction.\n");
   return CUBIT_FAILURE;
 }
 
 //================================================================================
 // Description: Creates a skin surface.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Author     : Jane Hu
+// Date       : 01/09
 //================================================================================
-CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& /*curves*/, 
-                                                    BodySM*& /*new_body*/ ) const
+CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& curves, 
+                                                  BodySM*& new_body ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   new_body = NULL;
+   Surface* surf = make_Surface(BEST_FIT_SURFACE_TYPE, curves);
+   if(surf)
+   {
+     new_body = CAST_TO(surf, OCCSurface)->my_body();
+     return CUBIT_SUCCESS;
+   } 
    return CUBIT_FAILURE;
 }
 
@@ -5954,38 +5963,80 @@ CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& /*curves*/,
 // Date       : 08/18/03
 //================================================================================
 CubitStatus OCCModifyEngine::loft_surfaces( Surface * /*face1*/, 
-                                              const double & /*takeoff1*/,
-                                              Surface * /*face2*/, 
-                                              const double & /*takeoff2*/,
-                                              BodySM*& /*new_body*/,
-                                              CubitBoolean /*arc_length_option*/, 
-                                              CubitBoolean /*twist_option*/,
-                                              CubitBoolean /*align_direction*/, 
-                                              CubitBoolean /*perpendicular*/,
-                                              CubitBoolean /*simplify_option*/ ) const
+                                            const double & /*takeoff1*/,
+                                            Surface * /*face2*/, 
+                                            const double & /*takeoff2*/,
+                                            BodySM*& /*new_body*/,
+                                            CubitBoolean /*arc_length_option*/, 
+                                            CubitBoolean /*twist_option*/,
+                                            CubitBoolean /*align_direction*/, 
+                                            CubitBoolean /*perpendicular*/,
+                                            CubitBoolean /*simplify_option*/ ) const
 {
    PRINT_ERROR("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
 
 //================================================================================
-// Description: Creates a body by lofting surfaces between bodies.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Description: Creates a body by lofting surfaces between surfaces
+// Author     : Jane Hu
+// Date       : 01/09
 //================================================================================
-CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * /*face1*/, 
-                                                      const double & /*takeoff1*/,
-                                                      Surface * /*face2*/, 
-                                                      const double & /*takeoff2*/,
-                                                      BodySM*& /*new_body*/,
-                                                      CubitBoolean /*arc_length_option*/, 
-                                                      CubitBoolean /*twist_option*/,
-                                                      CubitBoolean /*align_direction*/, 
-                                                      CubitBoolean /*perpendicular*/,
-                                                      CubitBoolean /*simplify_option*/ ) const
+CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * face1, 
+                             const double & /*takeoff1*/,
+                             Surface * face2, 
+                             const double & /*takeoff2*/,
+                             BodySM*& new_body,
+                             CubitBoolean /*arc_length_option*/, 
+                             CubitBoolean /*twist_option*/,
+                             CubitBoolean /*align_direction*/, 
+                             CubitBoolean /*perpendicular*/,
+                             CubitBoolean /*simplify_option*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
-   return CUBIT_FAILURE;
+   BRepOffsetAPI_ThruSections loft(CUBIT_TRUE);
+   OCCSurface* surf1 = CAST_TO(face1, OCCSurface);
+   OCCSurface* surf2 = CAST_TO(face2, OCCSurface); 
+   if(!surf1 || !surf2)
+   {
+     PRINT_ERROR("Surfaces are not OCC type.\n");
+     return CUBIT_FAILURE;
+   }
+   TopoDS_Face* topo_face1 = surf1->get_TopoDS_Face();
+   TopoDS_Face* topo_face2 = surf2->get_TopoDS_Face();
+   TopExp_Explorer Ex;
+   Ex.Init(*topo_face1, TopAbs_WIRE);
+   TopoDS_Wire wire1 = TopoDS::Wire(Ex.Current());
+   if(Ex.More())
+   {
+     PRINT_ERROR("Surface1 must have only one loop.\n");
+     return CUBIT_FAILURE;
+   }
+   Ex.Init(*topo_face2, TopAbs_WIRE);
+   TopoDS_Wire wire2 = TopoDS::Wire(Ex.Current());
+   if(Ex.More())
+   {
+     PRINT_ERROR("Surface2 must have only one loop.\n");
+     return CUBIT_FAILURE;
+   }
+   loft.AddWire(wire1);
+   loft.AddWire(wire2);
+   loft.Build();
+   if(!loft.IsDone())
+   {
+     PRINT_ERROR("Surfaces can't be loft into a body.\n");
+     return CUBIT_FAILURE;
+   }
+   TopoDS_Shape shape = loft.Shape();
+   TopoDS_Solid solid = TopoDS::Solid(shape);
+   Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(solid);
+   if (lump == NULL)
+   {
+     PRINT_ERROR("In OCCModifyEngine::loft_surfaces_to_body\n"
+                 "   Cannot create a loft body for given surfaces.\n");
+     return CUBIT_FAILURE;
+   }
+   new_body = CAST_TO(lump, OCCLump)->get_body();
+   return CUBIT_SUCCESS;   
 }
  
 //================================================================================
