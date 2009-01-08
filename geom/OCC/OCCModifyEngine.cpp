@@ -142,7 +142,7 @@
 #include <vector>
 OCCModifyEngine* OCCModifyEngine::instance_ = 0;
 #define DEBUG
-double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+double TOL = 0.0;
 //===============================================================================
 // Function   : OCCModifyEngine
 // Member Type: PUBLIC
@@ -156,6 +156,7 @@ OCCModifyEngine::OCCModifyEngine()
 
     // add this modify engine to geometrymodifytool
   GeometryModifyTool::instance()->add_gme(this);
+  TOL = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
 }
 
 
@@ -457,7 +458,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     //find the directrix and focus of the parabola
     //or the axis, major radius and minor radius of the hyperbola
     CubitVector width_vec = v2 - v1;
-    if(width_vec.length_squared() < tol * tol)
+    if(width_vec.length_squared() < TOL * TOL)
     {
        PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "2 end points are the same.\n");
@@ -468,7 +469,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     CubitVector height_vec = midpoint_vec - v3;
     gp_Pnt center(v3.x(), v3.y(), v3.z());
  
-    if (height_vec.length_squared() < tol * tol)
+    if (height_vec.length_squared() < TOL * TOL)
     { 
        PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "3 points are in the same line.\n");
@@ -479,7 +480,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
     gp_Dir x_dir(x.x(), x.y(), x.z());
  
     CubitVector N = x * (v2 - v1);  
-    if (N.length_squared() < tol * tol)
+    if (N.length_squared() < TOL * TOL)
     {
        PRINT_ERROR("Cannot create a parabola or hyperbola curve from the given points.\n"
                  "3 points are in the same line.\n");
@@ -832,16 +833,16 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
           break;
         }
 
-        if(end->is_equal(*(point_list.get()), tol) ||
-           end->is_equal(*(point_list.step_and_get()),tol)) 
+        if(end->is_equal(*(point_list.get()), TOL) ||
+           end->is_equal(*(point_list.step_and_get()),TOL)) 
         {
            end = point_list.step_and_get();
            new_end = CUBIT_TRUE;
            break;
         }
    
-        else if(start->is_equal(*(point_list.get()), tol) ||
-           start->is_equal(*(point_list.step_and_get()),tol))
+        else if(start->is_equal(*(point_list.get()), TOL) ||
+           start->is_equal(*(point_list.step_and_get()),TOL))
         {
            start = end;
            end = point_list.step_and_get(); 
@@ -856,7 +857,7 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
         topo_edge = occ_curve->get_TopoDS_Edge();
         topo_edges[count]->append(topo_edge);
         curve_list.remove();
-        if(start->is_equal( *end, tol))  //formed a closed loop
+        if(start->is_equal( *end, TOL))  //formed a closed loop
         {
           i = -1;
           size = curve_list.size() ;
@@ -1813,7 +1814,7 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
          return CUBIT_FAILURE;
       }
       CubitBox tool_box = *tool_boxes->get_and_step();  
-      if(!tool_box.overlap(tol,box1))
+      if(!tool_box.overlap(TOL,box1))
       {
         count++;
         continue;
@@ -2043,7 +2044,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                 GProp_GProps myProps2;
                 BRepGProp::LinearProperties(edge, myProps2);
                 gp_Pnt center2 = myProps2.CentreOfMass();
-                if(center1.IsEqual(center2, tol))
+                if(center1.IsEqual(center2, TOL))
                 {
 		  same_edge = CUBIT_TRUE;
                   break;
@@ -2170,7 +2171,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
         CubitVector point_on_surf;
         occ_face->closest_point_trimmed(p, point_on_surf);
-        if(p.distance_between(point_on_surf) > tol) //edge not on from_face
+        if(p.distance_between(point_on_surf) > TOL) //edge not on from_face
         {
           skipped = CUBIT_TRUE;
           total_edges--;
@@ -2203,7 +2204,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               //check if they are the same edge, so don't need to be split
               //the overlapped edges are considered the same if they have the
               //same length
-              if((d2 - d1) > tol)
+              if((d2 - d1) > TOL)
               {
 	        added = CUBIT_TRUE;
    	        splitor.Add(edge, from_edge);
@@ -2454,7 +2455,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
       CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
-      if (distShapeShape.IsDone() && distShapeShape.Value() < tol)
+      if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
         newP[0] = distShapeShape.PointOnShape1(1);
         if (double_check && distShapeShape.NbSolution() == 2)
@@ -2467,8 +2468,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
             for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
               if ( ext.IsMin(i) ) {
         	newVal[j] = ext.Point(i).Parameter();
-		if ((newVal[j]-lower_bound) >= -tol && 
-                    (upper_bound - newVal[j]) >= -tol)
+		if ((newVal[j]-lower_bound) >= -TOL && 
+                    (upper_bound - newVal[j]) >= -TOL)
 		{
 		  qualified[j] = CUBIT_TRUE;
 		  break;
@@ -2488,8 +2489,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 	      for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
 	      	if ( ext.IsMin(i) ) {
 		  newVal = ext.Point(i).Parameter();
-                  if ((newVal-lower_bound2) >= -tol &&
-                      (upper_bound2 - newVal) >= -tol)
+                  if ((newVal-lower_bound2) >= -TOL &&
+                      (upper_bound2 - newVal) >= -TOL)
 		  {
 		    qualified[j] = CUBIT_TRUE;
 		    break;
@@ -2507,7 +2508,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
           if (count_intersection == 2)
           {
             //make sure the two intersect point are not the same one 
-            if (intsec_pnt[0].IsEqual(intsec_pnt[1], tol))
+            if (intsec_pnt[0].IsEqual(intsec_pnt[1], TOL))
               count_intersection--;
           }
         }
@@ -3465,14 +3466,14 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      else
        no_volume = CUBIT_TRUE;
  
-     if(fabs(-after_mass + orig_mass) <= tol)
+     if(fabs(-after_mass + orig_mass) <= TOL)
      {
         has_changed= CUBIT_FALSE; //common is itself
         return;
      }
 
      //got cut. Update the entities
-     if(after_mass < tol && !no_volume) //no common section
+     if(after_mass < TOL && !no_volume) //no common section
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
      TopExp_Explorer Ex;
@@ -3487,13 +3488,13 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      double orig_mass = myProps.Mass();
      BRepGProp::SurfaceProperties(cut_shape, myProps);
      double after_mass = myProps.Mass();
-     if(fabs(-after_mass + orig_mass) <= tol)
+     if(fabs(-after_mass + orig_mass) <= TOL)
      {
        has_changed= CUBIT_FALSE; //common is itself, or not cut
        return;
      }
      //got cut. Update the entities
-     if(after_mass < tol)//no common section
+     if(after_mass < TOL)//no common section
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
      if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
@@ -3732,9 +3733,9 @@ CubitStatus OCCModifyEngine::hollow( DLIList<BodySM*>& bodies,
     return CUBIT_FAILURE;
   }
   
-  double dtol = 1.e-3; //hard coded for now, can be changed by application
+  double dTOL = 1.e-3; //hard coded for now, can be changed by application
   TopoDS_Shape* solid = shape_list.get();
-  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, dtol,
+  BRepOffsetAPI_MakeThickSolid hollower(*solid, face_shapes, depth, dTOL,
                                         BRepOffset_Skin, Standard_False,
                                         Standard_False, GeomAbs_Intersection);
   TopoDS_Shape new_shape = hollower.Shape();
@@ -4220,16 +4221,16 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
           for(int i = 0; i < intersect_pts.size(); i++)
           {
              CubitVector prt = *(intersect_pts.get_and_step());
-             if(prt.distance_between(start) > tol &&
-                prt.distance_between(end) > tol)
+             if(prt.distance_between(start) > TOL &&
+                prt.distance_between(end) > TOL)
              {
                 non_int = CUBIT_TRUE;
                 PRINT_ERROR("Only curves with no intersection point with the axis can be revolve-swept.\n");
                 break;
              }
-             else if(prt.distance_between(start) <= tol)
+             else if(prt.distance_between(start) <= TOL)
                 start_int = CUBIT_TRUE;
-             else if(prt.distance_between(end) <= tol)
+             else if(prt.distance_between(end) <= TOL)
                 end_int = CUBIT_TRUE;
           }
           if(non_int)
@@ -4659,7 +4660,7 @@ CubitStatus OCCModifyEngine::section( DLIList<BodySM*> &section_body_list,
   v1 = point_2 - point_1;
   v2 = point_3 - point_1; 
   normal = ~(v1 * v2); 
-  if(fabs(normal.length() - 1) > tol)
+  if(fabs(normal.length() - 1) > TOL)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
      return CUBIT_FAILURE;
@@ -4876,7 +4877,7 @@ Curve* OCCModifyEngine::trim_curve( Curve* trim_curve,
   occ_crv->get_param_range(u1, u2);
   double trim_u = occ_crv->u_from_position(trim_vector);
   double keep_u = occ_crv->u_from_position(keep_vector);
-  if(trim_u > u2+tol || trim_u < u1 - tol)
+  if(trim_u > u2+TOL || trim_u < u1 - TOL)
   {
     PRINT_ERROR("The trim_vector is outside of the curve range.\n");
     return (Curve*)NULL;
@@ -5020,8 +5021,8 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   CubitVector normal1 = tangent1 * tangent2;
   CubitVector normal2 = tangent2 * tangent3;
   CubitVector normal3 = tangent3 * tangent1;
-  if( normal1.length()< tol || normal2.length()< tol ||
-      normal3.length() < tol )
+  if( normal1.length()< TOL || normal2.length()< TOL ||
+      normal3.length() < TOL )
   {
     PRINT_WARNING("Three curves must be able to form a triangle.\n");
     return (Curve*) NULL;
@@ -5036,8 +5037,8 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
   CubitVector parallel1 = normal1 * normal2;
   CubitVector parallel2 = normal2 * normal3;
   CubitVector parallel3 = normal3 * normal1;
-  if(parallel1.length() > tol || parallel2.length() > tol ||
-     parallel3.length() > tol)
+  if(parallel1.length() > TOL || parallel2.length() > TOL ||
+     parallel3.length() > TOL)
   {
     PRINT_WARNING("Three curves must be able to form a triangle.\n");
     return (Curve*) NULL;
@@ -5108,15 +5109,15 @@ Curve* OCCModifyEngine::create_arc_three( Curve* curve1,
     CubitVector closest1, closest2, closest3;
     occ_crv1->closest_point(c_p[i], closest1);
     double u = occ_crv1->u_from_position(closest1);
-    if(u > u11-tol && u < u12 + tol)
+    if(u > u11-TOL && u < u12 + TOL)
     {
       occ_crv2->closest_point(c_p[i], closest2);
       u = occ_crv2->u_from_position(closest2);
-      if(u > u21 - tol && u < u22 + tol)
+      if(u > u21 - TOL && u < u22 + TOL)
       {
         occ_crv3->closest_point(c_p[i], closest3);
         u = occ_crv3->u_from_position(closest3);
-        if(u > u31 - tol && u < u32 + tol)
+        if(u > u31 - TOL && u < u32 + TOL)
         {
         //4. use the 3 intersection points to find the arc or circle.
           OCCPoint occ_p1(closest1);
@@ -5156,13 +5157,13 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
   {
      CubitVector vec;
      vec1.next_point( dir1, radius, vec );
-     if(vec.distance_between(vec2) > tol)
+     if(vec.distance_between(vec2) > TOL)
      {
        vec2 = vec;
        pt2 = new OCCPoint(vec);
      }
      vec1.next_point( dir2, radius, vec );
-     if(vec.distance_between(vec3) > tol)
+     if(vec.distance_between(vec3) > TOL)
      {
        vec3 = vec;
        pt3 = new OCCPoint(vec);
@@ -5174,7 +5175,7 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
     radius = vec1.distance_between(vec2);
     CubitVector vec;
     vec1.next_point( dir2, radius, vec );
-    if(vec.distance_between(vec3) > tol)
+    if(vec.distance_between(vec3) > TOL)
     {
        vec3 = vec;
        pt3 = new OCCPoint(vec);
@@ -5182,7 +5183,7 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
   }
  
   CubitVector normal_dir = normal;
-  if(normal_dir.length() > tol)
+  if(normal_dir.length() > TOL)
   {
     normal_dir.normalize();
     //verify sense
@@ -5329,7 +5330,7 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   v1 = point_2 - point_1;
   v2 = point_3 - point_1;
   normal = ~(v1 * v2);
-  if(fabs(normal.length() - 1) > tol)
+  if(fabs(normal.length() - 1) > TOL)
   {
      PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
      return CUBIT_FAILURE;
@@ -5389,7 +5390,7 @@ CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
   gp_Pnt center1 = sphere1.Location();
   gp_Pnt center2 = sphere2.Location();
 
-  if(!center1.IsEqual(center2, tol))
+  if(!center1.IsEqual(center2, TOL))
   {
     PRINT_ERROR( "Spheres need to have the same center.\n");
     return CUBIT_FAILURE;
@@ -5451,7 +5452,7 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
     gp_Cylinder cyl2 = asurface2.Cylinder(); 
     gp_Ax1  axis1 = cyl1.Axis();
     gp_Ax1  axis2 = cyl2.Axis();
-    if(!axis1.IsCoaxial(axis2, 0.001, tol))
+    if(!axis1.IsCoaxial(axis2, 0.001, TOL))
     {
       PRINT_ERROR( "Cylinders need to have the same axis of symmetry.\n");
       return CUBIT_FAILURE;
@@ -5487,7 +5488,7 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
     }
     gp_Ax1  axis1 = cone1.Axis();
     gp_Ax1  axis2 = cone2.Axis();
-    if(!axis1.IsCoaxial(axis2, 0.001, tol))
+    if(!axis1.IsCoaxial(axis2, 0.001, TOL))
     {
       PRINT_ERROR( "Cones need to have the same axis of symmetry.\n");
       return CUBIT_FAILURE;
@@ -5542,7 +5543,7 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
   gp_Pnt center1 = torus1.Location();
   gp_Pnt center2 = torus2.Location();
 
-  if(!center1.IsEqual(center2, tol))
+  if(!center1.IsEqual(center2, TOL))
   {
     PRINT_ERROR( "Torii need to have the same center.\n");
     return CUBIT_FAILURE;
@@ -5550,7 +5551,7 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
 
   double major_r1 = torus1.MajorRadius();
   double major_r2 = torus2.MajorRadius();
-  if(fabs(major_r1 - major_r2) > tol)
+  if(fabs(major_r1 - major_r2) > TOL)
   {
     PRINT_ERROR( "Torii need to have the same major radius.\n");
     return CUBIT_FAILURE;
@@ -5558,7 +5559,7 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
 
   gp_Ax1 axis1 = torus1.Axis();
   gp_Ax1 axis2 = torus2.Axis();
-  if(!axis1.IsCoaxial(axis2, 0.001, tol))
+  if(!axis1.IsCoaxial(axis2, 0.001, TOL))
   {
     PRINT_ERROR( "Torii need to have the same axis of symmetry.\n");
     return CUBIT_FAILURE;
