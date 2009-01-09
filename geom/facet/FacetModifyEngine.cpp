@@ -2007,7 +2007,7 @@ CubitStatus  FacetModifyEngine::webcut(
              DLIList<BodySM*>& /*webcut_body_list*/,
              BodySM const* /*tool_body*/,
              DLIList<BodySM*>& /*results_list*/,
-             bool /*imprint*/ )const
+             bool /*imprint*/ )
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;

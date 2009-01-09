@@ -330,7 +330,7 @@ public:
   virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list,
     BodySM const* tool_body,
     DLIList<BodySM*>& results_list,
-    bool imprint = false)const;
+    bool imprint = false);
   
   virtual CubitStatus webcut_across_translate( DLIList<BodySM*>& body_list,
     Surface* plane_surf1,

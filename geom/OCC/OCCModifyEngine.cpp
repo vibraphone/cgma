@@ -1835,13 +1835,15 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
         stat = CUBIT_FAILURE;
         //Add imprint code here 
         if(imprint)
-          stat = imprint_toposhapes(from_shape, tool_shape);
-        if(!stat)
         {
-          PRINT_ERROR("Can't do imprint operation on the body. \n");
-          count++;
+          stat = imprint_toposhapes(from_shape, tool_shape);
+          if(!stat)
+          {
+            PRINT_ERROR("Can't do imprint operation on the body. \n");
+            count++;
+          }
+          continue;
         }
-        continue;
       }
     }
 
@@ -3389,7 +3391,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   for (int i = 0; i < shape_list.size(); i++)
   { 
     TopoDS_Shape* from_shape = shape_list.get_and_step();
-    //BodySM* from_body = from_bodies.get_and_step();
+    BodySM* from_body = from_bodies.get_and_step();
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopoDS_Shape common_shape = intersector.Shape();
     check_operation(common_shape, from_shape, is_volume[i], has_changed, 
@@ -3398,7 +3400,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     if(from_shape->IsNull())
     {
       PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
-      continue; 
+      new_bodies.append(from_body); 
     }
     else
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
@@ -4494,19 +4496,45 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
 }
 
 //===============================================================================
-// Function   : webcut
+// Function   : webcuts a list of bodies using another Body as the tool.
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 01/09
 //===============================================================================
-CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& /*webcut_body_list*/,
-                                 BodySM const* /*tool_body*/,
-                                 DLIList<BodySM*>& /*results_list*/,
-                                 bool /*imprint*/ ) const
+CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
+                                BodySM const* tool_body,
+                                DLIList<BodySM*>& results_list,
+                                bool imprint ) 
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  //do intersect and subtract separately and with imprint option and keep_old
+  // is true.
+  //tool_body is a const pointer points to varible BodySM object
+  //here trying to create a non-const pointer points to the same BodySM object.
+
+  BodySM *body, *body2;
+  body = brick(1,1,1);
+  body2 = body;
+  *body = *tool_body;
+
+  CubitStatus stat = intersect(body, webcut_body_list, results_list,
+                               CUBIT_TRUE);
+ 
+  if(stat)
+  { 
+    PRINT_ERROR("Failed to webcut the bodies.\n"); 
+    return CUBIT_FAILURE;
+  }
+
+  DLIList<BodySM*> tool_bodies;
+  tool_bodies.append(body);
+  
+  stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
+                  CUBIT_TRUE);
+
+  OCCQueryEngine::instance()->delete_solid_model_entities(body2);
+
+  return stat;
 }
 
 //===============================================================================
