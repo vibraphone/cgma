@@ -5958,27 +5958,41 @@ CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& curves,
 }
 
 //================================================================================
-// Description: Creates a body from lofting surfaces.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Description: Creates a shell body from lofting surfaces.
+// Author     : Jane Hu
+// Date       : 01/09
 //================================================================================
-CubitStatus OCCModifyEngine::loft_surfaces( Surface * /*face1*/, 
+CubitStatus OCCModifyEngine::loft_surfaces( Surface * face1, 
                                             const double & /*takeoff1*/,
-                                            Surface * /*face2*/, 
+                                            Surface * face2, 
                                             const double & /*takeoff2*/,
-                                            BodySM*& /*new_body*/,
+                                            BodySM*& new_body,
                                             CubitBoolean /*arc_length_option*/, 
                                             CubitBoolean /*twist_option*/,
                                             CubitBoolean /*align_direction*/, 
                                             CubitBoolean /*perpendicular*/,
                                             CubitBoolean /*simplify_option*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
-   return CUBIT_FAILURE;
+   BRepOffsetAPI_ThruSections loft(CUBIT_FALSE);
+   CubitStatus stat = do_loft(loft, face1, face2);
+   if(!stat)
+     return CUBIT_FAILURE;
+
+   TopoDS_Shape shape = loft.Shape();
+   TopoDS_Shell shell = TopoDS::Shell(shape);
+   OCCShell* occ_shell = OCCQueryEngine::instance()->populate_topology_bridge(shell, CUBIT_TRUE);
+   if (occ_shell == NULL)
+   {
+     PRINT_ERROR("In OCCModifyEngine::loft_surfaces\n"
+                 "   Cannot create a loft surface for given surfaces.\n");
+     return CUBIT_FAILURE;
+   }
+   new_body = occ_shell->my_body();
+   return CUBIT_SUCCESS;
 }
 
 //================================================================================
-// Description: Creates a body by lofting surfaces between surfaces
+// Description: Creates a solid body by lofting surfaces between surfaces
 // Author     : Jane Hu
 // Date       : 01/09
 //================================================================================
@@ -5994,8 +6008,29 @@ CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * face1,
                              CubitBoolean /*simplify_option*/ ) const
 {
    BRepOffsetAPI_ThruSections loft(CUBIT_TRUE);
+   CubitStatus stat = do_loft(loft, face1, face2);
+   if(!stat)
+     return CUBIT_FAILURE;
+
+   TopoDS_Shape shape = loft.Shape();
+   TopoDS_Solid solid = TopoDS::Solid(shape);
+   Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(solid);
+   if (lump == NULL)
+   {
+     PRINT_ERROR("In OCCModifyEngine::loft_surfaces_to_body\n"
+                 "   Cannot create a loft body for given surfaces.\n");
+     return CUBIT_FAILURE;
+   }
+   new_body = CAST_TO(lump, OCCLump)->get_body();
+   return CUBIT_SUCCESS;   
+}
+ 
+CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
+                                  Surface * face1,
+                                  Surface * face2) const
+{
    OCCSurface* surf1 = CAST_TO(face1, OCCSurface);
-   OCCSurface* surf2 = CAST_TO(face2, OCCSurface); 
+   OCCSurface* surf2 = CAST_TO(face2, OCCSurface);
    if(!surf1 || !surf2)
    {
      PRINT_ERROR("Surfaces are not OCC type.\n");
@@ -6026,19 +6061,9 @@ CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * face1,
      PRINT_ERROR("Surfaces can't be loft into a body.\n");
      return CUBIT_FAILURE;
    }
-   TopoDS_Shape shape = loft.Shape();
-   TopoDS_Solid solid = TopoDS::Solid(shape);
-   Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(solid);
-   if (lump == NULL)
-   {
-     PRINT_ERROR("In OCCModifyEngine::loft_surfaces_to_body\n"
-                 "   Cannot create a loft body for given surfaces.\n");
-     return CUBIT_FAILURE;
-   }
-   new_body = CAST_TO(lump, OCCLump)->get_body();
-   return CUBIT_SUCCESS;   
-}
- 
+   return CUBIT_SUCCESS;
+}  
+
 //================================================================================
 // Description: Creates a surface.
 // Author     : Tyronne Lim

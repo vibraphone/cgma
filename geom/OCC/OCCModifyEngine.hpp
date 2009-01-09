@@ -29,6 +29,7 @@ class TopoDS_Edge;
 class TopoDS_Face;
 class CubitBox;
 class BRepAlgoAPI_BooleanOperation;
+class BRepOffsetAPI_ThruSections;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {
@@ -680,8 +681,14 @@ protected:
  CubitStatus stitch_surfs(DLIList<BodySM*>& surf_bodies,
                           TopoDS_Shape& stitched_shape) const;
 private:
+
+ CubitStatus do_loft(BRepOffsetAPI_ThruSections& loft,
+                     Surface * face1,
+                     Surface * face2) const;
+
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
+
  CubitStatus get_shape_list(DLIList<BodySM*>& BodySM_list,
                          DLIList<TopoDS_Shape*>& shape_list,
                          DLIList<CubitBoolean>& is_volume,
