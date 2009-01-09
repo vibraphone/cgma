@@ -97,5 +97,13 @@ MOSTLYCLEANFILES = \
 	unite2.occ \
 	unite3.occ \
 	unite5.occ \
-	unite6.occ 
+	unite6.occ \
+	proeexport.iges \
+	proe.occ \
+	diffuser.occ \
+	proeexport.step \
+	ex3export.step \
+	ex3.occ \
+	ex3export.iges
+
 
