@@ -4512,9 +4512,7 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   //tool_body is a const pointer points to varible BodySM object
   //here trying to create a non-const pointer points to the same BodySM object.
 
-  BodySM *body, *body2;
-  body = brick(1,1,1);
-  body2 = body;
+  BodySM *body;
   *body = *tool_body;
 
   CubitStatus stat = intersect(body, webcut_body_list, results_list,
@@ -4531,8 +4529,6 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   
   stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
                   CUBIT_TRUE);
-
-  OCCQueryEngine::instance()->delete_solid_model_entities(body2);
 
   return stat;
 }
