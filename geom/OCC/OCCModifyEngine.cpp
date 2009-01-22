@@ -3839,7 +3839,7 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
 // Author     : Jane Hu
 // Date       : 09/08
 //===============================================================================
-CubitStatus OCCModifyEngine:: sweep_translational(
+CubitStatus OCCModifyEngine::sweep_translational(
   DLIList<GeometryEntity*>& ref_ent_list,
   DLIList<BodySM*>& result_body_list,
   const CubitVector& sweep_vector,
@@ -3855,6 +3855,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
   //creating draft shell then make solid to achieve.
   //while if draft_angle is 0, and stop_surf = 0, to_body = 0
   // directly use sweep functions.
+  // mesh_size or mesh_scheme will only be preserved when it's not a draft.
   TopoDS_Shape *stop_shape = NULL;
   if(stop_surf)
   {
@@ -3875,6 +3876,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
   gp_Dir adir(sweep_vector.x(), sweep_vector.y(), sweep_vector.z());
   gp_Vec aVec(sweep_vector.x(), sweep_vector.y(), sweep_vector.z());
  
+  DLIList<TopoDS_Shape*> shape_list;
   for (int i = ref_ent_list.size(); i > 0; i--)
   {
     GeometryEntity *ref_ent = ref_ent_list.get_and_step();
@@ -3895,18 +3897,40 @@ CubitStatus OCCModifyEngine:: sweep_translational(
         continue;
     }
   
+    DLIList<CubitSimpleAttrib*> attribs;
+    if(surface)
+    {
+      surface->get_simple_attribute("MESH_SCHEME", attribs);
+      surface->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+    else if(curve)
+    {
+      curve->get_simple_attribute("MESH_SCHEME", attribs);
+      curve->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+
     DLIList<TopologyBridge*> tbs;
     //create the draft or the sweep
     if(stop_shape == NULL && draft_angle == 0.)
     {
       BRepSweep_Prism swept(toposhape, aVec);
       TopoDS_Shape new_shape = swept.Shape();
+      TopoDS_Shape bottom_shape = swept.FirstShape();
+      TopoDS_Shape top_shape = swept.LastShape();
+      assert(toposhape.IsEqual(bottom_shape) || toposhape.IsEqual(top_shape));
+
+      TopoDS_Shape the_other_shape = toposhape.IsEqual(bottom_shape)? top_shape:
+                                     bottom_shape;
+      for(int i = 0; i < attribs.size(); i++)
+        OCCAttribSet::append_attribute(attribs.get_and_step(), the_other_shape);
+
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
       assert(tbs.size() == 1);
 
       BodySM* bodysm = CAST_TO(tbs.get(), BodySM); 
       if (bodysm)
         result_body_list.append(bodysm);
+      
       continue;
     }
 
@@ -3995,7 +4019,10 @@ CubitStatus OCCModifyEngine:: sweep_translational(
        }
     }
     if (bodysm)
+    {
+      shape_list.append(&toposhape);
       result_body_list.append(bodysm);
+    }
   }
   return CUBIT_SUCCESS; 
 }
@@ -4007,6 +4034,10 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
   loops =  curve->loops();
   if( loops.size()) //not a free curve
   {
+    DLIList<CubitSimpleAttrib*> attribs;
+    curve->get_simple_attribute("MESH_INTERVAL",attribs);
+    curve->get_simple_attribute("MESH_SCHEME",attribs);
+
     //copy the curve
     Curve* c_curve = make_Curve(curve);
     if(c_curve)
@@ -4016,6 +4047,9 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
       PRINT_ERROR("Can't copy the curve for sweep.\n");
       return CUBIT_FAILURE;
     }
+    //copy mesh size/interval attributes too
+    for(int i = 0 ; i < attribs.size(); i++)
+       curve->append_simple_attribute_virt(attribs.get_and_step());    
   }
   TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
   toposhape = BRepBuilderAPI_MakeWire(*edge);
@@ -4034,6 +4068,10 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
     //check if the surface is sheet body, if not, copy it.
     if(surface->my_body() == NULL) //not a sheet body
     {
+      DLIList<CubitSimpleAttrib*> attribs;
+      surface->get_simple_attribute("MESH_INTERVAL",attribs);
+      surface->get_simple_attribute("MESH_SCHEME",attribs);  
+
       c_surface = make_Surface(surface);
       if (c_surface == NULL)
       {
@@ -4041,6 +4079,9 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
          return CUBIT_FAILURE;
       }
       surface = CAST_TO(c_surface, OCCSurface);
+
+      for(int i = 0; i < attribs.size(); i++)
+        surface->append_simple_attribute_virt(attribs.get_and_step());
     }
  
     if(sweep_v_p)
@@ -4150,7 +4191,7 @@ CubitStatus OCCModifyEngine:: sweep_perpendicular(
 // Author     : Jane Hu 
 // Date       : 10/08
 //===============================================================================
-CubitStatus OCCModifyEngine:: sweep_rotational(
+CubitStatus OCCModifyEngine::sweep_rotational(
   DLIList<GeometryEntity*>& ref_ent_list,
   DLIList<BodySM*>& result_body_list,
   const CubitVector& point,
@@ -4263,6 +4304,19 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
       PRINT_ERROR("Only surface or curve can be revolve-swept.\n");
       continue;
     }
+
+    DLIList<CubitSimpleAttrib*> attribs;
+    if(surface)
+    {
+      surface->get_simple_attribute("MESH_SCHEME", attribs);
+      surface->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+    else if(curve)
+    {
+      curve->get_simple_attribute("MESH_SCHEME", attribs);
+      curve->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+
     TopoDS_Shape new_shape;
     DLIList<TopologyBridge*> tbs;
     if(make_solid && curve != NULL )
@@ -4323,6 +4377,15 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
     }
     BRepSweep_Revol revol(toposhape, axis, angle);
     new_shape = revol.Shape();
+
+    TopoDS_Shape bottom_shape = revol.FirstShape();
+    TopoDS_Shape top_shape = revol.LastShape();
+    assert(toposhape.IsEqual(bottom_shape) || toposhape.IsEqual(top_shape));
+
+    TopoDS_Shape the_other_shape = toposhape.IsEqual(bottom_shape)? top_shape:
+                                   bottom_shape;
+    for(int i = 0; i < attribs.size(); i++)
+      OCCAttribSet::append_attribute(attribs.get_and_step(), the_other_shape);
 
     tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
     assert(tbs.size() == 1);
@@ -4426,6 +4489,19 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
         continue;
     }
 
+    DLIList<CubitSimpleAttrib*> attribs;
+    if(surface)
+    {
+      surface->get_simple_attribute("MESH_SCHEME", attribs);
+      surface->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+    else if(curve)
+    {
+      curve->get_simple_attribute("MESH_SCHEME", attribs);
+      curve->get_simple_attribute("MESH_INTERVAL", attribs);
+    }
+
+    DLIList<TopologyBridge*> tbs;
     //sweep along the wire
     BRepOffsetAPI_MakePipe maker(wire, toposhape);
     if(!maker.IsDone())
@@ -4434,7 +4510,17 @@ CubitStatus OCCModifyEngine::sweep_along_curve(
       continue;
     }
     TopoDS_Shape newShape = maker.Shape();
-    
+
+    TopoDS_Shape bottom_shape = maker.FirstShape();
+    TopoDS_Shape top_shape = maker.LastShape();
+
+    for(int i = 0; i < attribs.size(); i++)
+    {
+      CubitSimpleAttrib* attrib = attribs.get_and_step();
+      OCCAttribSet::append_attribute(attrib, bottom_shape);
+      OCCAttribSet::append_attribute(attrib, top_shape);
+    } 
+
     tbs += OCCQueryEngine::instance()->populate_topology_bridge(newShape);
     assert(tbs.size() == 1);
 

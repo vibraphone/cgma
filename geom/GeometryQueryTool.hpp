@@ -44,7 +44,6 @@ class CoEdgeSM;
 
 class GeometryEntity;
 
-class RefGroup;
 
 class TopologyEntity;
 class TopologyBridge;
