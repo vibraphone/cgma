@@ -269,7 +269,7 @@ bool gLoad_test(const std::string filename, iGeom_Instance geom)
   iGeom_load( geom, &filename[0], 0, &err, filename.length(), 0 );
   CHECK( "ERROR : can not load a geometry" );
   
-  iBase_EntityHandle root_set;
+  iBase_EntitySetHandle root_set;
   iGeom_getRootSet( geom, &root_set, &err );
   CHECK( "ERROR : getRootSet failed!" );
   
@@ -308,7 +308,7 @@ bool tag_info_test(iGeom_Instance geom)
 {
   int err;
   
-  iBase_EntityHandle root_set;
+  iBase_EntitySetHandle root_set;
   iGeom_getRootSet( geom, &root_set, &err );
   CHECK( "ERROR : getRootSet failed!" );
 
@@ -405,7 +405,7 @@ bool tag_get_set_test(iGeom_Instance geom)
   iGeom_createTag( geom, &tag_name[0], sizeof(int), iBase_BYTES, &this_tag, &err, tag_name.length() );
   CHECK( "ERROR : can not create a tag for get_set test." );
   
-  iBase_EntityHandle root_set;
+  iBase_EntitySetHandle root_set;
   iGeom_getRootSet( geom, &root_set, &err );
   CHECK( "ERROR : getRootSet failed!" );
   
@@ -471,7 +471,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   int ent_type = iBase_VERTEX;
 
   int err;
-  iBase_EntityHandle root_set;
+  iBase_EntitySetHandle root_set;
   iGeom_getRootSet( geom, &root_set, &err );
   CHECK( "ERROR : getRootSet failed!" );
   
@@ -492,7 +492,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     CHECK( "Failed to get gentities by type in gentityset_test." );
     
       // add gentities into gentity set
-    iGeom_addEntArrToSet( geom, ARRAY_IN( gentities ), &ges_array[ent_type], &err );
+    iGeom_addEntArrToSet( geom, ARRAY_IN( gentities ), ges_array[ent_type], &err );
     CHECK( "Failed to add gentities in entityset_test." );
     
       // Check to make sure entity set really has correct number of entities in it
@@ -519,7 +519,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   CHECK( "Failed to create a super set in gentityset_test." );
 
   for (int i = 0; i < num_type; i++) {
-    iGeom_addEntSet( geom, ges_array[i], &super_set, &err );
+    iGeom_addEntSet( geom, ges_array[i], super_set, &err );
     CHECK( "Failed to create a super set in gentityset_test." );
   }
 
@@ -537,7 +537,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   CHECK( "Failed to get gedge gentities in gentityset_test." );
 
     // add EDGEs to ges1
-  iGeom_addEntArrToSet( geom, ARRAY_IN(gedges), &temp_ges1, &err );
+  iGeom_addEntArrToSet( geom, ARRAY_IN(gedges), temp_ges1, &err );
   CHECK( "Failed to add gedge gentities in gentityset_test." );
 
     // get all FACE gentities
@@ -545,7 +545,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   CHECK( "Failed to get gface gentities in gentityset_test." );
 
     // add FACEs to es1
-  iGeom_addEntArrToSet( geom, ARRAY_IN(gfaces), &temp_ges1, &err );
+  iGeom_addEntArrToSet( geom, ARRAY_IN(gfaces), temp_ges1, &err );
   CHECK( "Failed to add gface gentities in gentityset_test." );
 
     // subtract EDGEs
@@ -574,7 +574,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     //
 
     // clean out the temp_ges1
-  iGeom_rmvEntArrFromSet( geom, ARRAY_IN(gfaces), &temp_ges1, &err );
+  iGeom_rmvEntArrFromSet( geom, ARRAY_IN(gfaces), temp_ges1, &err );
   CHECK( "Failed to remove gface gentities in gentityset_test." );
 
     // check if it is really cleaned out
@@ -587,11 +587,11 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   }
   
     // add EDGEs to temp ges1
-  iGeom_addEntArrToSet( geom, ARRAY_IN(gedges), &temp_ges1, &err );
+  iGeom_addEntArrToSet( geom, ARRAY_IN(gedges), temp_ges1, &err );
   CHECK( "Failed to add gedge gentities in gentityset_test." );
 
     // add FACEs to temp ges1
-  iGeom_addEntArrToSet( geom, ARRAY_IN(gfaces), &temp_ges1, &err );
+  iGeom_addEntArrToSet( geom, ARRAY_IN(gfaces), temp_ges1, &err );
   CHECK( "Failed to add gface gentities in gentityset_test." );
 
     // intersect temp_ges1 with gedges set 
@@ -622,7 +622,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   CHECK( "Failed to get gregion gentities in gentityset_test." );
   
     // add REGIONs to temp es2
-  iGeom_addEntArrToSet( geom, ARRAY_IN(gregions), &temp_ges2, &err );
+  iGeom_addEntArrToSet( geom, ARRAY_IN(gregions), temp_ges2, &err );
   CHECK( "Failed to add gregion gentities in gentityset_test." );
 
     // unite temp_ges1 and temp_ges2
@@ -647,7 +647,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   iGeom_createEntSet( geom, true, &parent_child, &err );
   CHECK( "Problem creating gentityset in gentityset_test." );
 
-  iGeom_addPrntChld( geom, &ges_array[iBase_VERTEX], &parent_child, &err );
+  iGeom_addPrntChld( geom, ges_array[iBase_VERTEX], parent_child, &err );
   CHECK( "Problem add parent in gentityset_test." );
 
     // check if parent is really added
@@ -668,17 +668,17 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   //int num_temp_gedge_array;
   //parent_child_array.set(0, parent_child);
   //temp_gedge_array.set(0, ges_array[TSTTG::EntityType_EDGE]);
-  iGeom_addPrntChld( geom, &ges_array[iBase_EDGE], &parent_child, &err );
+  iGeom_addPrntChld( geom, ges_array[iBase_EDGE], parent_child, &err );
   CHECK( "Problem adding parent and child in gentityset_test." );
 
   //sidl::array<void*> temp_gface_array = sidl::array<void*>::create1d(1);
   //int num_temp_gface_array;
   //temp_gface_array.set(0, ges_array[TSTTG::EntityType_FACE]);
-  iGeom_addPrntChld( geom, &parent_child, &ges_array[iBase_FACE], &err );
+  iGeom_addPrntChld( geom, parent_child, ges_array[iBase_FACE], &err );
   CHECK( "Problem adding parent and child in gentityset_test." );
 
     // add child
-  iGeom_addPrntChld( geom, &parent_child, &ges_array[iBase_REGION], &err );
+  iGeom_addPrntChld( geom, parent_child, ges_array[iBase_REGION], &err );
   CHECK( "Problem adding child in gentityset_test." );
 
     // get the number of parent gentitysets
@@ -714,7 +714,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   }
 
     // remove children
-  iGeom_rmvPrntChld( geom, &parent_child, &ges_array[iBase_FACE], &err );
+  iGeom_rmvPrntChld( geom, parent_child, ges_array[iBase_FACE], &err );
   CHECK( "Problem removing parent child in gentityset_test." );
 
     // get the number of child gentitysets
@@ -775,7 +775,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   }
 
     // get all entities in super set
-  SimpleArray<iBase_EntityHandle> all_gentities;
+  SimpleArray<iBase_EntitySetHandle> all_gentities;
   iGeom_getEntSets( geom, super_set, 1, ARRAY_INOUT( all_gentities ), &err );
   CHECK( "Problem to get all gentities in super set." );
   
@@ -795,7 +795,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     iBase_EntitySetHandle ges_k = ges_array1[k];
 
     for (int a = 0; a < ges_array1.size(); a++) {
-      iGeom_addEntSet( geom, ges_array1[a], &ges_k, &err );
+      iGeom_addEntSet( geom, ges_array1[a], ges_k, &err );
       CHECK( "Problem to add entity set." );
     }
     
@@ -805,7 +805,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     //superset_array.set(0, super_set);
     //int num_superset_array;
     
-    iGeom_addEntSet( geom, super_set, &ges_k, &err );
+    iGeom_addEntSet( geom, super_set, ges_k, &err );
     CHECK( "Problem to add super set to gentitysets." );
 
       // add one gentity sets multiple times
@@ -816,7 +816,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     //temp_array1.set(0, temp_ges1);
 
     //for (int l = 0; l < 3; l++) {
-    iGeom_addEntSet( geom, temp_ges1, &ges_k, &err );
+    iGeom_addEntSet( geom, temp_ges1, ges_k, &err );
     CHECK( "Problem to add temp set to gentitysets." );
       //}
   }
@@ -835,7 +835,7 @@ TSTTG topology adjacencies Test
 bool topology_adjacencies_test(iGeom_Instance geom)
 {
   int i, err;
-  iBase_EntityHandle root_set;
+  iBase_EntitySetHandle root_set;
   iGeom_getRootSet( geom, &root_set, &err );
   CHECK( "ERROR : getRootSet failed!" );
 

@@ -2,16 +2,16 @@
 // File:          iGeom_SIDL_GeomSidl_Impl.cc
 // Symbol:        iGeom_SIDL.GeomSidl-v0.1
 // Symbol Type:   class
-// Babel Version: 0.10.12
-// sidl Created:  20070626 21:46:23 CDT
-// Generated:     20070626 21:46:35 CDT
+// Babel Version: 0.10.10
+// sidl Created:  20090126 13:13:24 CST
+// Generated:     20090126 13:13:26 CST
 // Description:   Server-side implementation for iGeom_SIDL.GeomSidl
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
-// babel-version = 0.10.12
+// babel-version = 0.10.10
 // source-line   = 5
-// source-url    = file:/home/tautges/CGMnew/itaps/SIDL/iGeom_SIDL.sidl
+// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iGeom_SIDL.sidl
 // 
 #include "iGeom_SIDL_GeomSidl_Impl.hh"
 
@@ -952,7 +952,7 @@ throw (
 void
 iGeom_SIDL::GeomSidl_impl::addEntToSet (
   /* in */ void* entity_handle,
-  /* inout */ void*& entity_set ) 
+  /* in */ void* entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -971,7 +971,7 @@ throw (
 void
 iGeom_SIDL::GeomSidl_impl::rmvEntFromSet (
   /* in */ void* entity_handle,
-  /* inout */ void*& entity_set ) 
+  /* in */ void* entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -991,7 +991,7 @@ void
 iGeom_SIDL::GeomSidl_impl::addEntArrToSet (
   /* in */ ::sidl::array<void*> entity_handles,
   /* in */ int32_t entity_handles_size,
-  /* inout */ void*& entity_set ) 
+  /* in */ void* entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -1014,7 +1014,7 @@ void
 iGeom_SIDL::GeomSidl_impl::rmvEntArrFromSet (
   /* in */ ::sidl::array<void*> entity_handles,
   /* in */ int32_t entity_handles_size,
-  /* inout */ void*& entity_set ) 
+  /* in */ void* entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -1032,7 +1032,7 @@ throw (
 void
 iGeom_SIDL::GeomSidl_impl::addEntSet (
   /* in */ void* entity_set_to_add,
-  /* inout */ void*& entity_set_handle ) 
+  /* in */ void* entity_set_handle ) 
 throw ( 
   ::iBase::Error
 ){
@@ -1050,7 +1050,7 @@ throw (
 void
 iGeom_SIDL::GeomSidl_impl::rmvEntSet (
   /* in */ void* entity_set_to_remove,
-  /* inout */ void*& entity_set_handle ) 
+  /* in */ void* entity_set_handle ) 
 throw ( 
   ::iBase::Error
 ){
@@ -1085,6 +1085,23 @@ throw (
 }
 
 /**
+ * Method:  isEntArrContained[]
+ */
+void
+iGeom_SIDL::GeomSidl_impl::isEntArrContained (
+  /* in */ void* containing_set,
+  /* in */ ::sidl::array<void*> entity_handles,
+  /* in */ int32_t entity_handles_size,
+  /* inout */ ::sidl::array<int32_t>& is_contained,
+  /* out */ int32_t& is_contained_size ) 
+throw () 
+{
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntArrContained)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntArrContained} (isEntArrContained method)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntArrContained)
+}
+
+/**
  * Method:  isEntSetContained[]
  */
 void
@@ -1110,8 +1127,8 @@ throw (
  */
 void
 iGeom_SIDL::GeomSidl_impl::addPrntChld (
-  /* inout */ void*& parent_entity_set,
-  /* inout */ void*& child_entity_set ) 
+  /* in */ void* parent_entity_set,
+  /* in */ void* child_entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -1127,8 +1144,8 @@ throw (
  */
 void
 iGeom_SIDL::GeomSidl_impl::rmvPrntChld (
-  /* inout */ void*& parent_entity_set,
-  /* inout */ void*& child_entity_set ) 
+  /* in */ void* parent_entity_set,
+  /* in */ void* child_entity_set ) 
 throw ( 
   ::iBase::Error
 ){
@@ -2629,34 +2646,6 @@ throw (
                        TEMP_ARRAY_INOUT(sense));
   PROCESS_ERROR;
   ASSIGN_ARRAY(sense);
-    // DO-NOT-DELETE splicer.end(iGeom_CGM.CgmGeom.getEgVtxArrSense)
-}
-
-/**
- * Return the arc length / area / volume of the entities
- * @param gentity_handles Entities for which measure is requested
- * @param gentity_handles_size Number of gentities
- * @param measures Arc length / area / volume of the entities
- * @param measures_length Number of entries in measures
- */
-void
-iGeom_CGM::CgmGeom_impl::measure (
-  /* in */ ::sidl::array<void*> gentity_handles,
-  /* in */ int32_t gentity_handles_size,
-  /* inout */ ::sidl::array<double>& measures,
-  /* inout */ int32_t& measures_size ) 
-throw ( 
-  ::iBase::Error
-){
-  // DO-NOT-DELETE splicer.begin(iGeom_CGM.CgmGeom.measure)
-  CREATE_TEMP_ARRAY(double, measures);
-  
-  iGeom_measure(igeomInstance, 
-                       TEMP_ARRAY_IN(gentity_handles),
-                       TEMP_ARRAY_INOUT(measures));
-  PROCESS_ERROR;
-
-  ASSIGN_ARRAY(measures);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getParametric)
 }
 
@@ -2677,52 +2666,7 @@ throw (
   iGeom_getFaceType(igeomInstance, gface_handle, &this_type);
   if (NULL != this_type) face_type = this_type;
   PROCESS_ERROR;
-    // DO-NOT-DELETE splicer.end(iGeom_CGM.CgmGeom.getEgVtxArrSense)
-}
-
-/**
- * Return the arc length / area / volume of the entities
- * @param gentity_handles Entities for which measure is requested
- * @param gentity_handles_size Number of gentities
- * @param measures Arc length / area / volume of the entities
- * @param measures_length Number of entries in measures
- */
-void
-iGeom_CGM::CgmGeom_impl::measure (
-  /* in */ ::sidl::array<void*> gentity_handles,
-  /* in */ int32_t gentity_handles_size,
-  /* inout */ ::sidl::array<double>& measures,
-  /* inout */ int32_t& measures_size ) 
-throw ( 
-  ::iBase::Error
-){
-  // DO-NOT-DELETE splicer.begin(iGeom_CGM.CgmGeom.measure)
-  CREATE_TEMP_ARRAY(double, measures);
-  int32_t retval = iGeom_getParametric();
-  PROCESS_ERROR;
-  return retval;
-  // DO-NOT-DELETE splicer.end(iGeom_CGM.CgmGeom.measure)
-}
-
-/**
- * Return the type of surface as a string; if not a surface, an error is returned
- * @param face_handle Face for which the type is requested
- * @param face_type Type of face, returned as a string
- */
-void
-iGeom_CGM::CgmGeom_impl::getFaceType (
-  /* in */ void* gface_handle,
-  /* inout */ ::std::string& face_type ) 
-throw ( 
-  ::iBase::Error
-){
-  // DO-NOT-DELETE splicer.begin(iGeom_CGM.CgmGeom.getFaceType)
-  const char *this_type = NULL;
-  int32_t retval = iGeom_isEntParametric (igeomInstance, 
-                                              gentity_handle);
-  PROCESS_ERROR;
-  return retval;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntParametric)
+    // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntParametric)
 }
 
 /**
@@ -4232,7 +4176,7 @@ throw (
 // Insert-Code-Here {iGeom_SIDL.GeomSidl._misc} (miscellaneous code)
 // call this function when you want to throw an error
 void
-iGeom_CGM::CgmGeom_impl::processError() throw(::iBase::Error)
+iGeom_SIDL::GeomSidl_impl::processError() throw(::iBase::Error)
 {
   static void *behavior_tag = NULL;
   static ::iBase::ErrorActions action = ::iBase::ErrorActions_THROW_ERROR;
@@ -4265,3 +4209,24 @@ iGeom_CGM::CgmGeom_impl::processError() throw(::iBase::Error)
 }
 // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._misc)
 
+#error File has unused splicer blocks.
+/**
+ * ================= BEGIN UNREFERENCED METHOD(S) ================
+ * The following code segment(s) belong to unreferenced method(s).
+ * This can result from a method rename/removal in the sidl file.
+ * Move or remove the code in order to compile cleanly.
+ */
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl_impl.getFaceType)
+  const char *this_type = NULL;
+  int32_t retval = iGeom_isEntParametric (igeomInstance, 
+                                              gentity_handle);
+  PROCESS_ERROR;
+  return retval;
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl_impl.getFaceType)
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl_impl.measure)
+  CREATE_TEMP_ARRAY(double, measures);
+  int32_t retval = iGeom_getParametric();
+  PROCESS_ERROR;
+  return retval;
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl_impl.measure)
+// ================== END UNREFERENCED METHOD(S) =================

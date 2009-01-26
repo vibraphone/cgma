@@ -276,7 +276,7 @@ void iGeom_newGeom( const char* options,
     RETURN (iBase_FAILURE);
 
     // return the tagmanager as the instance
-  *instance_out = &CGMTagManager::instance();
+  *instance_out = reinterpret_cast<iGeom_Instance>(&CGMTagManager::instance());
   RETURN(iBase_SUCCESS);
 }
 
@@ -443,7 +443,9 @@ void iGeom_initEntIter ( iGeom_Instance instance,
                          iGeom_EntityIterator *iterator,
                          int* err)
 {
-  iGeom_initEntArrIter( instance, entity_set_handle, dimension, 1, iterator, err );
+  iGeom_initEntArrIter( instance, entity_set_handle, dimension, 1, 
+                        reinterpret_cast<iGeom_EntityArrIterator*>(iterator), 
+                        err );
 }
 
 void
@@ -451,7 +453,7 @@ iGeom_initEntArrIter (iGeom_Instance instance,
                       /*in*/ iBase_EntitySetHandle entity_set_handle,
                       /*in*/ int type,
                       /*in*/ int requested_array_size,
-                      /*out*/ iGeom_EntityIterator* entArr_iterator,
+                      /*out*/ iGeom_EntityArrIterator* entArr_iterator,
                       int* err)
 {
   DLIList<RefEntity*> entities;
@@ -488,7 +490,7 @@ iGeom_initEntArrIter (iGeom_Instance instance,
       entities, CUBIT_FALSE);
   
   CGMAIterator* iter = new CGMAIterator(entities, requested_array_size);
-  *entArr_iterator = reinterpret_cast<iGeom_EntityIterator>(iter);
+  *entArr_iterator = reinterpret_cast<iGeom_EntityArrIterator>(iter);
   RETURN(iBase_SUCCESS);
 }
 
@@ -517,7 +519,7 @@ iGeom_getNextEntIter (iGeom_Instance instance,
 
 void
 iGeom_getNextEntArrIter(iGeom_Instance instance,
-                        /*in*/ iGeom_EntityIterator entArr_iterator,
+                        /*in*/ iGeom_EntityArrIterator entArr_iterator,
                         /*inout*/ iBase_EntityHandle **entity_handles,
                         int *entity_handles_allocated,
                         int *entity_handles_size,
@@ -547,7 +549,7 @@ iGeom_resetEntIter(iGeom_Instance instance,
 
 void
 iGeom_resetEntArrIter(iGeom_Instance instance,
-                      /*in*/ iGeom_EntityIterator gentity_iterator,
+                      /*in*/ iGeom_EntityArrIterator gentity_iterator,
                       int* err
                       )
 {
@@ -572,7 +574,7 @@ iGeom_endEntIter (iGeom_Instance instance,
 
 void
 iGeom_endEntArrIter (iGeom_Instance instance,
-                     /*in*/ iGeom_EntityIterator gentity_iterator,
+                     /*in*/ iGeom_EntityArrIterator gentity_iterator,
                      int* err)
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
@@ -629,10 +631,11 @@ iGeom_getChldn (iGeom_Instance instance,
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
   TM->get_pc_groups(const_cast<RefGroup*>(this_grp), 1, num_hops, group_ptrs);
-  CHECK_SIZE(*entity_set_handles, iBase_EntityHandle, 
+  CHECK_SIZE(*entity_set_handles, iBase_EntitySetHandle, 
              (int)group_ptrs.size());
 
-  std::copy(group_ptrs.begin(), group_ptrs.end(), *entity_set_handles);
+  iBase_EntitySetHandle* ent_arr = reinterpret_cast<iBase_EntitySetHandle*>(&group_ptrs[0]);
+  std::copy( ent_arr, ent_arr + group_ptrs.size(), *entity_set_handles);
   
   RETURN(iBase_SUCCESS);
 }
@@ -653,10 +656,11 @@ iGeom_getPrnts (iGeom_Instance instance,
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
   TM->get_pc_groups(const_cast<RefGroup*>(this_grp), 0, num_hops, group_ptrs);
-  CHECK_SIZE(*entity_set_handles, iBase_EntityHandle, 
+  CHECK_SIZE(*entity_set_handles, iBase_EntitySetHandle, 
              (int)group_ptrs.size());
 
-  std::copy(group_ptrs.begin(), group_ptrs.end(), *entity_set_handles);
+  iBase_EntitySetHandle* ent_arr = reinterpret_cast<iBase_EntitySetHandle*>(&group_ptrs[0]);
+  std::copy( ent_arr, ent_arr + group_ptrs.size(), *entity_set_handles);
   RETURN(iBase_SUCCESS);
 }
 
@@ -707,16 +711,16 @@ iGeom_getNumPrnt (iGeom_Instance instance,
  */
 void
 iGeom_addPrntChld (iGeom_Instance instance,
-                   /*inout*/ iBase_EntitySetHandle *parent_entity_set,
-                   /*inout*/ iBase_EntitySetHandle *child_entity_set,
+                   /*inout*/ iBase_EntitySetHandle parent_entity_set,
+                   /*inout*/ iBase_EntitySetHandle child_entity_set,
                    int* err)
 {
   std::vector<RefGroup*> *my_parents = 
-    TM->pc_list(SET_HANDLE(*child_entity_set), 0, true);
+    TM->pc_list(SET_HANDLE(child_entity_set), 0, true);
   std::vector<RefGroup*> *my_children = 
-    TM->pc_list(SET_HANDLE(*parent_entity_set), 1, true);
-  RefGroup *par_group = SET_HANDLE(*parent_entity_set);
-  RefGroup *child_group = SET_HANDLE(*child_entity_set);
+    TM->pc_list(SET_HANDLE(parent_entity_set), 1, true);
+  RefGroup *par_group = SET_HANDLE(parent_entity_set);
+  RefGroup *child_group = SET_HANDLE(child_entity_set);
   my_parents->push_back(par_group);
   my_children->push_back(child_group);
   RETURN(iBase_SUCCESS);
@@ -727,12 +731,12 @@ iGeom_addPrntChld (iGeom_Instance instance,
  */
 void
 iGeom_rmvPrntChld (iGeom_Instance instance,
-                   /*inout*/ iBase_EntitySetHandle *parent_entity_set,
-                   /*inout*/ iBase_EntitySetHandle *child_entity_set,
+                   /*inout*/ iBase_EntitySetHandle parent_entity_set,
+                   /*inout*/ iBase_EntitySetHandle child_entity_set,
                    int* err)
 {
-  RefGroup *parent = reinterpret_cast<RefGroup *>(*parent_entity_set);
-  RefGroup *child = reinterpret_cast<RefGroup *>(*child_entity_set);
+  RefGroup *parent = reinterpret_cast<RefGroup *>(parent_entity_set);
+  RefGroup *child = reinterpret_cast<RefGroup *>(child_entity_set);
   std::vector<RefGroup*> *children = TM->pc_list(parent, 1, false),
     *parents = TM->pc_list(child, 0, false);
   if (NULL == children || NULL == parents) {
@@ -1252,7 +1256,7 @@ iGeom_getTagHandle (iGeom_Instance instance,
     // make sure string is null-terminated
   std::string tag_name_buf( tag_name, tag_name_len );
   tag_name = tag_name_buf.c_str();
-  *tag_handle = reinterpret_cast<void*>(static_cast<size_t>(TM->getTagHandle( tag_name )));
+  *tag_handle = reinterpret_cast<iBase_TagHandle>(static_cast<size_t>(TM->getTagHandle( tag_name )));
   RETURN(iBase_SUCCESS);
 }
 
@@ -1369,7 +1373,7 @@ iGeom_getEHArrData (iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *entity_handles,
                     int entity_handles_size,
                     /*in*/ iBase_TagHandle tag_handle,
-                    /*inout*/ void* **tag_value,
+                    /*inout*/ iBase_EntityHandle **tag_value,
                     int *tag_value_allocated,
                     int *tag_value_size,
                     int* err)
@@ -1625,7 +1629,7 @@ iGeom_getEntSetData (iGeom_Instance instance,
 
 void
 iGeom_getEntSetIntData (iGeom_Instance instance,
-                        /*in*/ iBase_EntityHandle entity_set,
+                        /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         int* tag_ptr,
                         int* err ) 
@@ -1638,7 +1642,7 @@ iGeom_getEntSetIntData (iGeom_Instance instance,
 
 void
 iGeom_getEntSetDblData (iGeom_Instance instance,
-                        /*in*/ iBase_EntityHandle entity_set,
+                        /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         double* tag_ptr,
                         int* err ) 
@@ -1650,7 +1654,7 @@ iGeom_getEntSetDblData (iGeom_Instance instance,
 }
 void
 iGeom_getEntSetEHData (iGeom_Instance instance,
-                       /*in*/ iBase_EntityHandle entity_set,
+                       /*in*/ iBase_EntitySetHandle entity_set,
                        /*in*/ iBase_TagHandle tag_handle,
                        iBase_EntityHandle* tag_ptr,
                        int* err ) 
@@ -1682,7 +1686,7 @@ iGeom_setEntSetData (iGeom_Instance instance,
 
 void
 iGeom_setEntSetIntData (iGeom_Instance instance,
-                        /*in*/ iBase_EntityHandle entity_set,
+                        /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         /*in*/ int tag_value,
                         int* err ) 
@@ -1695,7 +1699,7 @@ iGeom_setEntSetIntData (iGeom_Instance instance,
 
 void
 iGeom_setEntSetDblData (iGeom_Instance instance,
-                        /*in*/ iBase_EntityHandle entity_set,
+                        /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         /*in*/ double tag_value,
                         int* err ) 
@@ -3483,7 +3487,8 @@ iGeom_createEntSet (iGeom_Instance instance,
                     /*out*/ iBase_EntitySetHandle *entity_set,
                     int* err)
 {
-  *entity_set = RefEntityFactory::instance()->construct_RefGroup();
+  RefGroup* grp = RefEntityFactory::instance()->construct_RefGroup();
+  *entity_set = reinterpret_cast<iBase_EntitySetHandle>(grp);
     // need to set a tag denoting multiset or not...
   if (*entity_set == NULL) {
     RETURN(iBase_FAILURE);
@@ -3541,10 +3546,10 @@ iGeom_isList (iGeom_Instance instance,
 void
 iGeom_addEntSet (iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle entity_set_to_add,
-                 /*inout*/ iBase_EntitySetHandle *entity_set_handle,
+                 /*inout*/ iBase_EntitySetHandle entity_set_handle,
                  int* err)
 {
-  iGeom_addEntToSet(instance, entity_set_to_add, entity_set_handle, err);
+  iGeom_addEntToSet(instance, reinterpret_cast<iBase_EntityHandle>(entity_set_to_add), entity_set_handle, err);
 }
 
 /**
@@ -3558,10 +3563,10 @@ iGeom_addEntSet (iGeom_Instance instance,
 void
 iGeom_rmvEntSet (iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle entity_set_to_remove,
-                 /*inout*/ iBase_EntitySetHandle *entity_set_handle,
+                 /*inout*/ iBase_EntitySetHandle entity_set_handle,
                  int* err)
 {
-  iGeom_rmvEntFromSet(instance, entity_set_to_remove, entity_set_handle, err);
+  iGeom_rmvEntFromSet(instance, reinterpret_cast<iBase_EntityHandle>(entity_set_to_remove), entity_set_handle, err);
 }
 
 /**
@@ -3576,12 +3581,12 @@ iGeom_rmvEntSet (iGeom_Instance instance,
 void
 iGeom_addEntToSet (iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle entity_to_add,
-                   /*inout*/ iBase_EntitySetHandle *entity_set_handle,
+                   /*inout*/ iBase_EntitySetHandle entity_set_handle,
                    int* err)
 {
   if (NULL == entity_to_add) RETURN(iBase_INVALID_ARGUMENT);
   
-  CubitStatus status = SET_HANDLE(*entity_set_handle)->
+  CubitStatus status = SET_HANDLE(entity_set_handle)->
     add_ref_entity(const_cast<RefEntity*>(ENTITY_HANDLE(entity_to_add)));
   
   if (CUBIT_SUCCESS != status) {
@@ -3602,12 +3607,12 @@ iGeom_addEntToSet (iGeom_Instance instance,
 void
 iGeom_rmvEntFromSet (iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_to_remove,
-                     /*inout*/ iBase_EntitySetHandle *entity_set_handle,
+                     /*inout*/ iBase_EntitySetHandle entity_set_handle,
                      int* err)
 {
-  if (NULL == *entity_set_handle) RETURN(iBase_INVALID_ARGUMENT);
+  if (NULL == entity_set_handle) RETURN(iBase_INVALID_ARGUMENT);
   
-  CubitStatus status = SET_HANDLE(*entity_set_handle)->
+  CubitStatus status = SET_HANDLE(entity_set_handle)->
     remove_ref_entity(const_cast<RefEntity*>(ENTITY_HANDLE(entity_to_remove)));
   if (CUBIT_SUCCESS != status) {
     ERROR(iBase_FAILURE, "Problem removing entity from a set.");
@@ -3645,7 +3650,9 @@ iGeom_isEntSetContained (iGeom_Instance instance,
                          int* is_contained,
                          int* err) 
 {
-  iGeom_isEntContained( instance, containing_entity_set, contained_entity_set, is_contained, err);
+  iGeom_isEntContained( instance, containing_entity_set, 
+                        reinterpret_cast<iBase_EntityHandle>(contained_entity_set),
+                        is_contained, err);
 }
 
 /**
@@ -3660,12 +3667,12 @@ void
 iGeom_addEntArrToSet (iGeom_Instance instance,
                       /*in*/ iBase_EntityHandle const* entity_handles,
                       int entity_handles_size,
-                      /*inout*/ iBase_EntitySetHandle *entity_set,
+                      /*inout*/ iBase_EntitySetHandle entity_set,
                       int* err)
 {
   if (NULL == entity_set) RETURN(iBase_INVALID_ARGUMENT);
 
-  RefGroup *this_set = SET_HANDLE(*entity_set);
+  RefGroup *this_set = SET_HANDLE(entity_set);
   RefEntity **ent_array = (RefEntity**)(entity_handles);
   CubitStatus status = CUBIT_SUCCESS, tmp_status;
   for (int i = 0; i < entity_handles_size; i++) {
@@ -3689,12 +3696,12 @@ void
 iGeom_rmvEntArrFromSet (iGeom_Instance instance,
                         /*in*/ iBase_EntityHandle const* entity_handles,
                         int entity_handles_size,
-                        /*inout*/ iBase_EntitySetHandle *entity_set,
+                        /*inout*/ iBase_EntitySetHandle entity_set,
                         int* err)
 {
   if (NULL == entity_set) RETURN(iBase_INVALID_ARGUMENT);
 
-  RefGroup *this_set = SET_HANDLE(*entity_set);
+  RefGroup *this_set = SET_HANDLE(entity_set);
   RefEntity **ent_array = (RefEntity**)(entity_handles);
   CubitStatus status = CUBIT_SUCCESS, tmp_status;
   for (int i = 0; i < entity_handles_size; i++) {
@@ -4987,7 +4994,7 @@ iGeom_subtract (iGeom_Instance instance,
   RefGroup *set3 = SET_HANDLE(*result_entity_set);
   if (NULL == set3) {
     set3 = RefEntityFactory::instance()->construct_RefGroup();
-    *result_entity_set = set3;
+    *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
     
   set3->subtract(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
@@ -5011,7 +5018,7 @@ iGeom_intersect (iGeom_Instance instance,
   RefGroup *set3 = SET_HANDLE(*result_entity_set);
   if (NULL == set3) {
     set3 = RefEntityFactory::instance()->construct_RefGroup();
-    *result_entity_set = set3;
+    *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
 
   set3->intersect(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
@@ -5035,7 +5042,7 @@ iGeom_unite (iGeom_Instance instance,
   RefGroup *set3 = SET_HANDLE(*result_entity_set);
   if (NULL == set3) {
     set3 = RefEntityFactory::instance()->construct_RefGroup();
-    *result_entity_set = set3;
+    *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
 
   set3->unite(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
@@ -5061,12 +5068,12 @@ iGeom_copyEnt (iGeom_Instance instance,
     }
 
     RefEntity *temp_entity = gmt->copy_body(this_body);
-    *geom_entity2 = temp_entity;
+    *geom_entity2 = reinterpret_cast<iBase_EntityHandle>(temp_entity);
   }
   else {
     RefEntity *this_ent = ENTITY_HANDLE(geom_entity);
     RefEntity *temp_entity = gmt->copy_refentity(this_ent);
-    *geom_entity2 = temp_entity;
+    *geom_entity2 = reinterpret_cast<iBase_EntityHandle>(temp_entity);
   }
 
   if (NULL == *geom_entity2) {
@@ -5115,7 +5122,7 @@ iGeom_sweepEntAboutAxis (iGeom_Instance instance,
       // HACK to get last entity created, because cgm doesn't return
       // body created by sweep
     RefEntity *new_body = RefEntityFactory::instance()->get_last_body();
-    *geom_entity2 = new_body;
+    *geom_entity2 = reinterpret_cast<iBase_EntityHandle>(new_body);
 
       // now we know it's succeeded, delete original body
     Body *this_body = dynamic_cast<TopologyEntity*>(this_ent)->body();
@@ -5175,7 +5182,7 @@ iGeom_createSphere( iGeom_Instance instance,
   }
   
   RefEntity* tmp_body = gmt->sphere( radius );
-  *geom_entity = tmp_body;
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(tmp_body);
   RETURN ((tmp_body ? iBase_SUCCESS : iBase_FAILURE));
 }
 
@@ -5196,7 +5203,7 @@ iGeom_createPrism( iGeom_Instance instance,
   }
   
   RefEntity* tmp_body = gmt->prism( height, n_sides, major_rad, minor_rad );
-  *geom_entity = tmp_body;
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(tmp_body);
   RETURN ((tmp_body ? iBase_SUCCESS :iBase_FAILURE));
 }
 
@@ -5223,7 +5230,7 @@ iGeom_createBrick (iGeom_Instance instance,
   }
     
   RefEntity *temp_body = gmt->brick(tmp_x, tmp_y, tmp_z);
-  *geom_entity = temp_body;
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(temp_body);
 
   if (NULL == *geom_entity) {
     RETURN(iBase_FAILURE);
@@ -5243,7 +5250,7 @@ iGeom_createCylinder (iGeom_Instance instance,
   double tmp_minor = (0.0 == minor_rad ? major_rad : minor_rad);
   RefEntity *temp_body = 
     gmt->cylinder(height, major_rad, tmp_minor, major_rad);
-  *geom_entity = temp_body;
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(temp_body);
 
 
   if (NULL == *geom_entity) {
@@ -5265,7 +5272,7 @@ iGeom_createTorus (iGeom_Instance instance,
   }
   
   RefEntity *temp_body = gmt->torus(major_rad, minor_rad);
-  *geom_entity = temp_body;
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(temp_body);
    
   if (NULL == *geom_entity) {
     RETURN(iBase_FAILURE);
@@ -5492,7 +5499,7 @@ iGeom_uniteEnts (iGeom_Instance instance,
   }
     
   else {
-    *geom_entity = dynamic_cast<RefEntity*>(new_bods.get());
+    *geom_entity = reinterpret_cast<iBase_EntityHandle>(dynamic_cast<RefEntity*>(new_bods.get()));
     for (int i = orig_bods.size(); i > 0; i--)
       gqt->delete_RefEntity(orig_bods.get_and_step());
   }
@@ -5530,7 +5537,7 @@ iGeom_subtractEnts (iGeom_Instance instance,
   }
   else {
     new_body = new_body_list.get();
-    *geom_entity = new_body;
+    *geom_entity = reinterpret_cast<iBase_EntityHandle>(new_body);
     gqt->delete_RefEntity(this_blank);
     gqt->delete_RefEntity(this_tool);
   }
@@ -5568,7 +5575,7 @@ iGeom_intersectEnts ( iGeom_Instance instance,
   }
   else {
     new_body = new_body_list.get();
-    *geom_entity = new_body;
+    *geom_entity = reinterpret_cast<iBase_EntityHandle>(new_body);
     gqt->delete_RefEntity(this_ent2);
     gqt->delete_RefEntity(this_ent1);
   }
@@ -5631,7 +5638,7 @@ iGeom_sectionEnt (iGeom_Instance instance,
   else {
       // need to assign it to a RE* first so the void cast gets done right
     RefEntity *new_body = new_body_list.get();
-    *geom_entity2 = new_body;
+    *geom_entity2 = reinterpret_cast<iBase_EntityHandle>(new_body);
       // also, delete the original body, now that the section worked
     gqt->delete_RefEntity(this_body);
   }
