@@ -2,16 +2,16 @@
 // File:          iGeom_SIDL_GeomSidl_Impl.hh
 // Symbol:        iGeom_SIDL.GeomSidl-v0.1
 // Symbol Type:   class
-// Babel Version: 0.10.12
-// sidl Created:  20070626 21:46:23 CDT
-// Generated:     20070626 21:46:35 CDT
+// Babel Version: 0.10.10
+// sidl Created:  20090126 13:13:24 CST
+// Generated:     20090126 13:13:26 CST
 // Description:   Server-side implementation for iGeom_SIDL.GeomSidl
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
-// babel-version = 0.10.12
+// babel-version = 0.10.10
 // source-line   = 5
-// source-url    = file:/home/tautges/CGMnew/itaps/SIDL/iGeom_SIDL.sidl
+// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iGeom_SIDL.sidl
 // 
 
 #ifndef included_iGeom_SIDL_GeomSidl_Impl_hh
@@ -651,7 +651,7 @@ namespace iGeom_SIDL {
     void
     addEntToSet (
       /* in */ void* entity_handle,
-      /* inout */ void*& entity_set
+      /* in */ void* entity_set
     )
     throw ( 
       ::iBase::Error
@@ -663,7 +663,7 @@ namespace iGeom_SIDL {
     void
     rmvEntFromSet (
       /* in */ void* entity_handle,
-      /* inout */ void*& entity_set
+      /* in */ void* entity_set
     )
     throw ( 
       ::iBase::Error
@@ -676,7 +676,7 @@ namespace iGeom_SIDL {
     addEntArrToSet (
       /* in */ ::sidl::array<void*> entity_handles,
       /* in */ int32_t entity_handles_size,
-      /* inout */ void*& entity_set
+      /* in */ void* entity_set
     )
     throw ( 
       ::iBase::Error
@@ -689,7 +689,7 @@ namespace iGeom_SIDL {
     rmvEntArrFromSet (
       /* in */ ::sidl::array<void*> entity_handles,
       /* in */ int32_t entity_handles_size,
-      /* inout */ void*& entity_set
+      /* in */ void* entity_set
     )
     throw ( 
       ::iBase::Error
@@ -701,7 +701,7 @@ namespace iGeom_SIDL {
     void
     addEntSet (
       /* in */ void* entity_set_to_add,
-      /* inout */ void*& entity_set_handle
+      /* in */ void* entity_set_handle
     )
     throw ( 
       ::iBase::Error
@@ -713,7 +713,7 @@ namespace iGeom_SIDL {
     void
     rmvEntSet (
       /* in */ void* entity_set_to_remove,
-      /* inout */ void*& entity_set_handle
+      /* in */ void* entity_set_handle
     )
     throw ( 
       ::iBase::Error
@@ -736,6 +736,20 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
+    isEntArrContained (
+      /* in */ void* containing_set,
+      /* in */ ::sidl::array<void*> entity_handles,
+      /* in */ int32_t entity_handles_size,
+      /* inout */ ::sidl::array<int32_t>& is_contained,
+      /* out */ int32_t& is_contained_size
+    )
+    throw () 
+    ;
+
+    /**
+     * user defined non-static method.
+     */
+    void
     isEntSetContained (
       /* in */ void* containing_entity_set,
       /* in */ void* contained_entity_set,
@@ -750,8 +764,8 @@ namespace iGeom_SIDL {
      */
     void
     addPrntChld (
-      /* inout */ void*& parent_entity_set,
-      /* inout */ void*& child_entity_set
+      /* in */ void* parent_entity_set,
+      /* in */ void* child_entity_set
     )
     throw ( 
       ::iBase::Error
@@ -762,8 +776,8 @@ namespace iGeom_SIDL {
      */
     void
     rmvPrntChld (
-      /* inout */ void*& parent_entity_set,
-      /* inout */ void*& child_entity_set
+      /* in */ void* parent_entity_set,
+      /* in */ void* child_entity_set
     )
     throw ( 
       ::iBase::Error
@@ -2497,6 +2511,18 @@ namespace iGeom_SIDL {
     void
     Delete (
       /* in */ void* geom_entity
+    )
+    throw ( 
+      ::iBase::Error
+    );
+
+    /**
+     * user defined non-static method.
+     */
+    void
+    Sphere (
+      /* in */ double radius,
+      /* out */ void*& geom_entity
     )
     throw ( 
       ::iBase::Error

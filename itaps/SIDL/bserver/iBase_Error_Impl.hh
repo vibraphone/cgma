@@ -1,17 +1,17 @@
 // 
 // File:          iBase_Error_Impl.hh
-// Symbol:        iBase.Error-v0.7
+// Symbol:        iBase.Error-v0.8
 // Symbol Type:   class
-// Babel Version: 0.10.12
-// sidl Created:  20070626 21:46:00 CDT
-// Generated:     20070626 21:46:06 CDT
+// Babel Version: 0.10.10
+// sidl Created:  20090126 13:05:20 CST
+// Generated:     20090126 13:05:22 CST
 // Description:   Server-side implementation for iBase.Error
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
-// babel-version = 0.10.12
-// source-line   = 73
-// source-url    = file:/home/tautges/CGMnew/itaps/SIDL/iBase.sidl
+// babel-version = 0.10.10
+// source-line   = 84
+// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iBase.sidl
 // 
 
 #ifndef included_iBase_Error_Impl_hh
@@ -47,7 +47,7 @@
 namespace iBase { 
 
   /**
-   * Symbol "iBase.Error" (version 0.7)
+   * Symbol "iBase.Error" (version 0.8)
    */
   class Error_impl
   // DO-NOT-DELETE splicer.begin(iBase.Error._inherits)

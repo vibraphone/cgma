@@ -2,17 +2,17 @@
 // File:          iGeom_Factory_Impl.cc
 // Symbol:        iGeom.Factory-v0.6.99
 // Symbol Type:   class
-// Babel Version: 0.10.12
-// sidl Created:  20070626 21:46:15 CDT
-// Generated:     20070626 21:46:35 CDT
+// Babel Version: 0.10.10
+// sidl Created:  20090126 13:05:55 CST
+// Generated:     20090126 13:13:26 CST
 // Description:   Server-side implementation for iGeom.Factory
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
-// babel-version = 0.10.12
-// source-line   = 1109
-// source-url    = file:/home/tautges/CGMnew/itaps/SIDL/iGeom.sidl
-// xml-url       = /home/tautges/CGMnew/itaps/SIDL/repo/iGeom.Factory-v0.6.99.xml
+// babel-version = 0.10.10
+// source-line   = 1115
+// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iGeom.sidl
+// xml-url       = /home/jason/meshkit/cgm/itaps/SIDL/repo/iGeom.Factory-v0.6.99.xml
 // 
 #include "iGeom_Factory_Impl.hh"
 
