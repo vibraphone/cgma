@@ -248,6 +248,20 @@ extern "C" {
                            int* num_out,
                            int* err );
 
+    /**\brief  Get the entity type for the specified entity
+     *
+     * Get the entity type for the specified entity.  Types
+     * returned are values in the iBase_EntityType enumeration.
+     * \param instance iGeom instance handle
+     * \param entity_handle entity handle being queried
+     * \param *type Pointer to location at which to store the returned type
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_getEntType( iGeom_Instance instance,
+                         iBase_EntityHandle entity_handle,
+                         int* type,
+                         int* err );
+
     /**\brief  Get the entity type for the specified entities
      *
      * Get the entity type for the specified entities.  Types
