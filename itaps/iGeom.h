@@ -71,19 +71,19 @@ extern "C" {
      *
      * Type used to store iGeom interface handle
      */
-  typedef void* iGeom_Instance;
+  typedef struct iGeom_Instance_Private* iGeom_Instance;
 
     /**\brief  Type used to store an iterator returned by iGeom
      *
      * Type used to store an iterator returned by iGeom
      */
-  typedef void* iGeom_EntityIterator;
+  typedef struct iGeom_EntityIterator_Private* iGeom_EntityIterator;
 
     /**\brief  Type used to store an array iterator returned by iGeom
      *
      * Type used to store an array iterator returned by iGeom
      */
-  typedef void* iGeom_EntityArrIterator;
+  typedef struct iGeom_EntityArrIterator_Private* iGeom_EntityArrIterator;
 
     /**\brief  Get a description of the error returned from the last iGeom function
      *
@@ -2299,7 +2299,7 @@ void iGeom_createPrism( iGeom_Instance,
      */
   void iGeom_addEntToSet(iGeom_Instance instance,
                          iBase_EntityHandle entity_handle,
-                         iBase_EntitySetHandle* entity_set, 
+                         iBase_EntitySetHandle entity_set, 
                          int *err);
 
     /**\brief  Remove an entity from a set
@@ -2313,7 +2313,7 @@ void iGeom_createPrism( iGeom_Instance,
      */
   void iGeom_rmvEntFromSet(iGeom_Instance instance,
                            iBase_EntityHandle entity_handle,
-                           iBase_EntitySetHandle* entity_set, 
+                           iBase_EntitySetHandle entity_set, 
                            int *err);
 
 
@@ -2329,7 +2329,7 @@ void iGeom_createPrism( iGeom_Instance,
   void iGeom_addEntArrToSet(iGeom_Instance instance,
                             const iBase_EntityHandle* entity_handles,
                             int entity_handles_size,
-                            iBase_EntitySetHandle* entity_set, 
+                            iBase_EntitySetHandle entity_set, 
                             int *err);
 
 
@@ -2345,7 +2345,7 @@ void iGeom_createPrism( iGeom_Instance,
   void iGeom_rmvEntArrFromSet(iGeom_Instance instance,
                               const iBase_EntityHandle* entity_handles,
                               int entity_handles_size,
-                              iBase_EntitySetHandle* entity_set,
+                              iBase_EntitySetHandle entity_set,
                               int *err);
 
 
@@ -2358,8 +2358,8 @@ void iGeom_createPrism( iGeom_Instance,
      * \param *err Pointer to error type returned from function
      */
   void iGeom_addEntSet(iGeom_Instance instance,
-                       iBase_EntityHandle entity_set_to_add,
-                       iBase_EntitySetHandle* entity_set_handle, 
+                       iBase_EntitySetHandle entity_set_to_add,
+                       iBase_EntitySetHandle entity_set_handle, 
                        int *err);
 
 
@@ -2373,7 +2373,7 @@ void iGeom_createPrism( iGeom_Instance,
      */
   void iGeom_rmvEntSet(iGeom_Instance instance,
                        iBase_EntitySetHandle entity_set_to_remove,
-                       iBase_EntitySetHandle* entity_set_handle, 
+                       iBase_EntitySetHandle entity_set_handle, 
                        int *err);
 
     /**\brief  Return whether an entity is contained in another set
@@ -2389,7 +2389,7 @@ void iGeom_createPrism( iGeom_Instance,
      */
   void iGeom_isEntContained(iGeom_Instance instance,
                             iBase_EntitySetHandle containing_entity_set,
-                            iBase_EntitySetHandle contained_entity,
+                            iBase_EntityHandle contained_entity,
                             int *is_contained, 
                             int *err);
 
@@ -2420,8 +2420,8 @@ void iGeom_createPrism( iGeom_Instance,
      * \param *err Pointer to error type returned from function
      */
   void iGeom_addPrntChld(iGeom_Instance instance,
-                         iBase_EntitySetHandle* parent_entity_set,
-                         iBase_EntitySetHandle* child_entity_set, 
+                         iBase_EntitySetHandle parent_entity_set,
+                         iBase_EntitySetHandle child_entity_set, 
                          int *err);
 
     /**\brief  Remove parent/child links between two sets
@@ -2433,8 +2433,8 @@ void iGeom_createPrism( iGeom_Instance,
      * \param *err Pointer to error type returned from function
      */
   void iGeom_rmvPrntChld(iGeom_Instance instance,
-                         iBase_EntitySetHandle* parent_entity_set,
-                         iBase_EntitySetHandle* child_entity_set, 
+                         iBase_EntitySetHandle parent_entity_set,
+                         iBase_EntitySetHandle child_entity_set, 
                          int *err);
 
     /**\brief  Return whether two sets are related by parent/child links
