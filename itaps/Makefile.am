@@ -83,3 +83,17 @@ install-data-hook:
 EXTRA_DIST = testgeom.sat
 
 CLEANFILES = iGeom-Defs.inc
+
+FPFX=iGeom
+SEDEXPR = 's/^[[:space:]]*void[[:space:]][[:space:]]*$(FPFX)_\([a-z][_a-zA-Z0-9]*\)(.*$$/$(FPFX)\1/p'
+iGeom_protos.h: iGeom.h
+	echo '#include "iBase_FCDefs.h"' > $@
+	echo '#ifdef FC_FUNC_' >> $@
+	echo >> $@
+	for func in `$(SED) -n $(SEDEXPR) $<`; do \
+	  lower=`echo $$func | tr -s '[:upper:]' '[:lower:]'`; \
+          upper=`echo $$func | tr -s '[:lower:]' '[:upper:]'`; \
+	  echo "#define $$func FC_FUNC_( $$lower, $$upper )" >> $@; \
+        done
+	echo >> $@
+	echo "#endif" >> $@
