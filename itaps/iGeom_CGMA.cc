@@ -235,6 +235,8 @@ static CubitStatus init_cgm( const std::string& engine )
 
 extern "C" {
 
+static bool cgm_initialized = false;
+
 void iGeom_getDescription( iGeom_Instance geom,
                            char* descr,
                            int* err,
@@ -5139,7 +5141,15 @@ iGeom_sweepEntAboutAxis (iGeom_Instance instance,
   
   RETURN(iBase_SUCCESS);
 }
-      
+
+void
+iGeom_deleteAll( iGeom_Instance , int* err )
+{
+  GeometryQueryTool::instance()->delete_geometry();
+  *err = iBase_SUCCESS;
+}
+
+
 void
 iGeom_deleteEnt (iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle geom_entity,

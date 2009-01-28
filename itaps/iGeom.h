@@ -2061,6 +2061,10 @@ extern "C" {
                                 iBase_EntityHandle* geom_entity2,
                                 int* err );
 
+  /**\brief Delete all entities and sets
+   */
+  void iGeom_deleteAll( iGeom_Instance, int* err );
+
     /**\brief  Delete specified entity
      *
      * Delete specified entity
