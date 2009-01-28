@@ -85,7 +85,7 @@ EXTRA_DIST = testgeom.sat
 CLEANFILES = iGeom-Defs.inc
 
 FPFX=iGeom
-SEDEXPR = 's/^[[:space:]]*void[[:space:]][[:space:]]*$(FPFX)_\([a-z][_a-zA-Z0-9]*\)(.*$$/$(FPFX)\1/p'
+SEDEXPR = 's/^[[:space:]]*void[[:space:]][[:space:]]*$(FPFX)_\([a-z][_a-zA-Z0-9]*\)(.*$$/$(FPFX)_\1/p'
 iGeom_protos.h: iGeom.h
 	echo '#include "iBase_FCDefs.h"' > $@
 	echo '#ifdef FC_FUNC_' >> $@
