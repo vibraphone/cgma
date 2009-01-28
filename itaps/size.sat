@@ -1,0 +1,107 @@
+1600 0 1 0           
+10 Cubit 10.2 17 ACIS 16.0.1 Linux 24 Wed Jan 28 12:39:30 2009 
+1 9.9999999999999995e-07 1e-10 
+body $-1 -1 -1 $-1 $1 $-1 $-1 T -5 -5 -5 5 5 5 #
+lump $-1 -1 -1 $-1 $-1 $2 $0 T -5 -5 -5 5 5 5 #
+shell $-1 -1 -1 $-1 $-1 $-1 $3 $-1 $1 T -5 -5 -5 5 5 5 #
+face $4 -1 -1 $-1 $5 $6 $2 $-1 $7 forward single T -5 -5 5 5 5 5 F #
+simple-snl-attrib $-1 -1 $-1 $-1 $3 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 1 0 5 1 1 0 1 1 #
+face $8 -1 -1 $-1 $9 $10 $2 $-1 $11 reversed single T -5 -5 -5 5 5 -5 F #
+loop $-1 -1 -1 $-1 $-1 $12 $3 T -5 -5 5 5 5 5 unknown #
+plane-surface $-1 -1 -1 $-1 0 0 5 0 0 1 1 0 0 forward_v I I I I #
+simple-snl-attrib $-1 -1 $-1 $-1 $5 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 2 0 5 1 1 0 1 1 #
+face $13 -1 -1 $-1 $14 $15 $2 $-1 $16 reversed single T -5 -5 -5 5 -5 5 F #
+loop $-1 -1 -1 $-1 $-1 $17 $5 T -5 -5 -5 5 5 -5 unknown #
+plane-surface $-1 -1 -1 $-1 0 0 -5 0 0 1 1 0 0 forward_v I I I I #
+coedge $-1 -1 -1 $-1 $18 $19 $20 $21 forward $6 $-1 #
+simple-snl-attrib $-1 -1 $-1 $-1 $9 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 3 0 5 1 1 0 1 1 #
+face $22 -1 -1 $-1 $23 $24 $2 $-1 $25 reversed single T -5 -5 -5 -5 5 5 F #
+loop $-1 -1 -1 $-1 $-1 $26 $9 T -5 -5 -5 5 -5 5 unknown #
+plane-surface $-1 -1 -1 $-1 0 -5 0 0 1 -0 -0 0 1 forward_v I I I I #
+coedge $-1 -1 -1 $-1 $27 $28 $29 $30 forward $10 $-1 #
+coedge $-1 -1 -1 $-1 $31 $12 $32 $33 forward $6 $-1 #
+coedge $-1 -1 -1 $-1 $12 $31 $34 $35 forward $6 $-1 #
+coedge $-1 -1 -1 $-1 $36 $37 $12 $21 reversed $38 $-1 #
+edge $39 -1 -1 $-1 $40 -5 $41 5 $20 $42 forward @7 unknown T 5 -5 5 5 5 5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $14 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 4 0 5 1 1 0 1 1 #
+face $43 -1 -1 $-1 $44 $45 $2 $-1 $46 reversed single T -5 5 -5 5 5 5 F #
+loop $-1 -1 -1 $-1 $-1 $47 $14 T -5 -5 -5 -5 5 5 unknown #
+plane-surface $-1 -1 -1 $-1 -5 0 0 1 0 0 0 0 -1 forward_v I I I I #
+coedge $-1 -1 -1 $-1 $48 $34 $49 $50 forward $15 $-1 #
+coedge $-1 -1 -1 $-1 $51 $17 $48 $52 forward $10 $-1 #
+coedge $-1 -1 -1 $-1 $17 $51 $53 $54 forward $10 $-1 #
+coedge $-1 -1 -1 $-1 $37 $36 $17 $30 reversed $38 $-1 #
+edge $55 -1 -1 $-1 $56 -5 $57 5 $29 $58 forward @7 unknown T 5 -5 -5 5 5 -5 #
+coedge $-1 -1 -1 $-1 $19 $18 $59 $60 forward $6 $-1 #
+coedge $-1 -1 -1 $-1 $61 $62 $18 $33 reversed $45 $-1 #
+edge $63 -1 -1 $-1 $41 -5 $64 5 $32 $65 forward @7 unknown T -5 5 5 5 5 5 #
+coedge $-1 -1 -1 $-1 $26 $66 $19 $35 reversed $15 $-1 #
+edge $67 -1 -1 $-1 $68 -5 $40 5 $34 $69 forward @7 unknown T -5 -5 5 5 -5 5 #
+coedge $-1 -1 -1 $-1 $29 $20 $66 $70 forward $38 $-1 #
+coedge $-1 -1 -1 $-1 $20 $29 $61 $71 reversed $38 $-1 #
+loop $-1 -1 -1 $-1 $-1 $36 $44 T 5 -5 -5 5 5 5 unknown #
+simple-snl-attrib $-1 -1 $-1 $-1 $21 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 6 0 5 1 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $21 $72 #
+vertex $-1 -1 -1 $-1 $21 $73 #
+straight-curve $-1 -1 -1 $-1 5 0 5 0 1 0 I I #
+simple-snl-attrib $-1 -1 $-1 $-1 $23 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 5 0 5 1 1 0 1 1 #
+face $74 -1 -1 $-1 $-1 $38 $2 $-1 $75 reversed single T 5 -5 -5 5 5 5 F #
+loop $-1 -1 -1 $-1 $-1 $61 $23 T -5 5 -5 5 5 5 unknown #
+plane-surface $-1 -1 -1 $-1 0 5 0 0 -1 0 0 0 -1 forward_v I I I I #
+coedge $-1 -1 -1 $-1 $76 $59 $62 $77 forward $24 $-1 #
+coedge $-1 -1 -1 $-1 $66 $26 $27 $52 reversed $15 $-1 #
+coedge $-1 -1 -1 $-1 $59 $76 $26 $50 reversed $24 $-1 #
+edge $78 -1 -1 $-1 $68 -5 $79 5 $49 $80 forward @7 unknown T -5 -5 -5 -5 -5 5 #
+coedge $-1 -1 -1 $-1 $28 $27 $76 $81 forward $10 $-1 #
+edge $82 -1 -1 $-1 $57 -5 $79 5 $48 $83 forward @7 unknown T -5 -5 -5 5 -5 -5 #
+coedge $-1 -1 -1 $-1 $62 $61 $28 $54 reversed $45 $-1 #
+edge $84 -1 -1 $-1 $85 -5 $56 5 $53 $86 forward @7 unknown T -5 5 -5 5 5 -5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $30 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 6 0 5 5 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $30 $87 #
+vertex $-1 -1 -1 $-1 $70 $88 #
+straight-curve $-1 -1 -1 $-1 5 0 -5 0 -1 0 I I #
+coedge $-1 -1 -1 $-1 $47 $49 $31 $60 reversed $24 $-1 #
+edge $89 -1 -1 $-1 $64 -5 $68 5 $59 $90 forward @7 unknown T -5 -5 5 -5 5 5 #
+coedge $-1 -1 -1 $-1 $53 $32 $37 $71 forward $45 $-1 #
+coedge $-1 -1 -1 $-1 $32 $53 $47 $77 reversed $45 $-1 #
+simple-snl-attrib $-1 -1 $-1 $-1 $33 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 5 0 5 2 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $33 $91 #
+straight-curve $-1 -1 -1 $-1 0 5 5 -1 0 0 I I #
+coedge $-1 -1 -1 $-1 $34 $48 $36 $70 reversed $15 $-1 #
+simple-snl-attrib $-1 -1 $-1 $-1 $35 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 3 0 5 4 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $60 $92 #
+straight-curve $-1 -1 -1 $-1 0 -5 5 1 0 0 I I #
+edge $93 -1 -1 $-1 $40 -5 $57 5 $36 $94 forward @7 unknown T 5 -5 -5 5 -5 5 #
+edge $95 -1 -1 $-1 $41 -5 $56 5 $37 $96 forward @7 unknown T 5 5 -5 5 5 5 #
+point $-1 -1 -1 $-1 5 -5 5 #
+point $-1 -1 -1 $-1 5 5 5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $44 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 SOFT @4 LIMP 2 6 0 5 1 1 0 1 1 #
+plane-surface $-1 -1 -1 $-1 5 0 0 -1 0 0 0 -0 1 forward_v I I I I #
+coedge $-1 -1 -1 $-1 $49 $47 $51 $81 reversed $24 $-1 #
+edge $97 -1 -1 $-1 $64 -5 $85 5 $62 $98 forward @7 unknown T -5 5 -5 -5 5 5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $50 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 4 0 5 9 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $81 $99 #
+straight-curve $-1 -1 -1 $-1 -5 -5 0 0 0 -1 I I #
+edge $100 -1 -1 $-1 $79 -5 $85 5 $76 $101 forward @7 unknown T -5 -5 -5 -5 5 -5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $52 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 3 0 5 6 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 0 -5 -5 -1 0 0 I I #
+simple-snl-attrib $-1 -1 $-1 $-1 $54 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 5 0 5 8 1 1 0 -2147483648 #
+vertex $-1 -1 -1 $-1 $54 $102 #
+straight-curve $-1 -1 -1 $-1 0 5 -5 1 0 0 I I #
+point $-1 -1 -1 $-1 5 5 -5 #
+point $-1 -1 -1 $-1 5 -5 -5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $60 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 4 0 5 3 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 -5 0 5 0 -1 0 I I #
+point $-1 -1 -1 $-1 -5 5 5 #
+point $-1 -1 -1 $-1 -5 -5 5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $70 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 6 0 5 10 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 5 -5 0 0 0 -1 I I #
+simple-snl-attrib $-1 -1 $-1 $-1 $71 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 6 0 5 12 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 5 5 0 0 0 -1 I I #
+simple-snl-attrib $-1 -1 $-1 $-1 $77 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 5 0 5 11 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 -5 5 0 0 0 -1 I I #
+point $-1 -1 -1 $-1 -5 -5 -5 #
+simple-snl-attrib $-1 -1 $-1 $-1 $81 1 1 1 1 1 1 1 1 1 1 1 1 0 1 0 1 1 1 @17 NEW_SIMPLE_ATTRIB 3 @13 MESH_INTERVAL @4 HARD @4 LIMP 2 4 0 5 7 1 1 0 -2147483648 #
+straight-curve $-1 -1 -1 $-1 -5 0 -5 0 1 0 I I #
+point $-1 -1 -1 $-1 -5 5 -5 #
+End-of-ACIS-data 

@@ -122,7 +122,8 @@ private:
   int CATag_att_type;
   long pcTag;
   std::vector<TagInfo> tagInfo;
-  std::vector<TagInfo> presetTagInfo;
+  static TagInfo* const presetTagInfo;
+  static const int numPresetTag;
   std::map<std::string, long> tagNameMap;
   static const char *CATag_NAME;
   static const char *CATag_NAME_INTERNAL;
@@ -141,6 +142,7 @@ private:
   
   RefGroup *interface_group(const bool create_if_missing = true);
   
+  CubitSimpleAttrib* get_simple_attrib( RefEntity* entity, const char* name );  
 };
 
 class CATag: public CubitAttrib

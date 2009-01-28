@@ -22,6 +22,10 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <iomanip>
+#include <assert.h>
+#include <string.h>
+#include <math.h>
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
 #define STRINGIFY(S) XSTRINGIFY(S)
@@ -106,6 +110,7 @@ bool primitives_test(iGeom_Instance geom);
 bool transforms_test(iGeom_Instance geom);
 bool booleans_test(iGeom_Instance geom);
 bool shutdown_test(iGeom_Instance geom);
+bool mesh_size_test(iGeom_Instance geom);
 
 void handle_error_code(const bool result,
                        int &number_failed,
@@ -236,6 +241,16 @@ int main( int argc, char *argv[] )
                     number_tests_successful);
   number_tests++;
   std::cout << "\n";
+  
+#if defined(HAVE_ACIS) && !defined(FORCE_OCC)
+  std::cout << "   mesh size: ";
+  result = mesh_size_test(geom);
+  handle_error_code(result, number_tests_failed,
+                    number_tests_not_implemented,
+                    number_tests_successful);
+  number_tests++;
+  std::cout << "\n";
+#endif  
 
     // shutdown test
   std::cout << "   shutdown: ";
@@ -246,6 +261,7 @@ int main( int argc, char *argv[] )
   number_tests++;
   std::cout << "\n";
   
+
     // summary
 
   std::cout << "\nTSTT TEST SUMMARY: \n"
@@ -1149,6 +1165,199 @@ bool booleans_test(iGeom_Instance geom)
   
   iGeom_deleteEnt( geom, unite_results, &err );
   CHECK( "Problems deleting for booleans unite test." );
+  return true;
+}
+
+static int get_entities( iGeom_Instance geom, int entity_type,
+                          std::vector<iBase_EntityHandle>& entities_out,
+                          iBase_TagHandle id_tag = 0,
+                          std::vector<int>* ids_out = 0 )
+{
+  int err, num;
+  iBase_EntitySetHandle root;
+  iGeom_getRootSet( geom, &root, &err ); 
+  if (iBase_SUCCESS != err)
+    return err;
+  iGeom_getNumOfType( geom, root, entity_type, &num, &err ); 
+  if (iBase_SUCCESS != err)
+    return err;
+  
+  entities_out.resize(num);
+  int junk1 = entities_out.size(), junk2;
+  iBase_EntityHandle* junk_ptr = &entities_out[0];;
+  iGeom_getEntities( geom, root, entity_type, &junk_ptr, &junk1, &junk2, &err );
+  if (iBase_SUCCESS != err)
+    return err;
+  assert( num == junk1 && num == junk2 );
+  
+  if (!ids_out)
+    return iBase_SUCCESS;
+  
+  ids_out->resize(num);
+  int* int_ptr = &(*ids_out)[0];
+  iGeom_getIntArrData( geom, &entities_out[0], num, id_tag, &int_ptr, &junk1, &junk2, &err );
+  if (iBase_SUCCESS != err)
+    return err;
+  assert( num == junk1 && num == junk2 );
+  
+  return iBase_SUCCESS;
+}
+
+static int check_firmness( iGeom_Instance geom,
+                           const std::vector<iBase_EntityHandle>& entities,
+                           const std::vector<int>& ids,
+                           iBase_TagHandle firmness_tag,
+                           const char* expected_value,
+                           const char* ent_type_str )
+{
+  const int firmness_size = 4;
+  std::vector<char> firmness(firmness_size * entities.size());
+
+  char* byte_ptr = &firmness[0];
+  int err, junk1, junk2 = entities.size()*firmness_size;
+  iGeom_getArrData( geom, &entities[0], entities.size(), firmness_tag, &byte_ptr, &junk1, &junk2, &err ); 
+  if (iBase_SUCCESS != err)
+    return err;
+  
+  bool all_correct = true;
+  for (unsigned i = 0; i < entities.size(); ++i)
+    if (std::string(&firmness[firmness_size*i],firmness_size) != expected_value)
+      all_correct = false;
+  if (!all_correct) {
+    std::cout << "ERROR: Expected \"" << expected_value << "\" firmness "
+              << "for all " << ent_type_str << "." << std::endl;
+    std::cout << "ID  Actual  " << std::endl;
+    for (unsigned i = 0; i < entities.size(); ++i)
+      std::cout << std::setw(2) << ids[i] << "  "
+                << std::string(&firmness[firmness_size*i],firmness_size)
+                << std::endl;
+    return iBase_FAILURE;
+  }
+  
+  return iBase_SUCCESS;
+}
+
+static int count_num_with_tag( iGeom_Instance geom,
+                               const std::vector<iBase_EntityHandle>& ents,
+                               iBase_TagHandle tag )
+{
+  int err, bytes;
+  iGeom_getTagSizeBytes( geom, tag, &bytes, &err );
+  if (iBase_SUCCESS != err)
+    return -1;
+  std::vector<char> data(bytes);
+  
+  int success_count = 0;
+  for (size_t i = 0; i < ents.size(); ++i) {
+    char* ptr = &data[0];
+    int junk1 = bytes, junk2;
+    iGeom_getData( geom, ents[i], tag, &ptr, &junk1, &junk2, &err );
+    if (iBase_TAG_NOT_FOUND == err)
+      continue;
+    if (iBase_SUCCESS != err)
+      return -1;
+    ++success_count;
+  }
+  
+  return success_count;
+}
+  
+
+bool mesh_size_test(iGeom_Instance geom)
+{
+  const char* filename = STRINGIFY(SRCDIR) "/size.sat";
+  int err, junk1, junk2;
+  bool result = true;
+  
+  iGeom_deleteAll( geom, &err ); CHECK("");
+  iGeom_load( geom, filename, 0, &err, strlen(filename), 0 );
+  CHECK( "Failed to load input file: 'size.sat'" );
+  
+    // get tag handles
+  iBase_TagHandle interval, size, firmness, id;
+  iGeom_getTagHandle( geom, "MESH_INTERVAL", &interval, &err, strlen("MESH_INTERVAL") );
+  CHECK( "iGeom_getTagHandle(\"MESH_INTERVAL\")" );
+  iGeom_getTagHandle( geom, "MESH_SIZE", &size, &err, strlen("MESH_SIZE") );
+  CHECK( "iGeom_getTagHandle(\"MESH_SIZE\")" );
+  iGeom_getTagHandle( geom, "SIZE_FIRMNESS", &firmness, &err, strlen("SIZE_FIRMNESS") );
+  CHECK( "iGeom_getTagHandle(\"SIZE_FIRMNESS\")" );
+  iGeom_getTagHandle( geom, "GLOBAL_ID", &id, &err, strlen("GLOBAL_ID") );
+  CHECK( "iGeom_getTagHandle(\"GLOBAL_ID\")" );
+  
+    // get entity lists
+  std::vector<iBase_EntityHandle> verts, curves, surfs, vols;
+  std::vector<int> vert_ids, curve_ids, surf_ids, vol_ids;
+  err = get_entities( geom, iBase_VERTEX, verts,  id, &vert_ids  ); CHECK("");
+  err = get_entities( geom, iBase_EDGE,   curves, id, &curve_ids ); CHECK("");
+  err = get_entities( geom, iBase_FACE,   surfs,  id, &surf_ids  ); CHECK("");
+  err = get_entities( geom, iBase_REGION, vols,   id, &vol_ids   ); CHECK("");
+  
+    // expect interval count to be the same as ID for every curve
+  std::vector<int> intervals(curves.size());
+  int *int_ptr = &intervals[0];
+  junk1 = junk2 = curves.size();
+  iGeom_getIntArrData( geom, &curves[0], curves.size(), interval, &int_ptr, &junk1, &junk2, &err ); 
+  CHECK("Failed to get intervals for curves");
+  if (intervals != curve_ids) {
+    std::cout << "ERROR: Incorrect curve intervals for one or more curves." << std::endl;
+    std::cout << "ID  Expected  Actual" << std::endl;
+    for (unsigned i = 0; i < curves.size(); ++i)
+      std::cout << std::setw(2) << curve_ids[i] << "  "
+                << std::setw(8) << curve_ids[i] << "  "
+                << std::setw(6) << intervals[i] << std::endl;
+    result = false;
+  }
+  
+    // expect size to be the same as ID for every surface
+  std::vector<double> sizes(surfs.size());
+  double* dbl_ptr = &sizes[0];
+  junk1 = junk2 = surfs.size();
+  iGeom_getDblArrData( geom, &surfs[0], surfs.size(), size, &dbl_ptr, &junk1, &junk2, &err ); 
+  CHECK("Failed to get sizes for surfaces");
+  bool all_correct = true;
+  for (unsigned i = 0; i < surfs.size(); ++i)
+    if (fabs(sizes[i] - (double)surf_ids[i] ) > 1e-8)
+      all_correct = false;
+  if (!all_correct) {
+    std::cout << "ERROR: Incorrect mesh size for one or more surfaces." << std::endl;
+    std::cout << "ID  Expected  Actual  " << std::endl;
+    for (unsigned i = 0; i < surfs.size(); ++i)
+      std::cout << std::setw(2) << surf_ids[i] << "  "
+                << std::setw(8) << (double)surf_ids[i] << "  "
+                << std::setw(8) << sizes[i] << std::endl;
+    result = false;
+  }
+  
+  
+  err = result ? iBase_SUCCESS : iBase_FAILURE;
+  CHECK("Invalid size or interval data");
+    
+    // expect "HARD" firmness on all curves
+  err = check_firmness( geom, curves, curve_ids, firmness, "HARD", "curves" );
+  CHECK("Invalid curve firmness");
+    // expect "SOFT" firmness on all surfaces
+  err = check_firmness( geom, surfs, surf_ids, firmness, "SOFT", "surfaces" );
+  CHECK("Invalid surface firmness");
+  
+    // expect no firmnes on other entities
+  err = count_num_with_tag( geom, verts, firmness ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got firmness for vertex.");
+  err = count_num_with_tag( geom, vols, firmness ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got firmness for volume.");
+
+    // expect no interval tag on any entities except curves
+  err = count_num_with_tag( geom, verts, interval ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got interval count for vertex.");
+  err = count_num_with_tag( geom, vols, interval ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got interval count for volume.");
+
+    // expect no size tag on any entities except surfaces
+    // curves should have size of one of their parent surfaces
+  err = count_num_with_tag( geom, verts, size ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got mesh size for vertex.");
+  err = count_num_with_tag( geom, vols, size ) ? iBase_FAILURE : iBase_SUCCESS;
+  CHECK("Got mesh size for volume.");
+
   return true;
 }
 

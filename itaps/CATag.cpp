@@ -32,6 +32,7 @@
 #include "TDUniqueId.hpp"
 #include "CGMApp.hpp"
 #include "iGeomError.h"
+#include "TopologyEntity.hpp"
 
 #define CHECK_SIZE(array, type, this_size, retval)  \
   if (0 == array ## _allocated || array ## _allocated < this_size) {\
@@ -93,6 +94,21 @@ CubitAttrib *CGMTagManager::CATag_creator(RefEntity* entity, CubitSimpleAttrib *
   CATag *this_ca = new CATag(&instance(), entity, p_csa);
   return this_ca;
 }
+ 
+
+static CGMTagManager::TagInfo preset_tag_list[] = {
+   // tag size      tag name           tag data type  default active
+ { 0,              "",                 iBase_BYTES,   NULL,  false },
+ { 32,             "NAME",             iBase_BYTES,   NULL,   true },
+ { sizeof(int),    "GLOBAL_ID",        iBase_INTEGER, NULL,   true },
+ { sizeof(int),    "UNIQUE_ID",        iBase_INTEGER, NULL,   true },
+ { sizeof(int),    "MESH_INTERVAL",    iBase_INTEGER, NULL,   true },
+ { sizeof(double), "MESH_SIZE",        iBase_DOUBLE,  NULL,   true },
+ { 4,              "SIZE_FIRMNESS",    iBase_BYTES,   NULL,   true } };
+ 
+
+CGMTagManager::TagInfo* const CGMTagManager::presetTagInfo = preset_tag_list;
+const int CGMTagManager::numPresetTag = sizeof(preset_tag_list)/sizeof(preset_tag_list[0]);
 
 CGMTagManager::CGMTagManager() 
     : interfaceGroup(NULL)
@@ -119,32 +135,10 @@ CGMTagManager::CGMTagManager()
   else
     CATag_att_type = max_type;
 
-    // create the 0th tag, since this index represents no tag
-  TagInfo tmp_info = {0, std::string("NULL tag"), iBase_BYTES, NULL, false};
-  tagInfo.push_back(tmp_info);
-  presetTagInfo.push_back(tmp_info);
-
     // create preset tags, for CGM attributes we want to be visible as tags
     // name - make same as in MBTagConventions
-  tmp_info.tagLength = 32;
-  tmp_info.tagName = std::string("NAME");
-  tmp_info.defaultValue = NULL;
-  tmp_info.tagType = iBase_BYTES;
-  tmp_info.isActive = true;
-  presetTagInfo.push_back(tmp_info);
-  tagNameMap[std::string("NAME")] = -1;
-    // id
-  tmp_info.tagLength = sizeof(int);
-  tmp_info.tagName = std::string("GLOBAL_ID");
-  tmp_info.tagType = iBase_INTEGER;
-  presetTagInfo.push_back(tmp_info);
-  tagNameMap[std::string("GLOBAL_ID")] = -2;
-    // uid
-  tmp_info.tagLength = sizeof(int);
-  tmp_info.tagName = std::string("UNIQUE_ID");
-  tmp_info.tagType = iBase_INTEGER;
-  presetTagInfo.push_back(tmp_info);
-  tagNameMap[std::string("UNIQUE_ID")] = -3;
+  for (int i = 1; i < numPresetTag; ++i)
+    tagNameMap[presetTagInfo[i].tagName] = -i; // neg handles beginning with -1
 }
 
 CGMTagManager::~CGMTagManager() 
@@ -335,14 +329,24 @@ iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_hand
   TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
   int tag_size = tinfo->tagLength;
     // either way, we have to have that many bytes when we leave this function
+  const bool allocated_data_arr = (*tag_value_allocated == 0);
   TAG_CHECK_SIZE(*tag_value, *tag_value_allocated, entity_handles_size*tinfo->tagLength);
   char *val_ptr = *tag_value;
   if (tag_handle < 0) {
     for (int i = 0; i < entity_handles_size; i++) {
+      bool result;
       if (NULL == entity_handles[i])
-        getPresetTagData(interface_group(), tag_handle, val_ptr, tinfo->tagLength);
+        result = getPresetTagData(interface_group(), tag_handle, val_ptr, tinfo->tagLength);
       else
-        getPresetTagData(entity_handles[i], tag_handle, val_ptr, tinfo->tagLength);
+        result = getPresetTagData(entity_handles[i], tag_handle, val_ptr, tinfo->tagLength);
+      if (!result) {
+        if (allocated_data_arr) {
+          free(*tag_value);
+          *tag_value = 0;
+          *tag_value_allocated = 0;
+        }
+        RETURN(iBase_TAG_NOT_FOUND);
+      }
       val_ptr += tinfo->tagLength;
     }
     *tag_value_size = entity_handles_size*tinfo->tagLength;
@@ -508,6 +512,9 @@ iBase_ErrorType CGMTagManager::setPresetTagData(RefEntity *entity,
         // unique id
       iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set unique id of entities with this implementation." );
       return iBase_NOT_SUPPORTED;
+    case 4: // mesh interval
+    case 5: // mesh size
+    case 6: // mesh interval firmness
     default:
       iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set this tag on entities with this implementation." );
       return iBase_NOT_SUPPORTED;
@@ -516,22 +523,61 @@ iBase_ErrorType CGMTagManager::setPresetTagData(RefEntity *entity,
   iGeom_setLastError( iBase_TAG_NOT_FOUND );
   return iBase_TAG_NOT_FOUND;
 }
-        
+
+CubitSimpleAttrib* CGMTagManager::get_simple_attrib(RefEntity* entity,
+                                                    const char* name )
+{
+  TopologyEntity* te_ptr = dynamic_cast<TopologyEntity*>(entity);
+  TopologyBridge* tb_ptr = te_ptr ? te_ptr->bridge_manager()->topology_bridge() : 0;
+  if (!tb_ptr) {
+    iGeom_setLastError( iBase_INVALID_ENTITY_HANDLE, "Entity not topology" );
+    return 0;
+  }
+  DLIList<CubitSimpleAttrib*> attr_list;
+  tb_ptr->get_simple_attribute("MESH_INTERVAL", attr_list);
+  if (attr_list.size() == 0) {
+    iGeom_setLastError( iBase_TAG_NOT_FOUND, "No MESH_INTERVAL attribute" );
+    return 0;
+  }
+  CubitSimpleAttrib* result = attr_list.pop();
+  while (attr_list.size() != 0)
+    delete attr_list.pop();
+  return result;
+}
+
+
 bool CGMTagManager::getPresetTagData(const RefEntity *entity, 
                                      const long tag_handle, 
                                      char *tag_value, 
                                      int &tag_size) 
 {
-  std::string *this_name;
+  const char *this_name;
+  int name_len, val;
+  double dval;
   int *this_id;
   int *this_uid;
+  
+  if (-tag_handle >= numPresetTag || tag_handle >= 0) {
+    iGeom_setLastError( iBase_INVALID_TAG_HANDLE, "Invalid tag handle" );
+    return false;
+  }
+  
+  const TagInfo& info = presetTagInfo[-tag_handle];
+  tag_size = info.tagLength;
+  CubitSimpleAttrib* csa;
+  CubitString* str;
   
   switch (-tag_handle) {
     case 1:
         // entity name
-      tag_size = sizeof(std::string);
-      this_name = reinterpret_cast<std::string*>(tag_value);
-      *this_name = std::string(entity->entity_name().c_str());
+      this_name = entity->entity_name().c_str();
+      name_len = strlen(this_name);
+        // if name is too long, truncate
+      if (name_len > info.tagLength)
+        name_len = info.tagLength;
+      strncpy( tag_value, this_name, name_len );
+        // if name is too short, pad with zero bytes
+      memset( tag_value + name_len, 0, info.tagLength );
       return true;
     case 2:
         // entity id
@@ -546,6 +592,70 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
         // const_cast because we're passing false for create_if_missing
       *this_uid = TDUniqueId::get_unique_id(const_cast<RefEntity*>(entity), false);
       return (*this_uid == 0 ? false : true);
+    case 4: // mesh interval
+      csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
+      if (!csa)
+        return false;
+      csa->int_data_list()->reset();
+      val = *csa->int_data_list()->get_and_step();
+        // check if interval is set
+      csa->string_data_list()->reset();
+        // If a) the size is set and b) the firmness is LIMP, then
+        // the interval count has not been set.
+      if ( csa->string_data_list()->size() && 
+          *csa->string_data_list()->get() == "LIMP" && 
+           csa->int_data_list()->size() > 1 && 
+         !*csa->int_data_list()->get())
+        val = 0;
+      delete csa;
+      if (val == 0 || val == CUBIT_INT_MIN) {
+        if (info.defaultValue)
+          val = *(int*)info.defaultValue;
+        else {
+          iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval not set" );
+          return 0;
+        }
+      }
+      *(int*)tag_value = val;
+      return true;
+    case 5: // mesh size
+      csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
+      if (!csa)
+        return false;
+      csa->int_data_list()->reset();
+      csa->int_data_list()->step();
+      csa->double_data_list()->reset();
+        // if size value is invalid or flag indicates size has not been set...
+      if (csa->double_data_list()->size() == 0 ||
+         *csa->double_data_list()->get() == CUBIT_DBL_MIN ||
+         (csa->int_data_list()->size() > 1 && !*csa->int_data_list()->get())) {
+        if (info.defaultValue)
+          dval = *(double*)info.defaultValue;
+        else {
+          delete csa;
+          iGeom_setLastError( iBase_TAG_NOT_FOUND, "Mesh size not set" );
+          return false;
+        }
+      }
+      else
+        dval = *csa->double_data_list()->get();
+      delete csa;
+      *(double*)tag_value = dval;
+      return true;
+    case 6: // interval firmness
+      csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
+      if (!csa)
+        return false;
+      if (csa->string_data_list()->size() < 2) {
+        delete csa;
+        iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval firmness not set" );
+        return false;
+      }
+      csa->string_data_list()->reset();
+      str = csa->string_data_list()->step_and_get();
+      memcpy( tag_value, str->c_str(), 4 );
+      delete csa;
+      return true;
   }
 
   return false;
