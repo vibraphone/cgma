@@ -91,8 +91,8 @@ iGeom_protos.h: iGeom.h
 	echo '#ifdef FC_FUNC_' >> $@
 	echo >> $@
 	for func in `$(SED) -n $(SEDEXPR) $<`; do \
-	  lower=`echo $$func | tr -s '[:upper:]' '[:lower:]'`; \
-          upper=`echo $$func | tr -s '[:lower:]' '[:upper:]'`; \
+	  lower=`echo $$func | tr '[:upper:]' '[:lower:]'`; \
+          upper=`echo $$func | tr '[:lower:]' '[:upper:]'`; \
 	  echo "#define $$func FC_FUNC_( $$lower, $$upper )" >> $@; \
         done
 	echo >> $@
