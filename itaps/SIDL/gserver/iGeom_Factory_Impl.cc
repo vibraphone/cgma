@@ -3,8 +3,8 @@
 // Symbol:        iGeom.Factory-v0.6.99
 // Symbol Type:   class
 // Babel Version: 0.10.10
-// sidl Created:  20090126 13:05:55 CST
-// Generated:     20090126 13:13:26 CST
+// sidl Created:  20090126 14:50:17 CST
+// Generated:     20090126 14:50:21 CST
 // Description:   Server-side implementation for iGeom.Factory
 // 
 // WARNING: Automatically generated; only changes within splicers preserved

@@ -3,8 +3,8 @@
 // Symbol:        iGeom_SIDL.GeomSidl-v0.1
 // Symbol Type:   class
 // Babel Version: 0.10.10
-// sidl Created:  20090126 13:13:24 CST
-// Generated:     20090126 13:13:26 CST
+// sidl Created:  20090126 14:50:19 CST
+// Generated:     20090126 14:50:21 CST
 // Description:   Server-side implementation for iGeom_SIDL.GeomSidl
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
