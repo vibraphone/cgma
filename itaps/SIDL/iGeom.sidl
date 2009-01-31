@@ -81,7 +81,7 @@ package iGeom version 0.6.99
                       out int num_type) 
       throws iBase.Error;
 
-    EntityType getEntType( in opaque handle ) throws iBase.Error;
+    void getEntType( in opaque handle, out EntityType ent_type ) throws iBase.Error;
 
 //==========================getArrType=================
 /**
@@ -174,7 +174,7 @@ package iGeom version 0.6.99
  * @param gentity_handle2 2nd entity
  * @param are_adjacent If true, entities are adjacent
  */
-    int isEntAdj(in opaque gentity_handle1, in opaque gentity_handle2,
+    void isEntAdj(in opaque gentity_handle1, in opaque gentity_handle2,
                   out bool are_adjacent) 
       throws iBase.Error;
   
@@ -194,7 +194,7 @@ package iGeom version 0.6.99
                   ) throws iBase.Error;
 
 
-    int getTopoLevel( in string model_name ) throws iBase.Error;
+    void getTopoLevel( out int level ) throws iBase.Error;
   }
 
 //===========================================================================
@@ -409,7 +409,7 @@ package iGeom version 0.6.99
       throws iBase.Error;
    
 //==========================getPntIntsct=================
-    void getPntIntsct( in double x, in double y, in double z,
+    void getPntRayIntsct( in double x, in double y, in double z,
                        in double dir_x, in double dir_y, in double dir_z,
                        inout array<opaque> intersect_entity_handles,
                        inout int intersect_entity_handles_size,
@@ -444,8 +444,9 @@ package iGeom version 0.6.99
  * @param gface Gface whose sense is being queried.
  * @param gregion Gregion gface is being queried with respect to
  */
-    int getEntNrmlSense(in opaque gface,
-                        in opaque gregion) 
+    void getEntNrmlSense(in opaque gface,
+                         in opaque gregion,
+                         out int sense) 
       throws iBase.Error;
 
 //==========================getArrNrmlSense=================
@@ -465,8 +466,9 @@ package iGeom version 0.6.99
  * @param gedge Gedge whose sense is being queried.
  * @param gface Gface gedge is being queried with respect to
  */
-    int getEgFcSense(in opaque gedge,
-                     in opaque gface)
+    void getEgFcSense(in opaque gedge,
+                      in opaque gface,
+                      out int sense)
       throws iBase.Error;
 
 //==========================getEgFcArrSense=================
@@ -489,9 +491,10 @@ package iGeom version 0.6.99
  * @param gvertex1 First gvertex
  * @param gvertex2 Second gvertex
  */
-    int getEgVtxSense(in opaque gedge,
+    void getEgVtxSense(in opaque gedge,
                       in opaque gvertex1,
-                      in opaque gvertex2)
+                      in opaque gvertex2,
+                      out int sense)
       throws iBase.Error;
 
 //==========================getEgVtxArrSense=================
@@ -537,7 +540,7 @@ package iGeom version 0.6.99
   interface Parametric extends Geometry {
 
 //==========================getParametric=================
-  int getParametric() throws iBase.Error;
+  void getParametric(out int parametric) throws iBase.Error;
 
 //==========================isEntParametric=================
 /**
@@ -546,7 +549,7 @@ package iGeom version 0.6.99
  * when called on that entity.
  * @param gentity_handle Gentity being queried.
  */
-    int isEntParametric(in opaque gentity_handle) 
+    void isEntParametric(in opaque gentity_handle, out int is_parametric) 
       throws iBase.Error;
       
 //==========================isArrParametric=================
@@ -834,7 +837,7 @@ package iGeom version 0.6.99
                       ) throws iBase.Error;
 
 //==========================isFcDegenerate=================
-    int isFcDegenerate( in opaque face_handle) throws iBase.Error;
+    void isFcDegenerate( in opaque face_handle, out int is_degenerate) throws iBase.Error;
 
 //==========================isFcArrDegenerate=================
     void isFcArrDegenerate( in array<opaque> face_handles,
@@ -867,7 +870,8 @@ package iGeom version 0.6.99
       throws iBase.Error;
    
 //==========================getEntTolerance=================
-    double getEntTolerance( in opaque entity_handle) throws iBase.Error;
+    void getEntTolerance( in opaque entity_handle,
+                          out double tolerance ) throws iBase.Error;
 
 //==========================getArrTolerance=================
 /**
@@ -901,16 +905,16 @@ package iGeom version 0.6.99
  * @param gentity_dimension Dimension of gentities to be iterated over
  * @param gentity_iterator Iterator initialized by this function
  */
-    void initEntIter(in int gentity_dimension, 
+    void initEntIter(in opaque entity_set_handle,
+                     in int gentity_dimension, 
                      out opaque gentity_iterator) 
       throws iBase.Error;
 
 //==========================initEntArrIter=================
-    bool initEntArrIter( in opaque entity_set_handle,
-                         in EntityType requested_entity_type,
+    void initEntArrIter( in opaque entity_set_handle,
+                         in EntityType requested_entity_type, 
                          in int requested_array_size,
-                         out opaque entArr_iterator
-                       ) throws iBase.Error;
+                         out opaque entArr_iterator ) throws iBase.Error;
 
 //==========================getNextEntIter=================
 /**
@@ -919,14 +923,15 @@ package iGeom version 0.6.99
  * @param gentity_handle Next gentity
  * @return If true, there are more gentities, if false, this is the last one
  */
-    bool getNextEntIter(inout opaque gentity_iterator, 
-                        out opaque gentity_handle) 
-      throws iBase.Error;
+    void getNextEntIter( in opaque entity_iterator,
+                         out opaque entity_handle,
+                         out int has_data) throws iBase.Error;
       
 //==========================getNextEntArrIter=================
-    bool getNextEntArrIter( in opaque entArr_iterator,
+    void getNextEntArrIter( in opaque entArr_iterator,
                             inout array<opaque> entity_handles,
-                            inout int entity_handles_size) throws iBase.Error;
+                            out int entity_handles_size,
+                            out int has_data) throws iBase.Error;
 
 //==========================resetEntIter=================
 /**
@@ -991,7 +996,7 @@ package iGeom version 0.6.99
     {
 //==========================Sphere=================
         /* Construct a Sphere with specified radius. */
-      void Sphere(in double radius,
+      void createSphere(in double radius,
                   out opaque geom_entity) 
         throws iBase.Error;
           
@@ -1000,7 +1005,7 @@ package iGeom version 0.6.99
          * zero, a cube of dimension x is constructed.  
          * Result is undefined if only one dimension is zero.
          */
-      void Brick(in double x, in double y, in double z,
+      void createBrick(in double x, in double y, in double z,
                  out opaque geom_entity) 
         throws iBase.Error;
           
@@ -1009,7 +1014,7 @@ package iGeom version 0.6.99
          * Major radius is along x axis, minor along y axis, and height along z.
          * If minor radius is zero, a circular cylinder is produced.
          */
-      void Cylinder(in double height, in double major_rad, in double minor_rad,
+      void createCylinder(in double height, in double major_rad, in double minor_rad,
                     out opaque geom_entity) 
         throws iBase.Error;
           
@@ -1018,44 +1023,44 @@ package iGeom version 0.6.99
          * radii specified.  Torus is aligned with z axis, i.e. the locus of points
          * defined by the cross-section centers lies in the xy plane.
          */
-      void Torus(in double major_rad, in double minor_rad,
+      void createTorus(in double major_rad, in double minor_rad,
                  out opaque geom_entity) 
         throws iBase.Error;
     }
   
   interface Transforms extends Modify
     {
-//==========================Move=================
-        /* Move the specified entity by the specified vector 
+//==========================moveEnt=================
+        /* moveEnt the specified entity by the specified vector 
          */
-      void Move(inout opaque geom_entity,
+      void moveEnt(in opaque geom_entity,
                 in double x, in double y, in double z) 
         throws iBase.Error;
       
-//==========================Rotate=================
-        /* Rotate the specified entity the specified angle (in degrees) about the
+//==========================rotateEnt=================
+        /* rotateEnt the specified entity the specified angle (in degrees) about the
          * specified axis; axis_normal is assumed to pass through the origin.
          */
-      void Rotate(inout opaque geom_entity,
+      void rotateEnt(in opaque geom_entity,
                   in double angle, 
                   in double axis_normal_x,
                   in double axis_normal_y,
                   in double axis_normal_z) 
         throws iBase.Error;
       
-//==========================Reflect=================
-        /* Reflect the specified entity through a plane defined by the specified normal
+//==========================reflectEnt=================
+        /* reflectEnt the specified entity through a plane defined by the specified normal
          */
-      void Reflect(inout opaque geom_entity,
+      void reflectEnt(in opaque geom_entity,
                    in double plane_normal_x,
                    in double plane_normal_y,
                    in double plane_normal_z) 
         throws iBase.Error;
 
-//==========================Scale=================
+//==========================scaleEnt=================
         /* scale the specified entity 
          */
-      void Scale(inout opaque geom_entity,
+      void scaleEnt(in opaque geom_entity,
                  in double scale_x,
                  in double scale_y,
                  in double scale_z) 
@@ -1064,31 +1069,31 @@ package iGeom version 0.6.99
   
   interface Booleans extends Modify
     {
-//==========================Unite=================
-        /* Unite the specified entities, resulting in a new entity; original entities
+//==========================uniteEnts=================
+        /* uniteEnts the specified entities, resulting in a new entity; original entities
          * are unmodified
          */
-      void Unite(in array<opaque> geom_entities,
+      void uniteEnts(in array<opaque> geom_entities,
                  in int geom_entities_size,
                  out opaque geom_entity) 
         throws iBase.Error;
       
-//==========================Subtract=================
-        /* Subtract the tool from the blank, resulting in a new entity; original
+//==========================subtractEnts=================
+        /* subtractEnts the tool from the blank, resulting in a new entity; original
          * entities are unmodified
          */
-      void Subtract(in opaque blank, in opaque tool,
+      void subtractEnts(in opaque blank, in opaque tool,
                     out opaque geom_entity) 
         throws iBase.Error;
 
-//==========================Section=================
+//==========================sectionEnt=================
         /* Cut the specified entity with a plane containing the origin defined by 
          * the specified normal, discarding anything on the negative side of the
          * plane (as defined by the normal direction).  If offset is specified, 
          * plane is offset along the normal direction by the specified distance.  
          * If reverse is true, positive side of the plane is discarded instead.
          */
-      void Section(inout opaque geom_entity, 
+      void sectionEnt(in opaque geom_entity, 
                    in double plane_normal_x,
                    in double plane_normal_y,
                    in double plane_normal_z,
@@ -1096,17 +1101,17 @@ package iGeom version 0.6.99
                    out opaque geom_entity2) 
         throws iBase.Error;
 
-//==========================Imprint=================
-        /* Imprint the entities in the input list together.
+//==========================imprintEnts=================
+        /* imprintEnts the entities in the input list together.
          */
-      void Imprint(in array<opaque> geom_entities,
+      void imprintEnts(in array<opaque> geom_entities,
                    in int geom_entities_size) 
         throws iBase.Error;
 
-//==========================Merge=================
-        /* Merge coincident topology in the entities in the input list.
+//==========================mergeEnts=================
+        /* mergeEnts coincident topology in the entities in the input list.
          */
-      void Merge(in array<opaque> geom_entities,
+      void mergeEnts(in array<opaque> geom_entities,
                  in int geom_entities_size,
                  in double tolerance) 
         throws iBase.Error;

@@ -3,15 +3,11 @@
 // Symbol:        iGeom_SIDL.GeomSidl-v0.1
 // Symbol Type:   class
 // Babel Version: 0.10.10
-// sidl Created:  20090126 14:50:19 CST
-// Generated:     20090126 14:50:21 CST
 // Description:   Server-side implementation for iGeom_SIDL.GeomSidl
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
 // babel-version = 0.10.10
-// source-line   = 5
-// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iGeom_SIDL.sidl
 // 
 
 #ifndef included_iGeom_SIDL_GeomSidl_Impl_hh
@@ -62,7 +58,6 @@ namespace iGeom_SIDL {
   class GeomSidl_impl
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl._inherits)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl._inherits} (optional inheritance here)
-    void processError() throw(::iBase::Error);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._inherits)
   {
 
@@ -73,6 +68,8 @@ namespace iGeom_SIDL {
 
     // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl._implementation)
     // Insert-Code-Here {iGeom_SIDL.GeomSidl._implementation} (additional details)
+    int igeomError;
+    void processError() throw(::iBase::Error);
     iGeom_Instance igeomInstance;
     // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._implementation)
 
@@ -964,9 +961,10 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    ::iBase::EntityType
+    void
     getEntType (
-      /* in */ void* handle
+      /* in */ void* handle,
+      /* out */ ::iBase::EntityType& ent_type
     )
     throw ( 
       ::iBase::Error
@@ -1087,7 +1085,7 @@ namespace iGeom_SIDL {
      * @param gentity_handle2 2nd entity
      * @param are_adjacent If true, entities are adjacent
      */
-    int32_t
+    void
     isEntAdj (
       /* in */ void* gentity_handle1,
       /* in */ void* gentity_handle2,
@@ -1120,9 +1118,9 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    int32_t
+    void
     getTopoLevel (
-      /* in */ const ::std::string& model_name
+      /* out */ int32_t& level
     )
     throw ( 
       ::iBase::Error
@@ -1519,7 +1517,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    getPntIntsct (
+    getPntRayIntsct (
       /* in */ double x,
       /* in */ double y,
       /* in */ double z,
@@ -1569,10 +1567,11 @@ namespace iGeom_SIDL {
      * @param gface Gface whose sense is being queried.
      * @param gregion Gregion gface is being queried with respect to
      */
-    int32_t
+    void
     getEntNrmlSense (
       /* in */ void* gface,
-      /* in */ void* gregion
+      /* in */ void* gregion,
+      /* out */ int32_t& sense
     )
     throw ( 
       ::iBase::Error
@@ -1602,10 +1601,11 @@ namespace iGeom_SIDL {
      * @param gedge Gedge whose sense is being queried.
      * @param gface Gface gedge is being queried with respect to
      */
-    int32_t
+    void
     getEgFcSense (
       /* in */ void* gedge,
-      /* in */ void* gface
+      /* in */ void* gface,
+      /* out */ int32_t& sense
     )
     throw ( 
       ::iBase::Error
@@ -1638,11 +1638,12 @@ namespace iGeom_SIDL {
      * @param gvertex1 First gvertex
      * @param gvertex2 Second gvertex
      */
-    int32_t
+    void
     getEgVtxSense (
       /* in */ void* gedge,
       /* in */ void* gvertex1,
-      /* in */ void* gvertex2
+      /* in */ void* gvertex2,
+      /* out */ int32_t& sense
     )
     throw ( 
       ::iBase::Error
@@ -1703,10 +1704,14 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    int32_t
-    getParametric() throw ( 
+    void
+    getParametric (
+      /* out */ int32_t& parametric
+    )
+    throw ( 
       ::iBase::Error
     );
+
 
     /**
      * Return whether a given gentity is parametric or not.  If a gentity
@@ -1714,9 +1719,10 @@ namespace iGeom_SIDL {
      * when called on that entity.
      * @param gentity_handle Gentity being queried.
      */
-    int32_t
+    void
     isEntParametric (
-      /* in */ void* gentity_handle
+      /* in */ void* gentity_handle,
+      /* out */ int32_t& is_parametric
     )
     throw ( 
       ::iBase::Error
@@ -2301,9 +2307,10 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    int32_t
+    void
     isFcDegenerate (
-      /* in */ void* face_handle
+      /* in */ void* face_handle,
+      /* out */ int32_t& is_degenerate
     )
     throw ( 
       ::iBase::Error
@@ -2343,9 +2350,10 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    double
+    void
     getEntTolerance (
-      /* in */ void* entity_handle
+      /* in */ void* entity_handle,
+      /* out */ double& tolerance
     )
     throw ( 
       ::iBase::Error
@@ -2379,6 +2387,7 @@ namespace iGeom_SIDL {
      */
     void
     initEntIter (
+      /* in */ void* entity_set_handle,
       /* in */ int32_t gentity_dimension,
       /* out */ void*& gentity_iterator
     )
@@ -2389,7 +2398,7 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    bool
+    void
     initEntArrIter (
       /* in */ void* entity_set_handle,
       /* in */ ::iBase::EntityType requested_entity_type,
@@ -2407,10 +2416,11 @@ namespace iGeom_SIDL {
      * @param gentity_handle Next gentity
      * @return If true, there are more gentities, if false, this is the last one
      */
-    bool
+    void
     getNextEntIter (
-      /* inout */ void*& gentity_iterator,
-      /* out */ void*& gentity_handle
+      /* in */ void* entity_iterator,
+      /* out */ void*& entity_handle,
+      /* out */ int32_t& has_data
     )
     throw ( 
       ::iBase::Error
@@ -2419,11 +2429,12 @@ namespace iGeom_SIDL {
     /**
      * user defined non-static method.
      */
-    bool
+    void
     getNextEntArrIter (
       /* in */ void* entArr_iterator,
       /* inout */ ::sidl::array<void*>& entity_handles,
-      /* inout */ int32_t& entity_handles_size
+      /* out */ int32_t& entity_handles_size,
+      /* out */ int32_t& has_data
     )
     throw ( 
       ::iBase::Error
@@ -2520,7 +2531,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Sphere (
+    createSphere (
       /* in */ double radius,
       /* out */ void*& geom_entity
     )
@@ -2532,7 +2543,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Brick (
+    createBrick (
       /* in */ double x,
       /* in */ double y,
       /* in */ double z,
@@ -2546,7 +2557,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Cylinder (
+    createCylinder (
       /* in */ double height,
       /* in */ double major_rad,
       /* in */ double minor_rad,
@@ -2560,7 +2571,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Torus (
+    createTorus (
       /* in */ double major_rad,
       /* in */ double minor_rad,
       /* out */ void*& geom_entity
@@ -2573,8 +2584,8 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Move (
-      /* inout */ void*& geom_entity,
+    moveEnt (
+      /* in */ void* geom_entity,
       /* in */ double x,
       /* in */ double y,
       /* in */ double z
@@ -2587,8 +2598,8 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Rotate (
-      /* inout */ void*& geom_entity,
+    rotateEnt (
+      /* in */ void* geom_entity,
       /* in */ double angle,
       /* in */ double axis_normal_x,
       /* in */ double axis_normal_y,
@@ -2602,8 +2613,8 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Reflect (
-      /* inout */ void*& geom_entity,
+    reflectEnt (
+      /* in */ void* geom_entity,
       /* in */ double plane_normal_x,
       /* in */ double plane_normal_y,
       /* in */ double plane_normal_z
@@ -2616,8 +2627,8 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Scale (
-      /* inout */ void*& geom_entity,
+    scaleEnt (
+      /* in */ void* geom_entity,
       /* in */ double scale_x,
       /* in */ double scale_y,
       /* in */ double scale_z
@@ -2630,7 +2641,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Unite (
+    uniteEnts (
       /* in */ ::sidl::array<void*> geom_entities,
       /* in */ int32_t geom_entities_size,
       /* out */ void*& geom_entity
@@ -2643,7 +2654,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Subtract (
+    subtractEnts (
       /* in */ void* blank,
       /* in */ void* tool,
       /* out */ void*& geom_entity
@@ -2656,8 +2667,8 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Section (
-      /* inout */ void*& geom_entity,
+    sectionEnt (
+      /* in */ void* geom_entity,
       /* in */ double plane_normal_x,
       /* in */ double plane_normal_y,
       /* in */ double plane_normal_z,
@@ -2673,7 +2684,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Imprint (
+    imprintEnts (
       /* in */ ::sidl::array<void*> geom_entities,
       /* in */ int32_t geom_entities_size
     )
@@ -2685,7 +2696,7 @@ namespace iGeom_SIDL {
      * user defined non-static method.
      */
     void
-    Merge (
+    mergeEnts (
       /* in */ ::sidl::array<void*> geom_entities,
       /* in */ int32_t geom_entities_size,
       /* in */ double tolerance

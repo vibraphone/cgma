@@ -3,26 +3,32 @@
 // Symbol:        iGeom_SIDL.GeomSidl-v0.1
 // Symbol Type:   class
 // Babel Version: 0.10.10
-// sidl Created:  20090126 14:50:19 CST
-// Generated:     20090126 14:50:21 CST
 // Description:   Server-side implementation for iGeom_SIDL.GeomSidl
 // 
 // WARNING: Automatically generated; only changes within splicers preserved
 // 
 // babel-version = 0.10.10
-// source-line   = 5
-// source-url    = file:/home/jason/meshkit/cgm/itaps/SIDL/iGeom_SIDL.sidl
 // 
 #include "iGeom_SIDL_GeomSidl_Impl.hh"
 
 // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl._includes)
 // Insert-Code-Here {iGeom_SIDL.GeomSidl._includes} (additional includes or code)
 #include "sidlArray.h"
-#include "iBase.hh"
+#include "iBase.h"
 #include "iGeom.h"
 #include <iostream>
+#include <string.h>
 
-#define PROCESS_ERROR if (iGeom_LAST_ERROR.error_type != iBase_SUCCESS) this->processError()
+extern iBase_Error iGeom_LAST_ERROR;
+
+#define PROCESS_ERROR do { \
+  if (igeomError != iBase_SUCCESS) { \
+    iGeom_LAST_ERROR.error_type = iBase_ErrorType(igeomError); \
+    sprintf(iGeom_LAST_ERROR.description, "Undescribed error type"); \
+    this->processError(); \
+  } \
+} while (false)
+
 #define PROCESS_ERROR_MSG(a,b) \
    iGeom_LAST_ERROR.error_type = a; \
    sprintf(iGeom_LAST_ERROR.description, "%s", b);\
@@ -39,7 +45,7 @@
 void iGeom_SIDL::GeomSidl_impl::_ctor() {
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl._ctor)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl._ctor} (constructor)
-  iGeom_ctor(&igeomInstance);
+  iGeom_newGeom( 0, &igeomInstance, &igeomError, 0 );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._ctor)
 }
@@ -48,7 +54,7 @@ void iGeom_SIDL::GeomSidl_impl::_ctor() {
 void iGeom_SIDL::GeomSidl_impl::_dtor() {
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl._dtor)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl._dtor} (destructor)
-  iGeom_dtor(igeomInstance);
+  iGeom_dtor(igeomInstance, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._dtor)
 }
@@ -82,9 +88,11 @@ throw (
     PROCESS_ERROR_MSG(iBase_INVALID_ARGUMENT, "Wrong tag value type");
     return;
   }
+  iBase_TagHandle handle;
   iGeom_createTag(igeomInstance, tag_name.c_str(), number_of_values, (iBase_TagValueType)tag_type, 
-                  &tag_handle);
+                  &handle, &igeomError, tag_name.size());
   PROCESS_ERROR;
+  tag_handle = handle;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createTag)
 }
 
@@ -100,7 +108,7 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.destroyTag)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.destroyTag} (destroyTag method)
-  iGeom_destroyTag(igeomInstance, tag_handle, forced);
+  iGeom_destroyTag(igeomInstance, (iBase_TagHandle)tag_handle, forced, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.destroyTag)
 }
@@ -117,9 +125,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTagName)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTagName} (getTagName method)
-  std::string retval = iGeom_getTagName(igeomInstance, tag_handle);
+  char buffer[256];
+  iGeom_getTagName(igeomInstance, (iBase_TagHandle)tag_handle, 
+                   buffer, &igeomError, sizeof(buffer));
   PROCESS_ERROR;
-  return retval;
+  tag_name = buffer;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTagName)
 }
 
@@ -135,9 +145,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTagSizeValues)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTagSizeValues} (getTagSizeValues method)
-  int32_t retval = iGeom_getTagSizeValues(igeomInstance, tag_handle);
+  int size;
+  iGeom_getTagSizeValues(igeomInstance, (iBase_TagHandle)tag_handle, &size, &igeomError);
   PROCESS_ERROR;
-  return retval;
+  size_values = size;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTagSizeValues)
 }
 
@@ -153,9 +164,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTagSizeBytes)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTagSizeBytes} (getTagSizeBytes method)
-  int32_t retval = iGeom_getTagSizeBytes(igeomInstance, tag_handle);
+  int size;
+  iGeom_getTagSizeBytes(igeomInstance, (iBase_TagHandle)tag_handle, &size, &igeomError);
   PROCESS_ERROR;
-  return retval;
+  size_bytes = size;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTagSizeBytes)
 }
 
@@ -171,9 +183,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTagHandle)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTagHandle} (getTagHandle method)
-  void *retval = iGeom_getTagHandle(igeomInstance, tag_name.c_str());
+  iBase_TagHandle handle;
+  iGeom_getTagHandle(igeomInstance, tag_name.c_str(), &handle, &igeomError, tag_name.size() );
   PROCESS_ERROR;
-  return retval;
+  tag_handle = handle;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTagHandle)
 }
 
@@ -189,10 +202,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTagType)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTagType} (getTagType method)
-  ::iBase::TagValueType retval = (::iBase::TagValueType) iGeom_getTagType(igeomInstance,
-                                                                        tag_handle );
+  int type;
+  iGeom_getTagType( igeomInstance, (iBase_TagHandle)tag_handle, &type, &igeomError );
   PROCESS_ERROR;
-  return retval;
+  tag_data_type = (::iBase::TagValueType)type;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTagType)
 }
 
@@ -213,9 +226,10 @@ throw (
   CREATE_TEMP_TAG_ARRAY(tag_value);
   
   iGeom_getData (igeomInstance,
-                 entity_handle,
-                 tag_handle,
-                 TEMP_ARRAY_INOUT(tag_value));
+                 (iBase_EntityHandle)entity_handle,
+                 (iBase_TagHandle)tag_handle,
+                 TEMP_ARRAY_INOUT(tag_value),
+                 &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_TAG_ARRAY(tag_value);
@@ -235,11 +249,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getIntData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getIntData} (getIntData method)
-  int32_t retval = iGeom_getIntData(igeomInstance,
-                                    entity_handle,
-                                    tag_handle );
+  int data;
+  iGeom_getIntData(igeomInstance,
+                   (iBase_EntityHandle)entity_handle,
+                   (iBase_TagHandle)tag_handle,
+                   &data, &igeomError );
   PROCESS_ERROR;
-  return retval;
+  int_data = data;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getIntData)
 }
 
@@ -256,11 +272,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getDblData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getDblData} (getDblData method)
-  double retval = iGeom_getDblData(igeomInstance,
-                                   entity_handle,
-                                   tag_handle );  
+  iGeom_getDblData(igeomInstance,
+                   (iBase_EntityHandle)entity_handle,
+                   (iBase_TagHandle)tag_handle,
+                   &dbl_data, &igeomError );
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getDblData)
 }
 
@@ -277,11 +293,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEHData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEHData} (getEHData method)
-  void *retval = iGeom_getEHData(igeomInstance,
-                                 entity_handle,
-                                 tag_handle );
+  iBase_EntityHandle data;
+  iGeom_getEHData(igeomInstance,
+                  (iBase_EntityHandle)entity_handle,
+                  (iBase_TagHandle)tag_handle,
+                  &data, &igeomError );
   PROCESS_ERROR;
-  return retval;
+  eh_data = data;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEHData)
 }
 
@@ -300,9 +318,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setData} (setData method)
   iGeom_setData(igeomInstance, 
-                entity_handle,
-                tag_handle, 
-                TEMP_TAG_ARRAY_IN(tag_value));
+                (iBase_EntityHandle)entity_handle,
+                (iBase_TagHandle)tag_handle, 
+                TEMP_TAG_ARRAY_IN(tag_value),
+                &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setData)
 }
@@ -321,9 +340,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setIntData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setIntData} (setIntData method)
   iGeom_setIntData (igeomInstance,
-                    entity_handle,
-                    tag_handle,
-                    tag_value );
+                    (iBase_EntityHandle)entity_handle,
+                    (iBase_TagHandle)tag_handle,
+                    tag_value, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setIntData)
 }
@@ -342,9 +361,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setDblData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setDblData} (setDblData method)
   iGeom_setDblData (igeomInstance,
-                    entity_handle,
-                    tag_handle,
-                    tag_value );
+                    (iBase_EntityHandle)entity_handle,
+                    (iBase_TagHandle)tag_handle,
+                    tag_value, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setDblData)
 }
@@ -362,11 +381,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEHData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEHData} (setEHData method)
+  iBase_EntityHandle value;
   iGeom_setEHData (igeomInstance,
-                   entity_handle,
-                   tag_handle,
-                   tag_value );
+                    (iBase_EntityHandle)entity_handle,
+                    (iBase_TagHandle)tag_handle,
+                    value, &igeomError );
   PROCESS_ERROR;
+  tag_value = value;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEHData)
 }
 
@@ -383,13 +404,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getAllTags)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getAllTags} (getAllTags method)
-  CREATE_TEMP_ARRAY(void*, tag_handles);
+  CREATE_TEMP_TH_ARRAY(tag_handles);
   
-  iGeom_getAllTags(igeomInstance, entity_handle, 
-                   TEMP_ARRAY_INOUT(tag_handles));
+  iGeom_getAllTags(igeomInstance, (iBase_EntityHandle)entity_handle, 
+                   TEMP_ARRAY_INOUT(tag_handles), &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(tag_handles);
+  ASSIGN_TYPED_ARRAY(void*, tag_handles);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getAllTags)
 }
 
@@ -406,8 +427,8 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvTag)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvTag} (rmvTag method)
   iGeom_rmvTag (igeomInstance,
-                entity_handle,
-                tag_handle );
+                (iBase_EntityHandle)entity_handle,
+                (iBase_TagHandle)tag_handle, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvTag)
 }
@@ -430,9 +451,10 @@ throw (
   CREATE_TEMP_TAG_ARRAY(value_array);
   
   iGeom_getArrData(igeomInstance, 
-                   TEMP_ARRAY_IN(entity_handles), 
-                   tag_handle, 
-                   TEMP_ARRAY_INOUT(value_array));
+                   TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, entity_handles), 
+                   (iBase_TagHandle)tag_handle, 
+                   TEMP_ARRAY_INOUT(value_array),
+                   &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_TAG_ARRAY(value_array);
@@ -457,12 +479,13 @@ throw (
   CREATE_TEMP_ARRAY(int32_t, value_array);
   
   iGeom_getIntArrData (igeomInstance,
-                       TEMP_ARRAY_IN(entity_handles),
-                       tag_handle,
-                       TEMP_ARRAY_INOUT(value_array));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, entity_handles),
+                       (iBase_TagHandle)tag_handle,
+                       TEMP_ARRAY_INOUT(value_array), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(value_array);
+  ASSIGN_TYPED_ARRAY(int, value_array);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getIntArrData)
 }
 
@@ -484,12 +507,13 @@ throw (
   CREATE_TEMP_ARRAY(double, value_array);
   
   iGeom_getDblArrData (igeomInstance,
-                       TEMP_ARRAY_IN(entity_handles),
-                       tag_handle,
-                       TEMP_ARRAY_INOUT(value_array));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       (iBase_TagHandle)tag_handle,
+                       TEMP_ARRAY_INOUT(value_array), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(value_array);
+  ASSIGN_TYPED_ARRAY(double,value_array);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getDblArrData)
 }
 
@@ -508,15 +532,16 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEHArrData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEHArrData} (getEHArrData method)
-  CREATE_TEMP_ARRAY(void*, value_array);
+  CREATE_TEMP_EH_ARRAY(value_array);
   
   iGeom_getEHArrData (igeomInstance,
-                      TEMP_ARRAY_IN(entity_handles),
-                      tag_handle,
-                      TEMP_ARRAY_INOUT(value_array));
+                      TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                      (iBase_TagHandle)tag_handle,
+                      TEMP_ARRAY_INOUT(value_array), 
+                      &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(value_array);
+  ASSIGN_TYPED_ARRAY(void*,value_array);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEHArrData)
 }
 
@@ -536,9 +561,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setArrData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setArrData} (setArrData method)
   iGeom_setArrData(igeomInstance, 
-                   TEMP_ARRAY_IN(entity_handles),
-                   tag_handle, 
-                   TEMP_TAG_ARRAY_IN(value_array));
+                   TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                   (iBase_TagHandle)tag_handle, 
+                   TEMP_TAG_ARRAY_IN(value_array), 
+                   &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setArrData)
 }
@@ -559,9 +585,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setIntArrData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setIntArrData} (setIntArrData method)
   iGeom_setIntArrData (igeomInstance,
-                       TEMP_ARRAY_IN(entity_handles),
-                       tag_handle,
-                       TEMP_ARRAY_IN(value_array));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       (iBase_TagHandle)tag_handle,
+                       TEMP_ARRAY_IN(value_array), 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setIntArrData)
 }
@@ -582,9 +609,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setDblArrData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setDblArrData} (setDblArrData method)
   iGeom_setDblArrData (igeomInstance,
-                       TEMP_ARRAY_IN(entity_handles),
-                       tag_handle,
-                       TEMP_ARRAY_IN(value_array));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       (iBase_TagHandle)tag_handle,
+                       TEMP_ARRAY_IN(value_array), 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setDblArrData)
 }
@@ -605,9 +633,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEHArrData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEHArrData} (setEHArrData method)
   iGeom_setEHArrData (igeomInstance,
-                      TEMP_ARRAY_IN(entity_handles),
-                      tag_handle,
-                      TEMP_ARRAY_IN(value_array));
+                      TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                      (iBase_TagHandle)tag_handle,
+                      TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, value_array), 
+                      &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEHArrData)
 }
@@ -626,8 +655,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvArrTag)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvArrTag} (rmvArrTag method)
   iGeom_rmvArrTag (igeomInstance,
-                   TEMP_ARRAY_IN(entity_handles),
-                   tag_handle );
+                   TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                   (iBase_TagHandle)tag_handle, 
+                   &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvArrTag)
 }
@@ -646,8 +676,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEntSetData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEntSetData} (setEntSetData method)
-  iGeom_setEntSetData(igeomInstance, entity_set, tag_handle,
-                      TEMP_TAG_ARRAY_IN(tag_value));
+  iGeom_setEntSetData(igeomInstance, 
+                     (iBase_EntitySetHandle)entity_set, 
+                     (iBase_TagHandle)tag_handle,
+                      TEMP_TAG_ARRAY_IN(tag_value), 
+                      &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEntSetData)
 }
@@ -666,9 +699,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEntSetIntData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEntSetIntData} (setEntSetIntData method)
   iGeom_setEntSetIntData (igeomInstance,
-                          entity_set,
-                          tag_handle,
-                          tag_value );
+                          (iBase_EntitySetHandle)entity_set,
+                          (iBase_TagHandle)tag_handle,
+                          tag_value, 
+                          &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEntSetIntData)
 }
@@ -687,9 +721,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEntSetDblData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEntSetDblData} (setEntSetDblData method)
   iGeom_setEntSetDblData (igeomInstance,
-                          entity_set,
-                          tag_handle,
-                          tag_value );
+                          (iBase_EntitySetHandle)entity_set,
+                          (iBase_TagHandle)tag_handle,
+                          tag_value, 
+                          &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEntSetDblData)
 }
@@ -708,9 +743,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.setEntSetEHData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.setEntSetEHData} (setEntSetEHData method)
   iGeom_setEntSetEHData (igeomInstance,
-                         entity_set,
-                         tag_handle,
-                         tag_value );
+                         (iBase_EntitySetHandle)entity_set,
+                         (iBase_TagHandle)tag_handle,
+                         (iBase_EntityHandle)tag_value, 
+                         &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.setEntSetEHData)
 }
@@ -732,9 +768,10 @@ throw (
   CREATE_TEMP_TAG_ARRAY(tag_value);
   
   iGeom_getEntSetData (igeomInstance,
-                       entity_set,
-                       tag_handle,
-                       TEMP_ARRAY_INOUT(tag_value));
+                       (iBase_EntitySetHandle)entity_set,
+                       (iBase_TagHandle)tag_handle,
+                       TEMP_ARRAY_INOUT(tag_value), 
+                       &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_TAG_ARRAY(tag_value);
@@ -754,11 +791,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntSetIntData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntSetIntData} (getEntSetIntData method)
-  int32_t retval = iGeom_getEntSetIntData(igeomInstance,
-                                          entity_set,
-                                          tag_handle );
+  iGeom_getEntSetIntData(igeomInstance,
+                         (iBase_EntitySetHandle)entity_set,
+                         (iBase_TagHandle)tag_handle, 
+                         &int_data,
+                         &igeomError );
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntSetIntData)
 }
 
@@ -775,11 +813,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntSetDblData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntSetDblData} (getEntSetDblData method)
-  double retval = iGeom_getEntSetDblData(igeomInstance,
-                                         entity_set,
-                                         tag_handle );
+  iGeom_getEntSetDblData(igeomInstance,
+                         (iBase_EntitySetHandle)entity_set,
+                         (iBase_TagHandle)tag_handle, 
+                         &dbl_data,
+                         &igeomError );
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntSetDblData)
 }
 
@@ -796,11 +835,14 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntSetEHData)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntSetEHData} (getEntSetEHData method)
-  void *retval = iGeom_getEntSetEHData(igeomInstance,
-                                       entity_set,
-                                       tag_handle );
+  iBase_EntityHandle data;
+  iGeom_getEntSetEHData(igeomInstance,
+                        (iBase_EntitySetHandle)entity_set,
+                        (iBase_TagHandle)tag_handle, 
+                        &data,
+                        &igeomError );
   PROCESS_ERROR;
-  return retval;
+  eh_data = data;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntSetEHData)
 }
 
@@ -817,11 +859,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getAllEntSetTags)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getAllEntSetTags} (getAllEntSetTags method)
-  CREATE_TEMP_ARRAY(void*, tag_handles);
+  CREATE_TEMP_TH_ARRAY(tag_handles);
   
   iGeom_getAllEntSetTags (igeomInstance,
-                          entity_set,
-                          TEMP_ARRAY_INOUT(tag_handles));
+                          (iBase_EntitySetHandle)entity_set,
+                          TEMP_ARRAY_INOUT(tag_handles), 
+                          &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_ARRAY(tag_handles);
@@ -841,8 +884,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvEntSetTag)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvEntSetTag} (rmvEntSetTag method)
   iGeom_rmvEntSetTag (igeomInstance,
-                      entity_set,
-                      tag_handle );
+                      (iBase_EntitySetHandle)entity_set,
+                      (iBase_TagHandle)tag_handle, 
+                      &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvEntSetTag)
 }
@@ -859,8 +903,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.createEntSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.createEntSet} (createEntSet method)
-  iGeom_createEntSet(igeomInstance, isList, &entity_set);
+  iBase_EntitySetHandle handle;
+  iGeom_createEntSet(igeomInstance, isList, &handle, &igeomError);
   PROCESS_ERROR;
+  entity_set = handle;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createEntSet)
 }
 
@@ -875,7 +921,7 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.destroyEntSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.destroyEntSet} (destroyEntSet method)
-  iGeom_destroyEntSet(igeomInstance, entity_set);
+  iGeom_destroyEntSet(igeomInstance, (iBase_EntitySetHandle)entity_set, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.destroyEntSet)
 }
@@ -892,9 +938,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isList)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isList} (isList method)
-  bool retval = iGeom_isList(igeomInstance, entity_set);
+  iGeom_isList(igeomInstance, (iBase_EntitySetHandle)entity_set, &is_list, &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isList)
 }
 
@@ -911,9 +956,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNumEntSets)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNumEntSets} (getNumEntSets method)
-  int32_t retval = iGeom_getNumEntSets(igeomInstance, entity_set, num_hops);
+  iGeom_getNumEntSets(igeomInstance, 
+                      (iBase_EntitySetHandle)entity_set, 
+                      num_hops, 
+                      &num_sets,
+                      &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNumEntSets)
 }
 
@@ -931,18 +979,15 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntSets)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntSets} (getEntSets method)
-  CREATE_TEMP_ARRAY(void*, contained_entset_handles);
+  CREATE_TEMP_ESH_ARRAY(contained_entset_handles);
 
-  iGeom_getEntSets(igeomInstance, entity_set, num_hops, 
-                   TEMP_ARRAY_INOUT(contained_entset_handles));
+  iGeom_getEntSets (igeomInstance,
+                    reinterpret_cast<iBase_EntitySetHandle>(entity_set), num_hops,
+                    TEMP_ARRAY_INOUT(contained_entset_handles), &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(contained_entset_handles);
-  CREATE_TEMP_ARRAY(void*, contained_entset_handles);
 
-  iGeom_getEntSets(igeomInstance, entity_set, num_hops, 
-                   TEMP_ARRAY_INOUT(contained_entset_handles));
-  PROCESS_ERROR;
-  ASSIGN_ARRAY(contained_entset_handles);
+  ASSIGN_TYPED_ARRAY(void*, contained_entset_handles);
+
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntSets)
 }
 
@@ -959,8 +1004,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.addEntToSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.addEntToSet} (addEntToSet method)
   iGeom_addEntToSet (igeomInstance,
-                     entity_handle,
-                     &entity_set);
+                     (iBase_EntityHandle)entity_handle,
+                     (iBase_EntitySetHandle)entity_set, 
+                     &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.addEntToSet)
 }
@@ -978,8 +1024,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvEntFromSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvEntFromSet} (rmvEntFromSet method)
   iGeom_rmvEntFromSet (igeomInstance,
-                       entity_handle,
-                       &entity_set );
+                       (iBase_EntityHandle)entity_handle,
+                       (iBase_EntitySetHandle)entity_set, 
+                       &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvEntFromSet)
 }
@@ -1000,9 +1047,11 @@ throw (
   entity_handles.addRef();
   void **tmp_ptr1 = entity_handles._get_ior()->d_firstElement;
     //void **tmp_ptr3 = entity_handles._get_ior()->d_firstElement;
-  iGeom_addEntArrToSet(igeomInstance, tmp_ptr1,
+  iGeom_addEntArrToSet(igeomInstance, 
+                       (iBase_EntityHandle*)tmp_ptr1,
                        entity_handles_size,
-                       &entity_set);
+                       (iBase_EntitySetHandle)entity_set, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.addEntArrToSet)
 }
@@ -1020,8 +1069,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvEntArrFromSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvEntArrFromSet} (rmvEntArrFromSet method)
-  iGeom_rmvEntArrFromSet(igeomInstance, TEMP_ARRAY_IN(entity_handles), 
-                         &entity_set);
+  iGeom_rmvEntArrFromSet(igeomInstance, 
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles), 
+                         (iBase_EntitySetHandle)entity_set, 
+                         &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvEntArrFromSet)
 }
@@ -1038,8 +1089,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.addEntSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.addEntSet} (addEntSet method)
-  iGeom_addEntSet(igeomInstance, entity_set_to_add, 
-                  &entity_set_handle);
+  iGeom_addEntSet(igeomInstance, 
+                  (iBase_EntitySetHandle)entity_set_to_add, 
+                  (iBase_EntitySetHandle)entity_set_handle, 
+                  &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.addEntSet)
 }
@@ -1057,8 +1110,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvEntSet)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvEntSet} (rmvEntSet method)
   iGeom_rmvEntSet (igeomInstance,
-                   entity_set_to_remove,
-                   &entity_set_handle );
+                   (iBase_EntitySetHandle)entity_set_to_remove,
+                   (iBase_EntitySetHandle)entity_set_handle, 
+                   &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvEntSet)
 }
@@ -1076,11 +1130,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntContained)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntContained} (isEntContained method)
-  bool retval = iGeom_isEntContained(igeomInstance,
-                                     containing_entity_set,
-                                     entity_handle);
+ iGeom_isEntContained(igeomInstance,
+                      (iBase_EntitySetHandle)containing_entity_set,
+                      (iBase_EntityHandle)entity_handle, 
+                      &is_contained,
+                      &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntContained)
 }
 
@@ -1097,7 +1152,15 @@ iGeom_SIDL::GeomSidl_impl::isEntArrContained (
 throw () 
 {
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntArrContained)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntArrContained} (isEntArrContained method)
+
+  CREATE_TEMP_ARRAY(int32_t, is_contained);
+
+  iGeom_isEntArrContained( igeomInstance,
+                           (iBase_EntitySetHandle)containing_set,
+                           TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, entity_handles),
+                           TEMP_ARRAY_INOUT(is_contained), &igeomError);
+  PROCESS_ERROR;
+
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntArrContained)
 }
 
@@ -1114,11 +1177,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntSetContained)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntSetContained} (isEntSetContained method)
-  bool retval = iGeom_isEntSetContained(igeomInstance,
-                                        containing_entity_set,
-                                        contained_entity_set);
+  iGeom_isEntSetContained(igeomInstance,
+                          (iBase_EntitySetHandle)containing_entity_set,
+                          (iBase_EntitySetHandle)contained_entity_set, 
+                          &is_contained,
+                          &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntSetContained)
 }
 
@@ -1134,7 +1198,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.addPrntChld)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.addPrntChld} (addPrntChld method)
-  iGeom_addPrntChld(igeomInstance, &parent_entity_set, &child_entity_set);
+  iGeom_addPrntChld(igeomInstance, 
+                    (iBase_EntitySetHandle)parent_entity_set, 
+                    (iBase_EntitySetHandle)child_entity_set, 
+                    &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.addPrntChld)
 }
@@ -1151,7 +1218,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rmvPrntChld)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.rmvPrntChld} (rmvPrntChld method)
-  iGeom_rmvPrntChld(igeomInstance, &parent_entity_set, &child_entity_set);
+  iGeom_rmvPrntChld(igeomInstance, 
+                    (iBase_EntitySetHandle)parent_entity_set, 
+                    (iBase_EntitySetHandle)child_entity_set, 
+                    &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rmvPrntChld)
 }
@@ -1169,10 +1239,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isChildOf)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isChildOf} (isChildOf method)
-  bool retval = iGeom_isChildOf(igeomInstance, parent_entity_set, 
-                                child_entity_set);
+  iGeom_isChildOf(igeomInstance, 
+                  (iBase_EntitySetHandle)parent_entity_set, 
+                  (iBase_EntitySetHandle)child_entity_set, 
+                  &is_child, 
+                  &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isChildOf)
 }
 
@@ -1189,9 +1261,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNumChld)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNumChld} (getNumChld method)
-  int32_t retval = iGeom_getNumChld(igeomInstance, entity_set, num_hops);
+  iGeom_getNumChld(igeomInstance, 
+                   (iBase_EntitySetHandle)entity_set, 
+                   num_hops, 
+                   &num_child,
+                   &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNumChld)
 }
 
@@ -1208,9 +1283,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNumPrnt)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNumPrnt} (getNumPrnt method)
-  int32_t retval = iGeom_getNumPrnt(igeomInstance, entity_set, num_hops);
+  iGeom_getNumPrnt(igeomInstance, 
+                   (iBase_EntitySetHandle)entity_set, 
+                   num_hops, 
+                   &num_parent,
+                   &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNumPrnt)
 }
 
@@ -1228,10 +1306,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getChldn)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getChldn} (getChldn method)
-  CREATE_TEMP_ARRAY(void*, child_handles);
+  CREATE_TEMP_ESH_ARRAY(child_handles);
   
-  iGeom_getChldn(igeomInstance, from_entity_set, num_hops, 
-                 TEMP_ARRAY_INOUT(child_handles));
+  iGeom_getChldn(igeomInstance, 
+                 (iBase_EntitySetHandle)from_entity_set, 
+                 num_hops, 
+                 TEMP_ARRAY_INOUT(child_handles), 
+                 &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_ARRAY(child_handles);
@@ -1252,10 +1333,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getPrnts)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getPrnts} (getPrnts method)
-  CREATE_TEMP_ARRAY(void*, parent_handles);
+  CREATE_TEMP_ESH_ARRAY(parent_handles);
   
-  iGeom_getPrnts(igeomInstance, from_entity_set, num_hops, 
-                 TEMP_ARRAY_INOUT(parent_handles));
+  iGeom_getPrnts(igeomInstance, 
+                 (iBase_EntitySetHandle)from_entity_set, 
+                 num_hops, 
+                 TEMP_ARRAY_INOUT(parent_handles), 
+                 &igeomError);
   PROCESS_ERROR;
   
   ASSIGN_ARRAY(parent_handles);
@@ -1275,7 +1359,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.subtract)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.subtract} (subtract method)
-  iGeom_subtract(igeomInstance, entity_set_1, entity_set_2, &result_entity_set);
+  iGeom_subtract(igeomInstance, 
+                 (iBase_EntitySetHandle)entity_set_1, 
+                 (iBase_EntitySetHandle)entity_set_2, 
+                 (iBase_EntitySetHandle*)&result_entity_set, 
+                 &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.subtract)
 }
@@ -1293,7 +1381,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.intersect)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.intersect} (intersect method)
-  iGeom_intersect(igeomInstance, entity_set_1, entity_set_2, &result_entity_set);
+  iGeom_intersect(igeomInstance, 
+                  (iBase_EntitySetHandle)entity_set_1, 
+                  (iBase_EntitySetHandle)entity_set_2, 
+                  (iBase_EntitySetHandle*)&result_entity_set, 
+                  &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.intersect)
 }
@@ -1311,7 +1403,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.unite)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.unite} (unite method)
-  iGeom_unite(igeomInstance, entity_set_1, entity_set_2, &result_entity_set);
+  iGeom_unite(igeomInstance, 
+              (iBase_EntitySetHandle)entity_set_1, 
+              (iBase_EntitySetHandle)entity_set_2, 
+              (iBase_EntitySetHandle*)&result_entity_set, 
+              &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.unite)
 }
@@ -1333,18 +1429,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.load)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.load} (load method)
-  const char **tmp_options = NULL;
-  if (options_size > 0) {
-    tmp_options = new const char*[options_size];
-    for (int i = 0; i < options_size; i++)
-      tmp_options[i] = (options.get(i)).c_str();
-  }
-  
-  iGeom_load(igeomInstance, name.c_str(), tmp_options, 
-             options_size);
-  
-  delete [] tmp_options;
-
+  iGeom_load(igeomInstance, name.c_str(), options.c_str(), &igeomError, 
+             name.size(), options.size());
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.load)
 }
@@ -1366,18 +1452,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.save)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.save} (save method)
-  const char **tmp_options = NULL;
-  if (options_size > 0) {
-    tmp_options = new const char*[options_size];
-    for (int i = 0; i < options_size; i++)
-      tmp_options[i] = (options.get(i)).c_str();
-  }
-  
-  iGeom_save(igeomInstance, name.c_str(), tmp_options, 
-              options_size);
-  
-  delete [] tmp_options;
-
+  iGeom_save( igeomInstance, name.c_str(), options.c_str(), &igeomError, 
+              name.size(), options.size());
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.save)
 }
@@ -1399,21 +1475,22 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntities)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntities} (getEntities method)
-  if (gentity_type > ::iGeom::EntityType_ALL_TYPES || 
-      gentity_type < ::iGeom::EntityType_VERTEX) {
+  if (gentity_type > ::iBase::EntityType_ALL_TYPES || 
+      gentity_type < ::iBase::EntityType_VERTEX) {
     PROCESS_ERROR_MSG(iBase_INVALID_ARGUMENT, "Wrong entity type");
     return;
   }
     
-  CREATE_TEMP_ARRAY(void*, gentity_handles);
+  CREATE_TEMP_EH_ARRAY(gentity_handles);
 
   iGeom_getEntities (igeomInstance, 
-                     set_handle,
-                     (iGeom_EntityType)gentity_type,
-                     TEMP_ARRAY_INOUT(gentity_handles));
+                     (iBase_EntitySetHandle)set_handle,
+                     gentity_type,
+                     TEMP_ARRAY_INOUT(gentity_handles), 
+                     &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(gentity_handles);
+  ASSIGN_TYPED_ARRAY(void*, gentity_handles);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntities)
 }
 
@@ -1434,36 +1511,35 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNumOfType)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNumOfType} (getNumOfType method)
-  if (gentity_type > ::iGeom::EntityType_ALL_TYPES || 
-      gentity_type < ::iGeom::EntityType_VERTEX) {
-    PROCESS_ERROR_MSG(iBase_INVALID_ARGUMENT, "Wrong entity type");
-    return -1;
-  }
-  int32_t retval = iGeom_getNumOfType(igeomInstance, 
-                                      set_handle,
-                                      (iGeom_EntityType)gentity_type);
+  iGeom_getNumOfType(igeomInstance, 
+                     (iBase_EntitySetHandle)set_handle,
+                     gentity_type, 
+                     &num_type,
+                     &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNumOfType)
 }
 
 /**
  * Method:  getEntType[]
  */
-::iBase::EntityType
+void
 iGeom_SIDL::GeomSidl_impl::getEntType (
-  /* in */ void* handle ) 
+  /* in */ void* handle,
+  /* out */ ::iBase::EntityType& ent_type ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntType)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntType} (getEntType method)
-  iGeom_EntityType gtype;
-  iGeom_getEntType (igeomInstance, handle, &gtype );
-
+  int gtype;
+  iGeom_getEntType ( igeomInstance, 
+                     (iBase_EntityHandle)handle, 
+                     &gtype, 
+                     &igeomError );
+  ent_type = (::iBase::EntityType)gtype;
   PROCESS_ERROR;
 
-  return static_cast< ::iGeom::EntityType >(gtype);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntType)
 }
 
@@ -1482,11 +1558,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrType)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrType} (getArrType method)
-  CREATE_TEMP_ENUM_ARRAY(iGeom_EntityType, gtype);
+  CREATE_TEMP_ENUM_ARRAY(int, gtype);
   
   iGeom_getArrType (igeomInstance, 
-                    TEMP_ARRAY_IN(gentity_handles), 
-                    TEMP_ARRAY_INOUT(gtype));
+                    TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles), 
+                    TEMP_ARRAY_INOUT(gtype), 
+                    &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_ENUM_ARRAY(gtype);
@@ -1510,12 +1587,13 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntAdj)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntAdj} (getEntAdj method)
-  CREATE_TEMP_ARRAY(void*, adj_gentities);
+  CREATE_TEMP_EH_ARRAY(adj_gentities);
   
   iGeom_getEntAdj (igeomInstance, 
-                   gentity_handle,
-                   static_cast<iGeom_EntityType>(to_dimension),
-                   TEMP_ARRAY_INOUT(adj_gentities));
+                   (iBase_EntityHandle)entity_handle,
+                   to_dimension,
+                   TEMP_ARRAY_INOUT(adj_gentities), 
+                   &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_ARRAY(adj_gentities);
@@ -1542,16 +1620,16 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrAdj)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrAdj} (getArrAdj method)
-  CREATE_TEMP_ARRAY(iGeom_EntityHandle, adj_entity_handles);
+  CREATE_TEMP_EH_ARRAY(adj_entity_handles);
   CREATE_TEMP_ARRAY(int32_t, offset);
   
   iGeom_getArrAdj (igeomInstance, 
 
 //                   TEMP_ARRAY_IN(entity_handles)
-                   (entity_handles._get_ior() == NULL ? NULL : entity_handles._get_ior()->d_firstElement),
+                   (const iBase_EntityHandle*)(entity_handles._get_ior() == NULL ? NULL : entity_handles._get_ior()->d_firstElement),
                    entity_handles_size,
 
-                   static_cast<iGeom_EntityType>(requested_entity_type),
+                   requested_entity_type,
 
 //                   TEMP_ARRAY_INOUT(adj_entity_handles),
                    &adj_entity_handles_temp, 
@@ -1561,13 +1639,15 @@ throw (
 //                   TEMP_ARRAY_INOUT(offset)
                    &offset_temp, 
                    &offset_allocated_size, 
-                   &offset_size 
+                   &offset_size, 
+                   
+                   &igeomError 
 
                    );
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(adj_entity_handles);
-  ASSIGN_ARRAY(offset);
+  ASSIGN_TYPED_ARRAY(void*, adj_entity_handles);
+  ASSIGN_TYPED_ARRAY(int32_t, offset);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrAdj)
 }
 
@@ -1595,13 +1675,14 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEnt2ndAdj)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEnt2ndAdj} (getEnt2ndAdj method)
-  CREATE_TEMP_ARRAY(void*, adjacent_gentities);
+  CREATE_TEMP_EH_ARRAY(adjacent_gentities);
   
   iGeom_getEnt2ndAdj (igeomInstance, 
-                      gentity_handle,
+                      (iBase_EntityHandle)gentity_handle,
                       bridge_dimension,
                       to_dimension,
-                      TEMP_ARRAY_INOUT(adjacent_gentities));
+                      TEMP_ARRAY_INOUT(adjacent_gentities), 
+                      &igeomError);
   PROCESS_ERROR;
   
   ASSIGN_ARRAY(adjacent_gentities);
@@ -1636,19 +1717,20 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArr2ndAdj)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArr2ndAdj} (getArr2ndAdj method)
-  CREATE_TEMP_ARRAY(void*, adj_entity_handles);
+  CREATE_TEMP_EH_ARRAY(adj_entity_handles);
   CREATE_TEMP_ARRAY(int32_t, offset);
   
   iGeom_getArr2ndAdj (igeomInstance, 
-                   TEMP_ARRAY_IN(entity_handles),
-                   static_cast<iGeom_EntityType>(order_adjacent_key),
-                   static_cast<iGeom_EntityType>(requested_entity_type),
+                   TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                   order_adjacent_key,
+                   requested_entity_type,
                    TEMP_ARRAY_INOUT(adj_entity_handles),
-                   TEMP_ARRAY_INOUT(offset));
+                   TEMP_ARRAY_INOUT(offset), 
+                   &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(adj_entity_handles);
-  ASSIGN_ARRAY(offset);
+  ASSIGN_TYPED_ARRAY(void*, adj_entity_handles);
+  ASSIGN_TYPED_ARRAY(int32_t, offset);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArr2ndAdj)
 }
 
@@ -1658,7 +1740,7 @@ throw (
  * @param gentity_handle2 2nd entity
  * @param are_adjacent If true, entities are adjacent
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::isEntAdj (
   /* in */ void* gentity_handle1,
   /* in */ void* gentity_handle2,
@@ -1668,12 +1750,14 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntAdj)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntAdj} (isEntAdj method)
+  int adj;
   iGeom_isEntAdj (igeomInstance, 
-                  gentity_handle1,
-                  gentity_handle2,
-                  &are_adjacent);
+                  (iBase_EntityHandle)gentity_handle1,
+                  (iBase_EntityHandle)gentity_handle2,
+                  &adj, 
+                  &igeomError);
   PROCESS_ERROR;
-  return are_adjacent;
+  are_adjacent = !!adj;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntAdj)
 }
 
@@ -1698,29 +1782,28 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isArrAdj} (isArrAdj method)
   CREATE_TEMP_ARRAY(int32_t, is_adjacent_info);
   iGeom_isArrAdj (igeomInstance, 
-                  TEMP_ARRAY_IN(entity_handles_1),
-                  TEMP_ARRAY_IN(entity_handles_2),
-                  TEMP_ARRAY_INOUT(is_adjacent_info));
+                  TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles_1),
+                  TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles_2),
+                  TEMP_ARRAY_INOUT(is_adjacent_info), 
+                  &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(is_adjacent_info);
+  ASSIGN_TYPED_ARRAY(int32_t, is_adjacent_info);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isArrAdj)
 }
 
 /**
  * Method:  getTopoLevel[]
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::getTopoLevel (
-  /* in */ const ::std::string& model_name ) 
+  /* out */ int32_t& level ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getTopoLevel)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTopoLevel} (getTopoLevel method)
-  int level;
-  iGeom_getTopoLevel (igeomInstance, model_name.c_str(), &level);
+  iGeom_getTopoLevel (igeomInstance, &level, &igeomError);
   PROCESS_ERROR;
-  return level;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTopoLevel)
 }
 
@@ -1742,9 +1825,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntClosestPt)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntClosestPt} (getEntClosestPt method)
   iGeom_getEntClosestPt (igeomInstance, 
-                         entity_handle,
+                         (iBase_EntityHandle)entity_handle,
                          near_x, near_y, near_z, 
-                         &on_x, &on_y, &on_z);
+                         &on_x, &on_y, &on_z, 
+                         &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntClosestPt)
 }
@@ -1772,15 +1856,15 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrClosestPt)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrClosestPt} (getArrClosestPt method)
   CREATE_TEMP_ARRAY(double, on_coordinates);
-  
-  iGeom_getArrClosestPt (igeomInstance, 
-                             TEMP_ARRAY_IN(gentity_handles),
-                             static_cast<iBase_StorageOrder>(storage_order),
+   iGeom_getArrClosestPt (igeomInstance, 
+                             TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                             storage_order,
                              TEMP_ARRAY_IN(near_coordinates),
-                             TEMP_ARRAY_INOUT(on_coordinates));
+                             TEMP_ARRAY_INOUT(on_coordinates), 
+                             &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(on_coordinates);
+  ASSIGN_TYPED_ARRAY(double, on_coordinates);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrClosestPt)
 }
 
@@ -1802,9 +1886,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntNrmlXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntNrmlXYZ} (getEntNrmlXYZ method)
   iGeom_getEntNrmlXYZ (igeomInstance, 
-                       entity_handle,
+                       (iBase_EntityHandle)entity_handle,
                        x, y, z, 
-                       &nrml_i, &nrml_j, &nrml_k);
+                       &nrml_i, &nrml_j, &nrml_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntNrmlXYZ)
 }
@@ -1832,15 +1917,15 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrNrmlXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrNrmlXYZ} (getArrNrmlXYZ method)
   CREATE_TEMP_ARRAY(double, normals);
-  
   iGeom_getArrNrmlXYZ (igeomInstance, 
-                       TEMP_ARRAY_IN(gentity_handles),
-                       static_cast<iBase_StorageOrder>(storage_order),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                       storage_order,
                        TEMP_ARRAY_IN(coordinates),
-                       TEMP_ARRAY_INOUT(normals));
+                       TEMP_ARRAY_INOUT(normals), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(normals);
+  ASSIGN_TYPED_ARRAY(double, normals);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrNrmlXYZ)
 }
 
@@ -1865,10 +1950,11 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntNrmlPlXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntNrmlPlXYZ} (getEntNrmlPlXYZ method)
   iGeom_getEntNrmlPlXYZ (igeomInstance, 
-                       entity_handle,
+                       (iBase_EntityHandle)entity_handle,
                        x, y, z,
                        &pt_x, &pt_y, &pt_z, 
-                       &nrml_i, &nrml_j, &nrml_k);
+                       &nrml_i, &nrml_j, &nrml_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntNrmlPlXYZ)
 }
@@ -1900,17 +1986,17 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrNrmlPlXYZ} (getArrNrmlPlXYZ method)
   CREATE_TEMP_ARRAY(double, on_coordinates);
   CREATE_TEMP_ARRAY(double, normals);
-  
   iGeom_getArrNrmlPlXYZ (igeomInstance, 
-                             TEMP_ARRAY_IN(gentity_handles),
-                             static_cast<iBase_StorageOrder>(storage_order),
+                             TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                             storage_order,
                              TEMP_ARRAY_IN(near_coordinates),
                              TEMP_ARRAY_INOUT(on_coordinates),
-                             TEMP_ARRAY_INOUT(normals));
+                             TEMP_ARRAY_INOUT(normals), 
+                             &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(on_coordinates);
-  ASSIGN_ARRAY(normals);
+  ASSIGN_TYPED_ARRAY(double, on_coordinates);
+  ASSIGN_TYPED_ARRAY(double, normals);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrNrmlPlXYZ)
 }
 
@@ -1932,9 +2018,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntTgntXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntTgntXYZ} (getEntTgntXYZ method)
   iGeom_getEntTgntXYZ (igeomInstance, 
-                       entity_handle,
+                       (iBase_EntityHandle)entity_handle,
                        x, y, z, 
-                       &tgnt_i, &tgnt_j, &tgnt_k);
+                       &tgnt_i, &tgnt_j, &tgnt_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntTgntXYZ)
 }
@@ -1962,15 +2049,15 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrTgntXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrTgntXYZ} (getArrTgntXYZ method)
   CREATE_TEMP_ARRAY(double, tangents);
-  
   iGeom_getArrTgntXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(gentity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coordinates),
-                        TEMP_ARRAY_INOUT(tangents));
+                        TEMP_ARRAY_INOUT(tangents), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(tangents);
+  ASSIGN_TYPED_ARRAY(double, tangents);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrTgntXYZ)
 }
 
@@ -1995,10 +2082,11 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getFcCvtrXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getFcCvtrXYZ} (getFcCvtrXYZ method)
   iGeom_getFcCvtrXYZ (igeomInstance, 
-                       face_handle,
+                       (iBase_EntityHandle)face_handle,
                        x, y, z, 
                        &cvtr1_i, &cvtr1_j, &cvtr1_k,
-                       &cvtr2_i, &cvtr2_j, &cvtr2_k);
+                       &cvtr2_i, &cvtr2_j, &cvtr2_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getFcCvtrXYZ)
 }
@@ -2021,9 +2109,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEgCvtrXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgCvtrXYZ} (getEgCvtrXYZ method)
   iGeom_getEgCvtrXYZ ( igeomInstance, 
-                       edge_handle,
+                       (iBase_EntityHandle)edge_handle,
                        x, y, z, 
-                       &cvtr_i, &cvtr_j, &cvtr_k);
+                       &cvtr_i, &cvtr_j, &cvtr_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgCvtrXYZ)
 }
@@ -2049,17 +2138,17 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntArrCvtrXYZ} (getEntArrCvtrXYZ method)
   CREATE_TEMP_ARRAY(double, cvtr_1);
   CREATE_TEMP_ARRAY(double, cvtr_2);
-  
   iGeom_getEntArrCvtrXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(entity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coords),
                         TEMP_ARRAY_INOUT(cvtr_1),
-                        TEMP_ARRAY_INOUT(cvtr_2));
+                        TEMP_ARRAY_INOUT(cvtr_2), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(cvtr_1);
-  ASSIGN_ARRAY(cvtr_2);
+  ASSIGN_TYPED_ARRAY(double, cvtr_1);
+  ASSIGN_TYPED_ARRAY(double, cvtr_2);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntArrCvtrXYZ)
 }
 
@@ -2087,11 +2176,12 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEgEvalXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgEvalXYZ} (getEgEvalXYZ method)
   iGeom_getEgEvalXYZ (igeomInstance, 
-                       edge_handle,
+                       (iBase_EntityHandle)edge_handle,
                        x, y, z, 
                        &on_x, &on_y, &on_z,
                        &tgnt_i, &tgnt_j, &tgnt_k,
-                       &cvtr_i, &cvtr_j, &cvtr_k );
+                       &cvtr_i, &cvtr_j, &cvtr_k, 
+                       &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgEvalXYZ)
 }
@@ -2123,12 +2213,13 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getFcEvalXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getFcEvalXYZ} (getFcEvalXYZ method)
   iGeom_getFcEvalXYZ (igeomInstance, 
-                       face_handle,
+                       (iBase_EntityHandle)face_handle,
                        x, y, z, 
                        &on_x, &on_y, &on_z,
                        &nrml_i, &nrml_j, &nrml_k,
                        &cvtr1_i, &cvtr1_j, &cvtr1_k,
-                       &cvtr2_i, &cvtr2_j, &cvtr2_k);
+                       &cvtr2_i, &cvtr2_j, &cvtr2_k, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getFcEvalXYZ)
 }
@@ -2157,19 +2248,20 @@ throw (
   CREATE_TEMP_ARRAY(double, on_coords);
   CREATE_TEMP_ARRAY(double, tangent);
   CREATE_TEMP_ARRAY(double, cvtr);
-  
+
   iGeom_getArrEgEvalXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(edge_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coords),
                         TEMP_ARRAY_INOUT(on_coords),
                         TEMP_ARRAY_INOUT(tangent),
-                        TEMP_ARRAY_INOUT(cvtr));
+                        TEMP_ARRAY_INOUT(cvtr), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(on_coords);
-  ASSIGN_ARRAY(tangent);
-  ASSIGN_ARRAY(cvtr);
+  ASSIGN_TYPED_ARRAY(double, on_coords);
+  ASSIGN_TYPED_ARRAY(double, tangent);
+  ASSIGN_TYPED_ARRAY(double, cvtr);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrEgEvalXYZ)
 }
 
@@ -2200,21 +2292,22 @@ throw (
   CREATE_TEMP_ARRAY(double, normal);
   CREATE_TEMP_ARRAY(double, cvtr_1);
   CREATE_TEMP_ARRAY(double, cvtr_2);
-  
+
   iGeom_getArrFcEvalXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(face_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coords),
                         TEMP_ARRAY_INOUT(on_coords),
                         TEMP_ARRAY_INOUT(normal),
                         TEMP_ARRAY_INOUT(cvtr_1),
-                        TEMP_ARRAY_INOUT(cvtr_2));
+                        TEMP_ARRAY_INOUT(cvtr_2), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(on_coords);
-  ASSIGN_ARRAY(normal);
-  ASSIGN_ARRAY(cvtr_1);
-  ASSIGN_ARRAY(cvtr_2);
+  ASSIGN_TYPED_ARRAY(double, on_coords);
+  ASSIGN_TYPED_ARRAY(double, normal);
+  ASSIGN_TYPED_ARRAY(double, cvtr_1);
+  ASSIGN_TYPED_ARRAY(double, cvtr_2);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrFcEvalXYZ)
 }
 
@@ -2236,9 +2329,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntBoundBox)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntBoundBox} (getEntBoundBox method)
   iGeom_getEntBoundBox (igeomInstance, 
-                       entity_handle,
+                       (iBase_EntityHandle)entity_handle,
                        &min_x, &min_y, &min_z,
-                       &max_x, &max_y, &max_z);
+                       &max_x, &max_y, &max_z, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntBoundBox)
 }
@@ -2267,15 +2361,18 @@ throw (
   CREATE_TEMP_ARRAY(double, max_corner);
   CREATE_TEMP_ARRAY(double, min_corner);
   
+  int order = storage_order;
   iGeom_getArrBoundBox (igeomInstance, 
-                            TEMP_ARRAY_IN(gentity_handles),
-                            static_cast<iBase_StorageOrder>(storage_order),
+                            TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                            &order,
                             TEMP_ARRAY_INOUT(min_corner),
-                            TEMP_ARRAY_INOUT(max_corner));
+                            TEMP_ARRAY_INOUT(max_corner), 
+                            &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(min_corner);
-  ASSIGN_ARRAY(max_corner);
+  ASSIGN_TYPED_ARRAY(double, min_corner);
+  ASSIGN_TYPED_ARRAY(double, max_corner);
+  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrBoundBox)
 }
 
@@ -2294,7 +2391,7 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getVtxCoord)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxCoord} (getVtxCoord method)
   
-  iGeom_getVtxCoord (igeomInstance, vertex_handle, &x, &y, &z);
+  iGeom_getVtxCoord (igeomInstance, (iBase_EntityHandle)vertex_handle, &x, &y, &z, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxCoord)
 }
@@ -2319,21 +2416,24 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxArrCoords} (getVtxArrCoords method)
   CREATE_TEMP_ARRAY(double, coordinates);
   
+  int order = storage_order;
   iGeom_getVtxArrCoords (igeomInstance, 
-                               TEMP_ARRAY_IN(gentity_handles),
-                               static_cast<iBase_StorageOrder>(storage_order),
-                               TEMP_ARRAY_INOUT(coordinates));
+                               TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                               &order,
+                               TEMP_ARRAY_INOUT(coordinates), 
+                               &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(coordinates);
+  ASSIGN_TYPED_ARRAY(double, coordinates);
+  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxArrCoords)
 }
 
 /**
- * Method:  getPntIntsct[]
+ * Method:  getPntRayIntsct[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::getPntIntsct (
+iGeom_SIDL::GeomSidl_impl::getPntRayIntsct (
   /* in */ double x,
   /* in */ double y,
   /* in */ double z,
@@ -2350,25 +2450,26 @@ iGeom_SIDL::GeomSidl_impl::getPntIntsct (
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getPntIntsct)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.getPntIntsct} (getPntIntsct method)
-  CREATE_TEMP_ARRAY(void*, intersect_entity_handles);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getPntRayIntsct)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.getPntRayIntsct} (getPntRayIntsct method)
+  CREATE_TEMP_EH_ARRAY(intersect_entity_handles);
   CREATE_TEMP_ARRAY(double, intersect_coords);
   CREATE_TEMP_ARRAY(double, param_coords);
   
-  iBase_StorageOrder storage_order_tmp;
-  iGeom_getPntIntsct (igeomInstance, x, y, z, dir_x, dir_y, dir_z,
+  int storage_order_tmp;
+  iGeom_getPntRayIntsct (igeomInstance, x, y, z, dir_x, dir_y, dir_z,
                       TEMP_ARRAY_INOUT( intersect_entity_handles ),
                       &storage_order_tmp,
                       TEMP_ARRAY_INOUT( intersect_coords ),
-                      TEMP_ARRAY_INOUT( param_coords ) );
+                      TEMP_ARRAY_INOUT( param_coords ), 
+                      &igeomError );
   PROCESS_ERROR;
 
   storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
-  ASSIGN_ARRAY(intersect_entity_handles);
-  ASSIGN_ARRAY(intersect_coords);
-  ASSIGN_ARRAY(param_coords);
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getPntIntsct)
+  ASSIGN_TYPED_ARRAY(void*, intersect_entity_handles);
+  ASSIGN_TYPED_ARRAY(double, intersect_coords);
+  ASSIGN_TYPED_ARRAY(double, param_coords);
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getPntRayIntsct)
 }
 
 /**
@@ -2394,25 +2495,27 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getPntArrRayIntsct)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getPntArrRayIntsct} (getPntArrRayIntsct method)
-  CREATE_TEMP_ARRAY(void*, intersect_entity_handles);
+  CREATE_TEMP_EH_ARRAY(intersect_entity_handles);
   CREATE_TEMP_ARRAY(int32_t, offset);
   CREATE_TEMP_ARRAY(double, intersect_coords);
   CREATE_TEMP_ARRAY(double, param_coords);
-  
+  int order = storage_order;
   iGeom_getPntArrRayIntsct (igeomInstance, 
-                      static_cast<iBase_StorageOrder>(storage_order),
+                      storage_order,
                       TEMP_ARRAY_IN( coords ),
                       TEMP_ARRAY_IN( directions ),
                       TEMP_ARRAY_INOUT( intersect_entity_handles ),
                       TEMP_ARRAY_INOUT( offset ),
                       TEMP_ARRAY_INOUT( intersect_coords ),
-                      TEMP_ARRAY_INOUT( param_coords ) );
+                      TEMP_ARRAY_INOUT( param_coords ), 
+                      &igeomError );
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(intersect_entity_handles);
-  ASSIGN_ARRAY(offset);
-  ASSIGN_ARRAY(intersect_coords);
-  ASSIGN_ARRAY(param_coords);
+  ASSIGN_TYPED_ARRAY(void*, intersect_entity_handles);
+  ASSIGN_TYPED_ARRAY(int32_t, offset);
+  ASSIGN_TYPED_ARRAY(double, intersect_coords);
+  ASSIGN_TYPED_ARRAY(double, param_coords);
+  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getPntArrRayIntsct)
 }
 
@@ -2423,20 +2526,22 @@ throw (
  * @param gface Gface whose sense is being queried.
  * @param gregion Gregion gface is being queried with respect to
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::getEntNrmlSense (
   /* in */ void* gface,
-  /* in */ void* gregion ) 
+  /* in */ void* gregion,
+  /* out */ int32_t& sense ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntNrmlSense)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntNrmlSense} (getEntNrmlSense method)
-  int32_t retval = iGeom_getEntNrmlSense (igeomInstance, 
-                                          gface,
-                                          gregion);
+  iGeom_getEntNrmlSense (igeomInstance, 
+                         (iBase_EntityHandle)gface,
+                         (iBase_EntityHandle)gregion, 
+                         &sense,
+                         &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntNrmlSense)
 }
 
@@ -2458,11 +2563,12 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrNrmlSense} (getArrNrmlSense method)
   CREATE_TEMP_ARRAY(int32_t, sense);
   iGeom_getArrNrmlSense (igeomInstance,
-                       TEMP_ARRAY_IN(face_handles), 
-                       TEMP_ARRAY_IN(region_handles), 
-                       TEMP_ARRAY_INOUT(sense));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles), 
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,region_handles), 
+                       TEMP_ARRAY_INOUT(sense), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(sense);
+  ASSIGN_TYPED_ARRAY(int32_t, sense);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrNrmlSense)
 }
 
@@ -2473,20 +2579,22 @@ throw (
  * @param gedge Gedge whose sense is being queried.
  * @param gface Gface gedge is being queried with respect to
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::getEgFcSense (
   /* in */ void* gedge,
-  /* in */ void* gface ) 
+  /* in */ void* gface,
+  /* out */ int32_t& sense ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEgFcSense)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgFcSense} (getEgFcSense method)
-  int32_t retval = iGeom_getEgFcSense (igeomInstance, 
-                                           gedge,
-                                           gface);
+  iGeom_getEgFcSense (igeomInstance, 
+                      (iBase_EntityHandle)gedge,
+                      (iBase_EntityHandle)gface, 
+                      &sense,
+                      &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgFcSense)
 }
 
@@ -2508,11 +2616,12 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgFcArrSense} (getEgFcArrSense method)
   CREATE_TEMP_ARRAY(int32_t, sense);
   iGeom_getEgFcArrSense (igeomInstance,
-                       TEMP_ARRAY_IN(edge_handles), 
-                       TEMP_ARRAY_IN(face_handles), 
-                       TEMP_ARRAY_INOUT(sense));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles), 
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles), 
+                       TEMP_ARRAY_INOUT(sense), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(sense);
+  ASSIGN_TYPED_ARRAY(int32_t, sense);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgFcArrSense)
 }
 
@@ -2526,22 +2635,24 @@ throw (
  * @param gvertex1 First gvertex
  * @param gvertex2 Second gvertex
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::getEgVtxSense (
   /* in */ void* gedge,
   /* in */ void* gvertex1,
-  /* in */ void* gvertex2 ) 
+  /* in */ void* gvertex2,
+  /* out */ int32_t& sense ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEgVtxSense)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgVtxSense} (getEgVtxSense method)
-  int32_t retval = iGeom_getEgVtxSense (igeomInstance, 
-                                                 gedge,
-                                                 gvertex1,
-                                                 gvertex2);
+  iGeom_getEgVtxSense (igeomInstance, 
+                       (iBase_EntityHandle)gedge,
+                       (iBase_EntityHandle)gvertex1,
+                       (iBase_EntityHandle)gvertex2, 
+                       &sense,
+                       &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgVtxSense)
 }
 
@@ -2565,12 +2676,13 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEgVtxArrSense} (getEgVtxArrSense method)
   CREATE_TEMP_ARRAY(int32_t, sense);
   iGeom_getEgVtxArrSense (igeomInstance,
-                       TEMP_ARRAY_IN(edge_handles), 
-                       TEMP_ARRAY_IN(vertex_handles_1), 
-                       TEMP_ARRAY_IN(vertex_handles_2), 
-                       TEMP_ARRAY_INOUT(sense));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles), 
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,vertex_handles_1), 
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,vertex_handles_2), 
+                       TEMP_ARRAY_INOUT(sense), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(sense);
+  ASSIGN_TYPED_ARRAY(int32_t, sense);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEgVtxArrSense)
 }
 
@@ -2592,14 +2704,14 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.measure)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.measure} (measure method)
-  CREATE_TEMP_ARRAY(int32_t, sense);
-  iGeom_getEgVtxArrSense (igeomInstance,
-                       TEMP_ARRAY_IN(edge_handles), 
-                       TEMP_ARRAY_IN(vertex_handles_1), 
-                       TEMP_ARRAY_IN(vertex_handles_2), 
-                       TEMP_ARRAY_INOUT(sense));
+  CREATE_TEMP_ARRAY(double, measures);
+  iGeom_measure(igeomInstance, 
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                       TEMP_ARRAY_INOUT(measures), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(sense);
+
+  ASSIGN_TYPED_ARRAY(double, measures);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.measure)
 }
 
@@ -2617,35 +2729,31 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getFaceType)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getFaceType} (getFaceType method)
-  
-  iGeom_measure(igeomInstance, 
-                       TEMP_ARRAY_IN(gentity_handles),
-                       TEMP_ARRAY_INOUT(measures));
+  char buffer[256];
+  int len = sizeof(buffer);
+  iGeom_getFaceType( igeomInstance, 
+                     (iBase_EntityHandle)gface_handle,
+                     buffer,
+                     &igeomError,
+                     &len );
   PROCESS_ERROR;
-
-  ASSIGN_ARRAY(measures);
+  face_type = std::string(buffer,len);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getFaceType)
 }
 
 /**
  * Method:  getParametric[]
  */
-int32_t
-iGeom_SIDL::GeomSidl_impl::getParametric ()
+void
+iGeom_SIDL::GeomSidl_impl::getParametric (
+  /* out */ int32_t& parametric ) 
 throw ( 
   ::iBase::Error
-)
-{
+){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getParametric)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getParametric} (getParametric method)
-  CREATE_TEMP_ARRAY(int32_t, sense);
-  iGeom_getEgVtxArrSense (igeomInstance,
-                       TEMP_ARRAY_IN(edge_handles), 
-                       TEMP_ARRAY_IN(vertex_handles_1), 
-                       TEMP_ARRAY_IN(vertex_handles_2), 
-                       TEMP_ARRAY_INOUT(sense));
+  iGeom_getParametric( igeomInstance, &parametric, &igeomError );
   PROCESS_ERROR;
-  ASSIGN_ARRAY(sense);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getParametric)
 }
 
@@ -2655,16 +2763,19 @@ throw (
  * when called on that entity.
  * @param gentity_handle Gentity being queried.
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::isEntParametric (
-  /* in */ void* gentity_handle ) 
+  /* in */ void* gentity_handle,
+  /* out */ int32_t& is_parametric ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntParametric)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntParametric} (isEntParametric method)
-  iGeom_getFaceType(igeomInstance, gface_handle, &this_type);
-  if (NULL != this_type) face_type = this_type;
+  iGeom_isEntParametric( igeomInstance, 
+                         (iBase_EntityHandle)gentity_handle,
+                         &is_parametric,
+                         &igeomError );
   PROCESS_ERROR;
     // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntParametric)
 }
@@ -2686,10 +2797,11 @@ throw (
   CREATE_TEMP_ARRAY(int32_t, is_parametric);
   
   iGeom_isArrParametric (igeomInstance, 
-                         TEMP_ARRAY_IN(entity_handles),
-                         TEMP_ARRAY_INOUT(is_parametric));
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                         TEMP_ARRAY_INOUT(is_parametric), 
+                         &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(is_parametric);
+  ASSIGN_TYPED_ARRAY(int32_t, is_parametric);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isArrParametric)
 }
 
@@ -2709,7 +2821,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntUVtoXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntUVtoXYZ} (getEntUVtoXYZ method)
-  iGeom_getEntUVtoXYZ (igeomInstance, entity_handle, u, v, &x, &y, &z );
+  iGeom_getEntUVtoXYZ (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                       u, v, &x, &y, &z, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntUVtoXYZ)
 }
@@ -2737,15 +2850,14 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrUVtoXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUVtoXYZ} (getArrUVtoXYZ method)
   CREATE_TEMP_ARRAY(double, coordinates);
-  
   iGeom_getArrUVtoXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(gentity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(uv),
-                        TEMP_ARRAY_INOUT(coordinates));
+                        TEMP_ARRAY_INOUT(coordinates), 
+                        &igeomError);
   PROCESS_ERROR;
-
-  ASSIGN_ARRAY(coordinates);
+  ASSIGN_TYPED_ARRAY(double, coordinates);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUVtoXYZ)
 }
 
@@ -2764,7 +2876,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntUtoXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntUtoXYZ} (getEntUtoXYZ method)
-  iGeom_getEntUtoXYZ (igeomInstance, entity_handle, u, &x, &y, &z );
+  iGeom_getEntUtoXYZ (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                      u, &x, &y, &z, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntUtoXYZ)
 }
@@ -2787,13 +2900,16 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrUtoXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUtoXYZ} (getArrUtoXYZ method)
   CREATE_TEMP_ARRAY(double, on_coords);
+  int order = storage_order;
   iGeom_getArrUtoXYZ (igeomInstance, 
-                        TEMP_ARRAY_IN(entity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
-                        TEMP_ARRAY_IN(u),
-                        TEMP_ARRAY_INOUT(on_coords));
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                        TEMP_TYPED_ARRAY_IN(double,u),
+                        &order,
+                        TEMP_ARRAY_INOUT(on_coords), 
+                        &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(on_coords);
+  storage_order = (::iBase::StorageOrder)order;
+  ASSIGN_TYPED_ARRAY(double, on_coords);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUtoXYZ)
 }
 
@@ -2813,7 +2929,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntXYZtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntXYZtoUV} (getEntXYZtoUV method)
-  iGeom_getEntXYZtoUV (igeomInstance, entity_handle, x, y, z, &u, &v );
+  iGeom_getEntXYZtoUV (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                       x, y, z, &u, &v, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntXYZtoUV)
 }
@@ -2833,7 +2950,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntXYZtoU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntXYZtoU} (getEntXYZtoU method)
-  iGeom_getEntXYZtoU (igeomInstance, entity_handle, x, y, z, &u);
+  iGeom_getEntXYZtoU (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                      x, y, z, &u, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntXYZtoU)
 }
@@ -2861,15 +2979,17 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoUV} (getArrXYZtoUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  
+  int order = storage_order;
   iGeom_getArrXYZtoUV (igeomInstance, 
-                        TEMP_ARRAY_IN(gentity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coordinates),
-                        TEMP_ARRAY_INOUT(uv));
+                        TEMP_ARRAY_INOUT(uv), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(uv);
+  storage_order = (::iBase::StorageOrder)order;
+  ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoUV)
 }
 
@@ -2891,15 +3011,17 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoU} (getArrXYZtoU method)
   CREATE_TEMP_ARRAY(double, u);
-  
+  int order = storage_order;
   iGeom_getArrXYZtoU (igeomInstance, 
-                        TEMP_ARRAY_IN(gentity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coordinates),
-                        TEMP_ARRAY_INOUT(u));
+                        TEMP_ARRAY_INOUT(u), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(u);
+  storage_order = (::iBase::StorageOrder)order;
+  ASSIGN_TYPED_ARRAY(double, u);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoU)
 }
 
@@ -2919,7 +3041,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntXYZtoUVHint)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntXYZtoUVHint} (getEntXYZtoUVHint method)
-  iGeom_getEntXYZtoUVHint (igeomInstance, entity_handle, x, y, z, &u, &v );
+  iGeom_getEntXYZtoUVHint (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                           x, y, z, &u, &v, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntXYZtoUVHint)
 }
@@ -2942,15 +3065,17 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoUVHint)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoUVHint} (getArrXYZtoUVHint method)
   CREATE_TEMP_ARRAY(double, uv);
-  
+  int order = storage_order;
   iGeom_getArrXYZtoUVHint (igeomInstance, 
-                        TEMP_ARRAY_IN(entity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                        storage_order,
                         TEMP_ARRAY_IN(coords),
-                        TEMP_ARRAY_INOUT(uv));
+                        TEMP_ARRAY_INOUT(uv), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(uv);
+  storage_order = (::iBase::StorageOrder)order;
+  ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoUVHint)
 }
 
@@ -2970,8 +3095,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntUVRange)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntUVRange} (getEntUVRange method)
   iGeom_getEntUVRange (igeomInstance, 
-                       entity_handle,
-                       &u_min, &v_min, &u_max, &v_max);
+                       (iBase_EntityHandle)entity_handle,
+                       &u_min, &v_min, 
+                       &u_max, &v_max, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntUVRange)
 }
@@ -2990,8 +3117,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntURange)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntURange} (getEntURange method)
   iGeom_getEntURange (igeomInstance, 
-                       entity_handle,
-                       &u_min, &u_max);
+                       (iBase_EntityHandle)entity_handle,
+                       &u_min, &u_max, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntURange)
 }
@@ -3018,16 +3146,18 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUVRange} (getArrUVRange method)
   CREATE_TEMP_ARRAY(double, uv_max);
   CREATE_TEMP_ARRAY(double, uv_min);
-  
+  int order = storage_order;
   iGeom_getArrUVRange (igeomInstance, 
-                        TEMP_ARRAY_IN(gentity_handles),
-                        static_cast<iBase_StorageOrder>(storage_order),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
+                        &order,
                         TEMP_ARRAY_INOUT(uv_min),
-                        TEMP_ARRAY_INOUT(uv_max));
+                        TEMP_ARRAY_INOUT(uv_max), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(uv_max);
-  ASSIGN_ARRAY(uv_min);
+  storage_order = (::iBase::StorageOrder)order;
+  ASSIGN_TYPED_ARRAY(double, uv_max);
+  ASSIGN_TYPED_ARRAY(double, uv_min);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUVRange)
 }
 
@@ -3051,13 +3181,14 @@ throw (
   CREATE_TEMP_ARRAY(double, u_min);
   
   iGeom_getArrURange (igeomInstance, 
-                        TEMP_ARRAY_IN(entity_handles),
+                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
                          TEMP_ARRAY_INOUT(u_min),
-                        TEMP_ARRAY_INOUT(u_max));
+                        TEMP_ARRAY_INOUT(u_max), 
+                        &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(u_max);
-  ASSIGN_ARRAY(u_min);
+  ASSIGN_TYPED_ARRAY(double, u_max);
+  ASSIGN_TYPED_ARRAY(double, u_min);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrURange)
 }
 
@@ -3077,9 +3208,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntUtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntUtoUV} (getEntUtoUV method)
   iGeom_getEntUtoUV (igeomInstance, 
-                     edge_handle,
-                     face_handle,
-                     in_u, &u, &v);
+                     (iBase_EntityHandle)edge_handle,
+                     (iBase_EntityHandle)face_handle,
+                     in_u, &u, &v, 
+                     &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntUtoUV)
 }
@@ -3099,9 +3231,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getVtxToUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxToUV} (getVtxToUV method)
   iGeom_getVtxToUV (igeomInstance, 
-                     vertex_handle,
-                     face_handle,
-                     &u, &v);
+                     (iBase_EntityHandle)vertex_handle,
+                     (iBase_EntityHandle)face_handle,
+                     &u, &v, 
+                     &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxToUV)
 }
@@ -3120,9 +3253,10 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getVtxToU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxToU} (getVtxToU method)
   iGeom_getVtxToU (igeomInstance, 
-                     vertex_handle,
-                     edge_handle,
-                     &u);
+                     (iBase_EntityHandle)vertex_handle,
+                     (iBase_EntityHandle)edge_handle,
+                     &u, 
+                     &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxToU)
 }
@@ -3147,16 +3281,17 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrUtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUtoUV} (getArrUtoUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  iBase_StorageOrder storage_order_tmp;
+  int storage_order_tmp;
   iGeom_getArrUtoUV (igeomInstance, 
-                     TEMP_ARRAY_IN(edge_handles),
-                     TEMP_ARRAY_IN(face_handles),
+                     TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles),
+                     TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
                      TEMP_ARRAY_IN(u_in),
                      &storage_order_tmp,
-                     TEMP_ARRAY_INOUT(uv));
+                     TEMP_ARRAY_INOUT(uv), 
+                     &igeomError);
   PROCESS_ERROR;
   storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
-  ASSIGN_ARRAY(uv);
+  ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUtoUV)
 }
 
@@ -3178,15 +3313,16 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getVtxArrToUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxArrToUV} (getVtxArrToUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  iBase_StorageOrder storage_order_tmp;
+  int storage_order_tmp;
   iGeom_getVtxArrToUV (igeomInstance, 
-                       TEMP_ARRAY_IN(vertex_handles),
-                       TEMP_ARRAY_IN(face_handles),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,vertex_handles),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
                        &storage_order_tmp,
-                       TEMP_ARRAY_INOUT(uv));
+                       TEMP_ARRAY_INOUT(uv), 
+                       &igeomError);
   PROCESS_ERROR;
   storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
-  ASSIGN_ARRAY(uv);
+  ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxArrToUV)
 }
 
@@ -3208,11 +3344,12 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxArrToU} (getVtxArrToU method)
   CREATE_TEMP_ARRAY(double, u);
   iGeom_getVtxArrToU (igeomInstance, 
-                       TEMP_ARRAY_IN(vertex_handles),
-                       TEMP_ARRAY_IN(edge_handles),
-                       TEMP_ARRAY_INOUT(u));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,vertex_handles),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles),
+                       TEMP_ARRAY_INOUT(u), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(u);
+  ASSIGN_TYPED_ARRAY(double, u);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxArrToU)
 }
 
@@ -3232,7 +3369,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntNrmlUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntNrmlUV} (getEntNrmlUV method)
-  iGeom_getEntNrmlUV (igeomInstance, entity_handle, u, v, &nrml_i, &nrml_j, &nrml_k );
+  iGeom_getEntNrmlUV (igeomInstance, (iBase_EntityHandle)entity_handle, u, v, 
+                      &nrml_i, &nrml_j, &nrml_k, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntNrmlUV)
 }
@@ -3260,15 +3398,15 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrNrmlUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrNrmlUV} (getArrNrmlUV method)
   CREATE_TEMP_ARRAY(double, normals);
-  
   iGeom_getArrNrmlUV (igeomInstance, 
-                         TEMP_ARRAY_IN(gface_handles),
-                         static_cast<iBase_StorageOrder>(storage_order),
-                         TEMP_ARRAY_IN(parameters),
-                         TEMP_ARRAY_INOUT(normals));
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gface_handles),
+                         storage_order,
+                         TEMP_TYPED_ARRAY_IN(double, parameters),
+                         TEMP_ARRAY_INOUT(normals), 
+                         &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(normals);
+  ASSIGN_TYPED_ARRAY(double, normals);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrNrmlUV)
 }
 
@@ -3287,7 +3425,8 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntTgntU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntTgntU} (getEntTgntU method)
-  iGeom_getEntTgntU (igeomInstance, entity_handle, param_coord, &tngt_i, &tngt_j, &tngt_k );
+  iGeom_getEntTgntU (igeomInstance, (iBase_EntityHandle)entity_handle, param_coord, 
+                     &tngt_i, &tngt_j, &tngt_k, &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntTgntU)
 }
@@ -3315,15 +3454,15 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrTgntU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrTgntU} (getArrTgntU method)
   CREATE_TEMP_ARRAY(double, tangents);
-  
   iGeom_getArrTgntU (igeomInstance, 
-                         TEMP_ARRAY_IN(gedge_handles),
-                         static_cast<iBase_StorageOrder>(storage_order),
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, gedge_handles),
+                         storage_order,
                          TEMP_ARRAY_IN(parameters),
-                         TEMP_ARRAY_INOUT(tangents));
+                         TEMP_ARRAY_INOUT(tangents), 
+                         &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(tangents);
+  ASSIGN_TYPED_ARRAY(double, tangents);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrTgntU)
 }
 
@@ -3348,13 +3487,14 @@ throw (
   CREATE_TEMP_ARRAY(double, drvt_v);
   
   iGeom_getEnt1stDrvt (igeomInstance, 
-                       entity_handle, u, v,
+                       (iBase_EntityHandle)entity_handle, u, v,
                        TEMP_ARRAY_INOUT(drvt_u),
-                       TEMP_ARRAY_INOUT(drvt_v));
+                       TEMP_ARRAY_INOUT(drvt_v), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(drvt_u);
-  ASSIGN_ARRAY(drvt_v);
+  ASSIGN_TYPED_ARRAY(double, drvt_u);
+  ASSIGN_TYPED_ARRAY(double, drvt_v);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEnt1stDrvt)
 }
 
@@ -3385,21 +3525,21 @@ throw (
   CREATE_TEMP_ARRAY(int32_t, u_offset);
   CREATE_TEMP_ARRAY(double, drvt_v);
   CREATE_TEMP_ARRAY(int32_t, v_offset);
-  
   iGeom_getArr1stDrvt (igeomInstance, 
-                       TEMP_ARRAY_IN(entity_handles),
-                       static_cast<iBase_StorageOrder>(storage_order),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       storage_order,
                        TEMP_ARRAY_IN(uv),
                        TEMP_ARRAY_INOUT(drvt_u),
                        TEMP_ARRAY_INOUT(u_offset),
                        TEMP_ARRAY_INOUT(drvt_v),
-                       TEMP_ARRAY_INOUT(v_offset));
+                       TEMP_ARRAY_INOUT(v_offset), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(drvt_u);
-  ASSIGN_ARRAY(u_offset);
-  ASSIGN_ARRAY(drvt_v);
-  ASSIGN_ARRAY(v_offset);
+  ASSIGN_TYPED_ARRAY(double, drvt_u);
+  ASSIGN_TYPED_ARRAY(int32_t, u_offset);
+  ASSIGN_TYPED_ARRAY(double, drvt_v);
+  ASSIGN_TYPED_ARRAY(int32_t, v_offset);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArr1stDrvt)
 }
 
@@ -3427,15 +3567,16 @@ throw (
   CREATE_TEMP_ARRAY(double, drvt_vv);
  
   iGeom_getEnt2ndDrvt (igeomInstance, 
-                       entity_handle, u, v,
+                       (iBase_EntityHandle)entity_handle, u, v,
                        TEMP_ARRAY_INOUT(drvt_uu),
                        TEMP_ARRAY_INOUT(drvt_uv),
-                       TEMP_ARRAY_INOUT(drvt_vv));
+                       TEMP_ARRAY_INOUT(drvt_vv), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(drvt_uu);
-  ASSIGN_ARRAY(drvt_uv);
-  ASSIGN_ARRAY(drvt_vv);
+  ASSIGN_TYPED_ARRAY(double, drvt_uu);
+  ASSIGN_TYPED_ARRAY(double, drvt_uv);
+  ASSIGN_TYPED_ARRAY(double, drvt_vv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEnt2ndDrvt)
 }
 
@@ -3472,25 +3613,25 @@ throw (
   CREATE_TEMP_ARRAY(int32_t, uv_offset);
   CREATE_TEMP_ARRAY(double, drvt_vv);
   CREATE_TEMP_ARRAY(int32_t, vv_offset);
-  
   iGeom_getArr2ndDrvt (igeomInstance, 
-                       TEMP_ARRAY_IN(entity_handles),
-                       static_cast<iBase_StorageOrder>(storage_order),
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       storage_order,
                        TEMP_ARRAY_IN(uv),
                        TEMP_ARRAY_INOUT(drvt_uu),
                        TEMP_ARRAY_INOUT(uu_offset),
                        TEMP_ARRAY_INOUT(drvt_uv),
                        TEMP_ARRAY_INOUT(uv_offset),
                        TEMP_ARRAY_INOUT(drvt_vv),
-                       TEMP_ARRAY_INOUT(vv_offset));
+                       TEMP_ARRAY_INOUT(vv_offset), 
+                       &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(drvt_uu);
-  ASSIGN_ARRAY(uu_offset);
-  ASSIGN_ARRAY(drvt_uv);
-  ASSIGN_ARRAY(uv_offset);
-  ASSIGN_ARRAY(drvt_vv);
-  ASSIGN_ARRAY(vv_offset);
+  ASSIGN_TYPED_ARRAY(double, drvt_uu);
+  ASSIGN_TYPED_ARRAY(int32_t, uu_offset);
+  ASSIGN_TYPED_ARRAY(double, drvt_uv);
+  ASSIGN_TYPED_ARRAY(int32_t, uv_offset);
+  ASSIGN_TYPED_ARRAY(double, drvt_vv);
+  ASSIGN_TYPED_ARRAY(int32_t, vv_offset);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArr2ndDrvt)
 }
 
@@ -3513,9 +3654,11 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getFcCvtrUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getFcCvtrUV} (getFcCvtrUV method)
-  iGeom_getFcCvtrUV (igeomInstance, entity_handle, u, v, 
+  iGeom_getFcCvtrUV (igeomInstance, (iBase_EntityHandle)entity_handle, 
+                     u, v, 
                      &cvtr1_i, &cvtr1_j, &cvtr1_k,
-                     &cvtr2_i, &cvtr2_j, &cvtr2_k );
+                     &cvtr2_i, &cvtr2_j, &cvtr2_k, 
+                     &igeomError );
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getFcCvtrUV)
 }
@@ -3541,17 +3684,17 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getFcArrCvtrUV} (getFcArrCvtrUV method)
   CREATE_TEMP_ARRAY(double, cvtr_1);
   CREATE_TEMP_ARRAY(double, cvtr_2);
-  
   iGeom_getFcArrCvtrUV (igeomInstance, 
-                         TEMP_ARRAY_IN(face_handles),
-                         static_cast<iBase_StorageOrder>(storage_order),
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
+                         storage_order,
                          TEMP_ARRAY_IN(uv),
                          TEMP_ARRAY_INOUT(cvtr_1),
-                         TEMP_ARRAY_INOUT(cvtr_2));
+                         TEMP_ARRAY_INOUT(cvtr_2), 
+                         &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(cvtr_1);
-  ASSIGN_ARRAY(cvtr_2);
+  ASSIGN_TYPED_ARRAY(double, cvtr_1);
+  ASSIGN_TYPED_ARRAY(double, cvtr_2);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getFcArrCvtrUV)
 }
 
@@ -3569,8 +3712,9 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isEntPeriodic)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isEntPeriodic} (isEntPeriodic method)
   iGeom_isEntPeriodic (igeomInstance, 
-                       entity_handle,
-                       &in_u, &in_v);
+                       (iBase_EntityHandle)entity_handle,
+                       &in_u, &in_v, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isEntPeriodic)
 }
@@ -3591,27 +3735,28 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isArrPeriodic} (isArrPeriodic method)
   CREATE_TEMP_ARRAY(int32_t, in_uv);
   iGeom_isArrPeriodic (igeomInstance, 
-                       TEMP_ARRAY_IN(entity_handles),
-                       TEMP_ARRAY_INOUT(in_uv));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                       TEMP_ARRAY_INOUT(in_uv), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(in_uv);
+  ASSIGN_TYPED_ARRAY(int32_t, in_uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isArrPeriodic)
 }
 
 /**
  * Method:  isFcDegenerate[]
  */
-int32_t
+void
 iGeom_SIDL::GeomSidl_impl::isFcDegenerate (
-  /* in */ void* face_handle ) 
+  /* in */ void* face_handle,
+  /* out */ int32_t& is_degenerate ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.isFcDegenerate)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isFcDegenerate} (isFcDegenerate method)
-  int32_t retval = iGeom_isFcDegenerate (igeomInstance, face_handle);
+  iGeom_isFcDegenerate (igeomInstance, (iBase_EntityHandle)face_handle, &is_degenerate, &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isFcDegenerate)
 }
 
@@ -3631,10 +3776,11 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.isFcArrDegenerate} (isFcArrDegenerate method)
   CREATE_TEMP_ARRAY(int32_t, degenerate);
   iGeom_isFcArrDegenerate (igeomInstance, 
-                       TEMP_ARRAY_IN(face_handles),
-                       TEMP_ARRAY_INOUT(degenerate));
+                       TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
+                       TEMP_ARRAY_INOUT(degenerate), 
+                       &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(degenerate);
+  ASSIGN_TYPED_ARRAY(int32_t, degenerate);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.isFcArrDegenerate)
 }
 
@@ -3656,7 +3802,8 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getTolerance} (getTolerance method)
   iGeom_getTolerance (igeomInstance, 
                        &type,
-                       &tolerance);
+                       &tolerance, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getTolerance)
 }
@@ -3664,17 +3811,20 @@ throw (
 /**
  * Method:  getEntTolerance[]
  */
-double
+void
 iGeom_SIDL::GeomSidl_impl::getEntTolerance (
-  /* in */ void* entity_handle ) 
+  /* in */ void* entity_handle,
+  /* out */ double& tolerance ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getEntTolerance)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getEntTolerance} (getEntTolerance method)
-  double retval = iGeom_getEntTolerance (igeomInstance, entity_handle);
+  iGeom_getEntTolerance (igeomInstance, 
+                        (iBase_EntityHandle)entity_handle, 
+                        &tolerance,
+                        &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getEntTolerance)
 }
 
@@ -3700,11 +3850,12 @@ throw (
   CREATE_TEMP_ARRAY(double, tolerances);
   
   iGeom_getArrTolerance (igeomInstance, 
-                         TEMP_ARRAY_IN(entity_handles),
-                         TEMP_ARRAY_INOUT(tolerances));
+                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
+                         TEMP_ARRAY_INOUT(tolerances), 
+                         &igeomError);
   PROCESS_ERROR;
 
-  ASSIGN_ARRAY(tolerances);
+  ASSIGN_TYPED_ARRAY(double, tolerances);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrTolerance)
 }
 
@@ -3715,6 +3866,7 @@ throw (
  */
 void
 iGeom_SIDL::GeomSidl_impl::initEntIter (
+  /* in */ void* entity_set_handle,
   /* in */ int32_t gentity_dimension,
   /* out */ void*& gentity_iterator ) 
 throw ( 
@@ -3722,15 +3874,21 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.initEntIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.initEntIter} (initEntIter method)
-  iGeom_initEntIter (igeomInstance, gentity_dimension, &gentity_iterator);
+  iGeom_EntityIterator iter;
+  iGeom_initEntIter (igeomInstance, 
+                     (iBase_EntitySetHandle)entity_set_handle,
+                     gentity_dimension, 
+                     &iter, 
+                     &igeomError);
   PROCESS_ERROR;
+  gentity_iterator = iter;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.initEntIter)
 }
 
 /**
  * Method:  initEntArrIter[]
  */
-bool
+void
 iGeom_SIDL::GeomSidl_impl::initEntArrIter (
   /* in */ void* entity_set_handle,
   /* in */ ::iBase::EntityType requested_entity_type,
@@ -3741,13 +3899,15 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.initEntArrIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.initEntArrIter} (initEntArrIter method)
-  bool result = iGeom_initEntArrIter (igeomInstance, 
-                        entity_set_handle,
-                        static_cast<iGeom_EntityType>(requested_entity_type),
-                        requested_array_size,
-                        &entArr_iterator);
+ iGeom_EntityArrIterator iter;
+ iGeom_initEntArrIter (igeomInstance, 
+         (iBase_EntitySetHandle)entity_set_handle,
+         requested_entity_type,
+         requested_array_size,
+         &iter, 
+         &igeomError);
   PROCESS_ERROR;
-  return static_cast<bool>(result);
+  entArr_iterator = iter;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.initEntArrIter)
 }
 
@@ -3757,43 +3917,47 @@ throw (
  * @param gentity_handle Next gentity
  * @return If true, there are more gentities, if false, this is the last one
  */
-bool
+void
 iGeom_SIDL::GeomSidl_impl::getNextEntIter (
-  /* inout */ void*& gentity_iterator,
-  /* out */ void*& gentity_handle ) 
+  /* in */ void* entity_iterator,
+  /* out */ void*& entity_handle,
+  /* out */ int32_t& has_data ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNextEntIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNextEntIter} (getNextEntIter method)
-  bool retval = iGeom_getNextEntIter (igeomInstance, 
-                                           &gentity_iterator,
-                                           &gentity_handle);
+  iGeom_getNextEntIter (igeomInstance, 
+                        (iGeom_EntityIterator)entity_iterator,
+                        (iBase_EntityHandle*)&entity_handle, 
+                        &has_data,
+                        &igeomError);
   PROCESS_ERROR;
-  return retval;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNextEntIter)
 }
 
 /**
  * Method:  getNextEntArrIter[]
  */
-bool
+void
 iGeom_SIDL::GeomSidl_impl::getNextEntArrIter (
   /* in */ void* entArr_iterator,
   /* inout */ ::sidl::array<void*>& entity_handles,
-  /* inout */ int32_t& entity_handles_size ) 
+  /* out */ int32_t& entity_handles_size,
+  /* out */ int32_t& has_data ) 
 throw ( 
   ::iBase::Error
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getNextEntArrIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getNextEntArrIter} (getNextEntArrIter method)
-  CREATE_TEMP_ARRAY(void*, entity_handles);
-  bool result = iGeom_getNextEntArrIter (igeomInstance, 
-                           entArr_iterator,
-                           TEMP_ARRAY_INOUT(entity_handles));
+  CREATE_TEMP_EH_ARRAY(entity_handles);
+  iGeom_getNextEntArrIter (igeomInstance, 
+                           (iGeom_EntityArrIterator)entArr_iterator,
+                           TEMP_ARRAY_INOUT(entity_handles), 
+                           &has_data,
+                           &igeomError);
   PROCESS_ERROR;
-  ASSIGN_ARRAY(entity_handles);
-  return result;
+  ASSIGN_TYPED_ARRAY(void*, entity_handles);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getNextEntArrIter)
 }
 
@@ -3809,7 +3973,9 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.resetEntIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.resetEntIter} (resetEntIter method)
-  iGeom_resetEntIter (igeomInstance, gentity_iterator);
+  iGeom_resetEntIter (igeomInstance, 
+                     (iGeom_EntityIterator)gentity_iterator, 
+                     &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.resetEntIter)
 }
@@ -3825,7 +3991,9 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.resetEntArrIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.resetEntArrIter} (resetEntArrIter method)
-  iGeom_resetEntArrIter (igeomInstance, entArr_iterator);
+  iGeom_resetEntArrIter (igeomInstance, 
+                         (iGeom_EntityArrIterator)entArr_iterator, 
+                         &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.resetEntArrIter)
 }
@@ -3843,7 +4011,8 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.endEntIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.endEntIter} (endEntIter method)
   iGeom_endEntIter (igeomInstance, 
-                               Gentity_dim_iterator);
+                    (iGeom_EntityIterator)Gentity_dim_iterator, 
+                    &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.endEntIter)
 }
@@ -3859,7 +4028,9 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.endEntArrIter)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.endEntArrIter} (endEntArrIter method)
-  iGeom_endEntArrIter (igeomInstance, entArr_iterator);
+  iGeom_endEntArrIter (igeomInstance, 
+                       (iGeom_EntityArrIterator)entArr_iterator, 
+                       &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.endEntArrIter)
 }
@@ -3876,7 +4047,10 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Copy)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.Copy} (Copy method)
-  iGeom_Copy(igeomInstance, geom_entity, &geom_entity2);
+  iGeom_copyEnt(igeomInstance, 
+                (iBase_EntityHandle)geom_entity, 
+                (iBase_EntityHandle*)&geom_entity2, 
+                &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Copy)
 }
@@ -3897,9 +4071,12 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.SweepAboutAxis)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.SweepAboutAxis} (SweepAboutAxis method)
-  iGeom_SweepAboutAxis(igeomInstance, geom_entity, angle,
-                       axis_normal_x, axis_normal_y, axis_normal_z, 
-                       &geom_entity2);
+  iGeom_sweepEntAboutAxis( igeomInstance, 
+                        (iBase_EntityHandle)geom_entity, 
+                        angle,
+                        axis_normal_x, axis_normal_y, axis_normal_z, 
+                        (iBase_EntityHandle*)&geom_entity2, 
+                        &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.SweepAboutAxis)
 }
@@ -3915,33 +4092,36 @@ throw (
 ){
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Delete)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.Delete} (Delete method)
-  iGeom_Delete(igeomInstance, geom_entity);
+  iGeom_deleteEnt(igeomInstance, (iBase_EntityHandle)geom_entity, &igeomError);
   PROCESS_ERROR;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Delete)
 }
 
 /**
- * Method:  Sphere[]
+ * Method:  createSphere[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Sphere (
+iGeom_SIDL::GeomSidl_impl::createSphere (
   /* in */ double radius,
   /* out */ void*& geom_entity ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Sphere)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Sphere} (Sphere method)
-  iGeom_Sphere(igeomInstance, radius, &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.createSphere)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.createSphere} (createSphere method)
+  iGeom_createSphere( igeomInstance, 
+                      radius, 
+                      (iBase_EntityHandle*)&geom_entity, 
+                      &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Sphere)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createSphere)
 }
 
 /**
- * Method:  Brick[]
+ * Method:  createBrick[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Brick (
+iGeom_SIDL::GeomSidl_impl::createBrick (
   /* in */ double x,
   /* in */ double y,
   /* in */ double z,
@@ -3949,18 +4129,21 @@ iGeom_SIDL::GeomSidl_impl::Brick (
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Brick)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Brick} (Brick method)
-  iGeom_Brick(igeomInstance, x, y, z, &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.createBrick)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.createBrick} (createBrick method)
+  iGeom_createBrick( igeomInstance, 
+                     x, y, z, 
+                     (iBase_EntityHandle*)&geom_entity, 
+                     &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Brick)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createBrick)
 }
 
 /**
- * Method:  Cylinder[]
+ * Method:  createCylinder[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Cylinder (
+iGeom_SIDL::GeomSidl_impl::createCylinder (
   /* in */ double height,
   /* in */ double major_rad,
   /* in */ double minor_rad,
@@ -3968,56 +4151,62 @@ iGeom_SIDL::GeomSidl_impl::Cylinder (
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Cylinder)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Cylinder} (Cylinder method)
-  iGeom_Cylinder(igeomInstance, height, major_rad, minor_rad, &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.createCylinder)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.createCylinder} (createCylinder method)
+  iGeom_createCylinder( igeomInstance, 
+                        height, major_rad, minor_rad, 
+                        (iBase_EntityHandle*)&geom_entity, 
+                        &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Cylinder)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createCylinder)
 }
 
 /**
- * Method:  Torus[]
+ * Method:  createTorus[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Torus (
+iGeom_SIDL::GeomSidl_impl::createTorus (
   /* in */ double major_rad,
   /* in */ double minor_rad,
   /* out */ void*& geom_entity ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Torus)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Torus} (Torus method)
-  iGeom_Torus(igeomInstance, major_rad, minor_rad, &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.createTorus)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.createTorus} (createTorus method)
+  iGeom_createTorus( igeomInstance, 
+                     major_rad, minor_rad, 
+                     (iBase_EntityHandle*)&geom_entity, 
+                     &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Torus)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.createTorus)
 }
 
 /**
- * Method:  Move[]
+ * Method:  moveEnt[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Move (
-  /* inout */ void*& geom_entity,
+iGeom_SIDL::GeomSidl_impl::moveEnt (
+  /* in */ void* geom_entity,
   /* in */ double x,
   /* in */ double y,
   /* in */ double z ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Move)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Move} (Move method)
-  iGeom_Move(igeomInstance, &geom_entity, x, y, z);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.moveEnt)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.moveEnt} (moveEnt method)
+  iGeom_moveEnt(igeomInstance, (iBase_EntityHandle)geom_entity, x, y, z, &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Move)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.moveEnt)
 }
 
 /**
- * Method:  Rotate[]
+ * Method:  rotateEnt[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Rotate (
-  /* inout */ void*& geom_entity,
+iGeom_SIDL::GeomSidl_impl::rotateEnt (
+  /* in */ void* geom_entity,
   /* in */ double angle,
   /* in */ double axis_normal_x,
   /* in */ double axis_normal_y,
@@ -4025,96 +4214,106 @@ iGeom_SIDL::GeomSidl_impl::Rotate (
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Rotate)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Rotate} (Rotate method)
-  iGeom_Rotate(igeomInstance, &geom_entity, angle, axis_normal_x, 
-               axis_normal_y, axis_normal_z);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.rotateEnt)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.rotateEnt} (rotateEnt method)
+  iGeom_rotateEnt(igeomInstance, (iBase_EntityHandle)geom_entity, 
+                  angle, axis_normal_x, axis_normal_y, axis_normal_z, 
+                  &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Rotate)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.rotateEnt)
 }
 
 /**
- * Method:  Reflect[]
+ * Method:  reflectEnt[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Reflect (
-  /* inout */ void*& geom_entity,
+iGeom_SIDL::GeomSidl_impl::reflectEnt (
+  /* in */ void* geom_entity,
   /* in */ double plane_normal_x,
   /* in */ double plane_normal_y,
   /* in */ double plane_normal_z ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Reflect)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Reflect} (Reflect method)
-  iGeom_Reflect(igeomInstance, &geom_entity, plane_normal_x, 
-                plane_normal_y, plane_normal_z);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.reflectEnt)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.reflectEnt} (reflectEnt method)
+  iGeom_reflectEnt(igeomInstance, (iBase_EntityHandle)geom_entity, 
+                   plane_normal_x, plane_normal_y, plane_normal_z, 
+                   &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Reflect)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.reflectEnt)
 }
 
 /**
- * Method:  Scale[]
+ * Method:  scaleEnt[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Scale (
-  /* inout */ void*& geom_entity,
+iGeom_SIDL::GeomSidl_impl::scaleEnt (
+  /* in */ void* geom_entity,
   /* in */ double scale_x,
   /* in */ double scale_y,
   /* in */ double scale_z ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Scale)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Scale} (Scale method)
-  iGeom_Scale(igeomInstance, &geom_entity, scale_x, scale_y, scale_z);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.scaleEnt)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.scaleEnt} (scaleEnt method)
+  iGeom_scaleEnt(igeomInstance, (iBase_EntityHandle)geom_entity, 
+                 scale_x, scale_y, scale_z, 
+                 &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Scale)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.scaleEnt)
 }
 
 /**
- * Method:  Unite[]
+ * Method:  uniteEnts[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Unite (
+iGeom_SIDL::GeomSidl_impl::uniteEnts (
   /* in */ ::sidl::array<void*> geom_entities,
   /* in */ int32_t geom_entities_size,
   /* out */ void*& geom_entity ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Unite)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Unite} (Unite method)
-  iGeom_Unite(igeomInstance, 
-              TEMP_ARRAY_IN(geom_entities), &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.uniteEnts)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.uniteEnts} (uniteEnts method)
+  iGeom_uniteEnts(igeomInstance, 
+                  TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, geom_entities), 
+                  (iBase_EntityHandle*)&geom_entity, 
+                  &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Unite)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.uniteEnts)
 }
 
 /**
- * Method:  Subtract[]
+ * Method:  subtractEnts[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Subtract (
+iGeom_SIDL::GeomSidl_impl::subtractEnts (
   /* in */ void* blank,
   /* in */ void* tool,
   /* out */ void*& geom_entity ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Subtract)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Subtract} (Subtract method)
-  iGeom_Subtract(igeomInstance, blank, tool, &geom_entity);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.subtractEnts)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.subtractEnts} (subtractEnts method)
+  iGeom_subtractEnts( igeomInstance, 
+                      (iBase_EntityHandle)blank, 
+                      (iBase_EntityHandle)tool, 
+                      (iBase_EntityHandle*)&geom_entity, 
+                      &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Subtract)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.subtractEnts)
 }
 
 /**
- * Method:  Section[]
+ * Method:  sectionEnt[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Section (
-  /* inout */ void*& geom_entity,
+iGeom_SIDL::GeomSidl_impl::sectionEnt (
+  /* in */ void* geom_entity,
   /* in */ double plane_normal_x,
   /* in */ double plane_normal_y,
   /* in */ double plane_normal_z,
@@ -4124,51 +4323,55 @@ iGeom_SIDL::GeomSidl_impl::Section (
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Section)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Section} (Section method)
-  iGeom_Section(igeomInstance, &geom_entity, plane_normal_x, 
-                plane_normal_y, plane_normal_z, 
-                offset, reverse, &geom_entity2);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.sectionEnt)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.sectionEnt} (sectionEnt method)
+  iGeom_sectionEnt( igeomInstance, 
+                     (iBase_EntityHandle)geom_entity, 
+                     plane_normal_x, plane_normal_y, plane_normal_z, 
+                     offset, reverse, 
+                     (iBase_EntityHandle*)&geom_entity2, 
+                     &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Section)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.sectionEnt)
 }
 
 /**
- * Method:  Imprint[]
+ * Method:  imprintEnts[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Imprint (
+iGeom_SIDL::GeomSidl_impl::imprintEnts (
   /* in */ ::sidl::array<void*> geom_entities,
   /* in */ int32_t geom_entities_size ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Imprint)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Imprint} (Imprint method)
-  iGeom_Imprint (igeomInstance,
-                 TEMP_ARRAY_IN(geom_entities));
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.imprintEnts)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.imprintEnts} (imprintEnts method)
+  iGeom_imprintEnts(igeomInstance,
+                    TEMP_TYPED_ARRAY_IN(iBase_EntityHandle, geom_entities), 
+                    &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Imprint)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.imprintEnts)
 }
 
 /**
- * Method:  Merge[]
+ * Method:  mergeEnts[]
  */
 void
-iGeom_SIDL::GeomSidl_impl::Merge (
+iGeom_SIDL::GeomSidl_impl::mergeEnts (
   /* in */ ::sidl::array<void*> geom_entities,
   /* in */ int32_t geom_entities_size,
   /* in */ double tolerance ) 
 throw ( 
   ::iBase::Error
 ){
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.Merge)
-  // Insert-Code-Here {iGeom_SIDL.GeomSidl.Merge} (Merge method)
-  iGeom_Merge (igeomInstance,
-               TEMP_ARRAY_IN(geom_entities),
-               tolerance);
+  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.mergeEnts)
+  // Insert-Code-Here {iGeom_SIDL.GeomSidl.mergeEnts} (mergeEnts method)
+  iGeom_mergeEnts(igeomInstance,
+               TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,geom_entities),
+               tolerance, &igeomError);
   PROCESS_ERROR;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.Merge)
+  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.mergeEnts)
 }
 
 
@@ -4178,55 +4381,39 @@ throw (
 void
 iGeom_SIDL::GeomSidl_impl::processError() throw(::iBase::Error)
 {
-  static void *behavior_tag = NULL;
-  static ::iBase::ErrorActions action = ::iBase::ErrorActions_THROW_ERROR;
+  iBase_TagHandle behavior_tag = 0;
+  iBase_ErrorActions action = iBase_THROW_ERROR;
 
     // save this info before calling tag get function to get behavior
   std::string this_desc(iGeom_LAST_ERROR.description);
   iBase::ErrorType this_err = (iBase::ErrorType)iGeom_LAST_ERROR.error_type;
 
-  if (0 == behavior_tag)
-    behavior_tag = iGeom_getTagHandle(igeomInstance, "Error_Behavior");
+  if (0 == behavior_tag) {
+    int err;
+    iGeom_getTagHandle(igeomInstance, "Error_Behavior", &behavior_tag, &err, strlen("Error_Behavior"));
+    if (iBase_SUCCESS != err)
+      behavior_tag = 0;
+  }
 
   if (0 != behavior_tag) {
-    ::iBase::ErrorActions temp = (::iBase::ErrorActions) iGeom_getIntData (igeomInstance, NULL,
-                                                                         behavior_tag);
-    if (iBase_SUCCESS == iGeom_LAST_ERROR.error_type) action = temp;
+    int tmp_val;
+    iGeom_getIntData( igeomInstance, 0, behavior_tag, &tmp_val, &igeomError );
+    if (iBase_SUCCESS == iGeom_LAST_ERROR.error_type) 
+      action = (iBase_ErrorActions) tmp_val;;
   }
 
   ::iBase::Error this_error = ::iBase::Error::_create();
   switch (action) {
-    case ::iBase::ErrorActions_THROW_ERROR:
+    case iBase_THROW_ERROR:
       this_error.set(this_err, this_desc);
       throw this_error;
       break;
-    case ::iBase::ErrorActions_WARN_ONLY:
+    case iBase_WARN_ONLY:
       std::cerr << this_desc << std::endl;
       break;
-    case ::iBase::ErrorActions_SILENT:
+    case iBase_SILENT:
       break;
   }
 }
 // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl._misc)
 
-#error File has unused splicer blocks.
-/**
- * ================= BEGIN UNREFERENCED METHOD(S) ================
- * The following code segment(s) belong to unreferenced method(s).
- * This can result from a method rename/removal in the sidl file.
- * Move or remove the code in order to compile cleanly.
- */
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl_impl.getFaceType)
-  const char *this_type = NULL;
-  int32_t retval = iGeom_isEntParametric (igeomInstance, 
-                                              gentity_handle);
-  PROCESS_ERROR;
-  return retval;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl_impl.getFaceType)
-  // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl_impl.measure)
-  CREATE_TEMP_ARRAY(double, measures);
-  int32_t retval = iGeom_getParametric();
-  PROCESS_ERROR;
-  return retval;
-  // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl_impl.measure)
-// ================== END UNREFERENCED METHOD(S) =================
