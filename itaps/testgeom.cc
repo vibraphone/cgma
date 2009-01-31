@@ -935,7 +935,7 @@ bool construct_test(iGeom_Instance geom)
   CHECK( "Creating cylinder failed." );
   
     // move it onto the y axis
-  iGeom_moveEnt( geom, &cyl, 0.0, 1.0, -0.5, &err );
+  iGeom_moveEnt( geom, cyl, 0.0, 1.0, -0.5, &err );
   CHECK( "Problems moving surface." );
 
       // get the surface with max z
@@ -966,7 +966,7 @@ bool construct_test(iGeom_Instance geom)
   }
   
     // sweep it around the x axis
-  iGeom_moveEnt( geom, &cyl, 0.0, 1.0, 0.0, &err );
+  iGeom_moveEnt( geom, cyl, 0.0, 1.0, 0.0, &err );
   CHECK( "Problems moving surface." );
 
   iGeom_sweepEntAboutAxis( geom, max_surf, 360.0, 1.0, 0.0, 0.0, &new_body, &err );
@@ -1076,7 +1076,7 @@ bool transforms_test(iGeom_Instance geom)
   CHECK( "Problems creating brick for transforms test." );
   
     // move it, then test bounding box
-  iGeom_moveEnt( geom, &brick, 0.5, 1.0, 1.5, &err );
+  iGeom_moveEnt( geom, brick, 0.5, 1.0, 1.5, &err );
   CHECK( "Problems moving brick for transforms test." );
   
   double bb_min[3], bb_max[3];
@@ -1095,7 +1095,7 @@ bool transforms_test(iGeom_Instance geom)
   }
   
     // now rotate it about +x, then test bounding box
-  iGeom_rotateEnt( geom, &brick, 90, 1.0, 0.0, 0.0, &err );
+  iGeom_rotateEnt( geom, brick, 90, 1.0, 0.0, 0.0, &err );
   CHECK( "Problems rotating brick for transforms test." );
   
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
@@ -1112,7 +1112,7 @@ bool transforms_test(iGeom_Instance geom)
   }
   
     // now reflect through y plane; should recover original bb
-  iGeom_reflectEnt( geom, &brick, 0.0, 1.0, 0.0, &err );
+  iGeom_reflectEnt( geom, brick, 0.0, 1.0, 0.0, &err );
   CHECK( "Problems reflecting brick for transforms test." );
   
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
@@ -1152,7 +1152,7 @@ bool booleans_test(iGeom_Instance geom)
 
     // section the brick
   iBase_EntityHandle section_result = 0;
-  iGeom_sectionEnt( geom, &subtract_result, 1.0, 0.0, 0.0, 0.25, true, &section_result, &err );
+  iGeom_sectionEnt( geom, subtract_result, 1.0, 0.0, 0.0, 0.25, true, &section_result, &err );
   CHECK( "Problems sectioning for booleans section test." );
 
     // unite the section result with a new cylinder

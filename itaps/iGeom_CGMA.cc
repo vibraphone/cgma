@@ -235,8 +235,6 @@ static CubitStatus init_cgm( const std::string& engine )
 
 extern "C" {
 
-static bool cgm_initialized = false;
-
 void iGeom_getDescription( iGeom_Instance geom,
                            char* descr,
                            int* err,
@@ -525,12 +523,14 @@ iGeom_getNextEntArrIter(iGeom_Instance instance,
                         /*inout*/ iBase_EntityHandle **entity_handles,
                         int *entity_handles_allocated,
                         int *entity_handles_size,
+                        int* has_data,
                         int* err
                         )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(entArr_iterator);
   CHECK_SIZE(*entity_handles, iBase_EntityHandle, iterator->size());
   iterator->next( (RefEntity**)*entity_handles, *entity_handles_size );
+  *has_data = iterator->at_end();
 }
 
 
@@ -3645,6 +3645,26 @@ iGeom_isEntContained (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
+void iGeom_isEntArrContained( iGeom_Instance instance,
+                       /*in*/ iBase_EntitySetHandle containing_set,
+                       /*in*/ const iBase_EntityHandle* entity_handles,
+                       /*in*/ int num_entity_handles,
+                    /*inout*/ int** is_contained,
+                    /*inout*/ int* is_contained_allocated,
+                      /*out*/ int* is_contained_size,
+                      /*out*/ int* err )
+{
+    // go through each entity and look up its dimension
+  CHECK_SIZE(*is_contained, int, num_entity_handles);
+  *is_contained_size = num_entity_handles;
+
+  *err = iBase_SUCCESS;
+  for (int i = 0; i < num_entity_handles && iBase_SUCCESS == *err; ++i) 
+    iGeom_isEntContained( instance, containing_set, entity_handles[i], (*is_contained)+i, err );
+
+  RETURN(*err);
+}
+
 void
 iGeom_isEntSetContained (iGeom_Instance instance,
                          /*in*/ iBase_EntitySetHandle containing_entity_set,
@@ -5293,14 +5313,14 @@ iGeom_createTorus (iGeom_Instance instance,
 
 void
 iGeom_moveEnt (iGeom_Instance instance,
-               /*inout*/ iBase_EntityHandle *geom_entity,
+               /*inout*/ iBase_EntityHandle geom_entity,
                /*in*/ double x,
                /*in*/ double y,
                /*in*/ double z,
                int* err)
 {
   CubitVector vec(x, y, z);
-  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(*geom_entity));
+  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   CubitStatus result;
   if (NULL != this_bod) {
     result = gqt->translate(this_bod, vec);
@@ -5312,7 +5332,7 @@ iGeom_moveEnt (iGeom_Instance instance,
     RETURN(iBase_SUCCESS);
   }
   
-  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(*geom_entity));
+  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
   if (NULL != this_bte) {
       // non-body move; check to see if there are any siblings to this entity in the
       // same body; if so, we can't move it; if not, get the body and move that; if
@@ -5352,7 +5372,7 @@ iGeom_moveEnt (iGeom_Instance instance,
       
 void
 iGeom_rotateEnt (iGeom_Instance instance,
-                 /*inout*/ iBase_EntityHandle *geom_entity,
+                 /*inout*/ iBase_EntityHandle geom_entity,
                  /*in*/ double angle,
                  /*in*/ double axis_normal_x,
                  /*in*/ double axis_normal_y,
@@ -5360,7 +5380,7 @@ iGeom_rotateEnt (iGeom_Instance instance,
                  int* err)
 {
   CubitVector this_axis(axis_normal_x, axis_normal_y, axis_normal_z);
-  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(*geom_entity));
+  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   CubitStatus result;
   if (NULL != this_bod) {
     result = gqt->rotate(this_bod, this_axis, angle);
@@ -5371,7 +5391,7 @@ iGeom_rotateEnt (iGeom_Instance instance,
     RETURN(iBase_SUCCESS);
   }
   
-  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(*geom_entity));
+  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
   if (NULL != this_bte) {
     result = gqt->rotate(this_bte, this_axis, angle);
     if (CUBIT_SUCCESS != result) {
@@ -5386,14 +5406,14 @@ iGeom_rotateEnt (iGeom_Instance instance,
       
 void
 iGeom_reflectEnt (iGeom_Instance instance,
-                  /*inout*/ iBase_EntityHandle *geom_entity,
+                  /*inout*/ iBase_EntityHandle geom_entity,
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
                   /*in*/ double plane_normal_z,
                   int* err)
 {
   CubitVector this_plane(plane_normal_x, plane_normal_y, plane_normal_z);
-  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(*geom_entity));
+  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   DLIList<Body*> bods;
   bods.append(this_bod);
   CubitStatus result;
@@ -5406,7 +5426,7 @@ iGeom_reflectEnt (iGeom_Instance instance,
     RETURN(iBase_SUCCESS);
   }
   
-  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(*geom_entity));
+  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
   if (NULL != this_bte) {
     result = gqt->reflect(this_bte, this_plane);
     if (CUBIT_SUCCESS != result) {
@@ -5421,14 +5441,14 @@ iGeom_reflectEnt (iGeom_Instance instance,
 
 void
 iGeom_scaleEnt (iGeom_Instance instance,
-                /*inout*/ iBase_EntityHandle *geom_entity,
+                /*inout*/ iBase_EntityHandle geom_entity,
                 /*in*/ double scale_x,
                 /*in*/ double scale_y,
                 /*in*/ double scale_z,
                 int* err) 
 {
   CubitVector factor(scale_x, scale_y, scale_z);
-  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(*geom_entity));
+  Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   CubitStatus result;
   if (NULL != this_bod) {
     result = gqt->scale(this_bod, factor);
@@ -5439,7 +5459,7 @@ iGeom_scaleEnt (iGeom_Instance instance,
     RETURN(iBase_SUCCESS);
   }
   
-  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(*geom_entity));
+  BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
     // non-body move; check to see if there are any siblings to this entity in the
     // same body; if so, we can't move it; if not, get the body and move that; if
     // there is no body, it's a free entity and we can move it anyway
@@ -5595,7 +5615,7 @@ iGeom_intersectEnts ( iGeom_Instance instance,
 
 void
 iGeom_sectionEnt (iGeom_Instance instance,
-                  /*inout*/ iBase_EntityHandle *geom_entity,
+                  /*inout*/ iBase_EntityHandle geom_entity,
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
                   /*in*/ double plane_normal_z,
@@ -5604,9 +5624,9 @@ iGeom_sectionEnt (iGeom_Instance instance,
                   /*out*/ iBase_EntityHandle *geom_entity2,
                   int* err)
 {
-  Body *this_body = dynamic_cast<Body*>(ENTITY_HANDLE(*geom_entity));
+  Body *this_body = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   if (NULL == this_body) {
-    RefVolume *this_vol = dynamic_cast<RefVolume*>(ENTITY_HANDLE(*geom_entity));
+    RefVolume *this_vol = dynamic_cast<RefVolume*>(ENTITY_HANDLE(geom_entity));
     if (NULL != this_vol)
       this_body = this_vol->get_body_ptr();
   }

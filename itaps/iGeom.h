@@ -1999,6 +1999,7 @@ extern "C" {
                                 iBase_EntityHandle** entity_handles,
                                 int* entity_handles_allocated,
                                 int* entity_handles_size,
+                                int* has_data,
                                 int* err );
 
     /**\brief  Reset the iterator
@@ -2125,7 +2126,7 @@ void iGeom_createPrism( iGeom_Instance,
  *
  */
   void iGeom_moveEnt( iGeom_Instance,
-                      iBase_EntityHandle* geom_entity,
+                      iBase_EntityHandle geom_entity,
                       double x,
                       double y,
                       double z,
@@ -2135,7 +2136,7 @@ void iGeom_createPrism( iGeom_Instance,
  *
  */
   void iGeom_rotateEnt( iGeom_Instance,
-                        iBase_EntityHandle* geom_entity,
+                        iBase_EntityHandle geom_entity,
                         double angle,
                         double axis_normal_x,
                         double axis_normal_y,
@@ -2146,7 +2147,7 @@ void iGeom_createPrism( iGeom_Instance,
  *
  */
   void iGeom_reflectEnt( iGeom_Instance,
-                         iBase_EntityHandle* geom_entity,
+                         iBase_EntityHandle geom_entity,
                          double plane_normal_x,
                          double plane_normal_y,
                          double plane_normal_z,
@@ -2156,7 +2157,7 @@ void iGeom_createPrism( iGeom_Instance,
  *
  */
   void iGeom_scaleEnt( iGeom_Instance,
-                       iBase_EntityHandle* geom_entity,
+                       iBase_EntityHandle geom_entity,
                        double scale_x,
                        double scale_y,
                        double scale_z,
@@ -2192,7 +2193,7 @@ void iGeom_createPrism( iGeom_Instance,
  *
  */
   void iGeom_sectionEnt( iGeom_Instance,
-                         iBase_EntityHandle* geom_entity,
+                         iBase_EntityHandle geom_entity,
                          double plane_normal_x,
                          double plane_normal_y,
                          double plane_normal_z,
@@ -2410,6 +2411,25 @@ void iGeom_createPrism( iGeom_Instance,
                             iBase_EntityHandle contained_entity,
                             int *is_contained, 
                             int *err);
+
+    /**\brief  Return whether entities are contained in a set
+     *
+     * Return whether each entity is contained in the set.
+     * \param instance iMesh instance handle
+     * \param containing_entity_set Entity set being queried
+     * \param entity_handles List of entities for which to check containment.
+     * \param is_contained One value for each input entity, 1 if contained
+     *          in set, zero otherwise.
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_isEntArrContained( iGeom_Instance instance,
+                         /*in*/ iBase_EntitySetHandle containing_set,
+                         /*in*/ const iBase_EntityHandle* entity_handles,
+                         /*in*/ int num_entity_handles,
+                      /*inout*/ int** is_contained,
+                      /*inout*/ int* is_contained_allocated,
+                        /*out*/ int* is_contained_size,
+                        /*out*/ int* err );
 
     /**\brief  Return whether an entity set is contained in another set
      *

@@ -78,6 +78,9 @@ public:
    *        nor the remaining number of entities.
    */        
   int size() const { return mSize; }
+  
+  bool at_end() const
+    { return mIter == mArray.end(); }
 
 private:
 
