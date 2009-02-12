@@ -66,7 +66,7 @@ package iGeom version 0.6.99
     void getEntities( in opaque set_handle,
                       in EntityType gentity_type,
                       inout array<opaque> gentity_handles,
-                      inout int gentity_handles_size) 
+                      out int gentity_handles_size) 
       throws iBase.Error;
 
 //==========================getNumOfType=================
@@ -91,7 +91,7 @@ package iGeom version 0.6.99
     void getArrType(in array<opaque> gentity_handles,
                     in int gentity_handles_size,
                     inout array<EntityType> gtype,
-                    inout int gtype_size) 
+                    out int gtype_size) 
       throws iBase.Error;
   
 
@@ -105,7 +105,7 @@ package iGeom version 0.6.99
     void getEntAdj(in opaque entity_handle, 
                    in EntityType to_dimension, 
                    inout array<opaque> adj_gentities,
-                   inout int adj_gentities_size) 
+                   out int adj_gentities_size) 
       throws iBase.Error;
   
 //==========================getArrAdj=================
@@ -119,9 +119,9 @@ package iGeom version 0.6.99
                     in int entity_handles_size,
                     in EntityType requested_entity_type,
                     inout array<opaque> adj_entity_handles,
-                    inout int adj_entity_handles_size,
+                    out int adj_entity_handles_size,
                     inout array<int> offset, 
-                    inout int offset_size
+                    out int offset_size
                   ) throws iBase.Error;
 
 //==========================getEnt2ndAdj=================
@@ -141,7 +141,7 @@ package iGeom version 0.6.99
                       in EntityType bridge_dimension, 
                       in EntityType to_dimension, 
                       inout array<opaque> adjacent_gentities,
-                      inout int adjacent_gentities_size) 
+                      out int adjacent_gentities_size) 
       throws iBase.Error;
 
 //==========================getArr2ndAdj=================
@@ -162,9 +162,9 @@ package iGeom version 0.6.99
                        in EntityType order_adjacent_key,
                        in EntityType requested_entity_type,
                        inout array<opaque> adj_entity_handles,
-                       inout int adj_entity_handles_size,
+                       out int adj_entity_handles_size,
                        inout array<int> offset, 
-                       inout int offset_size
+                       out int offset_size
                      ) throws iBase.Error;
 
 //==========================isEntAdj=================
@@ -190,7 +190,7 @@ package iGeom version 0.6.99
                     in array<opaque> entity_handles_2,
                     in int entity_handles_2_size,
                     inout array <int> is_adjacent_info,
-                    inout int is_adjacent_info_size
+                    out int is_adjacent_info_size
                   ) throws iBase.Error;
 
 
@@ -227,7 +227,7 @@ package iGeom version 0.6.99
                          in array <double> near_coordinates, 
                          in int near_coordinates_size,
                          inout array <double> on_coordinates,
-                         inout int on_coordinates_size) 
+                         out int on_coordinates_size) 
       throws iBase.Error;
    
 //==========================getEntNrmlXYZ=================
@@ -251,7 +251,7 @@ package iGeom version 0.6.99
                        in array <double> coordinates, 
                        in int coordinates_size,
                        inout array <double> normals,
-                       inout int normals_size) 
+                       out int normals_size) 
       throws iBase.Error;
    
 //==========================getEntNrmlPlXYZ=================
@@ -277,9 +277,9 @@ package iGeom version 0.6.99
                          in array <double> near_coordinates, 
                          in int near_coordinates_size,
                          inout array <double> on_coordinates,
-                         inout int on_coordinates_size,
+                         out int on_coordinates_size,
                          inout array <double> normals,
-                         inout int normals_size) 
+                         out int normals_size) 
       throws iBase.Error;
    
 //==========================getEntTgntXYZ=================
@@ -302,7 +302,7 @@ package iGeom version 0.6.99
                        in array <double> coordinates, 
                        in int coordinates_size,
                        inout array <double> tangents,
-                       inout int tangents_size) 
+                       out int tangents_size) 
       throws iBase.Error;
    
 // Various Derivatives
@@ -324,8 +324,8 @@ package iGeom version 0.6.99
                            in int entity_handles_size,
                            in iBase.StorageOrder storage_order,
                            in array<double> coords, in int coords_size,
-                           inout array<double> cvtr_1, inout int cvtr_1_size,
-                           inout array<double> cvtr_2, inout int cvtr_2_size
+                           inout array<double> cvtr_1, out int cvtr_1_size,
+                           inout array<double> cvtr_2, out int cvtr_2_size
                         ) throws iBase.Error;
 
 //==========================getEgEvalXYZ=================
@@ -350,9 +350,9 @@ package iGeom version 0.6.99
                           in int edge_handles_size,
                           in iBase.StorageOrder storage_order,
                           in array<double> coords, in int coords_size,
-                          inout array<double> on_coords, inout int on_coords_size,
-                          inout array<double> tangent, inout int tangent_size,
-                          inout array<double> cvtr, inout int cvtr_size
+                          inout array<double> on_coords, out int on_coords_size,
+                          inout array<double> tangent, out int tangent_size,
+                          inout array<double> cvtr, out int cvtr_size
                         ) throws iBase.Error;
 
 //==========================getArrFcEvalXYZ=================
@@ -360,10 +360,10 @@ package iGeom version 0.6.99
                           in int face_handles_size,
                           in iBase.StorageOrder storage_order,
                           in array<double> coords, in int coords_size,
-                          inout array<double> on_coords, inout int on_coords_size,
-                          inout array<double> normal, inout int normal_size,
-                          inout array<double> cvtr_1, inout int cvtr_1_size,
-                          inout array<double> cvtr_2, inout int cvtr_2_size
+                          inout array<double> on_coords, out int on_coords_size,
+                          inout array<double> normal, out int normal_size,
+                          inout array<double> cvtr_1, out int cvtr_1_size,
+                          inout array<double> cvtr_2, out int cvtr_2_size
                         ) throws iBase.Error;
 
 //==========================getEntBoundBox=================
@@ -384,9 +384,9 @@ package iGeom version 0.6.99
                         in int gentity_handles_size,
                         inout iBase.StorageOrder storage_order,
                         inout array <double> min_corner, 
-                        inout int min_corner_size,
+                        out int min_corner_size,
                         inout array <double> max_corner,
-                        inout int max_corner_size) 
+                        out int max_corner_size) 
       throws iBase.Error;
 
 //==========================getVtxCoord=================
@@ -405,19 +405,19 @@ package iGeom version 0.6.99
                          in int gentity_handles_size,
                          inout iBase.StorageOrder storage_order,
                          inout array <double> coordinates,
-                         inout int coordinates_size)
+                         out int coordinates_size)
       throws iBase.Error;
    
 //==========================getPntIntsct=================
     void getPntRayIntsct( in double x, in double y, in double z,
                        in double dir_x, in double dir_y, in double dir_z,
                        inout array<opaque> intersect_entity_handles,
-                       inout int intersect_entity_handles_size,
+                       out int intersect_entity_handles_size,
                        inout iBase.StorageOrder storage_order,
                        inout array<double> intersect_coords,
-                       inout int intersect_coords_size,
+                       out int intersect_coords_size,
                        inout array<double> param_coords,
-                       inout int param_coords_size
+                       out int param_coords_size
                      ) throws iBase.Error;
 
 //==========================getPntArrRayIntsct=================
@@ -427,13 +427,13 @@ package iGeom version 0.6.99
                              in array<double> directions,
                              in int directions_size,
                              inout array<opaque> intersect_entity_handles,
-                             inout int intersect_entity_handles_size,
+                             out int intersect_entity_handles_size,
                              inout array<int> offset, 
-                             inout int offset_size,
+                             out int offset_size,
                              inout array<double> intersect_coords,
-                             inout int intersect_coords_size,
+                             out int intersect_coords_size,
                              inout array<double> param_coords,
-                             inout int param_coords_size
+                             out int param_coords_size
                            ) throws iBase.Error;
 
 //==========================getEntNrmlSense=================
@@ -455,7 +455,7 @@ package iGeom version 0.6.99
                           in array<opaque> region_handles,
                           in int region_handles_size,
                           inout array<int> sense, 
-                          inout int sense_size
+                          out int sense_size
                         ) throws iBase.Error;
    
 //==========================getEgFcSense=================
@@ -477,7 +477,7 @@ package iGeom version 0.6.99
                           in array<opaque> face_handles,
                           in int face_handles_size,
                           inout array<int> sense, 
-                          inout int sense_size
+                          out int sense_size
                         ) throws iBase.Error;
    
 //==========================getEgVtxSense=================
@@ -505,7 +505,7 @@ package iGeom version 0.6.99
                            in array<opaque> vertex_handles_2,
                            in int vertex_handles_2_size,
                            inout array<int> sense, 
-                           inout int sense_size
+                           out int sense_size
                          ) throws iBase.Error;
 
 //==========================measure=================
@@ -519,7 +519,7 @@ package iGeom version 0.6.99
     void measure(in array<opaque> gentity_handles,
                  in int gentity_handles_size,
                  inout array<double> measures,
-                 inout int measures_size) throws iBase.Error;
+                 out int measures_size) throws iBase.Error;
 
 //==========================getFaceType=================
 /**
@@ -556,7 +556,7 @@ package iGeom version 0.6.99
     void isArrParametric( in array<opaque> entity_handles,
                           in int entity_handles_size,
                           inout array<int> is_parametric,
-                          inout int is_parametric_size
+                          out int is_parametric_size
                         ) throws iBase.Error;
 
 
@@ -579,7 +579,7 @@ package iGeom version 0.6.99
                        in array <double> uv, 
                        in int uv_size,
                        inout array <double> coordinates,
-                       inout int coordinates_size) 
+                       out int coordinates_size) 
       throws iBase.Error;
 
 
@@ -595,7 +595,7 @@ package iGeom version 0.6.99
                        in int u_size,
                        inout iBase.StorageOrder storage_order,
                        inout array<double> on_coords, 
-                       inout int on_coords_size
+                       out int on_coords_size
                      ) throws iBase.Error;
 
 //==========================getEntXYZtoUV=================
@@ -623,7 +623,7 @@ package iGeom version 0.6.99
                        in array <double> coordinates,
                        in int coordinates_size,
                        inout array <double> uv,
-                       inout int uv_size) 
+                       out int uv_size) 
       throws iBase.Error;
 
 //==========================getArrXYZtoU=================
@@ -633,7 +633,7 @@ package iGeom version 0.6.99
                        in array <double> coordinates,
                        in int coordinates_size,
                        inout array <double> u,
-                       inout int u_size) 
+                       out int u_size) 
       throws iBase.Error;
 
 //==========================getEntXYZtoUVHint=================
@@ -647,7 +647,7 @@ package iGeom version 0.6.99
                             in int entity_handles_size,
                             in iBase.StorageOrder storage_order,
                             in array<double> coords, in int coords_size,
-                            inout array<double> uv, inout int uv_size
+                            inout array<double> uv, out int uv_size
                           ) throws iBase.Error;
 
 //==========================getEntUVRange=================
@@ -671,16 +671,16 @@ package iGeom version 0.6.99
                         in int gentity_handles_size,
                         inout iBase.StorageOrder storage_order,
                         inout array <double> uv_min, 
-                        inout int uv_min_size,
+                        out int uv_min_size,
                         inout array <double> uv_max,
-                        inout int uv_max_size) 
+                        out int uv_max_size) 
       throws iBase.Error;
 
 //==========================getArrURange=================
     void getArrURange( in array<opaque> entity_handles,
                        in int entity_handles_size,
-                       inout array<double> u_min, inout int u_min_size,
-                       inout array<double> u_max, inout int u_max_size
+                       inout array<double> u_min, out int u_min_size,
+                       inout array<double> u_max, out int u_max_size
                      ) throws iBase.Error;
 
 //==========================getEntUtoV=================
@@ -703,7 +703,7 @@ package iGeom version 0.6.99
                       in int face_handles_size,
                       in array<double> u_in, in int u_in_size,
                       inout iBase.StorageOrder storage_order,
-                      inout array<double> uv, inout int uv_size
+                      inout array<double> uv, out int uv_size
                     ) throws iBase.Error;
                     
 //==========================getVtxArrToUV=================
@@ -712,7 +712,7 @@ package iGeom version 0.6.99
                         in array<opaque> face_handles,
                         in int face_handles_size,
                         inout iBase.StorageOrder storage_order,
-                        inout array<double> uv, inout int uv_size
+                        inout array<double> uv, out int uv_size
                       ) throws iBase.Error;
                       
 //==========================getVtxArrToU=================
@@ -720,7 +720,7 @@ package iGeom version 0.6.99
                        in int vertex_handles_size,
                        in array<opaque> edge_handles,
                        in int edge_handles_size,
-                       inout array<double> u, inout int u_size
+                       inout array<double> u, out int u_size
                      ) throws iBase.Error;
 
 
@@ -744,7 +744,7 @@ package iGeom version 0.6.99
                       in array <double> parameters, 
                       in int parameters_size, 
                       inout array <double> normals,
-                      in int normals_size) 
+                      out int normals_size) 
       throws iBase.Error;
    
 //==========================getEntTgntU=================
@@ -767,13 +767,13 @@ package iGeom version 0.6.99
                       in array <double> parameters, 
                       in int parameters_size, 
                       inout array <double> tangents,
-                      inout int tangents_size) 
+                      out int tangents_size) 
       throws iBase.Error;
 
 //==========================getEnt1stDrvt=================
     void getEnt1stDrvt( in opaque entity_handle, in double u, in double v,
-                        inout array<double> drvt_u, inout int drvt_u_size,
-                        inout array<double> drvt_v, inout int drvt_v_size
+                        inout array<double> drvt_u, out int drvt_u_size,
+                        inout array<double> drvt_v, out int drvt_v_size
                       ) throws iBase.Error;
 
 //==========================getArr1stDrvt=================
@@ -781,17 +781,17 @@ package iGeom version 0.6.99
                         in int entity_handles_size,
                         in iBase.StorageOrder storage_order,
                         in array<double> uv, in int uv_size,
-                        inout array<double> drvt_u, inout int drvt_u_size,
-                        inout array<int> u_offset, inout int u_offset_size,
-                        inout array<double> drvt_v, inout int drvt_v_size,
-                        inout array<int> v_offset, inout int v_offset_size
+                        inout array<double> drvt_u, out int drvt_u_size,
+                        inout array<int> u_offset, out int u_offset_size,
+                        inout array<double> drvt_v, out int drvt_v_size,
+                        inout array<int> v_offset, out int v_offset_size
                       ) throws iBase.Error;
 
 //==========================getEnt2ndDrvt=================
     void getEnt2ndDrvt ( in opaque entity_handle, in double u, in double v,
-                         inout array<double> drvt_uu, inout int drvt_uu_size,
-                         inout array<double> drvt_vv, inout int drvt_vv_size,
-                         inout array<double> drvt_uv, inout int drvt_uv_size
+                         inout array<double> drvt_uu, out int drvt_uu_size,
+                         inout array<double> drvt_vv, out int drvt_vv_size,
+                         inout array<double> drvt_uv, out int drvt_uv_size
                        ) throws iBase.Error;
 
 //==========================getArr2ndDrvt=================
@@ -799,12 +799,12 @@ package iGeom version 0.6.99
                         in int entity_handles_size,
                         in iBase.StorageOrder storage_order,
                         in array<double> uv, in int uv_size,
-                        inout array<double> drvt_uu, inout int drvt_uu_size,
-                        inout array<int> uu_offset, inout int uu_offset_size,
-                        inout array<double> drvt_vv, inout int drvt_vv_size,
-                        inout array<int> vv_offset, inout int vv_offset_size,
-                        inout array<double> drvt_uv, inout int drvt_uv_size,
-                        inout array<int> uv_offset, inout int uv_offset_size
+                        inout array<double> drvt_uu, out int drvt_uu_size,
+                        inout array<int> uu_offset, out int uu_offset_size,
+                        inout array<double> drvt_vv, out int drvt_vv_size,
+                        inout array<int> vv_offset, out int vv_offset_size,
+                        inout array<double> drvt_uv, out int drvt_uv_size,
+                        inout array<int> uv_offset, out int uv_offset_size
                       ) throws iBase.Error;
 
 //==========================getFcCvtrUV=================
@@ -820,9 +820,9 @@ package iGeom version 0.6.99
                          in array<double> uv, 
                          in int uv_size,
                          inout array<double> cvtr_1, 
-                         inout int cvtr_1_size,
+                         out int cvtr_1_size,
                          inout array<double> cvtr_2, 
-                         inout int cvtr_2_size
+                         out int cvtr_2_size
                        ) throws iBase.Error;
 
 //==========================isEntPeriodic=================
@@ -833,7 +833,7 @@ package iGeom version 0.6.99
     void isArrPeriodic( in array<opaque> entity_handles,
                         in int entity_handles_size,
                         inout array<int> in_uv,
-                        inout int in_uv_size
+                        out int in_uv_size
                       ) throws iBase.Error;
 
 //==========================isFcDegenerate=================
@@ -843,7 +843,7 @@ package iGeom version 0.6.99
     void isFcArrDegenerate( in array<opaque> face_handles,
                             in int face_handles_size,
                             inout array<int> degenerate,
-                            inout int degenerate_size
+                            out int degenerate_size
                           ) throws iBase.Error;
 
   }
@@ -885,7 +885,7 @@ package iGeom version 0.6.99
     void getArrTolerance(in array<opaque> entity_handles,
                          in int entity_handles_size,
                          inout array<double> tolerances,
-                         inout int tolerances_size)
+                         out int tolerances_size)
       throws iBase.Error;
 
   }
