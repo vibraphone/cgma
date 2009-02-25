@@ -30,10 +30,12 @@
 #include "BRepBuilderAPI_TransitionMode.hxx"
 #include "BRepBuilderAPI_MakeWire.hxx"
 #include "BRepPrimAPI_MakeHalfSpace.hxx"
+#include "BRepBuilderAPI_MakePolygon.hxx"
 #include "BRepBndLib.hxx"
 #include "IntersectionTool.hpp"
 #include "TopoDS_Shape.hxx"
 #include "TopAbs_Orientation.hxx"
+#include "TopOpeBRep_Point2d.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeCircle.hxx"
@@ -1323,13 +1325,76 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
                                double minor) const
 {
   //currently OCC only support 4 sided prism
-  if (sides != 4)
+  if(major <= 0. || minor <= 0. || (major - minor) <=  -TOL)
   {
-    PRINT_ERROR("Option not supported for OCC based geometry.\n");
-    return (BodySM*) NULL;
+    PRINT_ERROR("Major and minor radii must be greater than zero.\n");
+    return (BodySM*)NULL;
   }
 
-  return brick(2 * major, 2 * minor, height); 
+  if (sides == 4)
+    return brick(2 * major, 2 * minor, height); 
+
+  DLIList<gp_Pnt> point_list;
+  double theta = 360.0/sides;
+  for(int n =1 ; n < sides; n++)
+  {
+    double angle = theta * n;
+    gp_Pnt v(-major * cos(angle), -major * sin(angle), -height/2.0);
+    point_list.append(v);
+  }
+  
+  TopoDS_Edge new_edge;
+  BRepBuilderAPI_MakePolygon poly_maker;
+  gp_Dir main_dir(0.0, 0.0, 1.0);
+  if (fabs(major - minor) < TOL)
+  {
+    Handle(Geom_Circle) curve_ptr;
+    gp_Pnt center = gp_Pnt( 0.0, 0.0, -height/2.0);
+    curve_ptr = GC_MakeCircle(center,main_dir, major);
+    new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+    gp_Pnt v(0, -major, -height/2.0);
+    point_list.append(v);
+    for (int i = 0; i <sides; i++)
+      poly_maker.Add(point_list[i]);
+    poly_maker.Close(); 
+  }
+  else 
+  {
+    gp_Pnt center(0.0, 0.0, -height/2.0);
+    gp_Dir x_dir(0.0, 1.0, 0.0);
+    gp_Ax2 Axis(center, main_dir, x_dir);
+    Handle(Geom_Curve) curve_ptr = GC_MakeEllipse(Axis, major, minor);
+    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr); 
+    gp_Pnt v(0, -minor, -height/2.0);
+    gp_Pln plane(center, main_dir);
+    TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
+    for(int i = 0; i < (sides-1); i++)
+    {
+      curve_ptr = GC_MakeSegment(center, point_list[i]);
+      TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(curve_ptr);
+      TopOpeBRep_EdgesIntersector intersector;
+      intersector.SetFaces(face,face);
+      intersector.Perform(new_edge, edge);
+      assert(intersector.NbPoints() == 1);
+      TopOpeBRep_Point2d point2d = intersector.Point();
+      gp_Pnt new_v = point2d.Value();
+      poly_maker.Add(new_v);
+    } 
+    poly_maker.Add(v);
+    poly_maker.Close();
+  }
+  
+  TopoDS_Wire wire = poly_maker.Wire();
+  TopoDS_Face base = BRepBuilderAPI_MakeFace(wire, Standard_True);
+  gp_Vec norm(main_dir);
+  BRepSweep_Prism swept(base, norm);
+  TopoDS_Shape new_shape = swept.Shape();
+  DLIList<TopologyBridge*> tbs;
+  tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+  assert(tbs.size() == 1);
+
+  BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+  return bodysm;
 }
 
 //===============================================================================
