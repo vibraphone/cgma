@@ -1324,7 +1324,6 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
 BodySM* OCCModifyEngine::prism( double height, int sides, double major,
                                double minor) const
 {
-  //currently OCC only support 4 sided prism
   if(major <= 0. || minor <= 0. || (major - minor) <=  -TOL)
   {
     PRINT_ERROR("Major and minor radii must be greater than zero.\n");
@@ -1334,55 +1333,42 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
   if (sides == 4)
     return brick(2 * major, 2 * minor, height); 
 
+  //One of the polygon side will be perpendicular to positive x-axis.
+  double y = major * sin(CUBIT_PI/sides);
+  double x = sqrt(major * major - y * y);
+  gp_Pnt start(x, y, -height/2.0);
+
   DLIList<gp_Pnt> point_list;
-  double theta = 360.0/sides;
+  double theta = 2.0/sides*CUBIT_PI;
   for(int n =1 ; n < sides; n++)
   {
-    double angle = theta * n;
-    gp_Pnt v(-major * cos(angle), -major * sin(angle), -height/2.0);
+    double angle = theta * (n + 0.5);
+    gp_Pnt v(major * cos(angle), major * sin(angle), -height/2.0);
     point_list.append(v);
   }
   
   TopoDS_Edge new_edge;
   BRepBuilderAPI_MakePolygon poly_maker;
   gp_Dir main_dir(0.0, 0.0, 1.0);
+  point_list.append(start);
+
   if (fabs(major - minor) < TOL)
-  {
-    Handle(Geom_Circle) curve_ptr;
-    gp_Pnt center = gp_Pnt( 0.0, 0.0, -height/2.0);
-    curve_ptr = GC_MakeCircle(center,main_dir, major);
-    new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
-    gp_Pnt v(0, -major, -height/2.0);
-    point_list.append(v);
     for (int i = 0; i <sides; i++)
       poly_maker.Add(point_list[i]);
-    poly_maker.Close(); 
-  }
-  else 
+  else
   {
-    gp_Pnt center(0.0, 0.0, -height/2.0);
-    gp_Dir x_dir(0.0, 1.0, 0.0);
-    gp_Ax2 Axis(center, main_dir, x_dir);
-    Handle(Geom_Curve) curve_ptr = GC_MakeEllipse(Axis, major, minor);
-    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr); 
-    gp_Pnt v(0, -minor, -height/2.0);
-    gp_Pln plane(center, main_dir);
-    TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
-    for(int i = 0; i < (sides-1); i++)
+    for (int i = 0; i <sides; i++)
     {
-      curve_ptr = GC_MakeSegment(center, point_list[i]);
-      TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(curve_ptr);
-      TopOpeBRep_EdgesIntersector intersector;
-      intersector.SetFaces(face,face);
-      intersector.Perform(new_edge, edge);
-      assert(intersector.NbPoints() == 1);
-      TopOpeBRep_Point2d point2d = intersector.Point();
-      gp_Pnt new_v = point2d.Value();
-      poly_maker.Add(new_v);
+      x = point_list[i].X();
+      if((y=point_list[i].Y()) > 0.0)
+        y = sqrt((1-x*x/major/major)*minor*minor);
+      else
+        y = -sqrt((1-x*x/major/major)*minor*minor);
+      point_list[i].SetY(y);
+      poly_maker.Add(point_list[i]);
     } 
-    poly_maker.Add(v);
-    poly_maker.Close();
   }
+  poly_maker.Close(); 
   
   TopoDS_Wire wire = poly_maker.Wire();
   TopoDS_Face base = BRepBuilderAPI_MakeFace(wire, Standard_True);
