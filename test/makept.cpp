@@ -115,6 +115,25 @@ CubitStatus make_Point()
   OCCQueryEngine::instance();
   OCCModifyEngine::instance();
 
+  //test for creating prisms
+  Body* prism1 = gmti->prism(10, 7, 5, 2); 
+  Body* prism2 = gmti->prism(10, 7, 5, 5);
+  Body* prism3 = gmti->prism(10, 8, 5, 2);
+  Body* prism4 = gmti->prism(10, 8, 5, 5);
+  CubitStatus rsl = CUBIT_SUCCESS;
+  DLIList<RefEntity*> ref_entity_list;
+  int num_ents_exported=0;
+  const CubitString cubit_version="10.2";
+  const char * filename = "prism.brep";
+  const char * filetype = "OCC";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  DLIList<Body*> bodies;
+  gti->bodies(bodies);
+  gti->delete_Body(bodies);
+
   //Create sphere
   RefEntity* sphereEnt= GeometryModifyTool::instance()->sphere(1.5);
   sphereEnt->entity_name("sphere");
@@ -183,18 +202,16 @@ CubitStatus make_Point()
   gmti->make_RefVertex(vector3,5);
   gti->get_free_ref_entities(free_entities);
 
-  CubitStatus rsl = CUBIT_SUCCESS;
-  DLIList<RefEntity*> ref_entity_list;
-  int num_ents_exported=0;
-  const CubitString cubit_version="10.2";
-  const char * filename = "point.occ";
-  const char * filetype = "OCC";
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "point.occ";
+  filetype = "OCC";
   
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
  
   //check for vertex
-  DLIList<Body*> bodies;
+  bodies.clean_out();
   gti->bodies(bodies);
   free_entities.clean_out();// get_free_ref_entities directly append
   //without checking for duplicates, so clean_out first. 
