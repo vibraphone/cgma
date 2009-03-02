@@ -134,6 +134,24 @@ CubitStatus make_Point()
   gti->bodies(bodies);
   gti->delete_Body(bodies);
 
+  //test for creating pyramids
+  Body* pyramid1 = gmti->pyramid(10, 7, 5, 2, 2);
+  Body* pyramid2 = gmti->pyramid(10, 7, 5, 5, 2);
+  Body* pyramid3 = gmti->pyramid(10, 8, 5, 2, 2);
+  Body* pyramid4 = gmti->pyramid(10, 8, 5, 5, 2);
+  Body* pyramid5 = gmti->pyramid(10, 8, 5, 2, 0);
+  Body* pyramid6 = gmti->pyramid(10, 8, 5, 5, 0);
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "pyramid.brep";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  gti->delete_Body(bodies);
+
   //Create sphere
   RefEntity* sphereEnt= GeometryModifyTool::instance()->sphere(1.5);
   sphereEnt->entity_name("sphere");
