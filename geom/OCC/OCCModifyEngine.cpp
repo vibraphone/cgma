@@ -908,8 +908,8 @@ CubitStatus OCCModifyEngine::sort_curves(DLIList<Curve*> curve_list,
 // Date       : 02/08
 //===============================================================================
 TopoDS_Face* OCCModifyEngine::make_TopoDS_Face(GeometryType surface_type,
-			       DLIList<DLIList<TopoDS_Edge*>*> topo_edges_list,
-			       Surface * old_surface_ptr)const
+			      DLIList<DLIList<TopoDS_Edge*>*> topo_edges_list,
+			      Surface * old_surface_ptr)const
 {
   TopoDS_Face* topo_face = NULL;
   // Make sure a supported type of surface is being requested.
@@ -1333,6 +1333,28 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
   if (sides == 4)
     return brick(2 * major, 2 * minor, height); 
 
+  TopoDS_Wire wire ;
+    make_base_for_prim_pyramid(major, minor, height, sides, wire);
+
+  TopoDS_Face base = BRepBuilderAPI_MakeFace(wire, Standard_True);
+  gp_Dir main_dir(0.0, 0.0, 1.0);
+  gp_Vec norm(main_dir);
+  BRepSweep_Prism swept(base, norm);
+  TopoDS_Shape new_shape = swept.Shape();
+  DLIList<TopologyBridge*> tbs;
+  tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+  assert(tbs.size() == 1);
+
+  BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
+  return bodysm;
+}
+
+void OCCModifyEngine::make_base_for_prim_pyramid(double major,
+                                                 double minor,
+                                                 double height,
+                                                 int sides,
+                                                 TopoDS_Wire& wire)const
+{
   //One of the polygon side will be perpendicular to positive x-axis.
   double y = major * sin(CUBIT_PI/sides);
   double x = sqrt(major * major - y * y);
@@ -1346,7 +1368,7 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
     gp_Pnt v(major * cos(angle), major * sin(angle), -height/2.0);
     point_list.append(v);
   }
-  
+
   TopoDS_Edge new_edge;
   BRepBuilderAPI_MakePolygon poly_maker;
   gp_Dir main_dir(0.0, 0.0, 1.0);
@@ -1366,21 +1388,11 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
         y = -sqrt((1-x*x/major/major)*minor*minor);
       point_list[i].SetY(y);
       poly_maker.Add(point_list[i]);
-    } 
+    }
   }
-  poly_maker.Close(); 
-  
-  TopoDS_Wire wire = poly_maker.Wire();
-  TopoDS_Face base = BRepBuilderAPI_MakeFace(wire, Standard_True);
-  gp_Vec norm(main_dir);
-  BRepSweep_Prism swept(base, norm);
-  TopoDS_Shape new_shape = swept.Shape();
-  DLIList<TopologyBridge*> tbs;
-  tbs += OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
-  assert(tbs.size() == 1);
+  poly_maker.Close();
 
-  BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
-  return bodysm;
+  wire = poly_maker.Wire();
 }
 
 //===============================================================================
@@ -1393,15 +1405,33 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
 BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
                                  double minor, double top) const
 {
-  //currently OCC only support 4 sided pyramid
-  if (sides != 4)
+  TopoDS_Solid S;
+  if (sides == 4)
+    S = BRepPrimAPI_MakeWedge( 2 * major, 2* minor, height, 2 * top);
+
+  else
   {
-    PRINT_ERROR("Option not supported for OCC based geometry.\n");
-    return (BodySM*) NULL;
+    //build the top and bottom shapes.
+    TopoDS_Wire wire_bottom ; 
+    make_base_for_prim_pyramid(major, minor, height, sides, wire_bottom);
+    double top_minor = top * minor / major;
+    TopoDS_Wire wire_top ; 
+    BRepOffsetAPI_ThruSections builder(CUBIT_TRUE, CUBIT_TRUE);
+    builder.AddWire(wire_bottom);
+    if(top > TOL)
+    {
+      make_base_for_prim_pyramid(top, top_minor, -height, sides, wire_top); 
+      builder.AddWire(wire_top);
+    }
+    else
+    {
+      gp_Pnt pt = gp_Pnt( 0.0, 0.0, height/2.0);
+      TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
+      builder.AddVertex(theVertex);
+    }
+    builder.Build() ;
+    S = TopoDS::Solid(builder.Shape());
   }
-  
-  TopoDS_Solid S = BRepPrimAPI_MakeWedge( 2 * major, 2* minor, height,
-                                        2 * top);
 
   Lump* lump =  OCCQueryEngine::instance()->populate_topology_bridge(S,
                                                                 CUBIT_TRUE);
@@ -1409,7 +1439,7 @@ BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
     return (BodySM*)NULL;
 
   BodySM* body = CAST_TO(lump, OCCLump)->get_body();
-  if(body)
+  if(body && sides == 4)
     CAST_TO(body, OCCBody)->move(-major, -minor, -height/2.0);
   return body;
   
@@ -6224,16 +6254,17 @@ CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
 }  
 
 //================================================================================
-// Description: Creates a surface.
-// Author     : Tyronne Lim
-// Date       : 08/18/03
+// Description: Creates a surface using a list of points, project to surface if
+//              given.
+// Author     : Jane Hu
+// Date       : 03/02/09
 //================================================================================
-CubitStatus OCCModifyEngine::create_surface( DLIList<CubitVector*>& /*vec_list*/, 
-                                               BodySM *& /*new_body*/, 
-                                               Surface * /*ref_face_ptr*/,
-                                               CubitBoolean /*project_points*/ ) const
+CubitStatus OCCModifyEngine::create_surface( DLIList<CubitVector*>& vec_list, 
+                                             BodySM *& new_body, 
+                                             Surface * ref_face_ptr,
+                                             CubitBoolean ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   
    return CUBIT_FAILURE;
 }
 

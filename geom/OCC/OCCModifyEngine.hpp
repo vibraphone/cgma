@@ -604,6 +604,12 @@ private:
                      Surface * face1,
                      Surface * face2) const;
 
+ void make_base_for_prim_pyramid(double major,
+                                 double minor,
+                                 double height,
+                                 int sides,
+                                 TopoDS_Wire& wire)const;
+
  int check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                         TopoDS_Face from_face)const;
 
