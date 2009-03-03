@@ -1613,7 +1613,8 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
        return (BodySM *)NULL;
     }
 
-    return CAST_TO(surface,OCCSurface)->my_body();
+    OCCSurface* occ_surf = CAST_TO(surface, OCCSurface);
+    return occ_surf->my_body();
   }
 
   if(OCCQueryEngine::instance()->OCCMap->IsBound(*theCS))
@@ -4757,11 +4758,153 @@ CubitStatus OCCModifyEngine::split_body( BodySM *body_ptr,
 // Function   : reverse_body
 // Member Type: PUBLIC
 // Description: Turn body inside-out
-// Author     : Jason Kraftcheck
-// Date       : 05/25/04
+// Author     : Jane Hu
+// Date       : 03/03/09
 //===============================================================================
 CubitStatus OCCModifyEngine::reverse_body( BodySM* body_ptr )
 {
+  OCCBody* occ_body = CAST_TO(body_ptr, OCCBody);
+  if (!occ_body)
+  {
+     PRINT_ERROR("Cannot reverse a non-OCC bodySM .\n"
+                 "Possible incompatible geometry engines.\n");
+     return CUBIT_FAILURE;
+  }
+
+  TopoDS_Shape* orig_S;
+  orig_S = occ_body->get_TopoDS_Shape();
+  TopoDS_Shape S;
+  BRep_Builder B;
+  if (orig_S->IsNull() ) //sheet body
+  {
+    OCCShell* occ_shell = occ_body->shell();
+    OCCSurface* occ_face = occ_body->my_sheet_surface();
+    if (occ_shell != NULL)
+      orig_S = occ_shell->get_TopoDS_Shell();
+
+    else
+    {
+       if (occ_face == NULL)
+       {
+         PRINT_ERROR("Cannot create an OCC sheet bodySM from the given bodySM.\n");
+         return CUBIT_FAILURE;
+       }
+       orig_S = occ_face->get_TopoDS_Face();
+    }
+    S = orig_S->EmptyCopied();
+    TopoDS_Iterator it(*orig_S);
+    while (it.More()) {
+      B.Add(S,it.Value().Reversed());
+      it.Next();
+    }
+  }
+
+  else
+  {
+    S = orig_S->EmptyCopied();
+    TopoDS_Iterator it(*orig_S);
+    while (it.More()) {
+      B.Add(S,it.Value().Reversed());
+      it.Next();
+    }
+    occ_body->set_TopoDS_Shape(TopoDS::CompSolid(S)); 
+  }
+  
+  //Bind the new shape and its underlining sub-shapes.
+  TopExp_Explorer Ex_orig, Ex;
+  int k = -1;
+  Ex.Init(S, TopAbs_COMPSOLID);
+  Ex_orig.Init(*orig_S, TopAbs_COMPSOLID);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(Ex.Current()))
+    {
+      k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());   
+      OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+      OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+      TopExp_Explorer Ex_old_solid, Ex_solid;
+      Ex_old_solid.Init(*orig_S,TopAbs_SOLID);
+      Ex_solid.Init(S, TopAbs_SOLID);
+      DLIList<Lump*> lumps = occ_body->lumps();
+      for (; Ex_old_solid.More(), Ex_solid.More(); Ex_old_solid.Next(), Ex_solid.Next())
+      {
+        k = OCCQueryEngine::instance()->OCCMap->Find(Ex_old_solid.Current());
+        OCCQueryEngine::instance()->OCCMap->UnBind(Ex_old_solid.Current());
+        OCCQueryEngine::instance()->OCCMap->Bind(Ex_solid.Current(), k);
+        OCCLump* occ_lump = CAST_TO(lumps.get_and_step(), OCCLump);
+        occ_lump->set_TopoDS_Solid(TopoDS::Solid(Ex_solid.Current()));
+      }
+    } 
+    
+    else
+    {
+      Lump *lump = occ_body->lumps().get();
+      OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+      TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
+      k = OCCQueryEngine::instance()->OCCMap->Find(solid);
+      OCCQueryEngine::instance()->OCCMap->UnBind(solid);
+      TopExp_Explorer Ex_local;
+      Ex_local.Init(S, TopAbs_SOLID);
+      OCCQueryEngine::instance()->OCCMap->Bind(Ex_local.Current(), k);
+      occ_lump->set_TopoDS_Solid(TopoDS::Solid(Ex_local.Current())); 
+    }
+  }  
+      
+  Ex.Init(S, TopAbs_SHELL);
+  Ex_orig.Init(*orig_S, TopAbs_SHELL);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+    OCCShell *shell = (OCCShell*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    shell->set_TopoDS_Shell(TopoDS::Shell(Ex.Current())); 
+  }
+
+  Ex.Init(S, TopAbs_FACE);
+  Ex_orig.Init(*orig_S, TopAbs_FACE);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+    OCCSurface *surface = (OCCSurface *)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    TopoDS_Face face = TopoDS::Face(Ex.Current());
+    surface->set_TopoDS_Face(face);
+  }
+
+  Ex.Init(S, TopAbs_WIRE);
+  Ex_orig.Init(*orig_S, TopAbs_WIRE);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+    OCCLoop* wire = (OCCLoop*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    wire->set_TopoDS_Wire(TopoDS::Wire(Ex.Current()));
+  }
+
+  Ex.Init(S, TopAbs_EDGE);
+  Ex_orig.Init(*orig_S, TopAbs_EDGE);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+    OCCCurve* edge = (OCCCurve*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    edge->set_TopoDS_Edge(TopoDS::Edge(Ex.Current()));
+  }
+
+  Ex.Init(S, TopAbs_VERTEX);
+  Ex_orig.Init(*orig_S, TopAbs_VERTEX);
+  for (; Ex_orig.More(), Ex.More(); Ex_orig.Next(), Ex.Next())
+  {
+    k = OCCQueryEngine::instance()->OCCMap->Find(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->UnBind(Ex_orig.Current());
+    OCCQueryEngine::instance()->OCCMap->Bind(Ex.Current(), k);
+    OCCPoint* point = (OCCPoint*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    point->set_TopoDS_Vertex(TopoDS::Vertex(Ex.Current()));
+  }
   return CUBIT_SUCCESS;
 }
     
