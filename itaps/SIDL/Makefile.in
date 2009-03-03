@@ -3,14 +3,19 @@
 MAKE_INC = iGeom-SIDL-Defs.inc
 SIDL_FILES = iBase.sidl iGeom.sidl iGeom_SIDL.sidl
 SIDL_FILES_PATH = $(srcdir)/iBase.sidl $(srcdir)/iGeom.sidl $(srcdir)/iGeom_SIDL.sidl
-SERVER_FILES = gserver/iBase_Error_Impl.cc \
-               gserver/iBase_Error_Impl.hh \
-	       gserver/iGeom_SIDL_GeomSidl_Impl.cc \
+# SERVER_FILES = gserver/iBase_Error_Impl.cc \
+#                gserver/iBase_Error_Impl.hh \
+# 	       gserver/iGeom_SIDL_GeomSidl_Impl.cc \
+# 	       gserver/iGeom_SIDL_GeomSidl_Impl.hh \
+# 	       gserver/iGeom_Factory_Impl.cc
+# SERVER_FILES_PATH = $(srcdir)/gserver/iBase_Error_Impl.cc \
+#                     $(srcdir)/gserver/iBase_Error_Impl.hh \
+# 	            $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.cc \
+# 	            $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.hh 
+SERVER_FILES = gserver/iGeom_SIDL_GeomSidl_Impl.cc \
 	       gserver/iGeom_SIDL_GeomSidl_Impl.hh \
 	       gserver/iGeom_Factory_Impl.cc
-SERVER_FILES_PATH = $(srcdir)/gserver/iBase_Error_Impl.cc \
-                    $(srcdir)/gserver/iBase_Error_Impl.hh \
-	            $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.cc \
+SERVER_FILES_PATH = $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.cc \
 	            $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.hh 
 SOURCE_FILES = $(SIDL_FILES) $(SERVER_FILES) iBase_SIDL_defs.h
 DIST_FILES = $(SOURCE_FILES) testgeom.cpp \
