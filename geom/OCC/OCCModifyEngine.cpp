@@ -1339,6 +1339,7 @@ BodySM* OCCModifyEngine::prism( double height, int sides, double major,
   TopoDS_Face base = BRepBuilderAPI_MakeFace(wire, Standard_True);
   gp_Dir main_dir(0.0, 0.0, 1.0);
   gp_Vec norm(main_dir);
+  norm *= height;
   BRepSweep_Prism swept(base, norm);
   TopoDS_Shape new_shape = swept.Shape();
   DLIList<TopologyBridge*> tbs;
@@ -1406,41 +1407,34 @@ BodySM* OCCModifyEngine::pyramid( double height, int sides, double major,
                                  double minor, double top) const
 {
   TopoDS_Solid S;
-  if (sides == 4)
-    S = BRepPrimAPI_MakeWedge( 2 * major, 2* minor, height, 2 * top);
 
+  //build the top and bottom shapes.
+  TopoDS_Wire wire_bottom ; 
+  make_base_for_prim_pyramid(major, minor, height, sides, wire_bottom);
+  double top_minor = top * minor / major;
+  TopoDS_Wire wire_top ; 
+  BRepOffsetAPI_ThruSections builder(CUBIT_TRUE, CUBIT_TRUE);
+  builder.AddWire(wire_bottom);
+  if(top > TOL)
+  {
+    make_base_for_prim_pyramid(top, top_minor, -height, sides, wire_top); 
+    builder.AddWire(wire_top);
+  }
   else
   {
-    //build the top and bottom shapes.
-    TopoDS_Wire wire_bottom ; 
-    make_base_for_prim_pyramid(major, minor, height, sides, wire_bottom);
-    double top_minor = top * minor / major;
-    TopoDS_Wire wire_top ; 
-    BRepOffsetAPI_ThruSections builder(CUBIT_TRUE, CUBIT_TRUE);
-    builder.AddWire(wire_bottom);
-    if(top > TOL)
-    {
-      make_base_for_prim_pyramid(top, top_minor, -height, sides, wire_top); 
-      builder.AddWire(wire_top);
-    }
-    else
-    {
-      gp_Pnt pt = gp_Pnt( 0.0, 0.0, height/2.0);
-      TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
-      builder.AddVertex(theVertex);
-    }
-    builder.Build() ;
-    S = TopoDS::Solid(builder.Shape());
+    gp_Pnt pt = gp_Pnt( 0.0, 0.0, height/2.0);
+    TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
+    builder.AddVertex(theVertex);
   }
-
+  builder.Build() ;
+  S = TopoDS::Solid(builder.Shape());
+ 
   Lump* lump =  OCCQueryEngine::instance()->populate_topology_bridge(S,
                                                                 CUBIT_TRUE);
   if (lump == NULL)
     return (BodySM*)NULL;
 
   BodySM* body = CAST_TO(lump, OCCLump)->get_body();
-  if(body && sides == 4)
-    CAST_TO(body, OCCBody)->move(-major, -minor, -height/2.0);
   return body;
   
 }

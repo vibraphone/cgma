@@ -26,6 +26,7 @@ class OCCSurface;
 class OCCCurve;
 class TopoDS_Shape;
 class TopoDS_Edge;
+class TopoDS_Wire;
 class TopoDS_Face;
 class CubitBox;
 class BRepAlgoAPI_BooleanOperation;
