@@ -130,6 +130,17 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  CubitBox box1 = prism1->bounding_box();  
+  //(-5.0, -1.949, -5.0) to (4.504, 1.949, 5.0)
+
+  box1 = prism2->bounding_box();
+  //(-5.0, -4.874, -5.0) to (4.504, 4.874, 5.0)
+
+  box1 = prism3->bounding_box();
+  //(-4.619, -1.847, -5.0) to (4.619, 1.847, 5.0)
+
+  box1 = prism4->bounding_box();
+  // (-4.619, -4.619, -5.0) to (4.619, 4.619, 5.0)
   DLIList<Body*> bodies;
   gti->bodies(bodies);
   gti->delete_Body(bodies);
@@ -139,14 +150,32 @@ CubitStatus make_Point()
   Body* pyramid2 = gmti->pyramid(10, 7, 5, 5, 2);
   Body* pyramid3 = gmti->pyramid(10, 8, 5, 2, 2);
   Body* pyramid4 = gmti->pyramid(10, 8, 5, 5, 2);
-  Body* pyramid5 = gmti->pyramid(10, 8, 5, 2, 0);
-  Body* pyramid6 = gmti->pyramid(10, 8, 5, 5, 0);
+  Body* pyramid5 = gmti->pyramid(10, 4, 5, 2, 0);
+  Body* pyramid6 = gmti->pyramid(10, 4, 5, 5, 0);
   ref_entity_list.clean_out();
   num_ents_exported=0;
   filename = "pyramid.brep";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+
+  box1 = pyramid1->bounding_box();
+  //(-5.0, -1.949, -5.0) to (4.504, 1.949, 5.0) 
+
+  box1 = pyramid2->bounding_box();
+  //(-5.0, -4.874, -5.0) to (4.504, 4.874, 5.0)
+
+  box1 = pyramid3->bounding_box();
+  //(-4.619, -1.847, -5.0) to (4.619, 1.847, 5.0);
+
+  box1 = pyramid4->bounding_box();
+  //(-4.619, -4.619, -5.0) to (4.619, 4.619, 5.0)
+
+  box1 = pyramid5->bounding_box();
+  //(-3.535, -1.414, -5.0) to (3.535, 1.414, 5.0)
+
+  box1 = pyramid6->bounding_box(); 
+  //(-3.535, -3.535, -5.0) to (3.535, 3.535, 5.0)
 
   bodies.clean_out();
   gti->bodies(bodies);
