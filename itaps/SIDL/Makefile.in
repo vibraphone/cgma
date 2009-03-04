@@ -17,7 +17,7 @@ SERVER_FILES = gserver/iGeom_SIDL_GeomSidl_Impl.cc \
 	       gserver/iGeom_Factory_Impl.cc
 SERVER_FILES_PATH = $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.cc \
 	            $(srcdir)/gserver/iGeom_SIDL_GeomSidl_Impl.hh 
-SOURCE_FILES = $(SIDL_FILES) $(SERVER_FILES) iBase_SIDL_defs.h
+SOURCE_FILES = $(SIDL_FILES) $(SERVER_FILES) 
 DIST_FILES = $(SOURCE_FILES) testgeom.cpp \
              gserver.make Cclient.make Fclient.make
 INCLUDES =  -I$(BABEL_DIR)/include -Igserver
