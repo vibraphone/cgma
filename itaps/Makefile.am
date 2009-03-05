@@ -51,9 +51,6 @@ libiGeom_la_include_HEADERS = \
 	iBase_f.h \
 	iGeom_f.h
 
-EXTRA_DIST = size.sat
-
-
 check_PROGRAMS = $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
@@ -83,7 +80,7 @@ install-data-hook:
 	echo "IGEOM_CXX_LTFLAGS = -R${libdir}" >> $(CFG_FILE)
 	echo "IGEOM_INCLUDES = -I${includedir}" >> $(CFG_FILE)
 
-EXTRA_DIST = testgeom.sat
+EXTRA_DIST = testgeom.sat size.sat
 
 CLEANFILES = iGeom-Defs.inc
 
