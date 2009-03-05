@@ -48,6 +48,7 @@
 #include "GC_MakeTrimmedCylinder.hxx"
 #include "gce_MakeElips.hxx"
 #include "BRepFilletAPI_MakeFillet.hxx"
+#include "BRepAdaptor_CompCurve.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "ChFi2d_ConstructionError.hxx"
 #include "Geom_BezierCurve.hxx"
@@ -5369,12 +5370,135 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
   } 
 }
 
+//===============================================================================
+// Function   : create_curve_combine
+// Member Type: PUBLIC
+// Description: create a curve of combination of several curves.  
+// Author     : Jane Hu 
+// Date       : 03/09
+//===============================================================================
+
 CubitStatus 
 OCCModifyEngine::create_curve_combine( DLIList<Curve*>& curve_list, 
                                     Curve *&new_curve_ptr )
 {
-  PRINT_ERROR("Curve combine is not implemented for facet based models\n");
-  return CUBIT_FAILURE;
+  int i;
+
+  DLIList<OCCCurve*> occ_curves(curve_list.size());
+  CAST_LIST( curve_list, occ_curves, OCCCurve );
+  if (curve_list.size() != occ_curves.size())
+  {
+    PRINT_ERROR("In OCCModifyEngine::create_curve_combine\n"
+                "       Not all input curves are OCC Curves.\n");
+    return CUBIT_FAILURE;
+  }
+  
+  BRepBuilderAPI_MakeWire aWire(*(occ_curves.get_and_step()->get_TopoDS_Edge()));
+  for(i =1 ; i < curve_list.size(); i++)
+  {
+    OCCCurve* curve = occ_curves.get_and_step();
+    TopoDS_Edge* edge = curve->get_TopoDS_Edge();
+      aWire.Add(*edge);
+    if(!aWire.IsDone())
+    {
+      PRINT_ERROR("In OCCModifyEngine::create_curve_combine\n"
+                "       The curves are not all connected.\n");
+      return CUBIT_FAILURE;
+    }
+  }
+  TopoDS_Wire wire = aWire.Wire(); 
+  BRepAdaptor_CompCurve comp_curve(wire);
+  GeomAbs_CurveType type = comp_curve.GetType();
+  GeomAbs_Shape cont = comp_curve.Continuity();
+  if(cont < GeomAbs_G1)
+  {
+    PRINT_ERROR("In OCCModifyEngine::create_curve_combine\n"
+                "       The combined curve is not G1 continued.\n");
+    return CUBIT_FAILURE;
+  }
+
+  //find the start/end vertices for the combined curve.
+  double first_u = comp_curve.FirstParameter();
+  double last_u = comp_curve.LastParameter();
+  gp_Pnt first = comp_curve.Value(first_u);
+  gp_Pnt last = comp_curve.Value(last_u);
+  CubitVector first_v(first.X(), first.Y(), first.Z());
+  CubitVector last_v(last.X(), last.Y(), last.Z());
+  DLIList<CubitVector> v_list;
+  v_list.append(first_v);
+  v_list.append(last_v);
+  v_list.reset();
+
+  DLIList<TopoDS_Vertex*> V_list;
+  for(int j = 0; j < 2; j++)
+  {
+    DLIList<TopologyBridge*> children;
+    if (j == 0)
+      occ_curves.reset();
+    else
+      occ_curves.last();
+    occ_curves.get()->get_children_virt(children);
+    CubitVector v = v_list.get_and_step();
+    for(i = 0 ; i < children.size(); i++)
+    {
+      OCCPoint* vertex = CAST_TO(children.get_and_step(), OCCPoint); 
+      CubitVector xyz = vertex->coordinates();
+      if(xyz.about_equal(v))
+      {
+        V_list.append( vertex->get_TopoDS_Vertex());
+        break;
+      }
+    }
+  }
+   
+  V_list.reset();
+  TopoDS_Edge topo_edge; 
+  gp_Lin line;
+  gp_Circ circle;
+  gp_Elips ellip;
+  gp_Hypr hypr;
+  gp_Parab parab;
+  Handle_Geom_BezierCurve bezier;
+  Handle_Geom_BSplineCurve spline;
+  switch(type)
+  {
+    case GeomAbs_Line:
+      line = comp_curve.Line();
+      topo_edge = BRepBuilderAPI_MakeEdge(line,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_Circle:
+      circle = comp_curve.Circle();
+      topo_edge = BRepBuilderAPI_MakeEdge(circle,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_Ellipse:
+      ellip = comp_curve.Ellipse();
+      topo_edge = BRepBuilderAPI_MakeEdge(ellip,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_Hyperbola:
+      hypr = comp_curve.Hyperbola();
+      topo_edge = BRepBuilderAPI_MakeEdge(hypr,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_Parabola:
+      parab = comp_curve.Parabola();
+      topo_edge = BRepBuilderAPI_MakeEdge(parab,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_BezierCurve:
+      bezier = comp_curve.Bezier();
+      topo_edge = BRepBuilderAPI_MakeEdge(bezier,*V_list.get_and_step(), *V_list.get() );
+      break;
+    case GeomAbs_BSplineCurve:
+      spline = comp_curve.BSpline();
+      topo_edge = BRepBuilderAPI_MakeEdge(spline,*V_list.get_and_step(), *V_list.get() );
+      break;
+    default:
+      PRINT_ERROR("In OCCModifyEngine::create_curve_combine\n"
+                "       The combined curve is not G1 continued.\n");
+      return CUBIT_FAILURE;
+  }
+  TopoDS_Edge *topo_edge_ptr = new TopoDS_Edge(topo_edge);
+  OCCCurve* occ_c = new OCCCurve(topo_edge_ptr);
+  new_curve_ptr = occ_c;
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================

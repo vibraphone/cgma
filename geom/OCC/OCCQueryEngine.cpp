@@ -112,11 +112,6 @@
 #include <TDF_ChildIterator.hxx>
 #include "Standard_Boolean.hxx"
 
-//#include "TopOpeBRep_ShapeIntersector.hxx"
-//#include "BRepAdaptor_Curve.hxx"
-//#include "TopOpeBRepTool_ShapeTool.hxx"
-//#include "BRepPrimAPI_MakePrism.hxx"
-//#include "TopOpeBRep_Point2d.hxx"
 #include "TDF_Label.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "BRepExtrema_DistShapeShape.hxx"
