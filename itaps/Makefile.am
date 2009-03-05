@@ -51,6 +51,8 @@ libiGeom_la_include_HEADERS = \
 	iBase_f.h \
 	iGeom_f.h
 
+EXTRA_DIST = size.sat
+
 
 check_PROGRAMS = $(TESTS)
 
