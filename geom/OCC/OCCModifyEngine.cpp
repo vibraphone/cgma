@@ -5424,12 +5424,15 @@ OCCModifyEngine::create_curve_combine( DLIList<Curve*>& curve_list,
   gp_Pnt last = comp_curve.Value(last_u);
   CubitVector first_v(first.X(), first.Y(), first.Z());
   CubitVector last_v(last.X(), last.Y(), last.Z());
+  if(first_v.about_equal(last_v))
+    comp_curve.SetPeriodic(Standard_True);
+
   DLIList<CubitVector> v_list;
   v_list.append(first_v);
   v_list.append(last_v);
   v_list.reset();
 
-  DLIList<TopoDS_Vertex*> V_list;
+  DLIList<gp_Pnt*> V_list;
   for(int j = 0; j < 2; j++)
   {
     DLIList<TopologyBridge*> children;
@@ -5445,7 +5448,8 @@ OCCModifyEngine::create_curve_combine( DLIList<Curve*>& curve_list,
       CubitVector xyz = vertex->coordinates();
       if(xyz.about_equal(v))
       {
-        V_list.append( vertex->get_TopoDS_Vertex());
+        gp_Pnt p ( v.x(), v.y(), v.z());
+        V_list.append(&p);
         break;
       }
     }
