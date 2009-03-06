@@ -6413,9 +6413,31 @@ CubitStatus OCCModifyEngine::create_offset_surface( Surface* face_ptr,
                                                     BodySM*& new_body, 
                                                     double offset ) const
 {
-   PRINT_ERROR("Function not implemented because offset_distance \n"
-               "doesn't show offset direction.\n");
-   return CUBIT_FAILURE;
+  //create offset surface from its center along center normal of distance 
+  //"offset"
+  OCCSurface *occ_surface =  CAST_TO(face_ptr, OCCSurface);
+  if (occ_surface == NULL)
+    {
+      PRINT_ERROR("Option not supported for non-occ based geometry.\n");
+      return CUBIT_FAILURE;
+    } 
+
+  Surface* c_surface = NULL;
+  c_surface = make_Surface(occ_surface);
+  if (c_surface == NULL)
+  {
+    PRINT_ERROR("Cannot copy surface in sweep_translational.\n");
+    return CUBIT_FAILURE;
+  }
+  occ_surface = CAST_TO(c_surface, OCCSurface);
+
+  CubitVector center = occ_surface->center_point();
+  CubitVector normal;
+  occ_surface->closest_point(center,NULL,&normal); 
+  CubitVector v = normal * offset;
+  OCCQueryEngine::instance()->translate(occ_surface, v);
+  new_body = occ_surface->my_body();
+  return CUBIT_SUCCESS;
 }
 
 //================================================================================
