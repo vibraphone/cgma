@@ -5542,7 +5542,9 @@ CubitStatus OCCModifyEngine::get_offset_intersections( Curve* curve1,
                                               double offset,
                                               CubitBoolean ext_first ) 
 {
-  
+  //offset the curve1 in both directions of normal direction of two curves at
+  //center points.
+    
   return CUBIT_SUCCESS;
 }
 
@@ -5559,8 +5561,41 @@ CubitStatus OCCModifyEngine::get_offset_intersections( Curve* curve1,
                                            double offset,
                                            CubitBoolean ext_surf )
 {
+  Surface* new_surface = face_ptr;
+  if(ext_surf)
+    new_surface = make_Surface(face_ptr, CUBIT_TRUE);
+
+  BodySM* bodysm = NULL;
+  CubitStatus status = CUBIT_SUCCESS;
+  status = create_offset_surface(new_surface, bodysm, offset); 
+  if(status == CUBIT_FAILURE)
+  {
+    PRINT_ERROR("Can't offset surface. \n");
+    return status;
+  }
+  OCCSurface* surface = CAST_TO(bodysm, OCCBody)->my_sheet_surface();
+
+  status = OCCQueryEngine::instance()->get_intersections(curve1, surface, out_list);
   
-  return CUBIT_SUCCESS;
+  if(ext_surf || offset)
+    OCCQueryEngine::instance()->delete_solid_model_entities(surface);
+ 
+  //offset surface in opposite direction
+  if(!offset)
+    return status;
+
+  status = create_offset_surface(new_surface, bodysm, -offset);
+  if(status == CUBIT_FAILURE)
+  {
+    PRINT_ERROR("Can't offset surface. \n");
+    return status;
+  }
+  surface = CAST_TO(bodysm, OCCBody)->my_sheet_surface();
+  status = OCCQueryEngine::instance()->get_intersections(curve1, surface, out_list);
+  OCCQueryEngine::instance()->delete_solid_model_entities(surface);
+  if(ext_surf)
+    OCCQueryEngine::instance()->delete_solid_model_entities(new_surface);
+  return status;
 }
 
 //===============================================================================
