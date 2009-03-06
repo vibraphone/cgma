@@ -5533,50 +5533,89 @@ CubitBoolean OCCModifyEngine::is_modify_engine(const TopologyBridge *tb_ptr) con
 // Function   : get_offset_intersections
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 03/09
 //===============================================================================
-CubitStatus OCCModifyEngine::get_offset_intersections( Curve* /*ref_edge1*/, 
-                                                         Curve* /*ref_edge2*/,
-                                                         DLIList<CubitVector*>& /*intersection_list*/,
-                                                         double /*offset*/,
-                                                         CubitBoolean /*ext_first*/ )
+CubitStatus OCCModifyEngine::get_offset_intersections( Curve* curve1, 
+                                              Curve* curve2,
+                                              DLIList<CubitVector*>& out_list,
+                                              double offset,
+                                              CubitBoolean ext_first ) 
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
 // Function   : get_offset_intersections
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu
+// Date       : 03/09
 //===============================================================================
-CubitStatus OCCModifyEngine::get_offset_intersections( Curve* /*ref_edge_ptr*/, 
-                                                         Surface* /*ref_face_ptr*/,
-                                                         DLIList<CubitVector*> & /*intersection_list*/,
-                                                         double /*offset*/,
-                                                         CubitBoolean /*ext_surf*/ )
+CubitStatus OCCModifyEngine::get_offset_intersections( Curve* curve1, 
+                                           Surface* face_ptr,
+                                           DLIList<CubitVector*> & out_list,
+                                           double offset,
+                                           CubitBoolean ext_surf )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
 // Function   : surface_intersection
 // Member Type: PUBLIC
 // Description: 
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Jane Hu  
+// Date       : 03/09
 //===============================================================================
-CubitStatus OCCModifyEngine::surface_intersection( Surface * /*surface1_ptr*/,
-                                                     Surface * /*surface2_ptr*/,
-                                                     DLIList<Curve*> &/*inter_graph*/,
-                                                     const double /*tol*/) const
+CubitStatus OCCModifyEngine::surface_intersection( Surface * surface1,
+                                                   Surface * surface2,
+                                                   DLIList<Curve*> &intscts,
+                                                   const double tol) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  OCCSurface *occ_surface1 =  CAST_TO(surface1, OCCSurface);
+  if (occ_surface1 == NULL)
+    {
+      PRINT_ERROR("Option not supported for non-occ based geometry.\n");
+      return CUBIT_FAILURE;
+    }
+
+  OCCSurface *occ_surface2 =  CAST_TO(surface2, OCCSurface);
+  if (occ_surface2 == NULL)
+    {
+      PRINT_ERROR("Option not supported for non-occ based geometry.\n");
+      return CUBIT_FAILURE;
+    }
+  
+  //currently, there's no effect on 'closest' argument or bounded.
+  BRepExtrema_DistShapeShape distShapeShape(*(occ_surface1->get_TopoDS_Face()),
+                                            *(occ_surface2->get_TopoDS_Face()));
+
+  //distShapeShape.Perform();
+  if (!distShapeShape.IsDone())
+    {
+      PRINT_ERROR("Cannot calculate the intersection points for the input curve and surface.\n");
+      return CUBIT_FAILURE;
+    }
+
+  if (distShapeShape.Value() < tol) //intersect
+    {
+      int numSol = distShapeShape.NbSolution();
+      for (int i = 1; i <= numSol; i++)
+        {
+          TopoDS_Shape shape = distShapeShape.SupportOnShape1(i);
+          if(shape.ShapeType() != TopAbs_EDGE)
+            continue;
+
+          TopoDS_Edge* edge = new TopoDS_Edge(TopoDS::Edge(shape));
+          OCCCurve* cv = new OCCCurve(edge);
+          intscts.append(cv);
+        }
+    }
+
+  return CUBIT_SUCCESS;
 }
 
 //===============================================================================
@@ -6370,9 +6409,9 @@ CubitStatus OCCModifyEngine::create_net_surface( DLIList<Curve*>& /*u_curves*/,
 // Author     : Jane Hu
 // Date       : 01/09
 //================================================================================
-CubitStatus OCCModifyEngine::create_offset_surface( Surface* /*ref_face_ptr*/, 
-                                                    BodySM*& /*new_body*/, 
-                                                    double /*offset_distance*/ ) const
+CubitStatus OCCModifyEngine::create_offset_surface( Surface* face_ptr, 
+                                                    BodySM*& new_body, 
+                                                    double offset ) const
 {
    PRINT_ERROR("Function not implemented because offset_distance \n"
                "doesn't show offset direction.\n");
