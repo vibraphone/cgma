@@ -104,6 +104,8 @@ MOSTLYCLEANFILES = \
 	proeexport.step \
 	ex3export.step \
 	ex3.occ \
-	ex3export.iges
-
+	ex3export.iges \
+        prism.occ \
+        pyramid.occ
+ 
 
