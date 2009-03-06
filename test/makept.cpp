@@ -124,7 +124,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = "prism.brep";
+  const char * filename = "prism.occ";
   const char * filetype = "OCC";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
@@ -154,7 +154,7 @@ CubitStatus make_Point()
   Body* pyramid6 = gmti->pyramid(10, 4, 5, 5, 0);
   ref_entity_list.clean_out();
   num_ents_exported=0;
-  filename = "pyramid.brep";
+  filename = "pyramid.occ";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
