@@ -616,11 +616,17 @@ CubitStatus GeometryQueryTool::import_solid_model(
   gqeList.reset();
   DLIList<TopologyBridge*> bridge_list;
 
-  CubitStatus status = gqeList.get()->import_solid_model( file_name,
+  CubitStatus status;
+  for(int i = 0; i < gqeList.size(); i++)
+  {
+    status = gqeList.get_and_step()->import_solid_model( file_name,
       file_type, bridge_list, CUBIT_TRUE,logfile_name, heal_step, import_bodies,
       import_surfaces, import_curves, import_vertices, free_surfaces );
 
-  if( bridge_list.size() == 0 )
+    if( bridge_list.size() > 0 )
+      break;
+  }
+  if(bridge_list.size() == 0)
     return status;
 
   for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
