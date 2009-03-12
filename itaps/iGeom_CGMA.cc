@@ -350,6 +350,8 @@ void iGeom_load( iGeom_Instance instance,
   }
   
   iBase_ErrorType result;
+  CubitStatus status = CUBIT_SUCCESS;
+
   if (strstr(name, ".cub") != NULL) {
     iGeom_load_cub_geometry(name, err);
     if (iBase_SUCCESS != *err) {
@@ -357,7 +359,10 @@ void iGeom_load( iGeom_Instance instance,
     }
   }
   else {
-    CubitStatus status = gqt->read_geometry_file(name);
+    if (strstr(name, ".brep") != NULL || strstr(name, ".occ") != NULL)
+      status = gqt->read_geometry_file(name, NULL, "OCC");
+    else
+      status = gqt->read_geometry_file(name);
     if (CUBIT_SUCCESS != status) {
       ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
     }
