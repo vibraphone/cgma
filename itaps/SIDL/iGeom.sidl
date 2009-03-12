@@ -382,7 +382,7 @@ package iGeom version 0.6.99
  */
     void getArrBoundBox(in array<opaque> gentity_handles, 
                         in int gentity_handles_size,
-                        inout iBase.StorageOrder storage_order,
+                        in iBase.StorageOrder storage_order,
                         inout array <double> min_corner, 
                         out int min_corner_size,
                         inout array <double> max_corner,
@@ -403,7 +403,7 @@ package iGeom version 0.6.99
  */
     void getVtxArrCoords(in array<opaque> gentity_handles, 
                          in int gentity_handles_size,
-                         inout iBase.StorageOrder storage_order,
+                         in iBase.StorageOrder storage_order,
                          inout array <double> coordinates,
                          out int coordinates_size)
       throws iBase.Error;
@@ -413,7 +413,7 @@ package iGeom version 0.6.99
                        in double dir_x, in double dir_y, in double dir_z,
                        inout array<opaque> intersect_entity_handles,
                        out int intersect_entity_handles_size,
-                       inout iBase.StorageOrder storage_order,
+                       in iBase.StorageOrder storage_order,
                        inout array<double> intersect_coords,
                        out int intersect_coords_size,
                        inout array<double> param_coords,
@@ -593,7 +593,7 @@ package iGeom version 0.6.99
                        in int entity_handles_size,
                        in array<double> u, 
                        in int u_size,
-                       inout iBase.StorageOrder storage_order,
+                       in iBase.StorageOrder storage_order,
                        inout array<double> on_coords, 
                        out int on_coords_size
                      ) throws iBase.Error;
@@ -669,7 +669,7 @@ package iGeom version 0.6.99
  */
     void getArrUVRange(in array<opaque> gentity_handles, 
                         in int gentity_handles_size,
-                        inout iBase.StorageOrder storage_order,
+                        in iBase.StorageOrder storage_order,
                         inout array <double> uv_min, 
                         out int uv_min_size,
                         inout array <double> uv_max,
@@ -702,7 +702,7 @@ package iGeom version 0.6.99
                       in array<opaque> face_handles,
                       in int face_handles_size,
                       in array<double> u_in, in int u_in_size,
-                      inout iBase.StorageOrder storage_order,
+                      in iBase.StorageOrder storage_order,
                       inout array<double> uv, out int uv_size
                     ) throws iBase.Error;
                     
@@ -711,7 +711,7 @@ package iGeom version 0.6.99
                         in int vertex_handles_size,
                         in array<opaque> face_handles,
                         in int face_handles_size,
-                        inout iBase.StorageOrder storage_order,
+                        in iBase.StorageOrder storage_order,
                         inout array<double> uv, out int uv_size
                       ) throws iBase.Error;
                       

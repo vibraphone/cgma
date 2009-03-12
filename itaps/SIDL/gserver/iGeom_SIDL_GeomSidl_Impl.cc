@@ -2348,7 +2348,7 @@ void
 iGeom_SIDL::GeomSidl_impl::getArrBoundBox (
   /* in */ ::sidl::array<void*> gentity_handles,
   /* in */ int32_t gentity_handles_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& min_corner,
   /* inout */ int32_t& min_corner_size,
   /* inout */ ::sidl::array<double>& max_corner,
@@ -2361,10 +2361,9 @@ throw (
   CREATE_TEMP_ARRAY(double, max_corner);
   CREATE_TEMP_ARRAY(double, min_corner);
   
-  int order = storage_order;
   iGeom_getArrBoundBox (igeomInstance, 
                             TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
-                            &order,
+                            storage_order,
                             TEMP_ARRAY_INOUT(min_corner),
                             TEMP_ARRAY_INOUT(max_corner), 
                             &igeomError);
@@ -2372,7 +2371,6 @@ throw (
 
   ASSIGN_TYPED_ARRAY(double, min_corner);
   ASSIGN_TYPED_ARRAY(double, max_corner);
-  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrBoundBox)
 }
 
@@ -2406,7 +2404,7 @@ void
 iGeom_SIDL::GeomSidl_impl::getVtxArrCoords (
   /* in */ ::sidl::array<void*> gentity_handles,
   /* in */ int32_t gentity_handles_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& coordinates,
   /* inout */ int32_t& coordinates_size ) 
 throw ( 
@@ -2416,16 +2414,14 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxArrCoords} (getVtxArrCoords method)
   CREATE_TEMP_ARRAY(double, coordinates);
   
-  int order = storage_order;
   iGeom_getVtxArrCoords (igeomInstance, 
                                TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
-                               &order,
+                               storage_order,
                                TEMP_ARRAY_INOUT(coordinates), 
                                &igeomError);
   PROCESS_ERROR;
 
   ASSIGN_TYPED_ARRAY(double, coordinates);
-  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxArrCoords)
 }
 
@@ -2442,7 +2438,7 @@ iGeom_SIDL::GeomSidl_impl::getPntRayIntsct (
   /* in */ double dir_z,
   /* inout */ ::sidl::array<void*>& intersect_entity_handles,
   /* inout */ int32_t& intersect_entity_handles_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* inout */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& intersect_coords,
   /* inout */ int32_t& intersect_coords_size,
   /* inout */ ::sidl::array<double>& param_coords,
@@ -2456,16 +2452,14 @@ throw (
   CREATE_TEMP_ARRAY(double, intersect_coords);
   CREATE_TEMP_ARRAY(double, param_coords);
   
-  int storage_order_tmp;
   iGeom_getPntRayIntsct (igeomInstance, x, y, z, dir_x, dir_y, dir_z,
                       TEMP_ARRAY_INOUT( intersect_entity_handles ),
-                      &storage_order_tmp,
+                      storage_order,
                       TEMP_ARRAY_INOUT( intersect_coords ),
                       TEMP_ARRAY_INOUT( param_coords ), 
                       &igeomError );
   PROCESS_ERROR;
 
-  storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
   ASSIGN_TYPED_ARRAY(void*, intersect_entity_handles);
   ASSIGN_TYPED_ARRAY(double, intersect_coords);
   ASSIGN_TYPED_ARRAY(double, param_coords);
@@ -2499,7 +2493,6 @@ throw (
   CREATE_TEMP_ARRAY(int32_t, offset);
   CREATE_TEMP_ARRAY(double, intersect_coords);
   CREATE_TEMP_ARRAY(double, param_coords);
-  int order = storage_order;
   iGeom_getPntArrRayIntsct (igeomInstance, 
                       storage_order,
                       TEMP_ARRAY_IN( coords ),
@@ -2515,7 +2508,6 @@ throw (
   ASSIGN_TYPED_ARRAY(int32_t, offset);
   ASSIGN_TYPED_ARRAY(double, intersect_coords);
   ASSIGN_TYPED_ARRAY(double, param_coords);
-  storage_order = (::iBase::StorageOrder)order;
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getPntArrRayIntsct)
 }
 
@@ -2891,7 +2883,7 @@ iGeom_SIDL::GeomSidl_impl::getArrUtoXYZ (
   /* in */ int32_t entity_handles_size,
   /* in */ ::sidl::array<double> u,
   /* in */ int32_t u_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& on_coords,
   /* inout */ int32_t& on_coords_size ) 
 throw ( 
@@ -2900,15 +2892,13 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrUtoXYZ)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUtoXYZ} (getArrUtoXYZ method)
   CREATE_TEMP_ARRAY(double, on_coords);
-  int order = storage_order;
   iGeom_getArrUtoXYZ (igeomInstance, 
                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
                         TEMP_TYPED_ARRAY_IN(double,u),
-                        &order,
+                        storage_order,
                         TEMP_ARRAY_INOUT(on_coords), 
                         &igeomError);
   PROCESS_ERROR;
-  storage_order = (::iBase::StorageOrder)order;
   ASSIGN_TYPED_ARRAY(double, on_coords);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUtoXYZ)
 }
@@ -2979,7 +2969,6 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoUV} (getArrXYZtoUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  int order = storage_order;
   iGeom_getArrXYZtoUV (igeomInstance, 
                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
                         storage_order,
@@ -2988,7 +2977,6 @@ throw (
                         &igeomError);
   PROCESS_ERROR;
 
-  storage_order = (::iBase::StorageOrder)order;
   ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoUV)
 }
@@ -3011,7 +2999,6 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoU)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoU} (getArrXYZtoU method)
   CREATE_TEMP_ARRAY(double, u);
-  int order = storage_order;
   iGeom_getArrXYZtoU (igeomInstance, 
                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
                         storage_order,
@@ -3020,7 +3007,6 @@ throw (
                         &igeomError);
   PROCESS_ERROR;
 
-  storage_order = (::iBase::StorageOrder)order;
   ASSIGN_TYPED_ARRAY(double, u);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoU)
 }
@@ -3065,7 +3051,6 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrXYZtoUVHint)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrXYZtoUVHint} (getArrXYZtoUVHint method)
   CREATE_TEMP_ARRAY(double, uv);
-  int order = storage_order;
   iGeom_getArrXYZtoUVHint (igeomInstance, 
                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,entity_handles),
                         storage_order,
@@ -3073,8 +3058,6 @@ throw (
                         TEMP_ARRAY_INOUT(uv), 
                         &igeomError);
   PROCESS_ERROR;
-
-  storage_order = (::iBase::StorageOrder)order;
   ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrXYZtoUVHint)
 }
@@ -3134,7 +3117,7 @@ void
 iGeom_SIDL::GeomSidl_impl::getArrUVRange (
   /* in */ ::sidl::array<void*> gentity_handles,
   /* in */ int32_t gentity_handles_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& uv_min,
   /* inout */ int32_t& uv_min_size,
   /* inout */ ::sidl::array<double>& uv_max,
@@ -3146,16 +3129,13 @@ throw (
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUVRange} (getArrUVRange method)
   CREATE_TEMP_ARRAY(double, uv_max);
   CREATE_TEMP_ARRAY(double, uv_min);
-  int order = storage_order;
   iGeom_getArrUVRange (igeomInstance, 
                         TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,gentity_handles),
-                        &order,
+                        storage_order,
                         TEMP_ARRAY_INOUT(uv_min),
                         TEMP_ARRAY_INOUT(uv_max), 
                         &igeomError);
   PROCESS_ERROR;
-
-  storage_order = (::iBase::StorageOrder)order;
   ASSIGN_TYPED_ARRAY(double, uv_max);
   ASSIGN_TYPED_ARRAY(double, uv_min);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUVRange)
@@ -3272,7 +3252,7 @@ iGeom_SIDL::GeomSidl_impl::getArrUtoUV (
   /* in */ int32_t face_handles_size,
   /* in */ ::sidl::array<double> u_in,
   /* in */ int32_t u_in_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& uv,
   /* inout */ int32_t& uv_size ) 
 throw ( 
@@ -3281,16 +3261,14 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getArrUtoUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getArrUtoUV} (getArrUtoUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  int storage_order_tmp;
   iGeom_getArrUtoUV (igeomInstance, 
                      TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,edge_handles),
                      TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
                      TEMP_ARRAY_IN(u_in),
-                     &storage_order_tmp,
+                     storage_order,
                      TEMP_ARRAY_INOUT(uv), 
                      &igeomError);
   PROCESS_ERROR;
-  storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
   ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getArrUtoUV)
 }
@@ -3304,7 +3282,7 @@ iGeom_SIDL::GeomSidl_impl::getVtxArrToUV (
   /* in */ int32_t vertex_handles_size,
   /* in */ ::sidl::array<void*> face_handles,
   /* in */ int32_t face_handles_size,
-  /* inout */ ::iBase::StorageOrder& storage_order,
+  /* in */ ::iBase::StorageOrder storage_order,
   /* inout */ ::sidl::array<double>& uv,
   /* inout */ int32_t& uv_size ) 
 throw ( 
@@ -3313,15 +3291,13 @@ throw (
   // DO-NOT-DELETE splicer.begin(iGeom_SIDL.GeomSidl.getVtxArrToUV)
   // Insert-Code-Here {iGeom_SIDL.GeomSidl.getVtxArrToUV} (getVtxArrToUV method)
   CREATE_TEMP_ARRAY(double, uv);
-  int storage_order_tmp;
   iGeom_getVtxArrToUV (igeomInstance, 
                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,vertex_handles),
                        TEMP_TYPED_ARRAY_IN(iBase_EntityHandle,face_handles),
-                       &storage_order_tmp,
+                       storage_order,
                        TEMP_ARRAY_INOUT(uv), 
                        &igeomError);
   PROCESS_ERROR;
-  storage_order = static_cast< ::iBase::StorageOrder >(storage_order_tmp);
   ASSIGN_TYPED_ARRAY(double, uv);
   // DO-NOT-DELETE splicer.end(iGeom_SIDL.GeomSidl.getVtxArrToUV)
 }
