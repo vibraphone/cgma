@@ -2090,7 +2090,8 @@ void iGeom_createPrism( iGeom_Instance,
 		   int n_sides,
 		   double major_rad,
 	           double minor_rad,
-	           iBase_EntityHandle* prism_handle_out,									          int* err );
+	           iBase_EntityHandle* prism_handle_out,
+                   int* err );
 
 /**\brief 
  *
