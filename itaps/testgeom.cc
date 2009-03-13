@@ -945,8 +945,7 @@ bool construct_test(iGeom_Instance geom)
   CHECK( "Problems getting max surf for rotation." );
   
   SimpleArray<double> max_corn, min_corn;
-  int so = iBase_INTERLEAVED;
-  iGeom_getArrBoundBox( geom, ARRAY_IN(surfs), &so, 
+  iGeom_getArrBoundBox( geom, ARRAY_IN(surfs), iBase_INTERLEAVED, 
                         ARRAY_INOUT( min_corn ),
                         ARRAY_INOUT( max_corn ),
                         &err );
@@ -1019,8 +1018,8 @@ bool primitives_test(iGeom_Instance geom)
   
     // verify the bounding boxes for Acis based entities
   SimpleArray<double> max_corn, min_corn;
-  int so = iBase_INTERLEAVED;
-  iGeom_getArrBoundBox( geom, ARRAY_IN(prims), &so, ARRAY_INOUT(min_corn), ARRAY_INOUT(max_corn), &err );
+  iGeom_getArrBoundBox( geom, ARRAY_IN(prims), iBase_INTERLEAVED, 
+                        ARRAY_INOUT(min_corn), ARRAY_INOUT(max_corn), &err );
 
   double preset_min_corn[] = 
       // min brick corner xyz
