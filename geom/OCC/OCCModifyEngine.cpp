@@ -48,6 +48,7 @@
 #include "GC_MakeTrimmedCylinder.hxx"
 #include "gce_MakeElips.hxx"
 #include "BRepFilletAPI_MakeFillet.hxx"
+#include "BRepFilletAPI_MakeChamfer.hxx"
 #include "BRepAdaptor_CompCurve.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "ChFi2d_ConstructionError.hxx"
@@ -5952,18 +5953,56 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
 //              with respect to the curve direction.  If the given right offset
 //              is negative, the left offset is used.  Users can preview to
 //              clarify the meaning of left and right.
-// Author     : 
-// Date       : 
+// Author     : Jane Hu
+// Date       : 03/2009
 //=============================================================================
-CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & /*curve_list*/, 
-                                              double /*left_offset*/,
-                                              DLIList<BodySM*> & /*new_bodysm_list*/,
-                                              double /*right_offset*/,
-                                              CubitBoolean /*keep_old_body*/,
-                                              CubitBoolean /*preview*/ ) const
+CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & curve_list, 
+                                            double left_offset,
+                                            DLIList<BodySM*> & new_bodysm_list,
+                                            double right_offset,
+                                            CubitBoolean keep_old_body,
+                                            CubitBoolean preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  CubitStatus stat;
+  int count = 0;
+  for(int i = 0; i < curve_list.size(); i++)
+  {
+    BodySM * new_bodysm_ptr = NULL;
+    stat = tweak_fillet(curve_list.get_and_step(), left_offset, right_offset,
+                      new_bodysm_ptr , keep_old_body, CUBIT_FALSE, CUBIT_FALSE);
+    if(stat && new_bodysm_ptr)
+    {
+      count++;
+      new_bodysm_list.append(new_bodysm_ptr);
+    }
+  }
+
+  if(count == 0)
+    return CUBIT_FAILURE;
+
+  if(preview)
+  {
+    GfxPreview::clear();
+    for(int i = 0; i < new_bodysm_list.size(); i++)
+    {
+      BodySM* new_bodysm = new_bodysm_list.get_and_step();
+      TopoDS_Shape* modified_shape =
+          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopExp_Explorer Ex;
+      Ex.Init(*modified_shape, TopAbs_FACE);
+      for( ; Ex.More(); Ex.Next() )
+      {
+        TopoDS_Face face = TopoDS::Face(Ex.Current());
+        // Draw this face
+        OCCDrawTool::instance()->draw_FACE( &face, CUBIT_BLUE, CUBIT_TRUE );
+      }
+    }
+    GfxPreview::flush();
+    OCCQueryEngine::instance()->delete_solid_model_entities(new_bodysm_list);
+    new_bodysm_list.clean_out();
+  }
+
+  return CUBIT_SUCCESS;
 }
 
 //=============================================================================
@@ -5974,20 +6013,20 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & /*curve_list*/,
 //              The offsets are in the direction of the supplied edges.  If 
 //              multiple vertices are supplied, only one offset value is 
 //              allowed and the edges are not used.
-// Author     : 
-// Date       : 
+// Author     : Jane Hu
+// Date       : 03/09
 //=============================================================================
 CubitStatus
-OCCModifyEngine::tweak_chamfer( DLIList<Point*> & /*point_list*/, 
-                                  double /*offset1*/,
-                                  DLIList<BodySM*> & /*new_bodysm_list*/,
-                                  Curve * /*edge1*/,
-                                  double /*offset2*/,
-                                  Curve * /*edge2*/,
-                                  double /*offset3*/,
-                                  Curve * /*edge3*/,
-                                  CubitBoolean /*keep_old_body*/,
-                                  CubitBoolean /*preview*/ ) const
+OCCModifyEngine::tweak_chamfer( DLIList<Point*> & point_list, 
+                                double offset1,
+                                DLIList<BodySM*> & new_bodysm_list,
+                                Curve * edge1,
+                                double offset2,
+                                Curve * edge2,
+                                double offset3,
+                                Curve * edge3,
+                                CubitBoolean keep_old_body,
+                                CubitBoolean preview ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -6052,9 +6091,29 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & curve_list,
 //=============================================================================
 // Function   : tweak_fillet
 // Member Type: PUBLIC
+// Description: Create a round fillet (or blend) at the given curves on a solid
+//              body.  The fillet/chamfer has a variable radius from the
+//              start to the end of the curve.
+// Author     : Jane Hu
+// Date       : 01/09
+//=============================================================================
+CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
+                                           double start_radius,
+                                           double end_radius,
+                                           BodySM *& new_bodysm_ptr,
+                                           CubitBoolean keep_old_body,
+                                           CubitBoolean preview ) const
+{
+  return tweak_fillet(curve_ptr, start_radius, end_radius, new_bodysm_ptr,
+                      keep_old_body, preview, CUBIT_TRUE);
+}
+
+//=============================================================================
+// Function   : tweak_fillet
+// Member Type: private
 // Description: Create a round fillet (or blend) at the given curves on a solid 
-//              body.  The fillet has a variable radius from the start to the
-//              end of the curve.
+//              body.  The fillet/chamfer has a variable radius from the 
+//              start to the end of the curve.
 // Author     : Jane Hu 
 // Date       : 01/09
 //=============================================================================
@@ -6063,7 +6122,8 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
                                            double end_radius,
                                            BodySM *& new_bodysm_ptr,
                                            CubitBoolean keep_old_body,
-                                           CubitBoolean preview ) const
+                                           CubitBoolean preview,
+                                           CubitBoolean if_fillet ) const
 {
   OCCCurve *occ_curve = CAST_TO(curve_ptr, OCCCurve);
   TopoDS_Edge* topo_edge = occ_curve->get_TopoDS_Edge();
@@ -6073,6 +6133,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
   TopTools_IndexedDataMapOfShapeListOfShape M;
   DLIList<TopoDS_CompSolid*> shape_list;
   OCCBody * body = NULL;
+  TopoDS_Face* s;
   for(int j = 0; j <  bodies->size(); j++)
   {
     body = bodies->get_and_step();
@@ -6089,6 +6150,22 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
       return CUBIT_FAILURE;
     }
     shape_list.append_unique(body->get_TopoDS_Shape());
+    
+    if(!if_fillet) //for chamfer, need to know the face for the curve.
+    {
+      DLIList<TopologyBridge*> parents;
+      occ_curve->get_parents_virt(parents); //OCCCoEdges
+      assert(parents.size() > 1);
+      OCCCoEdge* coedge = CAST_TO(parents.get(), OCCCoEdge);
+      parents.clean_out();
+      coedge->get_parents_virt(parents);  //OCCLoops
+      assert(parents.size() > 0);
+      OCCLoop* loop = CAST_TO(parents.get(), OCCLoop);
+      parents.clean_out(); 
+      loop->get_parents_virt(parents); //OCCSurface
+      assert(parents.size() > 0);
+      s = CAST_TO(parents.get(), OCCSurface)->get_TopoDS_Face();
+    }
   }
   if(shape_list.size() != 1)
   {
@@ -6105,26 +6182,35 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
   }
   else
     newShape = *shape;
-  BRepFilletAPI_MakeFillet fillet(newShape);
-  fillet.Add(start_radius, end_radius, *topo_edge);
-  fillet.Build();
 
-  if(!fillet.IsDone())
+  BRepBuilderAPI_MakeShape* fillet;
+  if(if_fillet)
+  {
+    fillet = new BRepFilletAPI_MakeFillet(newShape);
+    dynamic_cast<BRepFilletAPI_MakeFillet*>(fillet)->Add(start_radius, end_radius, *topo_edge);
+  }
+  else
+  {
+    fillet = new BRepFilletAPI_MakeChamfer(newShape);
+    dynamic_cast<BRepFilletAPI_MakeChamfer*>(fillet)->Add(start_radius, end_radius, *topo_edge, *s);
+  }
+  fillet->Build();
+
+  if(!fillet->IsDone())
   {
     PRINT_ERROR("Can't create fillet on given curve.\n");
     return CUBIT_FAILURE;
   } 
-  TopoDS_Shape modified_shape = fillet.Shape();
+  TopoDS_Shape modified_shape = fillet->Shape();
 
   if( !preview )
   {
     TopExp_Explorer Ex;
     Ex.Init(newShape, TopAbs_SOLID);
     TopoDS_Solid old_solid = TopoDS::Solid(Ex.Current());
-    OCCLump::update_OCC_entity(old_solid , modified_shape, &fillet);     
+    OCCLump::update_OCC_entity(old_solid , modified_shape, fillet);     
     DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->populate_topology_bridge(modified_shape);
     new_bodysm_ptr = CAST_TO(tbs.get(), BodySM);  
-    return CUBIT_SUCCESS;
   }
   else
   {
@@ -6140,8 +6226,9 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
     }
 
     GfxPreview::flush();
-    return CUBIT_SUCCESS;
   }
+  delete fillet;
+  return CUBIT_SUCCESS;
 }
 
 //=============================================================================
@@ -6181,7 +6268,11 @@ OCCModifyEngine::tweak_fillet( DLIList<Point*> & ref_vertex_list,
       TopExp::MapShapesAndAncestors(ashape, TopAbs_VERTEX, TopAbs_FACE, M);
       if(!M.Contains(*vertex))
         continue;
-      
+      if(face->my_body() == NULL )
+      {
+        PRINT_ERROR("Can only create fillet on sheet body.\n");
+        return CUBIT_FAILURE;
+      } 
       shape_list.append_unique(face->get_TopoDS_Face());
     }  
     if(shape_list.size() != 1)

@@ -601,6 +601,14 @@ protected:
                           TopoDS_Shape& stitched_shape) const;
 private:
 
+ CubitStatus tweak_fillet( Curve * curve_ptr,
+                           double start_radius,
+                           double end_radius,
+                           BodySM *& new_bodysm_ptr,
+                           CubitBoolean keep_old_body,
+                           CubitBoolean preview,
+                           CubitBoolean if_fillet ) const;
+
  CubitStatus do_loft(BRepOffsetAPI_ThruSections& loft,
                      Surface * face1,
                      Surface * face2) const;

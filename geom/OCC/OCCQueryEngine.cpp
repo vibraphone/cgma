@@ -588,6 +588,8 @@ CubitStatus OCCQueryEngine::get_intersections( Curve* curve1,
                                                CubitBoolean bounded,
                                                CubitBoolean closest)
 {
+  //If this function has shortcomes in using BRepExtrema_DistShapeShape,
+  //look also at IntTools_EdgeEdge.
   OCCCurve *occ_curve1 =  CAST_TO(curve1, OCCCurve);
   if (occ_curve1 == NULL)
     {
