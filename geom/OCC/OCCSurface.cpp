@@ -918,7 +918,15 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          shapes.Assign(sp->DescendantShapes(edge));
 
        if (shapes.Extent() == 1)
-         shape_edge = shapes.First();
+       {
+        //in fillet creating mothod, one edge could generated a face, so check
+        //it here.
+         TopAbs_ShapeEnum type = shapes.First().TShape()->ShapeType(); 
+         if(type != TopAbs_EDGE)
+           shape_edge.Nullify();
+         else
+           shape_edge = shapes.First();
+       }
        else if (shapes.Extent() > 1)
        {
          //update all attributes first.

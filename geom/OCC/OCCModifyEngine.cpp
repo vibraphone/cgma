@@ -5972,8 +5972,8 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & curve_list,
                       new_bodysm_ptr , keep_old_body, CUBIT_FALSE, CUBIT_FALSE);
     if(stat && new_bodysm_ptr)
     {
-      count++;
-      new_bodysm_list.append(new_bodysm_ptr);
+      new_bodysm_list.append_unique(new_bodysm_ptr);
+      count = new_bodysm_list.size();
     }
   }
 
@@ -6055,8 +6055,8 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & curve_list,
                         new_bodysm_ptr , keep_old_body, CUBIT_FALSE);
     if(stat && new_bodysm_ptr)
     {
-      count++;
-      new_bodysm_list.append(new_bodysm_ptr);
+      new_bodysm_list.append_unique(new_bodysm_ptr);
+      count = new_bodysm_list.size();
     }
   }
 
