@@ -134,18 +134,31 @@ CubitStatus make_Point()
   body->ref_edges(ref_edges);
   DLIList<Body*> new_bodies;
   int isize=ref_edges.size();
+  //isize = 12
+
   for(int i = 2; i < isize; i++)
     ref_edges.pop();
   gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
 
   ref_edges.clean_out();
+  new_bodies.get()->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  //isize = 21
+
+  ref_edges.clean_out();
   new_bodies.clean_out();
   body2->ref_edges(ref_edges);
   isize=ref_edges.size();
+  //isize = 12
   for(int i = 2; i < isize; i++)
     ref_edges.pop(); 
   
   gmti->tweak_chamfer(ref_edges, 1, new_bodies, 1);
+
+  ref_edges.clean_out();
+  new_bodies.get()->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  //isize = 17
 
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
