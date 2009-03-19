@@ -5975,6 +5975,8 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & curve_list,
       new_bodysm_list.append_unique(new_bodysm_ptr);
       count = new_bodysm_list.size();
     }
+    else
+      break;
   }
 
   if(count == 0)
@@ -6058,6 +6060,8 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & curve_list,
       new_bodysm_list.append_unique(new_bodysm_ptr);
       count = new_bodysm_list.size();
     }
+    else
+      break;
   }
 
   if(count == 0) 
@@ -6125,18 +6129,41 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
                                            CubitBoolean preview,
                                            CubitBoolean if_fillet ) const
 {
+  //check if this id is valid 
+  OCCQueryEngine* oqe = OCCQueryEngine::instance();
+  DLIList <OCCBody* > *bodies = oqe->BodyList;  
+  DLIList<OCCCurve*> curves;
+  for(int j = 0; j <  bodies->size(); j++)
+  {
+    OCCBody* body = bodies->get_and_step();
+    body->get_all_curves(curves);
+  }
+
+  bool curve_alive = false;
+  for(int j = 0; j <  curves.size(); j++)
+  {
+    if(curve_ptr == curves.get_and_step())
+    {
+      curve_alive = true; 
+      break;
+    }
+  }
+
+  if(!curve_alive)
+  {
+    PRINT_ERROR("This curve is not valid in the current model.\n");
+    return CUBIT_FAILURE;
+  }
+
   OCCCurve *occ_curve = CAST_TO(curve_ptr, OCCCurve);
   TopoDS_Edge* topo_edge = occ_curve->get_TopoDS_Edge();
 
-  OCCQueryEngine* oqe = OCCQueryEngine::instance();
-  DLIList <OCCBody* > *bodies = oqe->BodyList;
   TopTools_IndexedDataMapOfShapeListOfShape M;
   DLIList<TopoDS_CompSolid*> shape_list;
-  OCCBody * body = NULL;
   TopoDS_Face* s;
   for(int j = 0; j <  bodies->size(); j++)
   {
-    body = bodies->get_and_step();
+    OCCBody* body = bodies->get_and_step();
     TopExp_Explorer Ex;
     TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
     M.Clear();

@@ -177,7 +177,7 @@ void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )
          {
            TopoDS_Face Face = TopoDS::Face(it.Value());
            int k = oqe->OCCMap->Find(Face);
-           parents.append((OCCSurface*)(oqe->OccToCGM->find(k))->second);
+           parents.append_unique((OCCSurface*)(oqe->OccToCGM->find(k))->second);
          }
      }
   }
