@@ -125,6 +125,46 @@ CubitStatus make_Point()
   OCCQueryEngine::instance();
   OCCModifyEngine* ome = OCCModifyEngine::instance();
 
+  //test for tweak fillet and chamfer
+  Body* body = gmti->brick(10, 10, 10);
+  Body* body2 = gmti->brick(10, 10, 10);
+  CubitVector away(11, 0 , 0);
+  gti->translate(body2,away);
+  DLIList<RefEdge*> ref_edges;
+  body->ref_edges(ref_edges);
+  DLIList<Body*> new_bodies;
+  int isize=ref_edges.size();
+  for(int i = 2; i < isize; i++)
+    ref_edges.pop();
+  gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
+
+  ref_edges.clean_out();
+  new_bodies.clean_out();
+  body2->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  for(int i = 2; i < isize; i++)
+    ref_edges.pop(); 
+  
+  gmti->tweak_chamfer(ref_edges, 1, new_bodies, 1);
+
+  CubitStatus rsl = CUBIT_SUCCESS;
+  DLIList<RefEntity*> ref_entity_list;
+  int num_ents_exported=0;
+  const CubitString cubit_version="10.2";
+  const char * filename = "fillet.occ";
+  const char * filetype = "OCC";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  DLIList<Body*> bodies;
+  DLIList<RefEntity*>  free_entities;
+  gti->bodies(bodies);
+  gti->get_free_ref_entities(free_entities);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
   //bug fixing for creating arc curve.
    CubitVector vti(6.0, 0.0, 0.0);
    RefVertex* vert1 = GeometryModifyTool::instance()->make_RefVertex(vti);
@@ -152,8 +192,8 @@ CubitStatus make_Point()
        coord = tmpVertex->coordinates();
    }
 
-  DLIList<Body*> bodies;
-  DLIList<RefEntity*>  free_entities;
+  bodies.clean_out();
+  free_entities.clean_out();
   gti->bodies(bodies);
   gti->get_free_ref_entities(free_entities);
 
@@ -166,13 +206,13 @@ CubitStatus make_Point()
     }
 
   //other tests
-  Body* body = gmti->brick(10, 10, 10);
+  body = gmti->brick(10, 10, 10);
   CubitVector v(15,0,0);
   BodySM* bodysm = body->get_body_sm_ptr();
   DLIList<OCCSurface*> occ_surfaces;
   CAST_TO(bodysm, OCCBody)->get_all_surfaces(occ_surfaces);  
   DLIList<RefFace*> ref_faces;
-  DLIList<RefEdge*> ref_edges;
+  ref_edges.clean_out();
   body->ref_faces(ref_faces);
 
   DLIList<RefFace*> faces_to_stitch;
@@ -220,17 +260,14 @@ CubitStatus make_Point()
 
   //create solid from surfaces 
   //GeometryModifyEngine *gme = gmti->get_engine(occ_surfaces.get());
-  DLIList<Body*> new_bodies;
+  new_bodies.clean_out();
   gmti->create_solid_bodies_from_surfs(face_list, new_bodies);
   //Created volume(s): 9 
   //Destroyed volume(s): 2 to 7
 
-  CubitStatus rsl = CUBIT_SUCCESS;
-  DLIList<RefEntity*> ref_entity_list;
-  int num_ents_exported=0;
-  const CubitString cubit_version="10.2";
-  const char * filename = "stitch.occ";
-  const char * filetype = "OCC";
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "stitch.occ";
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
