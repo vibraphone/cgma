@@ -2710,7 +2710,7 @@ CubitStatus FacetModifyEngine::tweak_chamfer( DLIList<Curve*> & /*curve_list*/,
                                               DLIList<BodySM*> & /*new_bodysm_list*/,
                                               double /*right_offset*/,
                                               CubitBoolean /*keep_old_body*/,
-                                              CubitBoolean /*preview*/ ) const
+                                              CubitBoolean /*preview*/ ) 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2737,7 +2737,7 @@ FacetModifyEngine::tweak_chamfer( DLIList<Point*> & /*point_list*/,
                                   double /*offset3*/,
                                   Curve * /*edge3*/,
                                   CubitBoolean /*keep_old_body*/,
-                                  CubitBoolean /*preview*/ ) const
+                                  CubitBoolean /*preview*/ ) 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2755,7 +2755,7 @@ CubitStatus FacetModifyEngine::tweak_fillet( DLIList<Curve*> & /*curve_list*/,
                                              double /*radius*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*keep_old_body*/,
-                                             CubitBoolean /*preview*/ ) const
+                                             CubitBoolean /*preview*/ ) 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2775,7 +2775,7 @@ CubitStatus FacetModifyEngine::tweak_fillet( Curve * /*curve_ptr*/,
                                              double /*end_radius*/,
                                              BodySM *& /*new_bodysm_ptr*/,
                                              CubitBoolean /*keep_old_body*/,
-                                             CubitBoolean /*preview*/ ) const
+                                             CubitBoolean /*preview*/ ) 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2794,7 +2794,7 @@ FacetModifyEngine::tweak_fillet( DLIList<Point*> & /*ref_vertex_list*/,
                                  double /*radius*/,
                                  DLIList<BodySM*> & /*new_bodysm_list*/,
                                  CubitBoolean /*keep_old_body*/,
-                                 CubitBoolean /*preview*/ ) const
+                                 CubitBoolean /*preview*/ ) 
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;

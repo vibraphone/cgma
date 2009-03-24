@@ -397,7 +397,7 @@ public:
                                      DLIList<BodySM*> &new_bodysm_list,
                                      double right_offset = -1.0,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const;
+                                     CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Chamfer curves on solid bodies.  The left and right offsets are with 
     *   respect to the curve direction.  If the given right offset is negative,
     *   the left offset is used.  Users can preview to clarify the meaning of
@@ -413,7 +413,7 @@ public:
                                      double offset3 = -1.0,
                                      Curve *edge3 = NULL,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const;
+                                     CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Chamfer vertices on solid or sheet bodies.  On a solid body there can
     *   be up to 3 offsets; on a sheet body up to 2 offsets.  The offsets are
     *   in the direction of the supplied edges.  If multiple vertices are 
@@ -424,7 +424,7 @@ public:
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given curves on solid bodies.
     */
 
@@ -433,7 +433,7 @@ public:
                                     double end_radius,
                                     BodySM *&new_body_ptr,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given curve on a solid body.
     *   The fillet has a variable radius from the start to the end of the curve.
     */
@@ -442,7 +442,7 @@ public:
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given vertices on sheet bodies.
     */
 
@@ -601,13 +601,56 @@ protected:
                           TopoDS_Shape& stitched_shape) const;
 private:
 
+ CubitStatus tweak_chamfer_sheet(Point* pnt,
+                                 OCCSurface* face,
+                                 double d1,
+                                 Curve* edge1,
+                                 double d2,
+                                 Curve* edge2,
+                                 DLIList<BodySM*> & new_bodysm_list,
+                                 CubitBoolean keep_old_body,
+                                 CubitBoolean preview ) ;
+
+ CubitStatus tweak_fillet_chamfer_sheet( DLIList<Point*> & ref_vertex_list,
+                               DLIList<OCCSurface*> faces,
+                               double radius,
+                               CubitBoolean is_fillet,
+                               DLIList<BodySM*> & new_bodysm_list,
+                               CubitBoolean keep_old_body,
+                               CubitBoolean preview ) ;
+ 
+ CubitStatus tweak_chamfer_solid( Point* point_ptr,
+                                    OCCBody* body,
+                                    double r1,
+                                    Curve *c1,
+                                    double r2,
+                                    Curve *c2,
+                                    double r3,
+                                    Curve *c3,
+                                    DLIList<BodySM *> &new_bodysm_list,
+                                    CubitBoolean keep_old_body,
+                                    CubitBoolean preview );
+
+ CubitStatus tweak_chamfer_solid( DLIList<Point*> &point_list,
+                                    DLIList<OCCBody*> &bodies,
+                                    double radius,
+                                    DLIList<BodySM*> &new_bodysm_list,
+                                    CubitBoolean keep_old_body,
+                                    CubitBoolean preview );
+
+ CubitStatus sort_points_by_body_type( DLIList<Point*> &point_list,
+                                         DLIList<Point*> &solid_points,
+                                         DLIList<Point*> &sheet_points,
+                                         DLIList<OCCSurface*> &s_list,
+                                         DLIList<OCCBody*> &bodies );
+
  CubitStatus tweak_fillet( Curve * curve_ptr,
                            double start_radius,
                            double end_radius,
                            BodySM *& new_bodysm_ptr,
                            CubitBoolean keep_old_body,
                            CubitBoolean preview,
-                           CubitBoolean if_fillet ) const;
+                           CubitBoolean if_fillet ) ;
 
  CubitStatus do_loft(BRepOffsetAPI_ThruSections& loft,
                      Surface * face1,

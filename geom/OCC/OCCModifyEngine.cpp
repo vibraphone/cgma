@@ -5961,10 +5961,13 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & curve_list,
                                             DLIList<BodySM*> & new_bodysm_list,
                                             double right_offset,
                                             CubitBoolean keep_old_body,
-                                            CubitBoolean preview ) const
+                                            CubitBoolean preview ) 
 {
   CubitStatus stat;
   int count = 0;
+  if(right_offset <= 0.0)
+    right_offset = left_offset;
+
   for(int i = 0; i < curve_list.size(); i++)
   {
     BodySM * new_bodysm_ptr = NULL;
@@ -6028,12 +6031,314 @@ OCCModifyEngine::tweak_chamfer( DLIList<Point*> & point_list,
                                 double offset3,
                                 Curve * edge3,
                                 CubitBoolean keep_old_body,
-                                CubitBoolean preview ) const
+                                CubitBoolean preview ) 
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  // Sort out vertices between sheet and solid bodies
+  DLIList<Point*> solid_points, sheet_points;
+  DLIList<OCCSurface*> s_list;
+  DLIList<OCCBody*> bodies;
+  if( sort_points_by_body_type( point_list, solid_points, sheet_points, 
+                                s_list, bodies ) == CUBIT_FAILURE )
+    return CUBIT_FAILURE;
+
+  if(solid_points.size() > 0 && solid_points.size() != bodies.size())
+  {
+    PRINT_ERROR( "cannot find bodies corresponding to the points.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  if(sheet_points.size() > 0 && sheet_points.size() != s_list.size())
+  {
+    PRINT_ERROR( "cannot find surfaces corresponding to the points.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  // Do simple forms
+  if( edge1 == NULL || offset2 <= 0.0 )
+  {
+    if( tweak_chamfer_solid( solid_points, bodies, offset1, new_bodysm_list,
+      keep_old_body, preview )== CUBIT_FAILURE )
+      return CUBIT_FAILURE;
+    return tweak_fillet_chamfer_sheet( sheet_points, s_list, offset1, 
+           CUBIT_FALSE, new_bodysm_list, keep_old_body, preview );
+  }
+
+  if( solid_points.size() > 1 || sheet_points.size() > 1 )
+  {
+    PRINT_ERROR( "cannot chamfer multiple vertices with a variable radius.\n" );
+    return CUBIT_FAILURE;
+  }
+
+  if( solid_points.size() )
+  {
+    Point *point_ptr = solid_points.get();
+
+    if( tweak_chamfer_solid( point_ptr, bodies.get(), offset1, edge1, 
+        offset2, edge2, offset3, edge3,
+        new_bodysm_list, keep_old_body, preview ) == CUBIT_FAILURE )
+      return CUBIT_FAILURE;
+
+    return CUBIT_SUCCESS;
+  }
+
+  if( sheet_points.size() )
+  {
+    Point *point_ptr = sheet_points.get();
+
+    if( tweak_chamfer_sheet( point_ptr, s_list.get(), offset1, edge1, offset2, 
+        edge2, new_bodysm_list, keep_old_body, preview ) == CUBIT_FAILURE )
+      return CUBIT_FAILURE;
+
+    return CUBIT_SUCCESS;
+  }
+  return CUBIT_SUCCESS;
 }
 
+CubitStatus
+OCCModifyEngine::tweak_chamfer_solid( DLIList<Point*> &point_list,
+                                    DLIList<OCCBody*> &bodies,
+                                    double radius,
+                                    DLIList<BodySM*> &new_bodysm_list,
+                                    CubitBoolean keep_old_body,
+                                    CubitBoolean preview )
+{
+  for(int i = 0; i < point_list.size(); i++)
+  {
+    DLIList<TopologyBridge*> parents;
+    OCCPoint* point = CAST_TO(point_list.get_and_step(), OCCPoint);
+    OCCBody* body = bodies.get_and_step();
+    if(point != NULL)
+      point->get_parents_virt(parents); //OCCCurves
+    assert(parents.size() == 3);
+    DLIList<Curve*> curves;
+    for(int j = 0; j < 3; j++)
+    {
+      OCCCurve* occ_curve = CAST_TO(parents.get_and_step(), OCCCurve); 
+      curves.append(occ_curve);
+    }
+    CubitStatus stat;
+    stat = tweak_chamfer_solid(point, body,radius, curves.pop(), radius, 
+                        curves.pop(), radius, curves.pop(), new_bodysm_list,
+                        keep_old_body, CUBIT_FALSE );
+    if(!stat)
+      return CUBIT_FAILURE;
+  }
+  if(preview)
+  {
+    GfxPreview::clear();
+    for(int i = 0; i < new_bodysm_list.size(); i++)
+    {
+      BodySM* new_bodysm = new_bodysm_list.get_and_step();
+      TopoDS_Shape* modified_shape =
+          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopExp_Explorer Ex;
+      Ex.Init(*modified_shape, TopAbs_FACE);
+      for( ; Ex.More(); Ex.Next() )
+      {
+        TopoDS_Face face = TopoDS::Face(Ex.Current());
+        // Draw this face
+        OCCDrawTool::instance()->draw_FACE( &face, CUBIT_BLUE, CUBIT_TRUE );
+      }
+    }
+    GfxPreview::flush();
+    OCCQueryEngine::instance()->delete_solid_model_entities(new_bodysm_list);
+    new_bodysm_list.clean_out();
+  }
+
+  return CUBIT_SUCCESS;
+
+}
+
+CubitStatus
+OCCModifyEngine::tweak_chamfer_solid( Point* point_ptr,
+                                    OCCBody* body,
+                                    double r1,
+                                    Curve *c1,
+                                    double r2,
+                                    Curve *c2,
+                                    double r3,
+                                    Curve *c3,
+                                    DLIList<BodySM *> &new_bodysm_list,
+                                    CubitBoolean keep_old_body,
+                                    CubitBoolean preview )
+{
+  if(r1 <= 0.0 || r2 <= 0.0 || r3 <= 0.0)
+  {
+    PRINT_ERROR( "Chamfer radii must be greater than zero.\n" );
+    return CUBIT_FAILURE;
+  }
+  
+  DLIList<Curve*> curves;
+  curves.append(c1);
+  curves.append(c2);
+  curves.append(c3);
+  
+  DLIList<double> radii;
+  radii.append(r1);
+  radii.append(r2);
+  radii.append(r3);
+
+  //check point on curves
+  OCCPoint* occ_point = CAST_TO(point_ptr, OCCPoint);
+  CubitVector position = occ_point->coordinates();
+  DLIList<CubitVector> locations;
+  for(int i = 0; i < 3; i++)
+  {
+    OCCCurve *occ_curve = NULL;
+    occ_curve = CAST_TO(curves.get_and_step(), OCCCurve);
+    double length = occ_curve->measure();
+
+    DLIList<OCCPoint*> point_list;
+    occ_curve->get_points(point_list);
+    CubitBoolean in = point_list.is_in_list(occ_point); 
+    if(!in)
+    {
+      PRINT_ERROR( "Point is not on curve.\n" );
+      return CUBIT_FAILURE;
+    }
+    //find cutting points on curves
+    double u, u1, u2;
+    occ_curve->get_param_range(u1,u2);
+    u = occ_curve->u_from_position(position); 
+    if(fabs(u-u1) < TOL)
+      u = occ_curve->u_from_arc_length(u1, radii[i]);
+    else
+      u = occ_curve->u_from_arc_length(u1, length-radii[i]);
+    CubitVector c_p;
+    occ_curve->position_from_u(u, c_p);
+    locations.append(c_p);
+  }
+
+  //decide normal
+  CubitVector v1, v2, normal;
+  CubitVector point_1 = locations.pop();
+  CubitVector point_2 = locations.pop();
+  CubitVector point_3 = locations.pop();
+  v1 = point_2 - point_1;
+  v2 = point_1 - point_3;
+  normal = ~(v1 * v2); 
+  CubitVector center;
+  double volume;
+  body->mass_properties(center, volume); 
+  CubitVector dir = ~(center - position);
+  if(normal % dir > 0.0)//1, 3, 2 order
+  {
+    CubitVector v = point_2;
+    point_2 = point_3;
+    point_3 = v;
+  }
+
+  DLIList<BodySM*> bodies;
+  BodySM* new_body;
+  if(keep_old_body || preview)
+    new_body = copy_body(body); 
+  else
+    new_body = body;
+
+  bodies.append(new_body);
+  const CubitVector p1 = point_1;
+  const CubitVector p2 = point_2;
+  const CubitVector p3 = point_3;
+  CubitStatus status = section(bodies, p1, p2, p3, 
+                               new_bodysm_list, true,false, false);    
+  if(!status)
+    return CUBIT_FAILURE;
+
+  if(!preview)
+    return CUBIT_SUCCESS;
+
+  GfxPreview::clear();
+
+  for(int i = 0; i < new_bodysm_list.size(); i++)
+  {
+     BodySM* new_bodysm = new_bodysm_list.get_and_step();
+     OCCSurface* surf = CAST_TO(new_bodysm, OCCBody)->my_sheet_surface();
+     TopoDS_Face* modified_shape = surf->get_TopoDS_Face();
+     // Draw this face
+     OCCDrawTool::instance()->draw_FACE( modified_shape, CUBIT_BLUE, CUBIT_TRUE );
+  }
+  GfxPreview::flush();
+  OCCQueryEngine::instance()->delete_solid_model_entities(new_bodysm_list);
+  new_bodysm_list.clean_out();
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus
+OCCModifyEngine::sort_points_by_body_type( DLIList<Point*> &point_list,
+                                         DLIList<Point*> &solid_points,
+                                         DLIList<Point*> &sheet_points,
+                                         DLIList<OCCSurface*> &s_list,
+                                         DLIList<OCCBody*> &bodies )
+{
+  for (int i = 0; i < point_list.size(); i++)
+  {
+    DLIList<TopologyBridge*> parents;
+    OCCPoint* point = CAST_TO(point_list.get_and_step(), OCCPoint);
+    int curve_size = 0;
+    if(point != NULL)
+    {
+      point->get_parents_virt(parents); //OCCCurves
+      if(parents.size() < 2)
+      {
+        PRINT_ERROR( "Vertex found not attached to any surfaces.\n" );
+        return CUBIT_FAILURE;
+      } 
+      else if(parents.size() > 3)
+      {
+        PRINT_ERROR( "Vertex found attached to multiple bodies.\n" );
+        return CUBIT_FAILURE;
+      }
+      curve_size = parents.size();
+    }
+    
+    OCCCurve* occ_curve = CAST_TO(parents.get(), OCCCurve);
+    parents.clean_out();
+    occ_curve->get_parents_virt(parents); //OCCCoEdges
+    if(parents.size() == 0)
+    {
+      PRINT_ERROR( "Vertex found not attached to any surfaces.\n" );
+      return CUBIT_FAILURE;
+    }
+    OCCCoEdge* coedge = CAST_TO(parents.get(), OCCCoEdge);
+    parents.clean_out();
+    coedge->get_parents_virt(parents);  //OCCLoops
+    assert(parents.size() > 0);
+    OCCLoop* loop = CAST_TO(parents.get(), OCCLoop);
+    parents.clean_out();
+    loop->get_parents_virt(parents); //OCCSurface
+    assert(parents.size() > 0);
+    OCCSurface* s = CAST_TO(parents.get(), OCCSurface); 
+    if(s->my_body() != NULL && curve_size == 2) //sheet body
+    {
+      s_list.append(s);
+      sheet_points.append(point);
+    }
+    else if(s->my_body() != NULL && curve_size == 3) //shell body
+    {
+      PRINT_ERROR( "Vertex found attached to multiple surfaces but not on bodies.\n" );
+      return CUBIT_FAILURE;
+    }
+    else
+    {
+      solid_points.append(point);
+      OCCQueryEngine* oqe = OCCQueryEngine::instance();
+      DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
+      for(int i = 0; i < occ_bodies->size(); i++)
+      {
+        DLIList<OCCSurface*> surfaces;
+        OCCBody* occ_body = occ_bodies->get_and_step();
+        occ_body->get_all_surfaces(surfaces); 
+        if(surfaces.is_in_list(s))
+        {
+          bodies.append(occ_body);
+          break;
+        }
+      }
+    }
+  }
+  return CUBIT_SUCCESS;
+}
 //=============================================================================
 // Function   : tweak_fillet
 // Member Type: PUBLIC
@@ -6046,7 +6351,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & curve_list,
                                            double radius,
                                            DLIList<BodySM*> & new_bodysm_list,
                                            CubitBoolean keep_old_body,
-                                           CubitBoolean preview ) const
+                                           CubitBoolean preview ) 
 {
   CubitStatus stat;
   int count = 0;
@@ -6106,7 +6411,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
                                            double end_radius,
                                            BodySM *& new_bodysm_ptr,
                                            CubitBoolean keep_old_body,
-                                           CubitBoolean preview ) const
+                                           CubitBoolean preview )
 {
   return tweak_fillet(curve_ptr, start_radius, end_radius, new_bodysm_ptr,
                       keep_old_body, preview, CUBIT_TRUE);
@@ -6127,7 +6432,7 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
                                            BodySM *& new_bodysm_ptr,
                                            CubitBoolean keep_old_body,
                                            CubitBoolean preview,
-                                           CubitBoolean if_fillet ) const
+                                           CubitBoolean if_fillet ) 
 {
   //check if this id is valid 
   OCCQueryEngine* oqe = OCCQueryEngine::instance();
@@ -6271,12 +6576,26 @@ OCCModifyEngine::tweak_fillet( DLIList<Point*> & ref_vertex_list,
                                double radius,
                                DLIList<BodySM*> & new_bodysm_list,
                                CubitBoolean keep_old_body,
-                               CubitBoolean preview ) const
+                               CubitBoolean preview )
 {
-  OCCQueryEngine* oqe = OCCQueryEngine::instance();
-  DLIList <OCCSurface* > *faces = oqe->SurfaceList;
+  DLIList<OCCSurface*> s_list;
+  return tweak_fillet_chamfer_sheet(ref_vertex_list, s_list, radius, CUBIT_TRUE,
+         new_bodysm_list, keep_old_body, preview);
+}
+
+CubitStatus
+OCCModifyEngine::tweak_fillet_chamfer_sheet( DLIList<Point*> & ref_vertex_list,
+                               DLIList<OCCSurface*> faces,
+                               double radius,
+                               CubitBoolean is_fillet,
+                               DLIList<BodySM*> & new_bodysm_list,
+                               CubitBoolean keep_old_body,
+                               CubitBoolean preview )
+{
   TopTools_IndexedDataMapOfShapeListOfShape M;
-  DLIList<TopoDS_Face*> shape_list;
+
+  if(ref_vertex_list.size() != faces.size())
+    return CUBIT_FAILURE;
 
   for(int i = 0; i < ref_vertex_list.size(); i ++)
   {
@@ -6284,55 +6603,59 @@ OCCModifyEngine::tweak_fillet( DLIList<Point*> & ref_vertex_list,
     OCCPoint* occ_pnt = CAST_TO(pnt, OCCPoint);
     TopoDS_Vertex* vertex = occ_pnt->get_TopoDS_Vertex();
 
-    OCCSurface* face = NULL;
-    shape_list.clean_out();
-    for(int j = 0; j <  faces->size(); j++)
+    OCCSurface* face = faces.get_and_step();
+
+    if(!is_fillet)
     {
-      face = faces->get_and_step();
-      TopExp_Explorer Ex;
-      TopoDS_Face ashape = *(face->get_TopoDS_Face());
-      M.Clear();
-      TopExp::MapShapesAndAncestors(ashape, TopAbs_VERTEX, TopAbs_FACE, M);
-      if(!M.Contains(*vertex))
-        continue;
-      if(face->my_body() == NULL )
+      //find the two edges sharing the vertex.
+      DLIList<OCCCurve*> curves;
+      face->get_curves(curves);
+      int size = curves.size();
+      for(int j = 0; j < size; j ++)
       {
-        PRINT_ERROR("Can only create fillet on sheet body.\n");
-        return CUBIT_FAILURE;
-      } 
-      shape_list.append_unique(face->get_TopoDS_Face());
-    }  
-    if(shape_list.size() != 1)
-    {
-      PRINT_ERROR("Can't create fillet on given vertex.\n");
-      return CUBIT_FAILURE;
-    }      
-    TopoDS_Face *shape = shape_list.get();
-    TopoDS_Face newShape;
-    if(keep_old_body)
-    {
-      BRepBuilderAPI_Copy api_copy(*shape);
-      newShape = TopoDS::Face(api_copy.ModifiedShape(*shape));
+        DLIList<OCCPoint*> point_list;   
+        OCCCurve *curve = curves.get();
+        curve->get_points(point_list);
+        if(!point_list.is_in_list(occ_pnt))
+          curves.remove();
+        else
+          curves.step();
+      }
+      assert (curves.size()==2);
+      tweak_chamfer_sheet(pnt, face, radius, curves.pop(), radius, curves.pop(),
+                        new_bodysm_list, keep_old_body, CUBIT_FALSE); 
     }
+
     else
-      newShape = *shape;
-
-    BRepFilletAPI_MakeFillet2d fillet(newShape);
-    TopoDS_Edge fillet_edge = fillet.AddFillet(*vertex, radius);
-
-    if(fillet.Status() != ChFi2d_IsDone)
     {
-      PRINT_ERROR("Can't create fillet on given curve.\n");
-      return CUBIT_FAILURE;
-    }
-    TopoDS_Shape modified_shape = fillet.Shape();
+      TopoDS_Face *shape = face->get_TopoDS_Face();
+      TopoDS_Face newShape;
+      if(keep_old_body)
+      {
+        BRepBuilderAPI_Copy api_copy(*shape);
+        newShape = TopoDS::Face(api_copy.ModifiedShape(*shape));
+      }
+      else
+        newShape = *shape;
 
-    TopExp_Explorer Ex;
-    OCCSurface::update_OCC_entity(newShape , modified_shape, &fillet);
-    TopoDS_Face modified_face = TopoDS::Face(modified_shape);
-    Surface* surf = OCCQueryEngine::instance()->populate_topology_bridge(modified_face, CUBIT_TRUE);
-    BodySM* new_bodysm_ptr = CAST_TO(surf,OCCSurface)->my_body();
-    new_bodysm_list.append(new_bodysm_ptr);
+      BRepFilletAPI_MakeFillet2d fillet(newShape);
+      TopoDS_Edge fillet_edge;
+      fillet_edge = fillet.AddFillet(*vertex, radius);
+      fillet.Build();
+      if(fillet.Status() != ChFi2d_IsDone)
+      {
+        PRINT_ERROR("Can't create fillet on given curve.\n");
+        return CUBIT_FAILURE;
+      }
+      TopoDS_Shape modified_shape = fillet.Shape();
+
+      TopExp_Explorer Ex;
+      OCCSurface::update_OCC_entity(newShape , modified_shape, &fillet);
+      TopoDS_Face modified_face = TopoDS::Face(modified_shape);
+      Surface* surf = OCCQueryEngine::instance()->populate_topology_bridge(modified_face, CUBIT_TRUE);
+      BodySM* new_bodysm_ptr = CAST_TO(surf,OCCSurface)->my_body();
+      new_bodysm_list.append(new_bodysm_ptr);
+    }
   }
 
   if(!preview )
@@ -6355,6 +6678,74 @@ OCCModifyEngine::tweak_fillet( DLIList<Point*> & ref_vertex_list,
   return CUBIT_SUCCESS;
 }
 
+CubitStatus
+OCCModifyEngine::tweak_chamfer_sheet(Point* pnt,
+                                     OCCSurface* face,
+                                     double d1,
+                                     Curve* edge1,
+                                     double d2,
+                                     Curve* edge2,
+                                     DLIList<BodySM*> & new_bodysm_list,
+                                     CubitBoolean keep_old_body,
+                                     CubitBoolean preview ) 
+{
+  TopoDS_Face *shape = face->get_TopoDS_Face();
+  TopoDS_Face newShape;
+  if(keep_old_body)
+  {
+    BRepBuilderAPI_Copy api_copy(*shape);
+    newShape = TopoDS::Face(api_copy.ModifiedShape(*shape));
+  }
+  else
+    newShape = *shape;
+
+  BRepFilletAPI_MakeFillet2d fillet(newShape);
+
+  TopoDS_Edge fillet_edge;
+  if(edge1 == NULL || edge2 == NULL)
+  {
+    PRINT_ERROR("Cannot find the two edges for the vertex.\n");
+    return CUBIT_FAILURE;
+  }
+  TopoDS_Edge* topo_e1 = CAST_TO(edge1, OCCCurve)->get_TopoDS_Edge();
+  TopoDS_Edge* topo_e2 = CAST_TO(edge2, OCCCurve)->get_TopoDS_Edge();
+  fillet_edge = fillet.AddChamfer( *topo_e1, *topo_e2, d1, d2);
+
+  fillet.Build() ;
+  if(fillet.Status() != ChFi2d_IsDone)
+  {
+    PRINT_ERROR("Can't create chamfer on given vertex.\n");
+    return CUBIT_FAILURE;
+  }
+  TopoDS_Shape modified_shape = fillet.Shape();
+
+  if( !preview )
+  {
+    TopExp_Explorer Ex;
+    Ex.Init(newShape, TopAbs_SOLID);
+    TopoDS_Solid old_solid = TopoDS::Solid(Ex.Current());
+    OCCLump::update_OCC_entity(old_solid , modified_shape, &fillet);
+    DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->populate_topology_bridge(modified_shape);
+    BodySM* new_bodysm_ptr = CAST_TO(tbs.get(), BodySM);
+    new_bodysm_list.append(new_bodysm_ptr);
+  }
+  else
+  {
+    GfxPreview::clear();
+
+    TopExp_Explorer Ex;
+    Ex.Init(modified_shape, TopAbs_FACE);
+    for( ; Ex.More(); Ex.Next() )
+    {
+      TopoDS_Face face = TopoDS::Face(Ex.Current());
+      // Draw this face
+      OCCDrawTool::instance()->draw_FACE( &face, CUBIT_BLUE, CUBIT_TRUE );
+    }
+
+    GfxPreview::flush();
+  }
+  return CUBIT_SUCCESS;
+}
 //=============================================================================
 // Function   : tweak_move
 // Member Type: PUBLIC

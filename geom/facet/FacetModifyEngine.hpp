@@ -488,7 +488,7 @@ public:
                                      DLIList<BodySM*> &new_bodysm_list,
                                      double right_offset = -1.0,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const;
+                                     CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Chamfer curves on solid bodies.  The left and right offsets are with 
     *   respect to the curve direction.  If the given right offset is negative,
     *   the left offset is used.  Users can preview to clarify the meaning of
@@ -504,7 +504,7 @@ public:
                                      double offset3 = -1.0,
                                      Curve *edge3 = NULL,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const;
+                                     CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Chamfer vertices on solid or sheet bodies.  On a solid body there can
     *   be up to 3 offsets; on a sheet body up to 2 offsets.  The offsets are
     *   in the direction of the supplied edges.  If multiple vertices are 
@@ -515,7 +515,7 @@ public:
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given curves on solid bodies.
     */
 
@@ -524,7 +524,7 @@ public:
                                     double end_radius,
                                     BodySM *&new_body_ptr,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given curve on a solid body.
     *   The fillet has a variable radius from the start to the end of the curve.
     */
@@ -533,7 +533,7 @@ public:
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const;
+                                    CubitBoolean preview = CUBIT_FALSE ) ;
   /**<  Create a round fillet (or blend) at the given vertices on sheet bodies.
     */
 

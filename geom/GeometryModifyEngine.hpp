@@ -746,7 +746,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                      DLIList<BodySM*> &new_bodysm_list,
                                      double right_offset = -1.0,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const = 0;
+                                     CubitBoolean preview = CUBIT_FALSE )  = 0;
   /**<  Chamfer curves on solid bodies.  The left and right offsets are with 
     *   respect to the curve direction.  If the given right offset is negative,
     *   the left offset is used.  Users can preview to clarify the meaning of
@@ -762,7 +762,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                      double offset3 = -1.0,
                                      Curve *edge3 = NULL,
                                      CubitBoolean keep_old_body = CUBIT_FALSE,
-                                     CubitBoolean preview = CUBIT_FALSE ) const = 0;
+                                     CubitBoolean preview = CUBIT_FALSE )  = 0;
   /**<  Chamfer vertices on solid or sheet bodies.  On a solid body there can
     *   be up to 3 offsets; on a sheet body up to 2 offsets.  The offsets are
     *   in the direction of the supplied edges (for a solid) or the loop
@@ -774,7 +774,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const = 0;
+                                    CubitBoolean preview = CUBIT_FALSE )  = 0;
   /**<  Create a round fillet (or blend) at the given curves on solid bodies.
     */
 
@@ -783,7 +783,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                     double end_radius,
                                     BodySM *&new_bodysm_ptr,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const = 0;
+                                    CubitBoolean preview = CUBIT_FALSE ) = 0;
   /**<  Create a round fillet (or blend) at the given curve on a solid body.
     *   The fillet has a variable radius from the start to the end of the curve.
     */
@@ -792,7 +792,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                     double radius,
                                     DLIList<BodySM*> &new_bodysm_list,
                                     CubitBoolean keep_old_body = CUBIT_FALSE,
-                                    CubitBoolean preview = CUBIT_FALSE ) const = 0;
+                                    CubitBoolean preview = CUBIT_FALSE ) = 0;
   /**<  Create a round fillet (or blend) at the given vertices on sheet bodies.
     */
 
