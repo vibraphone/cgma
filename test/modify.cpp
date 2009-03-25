@@ -135,9 +135,31 @@ CubitStatus make_Point()
   DLIList<Body*> new_bodies;
   int isize=ref_edges.size();
   //isize = 12
-
   for(int i = 2; i < isize; i++)
     ref_edges.pop();
+
+  DLIList<RefVertex*> ref_vertices, ref_vertices2;
+  body->ref_vertices(ref_vertices);
+  RefVertex* vtx1 ;
+  ref_vertices2.append(ref_vertices.pop());
+  ref_vertices2.append(ref_vertices.pop());
+
+  CubitStatus status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
+  //status = failure
+
+  //make a sheet surfaces to do fillet on vertices
+  DLIList<RefFace*> ref_faces;
+  body->ref_faces(ref_faces);
+  RefFace* face = gmti->make_RefFace(ref_faces.get());
+  ref_vertices2.clean_out();
+  face->ref_vertices(ref_vertices2);
+  isize=ref_vertices2.size();
+  for(int i = 2; i < isize; i++)
+    ref_vertices2.pop();
+  
+  //status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
+
+  new_bodies.clean_out();
   gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
 
   ref_edges.clean_out();
@@ -146,7 +168,8 @@ CubitStatus make_Point()
   //isize = 21
 
   ref_edges.clean_out();
-  new_bodies.clean_out();
+  new_bodies.clean_out(); 
+
   body2->ref_edges(ref_edges);
   isize=ref_edges.size();
   //isize = 12
@@ -160,6 +183,38 @@ CubitStatus make_Point()
   isize=ref_edges.size();
   //isize = 17
 
+  ref_vertices.clean_out();
+  ref_vertices2.clean_out();
+  body2->ref_vertices(ref_vertices);
+  
+  for(int i = 0; i < 3; i++)
+  {
+    vtx1 = ref_vertices.pop();
+    ref_vertices2.append(vtx1);
+  }
+
+  new_bodies.clean_out();
+  ref_edges.clean_out();
+  ref_vertices2.get()->ref_edges(ref_edges);
+  status = gmti->tweak_chamfer(ref_vertices2, 1, new_bodies, ref_edges.pop(), 
+                         0.7, ref_edges.pop(), 0.5, ref_edges.pop());
+  //status = failure.
+
+  ref_vertices.clean_out();
+  ref_vertices.append(ref_vertices2.pop());
+  ref_vertices.append(ref_vertices2.pop());
+  ref_vertices2.get()->ref_edges(ref_edges);
+  gmti->tweak_chamfer(ref_vertices2, 2, new_bodies, ref_edges.pop(), 1,
+                      ref_edges.pop(), 0.5, ref_edges.pop());
+
+  new_bodies.clean_out();
+  gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
+
+  ref_edges.clean_out();
+  new_bodies.get()->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  //isize = 26
+ 
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
@@ -224,7 +279,7 @@ CubitStatus make_Point()
   BodySM* bodysm = body->get_body_sm_ptr();
   DLIList<OCCSurface*> occ_surfaces;
   CAST_TO(bodysm, OCCBody)->get_all_surfaces(occ_surfaces);  
-  DLIList<RefFace*> ref_faces;
+  ref_faces.clean_out();
   ref_edges.clean_out();
   body->ref_faces(ref_faces);
 
@@ -298,7 +353,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   const char *argv = "stitch.occ";
-  CubitStatus status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 1 volume.
 
@@ -928,7 +983,6 @@ CubitStatus make_Point()
   CubitVector pt3(-1,0,15);
   RefVertex* vt1 = gmti->make_RefVertex(pt1);
   RefVertex* vt2 = gmti->make_RefVertex(pt2);
-  RefVertex* vt3 = gmti->make_RefVertex(pt3);
   RefEdge* edge1 = gmti->make_RefEdge(ARC_CURVE_TYPE, vt1, vt2, &pt3, 
                   CUBIT_FORWARD );
   CubitVector apoint(0,-0.5,15);
