@@ -247,7 +247,7 @@ void OCCPoint::get_parents_virt( DLIList<TopologyBridge*>& parents )
          {
            TopoDS_Edge Edge = TopoDS::Edge(it.Value());
            int k = oqe->OCCMap->Find(Edge);
-           parents.append((OCCPoint*)(oqe->OccToCGM->find(k))->second);
+           parents.append_unique((OCCPoint*)(oqe->OccToCGM->find(k))->second);
          }
      }
   }

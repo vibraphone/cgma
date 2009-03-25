@@ -6594,16 +6594,54 @@ OCCModifyEngine::tweak_fillet_chamfer_sheet( DLIList<Point*> & ref_vertex_list,
 {
   TopTools_IndexedDataMapOfShapeListOfShape M;
 
-  if(ref_vertex_list.size() != faces.size())
-    return CUBIT_FAILURE;
-
   for(int i = 0; i < ref_vertex_list.size(); i ++)
   {
     Point* pnt = ref_vertex_list.get_and_step();
     OCCPoint* occ_pnt = CAST_TO(pnt, OCCPoint);
     TopoDS_Vertex* vertex = occ_pnt->get_TopoDS_Vertex();
+    OCCSurface* face = NULL;
 
-    OCCSurface* face = faces.get_and_step();
+    if( faces.size() == 0)
+    {
+      OCCQueryEngine* oqe = OCCQueryEngine::instance();
+      //make sure the vertex is on sheet body, not on a volume.
+      DLIList <OCCBody*> *bodies = oqe->BodyList;
+      for(int k =0 ; k < bodies->size(); k++)
+      {
+        OCCBody* occ_body = bodies->get_and_step();
+        TopExp_Explorer Ex;
+        TopoDS_Shape ashape = *(occ_body->get_TopoDS_Shape());
+        M.Clear();
+        TopExp::MapShapesAndAncestors(ashape, TopAbs_VERTEX, TopAbs_COMPSOLID, M);
+        if(M.Contains(*vertex))
+        {
+          PRINT_ERROR("Fillet on vertex can only be done on sheet body.\n");
+          return CUBIT_FAILURE;
+        }
+      } 
+      //find corresponding faces.
+      DLIList <OCCSurface* > *surfaces = oqe->SurfaceList;
+      for(int k =0 ; k < surfaces->size(); k++)
+      {
+        OCCSurface* occ_face = surfaces->get_and_step();
+        TopoDS_Face* topo_face = occ_face->get_TopoDS_Face();
+        TopExp_Explorer Ex;
+        M.Clear();
+        TopExp::MapShapesAndAncestors(*topo_face, TopAbs_VERTEX, TopAbs_FACE, M);
+        if(!M.Contains(*vertex))
+          continue;
+        face = occ_face; 
+        break;
+      }
+    }
+    else
+      face = faces.get_and_step();
+
+    if(face == NULL)
+    {
+      PRINT_ERROR("Can't find corresponding surface for the vertex.\n");
+      return CUBIT_FAILURE;
+    }
 
     if(!is_fillet)
     {

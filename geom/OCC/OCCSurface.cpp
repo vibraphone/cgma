@@ -43,6 +43,7 @@
 #include "CubitPointData.hpp"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
+#include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "BRep_Tool.hxx"
 #include "LocOpe_SplitShape.hxx"
@@ -857,6 +858,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
 
   TopTools_ListOfShape shapes;  
+  BRepFilletAPI_MakeFillet2d* test_op = NULL;
 
   for (int ii=1; ii<=M.Extent(); ii++) 
   {
@@ -864,7 +866,9 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      TopTools_ListOfShape shapes;
      if(op)
      {
-       shapes.Assign(op->Modified(wire));
+       test_op = dynamic_cast<BRepFilletAPI_MakeFillet2d*>(op);
+       if(!test_op)
+         shapes.Assign(op->Modified(wire));
        if(shapes.Extent() == 0)
          shapes.Assign(op->Generated(wire));
        if(!new_surface.IsNull())
@@ -887,7 +891,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      }
      else if(shapes.Extent() > 1)
        shape.Nullify();
-     else if(op->IsDeleted(wire))
+     else if(op->IsDeleted(wire) || shapes.Extent() == 0)
      {
        TopTools_IndexedMapOfShape M_new;
        TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
@@ -946,7 +950,8 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
 
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
-       if(op)
+       shapes.Clear();
+       if(op && ! test_op )
          shapes.Assign(op->Modified(vertex));
        else if(sp)
          shapes.Assign(sp->DescendantShapes(vertex));
