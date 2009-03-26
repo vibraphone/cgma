@@ -3260,7 +3260,7 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
            else if(shapes.First().TShape()->ShapeType() == TopAbs_FACE)
              OCCSurface::update_OCC_entity(TopoDS::Face(*from_shape), 
                     shapes.First(), 
-                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+                    (BRepBuilderAPI_MakeShape*) NULL, NULL, &splitor);
 
            from_shape->Nullify();
            delete from_shape;
@@ -6688,11 +6688,11 @@ OCCModifyEngine::tweak_fillet_chamfer_sheet( DLIList<Point*> & ref_vertex_list,
       TopoDS_Shape modified_shape = fillet.Shape();
 
       TopExp_Explorer Ex;
-      OCCSurface::update_OCC_entity(newShape , modified_shape, &fillet);
+      OCCSurface::update_OCC_entity(newShape , modified_shape, &fillet, vertex);
       TopoDS_Face modified_face = TopoDS::Face(modified_shape);
       Surface* surf = OCCQueryEngine::instance()->populate_topology_bridge(modified_face, CUBIT_TRUE);
       BodySM* new_bodysm_ptr = CAST_TO(surf,OCCSurface)->my_body();
-      new_bodysm_list.append(new_bodysm_ptr);
+      new_bodysm_list.append_unique(new_bodysm_ptr);
     }
   }
 
@@ -6747,6 +6747,8 @@ OCCModifyEngine::tweak_chamfer_sheet(Point* pnt,
   }
   TopoDS_Edge* topo_e1 = CAST_TO(edge1, OCCCurve)->get_TopoDS_Edge();
   TopoDS_Edge* topo_e2 = CAST_TO(edge2, OCCCurve)->get_TopoDS_Edge();
+  TopoDS_Vertex common_v;
+  TopExp::CommonVertex(*topo_e1, *topo_e2, common_v);
   fillet_edge = fillet.AddChamfer( *topo_e1, *topo_e2, d1, d2);
 
   fillet.Build() ;
@@ -6760,12 +6762,12 @@ OCCModifyEngine::tweak_chamfer_sheet(Point* pnt,
   if( !preview )
   {
     TopExp_Explorer Ex;
-    Ex.Init(newShape, TopAbs_SOLID);
-    TopoDS_Solid old_solid = TopoDS::Solid(Ex.Current());
-    OCCLump::update_OCC_entity(old_solid , modified_shape, &fillet);
+    Ex.Init(newShape, TopAbs_FACE);
+    TopoDS_Face old_face = TopoDS::Face(Ex.Current());
+    OCCSurface::update_OCC_entity(old_face , modified_shape, &fillet, &common_v);
     DLIList<TopologyBridge*> tbs = OCCQueryEngine::instance()->populate_topology_bridge(modified_shape);
     BodySM* new_bodysm_ptr = CAST_TO(tbs.get(), BodySM);
-    new_bodysm_list.append(new_bodysm_ptr);
+    new_bodysm_list.append_unique(new_bodysm_ptr);
   }
   else
   {

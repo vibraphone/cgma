@@ -45,6 +45,7 @@
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "BRepTools_WireExplorer.hxx"
+#include "TopExp.hxx"
 #include "BRep_Tool.hxx"
 #include "LocOpe_SplitShape.hxx"
 // ********** END CUBIT INCLUDES           **********
@@ -850,6 +851,7 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
                                           TopoDS_Shape& new_surface,
                                           BRepBuilderAPI_MakeShape *op,
+                                          TopoDS_Vertex* removed_vertex,
                                           LocOpe_SplitShape* sp) 
 {
   //set the Wires
@@ -908,16 +910,17 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
 
      //set curves
      BRepTools_WireExplorer Ex;
-     
+      
      for(Ex.Init(wire); Ex.More();Ex.Next())
      {
        TopoDS_Edge edge = Ex.Current();
-       if(op)
+       if(op && !test_op)
        {
          shapes.Assign(op->Modified(edge));
          if(shapes.Extent() == 0)
            shapes.Assign(op->Generated(edge));
        }
+         
        else if(sp)
          shapes.Assign(sp->DescendantShapes(edge));
 
@@ -945,12 +948,22 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        }
        else if (op->IsDeleted(edge))
          shape_edge.Nullify(); 
-       else 
+       else if (test_op)
+       {
+         if(!test_op->IsModified(edge))
+           shape_edge = edge;
+         else
+           shape_edge = (test_op->Modified(edge)).First();
+       } 
+       else
          shape_edge = edge;
 
        //update vertex
        TopoDS_Vertex vertex = Ex.CurrentVertex();
        shapes.Clear();
+       if(test_op)
+         assert(removed_vertex != NULL);
+
        if(op && ! test_op )
          shapes.Assign(op->Modified(vertex));
        else if(sp)
@@ -971,10 +984,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          }
          shape_vertex.Nullify() ;
        }
+       else if(test_op && !vertex.IsSame( *removed_vertex))
+         shape_vertex = vertex;
        else
          shape_vertex.Nullify();
-
-       if(!vertex.IsSame(shape_vertex) && (shapes.Extent() > 0 || (op && op->IsDeleted(vertex))))
+      
+       if(!vertex.IsSame(shape_vertex) )
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape_vertex);
 
        if (!edge.IsSame(shape_edge))

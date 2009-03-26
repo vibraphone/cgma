@@ -51,6 +51,7 @@ class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
+class TopoDS_Vertex;
 //// class CubitTransformMatrix;
 
 class OCCSurface : public Surface
@@ -63,9 +64,12 @@ public :
   virtual ~OCCSurface() ;
     //- The destructor
    
+  //if op is of BRepFilletAPI_MakeFillet2d type, need to input the 
+  //removed_vertex for update.
   static CubitStatus update_OCC_entity(TopoDS_Face& old_surface,
                                        TopoDS_Shape& new_surface,
                                        BRepBuilderAPI_MakeShape *op,
+                                       TopoDS_Vertex* removed_vertex = NULL,
                                        LocOpe_SplitShape* sp = NULL);
 
 
