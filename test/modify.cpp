@@ -149,15 +149,28 @@ CubitStatus make_Point()
 
   //make a sheet surfaces to do fillet on vertices
   DLIList<RefFace*> ref_faces;
-  body->ref_faces(ref_faces);
+  body2->ref_faces(ref_faces);
   RefFace* face = gmti->make_RefFace(ref_faces.get());
+  away *= 5;
+  gti->translate(face, away); 
   ref_vertices2.clean_out();
+  ref_vertices.clean_out();
   face->ref_vertices(ref_vertices2);
   isize=ref_vertices2.size();
   for(int i = 2; i < isize; i++)
-    ref_vertices2.pop();
+    ref_vertices.append(ref_vertices2.pop());
   
-  //status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
+  status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
+  ref_edges.clean_out();
+  new_bodies.get()->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  //isize = 6
+
+  status = gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
+  ref_edges.clean_out();
+  new_bodies.get()->ref_edges(ref_edges);
+  isize=ref_edges.size();
+  //isize = 8
 
   new_bodies.clean_out();
   gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
