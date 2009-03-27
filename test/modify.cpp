@@ -149,10 +149,11 @@ CubitStatus make_Point()
 
   //make a sheet surfaces to do fillet on vertices
   DLIList<RefFace*> ref_faces;
-  body2->ref_faces(ref_faces);
+  body->ref_faces(ref_faces);
   RefFace* face = gmti->make_RefFace(ref_faces.get());
+  Body* sheet_body = face->body();
   away *= 5;
-  gti->translate(face, away); 
+  gti->translate(sheet_body, away); 
   ref_vertices2.clean_out();
   ref_vertices.clean_out();
   face->ref_vertices(ref_vertices2);
@@ -161,15 +162,15 @@ CubitStatus make_Point()
     ref_vertices.append(ref_vertices2.pop());
   
   status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
-  ref_edges.clean_out();
-  new_bodies.get()->ref_edges(ref_edges);
-  isize=ref_edges.size();
+  DLIList<RefEdge*> ref_edges_check;
+  new_bodies.get()->ref_edges(ref_edges_check);
+  isize=ref_edges_check.size();
   //isize = 6
 
   status = gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
-  ref_edges.clean_out();
-  new_bodies.get()->ref_edges(ref_edges);
-  isize=ref_edges.size();
+  ref_edges_check.clean_out();
+  new_bodies.get()->ref_edges(ref_edges_check);
+  isize=ref_edges_check.size();
   //isize = 8
 
   new_bodies.clean_out();
