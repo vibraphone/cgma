@@ -151,9 +151,14 @@ CubitStatus make_Point()
   DLIList<RefFace*> ref_faces;
   body->ref_faces(ref_faces);
   RefFace* face = gmti->make_RefFace(ref_faces.get());
+  RefFace* face2 = gmti->make_RefFace(ref_faces.get());
   Body* sheet_body = face->body();
+  Body* sheet_body2 = face2->body();
   away *= 5;
   gti->translate(sheet_body, away); 
+  away /= 2;
+  gti->translate(sheet_body2, away);
+
   ref_vertices2.clean_out();
   ref_vertices.clean_out();
   face->ref_vertices(ref_vertices2);
@@ -172,6 +177,21 @@ CubitStatus make_Point()
   new_bodies.get()->ref_edges(ref_edges_check);
   isize=ref_edges_check.size();
   //isize = 8
+
+  ref_vertices.clean_out();
+  face2->ref_vertices(ref_vertices);
+  ref_vertices.pop();
+  ref_vertices.pop();
+  ref_vertices.pop();
+  ref_edges_check.clean_out();
+  ref_vertices.get()->ref_edges(ref_edges_check);
+  new_bodies.clean_out();
+  status = gmti->tweak_chamfer(ref_vertices, 1, new_bodies,ref_edges_check.pop(), 0.5, ref_edges_check.pop());
+ 
+  ref_edges_check.clean_out();
+  new_bodies.get()->ref_edges(ref_edges_check);
+  isize=ref_edges_check.size();
+  //isize = 5
 
   new_bodies.clean_out();
   gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
