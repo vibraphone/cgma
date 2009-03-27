@@ -73,6 +73,7 @@
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "BRepAdaptor_Surface.hxx"
 #include "BRepBuilderAPI_MakeFace.hxx"
+#include "ShapeExtend_Status.hxx"
 #include "BRepOffsetAPI_MakeThickSolid.hxx"
 #include "BRepBuilderAPI_Sewing.hxx"
 #include "BRepBuilderAPI_Copy.hxx"
@@ -82,6 +83,7 @@
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
 #include "TopoDS.hxx"
+#include "ShapeFix.hxx"
 #include "TopologyBridge.hpp"
 #include "ProgressTool.hpp"
 #include "BRepAlgoAPI_Fuse.hxx"
@@ -93,6 +95,8 @@
 #include "BRepPrimAPI_MakeWedge.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "Handle_Geom_TrimmedCurve.hxx"
+#include "Handle_ShapeBuild_ReShape.hxx"
+#include "ShapeBuild_ReShape.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "TopOpeBRep_EdgesIntersector.hxx"
@@ -6950,11 +6954,39 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
   return CUBIT_FAILURE;
 }
 
-CubitStatus OCCModifyEngine::remove_curve_slivers( BodySM* /*body*/,
-                                                   double /*lengthlimit*/ ) const
+CubitStatus OCCModifyEngine::remove_curve_slivers( BodySM* body,
+                                                   double lengthlimit ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
+  DLIList<CubitBoolean> is_volume;
+  DLIList<BodySM*> bodies;
+  DLIList<TopoDS_Shape*> shapes;
+  bodies.append(body);
+  CubitStatus status = get_shape_list(bodies, shapes, is_volume, CUBIT_FALSE);
+  if(!status)
+  {
+    PRINT_ERROR("Can't find underlying TopoDS_Shape for this body.\n");
+    return CUBIT_FAILURE;
+  }
+  Handle(ShapeBuild_ReShape) context;
+  TopoDS_Shape new_shape = ShapeFix::RemoveSmallEdges(*shapes.get(), 
+                           lengthlimit, context);
+  new_shape = context->Apply(new_shape, TopAbs_COMPSOLID);
+  if(context->Status(ShapeExtend_OK))
+  {
+    PRINT_INFO("There's no small edges on this body.\n");
+    return CUBIT_SUCCESS;
+  }
+     
+  else if(context->Status(ShapeExtend_FAIL))
+  {
+    PRINT_ERROR("Small edges can't be removed from this body.\n");
+    return CUBIT_FAILURE;
+  }
+
+  OCCQueryEngine::instance()->delete_solid_model_entities(body);
+  DLIList<TopologyBridge*>tbs = OCCQueryEngine::instance()->populate_topology_bridge(new_shape);
+  
+  return CUBIT_SUCCESS;
 }
 
 //================================================================================
