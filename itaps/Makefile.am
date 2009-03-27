@@ -9,7 +9,7 @@ else
   SIDL_DIR = 
 endif 
 
-TESTS =
+TESTS = chaman
 if build_ACIS
   TESTS += testgeom
 else
@@ -61,6 +61,11 @@ testgeom_occ_SOURCES = $(testgeom_SOURCES)
 testgeom_occ_LDADD = $(testgeom_LDADD)
 testgeom_occ_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
 testgeom_occ_LDFLAGS = $(testgeom_LDFLAGS)
+
+chaman_SOURCES = chaman.cc
+chaman_LDADD = libiGeom.la
+chaman_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
+chaman_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 

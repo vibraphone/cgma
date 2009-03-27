@@ -114,6 +114,7 @@ CGMTagManager::CGMTagManager()
     : interfaceGroup(NULL)
 {
   pcTag = 0;
+  tagInfo.push_back(preset_tag_list[0]);
   
     // get the tag number for CATag
   DLIList<int> tag_types;
@@ -255,7 +256,7 @@ iBase_ErrorType CGMTagManager::createTag (/*in*/ const char *tag_name,
     
   TagInfo tmp_info = {tag_length, std::string(tag_name), tag_type, NULL, true};
   tagInfo.push_back(tmp_info);
-  *tag_handle = tagInfo.size()-1;
+  *tag_handle = tagInfo.size() - 1;
   if (default_value != NULL) {
     tagInfo[*tag_handle].defaultValue = (char *) malloc(tag_length);
     memcpy(tagInfo[*tag_handle].defaultValue, default_value, tag_length);
@@ -278,7 +279,7 @@ iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const long tag_handle,
   }
   
     // if we got here, assume we can delete it
-  TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
+  TagInfo *tinfo = (tag_handle > 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
   tinfo->isActive = false;
 
   RETURN(iBase_SUCCESS);
@@ -287,14 +288,14 @@ iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const long tag_handle,
 const char *CGMTagManager::getTagName (/*in*/ const long tag_handle)
 {
   iGeom_clearLastError();
-  return (tag_handle >= 0 ? tagInfo[tag_handle].tagName.c_str() : 
+  return (tag_handle > 0 ? tagInfo[tag_handle].tagName.c_str() : 
           presetTagInfo[-tag_handle].tagName.c_str());
 }
 
 int CGMTagManager::getTagSize (/*in*/ const long tag_handle)
 {
   iGeom_clearLastError();
-  return (tag_handle >= 0 ? 
+  return (tag_handle > 0 ? 
           tagInfo[tag_handle].tagLength : 
           presetTagInfo[-tag_handle].tagLength);
 }
@@ -317,7 +318,7 @@ long CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
 int CGMTagManager::getTagType (/*in*/ const long tag_handle) 
 {
   iGeom_clearLastError();
-  return (tag_handle >= 0 ? 
+  return (tag_handle > 0 ? 
           tagInfo[tag_handle].tagType : 
           presetTagInfo[-tag_handle].tagType);
 }
@@ -326,7 +327,7 @@ iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_hand
                                            /*in*/ const long tag_handle,
                                            /*inout*/ ARRAY_INOUT_DECL(char, tag_value))
 {
-  TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
+  TagInfo *tinfo = (tag_handle > 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
   int tag_size = tinfo->tagLength;
     // either way, we have to have that many bytes when we leave this function
   const bool allocated_data_arr = (*tag_value_allocated == 0);
@@ -391,7 +392,7 @@ iBase_ErrorType CGMTagManager::setArrData (/*in*/ ARRAY_IN_DECL(RefEntity*, enti
                                            /*in*/ const long tag_handle,
                                            /*in*/ const char *tag_values, const int tag_values_size)
 {
-  TagInfo *tinfo = (tag_handle >= 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
+  TagInfo *tinfo = (tag_handle > 0 ? &tagInfo[tag_handle] : &presetTagInfo[-tag_handle]);
   int tag_size = tinfo->tagLength;
   
   const char *val_ptr = tag_values;
@@ -872,10 +873,10 @@ void CATag::print()
   std::cout << "This entity has " << tagData.size() << " tags.  Types are: " << std::endl;
   for (std::map<int,void*>::iterator mit = tagData.begin(); mit != tagData.end(); mit++) 
   {
-    if ((*mit).first < 0)
-      std::cout << myManager->tagInfo[-(*mit).first].tagName << std::endl;
-    else
+    if ((*mit).first > 0)
       std::cout << myManager->tagInfo[(*mit).first].tagName << std::endl;
+    else
+      std::cout << myManager->presetTagInfo[-(*mit).first].tagName << std::endl;
   }
 }
 
@@ -883,7 +884,7 @@ iBase_ErrorType CATag::get_tag_data(long tag_handle, void *tag_data)
 {
   assert(NULL != tag_data);
 
-  CGMTagManager::TagInfo *tinfo = (tag_handle >= 0 ? 
+  CGMTagManager::TagInfo *tinfo = (tag_handle > 0 ? 
                                    &(myManager->tagInfo[tag_handle]) : 
                                    &(myManager->presetTagInfo[-tag_handle]));
   
@@ -908,7 +909,7 @@ iBase_ErrorType CATag::get_tag_data(long tag_handle, void *tag_data)
 iBase_ErrorType CATag::set_tag_data(long tag_handle, const void *tag_data, 
                                      const bool can_shallow_copy)
 {
-  CGMTagManager::TagInfo *tinfo = (tag_handle >= 0 ? 
+  CGMTagManager::TagInfo *tinfo = (tag_handle > 0 ? 
                                    &(myManager->tagInfo[tag_handle]) : 
                                    &(myManager->presetTagInfo[-tag_handle]));
   
