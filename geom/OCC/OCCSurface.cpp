@@ -984,10 +984,11 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          }
          shape_vertex.Nullify() ;
        }
-       else if(test_op && !vertex.IsSame( *removed_vertex))
-         shape_vertex = vertex;
+       else if(op->IsDeleted(vertex) || (test_op && vertex.IsSame( *removed_vertex)))
+         shape_vertex.Nullify() ;
+         
        else
-         shape_vertex.Nullify();
+         shape_vertex = vertex;
       
        if(!vertex.IsSame(shape_vertex) )
          OCCQueryEngine::instance()->update_OCC_map(vertex, shape_vertex);
