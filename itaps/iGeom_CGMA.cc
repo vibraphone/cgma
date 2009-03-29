@@ -137,8 +137,7 @@ iGeom_get_adjacent_entities( const RefEntity *from,
                              int* err);
 
 static void tokenize( const std::string& str, 
-                      std::vector<std::string>& tokens,
-                      const char* delimiters = ":,\n\t" );
+                      std::vector<std::string>& tokens );
 
 // Expect option of the form "NAME=VALUE".
 // If NAME portion matches, pass back VALUE and return true.
@@ -5823,15 +5822,15 @@ iGeom_mergeEnts (iGeom_Instance instance,
 /********************* HELPER FUNCTION IMPLEMENTATIONS ***************************/
 
 static void tokenize( const std::string& str, 
-                      std::vector<std::string>& tokens,
-                      const char* delimiters )
+                      std::vector<std::string>& tokens )
 {
-  std::string::size_type last = str.find_first_not_of( delimiters, 0 );
-  std::string::size_type pos  = str.find_first_of( delimiters, last );
+  char delim =  str[0];
+  std::string::size_type last = str.find_first_not_of( delim, 1 );
+  std::string::size_type pos  = str.find_first_of( delim, last );
   while (std::string::npos != pos && std::string::npos != last) {
     tokens.push_back( str.substr( last, pos - last ) );
-    last = str.find_first_not_of( delimiters, pos );
-    pos  = str.find_first_of( delimiters, last ); 
+    last = str.find_first_not_of( delim, pos );
+    pos  = str.find_first_of( delim, last ); 
   }
 }
 
