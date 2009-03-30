@@ -426,6 +426,7 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
     type = buffer.substr( 0, i );
 
     CubitString* string_prt = new CubitString(type.c_str());
+    strings.clean_out();
     strings.append(string_prt);
 
     IS >> buffer;
