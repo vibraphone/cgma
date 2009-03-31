@@ -9,7 +9,7 @@ else
   SIDL_DIR = 
 endif 
 
-TESTS = chaman
+TESTS = 
 if build_ACIS
   TESTS += testgeom
 else
@@ -51,7 +51,7 @@ libiGeom_la_include_HEADERS = \
 	iBase_f.h \
 	iGeom_f.h
 
-check_PROGRAMS = $(TESTS)
+check_PROGRAMS = chaman $(TESTS)
 
 testgeom_SOURCES = testgeom.cc
 testgeom_LDADD = libiGeom.la
