@@ -414,7 +414,7 @@ void OCCShapeAttributeSet::AddGeometry(const TopoDS_Shape& S)
 
 void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
                                           Standard_IStream&   IS,
-                                          TDF_Label& l_attr)
+                                          TDF_Label& l_attr)const
 {
   std::string buffer, type, stringdata;
   DLIList<CubitString*> strings;
@@ -429,22 +429,27 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
     strings.clean_out();
     strings.append(string_prt);
 
-    IS >> buffer;
-    //consider there's only one string in the stringdata field
-    i = buffer.find_first_of("*");
-    if(i > 0)
-    {
-      stringdata = buffer.substr( 0, i );
-      CubitString* string_prt2 = new CubitString(stringdata.c_str());
-      strings.append(string_prt2);
-    }
+    char s = ' ';
+    do {
+      IS >> buffer;
+      i = buffer.find_first_of("*");
+      if(i > 0)
+      {
+        stringdata = buffer.substr( 0, i );
+        CubitString* string_prt2 = new CubitString(stringdata.c_str());
+        strings.append(string_prt2);
+      }
 
-    IS.get(); //' '
+      //check if next data is still string
+      IS.get(); //' '
+      IS.get(s); //either '*' or 'number' or a char
+      IS.unget();
+    } while(s!= '*' && !(s > '0' && s < '9'));
+    
     int tmp_int;
     double  tmp_dbl; 
     doubles.clean_out();
     ints.clean_out();
-    char s;
     IS.get(s); //either '*' or 'number'
     while (s != '\n')
     {
@@ -517,10 +522,16 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
     }
   }
   if(!found)
+  {
+    OS << "\n*";
     return;
+  }
 
   if(!myLabel.HasChild())
+  {
+    OS << "\n*";
     return;
+  }
 
   for (TDF_ChildIterator it2(myLabel,Standard_False); it2.More(); it2.Next())
   {
@@ -582,8 +593,7 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
 //purpose  :
 //=======================================================================
 
-void  OCCShapeAttributeSet::Write(Standard_OStream& OS,
-                                  TDF_Label l_attr)const
+void  OCCShapeAttributeSet::Write(Standard_OStream& OS)const
 {
   //on sauvegarde l'ancien LC_NUMERIC
   
@@ -634,9 +644,6 @@ void  OCCShapeAttributeSet::Write(Standard_OStream& OS,
     // Geometry
     WriteGeometry(S,OS);
 
-    // Attributes
-    WriteAttribute(S, OS, l_attr);
-
     // Flags
     OS << "\n";
     OS << (S.Free()       ? 1 : 0);
@@ -679,7 +686,6 @@ void  OCCShapeAttributeSet::Write(Standard_OStream& OS,
 //=======================================================================
 
 void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
-                                 TDF_Label& l_attr,
                                  bool print_results) 
 {
  // on sauvegarde l'ancien LC_NUMERIC
@@ -751,14 +757,8 @@ void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
     TopAbs_ShapeEnum T = ReadShapeEnum(IS);
     ReadGeometry(T,IS,S);
 
-    // Read Attributes and Set the flags
+    // Set the flags
     IS >> buffer;
-
-    while (buffer[0] == 'C')
-    {
-      ReadAttribute(S, IS,l_attr);
-      IS >> buffer;
-    }
 
     // sub-shapes
     TopoDS_Shape SS;
@@ -1175,13 +1175,24 @@ void  OCCShapeAttributeSet::WriteGeometry(const TopoDS_Shape& S,
 //=======================================================================
 
 void  OCCShapeAttributeSet::Write(const TopoDS_Shape& S,
-                               Standard_OStream& OS)const
+                               Standard_OStream& OS,
+                               TDF_Label* l_attr)const
 {
   if (S.IsNull()) OS << "*";
   else {
     PrintOrientation(S.Orientation(),OS,Standard_True);
     OS << myShapes.Extent() - myShapes.FindIndex(S.Located(TopLoc_Location())) + 1;
     OS << " " << myLocations.Index(S.Location()) << " ";
+  }
+  //Write Attributes
+  Standard_Integer i, nbShapes = myShapes.Extent();
+  if(l_attr != NULL)
+  {
+    for ( i = 1; i <= nbShapes; i++)
+    {
+      const TopoDS_Shape& Sh = myShapes(i);
+      WriteAttribute(Sh, OS, *l_attr);
+    }
   }
 }
 
@@ -1700,7 +1711,8 @@ void  OCCShapeAttributeSet::Clear()
 
 void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
                                  Standard_IStream& IS,
-                                 const int nbshapes)const
+                                 const int nbshapes,
+                                 TDF_Label* label )const
 {
   std::string buffer;
   IS >> buffer;
@@ -1734,6 +1746,18 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
     Standard_Integer l;
     IS >> l;
     S.Location(myLocations.Location(l));
+  }
+  if(label != NULL)
+  {
+    Standard_Integer i, nbShapes = myShapes.Extent();
+    for ( i = 1; i <= nbShapes; i++)
+    {
+      TopoDS_Shape Sh = myShapes(i);
+      IS >> buffer;
+      if(buffer[0] == '*') //empty attributes for this shape
+        continue;
+      ReadAttribute(Sh, IS,*label);
+    }
   }
 }
 

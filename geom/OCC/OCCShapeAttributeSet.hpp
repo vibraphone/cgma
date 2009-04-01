@@ -80,18 +80,18 @@ void WriteAttribute(const TopoDS_Shape& S,
 
 void  ReadAttribute(TopoDS_Shape& S,
                     Standard_IStream&   IS,
-                    TDF_Label& l_attr);
+                    TDF_Label& l_attr)const;
 
 //! Stores <S> and its sub-shape. Returns the index of <S>. <br>
 //!          The method AddGeometry is called on each sub-shape. <br>
 Standard_Integer Add(const TopoDS_Shape& S) ;
 
-void Write(Standard_OStream& OS,
-           TDF_Label l_attr)const;
+void Write(Standard_OStream& OS)const;
 
-void Read(Standard_IStream& IS, TDF_Label& l_attr, bool print);
+void Read(Standard_IStream& IS, bool print);
 
-void Read(TopoDS_Shape& S,Standard_IStream& IS, const int nbshapes)const;
+void Read(TopoDS_Shape& S,Standard_IStream& IS, const int nbshapes,
+          TDF_Label* l_attr = NULL) const;
 
 //! Writes the geometry of  me  on the stream <OS> in a <br>
 //!          format that can be read back by Read. <br>
@@ -111,7 +111,8 @@ void ReadGeometry(const TopAbs_ShapeEnum T,
 //!          orientation, the index of the TShape and the index <br>
 //!          of the Location. <br>
 void Write(const TopoDS_Shape& S,
-           Standard_OStream& OS) const;
+           Standard_OStream& OS,
+           TDF_Label* l_attr = NULL) const;
 
 //! Writes the 3d polygons <br>
 //!          on the stream <OS> in a format that can <br>

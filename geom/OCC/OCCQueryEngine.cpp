@@ -1117,10 +1117,10 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
   SS.Add(Sh);
 
   os << "DBRep_DrawableShape\n";  // for easy Draw read
-  SS.Write(os, label);
+  SS.Write(os);
   isGood = os.good();
   if(isGood )
-    SS.Write(Sh,os);
+    SS.Write(Sh,os,&label);
   os.flush();
   isGood = os.good();
   os.close();
@@ -1143,10 +1143,10 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
   }
 
   OCCShapeAttributeSet SS;
-  SS.Read(in, label, print_results);
+  SS.Read(in, print_results);
   int nbshapes = SS.NbShapes();
   if(!nbshapes) return CUBIT_FALSE;
-  SS.Read(Sh,in,nbshapes);
+  SS.Read(Sh,in,nbshapes, &label);
   return CUBIT_TRUE;
 }
 
