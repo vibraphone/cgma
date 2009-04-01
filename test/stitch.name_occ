@@ -213,8 +213,6 @@ Wi
 Fa
 0  1e-07 1 0
 
-CGM_ATTRIB ENTITY_NAME* face1* * *
-*
 0111000
 +89 0 *
 Ve
@@ -329,8 +327,6 @@ Wi
 Fa
 0  1e-07 2 0
 
-CGM_ATTRIB ENTITY_NAME* face2* * *
-*
 0101000
 +74 0 *
 Ve
@@ -365,8 +361,6 @@ Wi
 Fa
 0  1e-07 3 0
 
-CGM_ATTRIB ENTITY_NAME* face16* * *
-*
 0111000
 +69 0 *
 Ve
@@ -465,8 +459,6 @@ Wi
 Fa
 0  1e-07 4 0
 
-CGM_ATTRIB ENTITY_NAME* face3* * *
-*
 0101000
 +56 0 *
 Ed
@@ -485,8 +477,6 @@ Wi
 Fa
 0  1e-07 5 0
 
-CGM_ATTRIB ENTITY_NAME* face4* * *
-*
 0101000
 +53 0 *
 Ed
@@ -505,8 +495,6 @@ Wi
 Fa
 0  1e-07 6 1
 
-CGM_ATTRIB ENTITY_NAME* face5* * *
-*
 0101000
 +50 0 *
 Ed
@@ -525,8 +513,6 @@ Wi
 Fa
 0  1e-07 8 1
 
-CGM_ATTRIB ENTITY_NAME* face6* * *
-*
 0101000
 +47 0 *
 Ed
@@ -545,8 +531,6 @@ Wi
 Fa
 0  1e-07 9 1
 
-CGM_ATTRIB ENTITY_NAME* face7* * *
-*
 0101000
 +44 0 *
 Ed
@@ -565,8 +549,6 @@ Wi
 Fa
 0  1e-07 5 0
 
-CGM_ATTRIB ENTITY_NAME* face8* * *
-*
 0101000
 +41 0 *
 Wi
@@ -576,8 +558,6 @@ Wi
 Fa
 0  1e-07 10 0
 
-CGM_ATTRIB ENTITY_NAME* face9* * *
-*
 0111000
 +39 0 *
 Sh
@@ -660,8 +640,6 @@ Wi
 Fa
 0  1e-07 12 0
 
-CGM_ATTRIB ENTITY_NAME* face10* * *
-*
 0111000
 +27 0 *
 Ve
@@ -735,8 +713,6 @@ Wi
 Fa
 0  1e-07 17 0
 
-CGM_ATTRIB ENTITY_NAME* face11* * *
-*
 0111000
 +17 0 *
 Ed
@@ -764,8 +740,6 @@ Wi
 Fa
 0  1e-07 13 0
 
-CGM_ATTRIB ENTITY_NAME* face12* * *
-*
 0111000
 +13 0 *
 Ed
@@ -793,8 +767,6 @@ Wi
 Fa
 0  1e-07 15 0
 
-CGM_ATTRIB ENTITY_NAME* face13* * *
-*
 0111000
 +9 0 *
 Wi
@@ -804,8 +776,6 @@ Wi
 Fa
 0  1e-07 16 0
 
-CGM_ATTRIB ENTITY_NAME* face14* * *
-*
 0111000
 +7 0 *
 Wi
@@ -815,8 +785,6 @@ Wi
 Fa
 0  1e-07 14 0
 
-CGM_ATTRIB ENTITY_NAME* face15* * *
-*
 0111000
 +5 0 *
 Sh
@@ -833,3 +801,116 @@ Co
 +36 0 +2 3 *
 
 +1 0 
+*
+*
+*
+*
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face1* * *
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face2* * *
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face16* * *
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face3* * *
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face4* * *
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face5* * *
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face6* * *
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face7* * *
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face8* * *
+*
+*
+CGM_ATTRIB ENTITY_NAME* face9* * *
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face10* * *
+*
+*
+*
+*
+*
+*
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face11* * *
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face12* * *
+*
+*
+*
+*
+CGM_ATTRIB ENTITY_NAME* face13* * *
+*
+*
+CGM_ATTRIB ENTITY_NAME* face14* * *
+*
+*
+CGM_ATTRIB ENTITY_NAME* face15* * *
+*
+*
+*
+*
