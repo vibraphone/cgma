@@ -1714,7 +1714,7 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
                                  const int nbshapes,
                                  TDF_Label* label )const
 {
-  std::string buffer;
+  std::string buffer, buffer_attr;
   IS >> buffer;
   if (buffer[0] == '*')
     S = TopoDS_Shape();
@@ -1753,8 +1753,10 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
     for ( i = 1; i <= nbShapes; i++)
     {
       TopoDS_Shape Sh = myShapes(i);
-      IS >> buffer;
-      if(buffer[0] == '*') //empty attributes for this shape
+      IS >> buffer_attr;
+      if(buffer_attr[0] != '*' && buffer_attr[0] != 'C')
+        break;
+      if(buffer_attr[0] == '*') //empty attributes for this shape
         continue;
       ReadAttribute(Sh, IS,*label);
     }
