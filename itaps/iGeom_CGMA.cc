@@ -394,7 +394,7 @@ void iGeom_save (iGeom_Instance instance,
   name = name_buf.c_str();
   
     // parse options
-  std::string file_type = "ACIS_SAT";
+  std::string file_type;
   std::vector<std::string> opts;
   tokenize( std::string(options, options_len), opts );
   for (std::vector<std::string>::iterator i = opts.begin(); i != opts.end(); ++i)
@@ -403,6 +403,31 @@ void iGeom_save (iGeom_Instance instance,
       ERROR( iBase_INVALID_ARGUMENT, i->c_str() );
   }
 
+    // if no type, check file type for known extensions
+  if (file_type.empty()) {
+    size_t name_len = name_buf.length();
+    if (name_buf.find(".igs") < name_len ||
+        name_buf.find(".IGS") < name_len ||
+        name_buf.find(".iges") < name_len ||
+        name_buf.find(".IGES") < name_len)
+      file_type = "IGES";
+    else if (name_buf.find(".stp") < name_len ||
+             name_buf.find(".STP") < name_len ||
+             name_buf.find(".step") < name_len ||
+             name_buf.find(".STEP") < name_len)
+      file_type = "STEP";
+    else if (name_buf.find(".sat") < name_len ||
+             name_buf.find(".SAT") < name_len)
+      file_type = "ACIS_SAT";
+    else if (name_buf.find(".occ") < name_len ||
+             name_buf.find(".brep") < name_len ||
+             name_buf.find(".OCC") < name_len ||
+             name_buf.find(".BREP") < name_len)
+      file_type = "OCC";
+    else
+      ERROR(iBase_FAILURE, "Unknown geometry file extension and no file type.");
+  }
+  
     // process options (none right now...)
   DLIList<RefEntity*> bodies;
   int num_ents_exported;
