@@ -60,7 +60,8 @@ public:
     
   inline void set_curve(Curve* curve) {myCurve = curve;}
 
-  inline LoopSM* loop() const { return myLoop; }
+  inline LoopSM* loop() const { if(myLoop)return myLoop;
+                                else return NULL; }
 
   inline void set_loop(LoopSM * loop) {myLoop = loop;}
 
@@ -121,8 +122,8 @@ protected:
   
 private:
   int myMark;
-  Curve *myCurve;
-  LoopSM *myLoop;
+  Curve *myCurve ;
+  LoopSM *myLoop ;
   CubitSense edgeSense;
 };
 

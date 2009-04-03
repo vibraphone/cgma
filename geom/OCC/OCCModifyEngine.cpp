@@ -3545,7 +3545,7 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      double orig_mass = myProps.Mass();
      TopTools_IndexedMapOfShape M;
      TopExp::MapShapes(cut_shape, TopAbs_SOLID, M);
-     double after_mass;
+     double after_mass = 0.0;
      CubitBoolean no_volume = CUBIT_FALSE;
      if(M.Extent() > 0)
      {

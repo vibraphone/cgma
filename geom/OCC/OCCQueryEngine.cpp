@@ -1209,7 +1209,8 @@ CubitStatus OCCQueryEngine::import_solid_model(
   else if(strcmp(file_type, "IGES") == 0)
   {
     IGESControl_Reader reader;
-    IFSelect_ReturnStatus stat = reader.ReadFile( (char*) file_name);
+    const Standard_CString string1 = file_name;
+    IFSelect_ReturnStatus stat = reader.ReadFile( string1);
     if (stat  != IFSelect_RetDone)
     {
        PRINT_INFO("%s: Cannot open file", file_name );
@@ -2273,11 +2274,11 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve)const
   }
   
   CubitStatus stat = unhook_Curve_from_OCC(curve);
-  if (stat)
-  {
-    CurveList->remove(fcurve);
-    delete curve;
-  }
+  if (!stat)
+    return CUBIT_FAILURE;
+
+  CurveList->remove(fcurve);
+  delete fcurve;
   return stat;
 }
 
@@ -2921,7 +2922,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
          {
            OCCCoEdge* coedge = children.pop();
            CAST_TO(coedge->curve(), OCCCurve)->remove_loop(CAST_TO(loop, OCCLoop));
-           delete coedge;
+           delete (OCCCoEdge*)coedge;
          }
          unhook_LoopSM_from_OCC(loop);
          delete loop;

@@ -62,7 +62,7 @@ OCCLoop::~OCCLoop()
 {
   disconnect_all_curves();
   if (myTopoDSWire)
-    delete myTopoDSWire;
+    delete (TopoDS_Wire*)myTopoDSWire;
 }
 
 void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
@@ -71,7 +71,7 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
      return;
    TopoDS_Wire* the_wire = new TopoDS_Wire(loop);
    if(myTopoDSWire)
-     delete myTopoDSWire;
+     delete (TopoDS_Wire*)myTopoDSWire;
    myTopoDSWire = the_wire;
 }
 //-------------------------------------------------------------------------

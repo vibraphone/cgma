@@ -90,7 +90,7 @@ void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
 
   TopoDS_CompSolid * the_comp = new TopoDS_CompSolid(theshape);
   if(myTopoDSShape)
-    delete myTopoDSShape;
+    delete (TopoDS_CompSolid*)myTopoDSShape;
   myTopoDSShape = the_comp;
 }
 
@@ -121,7 +121,7 @@ TopoDS_CompSolid* OCCBody::make_CompSolid(DLIList<Lump*>& my_lumps)
 OCCBody::~OCCBody() 
 {
   if (myTopoDSShape)
-    delete myTopoDSShape;
+    delete (TopoDS_CompSolid*)myTopoDSShape;
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const

@@ -77,7 +77,7 @@ OCCLump::OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface, OCCShell* shell)
 OCCLump::~OCCLump()
 { 
   if (myTopoDSSolid)
-    delete myTopoDSSolid;
+    delete (TopoDS_Solid*)myTopoDSSolid;
 }
 
 void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
@@ -87,7 +87,7 @@ void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
 
   TopoDS_Solid* the_solid = new TopoDS_Solid(solid);
   if(myTopoDSSolid)
-    delete myTopoDSSolid ;
+    delete (TopoDS_Solid*)myTopoDSSolid ;
 
   myTopoDSSolid = the_solid;
 }

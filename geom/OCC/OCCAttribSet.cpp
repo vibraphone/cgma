@@ -122,8 +122,9 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   strings->step(); //type string filters out
   for(int i = 0; strings && i < size; i++)
   {
+    char const* string1 = strings->get_and_step()->c_str();
     TCollection_ExtendedString 
-       cstring((Standard_CString)strings->get_and_step()->c_str() );
+       cstring(string1, Standard_True );
     attr_string->SetValue(i, cstring) ;
   }
   
@@ -168,7 +169,9 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
 {
   DLIList<int*>* ints = csa->int_data_list();
   CubitString type = csa->character_type();
-  TCollection_ExtendedString cstring( (Standard_CString)type.c_str() );
+  char const* string1 = type.c_str();
+  Standard_Boolean isMultiByte = Standard_True;
+  TCollection_ExtendedString cstring( string1, isMultiByte );
   DLIList<double*>* doubles = csa->double_data_list();
   DLIList<CubitString*>* strings = csa->string_data_list();
 
@@ -233,7 +236,8 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
       for(int i = 0; i < strings->size()-1; i++)
       {
         CubitString astring = *strings->get_and_step();
-        TCollection_ExtendedString string( (Standard_CString)astring.c_str() );
+        char const* string1 = astring.c_str();
+        TCollection_ExtendedString string( string1 , Standard_True);
         if(attr_strings->Value(i) != string)
         {
           is_same = CUBIT_FALSE;
@@ -355,7 +359,8 @@ void OCCAttribSet::get_attributes(TDF_Label &lab,
         temp_string[j-1] = ToCharacter(c);
       }
       temp_string[length2] = '\0';
-      string = new CubitString(&temp_string[0]);
+      const char *s = &temp_string[0];
+      string = new CubitString(s);
       strings.append(string);
     }
   }

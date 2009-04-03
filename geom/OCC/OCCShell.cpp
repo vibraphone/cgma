@@ -72,7 +72,7 @@ OCCShell::OCCShell(TopoDS_Shell *theShell, OCCSurface* surface)
 OCCShell::~OCCShell()
 {
   if(myTopoDSShell)
-    delete myTopoDSShell;
+    delete (TopoDS_Shell*)myTopoDSShell;
 }
 
 OCCCoFace* OCCShell::remove_coface(OCCCoFace *coface)
@@ -87,7 +87,7 @@ void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
 
   TopoDS_Shell* the_shell = new TopoDS_Shell(shell);
   if (myTopoDSShell)
-    delete myTopoDSShell;
+    delete (TopoDS_Shell*)myTopoDSShell;
 
   myTopoDSShell = the_shell;
 }

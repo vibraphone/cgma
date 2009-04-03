@@ -96,7 +96,7 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 OCCSurface::~OCCSurface() 
 {
   if(myTopoDSFace)
-    delete myTopoDSFace;
+    delete (TopoDS_Face*)myTopoDSFace;
 }
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
@@ -106,7 +106,7 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 
   TopoDS_Face* face_ptr = new TopoDS_Face(face);
   if(myTopoDSFace)
-    delete myTopoDSFace;
+    delete (TopoDS_Face*)myTopoDSFace;
   myTopoDSFace = face_ptr ; 
 }
 
@@ -1001,7 +1001,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   }
   if (!old_surface.IsSame(new_surface))
   {
-    TopAbs_ShapeEnum shapetype;
+    TopAbs_ShapeEnum shapetype =  TopAbs_SHAPE;
     if(!new_surface.IsNull())
       shapetype = new_surface.TShape()->ShapeType();  
     if(shapetype == TopAbs_FACE || new_surface.IsNull())

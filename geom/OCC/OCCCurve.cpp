@@ -111,7 +111,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 OCCCurve::~OCCCurve() 
 {
   if (myTopoDSEdge)
-    delete myTopoDSEdge;
+    delete (TopoDS_Edge *)myTopoDSEdge;
 }
 
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
@@ -121,7 +121,7 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 
   TopoDS_Edge* the_edge = new TopoDS_Edge(edge);
   if(myTopoDSEdge)
-    delete myTopoDSEdge;
+    delete (TopoDS_Edge *)myTopoDSEdge;
   myTopoDSEdge = the_edge;
 }
 
@@ -997,7 +997,8 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         return (Curve*) NULL;
    }
 
-   BRepAlgo_NormalProjection aProjection(*face);
+   BRepAlgo_NormalProjection aProjection;
+   aProjection.Init(*face);
    aProjection.Add(*edge);
    aProjection.Build();
    if (!aProjection.IsDone())
