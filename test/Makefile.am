@@ -12,7 +12,7 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS = sheet
+TESTS = sheet brick
 if build_ACIS
   TESTS += webcut hollow_acis
 else
@@ -47,6 +47,8 @@ sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 test_occ_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 operation_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
+brick_SOURCES = brick.cpp
+brick_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.
