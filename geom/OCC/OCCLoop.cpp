@@ -89,7 +89,8 @@ void OCCLoop::disconnect_all_curves()
   for (int i = myCoEdgeList.size(); i--; )
   {
     OCCCoEdge* coedge = myCoEdgeList.get_and_step();
-    assert(coedge->loop() == this);
+    OCCLoop *loop = CAST_TO(coedge->loop(), OCCLoop);
+    assert(loop == this);
   }
   myCoEdgeList.clean_out();
 }

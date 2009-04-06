@@ -2286,24 +2286,37 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             else
               curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
             OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
-            CubitPointContainment pc = occ_curve->point_containment(p);
+   
+            CubitPointContainment pc = CUBIT_PNT_OFF;
+            if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE) 
+            {
+              pc = occ_curve->point_containment(p);
 
-	    if(pc == CUBIT_PNT_ON) //overlap
- 	    {
-              //check if they are the same edge, so don't need to be split
-              //the overlapped edges are considered the same if they have the
-              //same length
-              if((d2 - d1) > TOL)
-              {
-	        added = CUBIT_TRUE;
-   	        splitor.Add(edge, from_edge);
+	      if(pc == CUBIT_PNT_ON) //overlap
+ 	      {
+                //check if they are the same edge, so don't need to be split
+                //the overlapped edges are considered the same if they have the
+                //same length
+                if((d2 - d1) > TOL)
+                {
+	          added = CUBIT_TRUE;
+   	          splitor.Add(edge, from_edge);
+                }
+                else
+	          skipped = CUBIT_TRUE;
+                total_edges--;
+                break;
               }
-              else
-	        skipped = CUBIT_TRUE;
-              total_edges--;
-              break;
 	    }
+            else if(list_of_edges.Extent() == 1 && (d2 - d1) <= TOL)
+              skipped = CUBIT_TRUE;
           } 
+          if(list_of_edges.Extent() == 1 && !skipped) 
+          {
+            added = CUBIT_TRUE;
+            Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+            curve_list.append(curve); 
+          }
         } 
         if(added)
         {
@@ -2334,7 +2347,15 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
       if (total_edges >= 1)
 	{      
-	  CubitStatus stat = sort_curves(curve_list, edge_lists); 
+	  CubitStatus stat = CUBIT_SUCCESS;
+          if(curve_list.size() > 0)
+             stat = sort_curves(curve_list, edge_lists); 
+          else
+          {
+             TopoDS_Face* topo_face = new TopoDS_Face(from_face);
+             from_faces.append(topo_face);
+             continue;
+          }
 	  DLIList<TopoDS_Edge*>* edge_list;
           int size = edge_lists.size();
           for (int iii = 0; iii < size; iii++)
@@ -2348,10 +2369,10 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             {
               count_intersection = check_intersection(edge_list, from_face);
             
-              if (count_intersection < 2)
+              if (count_intersection == 1 )
                 PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
 	    } 
-            if (stat || count_intersection == 2)
+            if (stat)
             {
 	      BRepBuilderAPI_MakeWire myWire;
               edge_list->reset(); 

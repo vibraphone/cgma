@@ -305,9 +305,8 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
            if (curvature_2 != NULL)
               *curvature_2 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
         }
-  	return CUBIT_SUCCESS;
   }
-  return CUBIT_FAILURE;
+  return CUBIT_SUCCESS;
 }
 
 //-------------------------------------------------------------------------
