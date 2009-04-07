@@ -60,8 +60,7 @@ public:
     
   inline void set_curve(Curve* curve) {myCurve = curve;}
 
-  inline LoopSM* loop() const { if(myLoop)return myLoop;
-                                else return NULL; }
+  LoopSM* loop(); 
 
   inline void set_loop(LoopSM * loop) {myLoop = loop;}
 

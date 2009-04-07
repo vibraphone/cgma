@@ -64,6 +64,11 @@ OCCCoEdge::get_geometry_query_engine() const
   return OCCQueryEngine::instance();
 }
 
+LoopSM* OCCCoEdge::loop()
+{
+  return myLoop;
+}
+
 void OCCCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* csattrib_ptr)
 {
 }

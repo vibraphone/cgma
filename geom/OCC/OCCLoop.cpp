@@ -85,13 +85,6 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
 //-------------------------------------------------------------------------
 void OCCLoop::disconnect_all_curves()
 {
-  myCoEdgeList.reset();
-  for (int i = myCoEdgeList.size(); i--; )
-  {
-    OCCCoEdge* coedge = myCoEdgeList.get_and_step();
-    OCCLoop *loop = CAST_TO(coedge->loop(), OCCLoop);
-    assert(loop == this);
-  }
   myCoEdgeList.clean_out();
 }
 
