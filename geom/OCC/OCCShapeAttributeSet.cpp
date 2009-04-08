@@ -433,7 +433,7 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
     do {
       IS >> buffer;
       i = buffer.find_first_of("*");
-      if(i > 0)
+      if(i > 0 && i < buffer.size())
       {
         stringdata = buffer.substr( 0, i );
         CubitString* string_prt2 = new CubitString(stringdata.c_str());
@@ -444,7 +444,7 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
       IS.get(); //' '
       IS.get(s); //either '*' or 'number' or a char
       IS.unget();
-    } while(s!= '*' && !(s > '0' && s < '9'));
+    } while(s!= '*' && !(s >= '0' && s <= '9'));
     
     int tmp_int;
     double  tmp_dbl; 
