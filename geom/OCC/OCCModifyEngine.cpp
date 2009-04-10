@@ -2002,185 +2002,189 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces; 
   while( more_face)
-  {
-    TopoDS_Face from_face,tool_face;
-    TopoDS_Edge* common_edge = NULL;
-    DLIList<TopoDS_Shape*> tool_faces_edges;
-    TopTools_ListOfShape list_of_edges;
-    BRepFeat_SplitShape splitor(*from_shape);
-    CubitBoolean qualified = CUBIT_TRUE;
-    if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
     {
-      if(count == 1)
-        break;
-      
-      DLIList<TopoDS_Face*> faces;
-      //need to delete TopoDS_Face* in faces
-      common_edge = find_imprinting_edge(*from_shape, TopoDS::Edge(*tool_shape),faces);
-      if (common_edge)
-      {
-        if (on_faces)
-          qualified = CUBIT_FALSE;
-        for(int j = 0; j < faces.size(); j++)
-        {
-          from_face = *faces.get();
-          for (int i = 0; on_faces && i < on_faces->size(); i++)
-          {
-            if (from_face.IsSame(*(on_faces->get_and_step())))
-            {
-              qualified = CUBIT_TRUE; 
-              break;
-            }
-          }
-          faces.get()->Nullify();
-          delete faces.get();
-          faces.step();
-        }
-        if (qualified && (from_faces.size() == 0 || (from_faces.size() && !from_face.IsSame(*from_faces.get()))) )
-          list_of_edges.Append(*common_edge);
-        else
-          from_face.Nullify();
-        common_edge->Nullify();
-        delete common_edge;
-      }
-    }
-    else 
-    {
-      TopOpeBRep_ShapeIntersector intersector;
-      intersector.InitIntersection(*from_shape, *tool_shape);
-
-      //find the intersecting edges and faces.
-      int max_edge = 0;
-      for(; intersector.MoreIntersection(); intersector.NextIntersection())
+      TopoDS_Face from_face,tool_face;
+      TopoDS_Edge* common_edge = NULL;
+      DLIList<TopoDS_Shape*> tool_faces_edges;
+      TopTools_ListOfShape list_of_edges;
+      BRepFeat_SplitShape splitor(*from_shape);
+      CubitBoolean qualified = CUBIT_TRUE;
+      if (tool_shape->TShape()->ShapeType() == TopAbs_EDGE)
 	{
-          TopoDS_Shape face1;
-	  face1 = intersector.ChangeFacesIntersector().Face(1);
-          CubitBoolean has_imprinted = CUBIT_FALSE;
-          for (int j = 0; j < from_faces.size(); j++)
-          {
-            TopoDS_Face* topo_face = from_faces.get_and_step();
-            if(face1.IsSame(*topo_face))
-            {
-              has_imprinted = CUBIT_TRUE;
-              break;
-            }
-          }
-
-          if (has_imprinted)
-	    continue;
-
-          TopoDS_Shape edge_face;
-
-          edge_face = intersector.ChangeFacesIntersector().Face(2);
-          BRepAlgoAPI_Section section(face1, edge_face);
-
-          //intersection edges between face1 and edge_face
-	  TopTools_ListOfShape temp_list_of_edges;
-	  temp_list_of_edges.Assign(section.SectionEdges());
-	  int num_edges = temp_list_of_edges.Extent();
-  
-          CubitBoolean is_same = face1.IsSame(from_face);
-          CubitBoolean is_same_tool = CUBIT_FALSE;
-          for (int j = 0; j < tool_faces_edges.size(); j++)
-          {
-            TopoDS_Shape* topo_face_edge = tool_faces_edges.get_and_step();
-            if(edge_face.IsSame(*topo_face_edge))
-            {
-              is_same_tool = CUBIT_TRUE;
-	      break;
-	    }
-          }
-	  if (max_edge < num_edges )
+	  if(count == 1)
+	    break;
+      
+	  DLIList<TopoDS_Face*> faces;
+	  //need to delete TopoDS_Face* in faces
+	  common_edge = find_imprinting_edge(*from_shape, TopoDS::Edge(*tool_shape),faces);
+	  if (common_edge)
 	    {
-	      list_of_edges.Assign(temp_list_of_edges);  
-	      max_edge =  num_edges ;
-	      from_face = TopoDS::Face(face1);
-              TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
-              DLIList<TopoDS_Shape*> shape_list;
-              for(int iii = 0; iii < tool_faces_edges.size(); iii++)
-              {
-                int size = shape_list.size();
-                shape_list.append_unique(tool_faces_edges.get_and_step());
-                if (size < shape_list.size())
-                {
-                  shape_list.last();
-                  shape_list.get()->Nullify();
-                  delete shape_list.get();
-                }
-              }
-              tool_faces_edges.clean_out();
-              for(int i = 0 ; i < num_edges; i++)
-                //later has to use it num_edges times 
-                tool_faces_edges.append(topo_shape);
+	      if (on_faces)
+		qualified = CUBIT_FALSE;
+	      for(int j = 0; j < faces.size(); j++)
+		{
+		  from_face = *faces.get();
+		  for (int i = 0; on_faces && i < on_faces->size(); i++)
+		    {
+		      if (from_face.IsSame(*(on_faces->get_and_step())))
+			{
+			  qualified = CUBIT_TRUE; 
+			  break;
+			}
+		    }
+		  faces.get()->Nullify();
+		  delete faces.get();
+		  faces.step();
+		}
+	      if (qualified && (from_faces.size() == 0 || (from_faces.size() && !from_face.IsSame(*from_faces.get()))) )
+		list_of_edges.Append(*common_edge);
+	      else
+		from_face.Nullify();
+	      common_edge->Nullify();
+	      delete common_edge;
 	    }
-          else if(num_edges == max_edge && is_same && !is_same_tool) 
-          //multi tool faces cut the same face
-          {
-            TopTools_ListIteratorOfListOfShape Itor, temp_Itor;
-            temp_Itor.Initialize(temp_list_of_edges);
-            for(; temp_Itor.More(); temp_Itor.Next())
-            {
-              TopoDS_Edge temp_edge = TopoDS::Edge(temp_Itor.Value());
-              Itor.Initialize(list_of_edges);
-              CubitBoolean same_edge = CUBIT_FALSE;
-              
-              GProp_GProps myProps1;
-              BRepGProp::LinearProperties(temp_edge, myProps1);
-              gp_Pnt center1 = myProps1.CentreOfMass();
-              for(; Itor.More(); Itor.Next())
-              {
-                TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
-                GProp_GProps myProps2;
-                BRepGProp::LinearProperties(edge, myProps2);
-                gp_Pnt center2 = myProps2.CentreOfMass();
-                if(center1.IsEqual(center2, TOL))
-                {
-		  same_edge = CUBIT_TRUE;
-                  break;
-  		}
-	      }
-              if(!same_edge)
-              {
-                list_of_edges.Append(temp_edge);
-                TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
-                tool_faces_edges.append(topo_shape);
- 	      }
-            }
-          }
 	}
-      }
-      if (from_face.IsNull())
-      {
-        more_face = CUBIT_FALSE;
-        DLIList<TopoDS_Shape*> shape_list;
-        for(int iii = 0; iii < tool_faces_edges.size(); iii++)
-        {
-           int size = shape_list.size();
-           shape_list.append_unique(tool_faces_edges.get_and_step());
-           if (size < shape_list.size())
-           {
-              shape_list.last();
-              shape_list.get()->Nullify();
-              delete shape_list.get();
-           }
-         }
-        tool_faces_edges.clean_out();
+      else 
+	{
+	  TopOpeBRep_ShapeIntersector intersector;
+	  intersector.InitIntersection(*from_shape, *tool_shape);
 
-        for (int iii=0; iii < from_faces.size(); iii++)
-        {
-          TopoDS_Face* topo_face = from_faces.get_and_step();
-          topo_face->Nullify();
-          delete topo_face;
-        }
+	  //find the intersecting edges and faces.
+	  int max_edge = 0;
+                     
+	  for(; intersector.MoreIntersection(); )
+	    {
+	      TopoDS_Shape face1;
+	      face1 = intersector.ChangeFacesIntersector().Face(1);
+	      CubitBoolean has_imprinted = CUBIT_FALSE;
+	      for (int j = 0; j < from_faces.size(); j++)
+		{
+		  TopoDS_Face* topo_face = from_faces.get_and_step();
+		  if(face1.IsSame(*topo_face))
+		    {
+		      has_imprinted = CUBIT_TRUE;
+		      break;
+		    }
+		}
+
+	      if (has_imprinted == CUBIT_TRUE)
+		{
+		  intersector.NextIntersection();
+		  continue;
+		}
+	      TopoDS_Shape edge_face;
+
+	      edge_face = intersector.ChangeFacesIntersector().Face(2);
+	      BRepAlgoAPI_Section section(face1, edge_face);
+
+	      //intersection edges between face1 and edge_face
+	      TopTools_ListOfShape temp_list_of_edges;
+	      temp_list_of_edges.Assign(section.SectionEdges());
+	      int num_edges = temp_list_of_edges.Extent();
+  
+	      CubitBoolean is_same = face1.IsSame(from_face);
+	      CubitBoolean is_same_tool = CUBIT_FALSE;
+	      for (int j = 0; j < tool_faces_edges.size(); j++)
+		{
+		  TopoDS_Shape* topo_face_edge = tool_faces_edges.get_and_step();
+		  if(edge_face.IsSame(*topo_face_edge))
+		    {
+		      is_same_tool = CUBIT_TRUE;
+		      break;
+		    }
+		}
+	      if (max_edge < num_edges )
+		{
+		  list_of_edges.Assign(temp_list_of_edges);  
+		  max_edge =  num_edges ;
+		  from_face = TopoDS::Face(face1);
+		  TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
+		  DLIList<TopoDS_Shape*> shape_list;
+		  for(int iii = 0; iii < tool_faces_edges.size(); iii++)
+		    {
+		      int size = shape_list.size();
+		      shape_list.append_unique(tool_faces_edges.get_and_step());
+		      if (size < shape_list.size())
+			{
+			  shape_list.last();
+			  shape_list.get()->Nullify();
+			  delete shape_list.get();
+			}
+		    }
+		  tool_faces_edges.clean_out();
+		  for(int i = 0 ; i < num_edges; i++)
+		    //later has to use it num_edges times 
+		    tool_faces_edges.append(topo_shape);
+		}
+	      else if(num_edges == max_edge && is_same && !is_same_tool) 
+		//multi tool faces cut the same face
+		{
+		  TopTools_ListIteratorOfListOfShape Itor, temp_Itor;
+		  temp_Itor.Initialize(temp_list_of_edges);
+		  for(; temp_Itor.More(); temp_Itor.Next())
+		    {
+		      TopoDS_Edge temp_edge = TopoDS::Edge(temp_Itor.Value());
+		      Itor.Initialize(list_of_edges);
+		      CubitBoolean same_edge = CUBIT_FALSE;
+              
+		      GProp_GProps myProps1;
+		      BRepGProp::LinearProperties(temp_edge, myProps1);
+		      gp_Pnt center1 = myProps1.CentreOfMass();
+		      for(; Itor.More(); Itor.Next())
+			{
+			  TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+			  GProp_GProps myProps2;
+			  BRepGProp::LinearProperties(edge, myProps2);
+			  gp_Pnt center2 = myProps2.CentreOfMass();
+			  if(center1.IsEqual(center2, TOL))
+			    {
+			      same_edge = CUBIT_TRUE;
+			      break;
+			    }
+			}
+		      if(!same_edge)
+			{
+			  list_of_edges.Append(temp_edge);
+			  TopoDS_Shape* topo_shape = new TopoDS_Shape(edge_face);
+			  tool_faces_edges.append(topo_shape);
+			}
+		    }//end 'for'
+		}//end  'else if'
+              intersector.NextIntersection();
+	    } //end 'for'
+	}//end 'else'
+      if (from_face.IsNull())
+	{
+	  more_face = CUBIT_FALSE;
+	  DLIList<TopoDS_Shape*> shape_list;
+	  for(int iii = 0; iii < tool_faces_edges.size(); iii++)
+	    {
+	      int size = shape_list.size();
+	      shape_list.append_unique(tool_faces_edges.get_and_step());
+	      if (size < shape_list.size())
+		{
+		  shape_list.last();
+		  shape_list.get()->Nullify();
+		  delete shape_list.get();
+		}
+	    }
+	  tool_faces_edges.clean_out();
+
+	  for (int iii=0; iii < from_faces.size(); iii++)
+	    {
+	      TopoDS_Face* topo_face = from_faces.get_and_step();
+	      topo_face->Nullify();
+	      delete topo_face;
+	    }
         
-        for (int iii=0; iii < list_for_delete.size(); iii++)
-        {
-           TopoDS_Face* topo_face = list_for_delete.get_and_step();
-           topo_face->Nullify();
-           delete topo_face;
-        }
-        continue;
-      }
+	  for (int iii=0; iii < list_for_delete.size(); iii++)
+	    {
+	      TopoDS_Face* topo_face = list_for_delete.get_and_step();
+	      topo_face->Nullify();
+	      delete topo_face;
+	    }
+	  continue;
+	}
   
       TopTools_ListIteratorOfListOfShape Itor;
 
@@ -2199,298 +2203,298 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
       Surface* face = NULL;
       if (OCCQueryEngine::instance()->OCCMap->IsBound(from_face))
-      {
-        int i = OCCQueryEngine::instance()->OCCMap->Find(from_face);
-        face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
-      }
+	{
+	  int i = OCCQueryEngine::instance()->OCCMap->Find(from_face);
+	  face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
+	}
       else
         face = OCCQueryEngine::instance()->populate_topology_bridge(from_face);
       OCCSurface* occ_face = CAST_TO(face, OCCSurface);
 
       DLIList<Curve*> common_curves;
       for(; Itor.More(); Itor.Next())
-      {
-        TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
-        //copy the edge for imprinting.
-        BRepBuilderAPI_Copy api_copy(edge);
-        TopoDS_Shape newShape = api_copy.ModifiedShape(edge);
-        edge = TopoDS::Edge(newShape);
-        Curve* curve = NULL;
-        curve = OCCQueryEngine::instance()->populate_topology_bridge(edge); 
-        if(curve)
-          common_curves.append(curve);
-      }
+	{
+	  TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+	  //copy the edge for imprinting.
+	  BRepBuilderAPI_Copy api_copy(edge);
+	  TopoDS_Shape newShape = api_copy.ModifiedShape(edge);
+	  edge = TopoDS::Edge(newShape);
+	  Curve* curve = NULL;
+	  curve = OCCQueryEngine::instance()->populate_topology_bridge(edge); 
+	  if(curve)
+	    common_curves.append(curve);
+	}
 
       DLIList<DLIList<TopoDS_Edge*>*> temp_edge_lists;
       list_of_edges.Clear(); 
       if (common_curves.size() >= 1)
-      {
-        sort_curves(common_curves, temp_edge_lists);
-        DLIList<TopoDS_Edge*>* edge_list;
-        int size = temp_edge_lists.size();
-        for(int i = 0; i < size; i++)
-        {
-          edge_list = temp_edge_lists.pop();
-          //make sure the copied edges are sharing vertices.
-          BRepBuilderAPI_MakeWire myWire;
-          edge_list->reset();
-          for(int i = 0; i < edge_list->size(); i++)
-          {
-             TopoDS_Edge e = *(edge_list->get_and_step());
-             myWire.Add(e);
-          }
-          TopoDS_Wire wire = myWire.Wire();
-          BRepTools_WireExplorer Ex(wire); 
-          for(; Ex.More(); Ex.Next())
-            list_of_edges.Append(Ex.Current());
-        }
-      }
-      for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
-      {
-        TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
-        //check to see if the intersection edge is on from_face
-	TopExp_Explorer Ex;
-	CubitBoolean added = CUBIT_FALSE;
-        CubitBoolean skipped = CUBIT_FALSE;
-        GProp_GProps myProps1;
-        BRepGProp::LinearProperties(edge, myProps1);
-        double d1 = myProps1.Mass();
-        gp_Pnt pt = myProps1.CentreOfMass();
-        CubitVector p(pt.X(), pt.Y(), pt.Z());
-
-        CubitVector point_on_surf;
-        occ_face->closest_point_trimmed(p, point_on_surf);
-        if(p.distance_between(point_on_surf) > TOL) //edge not on from_face
-        {
-          skipped = CUBIT_TRUE;
-          total_edges--;
-        }
-
-        else 
-        {
-	  for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
-	  {
-           //check if the edge is on from_face edges, add such edge on existing
-            //edge to split it.
-	    TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
-         
-            GProp_GProps myProps2;
-            BRepGProp::LinearProperties(from_edge, myProps2);
-            double d2 = myProps2.Mass();
-            Curve* curve = NULL;
-            if (OCCQueryEngine::instance()->OCCMap->IsBound(from_edge))
-            {
-              int i = OCCQueryEngine::instance()->OCCMap->Find(from_edge);
-              curve = (OCCCurve*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
-            }
-            else
-              curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
-            OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
-   
-            CubitPointContainment pc = CUBIT_PNT_OFF;
-            if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE) 
-            {
-              pc = occ_curve->point_containment(p);
-
-	      if(pc == CUBIT_PNT_ON) //overlap
- 	      {
-                //check if they are the same edge, so don't need to be split
-                //the overlapped edges are considered the same if they have the
-                //same length
-                if((d2 - d1) > TOL)
-                {
-	          added = CUBIT_TRUE;
-   	          splitor.Add(edge, from_edge);
-                }
-                else
-	          skipped = CUBIT_TRUE;
-                total_edges--;
-                break;
-              }
+	{
+	  sort_curves(common_curves, temp_edge_lists);
+	  DLIList<TopoDS_Edge*>* edge_list;
+	  int size = temp_edge_lists.size();
+	  for(int i = 0; i < size; i++)
+	    {
+	      edge_list = temp_edge_lists.pop();
+	      //make sure the copied edges are sharing vertices.
+	      BRepBuilderAPI_MakeWire myWire;
+	      edge_list->reset();
+	      for(int i = 0; i < edge_list->size(); i++)
+		{
+		  TopoDS_Edge e = *(edge_list->get_and_step());
+		  myWire.Add(e);
+		}
+	      TopoDS_Wire wire = myWire.Wire();
+	      BRepTools_WireExplorer Ex(wire); 
+	      for(; Ex.More(); Ex.Next())
+		list_of_edges.Append(Ex.Current());
 	    }
-            else if(list_of_edges.Extent() == 1 && (d2 - d1) <= TOL)
-              skipped = CUBIT_TRUE;
-          } 
-          if(list_of_edges.Extent() == 1 && !skipped) 
-          {
-            added = CUBIT_TRUE;
-            Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
-            curve_list.append(curve); 
-          }
-        } 
-        if(added)
-        {
-          topo_changed = CUBIT_TRUE;
-          continue;
-        }
-        if (!skipped)
-        {
-          //check if edge's inside from_face by checking bounding boxes  
-          BRepAdaptor_Curve acurve(edge);
-          BRepAdaptor_Surface asurface( from_face);
-          Bnd_Box aBox_edge, aBox_face;
-          BndLib_Add3dCurve::Add(acurve, Precision::Approximation(), aBox_edge);
-          BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox_face);
-          double min[3], max[3];
-          aBox_edge.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
-          CubitBox aBox_e(min, max);
-          aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
-          CubitBox aBox_f(min, max);
-          if (aBox_e <= aBox_f)
-          {
-	    Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
-	    curve_list.append(curve);
-          }
-        }
-      }
+	}
+      for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
+	{
+	  TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+	  //check to see if the intersection edge is on from_face
+	  TopExp_Explorer Ex;
+	  CubitBoolean added = CUBIT_FALSE;
+	  CubitBoolean skipped = CUBIT_FALSE;
+	  GProp_GProps myProps1;
+	  BRepGProp::LinearProperties(edge, myProps1);
+	  double d1 = myProps1.Mass();
+	  gp_Pnt pt = myProps1.CentreOfMass();
+	  CubitVector p(pt.X(), pt.Y(), pt.Z());
+
+	  CubitVector point_on_surf;
+	  occ_face->closest_point_trimmed(p, point_on_surf);
+	  if(p.distance_between(point_on_surf) > TOL) //edge not on from_face
+	    {
+	      skipped = CUBIT_TRUE;
+	      total_edges--;
+	    }
+
+	  else 
+	    {
+	      for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
+		{
+		  //check if the edge is on from_face edges, add such edge on existing
+		  //edge to split it.
+		  TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
+         
+		  GProp_GProps myProps2;
+		  BRepGProp::LinearProperties(from_edge, myProps2);
+		  double d2 = myProps2.Mass();
+		  Curve* curve = NULL;
+		  if (OCCQueryEngine::instance()->OCCMap->IsBound(from_edge))
+		    {
+		      int i = OCCQueryEngine::instance()->OCCMap->Find(from_edge);
+		      curve = (OCCCurve*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
+		    }
+		  else
+		    curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
+		  OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+   
+		  CubitPointContainment pc = CUBIT_PNT_OFF;
+		  if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE) 
+		    {
+		      pc = occ_curve->point_containment(p);
+
+		      if(pc == CUBIT_PNT_ON) //overlap
+			{
+			  //check if they are the same edge, so don't need to be split
+			  //the overlapped edges are considered the same if they have the
+			  //same length
+			  if((d2 - d1) > TOL)
+			    {
+			      added = CUBIT_TRUE;
+			      splitor.Add(edge, from_edge);
+			    }
+			  else
+			    skipped = CUBIT_TRUE;
+			  total_edges--;
+			  break;
+			}
+		    }
+		  else if(list_of_edges.Extent() == 1 && (d2 - d1) <= TOL)
+		    skipped = CUBIT_TRUE;
+		} 
+	      if(list_of_edges.Extent() == 1 && !skipped) 
+		{
+		  added = CUBIT_TRUE;
+		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+		  curve_list.append(curve); 
+		}
+	    } 
+	  if(added)
+	    {
+	      topo_changed = CUBIT_TRUE;
+	      continue;
+	    }
+	  if (!skipped)
+	    {
+	      //check if edge's inside from_face by checking bounding boxes  
+	      BRepAdaptor_Curve acurve(edge);
+	      BRepAdaptor_Surface asurface( from_face);
+	      Bnd_Box aBox_edge, aBox_face;
+	      BndLib_Add3dCurve::Add(acurve, Precision::Approximation(), aBox_edge);
+	      BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox_face);
+	      double min[3], max[3];
+	      aBox_edge.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
+	      CubitBox aBox_e(min, max);
+	      aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
+	      CubitBox aBox_f(min, max);
+	      if (aBox_e <= aBox_f)
+		{
+		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+		  curve_list.append(curve);
+		}
+	    }
+	}
 
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
       if (total_edges >= 1)
 	{      
 	  CubitStatus stat = CUBIT_SUCCESS;
           if(curve_list.size() > 0)
-             stat = sort_curves(curve_list, edge_lists); 
+	    stat = sort_curves(curve_list, edge_lists); 
           else
-          {
-             TopoDS_Face* topo_face = new TopoDS_Face(from_face);
-             from_faces.append(topo_face);
-             continue;
-          }
+	    {
+	      TopoDS_Face* topo_face = new TopoDS_Face(from_face);
+	      from_faces.append(topo_face);
+	      continue;
+	    }
 	  DLIList<TopoDS_Edge*>* edge_list;
           int size = edge_lists.size();
           for (int iii = 0; iii < size; iii++)
-          {
-	    edge_list = edge_lists.pop();
+	    {
+	      edge_list = edge_lists.pop();
 
-            //check if the edges make a split of the surface, error out if it's
-            //just a scar on the surface
-            int count_intersection = 0;
-            if (stat == CUBIT_FAILURE) //Open wire
-            {
-              count_intersection = check_intersection(edge_list, from_face);
+	      //check if the edges make a split of the surface, error out if it's
+	      //just a scar on the surface
+	      int count_intersection = 0;
+	      if (stat == CUBIT_FAILURE) //Open wire
+		{
+		  count_intersection = check_intersection(edge_list, from_face);
             
-              if (count_intersection == 1 )
-                PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
-	    } 
-            if (stat)
-            {
-	      BRepBuilderAPI_MakeWire myWire;
-              edge_list->reset(); 
-	      for(int i = 0; i < edge_list->size(); i++)
-	        {
-	          TopoDS_Edge e = *(edge_list->get_and_step());
-	          myWire.Add(e); 
-	        }
-	      splitor.Add(myWire.Wire(),from_face);
-              topo_changed = CUBIT_TRUE; 
-              break;
-            }
-            for(int iii = 0; iii < edge_list->size(); iii++)
-              edge_list->pop();
-            delete edge_list;
-          }
+		  if (count_intersection == 1 )
+		    PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
+		} 
+	      if (stat)
+		{
+		  BRepBuilderAPI_MakeWire myWire;
+		  edge_list->reset(); 
+		  for(int i = 0; i < edge_list->size(); i++)
+		    {
+		      TopoDS_Edge e = *(edge_list->get_and_step());
+		      myWire.Add(e); 
+		    }
+		  splitor.Add(myWire.Wire(),from_face);
+		  topo_changed = CUBIT_TRUE; 
+		  break;
+		}
+	      for(int iii = 0; iii < edge_list->size(); iii++)
+		edge_list->pop();
+	      delete edge_list;
+	    }
 	} 
       if(topo_changed)
-      {
-        splitor.Build();
-        topo_changed = CUBIT_FALSE;
-        if(splitor.IsDone())
-        {
-          //take care of on_faces list first:after operation, the on_faces
-          // will have at least one face changed, update the pointer.
-          if (on_faces)
-          {
-            for(int k = 0; k < on_faces->size(); k++)
-            {
-              TopoDS_Face* compare_face = on_faces->get_and_step();
-              if(from_face.IsSame(*compare_face))
-              {
-                on_faces->remove(compare_face);
-                TopTools_ListOfShape shapes;
-                shapes.Assign(splitor.Modified(from_face)); 
-                while(shapes.Extent() > 0)
-                {
-                  TopoDS_Face* face = 
-                    new TopoDS_Face(TopoDS::Face(shapes.First())); 
-                  shapes.RemoveFirst();
-                  on_faces->append(face);
-                  list_for_delete.append(face);
-                }
-              }
-            }
-          }
+	{
+	  splitor.Build();
+	  topo_changed = CUBIT_FALSE;
+	  if(splitor.IsDone())
+	    {
+	      //take care of on_faces list first:after operation, the on_faces
+	      // will have at least one face changed, update the pointer.
+	      if (on_faces)
+		{
+		  for(int k = 0; k < on_faces->size(); k++)
+		    {
+		      TopoDS_Face* compare_face = on_faces->get_and_step();
+		      if(from_face.IsSame(*compare_face))
+			{
+			  on_faces->remove(compare_face);
+			  TopTools_ListOfShape shapes;
+			  shapes.Assign(splitor.Modified(from_face)); 
+			  while(shapes.Extent() > 0)
+			    {
+			      TopoDS_Face* face = 
+				new TopoDS_Face(TopoDS::Face(shapes.First())); 
+			      shapes.RemoveFirst();
+			      on_faces->append(face);
+			      list_for_delete.append(face);
+			    }
+			}
+		    }
+		}
 
-          TopoDS_Shape new_from_shape = splitor.Shape();
-          if(from_shape->TShape()->ShapeType() == TopAbs_COMPSOLID)
-          {
-            TopoDS_CompSolid old_csolid = TopoDS::CompSolid(*from_shape);
-            OCCBody::update_OCC_entity(old_csolid, new_from_shape, &splitor);
-            from_shape->Nullify();
-            delete from_shape;
-            from_shape = new TopoDS_Shape(new_from_shape);
-          }
+	      TopoDS_Shape new_from_shape = splitor.Shape();
+	      if(from_shape->TShape()->ShapeType() == TopAbs_COMPSOLID)
+		{
+		  TopoDS_CompSolid old_csolid = TopoDS::CompSolid(*from_shape);
+		  OCCBody::update_OCC_entity(old_csolid, new_from_shape, &splitor);
+		  from_shape->Nullify();
+		  delete from_shape;
+		  from_shape = new TopoDS_Shape(new_from_shape);
+		}
 
-          else if(from_shape->TShape()->ShapeType() == TopAbs_SOLID)
-          {
-            TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
-            OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-            from_shape->Nullify();
-            delete from_shape;
-            from_shape = new TopoDS_Shape(new_from_shape);
-          }
-          else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
-          {
-            TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
-            OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
-            from_shape->Nullify();
-            delete from_shape;
-            from_shape = new TopoDS_Shape(new_from_shape);
-          }
-          else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
-          {
-            TopoDS_Face old_face = TopoDS::Face(*from_shape);
-            OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
-            from_shape->Nullify();
-            delete from_shape;
-            from_shape = new TopoDS_Shape(new_from_shape);
-          }
+	      else if(from_shape->TShape()->ShapeType() == TopAbs_SOLID)
+		{
+		  TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
+		  OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
+		  from_shape->Nullify();
+		  delete from_shape;
+		  from_shape = new TopoDS_Shape(new_from_shape);
+		}
+	      else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
+		{
+		  TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
+		  OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
+		  from_shape->Nullify();
+		  delete from_shape;
+		  from_shape = new TopoDS_Shape(new_from_shape);
+		}
+	      else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
+		{
+		  TopoDS_Face old_face = TopoDS::Face(*from_shape);
+		  OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
+		  from_shape->Nullify();
+		  delete from_shape;
+		  from_shape = new TopoDS_Shape(new_from_shape);
+		}
 
-          TopTools_ListOfShape shapes;
-          for(int i = 0; i < from_faces.size(); i++)
-          {
-             TopoDS_Face* topo_face = from_faces.get();
-             shapes.Assign(splitor.Modified(*topo_face));
-             topo_face = new TopoDS_Face(TopoDS::Face(shapes.First()));
-             from_faces.get()->Nullify();
-             delete from_faces.get();
-             from_faces.change_to(topo_face);
-             from_faces.step();
-          } 
-          count++;
-        }
-      }
+	      TopTools_ListOfShape shapes;
+	      for(int i = 0; i < from_faces.size(); i++)
+		{
+		  TopoDS_Face* topo_face = from_faces.get();
+		  shapes.Assign(splitor.Modified(*topo_face));
+		  topo_face = new TopoDS_Face(TopoDS::Face(shapes.First()));
+		  from_faces.get()->Nullify();
+		  delete from_faces.get();
+		  from_faces.change_to(topo_face);
+		  from_faces.step();
+		} 
+	      count++;
+	    }
+	}
       else
-      {
-        TopoDS_Face* topo_face = new TopoDS_Face(from_face);
-        from_faces.append(topo_face);
-      } 
-  }
+	{
+	  TopoDS_Face* topo_face = new TopoDS_Face(from_face);
+	  from_faces.append(topo_face);
+	} 
+    }
   
   
   TopExp_Explorer Ex;
   int num_face = 0;
   for (Ex.Init(*from_shape, TopAbs_FACE); Ex.More(); Ex.Next())
-  {
-     TopoDS_Face face = TopoDS::Face(Ex.Current());
-     num_face++;
-  }
+    {
+      TopoDS_Face face = TopoDS::Face(Ex.Current());
+      num_face++;
+    }
   
 #ifdef DEBUG  
   PRINT_INFO("Total %d cuts performed, with from_shape having %d faces.\n", count, num_face); 
 #endif
 
   if (count > 0)
-     return CUBIT_SUCCESS;
+    return CUBIT_SUCCESS;
   return CUBIT_FAILURE;
 }
 
@@ -2548,7 +2552,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
   if (edge_list->size() == 1)
     double_check = CUBIT_TRUE;
 
-  gp_Pnt intsec_pnt[2];
+  gp_Pnt pt1(0,0,0), pt2(0,0,0); 
+  gp_Pnt intsec_pnt[2] = {pt1, pt2} ;
   for(int j = 0; j < edge_list->size(); j++)
   {
     TopoDS_Edge* edge = edge_list->get_and_step();
@@ -2556,7 +2561,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
     double lower_bound = acurve.FirstParameter();
     double upper_bound = acurve.LastParameter();
     TopExp_Explorer Ex;
-    gp_Pnt newP[2];
+    gp_Pnt p1(0,0,0), p2(0,0,0); 
+    gp_Pnt newP[2] = {p1, p2 };
     for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
     {
       TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
@@ -2610,7 +2616,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 	    }
 	  }
         }
-        for(int k = 0; k < distShapeShape.NbSolution(); k++)
+        for(int k = 0; count_intersection < 3, k < distShapeShape.NbSolution(); k++)
         {
           if (qualified[k])
             count_intersection++;
@@ -4274,7 +4280,8 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
 
   gp_Lin line = gp_Lin(axis);
   TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(line);
-  OCCCurve* acurve = new OCCCurve(&edge);
+  TopoDS_Edge* p_edge = new TopoDS_Edge(edge);
+  OCCCurve* acurve = new OCCCurve(p_edge);
   assert(acurve);
 
   CubitVector start;
