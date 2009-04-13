@@ -2616,7 +2616,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 	    }
 	  }
         }
-        for(int k = 0; count_intersection < 3, k < distShapeShape.NbSolution(); k++)
+        for(int k = 0; count_intersection < 3 && k < distShapeShape.NbSolution(); k++)
         {
           if (qualified[k])
             count_intersection++;
