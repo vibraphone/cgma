@@ -127,6 +127,9 @@ CubitStatus hollow()
   gti->bodies(new_bodies);
   double d = new_bodies.get()->measure(); //d = 518.3627
   int n = new_bodies.get()->num_ref_faces(); //n = 5
+  assert(n == 5);
+  assert(d-518.3627 < 0.0001);
+
   //find the top most surface as the opening of the thick body.
   DLIList<RefFace*> ref_faces;
   new_bodies.get()->ref_faces(ref_faces);
@@ -147,6 +150,8 @@ CubitStatus hollow()
   //Destroyed volume(s): 1
   n = new_bodies.get()->num_ref_faces(); //n = 9
   d = new_bodies.get()->measure(); //d = 72.4074
+  assert(n == 9);
+  assert(d - 72.4074 < 0.0001);
   return stat ;
 }
 

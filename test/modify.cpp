@@ -145,7 +145,7 @@ CubitStatus make_Point()
   ref_vertices2.append(ref_vertices.pop());
 
   CubitStatus status = gmti->tweak_fillet(ref_vertices2, 1, new_bodies);
-  //status = failure
+  assert(status == CUBIT_FAILURE);
 
   //make a sheet surfaces to do fillet on vertices
   DLIList<RefFace*> ref_faces;
@@ -170,13 +170,13 @@ CubitStatus make_Point()
   DLIList<RefEdge*> ref_edges_check;
   new_bodies.get()->ref_edges(ref_edges_check);
   isize=ref_edges_check.size();
-  //isize = 6
+  assert(isize == 6);
 
   status = gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
   ref_edges_check.clean_out();
   new_bodies.get()->ref_edges(ref_edges_check);
   isize=ref_edges_check.size();
-  //isize = 8
+  assert(isize == 8);
 
   ref_vertices.clean_out();
   face2->ref_vertices(ref_vertices);
@@ -191,7 +191,7 @@ CubitStatus make_Point()
   ref_edges_check.clean_out();
   new_bodies.get()->ref_edges(ref_edges_check);
   isize=ref_edges_check.size();
-  //isize = 5
+  assert(isize == 5);
 
   new_bodies.clean_out();
   gmti->tweak_fillet(ref_edges, 1, new_bodies, CUBIT_FALSE, CUBIT_FALSE);
@@ -199,14 +199,14 @@ CubitStatus make_Point()
   ref_edges.clean_out();
   new_bodies.get()->ref_edges(ref_edges);
   isize=ref_edges.size();
-  //isize = 21
+  assert(isize == 21);
 
   ref_edges.clean_out();
   new_bodies.clean_out(); 
 
   body2->ref_edges(ref_edges);
   isize=ref_edges.size();
-  //isize = 12
+  assert(isize == 12);
   for(int i = 2; i < isize; i++)
     ref_edges.pop(); 
   
@@ -215,7 +215,7 @@ CubitStatus make_Point()
   ref_edges.clean_out();
   new_bodies.get()->ref_edges(ref_edges);
   isize=ref_edges.size();
-  //isize = 17
+  assert(isize == 17);
 
   ref_vertices.clean_out();
   ref_vertices2.clean_out();
@@ -232,7 +232,7 @@ CubitStatus make_Point()
   ref_vertices2.get()->ref_edges(ref_edges);
   status = gmti->tweak_chamfer(ref_vertices2, 1, new_bodies, ref_edges.pop(), 
                          0.7, ref_edges.pop(), 0.5, ref_edges.pop());
-  //status = failure.
+  assert(status == CUBIT_FAILURE);
 
   ref_vertices.clean_out();
   ref_vertices.append(ref_vertices2.pop());
@@ -247,7 +247,7 @@ CubitStatus make_Point()
   ref_edges.clean_out();
   new_bodies.get()->ref_edges(ref_edges);
   isize=ref_edges.size();
-  //isize = 26
+  assert(isize == 26);
  
   CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
@@ -258,6 +258,7 @@ CubitStatus make_Point()
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  assert(num_ents_exported == 4);
 
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
@@ -275,6 +276,8 @@ CubitStatus make_Point()
    CubitVector v3(0, 8.0, 0.0);
    RefEdge* edge6 = gmti->make_RefEdge(ARC_CURVE_TYPE, vert1, vert2, &v3, CUBIT_FORWARD );
    double d = edge6->measure();
+   assert(d - 22.14297 < 0.00001);
+
    DLIList<RefEntity*> listVertexEdge;
    edge6->get_child_ref_entities(listVertexEdge);
    int numVertexEdge = listVertexEdge.size();
@@ -330,10 +333,12 @@ CubitStatus make_Point()
   test_face = gmti->make_RefFace(ref_faces.get());
   surface_list.append(test_face->get_surface_ptr());
   CubitVector v_test(-5,0,0);
-  CubitVector normal;
+  CubitVector normal, test_normal(-1,0,0);
   normal = test_face->normal_at(v_test); //(-1,0,0)
+  assert(normal == test_normal);
   ome->flip_normals(surface_list);
   normal = test_face->normal_at(v_test); //(1,0, 0)
+  assert(normal == -test_normal);
   bodies.clean_out();
   test_face->bodies(bodies);
   gti->delete_Body(bodies);
@@ -364,8 +369,8 @@ CubitStatus make_Point()
   //GeometryModifyEngine *gme = gmti->get_engine(occ_surfaces.get());
   new_bodies.clean_out();
   gmti->create_solid_bodies_from_surfs(face_list, new_bodies);
-  //Created volume(s): 12 
-  //Destroyed volume(s): 5 to 10
+  //Created volume(s): 13 
+  //Destroyed volume(s): 6 to 11
 
   ref_entity_list.clean_out();
   num_ents_exported=0;
@@ -373,6 +378,7 @@ CubitStatus make_Point()
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  assert(num_ents_exported == 1);
 
   gti->bodies(bodies);
   free_entities.clean_out();
@@ -409,29 +415,33 @@ CubitStatus make_Point()
   Body* from_body2 = gmti->cylinder(8, 4, 2, 0);
   Body* tool_body = gmti->cylinder(10, 1, 1, 1);
   d = from_body->measure(); //d = 219.91
+  assert(d - 219.91 < 0.01);
   bodysm = from_body->get_body_sm_ptr();
   CubitVector center1;
   CAST_TO(bodysm, OCCBody)->mass_properties(center1, d);
   d = from_body2->measure();//d = 67.02
+  assert(d - 67.02 < 0.01);
   d = tool_body->measure(); //d = 31.41
+  assert(d - 31.41 < 0.01);
   
 
   // test for sphere making
   Body* test_body = gmti->sphere(5);
   d = test_body->measure(); //d = 523.598 
-
+  assert(d - 523.598 < 0.01);
   //test for prism making
   test_body = gmti->prism(10, 4, 4,2);
   d =  test_body->measure(); //d = 320
-
+  assert(-d + 320 < 0.1);
   //test for pyramid making
   test_body = gmti->pyramid(10, 4, 5, 2, 3);
-  d =  test_body->measure(); //d = 320
+  d =  test_body->measure(); //d = 130.6666
+  assert(d - 130.666 < 0.001);
 
   //test for torus making
   test_body =  gmti->torus(10,5);
   d =  test_body->measure(); //d = 4934.8
-
+  assert(d - 4934.8 < 0.1);
   //test for planar_sheet making
   CubitVector p1(0, 0, 0);
   CubitVector p2(0, 0, 1);
@@ -439,7 +449,7 @@ CubitStatus make_Point()
   CubitVector p4(0, 1, 0);
   test_body =  gmti->planar_sheet(p1, p2, p3, p4);
   d =  test_body->measure(); //d = 1
-
+  assert(1-d < 0.001);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -461,21 +471,26 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(from_body2, from_bodies, new_bodies, 
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Updated volume(s): 22
-  //Destroyed volume(s): 23
+  //Updated volume(s): 23
+  //Destroyed volume(s): 24
   //new bodies has one body, new body has 10 ref-faces, 5 of them are remaining
   //with old id, 5 of them are new faces.
+  assert(new_bodies.size() == 1);
+  assert(new_bodies.get()->num_ref_faces() == 10);
 
   from_bodies=new_bodies;
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body,from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Created volume(s): 25, 26
-  //Destroyed volume(s): 22, 24
+  //Created volume(s): 26, 27
+  //Destroyed volume(s): 23, 25
   d = new_bodies.step_and_get()->measure(); //d = 50
   v = new_bodies.get()->center_point(); //v = (7.5, 5, .05)
   int n = new_bodies.get()->num_ref_faces();
-  // n = 6
+  assert( n == 6);
+  assert (50 -d < 0.0001);
+  CubitVector test_v(7.5, 5, .5);
+  assert (v == test_v);
   //new bodies has 2 bodies, one has a volume = 10 and the other has a 
   //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
   //remaining (unchanged or modified).
@@ -506,7 +521,8 @@ CubitStatus make_Point()
   from_bodies.append(cp_from_body);
   new_bodies.clean_out();
   CubitStatus stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
-  //Updated volume(s): 29
+  //Updated volume(s): 30
+  //assert(new_bodies.get()->num_ref_faces() == 6);
 
   //test edge imprint on surface
   CubitVector vv(5,1,4.0);
@@ -524,8 +540,9 @@ CubitStatus make_Point()
   }
   assert(face_list.size() == 1);
   ref_edges.step_and_get()->ref_vertices(vertices);
+  new_bodies.clean_out();
   stat = gmti->imprint(unimprint_faces, ref_edges, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 30
+  //Updated volume(s): 31
 
   new_bodies.clean_out();
   face_list.clean_out();
@@ -551,15 +568,16 @@ CubitStatus make_Point()
   from_bodies.append(cp_from_body2);
   new_bodies.clean_out(); 
   stat = gmti->imprint(from_bodies, vectors, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 30
+  //Updated volume(s): 31
 
   n = new_bodies.get()->num_ref_edges();//n = 17
-
+  assert( n == 17);
   new_bodies.clean_out();
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 30
+  //Updated volume(s): 31
 
   n = new_bodies.get()->num_ref_edges();//n = 21
+  assert( n == 21);
 
   //test for multi-cut imprint for subtract.
   from_bodies.clean_out();
@@ -567,13 +585,13 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-  //Updated volume(s): 27
-  //Destroyed volume(s): 28
+  //Updated volume(s): 28
+  //Destroyed volume(s): 29
 
   n = new_bodies.get()->num_ref_faces();
-  //n = 8
+  assert(n == 8);
   n = new_bodies.get()->num_ref_edges();
-  //n = 18
+  assert(n == 18);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -614,7 +632,8 @@ CubitStatus make_Point()
 
   //test stitch surfaces operation
   ome->stitch_surfs(body_list, bodysm);
-
+  assert(bodysm != NULL);
+ 
   bodies.clean_out();
   bodies.append(tool_body);
   gti->delete_Body(bodies);
@@ -625,12 +644,18 @@ CubitStatus make_Point()
   ref_faces.clean_out();
   test_body->ref_faces(ref_faces);
   normal = ref_faces.get()->normal_at(v1); //(1,0,0)
+  CubitVector test_normal0(1,0,0);
+  assert(normal == test_normal0);
   normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
+  CubitVector test_normal2(0,0,1);
+  assert(normal == test_normal2);
   surfaces.clean_out();
   surfaces.append(ref_faces.step_and_get()->get_surface_ptr());
   ome->flip_normals(surfaces);
   normal = ref_faces.get()->normal_at(v1); //(-1,0,0)
+  assert(normal == -test_normal);
   normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
+  assert(normal == test_normal2);
   gti->delete_Body(test_body);
   surfaces.clean_out();
    
@@ -646,7 +671,7 @@ CubitStatus make_Point()
   from_bodies.append(copy_tool_body);
   from_bodies.append(from_body2);
   stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE); 
-  //Updated volume(s): 35 one body gets cut once with 7 faces, the other is not
+  //Updated volume(s): 35  no cuts performed
 
   //test body imprinted by curves.
   ref_edges.clean_out();
@@ -655,7 +680,7 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   from_bodies.append(copy_tool_body2);
   stat = gmti->imprint(from_bodies, ref_edges, new_bodies, CUBIT_FALSE, CUBIT_TRUE );
-  //Updated volume(s): 36, no cuts performed
+  //Updated volume(s): 37, 1 cut performed
 
   //test body cutting a shell, one surface got cut as the result. 
   CubitVector v_move6(1,-1,0);
@@ -665,12 +690,15 @@ CubitStatus make_Point()
   new_bodies.clean_out();
   rsl = gmti->subtract(tool_body, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_TRUE);
-  //Created volume(s): 37
+  //Created volume(s): 38
 
   d = new_bodies.step_and_get()->measure();
   v = new_bodies.get()->center_point();
   n = new_bodies.get()->num_ref_faces();
-  // n = 1
+  assert( n == 1);
+  assert(1-d<0.00001);
+  CubitVector test_v1(0.5,0.5,1);
+  assert(v == test_v1);
  
   from_bodies.clean_out();
   from_bodies.append(tool_body);
@@ -680,6 +708,7 @@ CubitStatus make_Point()
                        CUBIT_TRUE, CUBIT_TRUE);
   //WARNING: Surfaces or Shells can't be used to cut a body.
   //ERROR: Subtract FAILED
+  assert (rsl == CUBIT_FAILURE);
 
   //test solid solid imprint
   tool_body  = gmti->brick(4, 4, 4);
@@ -692,7 +721,7 @@ CubitStatus make_Point()
   from_bodies.append(from_body);
   from_bodies.append(tool_body);
   stat =  gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
-  //Updated volume(s): 38, 39
+  //Updated volume(s): 39, 40
   //one body gets 4 cuts, the other 3.
   //one body gets 10 faces, the other 9.
   

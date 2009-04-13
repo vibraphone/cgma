@@ -125,7 +125,8 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
     if (type.empty()) // just guess OCC
       type = "OCC";
     std::string filename( local ? "./" : SRCPATH );
-    filename += argv[i];
+    char const* local_name = argv[i];
+    filename += local_name;  
     status = gti->import_solid_model(filename.c_str(), type.c_str());
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
@@ -164,6 +165,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3.occ
+  assert(num_ents_exported == 18);
 
   filetype = "IGES";
   filename = "ex3export.iges";
@@ -172,6 +174,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3export.iges
+  assert(num_ents_exported == 18);
 
   filetype = "STEP";
   filename = "ex3export.step";
@@ -179,6 +182,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  18 OCC Curves to ex3export.step
+  assert(num_ents_exported == 18);
 
   gti->bodies(bodies);
 
@@ -207,6 +211,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   //Exported:   7 OCC Bodies to diffuser.occ
+  assert(num_ents_exported == 7);
 
   gti->bodies(bodies);
 
@@ -234,6 +239,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proe.occ
+  assert(num_ents_exported == 12);
 
   filetype = "IGES";
   filename = "proeexport.iges";
@@ -241,6 +247,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.iges
+  assert(num_ents_exported == 12);
 
   filetype = "STEP";
   filename = "proeexport.step";
@@ -248,6 +255,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.step
+  assert(num_ents_exported == 12);
 
   gti->bodies(bodies);
 
@@ -275,6 +283,8 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(num_ents_exported == 2);
+
   gti->bodies(bodies); 
 
   //delete all entities
@@ -300,6 +310,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(num_ents_exported == 2);
   bodies.clean_out();
   gti->bodies(bodies);
   DLIList<Body*> new_bodies;
@@ -313,6 +324,10 @@ CubitStatus make_Point()
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
+  assert (n == 6);
+  CubitVector test_v(7.5, 5,0.5);
+  assert (v == test_v);
+  assert (50-d < 0.000000001);
   // n = 6
   //new bodies has 2 bodies, one has a volume = 10 and the other has a 
   //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
@@ -324,6 +339,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(num_ents_exported == 2);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -350,6 +366,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(num_ents_exported == 1);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -379,6 +396,7 @@ CubitStatus make_Point()
   num_ents_exported = 0;
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  assert(num_ents_exported == 1);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -406,6 +424,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(num_ents_exported == 1);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -434,7 +453,8 @@ CubitStatus make_Point()
   num_ents_exported = 0;
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
-
+  assert(num_ents_exported == 1);
+ 
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
