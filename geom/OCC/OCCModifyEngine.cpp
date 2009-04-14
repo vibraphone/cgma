@@ -2376,7 +2376,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  if (count_intersection == 1 )
 		    PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
 		} 
-	      if (stat)
+	      if (stat || count_intersection == 2)
 		{
 		  BRepBuilderAPI_MakeWire myWire;
 		  edge_list->reset(); 
@@ -3511,10 +3511,9 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     check_operation(common_shape, from_shape, is_volume[i], has_changed, 
                     &intersector, keep_old); 
 
-    if(from_shape->IsNull())
+    if(from_shape->IsNull() )
     {
       PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
-      new_bodies.append(from_body); 
     }
     else
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
@@ -3526,6 +3525,9 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
       new_bodies.append(bodysm);
   }
   
+  if(tbs.size() == 0)
+    stat = CUBIT_FAILURE;
+    
   //ok, we're done with all cuts, delete unnecessaries.
   if(!keep_old)
     OCCQueryEngine::instance()->delete_solid_model_entities(tool_body_ptr);   
@@ -3547,6 +3549,8 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
       delete shape;
     }
   }
+  if(!stat)
+    return stat;
   return CUBIT_SUCCESS;
 }
 
@@ -3589,7 +3593,7 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
      }
 
      //got cut. Update the entities
-     if(after_mass < TOL && !no_volume) //no common section
+     if(after_mass < TOL || no_volume) //no common section
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
      TopExp_Explorer Ex;
@@ -4443,7 +4447,10 @@ CubitStatus OCCModifyEngine:: sweep_rotational(
     continue;
   }
   OCCQueryEngine::instance()->delete_solid_model_entities(acurve);
-  return CUBIT_SUCCESS;
+  if(result_body_list.size()>0)
+    return CUBIT_SUCCESS;
+  else 
+    return CUBIT_FAILURE;
 }
 
 //===============================================================================
