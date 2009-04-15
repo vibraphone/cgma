@@ -1,10 +1,10 @@
 ###############################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(CGMA, 10.2.2)
+AC_INIT(CGMA, 10.2.3)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(CGMA,10.2.2)
+AM_INIT_AUTOMAKE(CGMA,10.2.3)
 AC_DISABLE_SHARED
 
 AC_PROG_SED
