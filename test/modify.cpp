@@ -487,7 +487,7 @@ CubitStatus make_Point()
   v = new_bodies.get()->center_point(); //v = (7.5, 5, .05)
   int n = new_bodies.get()->num_ref_faces();
   assert( n == 6);
-  assert (50 -d < 0.0001 && d < 50);
+  assert (50 -d < 0.0001 && d <= 50);
   CubitVector test_v(7.5, 5, .5);
   assert (v == test_v);
   //new bodies has 2 bodies, one has a volume = 10 and the other has a 
