@@ -203,6 +203,8 @@ CubitStatus make_Point()
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
+  assert(n==8);
+  assert(d == 710);
   // n = 8
   //new bodies has 2 bodies, one has a volume = 170 and the other has a 
   //volume = 710; each of them has 8 ref_faces. 
