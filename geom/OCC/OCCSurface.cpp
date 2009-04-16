@@ -651,8 +651,19 @@ CubitPointContainment OCCSurface::point_containment( const CubitVector &point )
    face_classifier.Perform(*face, p, tol);
    TopAbs_State state = face_classifier.State();
    
+   //if surface is part of a periodic TopoDS_Face, it'll check the point
+   //againt the whole periodic Face, even it outside the occsurface 
+   //boundary, if it's on its periodic extension, it'll return as in. 
    if (state == TopAbs_IN)
-     return CUBIT_PNT_INSIDE;
+   {
+     //double check if the point is projected on the surface
+     CubitVector closest_point;
+     this->closest_point_trimmed(point, closest_point);
+     if(point.distance_between(closest_point) < tol) 
+       return CUBIT_PNT_INSIDE;
+     else
+       return CUBIT_PNT_OUTSIDE;
+   }
    else if (state == TopAbs_OUT)
      return CUBIT_PNT_OUTSIDE;
    else if (state == TopAbs_ON)
@@ -665,7 +676,7 @@ CubitPointContainment OCCSurface::point_containment( double u_param,
                                                      double v_param )
 {
   CubitVector point = position_from_u_v(u_param, v_param);
-  return point_containment(point); 
+  return point_containment(point);
 }
 
 
