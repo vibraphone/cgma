@@ -217,12 +217,12 @@ CubitStatus Curve::closest_point_trimmed( CubitVector const& from_pt,
                                           CubitVector& result )
 {
     // Get the untrimmed point
-  double param = -1;
+  double param;
   if ( !closest_point(from_pt, result, NULL, NULL, &param) )
     return CUBIT_FAILURE;  
   
   double param_range = 0.0;
-  double period = -1, start_param = -1, end_param = -1;
+  double period, start_param, end_param;
   
     // Get whether periodic
   CubitBoolean is_per = this->is_periodic(period);
