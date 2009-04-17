@@ -417,8 +417,8 @@ public :
     //- Determines if the surface is singular in a given direction
     //- at a given parameter value.
 
-  CubitBoolean is_closed_in_U(){};  
-  CubitBoolean is_closed_in_V(){};
+  CubitBoolean is_closed_in_U();  
+  CubitBoolean is_closed_in_V();
     //R CubitBoolean
     //R- CUBIT_TRUE/CUBIT_FALSE
     //- Determines if the surface is closed, smoothly or not in the

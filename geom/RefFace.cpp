@@ -1640,6 +1640,14 @@ CubitStatus RefFace::get_graphics( GMem& facets,
       normal_tolerance, distance_tolerance, longest_edge );
 }
 
+CubitBoolean RefFace::is_closed_in_U()
+{
+  Surface* surface_ptr = get_surface_ptr();
+  return surface_ptr->is_closed_in_U();
+}
 
-
-
+CubitBoolean RefFace::is_closed_in_V()
+{
+  Surface* surface_ptr = get_surface_ptr();
+  return surface_ptr->is_closed_in_V();
+}
