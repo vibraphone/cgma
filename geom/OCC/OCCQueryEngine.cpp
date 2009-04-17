@@ -159,7 +159,8 @@ OCCQueryEngine::OCCQueryEngine()
   WireList = new DLIList<OCCLoop*>;
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
-  TCollection_ExtendedString xString;
+  CubitString name("Doc");
+  TCollection_ExtendedString xString((Standard_CString)name.c_str());
   MyDF = new TDocStd_Document(xString);
   mainLabel = MyDF->Main();
   EXPORT_ATTRIB = CUBIT_TRUE;

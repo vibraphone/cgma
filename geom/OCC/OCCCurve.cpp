@@ -459,13 +459,20 @@ CubitStatus OCCCurve::closest_point(
 		  CLP.Tangent(tangent);
 		  *tangent_ptr = CubitVector(tangent.X(), tangent.Y(), tangent.Z()); 
 	  }
+          else
+            *tangent_ptr = CubitVector(0, 0, 0);
     }
     if (curvature_ptr != NULL) 
+    {
+       *curvature_ptr = CubitVector(0, 0, 0);
        get_curvature( location, *curvature_ptr);
+    } 
   
     if (param != NULL) 
 	  *param = newVal;
   } 
+  else 
+    *param = -1;
   return CUBIT_SUCCESS;
 }
 

@@ -2247,6 +2247,8 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      BRepTools_WireExplorer Ex(wire); 
 	      for(; Ex.More(); Ex.Next())
 		list_of_edges.Append(Ex.Current());
+              edge_list->clean_out();
+              delete edge_list;
 	    }
 	}
       for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
@@ -2387,10 +2389,17 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		    }
 		  splitor.Add(myWire.Wire(),from_face);
 		  topo_changed = CUBIT_TRUE; 
+                  edge_list->clean_out();
+                  delete edge_list;
+                  for(int i = 0; i <edge_lists.size(); i++)
+                  {
+                    edge_list = edge_lists.get_and_step();
+                    edge_list->clean_out();
+                    delete edge_list;
+                  }
 		  break;
 		}
-	      for(int iii = 0; iii < edge_list->size(); iii++)
-		edge_list->pop();
+	      edge_list->clean_out();
 	      delete edge_list;
 	    }
 	} 
