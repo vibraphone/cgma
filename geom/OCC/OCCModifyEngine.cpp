@@ -4677,7 +4677,7 @@ CubitStatus    OCCModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*bod
                                                           DLIList<BodySM*>& /*results_list*/,
                                                           bool /*imprint*/ ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -4983,7 +4983,7 @@ CubitStatus OCCModifyEngine::split_periodic( BodySM * /*body_ptr*/,
 CubitStatus    OCCModifyEngine::regularize_body( BodySM * /*body_ptr*/,
                                                    BodySM *& /*new_body_ptr*/ )
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6847,7 +6847,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & /*surface_list*/,
                                            CubitBoolean /*keep_old_body*/ ,
                                            CubitBoolean show_preview) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6864,7 +6864,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6882,7 +6882,7 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6900,7 +6900,7 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6919,7 +6919,7 @@ CubitStatus OCCModifyEngine::tweak_remove( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6936,7 +6936,7 @@ CubitStatus OCCModifyEngine::tweak_remove( DLIList<Curve*> & /*curve_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6955,7 +6955,7 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6974,7 +6974,7 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -6994,7 +6994,7 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            CubitBoolean /*keep_old_body*/,
                                            CubitBoolean show_preview ) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
@@ -7280,7 +7280,7 @@ CubitStatus OCCModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                                DLIList<TopologyBridge*>*,
                                                DLIList<TopologyBridge*>* )  const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
 
