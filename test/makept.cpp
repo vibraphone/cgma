@@ -597,7 +597,7 @@ CubitStatus make_Point()
   d = new_edge_4->measure();
   assert(fabs(d - 22.21) < 0.01); 
   new_edge_4->closest_point_trimmed(vi, c_point);
-  vii.set(10, 10, 10);
+  vii.set(2.07255, 6.09554, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,

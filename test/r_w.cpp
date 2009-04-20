@@ -48,7 +48,7 @@
 #define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **, bool local = false);
+CubitStatus read_geometry(int, const char **, bool local = false);
 CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
@@ -150,7 +150,7 @@ CubitStatus make_Point()
 
   //Read in the geometry from iges file
   const char *argiges = "ex3.iges";
-  CubitStatus status = read_geometry(1, &argiges, false);
+  CubitStatus status = read_geometry(1, &argiges, true);
   //Constructed 18 Free Curves: 1 to 18
   if (status == CUBIT_FAILURE) exit(1);
 
