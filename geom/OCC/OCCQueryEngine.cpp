@@ -1362,10 +1362,26 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
   if(aShape.IsNull())
     return (OCCShell*)NULL;
   OCCShell *shell ;
-  CubitBoolean build_body = CUBIT_FALSE;
   DLIList<OCCCoFace*> cofaces_old, cofaces_new;
   if (!OCCMap->IsBound(aShape))
   {
+    if(standalone)
+    {
+      //check if just has one Face,if so, don't make new shell.
+      TopExp_Explorer Ex;
+      int num_faces = 0;
+      TopoDS_Face topo_face;
+      for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
+      {
+        topo_face = TopoDS::Face(Ex.Current());
+        num_faces++;
+      }
+      if(num_faces == 1)
+      {
+        Surface* face = populate_topology_bridge(topo_face, standalone);
+        return CAST_TO(face, OCCSurface)->my_shell();
+      }
+    }
     TopoDS_Shell *poshell = new TopoDS_Shell;
     *poshell = aShape;
     iTotalTBCreated++;
@@ -1398,7 +1414,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
   {
     TopoDS_Face topo_face = TopoDS::Face(Ex.Current());
     Surface* face =
-      populate_topology_bridge(topo_face, build_body);
+      populate_topology_bridge(topo_face, CUBIT_FALSE);
     
     if(!face)
       continue;

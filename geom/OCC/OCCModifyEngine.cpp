@@ -40,6 +40,9 @@
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeCircle.hxx"
 #include "Geom_Circle.hxx"
+#include "Geom_SurfaceOfLinearExtrusion.hxx"
+#include "Geom_RectangularTrimmedSurface.hxx"
+#include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
 #include "GC_MakeArcOfParabola.hxx"
 #include "GC_MakeArcOfEllipse.hxx"
@@ -1824,26 +1827,17 @@ CubitStatus     OCCModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
   if(!stat)
     return stat;
 
-  //check that tool_bodies are all solid, shell and surface body can't be used
-  //for subtracting purpose.
-  if(is_tool_volume.is_in_list(CUBIT_FALSE))
-  {
-     PRINT_WARNING("Surfaces or Shells can't be used to cut a body.\n");
-     while (tool_boxes->size())
-       delete tool_boxes->pop();
-     delete tool_boxes;
-     while (tool_bodies_copy.size())
-       delete tool_bodies_copy.pop();
-     return CUBIT_FAILURE;
-  }
-
   stat = do_subtract(from_bodies, tool_bodies_copy, is_tool_volume,
                      tool_boxes, new_bodies, keep_old, imprint) ;
 
   //ok, we're done with all cuts, delete unnecessaries.
+  CubitBoolean delete_tool_boxes = CUBIT_FALSE;
+  if(tool_boxes->size() > 0)
+    delete_tool_boxes = CUBIT_TRUE;
   while (tool_boxes->size())
     delete tool_boxes->pop();
-  delete tool_boxes;
+  if(delete_tool_boxes)
+    delete tool_boxes;
   while (tool_bodies_copy.size())
     delete tool_bodies_copy.pop();
   if(!keep_old) //delete tool_bodies
@@ -1874,6 +1868,21 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
     return CUBIT_FAILURE;
   } 
 
+  //check that tool_bodies are all solid, shell and surface body can't be used
+  //for subtracting solids.
+  if(is_tool_volume.is_in_list(CUBIT_FALSE) && !is_volume.is_in_list(CUBIT_FALSE))
+  {
+     PRINT_WARNING("Surfaces or Shells can't be used to cut a solid.\n");
+     while (tool_boxes->size())
+       delete tool_boxes->pop();
+     delete tool_boxes;
+     while (tool_bodies_copy.size())
+       delete tool_bodies_copy.pop();
+     while (from_bodies_copy.size())
+       delete from_bodies_copy.pop(); 
+     return CUBIT_FAILURE;
+  }
+
   int fraction_remaining = 100;
 
   // subtract the tool body from each body in the list
@@ -1883,11 +1892,18 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
   DLIList<TopologyBridge*> tbs;
   for (int i = 0; i < from_bodies_copy.size(); i++)
   {
+    CubitBoolean from_volume = is_volume.get_and_step();
     BodySM* from_body = from_bodies.get();
     CubitBox box1 = CAST_TO(from_body, OCCBody)->get_bounding_box();
     int count = 0;  //count for not preforming cut
     for(int j = 0; j < tool_bodies_copy.size(); j ++)
     {
+      CubitBoolean tool_volume = is_tool_volume.get_and_step();
+      if(tool_volume == CUBIT_FALSE && from_volume == CUBIT_TRUE)
+      {
+        PRINT_WARNING("Surfaces or Shells can't be used to cut a solid.\n");
+        continue;
+      }
       if (cmi->Interrupt())
       {
          PRINT_ERROR("Subtraction interrupted.  Aborting...\n");
@@ -2753,6 +2769,7 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
       }
       else
         shape_list.append(topo_face);
+      is_volume.last();
       is_volume.change_to( CUBIT_FALSE);
     }
     else if(shell)
@@ -6858,14 +6875,105 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & /*surface_list*/,
 // Author     : 
 // Date       : 
 //=============================================================================
-CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & /*curve_list*/,
-                                           const CubitVector & /*delta*/,
-                                           DLIList<BodySM*> & /*new_bodysm_list*/, 
-                                           CubitBoolean /*keep_old_body*/,
-                                           CubitBoolean show_preview ) const
+CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
+                                         const CubitVector & delta,
+                                         DLIList<BodySM*> & new_bodysm_list, 
+                                         CubitBoolean keep_old_body,
+                                         CubitBoolean preview ) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");
-  return CUBIT_FAILURE;
+  gp_Dir offset_dir(delta.x(), delta.y(), delta.z());
+  double length = delta.length();
+  
+  for(int i = 0 ; i < curves.size(); i++)
+  {
+    Curve* curve = curves.get_and_step();
+    OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
+    if(!occ_curve)
+      continue;
+    //check to make sure that the curve is on a sheet body.
+    DLIList<OCCLoop*> loops;
+    loops = occ_curve->loops();
+    if(loops.size() == 0)
+    {
+      PRINT_ERROR( "Cannot tweak move curves that are free\n");
+      return CUBIT_FAILURE;
+    }
+    else if(loops.size() != 1)
+    {
+      PRINT_ERROR( "Can only tweak move curves attached to one surface\n");
+      return CUBIT_FAILURE;
+    }
+    //determine if the delta is to trim the existing surface or extend it.
+    double u_low, u_upper;
+    CubitVector a_point;
+    occ_curve->get_param_range(u_low, u_upper);
+    occ_curve->position_from_u((u_low + u_upper)/2, a_point);
+    a_point += ~delta;
+    DLIList<TopologyBridge*> parents;
+    loops.get()->get_parents_virt(parents);
+    OCCSurface* surface = CAST_TO(parents.get(), OCCSurface);
+    BodySM* original_body = surface->my_body();
+    CubitBoolean trim = CUBIT_FALSE;
+    if(surface->point_containment(a_point) == CUBIT_PNT_INSIDE)
+       trim = CUBIT_TRUE;
+
+    TopoDS_Edge * edge = occ_curve->get_TopoDS_Edge();
+    Standard_Real first;
+    Standard_Real last;
+    Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last);
+    Geom_SurfaceOfLinearExtrusion new_surface(myCurve, offset_dir); 
+    Handle(Geom_RectangularTrimmedSurface) trimmed_surface = 
+               new  Geom_RectangularTrimmedSurface(&new_surface, first, last,
+                                                   0, length);    
+    if(trimmed_surface == NULL)
+    { 
+      PRINT_ERROR( "Can not tweak move the %dth curve\n", i);
+      return CUBIT_FAILURE;
+    }
+    TopoDS_Face FACE = BRepBuilderAPI_MakeFace(trimmed_surface);
+    Surface*  extrude_surf= OCCQueryEngine::instance()->populate_topology_bridge(FACE, CUBIT_TRUE);
+    BodySM* body = CAST_TO(extrude_surf, OCCSurface)->my_body();
+    //subtract or unite the two surfaces
+    DLIList<BodySM*> bodies;
+    bodies.append(original_body);
+    CubitStatus stat;
+    if(!trim)
+    {
+      bodies.append(body);
+      stat = unite(bodies, new_bodysm_list, keep_old_body);
+    }
+    else 
+    {
+      DLIList<BodySM*> tool_bodies;
+      tool_bodies.append(body);
+      stat = subtract(tool_bodies, bodies, new_bodysm_list, CUBIT_FALSE, 
+                      keep_old_body);
+    } 
+    if(stat = CUBIT_FAILURE)
+      return CUBIT_FAILURE;    
+  }
+  if(preview)
+  {
+    GfxPreview::clear();
+    for(int i = 0; i < new_bodysm_list.size(); i++)
+    {
+      BodySM* new_bodysm = new_bodysm_list.get_and_step();
+      TopoDS_Shape* modified_shape =
+          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopExp_Explorer Ex;
+      Ex.Init(*modified_shape, TopAbs_FACE);
+      for( ; Ex.More(); Ex.Next() )
+      {
+        TopoDS_Face face = TopoDS::Face(Ex.Current());
+        // Draw this face
+        OCCDrawTool::instance()->draw_FACE( &face, CUBIT_BLUE, CUBIT_TRUE );
+      }
+    }
+    GfxPreview::flush();
+    OCCQueryEngine::instance()->delete_solid_model_entities(new_bodysm_list);
+    new_bodysm_list.clean_out();
+  }
+  return CUBIT_SUCCESS;
 }
 
 //=============================================================================
