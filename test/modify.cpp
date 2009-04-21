@@ -152,6 +152,20 @@ CubitStatus make_Point()
   body->ref_faces(ref_faces);
   RefFace* face = gmti->make_RefFace(ref_faces.get());
   RefFace* face2 = gmti->make_RefFace(ref_faces.get());
+  RefFace* tweak_face = gmti->make_RefFace(ref_faces.get());
+  DLIList<RefEdge*> tweak_edges;
+  tweak_face->ref_edges(tweak_edges);
+  tweak_edges.pop();
+  tweak_edges.pop();
+  tweak_edges.pop();
+  Body* tweak_body = tweak_face->body();
+  away *= 3;
+  gti->translate(tweak_body, away);
+  away /= 3;
+  CubitVector delta(0,0,1);
+  DLIList<Body*> tweak_bodies;
+  gmti->tweak_move( tweak_edges, delta, tweak_bodies, CUBIT_FALSE,
+                    CUBIT_FALSE);
   Body* sheet_body = face->body();
   Body* sheet_body2 = face2->body();
   away *= 5;
@@ -258,7 +272,7 @@ CubitStatus make_Point()
 
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
-  assert(num_ents_exported == 4);
+  assert(num_ents_exported == 5);
 
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
@@ -987,6 +1001,7 @@ CubitStatus make_Point()
   RefFace* draft_face = gmti->make_RefFace(sweep_face);
   RefFace* perp_face = gmti->make_RefFace(sweep_face);
   RefFace* rotate_face = gmti->make_RefFace(sweep_face);
+
   gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
   body = CAST_TO(refentities.get(), Body);
   d = body->measure();

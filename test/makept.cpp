@@ -325,8 +325,8 @@ CubitStatus make_Point()
   filename = "point.occ";
   filetype = "OCC";
   
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
-                                num_ents_exported, cubit_version);
+  //rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
+  //                              num_ents_exported, cubit_version);
  
   //check for vertex
   bodies.clean_out();
