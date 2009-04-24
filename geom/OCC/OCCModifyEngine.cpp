@@ -4683,6 +4683,7 @@ CubitStatus    OCCModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*bod
                                                           DLIList<BodySM*>& /*results_list*/,
                                                           bool /*imprint*/ ) const
 {
+  //from Acis : // Currently no command line to this
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
 }
