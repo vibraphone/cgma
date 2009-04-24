@@ -127,6 +127,42 @@ CubitStatus make_Point()
 
   //test for tweak fillet and chamfer
   Body* body = gmti->brick(10, 10, 10);
+  //Added for code development testing, can be removed later.
+  DLIList<RefFace*> test_ref_faces;
+  DLIList<RefFace*> test_ref_faces2;
+  body->ref_faces(test_ref_faces);
+  test_ref_faces2.append(test_ref_faces.pop());
+  CubitVector sweep_direction(0,0,6);
+  DLIList<Body*> all_bodies;
+  CubitStatus sta = gmti->tweak_move(test_ref_faces2, sweep_direction, all_bodies);
+  assert(all_bodies.size() == 1);
+  double volume = all_bodies.get()->measure();
+  assert(fabs(volume-1600) <= 0.00001);
+  int n = all_bodies.get()->num_ref_faces();
+  assert(n == 10);
+
+  test_ref_faces.clean_out();
+  test_ref_faces2.clean_out();
+  all_bodies.get()->ref_faces(test_ref_faces);
+  for(int i = 0 ; i < test_ref_faces.size(); i++)
+  {
+    double max = test_ref_faces.get()->bounding_box().max_z();
+    double min = test_ref_faces.get()->bounding_box().min_z();
+    if(max-11. < 0.000001 && max-11. > -0.000001 &&
+       min-11. < 0.000001 && min-11. > -0.000001)
+      test_ref_faces2.append(test_ref_faces.get());
+    else
+      test_ref_faces.step();
+  }
+  sweep_direction.set(0,0,-6);
+  all_bodies.clean_out();
+  sta = gmti->tweak_move(test_ref_faces2, sweep_direction, all_bodies);
+  assert(all_bodies.size() == 1);
+  volume = all_bodies.get()->measure();
+  assert(fabs(volume-1000) <= 0.00001);
+  n = all_bodies.get()->num_ref_faces();
+  assert(n == 6);
+
   Body* body2 = gmti->brick(10, 10, 10);
   CubitVector away(11, 0 , 0);
   gti->translate(body2,away);
@@ -162,10 +198,18 @@ CubitStatus make_Point()
   away *= 3;
   gti->translate(tweak_body, away);
   away /= 3;
-  CubitVector delta(0,0,1);
+  CubitVector delta(0,-1,0);
   DLIList<Body*> tweak_bodies;
   gmti->tweak_move( tweak_edges, delta, tweak_bodies, CUBIT_FALSE,
                     CUBIT_FALSE);
+  assert(tweak_bodies.size() == 1);
+  double area = tweak_bodies.get()->measure();
+  assert(fabs(area - 110) <= 0.00001);
+  n = tweak_bodies.get()->num_ref_edges();
+  assert(n == 7);
+  n = tweak_bodies.get()->num_ref_faces();
+  assert(n == 2);
+
   Body* sheet_body = face->body();
   Body* sheet_body2 = face2->body();
   away *= 5;
@@ -499,7 +543,7 @@ CubitStatus make_Point()
   //Destroyed volume(s): 23, 25
   d = new_bodies.step_and_get()->measure(); //d = 50
   v = new_bodies.get()->center_point(); //v = (7.5, 5, .05)
-  int n = new_bodies.get()->num_ref_faces();
+  n = new_bodies.get()->num_ref_faces();
   assert( n == 6);
   assert (50 -d < 0.0001 && d <= 50);
   CubitVector test_v(7.5, 5, .5);
