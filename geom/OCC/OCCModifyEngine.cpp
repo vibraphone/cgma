@@ -3063,23 +3063,14 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
       shape_list.append(topo_face);
     else
     {
-      //int size = shape_list.size();
-      OCCQueryEngine* oqe = OCCQueryEngine::instance();
-      DLIList <OCCBody* > *bodies = oqe->BodyList;
-      TopTools_IndexedDataMapOfShapeListOfShape M;
-      OCCBody * body = NULL;
-      for(int j = 0; j <  bodies->size(); j++)
+      DLIList<OCCBody*> bodies;
+      surface->get_bodies(bodies);
+      if(bodies.size() != 1)
       {
-        body = bodies->get_and_step();
-        TopExp_Explorer Ex;
-        TopoDS_Face the_face;
-        TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
-        M.Clear();
-        TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPSOLID, M);
-        if(!M.Contains(*topo_face))
-          continue;
-        shape_list.append_unique(body->get_TopoDS_Shape());
+        PRINT_ERROR("Can't find the corresponding manifold solid body.\n");
+        return CUBIT_FAILURE;
       }
+      shape_list.append_unique(bodies.get()->get_TopoDS_Shape());
     }
   }
 
@@ -3746,28 +3737,23 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
 
   //find a non-sheet body to be the first shape
   TopoDS_Shape* first_shape;
+  TopoDS_Shape* second_shape;
   CubitBoolean first_is_volume;
+  int index = 0;
   if((first_is_volume = is_volume.move_to(CUBIT_TRUE)))
-  {
-    int index = is_volume.get_index();
-    first_shape = shape_list[index];
-    shape_list.remove(first_shape);
-    is_volume.step(index);
-    is_volume.remove();
-    bodies.step(index);
-    bodies.remove();
-  }
- 
-  else
-  {
-    first_shape = shape_list.pop();
-    bodies.pop();
-  }
+    index = is_volume.get_index();
+
+  first_shape = shape_list[index];
+  shape_list.remove(first_shape);
+  is_volume.step(index);
+  is_volume.remove();
+  bodies.step(index);
+  BodySM* removed_body = bodies.remove();
 
   int size = shape_list.size();
   for(int i = 0; i < size; i++)
   {
-    TopoDS_Shape* second_shape = shape_list.get_and_step();
+    second_shape = shape_list.get_and_step();
 
     BRepAlgoAPI_Fuse fuser(*first_shape, *second_shape);
     TopoDS_Shape new_shape = fuser.Shape();
@@ -3802,6 +3788,7 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     }
   }
 
+  bodies.append(removed_body); 
   return CUBIT_SUCCESS; 
 }
 
@@ -4202,6 +4189,8 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
         PRINT_ERROR("Sweeping direction should not be on the surface.\n");
         return CUBIT_FAILURE;
       }
+      else 
+        ref_ent = (GeometryEntity *)surface;
     }
     else
       ref_ent = (GeometryEntity *)surface;
@@ -6387,19 +6376,10 @@ OCCModifyEngine::sort_points_by_body_type( DLIList<Point*> &point_list,
     else
     {
       solid_points.append(point);
-      OCCQueryEngine* oqe = OCCQueryEngine::instance();
-      DLIList <OCCBody* > *occ_bodies = oqe->BodyList;
-      for(int i = 0; i < occ_bodies->size(); i++)
-      {
-        DLIList<OCCSurface*> surfaces;
-        OCCBody* occ_body = occ_bodies->get_and_step();
-        occ_body->get_all_surfaces(surfaces); 
-        if(surfaces.is_in_list(s))
-        {
-          bodies.append(occ_body);
-          break;
-        }
-      }
+      DLIList<OCCBody*> solid_bodies;
+      s->get_bodies(solid_bodies);
+      assert(solid_bodies.size() == 1);
+      bodies += solid_bodies;
     }
   }
   return CUBIT_SUCCESS;
@@ -6855,25 +6835,113 @@ OCCModifyEngine::tweak_chamfer_sheet(Point* pnt,
 // Function   : tweak_move
 // Member Type: PUBLIC
 // Description: Tweak specified faces of a volume or volumes along a vector.
-// Author     : 
-// Date       : 
+// Author     : Jane Hu
+// Date       : 04/09
 //=============================================================================
-CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & /*surface_list*/, 
-                                           const CubitVector & /*delta*/,
-                                           DLIList<BodySM*> & /*new_bodysm_list*/, 
-                                           CubitBoolean /*keep_old_body*/ ,
-                                           CubitBoolean show_preview) const
+CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & surface_list, 
+                                         const CubitVector & delta,
+                                         DLIList<BodySM*> & new_bodysm_list, 
+                                         CubitBoolean keep_old_body ,
+                                         CubitBoolean preview) const
 {
-  PRINT_ERROR("Option not supported for OCC based geometry.\n");
-  return CUBIT_FAILURE;
+  CubitStatus stat;
+  for(int i = 0 ; i < surface_list.size(); i++)
+  {
+    Surface* surf = surface_list.get_and_step();
+    OCCSurface* occ_surf = CAST_TO(surf, OCCSurface);
+    if(!occ_surf)
+      continue;
+    //check to make sure that the surf is not on a sheet body. 
+    OCCLump* lump = occ_surf->my_lump(); 
+    if(lump != NULL && (lump->my_sheet_surface() || lump->my_shell()))
+    {
+      PRINT_ERROR( "Cannot tweak move surfaces that are not in a solid\n");
+      return CUBIT_FAILURE;
+    }
+    DLIList<GeometryEntity*> ref_ent_list;
+    ref_ent_list.append(occ_surf);
+    DLIList<BodySM*> result_bodies;
+    stat = sweep_translational(ref_ent_list, result_bodies, delta, 0.0, 1,
+                               false, true); 
+    if(stat == CUBIT_FAILURE)
+    {
+      PRINT_ERROR( "Cannot tweak move the surface. \n");
+      return CUBIT_FAILURE;
+    }
+    assert(result_bodies.size() == 1);
+    
+    //determine if the delta is to trim the existing body or extend it.
+    CubitVector center_point;
+    center_point = occ_surf->center_point();
+    center_point += ~delta;
+    BodySM* original_body = occ_surf->my_body();
+    if(original_body == NULL)
+    {
+      DLIList<OCCBody*> original_bodies;
+      occ_surf->get_bodies(original_bodies);
+      if(original_bodies.size() > 1)
+      {
+        PRINT_ERROR( "Cannot tweak move the surface in non-mainfold solids. \n");
+        return CUBIT_FAILURE;
+      }
+      else if(original_bodies.size() == 0)
+      {
+        PRINT_ERROR( "Interal error: Can't find associated solid. \n");       
+        return CUBIT_FAILURE;
+      }
+      original_body = original_bodies.get();
+      assert(original_body != NULL);
+    } 
+    CubitBoolean trim = CUBIT_FALSE;
+    if(original_body->point_containment(center_point) == CUBIT_PNT_INSIDE)
+       trim = CUBIT_TRUE;
+
+    //subtract or unite the two bodies
+    if(!trim)
+    {
+      result_bodies.insert_first(original_body);
+      stat = unite(result_bodies, new_bodysm_list, keep_old_body);
+    }
+    else
+    {
+      DLIList<BodySM*> from_bodies;
+      from_bodies.append(original_body);
+      stat = subtract(result_bodies, from_bodies, new_bodysm_list, CUBIT_FALSE,
+                      keep_old_body);
+    }
+    if(stat = CUBIT_FAILURE)
+      return CUBIT_FAILURE;
+  } 
+  if(preview)
+  {
+    GfxPreview::clear();
+    for(int i = 0; i < new_bodysm_list.size(); i++)
+    {
+      BodySM* new_bodysm = new_bodysm_list.get_and_step();
+      TopoDS_Shape* modified_shape =
+          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopExp_Explorer Ex;
+      Ex.Init(*modified_shape, TopAbs_FACE);
+      for( ; Ex.More(); Ex.Next() )
+      {
+        TopoDS_Face face = TopoDS::Face(Ex.Current());
+        // Draw this face
+        OCCDrawTool::instance()->draw_FACE( &face, CUBIT_BLUE, CUBIT_TRUE );
+      }
+    }
+    GfxPreview::flush();
+    OCCQueryEngine::instance()->delete_solid_model_entities(new_bodysm_list);
+    new_bodysm_list.clean_out();
+  }
+  return CUBIT_SUCCESS;
 }
 
 //=============================================================================
 // Function   : tweak_move
 // Member Type: PUBLIC
 // Description: Tweak specified curves of a sheet body along a vector.
-// Author     : 
-// Date       : 
+// Author     : Jane Hu
+// Date       : 04/09
 //=============================================================================
 CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
                                          const CubitVector & delta,

@@ -335,6 +335,8 @@ public :
 
   OCCBody* my_body() {return myBody;}
 
+  CubitStatus get_bodies(DLIList<OCCBody*> &bodies);
+
   virtual CubitBoolean is_parametric();
     //R CubitBoolean
     //R- CUBIT_TRUE/CUBIT_FALSE

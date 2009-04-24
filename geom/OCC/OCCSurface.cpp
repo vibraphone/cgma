@@ -1009,6 +1009,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      if (!wire.IsSame(shape))
        OCCQueryEngine::instance()->update_OCC_map(wire, shape);
   }
+  double dTOL = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
   if (!old_surface.IsSame(new_surface))
   {
     TopAbs_ShapeEnum shapetype =  TopAbs_SHAPE;
@@ -1021,17 +1022,54 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
       TopTools_IndexedMapOfShape M;
       TopExp::MapShapes(new_surface, TopAbs_FACE, M);   
       TopoDS_Shape new_shape;
-      if(M.Extent() > 0)
+      if(M.Extent() == 1)
         new_shape = M(1);
-      else
-        new_shape = new_surface;
+      else if(M.Extent() > 1)
+      {
+        for(int i = 1; i <= M.Extent(); i++)
+        {
+          GProp_GProps myProps;
+          BRepGProp::SurfaceProperties(old_surface, myProps);
+          double orig_mass = myProps.Mass();
+          gp_Pnt orig_pnt = myProps.CentreOfMass();
+          BRepGProp::SurfaceProperties(M(i), myProps);
+          double after_mass = myProps.Mass();
+          gp_Pnt after_pnt = myProps.CentreOfMass();
+          if(fabs(-after_mass + orig_mass) <= dTOL && 
+             orig_pnt.IsEqual(after_pnt, dTOL))
+          {
+            new_shape = M(i);
+            break;
+          }
+        }
+      }
       OCCQueryEngine::instance()->update_OCC_map(old_surface, new_shape);
     }
   }
   return CUBIT_SUCCESS;
 }
 
-
+CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
+{
+   TopoDS_Face* topo_face = this->get_TopoDS_Face();
+   OCCQueryEngine* oqe = OCCQueryEngine::instance();
+   DLIList <OCCBody* > *all_bodies = oqe->BodyList;
+   TopTools_IndexedDataMapOfShapeListOfShape M;
+   OCCBody * body = NULL;
+   for(int j = 0; j <  all_bodies->size(); j++)
+   {
+     body = all_bodies->get_and_step();
+     TopExp_Explorer Ex;
+     TopoDS_Face the_face;
+     TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
+     M.Clear();
+     TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPSOLID, M);
+     if(!M.Contains(*topo_face))
+       continue;
+     bodies.append_unique(body);
+  }
+  return CUBIT_SUCCESS;
+}
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

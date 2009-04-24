@@ -1419,6 +1419,21 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     if(!face)
       continue;
     OCCSurface *occ_surface = CAST_TO(face, OCCSurface);
+    //check if surface was a sheet surface, delete it if so
+    if(occ_surface->my_shell() != NULL && occ_surface->my_shell() != shell)
+    {
+       //if Sheet_body, delete this sheet body
+       if(occ_surface->my_body() != NULL)
+       {
+          delete_solid_model_entities(occ_surface->my_body());
+          face =
+            populate_topology_bridge(topo_face, CUBIT_FALSE);
+   
+          if(!face)
+            continue;
+          occ_surface = CAST_TO(face, OCCSurface);
+       }
+    }
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoFace * coface = NULL;
     int size = cofaces_old.size();
