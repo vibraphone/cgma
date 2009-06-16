@@ -2020,7 +2020,7 @@ iGeom_getEntNrmlXYZ (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_TYPE, "Entities passed into gentityNormal must be faces.");
   }
   
-  CubitVector normal, near( near_x, near_y, near_x );
+  CubitVector normal, near( near_x, near_y, near_z );
   normal = face->normal_at( near );
   normal.get_xyz( *nmrl_i, *nmrl_j, *nmrl_k );
   RETURN(iBase_SUCCESS);
