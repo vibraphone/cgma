@@ -3,6 +3,10 @@ BUILT_SOURCES = iGeom_protos.h
 
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 
+# because "ISO C++ does not support ‘long long"
+CXXFLAGS += -Wno-long-long
+#CXXFLAGS = -Wall -pipe -pedantic -g -DDEBUG -Wno-long-long -DUSE_MPI
+
 if USE_BABEL
   SIDL_DIR = SIDL
 else
@@ -19,6 +23,9 @@ endif
 endif
 if build_OCC
   TESTS += testgeom_occ
+endif
+if build_parallel
+  TESTS += partest testgeomParallel
 endif
 
 
@@ -66,6 +73,19 @@ chaman_SOURCES = chaman.cc
 chaman_LDADD = libiGeom.la
 chaman_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 chaman_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
+
+if build_parallel
+  partest_SOURCES = partest.cpp
+  partest_LDADD = $(testgeom_LDADD)
+  partest_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
+  partest_LDFLAGS = $(testgeom_LDFLAGS)
+  testgeomParallel_SOURCES = testgeomParallel.cpp
+  testgeomParallel_LDADD = $(testgeom_LDADD)
+  testgeomParallel_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
+  testgeomParallel_LDFLAGS = $(testgeom_LDFLAGS)
+  INCLUDES += -I$(top_srcdir)/geom/parallel
+endif
+
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 

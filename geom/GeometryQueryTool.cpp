@@ -507,6 +507,32 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
   return result;
 }
 
+CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entity_list,
+						  char*& p_buffer,
+						  int& n_buffer_size,
+						  bool b_export_buffer)
+{
+  // Get TopologyBridges from RefEntities.
+  DLIList<TopologyBridge*> bridge_list(ref_entity_list.size()), ref_ent_bridges;
+  ref_entity_list.reset();
+  for( int i = ref_entity_list.size(); i--; )
+  {
+    ref_ent_bridges.clean_out();
+    TopologyEntity* topo_ptr = dynamic_cast<TopologyEntity*>(ref_entity_list.get_and_step());
+    if( topo_ptr )
+      topo_ptr->bridge_manager()->get_bridge_list( ref_ent_bridges );
+    bridge_list += ref_ent_bridges;
+  }
+
+  bridge_list.reset();
+  GeometryQueryEngine *gqe = bridge_list.get()->get_geometry_query_engine();
+
+  CubitStatus result = gqe->export_solid_model(bridge_list, p_buffer,
+					       n_buffer_size, b_export_buffer);
+
+  return result;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Fire a ray and see which entities it hits
 //
@@ -639,6 +665,35 @@ CubitStatus GeometryQueryTool::import_solid_model(
 //  CubitAttrib::report_attrib_importeds();
 
     // now return
+  return status;
+}
+
+CubitStatus GeometryQueryTool::import_solid_model(DLIList<RefEntity*> *imported_entities,
+						  const char* pBuffer,
+						  const int n_buffer_size)
+{
+  if (0 == gqeList.size()) {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  // Use the default MQE to import a list of ToplogyBridges from the file.
+  gqeList.reset();
+  DLIList<TopologyBridge*> bridge_list;
+
+  CubitStatus status;
+  for (int i = 0; i < gqeList.size(); i++)
+  {
+    status = gqeList.get_and_step()->import_solid_model( bridge_list, pBuffer, n_buffer_size );
+
+    if (bridge_list.size() > 0) break;
+  }
+  if (bridge_list.size() == 0) return status;
+
+  bridge_list.reset();
+  status = construct_refentities(bridge_list, imported_entities);
+
+  // now return
   return status;
 }
 

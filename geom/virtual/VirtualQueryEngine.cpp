@@ -1526,6 +1526,14 @@ CubitStatus VirtualQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ,
   return CUBIT_FAILURE;
 }
 
+CubitStatus VirtualQueryEngine::export_solid_model( DLIList<TopologyBridge*>& bridge_list,
+						    char*& p_Buffer,
+						    int& n_buffer_size,
+						    bool b_export_buffer)
+{
+  return CUBIT_FAILURE;
+}
+
 CubitStatus VirtualQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ,
                                         const char* ,
                                         const CubitString &,
@@ -1553,6 +1561,16 @@ CubitStatus VirtualQueryEngine::import_solid_model(
                                                       CubitBoolean ,
                                                       CubitBoolean ,
                                                       CubitBoolean  )  
+{
+  PRINT_INFO("VirtualQueryEngine::import_solid_model\n");
+  
+  default_error_message( "import_solid_model()");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus VirtualQueryEngine::import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+						   const char* pBuffer,
+						   const int n_buffer_size)
 {
   PRINT_INFO("VirtualQueryEngine::import_solid_model\n");
   

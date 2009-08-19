@@ -42,6 +42,7 @@
 class RefEntity;
 class RefGroup;
 class CATag;
+class CGMParallelComm;
 
 class CGMTagManager 
 {
@@ -116,6 +117,8 @@ public:
     return static_instance;
   }
 
+  inline std::vector<CGMParallelComm*>& get_pc_array() { return pc_array; }
+
 private:
   CGMTagManager();
 
@@ -128,6 +131,9 @@ private:
   static const char *CATag_NAME;
   static const char *CATag_NAME_INTERNAL;
   RefGroup *interfaceGroup;
+
+  // list of parallel comm
+  std::vector<CGMParallelComm*> pc_array;
 
   bool getPresetTagData(const RefEntity *entity, const long tag_num, 
                         char *tag_value, int &tag_size);

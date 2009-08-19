@@ -281,7 +281,7 @@ AC_ARG_WITH( occ,
 CUBIT_OCC_LIB=
 HAVE_OCC_DEF=
 if test "x$occ_DIR" != "xno"; then
-  OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase -lTKLCAF"
+  OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase -lTKLCAF -lTKBin"
   CUBIT_OCC_LIB="-lcubit_OCC"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option

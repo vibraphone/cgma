@@ -270,6 +270,11 @@ public:
                                           const CubitString &cubit_version,
                                           const char* logfile_name = NULL );
 
+  virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
+					  char*& p_buffer,
+					  int& n_buffer_size,
+					  bool b_export_buffer);
+
   virtual CubitStatus save_temp_geom_file( DLIList<TopologyBridge*>& ref_entity_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
@@ -292,7 +297,11 @@ public:
                                          CubitBoolean import_curves = CUBIT_TRUE,
                                          CubitBoolean import_vertices = CUBIT_TRUE,
                                          CubitBoolean free_surfaces = CUBIT_TRUE );
-private:
+
+ virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+					const char* pBuffer,
+					const int n_buffer_size);
+    private:
   CubitStatus import_solid_model(FILE *file_ptr,
                                  const char* /*file_type*/,
                                  DLIList<TopologyBridge*> &imported_entities,

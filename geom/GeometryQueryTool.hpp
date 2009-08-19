@@ -254,6 +254,11 @@ public :
     *
     */
 
+  CubitStatus export_solid_model(DLIList<RefEntity*>& ref_entity_list,
+				 char*& p_buffer,
+				 int& n_buffer_size,
+				 bool b_export_buffer);
+  
   CubitStatus import_solid_model(const char* file_name,
                                  const char* file_type,
                                  const char* logfile_name = NULL,
@@ -264,6 +269,7 @@ public :
                                  CubitBoolean import_vertices = CUBIT_TRUE,
                                  CubitBoolean free_surfaces = CUBIT_TRUE,
 				 DLIList<RefEntity*> *imported_entities = NULL);
+
   /**<
    * Import all or specified entities in a solid model file.
     *  \arg file_ptr
@@ -293,6 +299,11 @@ public :
     *  the underlying representation and file type. It returns
     *  CUBIT_SUCCESS if everything goes well.
     */
+
+  // import entities in a solid model buffer
+  CubitStatus import_solid_model(DLIList<RefEntity*> *imported_entities,
+				 const char* pBuffer,
+				 const int n_buffer_size);
 
   CubitStatus construct_refentities(DLIList<TopologyBridge*> &topology_bridges,
                                     DLIList<RefEntity*> *imported_entities = NULL);

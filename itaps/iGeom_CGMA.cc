@@ -314,32 +314,19 @@ void iGeom_load( iGeom_Instance instance,
   std::string file_name( name, name_len );
   name = file_name.c_str();
   
-    // process options
+  // check if work in parallel
   bool parallel = false;
-  int par_load_option = -1;
-  std::vector<std::string> opts;
-  tokenize( std::string(options, options_size), opts );
-  for (size_t i = 0; i < opts.size(); ++i) {
-    if (opts[i] == "PARALLEL" 
-     || opts[i] == "parallel")
-      parallel = true;
-    
-    if (opts[i] == "GEOM_BCAST" 
-     || opts[i] == "geom_bcast");
-      par_load_option = 0;
-    
-    if (opts[i] == "GEOM_BCAST_AND_DELETE" 
-     || opts[i] == "geom_bcast_and_delete")
-      par_load_option = 1;
-    
-    if (opts[i] == "GEOM_SCATTER" 
-     || opts[i] == "geom_scatter")
-      par_load_option = 2;
-  }
+  FileOptions opts(options);
+  std::string parallel_opt;
+  FOErrorCode rval = opts.get_option("PARALLEL", parallel_opt);
+  if (FO_SUCCESS == rval) parallel = true;
 
+  // parallel
   if (parallel) {
 #ifdef USE_MPI
-    CubitStatus status = ParallelGeomTool::instance()->load_parallel(name, par_load_option);
+    //CubitStatus status = ParallelGeomTool::instance()->load_file(name, options);
+    ParallelGeomTool pgt(reinterpret_cast<CGMTagManager*> (instance), NULL);
+    CubitStatus status = pgt.load_file(name, options);
     if (CUBIT_SUCCESS != status) {
       ERROR(iBase_FAILURE, "Trouble loading geometry file in parallel.");
     }
@@ -347,27 +334,28 @@ void iGeom_load( iGeom_Instance instance,
     ERROR(iBase_NOT_SUPPORTED, "Parallel not enabled in this version.");
 #endif    
   }
-  
-  iBase_ErrorType result;
-  CubitStatus status = CUBIT_SUCCESS;
-
-  if (strstr(name, ".cub") != NULL) {
-    iGeom_load_cub_geometry(name, err);
-    if (iBase_SUCCESS != *err) {
-      return;
-    }
-  }
   else {
-    if (strstr(name, ".brep") != NULL || strstr(name, ".occ") != NULL)
-      status = gqt->read_geometry_file(name, NULL, "OCC");
-    else
-      status = gqt->read_geometry_file(name);
-    if (CUBIT_SUCCESS != status) {
-      ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
+    CubitStatus status = CUBIT_SUCCESS;
+    
+    if (strstr(name, ".cub") != NULL) {
+      iGeom_load_cub_geometry(name, err);
+      if (iBase_SUCCESS != *err) {
+	return;
+      }
+    }
+    else {
+      if (strstr(name, ".brep") != NULL || strstr(name, ".occ") != NULL)
+	status = gqt->read_geometry_file(name, NULL, "OCC");
+      else
+	status = gqt->read_geometry_file(name);
+      if (CUBIT_SUCCESS != status) {
+	ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
+      }
     }
   }
-  
+
     // now process uncaught/unregistered attributes
+  iBase_ErrorType result;
   result = process_attribs(instance);
 
   RETURN(result);
@@ -5882,7 +5870,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
   if (NULL == cubfile) RETURN(iBase_FILE_NOT_FOUND);
 
     // first get the length
-  int result = fseek(cubfile, 0, SEEK_END);
+  //int result = fseek(cubfile, 0, SEEK_END);
+  int result = fseek(cubfile, 0, 2);
   if (result) {
     ERROR(iBase_FAILURE, "Couldn't seek to end of .cub file.");
   }
@@ -5896,7 +5885,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
   }
   
     // get the model header
-  result = fseek(cubfile, 4, SEEK_SET);
+  //result = fseek(cubfile, 4, SEEK_SET);
+  result = fseek(cubfile, 4, 0);
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed reading cub file header.");
   }
@@ -5916,7 +5906,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
     ERROR(iBase_FAILURE, "Reading model table will go past end of file.");
   }
     
-  result = fseek(cubfile, model_table_offset, SEEK_SET);
+  //result = fseek(cubfile, model_table_offset, SEEK_SET);
+  result = fseek(cubfile, model_table_offset, 0);
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed seeking to model table.");
   }

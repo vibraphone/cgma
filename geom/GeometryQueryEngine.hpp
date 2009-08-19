@@ -49,6 +49,13 @@ public:
                                    const char* file_type,
                                    const CubitString &cubit_version,
                                    const char* logfile_name = NULL ) = 0;
+
+      virtual CubitStatus export_solid_model(
+                                   DLIList<TopologyBridge*>& bridge_list,
+				   char*& p_buffer,
+				   int& n_buffer_size,
+				   bool b_export_buffer) = 0;
+
      //R CubitStatus
      //R- CUBIT_SUCCESS/CUBIT_FAILURE
      //I ref_entity_list
@@ -101,6 +108,11 @@ public:
                                 bool import_vertices = true,
                                 bool free_surfaces = true
 					                      ) = 0;
+
+     virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+					    const char* pBuffer,
+					    const int n_buffer_size) = 0;
+       
      //R CubitStatus
      //R- CUBIT_SUCCESS/CUBIT_FAILURE
      //I file_ptr

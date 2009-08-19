@@ -231,6 +231,12 @@ public:
                                           const CubitString &cubit_version,
                                           const char* logfile_name = NULL );
 
+  // write shapes to buffer as binary format
+  virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
+					  char*& p_buffer,
+					  int& n_buffer_size,
+					  bool b_export_buffer);
+  
   virtual CubitStatus save_temp_geom_file( DLIList<TopologyBridge*>& ref_entity_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
@@ -254,6 +260,10 @@ public:
                                          CubitBoolean import_vertices = CUBIT_TRUE,
                                          CubitBoolean free_surfaces = CUBIT_TRUE );
 
+  virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+					 const char* pBuffer,
+					 const int n_buffer_size);
+    
   CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm)const;
   CubitStatus unhook_Surface_from_OCC( Surface* surface) const;
   CubitStatus unhook_Curve_from_OCC( Curve* curve) const;
@@ -387,14 +397,31 @@ private:
                               DLIList<OCCCurve*> &facet_curves,
                               DLIList<OCCPoint*> &facet_points );
 
+  CubitStatus write_topology( char*& p_buffer,
+			      int& n_buffer_size,
+			      bool b_export_buffer,
+			      DLIList<OCCBody*> &OCC_bodies,
+			      DLIList<OCCSurface*> &OCC_surfaces,
+			      DLIList<OCCCurve*> &OCC_curves,
+			      DLIList<OCCPoint*> &OCC_points);
+  
   CubitBoolean Write(const TopoDS_Shape& Sh,
                      const Standard_CString File,
                      TDF_Label label);
 
+  CubitBoolean Write(const TopoDS_Shape& Sh,
+		     char*& p_buffer,
+		     int& n_buffer_size,
+		     bool b_export_buffer);
+  
   CubitBoolean Read(TopoDS_Shape& Sh,
                     const Standard_CString File,
                     TDF_Label label,
                     bool print_results);
+
+  CubitBoolean Read(TopoDS_Shape& Sh,
+		    const char* pBuffer,
+		    const int n_buffer_size);
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class

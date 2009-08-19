@@ -849,6 +849,14 @@ CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_
   return CUBIT_SUCCESS;
 }
 
+CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& bridge_list,
+						  char*& p_buffer,
+						  int& n_buffer_size,
+						  bool b_export_buffer)
+{
+  return CUBIT_FAILURE;
+}
+
 CubitStatus
 FacetQueryEngine::gather_all_facet_entities( DLIList<FacetBody*> &facet_bodies,
                                              DLIList<FacetLump*> &facet_lumps,
@@ -1790,13 +1798,13 @@ CubitStatus FacetQueryEngine::import_solid_model(FILE *file_ptr,
     PRINT_ERROR("Trouble reading in file type for MBG\n");
     return CUBIT_FAILURE;
   }
-
+  
   if( strncmp( fileType, "MESH_BASED_GEOMETRY", 19 ) )
   {
     PRINT_ERROR("Not MESH_BASED_GEOMETRY file type\n");
     return CUBIT_FAILURE;
   }
-
+  
   // read in the endian value
   NCubitFile::CIOWrapper file_reader(file_ptr, 19, 0);
 
@@ -1838,6 +1846,12 @@ CubitStatus FacetQueryEngine::import_solid_model(FILE *file_ptr,
   return CUBIT_SUCCESS;
 }
 
+CubitStatus FacetQueryEngine::import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+						 const char* pBuffer,
+						 const int n_buffer_size)
+{
+  return CUBIT_FAILURE;
+}
 
 //===============================================================================
 // Function   : restore_facets
