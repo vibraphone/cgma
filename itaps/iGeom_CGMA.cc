@@ -313,18 +313,22 @@ void iGeom_load( iGeom_Instance instance,
    // make sure we have a null-terminated string for file name
   std::string file_name( name, name_len );
   name = file_name.c_str();
-  
+
   // check if work in parallel
   bool parallel = false;
-  FileOptions opts(options);
   std::string parallel_opt;
-  FOErrorCode rval = opts.get_option("PARALLEL", parallel_opt);
-  if (FO_SUCCESS == rval) parallel = true;
-
+  std::vector<std::string> opts;
+  std::string tmp_options(options, options_size);
+  tmp_options.insert(0, ";");
+  tokenize(tmp_options, opts );
+  for (std::vector<std::string>::iterator i = opts.begin(); i != opts.end(); ++i)
+  {
+    if (match_option( *i, "PARALLEL", parallel_opt )) parallel = true;
+  }
+  
   // parallel
   if (parallel) {
 #ifdef USE_MPI
-    //CubitStatus status = ParallelGeomTool::instance()->load_file(name, options);
     ParallelGeomTool pgt(reinterpret_cast<CGMTagManager*> (instance), NULL);
     CubitStatus status = pgt.load_file(name, options);
     if (CUBIT_SUCCESS != status) {
