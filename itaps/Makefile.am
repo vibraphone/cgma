@@ -25,7 +25,7 @@ if build_OCC
   TESTS += testgeom_occ
 endif
 if build_parallel
-  TESTS += partest testgeomParallel
+  TESTS += partest
 endif
 
 
@@ -79,10 +79,6 @@ if build_parallel
   partest_LDADD = $(testgeom_LDADD)
   partest_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
   partest_LDFLAGS = $(testgeom_LDFLAGS)
-  testgeomParallel_SOURCES = testgeomParallel.cpp
-  testgeomParallel_LDADD = $(testgeom_LDADD)
-  testgeomParallel_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
-  testgeomParallel_LDFLAGS = $(testgeom_LDFLAGS)
   INCLUDES += -I$(top_srcdir)/geom/parallel
 endif
 
