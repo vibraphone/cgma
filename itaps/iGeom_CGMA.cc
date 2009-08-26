@@ -5305,7 +5305,29 @@ iGeom_createCylinder (iGeom_Instance instance,
 
   RETURN(iBase_SUCCESS);
 }
-          
+      
+void
+iGeom_createCone (iGeom_Instance instance,
+		  /*in*/ double height,
+		  /*in*/ double major_rad_base,
+		  /*in*/ double minor_rad_base,
+		  /*in*/ double rad_top,
+		  /*out*/ iBase_EntityHandle *geom_entity,
+		  int* err)
+{
+  double tmp_minor = (0.0 == minor_rad_base ? major_rad_base : minor_rad_base);
+  RefEntity *temp_body = 
+    gmt->cylinder(height, major_rad_base, tmp_minor, rad_top);
+  *geom_entity = reinterpret_cast<iBase_EntityHandle>(temp_body);
+
+
+  if (NULL == *geom_entity) {
+    RETURN(iBase_FAILURE);
+  }
+
+  RETURN(iBase_SUCCESS);
+}
+    
 void
 iGeom_createTorus (iGeom_Instance instance,
                    /*in*/ double major_rad,

@@ -2116,6 +2116,17 @@ void iGeom_createPrism( iGeom_Instance,
 /**\brief 
  *
  */
+  void iGeom_createCone( iGeom_Instance,
+			 double height,
+			 double major_rad_base,
+			 double minor_rad_base,
+			 double rad_top,
+			 iBase_EntityHandle* geom_entity,
+			 int* err );
+
+/**\brief 
+ *
+ */
   void iGeom_createTorus( iGeom_Instance,
                           double major_rad,
                           double minor_rad,
