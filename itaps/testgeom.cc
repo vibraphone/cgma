@@ -109,7 +109,8 @@ bool construct_test(iGeom_Instance geom);
 bool primitives_test(iGeom_Instance geom);
 bool transforms_test(iGeom_Instance geom);
 bool booleans_test(iGeom_Instance geom);
-bool shutdown_test(iGeom_Instance geom);
+bool shutdown_test(iGeom_Instance geom, std::string &engine_opt);
+bool save_entset_test(iGeom_Instance geom);
 bool mesh_size_test(iGeom_Instance geom);
 
 void handle_error_code(const bool result,
@@ -252,9 +253,18 @@ int main( int argc, char *argv[] )
   std::cout << "\n";
 #endif  
 
+    // save entset test
+  std::cout << "   save entset: ";
+  result = save_entset_test(geom);
+  handle_error_code(result, number_tests_failed,
+                    number_tests_not_implemented,
+                    number_tests_successful);
+  number_tests++;
+  std::cout << "\n";
+  
     // shutdown test
   std::cout << "   shutdown: ";
-  result = shutdown_test(geom);
+  result = shutdown_test(geom, engine_opt);
   handle_error_code(result, number_tests_failed,
                     number_tests_not_implemented,
                     number_tests_successful);
@@ -1360,7 +1370,7 @@ bool mesh_size_test(iGeom_Instance geom)
   return true;
 }
 
-bool shutdown_test(iGeom_Instance geom) 
+bool shutdown_test(iGeom_Instance geom, std::string &engine_opt) 
 {
   int err;
 
@@ -1368,8 +1378,82 @@ bool shutdown_test(iGeom_Instance geom)
   iGeom_dtor(geom, &err);
   CHECK( "Interface destruction didn't work properly." );
   
-  iGeom_newGeom(NULL, &geom, &err, 0);
+  iGeom_newGeom(engine_opt.c_str(), &geom, &err, engine_opt.length());
   CHECK( "Interface re-construction didn't work properly." );
+  
+  iGeom_dtor(geom, &err);
+  CHECK( "2nd Interface destruction didn't work properly." );
   
   return true;
 }
+
+bool save_entset_test(iGeom_Instance geom) 
+{
+  int err;
+
+#ifdef HAVE_ACIS
+  std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
+#elif defined(USE_OCC)
+  std::string filename = STRINGIFY(SRCDIR) "/testout.brep";
+#else
+  std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
+#endif
+
+    // initialize number of ents and sets to compare with later
+  int num_ents_bef, num_sets_bef;
+  iBase_EntitySetHandle root;
+  iGeom_getRootSet( geom, &root, &err ); 
+  CHECK("Failed to get root set.");
+  iGeom_getNumEntSets(geom, root, 1, &num_sets_bef, &err);
+  CHECK("Failed to get number of ent sets.");
+  iGeom_getNumOfType(geom, root, iBase_REGION, &num_ents_bef, &err);
+  CHECK("Failed to get number of entities.");
+
+    // create set, and entity to add to set
+  iBase_EntityHandle cyl;
+  iGeom_createCylinder( geom, 1.0, 0.25, 0.0, &cyl, &err );
+  CHECK( "Problems creating cylinder for save entset test." );
+  iBase_EntitySetHandle seth;
+  iGeom_createEntSet(geom, true, &seth, &err);
+  CHECK( "Problems creating entity set for save entset test." );
+
+    // add the entity
+  iGeom_addEntToSet(geom, cyl, seth, &err);
+  CHECK( "Problems adding entity to set for save entset test." );
+
+    // save/restore the model, and see if the entity is there
+  iGeom_save(geom, filename.c_str(), NULL, &err, filename.length(), 0);
+  CHECK( "Problems saving file for save entset test." );
+
+  iGeom_destroyEntSet(geom, seth, &err);
+  CHECK("Failed to destroy entity set.");
+  iGeom_deleteEnt(geom, cyl, &err);
+  CHECK("Failed to destroy entity.");
+  
+    // read the file back in
+  iGeom_load(geom, filename.c_str(), NULL, &err,
+             filename.length(), 0);
+  CHECK( "Problems reading file for save entset test." );
+
+    // check number of sets and entities
+  int num_ents_aft, num_sets_aft;
+  iGeom_getNumEntSets(geom, root, 1, &num_sets_aft, &err);
+  CHECK("Failed to get number of ent sets.");
+  iGeom_getNumOfType(geom, root, iBase_REGION, &num_ents_aft, &err);
+  CHECK("Failed to get number of entities.");
+  bool success = true;
+  if (num_ents_aft != 2*num_ents_bef + 1) {
+    print_error("Failed to get the right number of entities.",
+                iBase_FAILURE, geom, __FILE__, __LINE__);
+    success = false;
+  }
+  else if (num_sets_aft != 2*num_sets_bef + 1) {
+    print_error("Failed to get the right number of entity sets.",
+                iBase_FAILURE, geom, __FILE__, __LINE__);
+    success = false;
+  }
+
+    // otherwise, we succeeded
+  return success;
+}
+
