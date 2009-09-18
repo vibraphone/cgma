@@ -53,7 +53,7 @@ libiGeom_la_SOURCES = \
 libiGeom_la_include_HEADERS = \
 	iBase.h \
 	iGeom.h \
-	iBase_FCDefs.h \
+	iGeom_FCDefs.h \
 	iGeom_protos.h \
 	iBase_f.h \
 	iGeom_f.h
@@ -104,17 +104,22 @@ install-data-hook:
 EXTRA_DIST = testgeom.sat size.sat
 
 CLEANFILES = iGeom-Defs.inc
+DISTCLEANFILES = iGeom_FCDefs.h
 
 FPFX=iGeom
 SEDEXPR = 's/^[[:space:]]*void[[:space:]][[:space:]]*$(FPFX)_\([a-z][_a-zA-Z0-9]*\)[[:space:]]*(.*$$/$(FPFX)_\1/p'
 iGeom_protos.h: iGeom.h
-	echo '#include "iBase_FCDefs.h"' > $@
-	echo '#ifdef FC_FUNC_' >> $@
+	echo '#include "iGeom_FCDefs.h"' > $@
+	echo '#ifdef IGEOM_FC_FUNC_' >> $@
 	echo >> $@
 	for func in `$(SED) -n $(SEDEXPR) $<`; do \
 	  lower=`echo $$func | tr '[:upper:]' '[:lower:]'`; \
           upper=`echo $$func | tr '[:lower:]' '[:upper:]'`; \
-	  echo "#define $$func FC_FUNC_( $$lower, $$upper )" >> $@; \
+	  echo "#define $$func IGEOM_FC_FUNC_( $$lower, $$upper )" >> $@; \
         done
 	echo >> $@
 	echo "#endif" >> $@
+
+iGeom_FCDefs.h: iBase_FCDefs.h
+	cd .. && ./config.status itaps/iGeom_FCDefs.h
+

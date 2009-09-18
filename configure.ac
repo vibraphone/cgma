@@ -29,6 +29,7 @@ if test "x" != "x$FC"; then
 fi
 
 
+
 ################################################################################
 #                              Extract libtool config
 ################################################################################
@@ -435,8 +436,13 @@ AC_CONFIG_FILES(Makefile
            cgm_apps/examples/driverc++/Makefile
            cgm_apps/examples/facetdriver/Makefile
 	   )
-
+# Generate iGeom_FCDefs.h from iBase_FCDefs.h
+AC_CONFIG_COMMANDS([itaps/iGeom_FCDefs.h],
+  [sed -e "s/FC_FUNC/IGEOM_FC_FUNC/" itaps/iBase_FCDefs.h >itaps/iGeom_FCDefs.h])
+# Remove iGeom_protos.h if old format
+AC_CONFIG_COMMANDS_POST([grep IGEOM_FC_FUNC itaps/iGeom_protos.h >/dev/null 2>&1 || rm -f itaps/iGeom_protos.h])
 AC_OUTPUT
+
 if test "x$CUBIT_DIR" != "xno" && test "x$CUBIT_DIR" != "x"; then
    AC_MSG_WARN([Linking against Cubit-based CGM; you'll need to add Cubit's 'bin' directory
                 to your LD_LIBRARY_PATH before linking, or add -R (linux) or equivalent (non-linux)
