@@ -6,7 +6,12 @@
 #  variable in which to store result
 #######################################################################################
 AC_DEFUN([ITAPS_LIBTOOL_VAR], [
-  $3=`./libtool --tag=$1 --config | sed -e 's/^$2=//p' -e 'd' | tr -d '"\n'`
+  echo "SED=$SED" > .tmp
+  ./libtool --tag=$1 --config >>.tmp
+  echo "echo \$$2" >> .tmp
+  chmod +x .tmp
+  $3=`./.tmp`
+  rm .tmp
 ])
 
 #######################################################################################
@@ -20,8 +25,22 @@ AC_DEFUN([ITAPS_LIBTOOL_VAR], [
 #  CXXFLAGS - C++ compiler flags
 #  WITH_MPI - 'yes' if parallel support, 'no' otherwise
 #
+# Arguments:  three strings that msut be either "yes" or "no".
+#             - test for C compiler
+#             - test for C++ compiler
+#             - test for Fortran compiler
 #######################################################################################
 AC_DEFUN([SNL_CHECK_COMPILERS], [
+
+CHECK_CC="$1"
+CHECK_CXX="$2"
+CHECK_FC="$3"
+
+# If not specified or invalid value, change to yes.
+test "xno" = "x$CHECK_CC" || CHECK_CC=yes 
+test "xno" = "x$CHECK_CXX" || CHECK_CXX=yes 
+test "xno" = "x$CHECK_FC" || CHECK_FC=yes 
+
 
   # Save these before calling AC_PROG_CC or AC_PROG_CXX
   # because those macros will modify them, and we want
@@ -47,7 +66,7 @@ case "x$WITH_MPI" in
     F77_LIST="mpif77"
     ;;
   x*)
-    if test -z "$CC";then
+    if test "x" = "x$CC"; then
       for prog in mpicc mpcc; do
         if test -x ${WITH_MPI}/bin/$prog; then
           CC="${WITH_MPI}/bin/$prog"
@@ -57,7 +76,7 @@ case "x$WITH_MPI" in
     else
       CC_LIST="$CC"
     fi
-    if test -z "$CXX";then
+    if test "x" = "x$CXX"; then
       for prog in mpicxx mpiCC mpCC mpicxx; do
         if test -x ${WITH_MPI}/bin/$prog; then
           CXX="${WITH_MPI}/bin/$prog"
@@ -67,7 +86,7 @@ case "x$WITH_MPI" in
     else
       CXX_LIST="$CXX"
     fi
-    if test -z "$FC";then
+    if test "x" = "x$FC"; then
       for prog in mpif90; do
         if test -x ${WITH_MPI}/bin/$prog; then
           FC="${WITH_MPI}/bin/$prog"
@@ -77,7 +96,7 @@ case "x$WITH_MPI" in
     else
       FC_LIST="$FC"
     fi
-    if test -z "$F77";then
+    if test "x" = "x$F77";then
       for prog in mpif77; do
         if test -x ${WITH_MPI}/bin/$prog; then
           F77="${WITH_MPI}/bin/$prog"
@@ -90,17 +109,24 @@ case "x$WITH_MPI" in
     WITH_MPI=yes
     ;;
 esac
-AC_PROG_CC( [$CC_LIST] )
+
+if test "xno" != "x$CHECK_CC"; then
+  AC_PROG_CC( [$CC_LIST] )
+  SNL_CC_FLAGS
+fi
 AC_PROG_CPP
-AC_PROG_CXX( [$CXX_LIST] )
-AC_PROG_CXXCPP
-AC_PROG_FC( [$FC_LIST] )
-AC_PROG_F77( [$F77_LIST] )
+if test "xno" != "x$CHECK_CXX"; then
+  AC_PROG_CXX( [$CXX_LIST] )
+  AC_PROG_CXXCPP
+  SNL_CXX_FLAGS
+fi
+if test "xno" != "x$CHECK_FC"; then
+  AC_PROG_FC( [$FC_LIST] )
+  AC_PROG_F77( [$F77_LIST] )
+fi
 
 # Try to determine compiler-specific flags.  This must be done
 # before setting up libtool so that it can override libtool settings.
-SNL_CC_FLAGS
-SNL_CXX_FLAGS
 CFLAGS="$USER_CFLAGS $SNL_CC_SPECIAL"
 CXXFLAGS="$USER_CXXFLAGS $SNL_CXX_SPECIAL"
 
@@ -229,6 +255,8 @@ AC_MSG_CHECKING([for known c++ compilers])
 # Autoconf does G++ for us
 if test x$GXX = xyes; then
   cxx_compiler=GNU
+  # Intel claims to be GCC, check for it here
+  SNL_TRY_COMPILER_DEFINE([__INTEL_COMPILER],[cxx_compiler=Intel])
 # Search for other compiler types
 # For efficiency, limit checks to relevant OSs
 else
@@ -300,6 +328,11 @@ case "$cxx_compiler:$host_cpu" in
   GNU:*)
     SNL_CXX_SPECIAL="$EXTRA_GNU_FLAGS"
     ;;
+  Intel:*)
+    SNL_CXX_32BIT=-m32
+    SNL_CXX_64BIT=-m64
+    SNL_CXX_SPECIAL="$EXTRA_GNU_FLAGS -wd981 -wd383"
+    ;;
   VisualAge:*)
     SNL_CXX_32BIT=-q32
     SNL_CXX_64BIT=-q64
@@ -355,6 +388,8 @@ AC_MSG_CHECKING([for known C compilers])
 # Autoconf does gcc for us
 if test x$GCC = xyes; then
   cc_compiler=GNU
+  # Intel claims to be GCC, check for it here
+  SNL_TRY_COMPILER_DEFINE([__INTEL_COMPILER],[cc_compiler=Intel])
 # Search for other compiler types
 # For efficiency, limit checks to relevant OSs
 else
@@ -415,6 +450,11 @@ case "$cc_compiler:$host_cpu" in
     SNL_CC_32BIT=-m32
     SNL_CC_64BIT=-m64
     SNL_CC_SPECIAL="$EXTRA_GNU_FLAGS"
+    ;;
+  Intel:*)
+    SNL_CC_32BIT=-m32
+    SNL_CC_64BIT=-m64
+    SNL_CC_SPECIAL="$EXTRA_GNU_FLAGS -wd981 -wd383"
     ;;
   GNU:mips*)
     SNL_CC_32BIT="-mips32 -mabi=32"

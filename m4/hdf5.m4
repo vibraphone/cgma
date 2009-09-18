@@ -26,7 +26,7 @@ case "x$WITH_ZLIB" in
 esac
 HAVE_ZLIB=no
 if test "x$WITH_ZLIB" != "xno"; then
-  old_LDFLAGS="$LIBS"
+  old_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS $HDF5_LDFLAGS"
   AC_CHECK_LIB([z],[deflate],[HAVE_ZLIB=yes],
     [if test "x$WITH_ZLIB" != "x"; then AC_MSG_ERROR([Could not find zlib]); fi])
@@ -59,7 +59,7 @@ if test "x$WITH_SZIP" != "xno"; then
 fi
 
   # CLI option for extra HDF5 link flags
-AC_ARG_WITH([--with-hdf5-ldflags],[AC_HELP_STRING([--with-hdf5-ldflags=...],
+AC_ARG_WITH([hdf5-ldflags],[AC_HELP_STRING([--with-hdf5-ldflags=...],
  [Extra LDFLAGS required for HDF5 library (e.g. parallel IO lib)])],
  [HDF5_LDFLAGS_WITHVAL="$withval"; 
  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-hdf5-ldflags=\"${withval}\""
@@ -99,10 +99,15 @@ if test "xno" != "x$HDF5_ARG"; then
   if test "x$WITH_MPI" != "xno"; then
     AC_CHECK_LIB([gpfs],[gpfs_stat],[HDF5_LIBS="-lgpfs $HDF5_LIBS"])
   fi
+  
+  HDF5_LIBNAME=hdf5
 
     # if a path is specified, update LIBS and INCLUDES accordingly
   if test "xyes" != "x$HDF5_ARG" && test "x" != "x$HDF5_ARG"; then
-    if test -d "${HDF5_ARG}/lib"; then
+    if test -d "${HDF5_ARG}/dll"; then
+      HDF5_LDFLAGS="$HDF5_LDFLAGS -L${HDF5_ARG}/dll"
+      HDF5_LIBNAME=hdf5dll
+    elif test -d "${HDF5_ARG}/lib"; then
       HDF5_LDFLAGS="$HDF5_LDFLAGS -L${HDF5_ARG}/lib"
     elif test -d "${HDF5_ARG}"; then
       HDF5_LDFLAGS="$HDF5_LDFLAGS -L${HDF5_ARG}"
@@ -132,24 +137,27 @@ if test "xno" != "x$HDF5_ARG"; then
   AC_CHECK_HEADERS( [hdf5.h], [], [HAVE_HDF5=no] )
   
   HAVE_LIB_HDF5=no
-  AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes] )
+  AC_CHECK_LIB( [$HDF5_LIBNAME], [H5Fopen], [HAVE_LIB_HDF5=yes] )
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_ZLIB = yes; then
-      unset ac_cv_lib_hdf5_H5Fopen
-      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="-lz $HDF5_LIBS"], [], [-lz] )
+      unset "ac_cv_lib_${HDF5_LIBNAME}_H5Fopen"
+      unset "ac_cv_lib_${HDF5_LIBNAME}___H5Fopen"
+      AC_CHECK_LIB( [${HDF5_LIBNAME}], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="$HDF5_LIBS -lz"], [], [-lz] )
     fi
   fi
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_SZIP = yes; then
-      unset ac_cv_lib_hdf5_H5Fopen
-      AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="-lsz $HDF5_LIBS"], [], [-lsz] )
+      unset "ac_cv_lib_${HDF5_LIBNAME}_H5Fopen"
+      unset "ac_cv_lib_${HDF5_LIBNAME}___H5Fopen"
+      AC_CHECK_LIB( [$HDF5_LIBNAME], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="$HDF5_LIBS -lsz"], [], [-lsz] )
     fi
   fi
   if test $HAVE_LIB_HDF5 = no; then
     if test $HAVE_SZIP = yes; then
       if test $HAVE_ZLIB = yes; then
-        unset ac_cv_lib_hdf5_H5Fopen
-        AC_CHECK_LIB( [hdf5], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="-lsz -lz $HDF5_LIBS"], [], [-lz -lsz] )
+        unset "ac_cv_lib_${HDF5_LIBNAME}_H5Fopen"
+        unset "ac_cv_lib_${HDF5_LIBNAME}___H5Fopen"
+        AC_CHECK_LIB( [$HDF5_LIBNAME], [H5Fopen], [HAVE_LIB_HDF5=yes; HDF5_LIBS="$HDF5_LIBS -lsz -lz"], [], [-lz -lsz] )
       fi
     fi
   fi
@@ -167,7 +175,7 @@ if test "xno" != "x$HDF5_ARG"; then
     HDF5_LDFLAGS=
     HDF5_LIBS=
   else
-    HDF5_LIBS="$HDF5_LIBS -lhdf5"
+    HDF5_LIBS="$HDF5_LIBS -l$HDF5_LIBNAME"
   fi
   
   CPPFLAGS="$old_CPPFLAGS"
