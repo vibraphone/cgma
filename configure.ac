@@ -5,21 +5,18 @@ AC_INIT(CGMA, 10.2.3)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE(CGMA,10.2.3)
+AM_INIT_AUTOMAKE([foreign])
 AC_DISABLE_SHARED
-
-AC_PROG_SED
 
 EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
 SNL_CHECK_COMPILERS
-AC_PROG_FC
+AC_PROG_LIBTOOL
 AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
-AC_PROG_LIBTOOL
 LIBS="-lm"
-AC_PROG_LIBTOOL
+AC_PROG_SED
 AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
 AC_SUBST(LITTLE_ENDIAN)
-
+SNL_COMPILER_FLAGS
 
 ################################################################################
 #                Fortran Stuff for ITAPS C bindings
