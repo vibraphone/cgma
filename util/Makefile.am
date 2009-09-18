@@ -202,3 +202,5 @@ else
       RStarTreeNode.cpp
 endif
 
+libcubit_util_la_LIBADD = -ldl
+
