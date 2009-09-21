@@ -158,7 +158,7 @@ AC_ARG_WITH( ACIS,
              AC_HELP_STRING([--with-ACIS],[DEPRECATED.  Use --wtih-acis (small case)]),
              [ACIS_DIR=$withval
               DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-acis=\"${withval}\""] )
-AC_ARG_WITH( ACIS-system, AC_HELP_STRING([--with-acis-system=SYS], 
+AC_ARG_WITH( acis-system, AC_HELP_STRING([--with-acis-system=SYS], 
           [Specify ACIS system name (e.g. linux_so), default is to autodetect.]),
              [ACIS_SYSTEM=$withval],[ACIS_SYSTEM=] )
 AC_ARG_WITH( acis-version, AC_HELP_STRING([--with-acis-version=INT],
@@ -167,7 +167,7 @@ AC_ARG_WITH( acis-version, AC_HELP_STRING([--with-acis-version=INT],
   AC_MSG_ERROR("ACIS-version must be an integer greater than 600.")
  fi
  ACIS_VERSION=$withval],
-[ACIS_VERSION=0])
+[ACIS_VERSION=])
 if test "x$ACIS_DIR" == "x"; then 
   ACIS_DIR=no
 fi          

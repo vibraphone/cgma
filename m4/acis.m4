@@ -21,31 +21,43 @@ else
   dir_list="$ACIS_DIR/bin/$ACIS_SYSTEM"
 fi
 
+AC_MSG_CHECKING([for ACIS library directory])
+snl_acis_link_success=no
 for dir in $dir_list; do
+  if test "x$snl_acis_link_success" = "xyes"; then
+    break
+  fi
     # first try non-debug libraries
   case "$dir" in
     *_debug)
       ;;
     *)
-      if ! test "$ACIS_VERSION" -gt "600"; then
-        SNL_ACIS_VERSION( [$dir] )
-        ACIS_LIB_DIR="$dir"
-      fi
+      SNL_ACIS_LIBDIR( [$dir] )
       ;;
   esac
     # next try debug libraries
   case "$dir" in
     *_debug)
-      if ! test "$ACIS_VERSION" -gt "600"; then
-        SNL_ACIS_VERSION( [$dir] )
-        ACIS_DEBUG_LIB_DIR="$dir"
-      fi
+      SNL_ACIS_LIBDIR( [$dir] )
       ;;
   esac
 done
 
-if ! test "$ACIS_VERSION" -gt "600"; then
-  AC_MSG_ERROR([ACIS configuration failed.  Verify ACIS directory.  Try specifying ACIS system and version])
+if test "xyes" != "x$snl_acis_link_success"; then
+  AC_MSG_ERROR([failed.])
+else 
+  ACIS_LIB_DIR="$dir"
+  AC_MSG_RESULT([$ACIS_LIB_DIR])
+  
+  AC_MSG_CHECKING([ACIS version])
+  AC_MSG_RESULT([$ACIS_VERSION])
+  if test "x0" = "x$ACIS_VERSION"; then
+    AC_MSG_ERROR([Failed to detect ACIS version.  Try --with-acis-version."])
+  else 
+    if test "0$ACIS_VERSION" -lt "0600"; then
+      AC_MSG_ERROR([Invalid ACIS version.])
+    fi
+  fi
 fi
 
 # If either ACIS_LIB_DIR or ACIS_DEBUG_LIB_DIR is not defined,
@@ -125,37 +137,55 @@ LIBS="$old_LIBS"
 #######################################################################################
 # Macro to get ACIS_VERSION
 # Expected arguments: ACIS library path
+# Sets variables:
+#  snl_acis_link_success=yes/no
+#  ACIS_VERSION=version/0
+#  If ACIS_VERSION is alreay set, it will NOT be modified by
+#  this function.
 #######################################################################################
-AC_DEFUN([SNL_ACIS_VERSION], [
+AC_DEFUN([SNL_ACIS_LIBDIR], [
 AC_REQUIRE([AC_PROG_LIBTOOL])
-AC_LANG_SAVE
-AC_LANG_CPLUSPLUS
-AC_MSG_CHECKING([ACIS version of $1])
-src=conftest.cc
-exe=conftest
-
-cat <<END_SNL_ACIS_VERSION_SRC  >$src
+AC_LANG_PUSH([C++])
+snl_acis_libdir=$1
+snl_acis_link_success=no
+old_LDFLAGS="$LDFLAGS"
+old_LIBS="$LIBS"
+LDFLAGS="-L$1"
+LIBS="-lSpaBase"
+AC_LINK_IFELSE(
+ [AC_LANG_PROGRAM([[
 #include <stdio.h>
 int get_major_version();
 int get_minor_version();
 int get_point_version();
-int main(int,char**) { printf("%d\n", 
+]],[[
+printf("%d\n", 
 100*get_major_version() +
  10*get_minor_version() +
-    get_point_version()); 
-return 0;}
-
-END_SNL_ACIS_VERSION_SRC
-
-FLAGS="$CXXFLAGS $LDFLAGS -L$1 -R$1"
-if ./libtool --mode=link $CXX $FLAGS $src -lSpaBase -o $exe >/dev/null 2>/dev/null; then
-  ACIS_VERSION=`./$exe || echo 0`
-  AC_MSG_RESULT($ACIS_VERSION)
-else
-  ACIS_VERSION=0
-  AC_MSG_RESULT(failed)
-fi
-
-#rm -f $src $exe
-AC_LANG_RESTORE
-]) # SNL_ACIS_VERSION
+    get_point_version());  
+]])],
+[snl_acis_link_success=yes
+ if test "x" = "x$ACIS_VERSION"; then
+   echo "************************"
+   echo "ACIS_VERSION=$ACIS_VERSION"
+   echo "************************"
+   old_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
+   old_SHLIB_PATH="$SH_LIBPATH"
+   old_PATH="$PATH"  # windows!
+   LD_LIBRARY_PATH="${snl_acis_libdir}:$LD_LIBRARY_PATH"
+   SHLIB_PATH="${snl_acis_libdir}:$SHLIB_PATH"
+   PATH="${snl_acis_libdir}:$PATH"
+   export LD_LIBRARY_PATH
+   export SHLIB_PATH
+   export PATH
+   ACIS_VERSION=`./conftest` || ACIS_VERSION=0
+   LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
+   SHLIB_PATH="$old_SHLIB_PATH"
+   PATH="$old_PATH"
+   export LD_LIBRARY_PATH
+   export SHLIB_PATH
+   export PATH
+ fi
+], [snl_acis_link_success=no])
+AC_LANG_POP
+]) # SNL_ACIS_LIBDIR
