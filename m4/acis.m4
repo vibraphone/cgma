@@ -166,9 +166,6 @@ printf("%d\n",
 ]])],
 [snl_acis_link_success=yes
  if test "x" = "x$ACIS_VERSION"; then
-   echo "************************"
-   echo "ACIS_VERSION=$ACIS_VERSION"
-   echo "************************"
    old_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
    old_SHLIB_PATH="$SH_LIBPATH"
    old_PATH="$PATH"  # windows!
