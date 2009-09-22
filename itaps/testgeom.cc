@@ -140,7 +140,7 @@ int main( int argc, char *argv[] )
   #elif defined(HAVE_ACIS)
     std::string filename = STRINGIFY(SRCDIR) "/testgeom.sat";
     std::string engine_opt = ";engine=ACIS";
-  #elif defined(USE_OCC)
+  #elif defined(HAVE_OCC)
     std::string filename = STRINGIFY(SRCDIR) "/../test/LeverArm.brep";
     std::string engine_opt = ";engine=OCC";
   #else
@@ -1391,9 +1391,11 @@ bool save_entset_test(iGeom_Instance geom)
 {
   int err;
 
-#ifdef HAVE_ACIS
+#ifdef FORCE_OCC
+  std::string filename = STRINGIFY(SRCDIR) "/testout.brep";
+#elif defined (HAVE_ACIS)
   std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
-#elif defined(USE_OCC)
+#elif defined (HAVE_OCC)
   std::string filename = STRINGIFY(SRCDIR) "/testout.brep";
 #else
   std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
