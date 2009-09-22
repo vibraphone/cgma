@@ -198,7 +198,7 @@ int main( int argc, char *argv[] )
   number_tests++;
   std::cout << "\n";
 
-    // gentitysets test
+    // topology adjacencies test
   std::cout << "   topology adjacencies: ";
   result = topology_adjacencies_test(geom);
   handle_error_code(result, number_tests_failed,
@@ -251,7 +251,6 @@ int main( int argc, char *argv[] )
                     number_tests_successful);
   number_tests++;
   std::cout << "\n";
-#endif  
 
     // save entset test
   std::cout << "   save entset: ";
@@ -261,6 +260,7 @@ int main( int argc, char *argv[] )
                     number_tests_successful);
   number_tests++;
   std::cout << "\n";
+#endif  
   
     // shutdown test
   std::cout << "   shutdown: ";
