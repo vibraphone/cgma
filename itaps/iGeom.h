@@ -2041,7 +2041,7 @@ extern "C" {
      */
   void iGeom_endEntArrIter( iGeom_Instance, iGeom_EntityArrIterator, int* err );
 
-/**\brief 
+/**\brief Make a copy of the specified entity
  *
  */
   void iGeom_copyEnt( iGeom_Instance,
@@ -2093,8 +2093,9 @@ void iGeom_createPrism( iGeom_Instance,
 	           iBase_EntityHandle* prism_handle_out,
                    int* err );
 
-/**\brief 
+/**\brief Create an axis-oriented box 
  *
+ * Create an axis-oriented box of the given dimensions, centered at the origin
  */
   void iGeom_createBrick( iGeom_Instance,
                           double x,
@@ -2103,8 +2104,14 @@ void iGeom_createPrism( iGeom_Instance,
                           iBase_EntityHandle* geom_entity,
                           int* err );
 
-/**\brief 
+/**\brief Create a cylinder
  *
+ * Create a cylinder parallel to the z-axis and centered at the origin 
+ * (so that its z-coordinate extents are +height/2 and -height/2).
+ * \param height The height of the cylinder.
+ * \param major_rad The x-axis radius
+ * \param minor_rad The y-axis radius. If minor_rad is 0, the cylinder will 
+ *                  be circular (as if minor_rad == major_rad).
  */
   void iGeom_createCylinder( iGeom_Instance,
                              double height,
@@ -2113,8 +2120,21 @@ void iGeom_createPrism( iGeom_Instance,
                              iBase_EntityHandle* geom_entity,
                              int* err );
 
-/**\brief 
+/**\brief Create a cone or tapered cylinder
  *
+ * Create a cone parallel to the z-axis and centered at the origin
+ * (so that its z-coordinate extents are +height/2 and -height/2).
+ * The 'base' of the cylinder is at z = -height/2, and the top is at +height/2.
+ * 
+ * \param height The height of the cone.
+ * \param major_rad_base The x-axis radius at the base of the cylinder 
+ * \param minor_rad_base The y-axis radius at the base.  If minor_rad_base is 0, 
+ *                       the cylinder will be circular (as if 
+ *                       minor_rad_base == major_rad_base)
+ * \param rad_top The x-axis radius at the top of the cone.  The y-axis radius 
+ *                at the top of the cone will be inferred to keep the aspect 
+ *                ratio of the top of the cone the same as the bottom.
+ *                If rad_top is 0, the cone terminates at a point.
  */
   void iGeom_createCone( iGeom_Instance,
 			 double height,
@@ -2124,8 +2144,13 @@ void iGeom_createPrism( iGeom_Instance,
 			 iBase_EntityHandle* geom_entity,
 			 int* err );
 
-/**\brief 
+/**\brief Create a torus
  *
+ * Create a torus centered on the origin and encircling the z-axis.
+ *
+ * \param major_rad The distance from the origin to the center of the
+ *                  torus's circular cross-section.
+ * \param minor_rad The radius of the cross-section.
  */
   void iGeom_createTorus( iGeom_Instance,
                           double major_rad,
@@ -2133,7 +2158,7 @@ void iGeom_createPrism( iGeom_Instance,
                           iBase_EntityHandle* geom_entity,
                           int* err );
 
-/**\brief 
+/**\brief Move an entity by the given vector
  *
  */
   void iGeom_moveEnt( iGeom_Instance,
@@ -2143,8 +2168,9 @@ void iGeom_createPrism( iGeom_Instance,
                       double z,
                       int* err );
 
-/**\brief 
+/**\brief Rotate an entity about a given axis
  *
+ * \param angle The rotational angle, in degrees.
  */
   void iGeom_rotateEnt( iGeom_Instance,
                         iBase_EntityHandle geom_entity,
