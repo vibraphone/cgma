@@ -46,16 +46,26 @@
   }; \
   array ## _size = this_size;
 
-#define TAG_CHECK_SIZE(array, allocated, size)  \
-  if (allocated < size) {\
-    if (NULL != array) free(array); \
-    allocated=size; \
-    array = (char*)malloc(allocated); \
-    if (NULL == array) {\
-      iGeom_setLastError(iBase_MEMORY_ALLOCATION_FAILED); \
-      return iBase_MEMORY_ALLOCATION_FAILED; \
-    }\
+static inline iBase_ErrorType tag_check_size( char*& array,
+                                              int& allocated,
+                                              int size )
+{
+  if (!array || !allocated) {
+    allocated = size;
+    array = (char*)malloc(allocated);
+    if (!array) 
+      return iBase_MEMORY_ALLOCATION_FAILED;
   }
+  else if (allocated < size) {
+    return iBase_BAD_ARRAY_SIZE;
+  }
+  
+  return iBase_SUCCESS;
+}
+
+#define TAG_CHECK_SIZE(array, allocated, size)  \
+  if (iBase_ErrorType tag_check_size_tmp = tag_check_size( array, allocated, size )) \
+    return tag_check_size_tmp;
 
 #define RETURN(a) {iGeom_setLastError(a); return a;}
 
