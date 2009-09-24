@@ -1223,7 +1223,7 @@ static int check_firmness( iGeom_Instance geom,
   std::vector<char> firmness(firmness_size * entities.size());
 
   char* byte_ptr = &firmness[0];
-  int err, junk1, junk2 = entities.size()*firmness_size;
+  int err, junk1 = firmness.size(), junk2 = entities.size()*firmness_size;
   iGeom_getArrData( geom, &entities[0], entities.size(), firmness_tag, &byte_ptr, &junk1, &junk2, &err ); 
   if (iBase_SUCCESS != err)
     return err;
