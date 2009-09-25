@@ -1392,13 +1392,13 @@ bool save_entset_test(iGeom_Instance geom)
   int err;
 
 #ifdef FORCE_OCC
-  std::string filename = STRINGIFY(SRCDIR) "/testout.brep";
+  std::string filename = "testout.brep";
 #elif defined (HAVE_ACIS)
-  std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
+  std::string filename = "testout.sat";
 #elif defined (HAVE_OCC)
-  std::string filename = STRINGIFY(SRCDIR) "/testout.brep";
+  std::string filename = "testout.brep";
 #else
-  std::string filename = STRINGIFY(SRCDIR) "/testout.sat";
+  std::string filename = "testout.sat";
 #endif
 
     // initialize number of ents and sets to compare with later
