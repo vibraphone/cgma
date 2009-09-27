@@ -109,6 +109,7 @@ MOSTLYCLEANFILES = \
 	ex3export.iges \
         prism.occ \
         pyramid.occ \
-        fillet.occ
+        fillet.occ \
+	mmgr.log
  
 

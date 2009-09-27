@@ -3,6 +3,7 @@ EXTRA_DIST = README merge.sat huge.sat $(TESTS)
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 
 check_PROGRAMS = mergechk
+CLEANFILES = mmgr.log
 
 AM_CPPFLAGS += -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
