@@ -99,27 +99,42 @@ elif test "x$CUBIT_DIR" != "xno"; then
   CUBIT_LDFLAGS="-L$CUBIT_BIN_DIR"
   CUBIT_LTFLAGS="-R$CUBIT_BIN_DIR"
 
-  cat >conftest.cc <<EOCUBITCT
-class AcisQueryEngine { public: static AcisQueryEngine* instance_; };
-int main() {
-  AcisQueryEngine::instance_ = 0;
-  return 0;
-}
-EOCUBITCT
+  AC_LANG_PUSH([C++])
+  old_LIBS="$LIBS"
+  old_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS -L$CUBIT_BIN_DIR"
+  old_SHLIB_PATH="$SH_LIBPATH"
+  old_PATH="$PATH"  # windows!
+  LD_LIBRARY_PATH="${CUBIT_BIN_DIR}:$LD_LIBRARY_PATH"
+  SHLIB_PATH="${CUBIT_BIN_DIR}:$SHLIB_PATH"
+  PATH="${CUBIT_BIN_DIR}:$PATH"
+  export LD_LIBRARY_PATH
+  export SHLIB_PATH
+  export PATH
   pattern=["${CUBIT_BIN_DIR}/*cubiti[0-9][0-9].*"]
   for file in $pattern; do
     AC_MSG_CHECKING([for AcisQueryEngine::instance_ in $file])
     num=[`expr X"$file" : X".*cubiti\([0-9][0-9]\)\..*"`]
-    if ./libtool --mode=link $CXX $LDFLAGS $CUBIT_LDFLAGS $CUBIT_LTFLAGS -lcubiti$num conftest.cc -o conftest >&5 2>&5; then
-      CUBIT_LIBS="-lcubiti$num"
-      CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
-      CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
-      AC_MSG_RESULT(yes)
-    else
-      AC_MSG_RESULT(no)
-    fi
+    LIBS="$old_LIBS -lcubiti$num"
+    AC_LINK_IFELSE([AC_LANG_PROGRAM(
+      [class AcisQueryEngine { public: static AcisQueryEngine* instance_; };],
+      [AcisQueryEngine::instance_ = 0;])],
+      [CUBIT_LIBS="-lcubiti$num"
+       CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
+       CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
+       AC_MSG_RESULT(yes)
+       break],
+      [AC_MSG_RESULT(no)])
   done
-  rm -f conftest.cc
+  LIBS="$old_LIBS"
+  LDFLAGS="$old_LDFLAGS"
+  LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
+  SHLIB_PATH="$old_SHLIB_PATH"
+  PATH="$old_PATH"
+  export LD_LIBRARY_PATH
+  export SHLIB_PATH
+  export PATH
+  AC_LANG_POP([C++])
   
   if test "x$CUBIT_LIBS" = "xno"; then
     AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
@@ -441,7 +456,8 @@ AC_CONFIG_COMMANDS_POST([grep IGEOM_FC_FUNC itaps/iGeom_protos.h >/dev/null 2>&1
 AC_OUTPUT
 
 if test "x$CUBIT_DIR" != "xno" && test "x$CUBIT_DIR" != "x"; then
-   AC_MSG_WARN([Linking against Cubit-based CGM; you'll need to add Cubit's 'bin' directory
-                to your LD_LIBRARY_PATH before linking, or add -R (linux) or equivalent (non-linux)
-                to your link statement to link applications.])
+   AC_MSG_WARN(
+[Linking against Cubit-based CGM; you'll need to add Cubit's 'bin' directory
+to your LD_LIBRARY_PATH before linking, or add -R (linux) or equivalent 
+(non-linux) to your link statement to link applications.])
 fi
