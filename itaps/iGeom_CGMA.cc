@@ -4106,7 +4106,9 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
   else {
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
-    
+
+  CHECK_SIZE( *uv, double, 2*count );
+
   double *u, *v;
   const double *x, *y, *z;
   u = *uv;
@@ -4125,8 +4127,6 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
     coord_step *= 3;
     uv_step = 2;
   }
-  
-  CHECK_SIZE( *uv, double, 2*count );
   
   iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** ent = (RefEntity**)gentity_handles;
