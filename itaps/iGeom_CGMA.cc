@@ -3891,7 +3891,7 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
 {
   size_t ent_step, coord_step, uv_step;
   int count;
-  if (gentity_handles_size == 2*uv_size) {
+  if (2*gentity_handles_size == uv_size) {
     ent_step = uv_step = 1;
     count = gentity_handles_size;
   }
@@ -3908,6 +3908,8 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
   else {
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
+
+  CHECK_SIZE( *coordinates, double, 3*count );
     
   const double *u, *v;
   double *x, *y, *z;
@@ -3927,8 +3929,6 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
     coord_step = 3;
     uv_step *= 2;
   }
-  
-  CHECK_SIZE( *coordinates, double, 3*count );
   
   RefEntity** ent = (RefEntity**)gentity_handles;
   for (int i = 0; i < count; ++i) {
