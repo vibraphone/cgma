@@ -849,8 +849,18 @@ iGeom_getNumOfType (iGeom_Instance instance,
   if (NULL == dim_entities) dim_entities = new DLIList<RefEntity*>();
   dim_entities->clean_out();
   if (0 == this_set) {
-    RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[gentity_type], 
-                                                  *dim_entities, CUBIT_FALSE);
+    if (gentity_type == iBase_ALL_TYPES) {
+      for (int i = 0; i < 4; i++) {
+        static DLIList<RefEntity*> temp_entities;
+        RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[i], 
+                                                      temp_entities, CUBIT_FALSE);
+        *dim_entities += temp_entities;
+      }
+    }
+    else {
+      RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[gentity_type], 
+                                                    *dim_entities, CUBIT_FALSE);
+    }
   }
   else {
     static DLIList<CubitEntity*> centities;
@@ -859,16 +869,21 @@ iGeom_getNumOfType (iGeom_Instance instance,
     entities.clean_out();
     const_cast<RefGroup*>(this_set)->get_child_entities(centities);
     CAST_LIST(centities, entities, RefEntity);
-    entities.reset();
-    int num_ents = entities.size();
-    for (int i = 0; i < num_ents; i++) {
-      if (entities.get()->dimension() == gentity_type)
-        dim_entities->append(entities.get_and_step());
-      else
-        entities.step();
+    if (gentity_type == 4) {
+      *dim_entities += entities;
+    }
+    else {
+      entities.reset();
+      int num_ents = entities.size();
+      for (int i = 0; i < num_ents; i++) {
+        if (entities.get()->dimension() == gentity_type)
+          dim_entities->append(entities.get_and_step());
+        else
+          entities.step();
+      }
     }
   }
-    
+
   *count = dim_entities->size();
   RETURN (iBase_SUCCESS);
 }
