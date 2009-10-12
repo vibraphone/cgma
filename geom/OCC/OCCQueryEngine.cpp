@@ -76,23 +76,10 @@
 #include "OCCShell.hpp"
 #include "OCCLump.hpp"
 #include "OCCBody.hpp"
-#include "CubitFacetEdge.hpp"
-#include "CubitFacetEdgeData.hpp"
-#include "CubitFacet.hpp"
-#include "CubitFacetData.hpp"
-#include "CubitQuadFacet.hpp"
-#include "CubitQuadFacetData.hpp"
-#include "CubitPoint.hpp"
 #include "GMem.hpp"
-#include "FacetEvalTool.hpp"
-#include "CurveFacetEvalTool.hpp"
-#include "CubitPointData.hpp"
 #include "GeometryQueryTool.hpp"
-#include "debug.hpp"
 #include "CubitObserver.hpp"
 #include "GfxDebug.hpp"
-#include "KDDTree.hpp"
-#include "RTree.hpp"
 #include <stdio.h>
 #include <errno.h>
 

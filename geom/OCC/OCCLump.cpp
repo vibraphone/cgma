@@ -18,8 +18,6 @@
 #include "CastTo.hpp"
 #include "Surface.hpp"
 #include "DLIList.hpp"
-#include "CubitFacet.hpp"
-#include "CubitPoint.hpp"
 #include "CubitVector.hpp"
 #include "CubitString.hpp"
 #include "ShellSM.hpp"

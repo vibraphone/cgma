@@ -18,7 +18,6 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "CubitString.hpp"
-#include "CubitPoint.hpp"
 #include "CastTo.hpp"
 #include "BodySM.hpp"
 #include "Body.hpp"

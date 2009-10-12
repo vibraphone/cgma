@@ -14,7 +14,6 @@
 
 // ********** BEGIN OCC INCLUDES           **********
 #include "OCCSurface.hpp"
-#include "RefFace.hpp"
 #include "OCCQueryEngine.hpp"
 
 #include "OCCBody.hpp"
@@ -34,13 +33,11 @@
 #include "GeometryDefines.h"
 #include "CubitUtil.hpp"
 #include "CastTo.hpp"
-#include "RefVolume.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "DLIList.hpp"
 #include "ShellSM.hpp"
 #include "Lump.hpp"
 #include "LoopSM.hpp"
-#include "CubitPointData.hpp"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"

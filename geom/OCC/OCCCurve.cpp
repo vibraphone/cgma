@@ -25,7 +25,6 @@
 #include "GeometryQueryEngine.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CoEdgeSM.hpp"
-#include "CubitPoint.hpp"
 
 #include "OCCBody.hpp"
 #include "OCCLump.hpp"
