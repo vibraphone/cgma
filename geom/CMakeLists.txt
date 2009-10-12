@@ -17,6 +17,12 @@ IF(CGM_GRANITE)
   SUBDIRS(granite)
 ENDIF(CGM_GRANITE)
 
+# build cgm with OpenCASCADE support, default to on
+OPTION(CGM_OCC "Build CGM with OpenCASCADE support" ON)
+IF(CGM_OCC)
+  SUBDIRS(OCC)
+ENDIF(CGM_OCC)
+
 INCLUDE(${cubit_geom_SOURCE_DIR}/../util/UseUtil.cmake)
 
 SET(GEOM_SRCS
