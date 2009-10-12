@@ -29,7 +29,6 @@ libcubit_OCC_la_SOURCES = \
     OCCLoop.cpp \
     OCCLump.cpp \
     OCCModifyEngine.cpp \
-    OCCParamTool.cpp \
     OCCPoint.cpp \
     OCCQueryEngine.cpp \
     OCCShell.cpp \
@@ -49,7 +48,6 @@ libcubit_OCC_la_include_HEADERS = \
     OCCLoop.hpp \
     OCCLump.hpp \
     OCCModifyEngine.hpp \
-    OCCParamTool.hpp \
     OCCPoint.hpp \
     OCCQueryEngine.hpp \
     OCCShell.hpp \
