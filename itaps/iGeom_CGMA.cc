@@ -206,6 +206,9 @@ static int iGeom_is_parametric( RefEntity* entity );
 static iBase_ErrorType
 iGeom_get_vtx_to_u(RefVertex* vertex, RefEdge* edge, double& u);
 
+static iBase_ErrorType
+iGeom_get_vtx_to_uv(RefVertex* vertex, RefFace* face, double& u, double& uv);
+
 
 static CubitStatus
 iGeom_normal_from_uv( RefFace* face, double u, double v, CubitVector& normal );
@@ -4524,7 +4527,14 @@ iGeom_getVtxToUV (iGeom_Instance instance,
                   /*out*/ double* v,
                   int* err)
 {
-  RETURN(iBase_NOT_SUPPORTED);
+  RefVertex* vtx = dynamic_cast<RefVertex*>((RefEntity*)vertex_handle);
+  RefFace* face = dynamic_cast<RefFace*>((RefEntity*)face_handle);
+  if (!vtx || !face) {
+    RETURN(iBase_INVALID_ENTITY_TYPE);
+  }
+
+  iBase_ErrorType result = iGeom_get_vtx_to_uv( vtx, face, *u, *v );
+  RETURN(result);
 }  
 
 void
@@ -4539,7 +4549,60 @@ iGeom_getVtxArrToUV (iGeom_Instance instance,
                      int *uv_size,
                      int* err)
 {
-  RETURN(iBase_NOT_SUPPORTED);
+  int count;
+  size_t vtx_step, face_step, uv_step;
+  if (vertex_handles_size == face_handles_size) {
+    count = vertex_handles_size;
+    vtx_step = face_step = 1;
+  }
+  else if (face_handles_size == 1) {
+    count = vertex_handles_size;
+    vtx_step = 1;
+    face_step = 0;
+  }
+  else if (vertex_handles_size == 1) {
+    count = face_handles_size;
+    vtx_step = 0;
+    face_step = 1;
+  }
+  else {
+    ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
+  }
+  
+  CHECK_SIZE( *uv, double, 2*count );
+
+  double *u, *v;
+  u = *uv;
+  if (storage_order == iBase_BLOCKED) {
+    v = u + count;
+    uv_step = 1;
+  } 
+  else {
+    storage_order = iBase_INTERLEAVED;
+    v = u + 1;
+    uv_step = 2;
+  }
+  
+  RefEntity** vtx_iter = (RefEntity**)vertex_handles;
+  RefEntity** face_iter = (RefEntity**)face_handles;
+  for (int i = 0; i < count; ++i) {
+    RefVertex* vtx = dynamic_cast<RefVertex*>(*vtx_iter);
+    RefFace* face = dynamic_cast<RefFace*>(*face_iter);
+    if (!vtx || !face) {
+      RETURN(iBase_INVALID_ENTITY_TYPE);
+    }
+    
+    iBase_ErrorType rval = iGeom_get_vtx_to_uv( vtx, face, *u, *v );
+    if (iBase_SUCCESS != rval) {
+      RETURN(rval);
+    }
+
+    vtx_iter += vtx_step;
+    face_iter += face_step;
+    u += uv_step;
+    v += uv_step;
+  }
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -6373,6 +6436,23 @@ iGeom_get_vtx_to_u(RefVertex* vertex,
   else
     return iBase_INVALID_ARGUMENT;
   return iBase_SUCCESS;
+}
+
+static iBase_ErrorType
+iGeom_get_vtx_to_uv(RefVertex* vertex, RefFace* face, double& u, double& v)
+{
+  DLIList<RefVertex*> pts;
+  TopologyEntity *topo_ent = dynamic_cast<const TopologyEntity*>(face);
+  topo_ent->ref_vertices(pts);
+
+  pts.reset();
+  for(int i=0; i<pts.size(); i++) {
+    if (pts.get_and_step() == vertex) {
+      face->u_v_from_position( vertex->coordinates(), u, v );         
+      return iBase_SUCCESS;
+    }
+  }
+  return iBase_INVALID_ARGUMENT;
 }
 
 static CubitStatus
