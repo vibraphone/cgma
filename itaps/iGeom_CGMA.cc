@@ -2823,6 +2823,8 @@ iGeom_getFaceType( iGeom_Instance instance,
   
   RefEntity *this_ent = ENTITY_HANDLE(gentity_handle);
   RefFace *this_face = dynamic_cast<RefFace*>(this_ent);
+  if (!this_face)
+    RETURN(iBase_INVALID_ENTITY_TYPE);
   GeometryType this_type = this_face->get_surface_ptr()->geometry_type();
   if (this_type < CONE_SURFACE_TYPE || this_type > UNDEFINED_SURFACE_TYPE) {
     RETURN(iBase_FAILURE);
