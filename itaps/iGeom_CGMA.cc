@@ -4501,8 +4501,27 @@ iGeom_getEntUtoUV (iGeom_Instance instance,
                    /*out*/ double* v,
                    int* err)
 {
-  RETURN(iBase_NOT_SUPPORTED);
-}  
+  RefEdge* edge = dynamic_cast<RefEdge*>((RefEntity*)edge_handle);
+  RefFace* face = dynamic_cast<RefFace*>((RefEntity*)face_handle);
+  if (!edge || !face) {
+    RETURN(iBase_INVALID_ENTITY_TYPE);
+  }
+  
+  CubitVector xyz;
+  CubitStatus s;
+  s = edge->position_from_u( in_u, xyz );
+  if (s != CUBIT_SUCCESS)
+    RETURN(iBase_FAILURE);
+
+  s = face->u_v_from_position( xyz, *u, *v );
+  RETURN( (s == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
+}
+
+static bool
+iGeom_check_array_size(int size1, int size2)
+{
+    return size1 == 1 || size2 == 1 || size1 == size2;        
+}
 
 void
 iGeom_getArrUtoUV (iGeom_Instance instance,
@@ -4518,8 +4537,64 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
                    int *uv_size,
                    int* err)
 {
-  RETURN(iBase_NOT_SUPPORTED);
-}  
+  int count;
+  size_t edge_step, face_step, coord_step, in_u_step;
+
+  if (!(iGeom_check_array_size(edge_handles_size, face_handles_size) &&
+        iGeom_check_array_size(edge_handles_size, in_u_size) &&
+        iGeom_check_array_size(face_handles_size, in_u_size))) {
+    ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
+  }
+
+  edge_step = (edge_handles_size == 1) ? 0:1;
+  face_step = (face_handles_size == 1) ? 0:1;
+  in_u_step = (in_u_size == 1) ? 0:1;
+
+  count = std::max(edge_handles_size, std::max(face_handles_size, in_u_size));
+
+  CHECK_SIZE( *uv, double, 2*count );
+  
+  const double *in_u_iter;
+  double *u, *v;
+  in_u_iter = in_u;
+  u = *uv;
+  if (storage_order == iBase_BLOCKED) {
+    v = u + count;
+    coord_step = 1;
+  } 
+  else {
+    v = u + 1;
+    coord_step = 2;
+  }
+  
+  iBase_ErrorType result = iBase_SUCCESS;
+  RefEntity** edge_ent = (RefEntity**)edge_handles;
+  RefEntity** face_ent = (RefEntity**)face_handles;
+  for (int i = 0; i < count; ++i) {
+    RefEdge* edge = dynamic_cast<RefEdge*>(*edge_ent);
+    RefFace* face = dynamic_cast<RefFace*>(*face_ent);
+    if (!edge || !face) {
+      RETURN(iBase_INVALID_ENTITY_TYPE);
+    }
+    
+    CubitVector xyz;
+    CubitStatus s;
+    s = edge->position_from_u( *in_u_iter, xyz );
+    if (CUBIT_SUCCESS != s)
+      result = iBase_FAILURE;
+    s = face->u_v_from_position( xyz, *u, *v );
+    if (CUBIT_SUCCESS != s)
+      result = iBase_FAILURE;
+
+    edge_ent += edge_step;
+    face_ent += face_step;
+    in_u_iter += in_u_step;
+    u += coord_step;
+    v += coord_step;
+  }
+  
+  RETURN(result);
+}
 
 void
 iGeom_getVtxToUV (iGeom_Instance instance,
