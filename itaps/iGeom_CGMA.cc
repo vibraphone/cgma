@@ -4795,7 +4795,7 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
 {
   int count;
   size_t face_step, param_step, norm_step;
-  if (gface_handles_size == 2*parameters_size) {
+  if (2*gface_handles_size == parameters_size) {
     count = gface_handles_size;
     face_step = param_step = 1;
   }
@@ -4813,6 +4813,9 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
   
+    // check or pre-allocate the coordinate arrays
+  CHECK_SIZE( *normals, double, 3*count );
+
   const double *u, *v;
   double *x, *y, *z;
   u = parameters;
