@@ -4898,7 +4898,7 @@ iGeom_getArrTgntU (iGeom_Instance instance,
                      ARRAY_IN(parameters), storage_order, 
                      ARRAY_INOUT(tangents), err); 
   if (iBase_SUCCESS == *err)
-    iGeom_getArrNrmlXYZ(instance, ARRAY_IN(gedge_handles), storage_order,
+    iGeom_getArrTgntXYZ(instance, ARRAY_IN(gedge_handles), storage_order,
                         *tangents, *tangents_size, ARRAY_INOUT(tangents), err);
 }
 
