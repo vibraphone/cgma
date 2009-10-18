@@ -13,7 +13,6 @@
 #include "CpuTimer.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
-#include "AcisQueryEngine.hpp"
 #include "MergeTool.hpp"
 #include "CubitUtil.hpp"
 #include "CubitMessage.hpp"
@@ -26,11 +25,10 @@
 #include "RefVertex.hpp"
 #include "CubitObserver.hpp"
 #include "CastTo.hpp"
-#include "AcisQueryEngine.hpp"
-#include "AcisModifyEngine.hpp"
 #include "AppUtil.hpp"
 #include "RefEntityFactory.hpp"
 #include "RefEdge.hpp"
+#include "InitCGMA.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -59,24 +57,10 @@ CubitStatus webcut_with_sweep_surfaces_perp();
 // main program - initialize, then send to proper function
 int main (int argc, char **argv)
 {
-
-  CubitObserver::init_static_observers();
-    // Initialize the GeometryTool
-  
-  CGMApp::instance()->startup( argc, argv );
-  GeometryQueryTool::instance();
-  AcisQueryEngine::instance();
-  AcisModifyEngine::instance();
-
-    // If there aren't any file arguments, print usage and exit
-  //if (argc == 1) {
-  //  PRINT_INFO("Usage: mergechk <geom_file> [<geom_file> ...]\n");
-  //  exit(0);
-  //}
+  CubitStatus result = InitCGMA::initialize_cgma();
+  if (CUBIT_SUCCESS != result) return 1;
   
   CubitStatus status = CUBIT_SUCCESS;
-
-
 
   //Do brick webcut.
   status = webcut_with_brick();

@@ -35,7 +35,7 @@ lib_LTLIBRARIES = libiGeom.la
 
 libiGeom_la_includedir = $(includedir)
 
-libiGeom_la_LIBADD = ../libcgm.la
+libiGeom_la_LIBADD = $(top_builddir)/libcgm.la
 
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \

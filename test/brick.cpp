@@ -8,15 +8,7 @@
 #include "AppUtil.hpp"
 #include "Loop.hpp"
 #include "CoEdge.hpp"
-
-#ifdef HAVE_OCC
-#  include "OCCQueryEngine.hpp"
-#  include "OCCModifyEngine.hpp"
-#endif
-#ifdef HAVE_ACIS
-#  include "AcisQueryEngine.hpp"
-#  include "AcisModifyEngine.hpp"
-#endif
+#include "InitCGMA.hpp"
 
 #include <assert.h>
 #include <algorithm>
@@ -35,17 +27,8 @@ void check_valid_loop( Loop* loop );
 int main( int argc, char* argv[] )
 {
     // Start up CGM
-  AppUtil::instance()->startup(argc, argv);
-  CGMApp::instance()->startup(argc, argv);
-  CubitObserver::init_static_observers();
-#ifdef HAVE_OCC
-  OCCQueryEngine::instance();
-  OCCModifyEngine::instance();
-#endif
-#ifdef HAVE_ACIS
-  AcisQueryEngine::instance();
-  AcisModifyEngine::instance();
-#endif
+  CubitStatus result = InitCGMA::initialize_cgma();
+  if (CUBIT_SUCCESS != result) return 1;
 
     // Create a brick
   Body* brick = GeometryModifyTool::instance()->brick( 2, 2, 2 );

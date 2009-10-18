@@ -14,19 +14,10 @@
 #include "RefFace.hpp"
 #include "CubitObserver.hpp"
 #include "InitCGMA.hpp"
+#include "DLIList.hpp"
 
 #include <typeinfo>
 #include <assert.h>
-
-#ifdef HAVE_ACIS
-//#include "AcisModifyEngine.hpp"
-//#include "AcisQueryEngine.hpp"
-#endif
-
-#ifdef HAVE_OCC
-#include "OCCModifyEngine.hpp"
-#include "OCCQueryEngine.hpp"
-#endif
 
 int test_sheet_query( GeometryModifyEngine* engine );
 
@@ -36,18 +27,11 @@ int main (int argc, char **argv)
   CubitStatus result = InitCGMA::initialize_cgma();
   if (CUBIT_SUCCESS != result) return 1;
   
-  GeometryModifyEngine* const gme_list[] = {
-#ifdef HAVE_ACIS
-//    AcisModifyEngine::instance(),
-#endif
-#ifdef HAVE_OCC
-//    OCCModifyEngine::instance(),
-#endif
-    NULL
-  };
+  DLIList<GeometryModifyEngine*> gme_list;
+  GeometryModifyTool::instance()->get_gme_list(gme_list);
 
   int exit_val = 0;
-  for (int i = 0; gme_list[i]; ++i)
+  for (int i = 0; i < gme_list.size(); ++i)
     exit_val += test_sheet_query( gme_list[i] );
 
   return exit_val;
@@ -56,9 +40,6 @@ int main (int argc, char **argv)
 
 int test_sheet_query( GeometryModifyEngine* engine )
 {
-//  CubitStatus rval = GeometryModifyTool::instance()->set_default_gme( engine );
-//  assert(rval);
-  
   Body *sphere = 0, *sheet = 0;
   
   sphere = GeometryModifyTool::instance()->sphere( 1.0 );
