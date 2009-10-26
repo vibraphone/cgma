@@ -3824,7 +3824,7 @@ iGeom_getArrTolerance (iGeom_Instance instance,
   CHECK_SIZE(*tolerances, double, gentity_handles_size);
   double dum_abs_tol = gqt->get_sme_resabs_tolerance();
   for (int i = 0; i < gentity_handles_size; i++) {
-    (*tolerances[i]) = dum_abs_tol;
+    (*tolerances)[i] = dum_abs_tol;
   }
   RETURN(iBase_SUCCESS);
 }
