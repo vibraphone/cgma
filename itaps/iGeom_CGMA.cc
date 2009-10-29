@@ -970,7 +970,7 @@ iGeom_getArrAdj(iGeom_Instance instance,
                 int *offset_size,
                 int* err)
 {
-  CHECK_SIZE(*offset, int, entity_handles_size);
+  CHECK_SIZE(*offset, int, entity_handles_size+1);
   DLIList<RefEntity*> temp_list, total_list;
   for (int i = 0; i < entity_handles_size; ++i) {
     (*offset)[i] = total_list.size();
@@ -979,6 +979,7 @@ iGeom_getArrAdj(iGeom_Instance instance,
     if (iBase_SUCCESS != *err) return;
     total_list += temp_list;
   }
+  (*offset)[entity_handles_size] = total_list.size();
 
   CHECK_SIZE(*adj_entity_handles, iBase_EntityHandle, total_list.size());
   total_list.copy_to((RefEntity**)*adj_entity_handles);
@@ -1045,7 +1046,7 @@ iGeom_getArr2ndAdj(iGeom_Instance instance,
                    int *offset_size,
                    int *err)
 {
-  CHECK_SIZE(*offset, int, entity_handles_size);
+  CHECK_SIZE(*offset, int, entity_handles_size+1);
   DLIList<RefEntity*> bridge_list, temp_list, entity_list, total_list;
    
   for (int i = 0; i < entity_handles_size; ++i) {
@@ -1061,9 +1062,10 @@ iGeom_getArr2ndAdj(iGeom_Instance instance,
       entity_list += temp_list;
     }
     entity_list.uniquify_unordered();
-    (*offset)[i] = entity_list.size();
+    (*offset)[i] = total_list.size();
     total_list += entity_list;
   }
+  (*offset)[entity_handles_size] = total_list.size();
 
   CHECK_SIZE(*adj_entity_handles, iBase_EntityHandle, total_list.size());
   total_list.copy_to((RefEntity**)*adj_entity_handles);
