@@ -3180,7 +3180,7 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
   CHECK_SIZE( *entity_handles, iBase_EntityHandle, count );
   
   iBase_ErrorType result = iBase_SUCCESS;
-  RefEntity** array = (RefEntity**)entity_handles;
+  RefEntity** array = (RefEntity**)*entity_handles;
   for (int i = 0; i < count; ++i)
   {
     const CubitVector pt( *x, *y, *z );
