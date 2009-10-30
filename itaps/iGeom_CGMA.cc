@@ -1131,8 +1131,8 @@ iGeom_isArrAdj (iGeom_Instance instance,
   CHECK_SIZE(*is_adjacent_info, int, count);
   for (int i = 0; i < count; ++i)
   {
-    TopologyEntity* ent1 = (TopologyEntity*)(*list_1_iter);
-    TopologyEntity* ent2 = (TopologyEntity*)(*list_2_iter);
+    TopologyEntity* ent1 = dynamic_cast<TopologyEntity*>(*list_1_iter);
+    TopologyEntity* ent2 = dynamic_cast<TopologyEntity*>(*list_2_iter);
     (*is_adjacent_info)[i] = ent1->is_directly_related(ent2);
     list_1_iter += list_1_step;
     list_2_iter += list_2_step;
@@ -3254,21 +3254,24 @@ iGeom_getArrNrmlSense(iGeom_Instance instance,
     RETURN (iBase_INVALID_ENTITY_COUNT);
   }
   
-  RefEntity** face_array = (RefEntity**)faces;
-  RefEntity** region_array = (RefEntity**)regions;
+  RefEntity** face_iter = (RefEntity**)faces;
+  RefEntity** region_iter = (RefEntity**)regions;
   CHECK_SIZE( *senses, int, count );
   for (int i = 0; i < count; ++i) {
-    RefFace *face_ent = dynamic_cast<RefFace*>(face_array[i]);
+    RefFace *face_ent = dynamic_cast<RefFace*>(*face_iter);
     if (NULL == face_ent) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getGnormalSense must be a face.");
     }
-    RefVolume *volume_ent = dynamic_cast<RefVolume*>(region_array[i]);
+    RefVolume *volume_ent = dynamic_cast<RefVolume*>(*region_iter);
     if (NULL == volume_ent) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGnormalSense must be a region.");
     }
     (*senses)[i] = iGeom_get_nonmanifold_sense( face_ent, volume_ent, err );
     if (iBase_SUCCESS != *err)
       return;
+
+    face_iter += faces_step;
+    region_iter += regions_step;
   }
   
   RETURN(iBase_SUCCESS);
@@ -3332,21 +3335,24 @@ iGeom_getEgFcArrSense(iGeom_Instance instance,
     ERROR( iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes" );
   }
   
-  RefEntity** face_array = (RefEntity**)faces;
-  RefEntity** edge_array = (RefEntity**)edges;
+  RefEntity** face_iter = (RefEntity**)faces;
+  RefEntity** edge_iter = (RefEntity**)edges;
   CHECK_SIZE( *senses, int, count );
   for (int i = 0; i < count; ++i) {
-    RefEdge *edge_ent = dynamic_cast<RefEdge*>(edge_array[i]);
+    RefEdge *edge_ent = dynamic_cast<RefEdge*>(*edge_iter);
     if (NULL == edge_ent) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getGnormalSense must be a face.");
     }
-    RefFace *face_ent = dynamic_cast<RefFace*>(face_array[i]);
+    RefFace *face_ent = dynamic_cast<RefFace*>(*face_iter);
     if (NULL == face_ent) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGnormalSense must be a region.");
     }
     (*senses)[i] = iGeom_get_nonmanifold_sense( edge_ent, face_ent, err );
     if (iBase_SUCCESS != *err)
       return;
+
+    face_iter += faces_step;
+    edge_iter += edges_step;
   }
   
   RETURN(iBase_SUCCESS);
