@@ -11,7 +11,6 @@ AC_DISABLE_SHARED
 EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
 SNL_CHECK_COMPILERS
 AC_PROG_LIBTOOL
-AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
 LIBS="-lm"
 AC_PROG_SED
 AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
@@ -40,6 +39,9 @@ AC_SUBST(CGM_CXX_LIBS)
 #                              MPI OPTIONS
 ################################################################################
 
+AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
+FATHOM_CHECK_MPI
+FATHOM_CONFIG_MPI_EXEC
 if test "x$WITH_MPI" != "xno"; then
   CXXFLAGS="$CXXFLAGS -DUSE_MPI"
   CGM_PARALLEL_INCLUDE='-I${CGM_DIR}/geom/parallel'
@@ -50,6 +52,14 @@ AM_CONDITIONAL(USE_MPI, [test "xno" != "x$WITH_MPI"])
 AC_SUBST(CGM_PARALLEL_INCLUDE)
 AC_SUBST(CGM_PARALLEL_LIB)
 AC_SUBST(CGM_PARALLEL_LIB_FILE)
+# Used to generate CGMmpi.h
+if test "xyes" = "x$MPI_CXX_HELP_NEEDED"; then
+  AC_DEFINE( [CGM_MPI_CXX_CONFLICT], [1], 
+    [MPICH_IGNORE_CXX_SEEK is not sufficient to avoid conflicts] )
+  AC_DEFINE_UNQUOTED([CGM_SEEK_SET],[$SEEK_SET],["Value of C SEEK_SET"])
+  AC_DEFINE_UNQUOTED([CGM_SEEK_CUR],[$SEEK_CUR],["Value of C SEEK_CUR"])
+  AC_DEFINE_UNQUOTED([CGM_SEEK_END],[$SEEK_END],["Value of C SEEK_END"])
+fi
 
 ################################################################################
 #                           CGM-specific Checks
@@ -423,6 +433,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
 AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_HEADERS([geom/parallel/CGMmpi_config.h])
 AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile

@@ -9,7 +9,7 @@
 #include <sstream>
 
 #ifdef USE_MPI
-#include "mpi.h"
+#include "CGMmpi.h"
 #endif
 
 #define INITIAL_BUFF_SIZE 1024

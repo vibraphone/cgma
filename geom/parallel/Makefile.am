@@ -30,6 +30,8 @@ libcubit_parallel_la_SOURCES = \
 # If any of these do not need to be installed, move them
 # to the _SOURCES list above.
 libcubit_parallel_la_include_HEADERS = \
+    CGMmpi.h \
+    CGMmpi_config.h \
     CGMProcConfig.hpp \
     CGMParallelComm.hpp \
     FileOptions.hpp \
