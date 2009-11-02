@@ -11,7 +11,7 @@
 # If ACIS_VERSION is set, the corresponding test
 # will be skipped.
 #######################################################################################
-AC_DEFUN([SNL_ACIS_ENV], [
+AC_DEFUN([FATHOM_ACIS_ENV], [
 
 AC_CHECK_FILE([$ACIS_DIR/include/acis.hxx], [], [AC_MSG_ERROR("Invalid ACIS path")])
  
@@ -32,13 +32,13 @@ for dir in $dir_list; do
     *_debug)
       ;;
     *)
-      SNL_ACIS_LIBDIR( [$dir] )
+      FATHOM_ACIS_LIBDIR( [$dir] )
       ;;
   esac
     # next try debug libraries
   case "$dir" in
     *_debug)
-      SNL_ACIS_LIBDIR( [$dir] )
+      FATHOM_ACIS_LIBDIR( [$dir] )
       ;;
   esac
 done
@@ -104,8 +104,8 @@ AC_MSG_RESULT([$ACIS_PLATFORM])
 #######################################################################################
 # Macro to check for ACIS translators.
 #######################################################################################
-AC_DEFUN([SNL_ACIS_TRANSLATOR], [
-AC_REQUIRE([SNL_ACIS_ENV])
+AC_DEFUN([FATHOM_ACIS_TRANSLATOR], [
+AC_REQUIRE([FATHOM_ACIS_ENV])
 case "$ACIS_VERSION" in
   11??)
     ACIS_XLATE_LIBS='-lxacis2k -lxcore2k -lxutil'
@@ -143,7 +143,7 @@ LIBS="$old_LIBS"
 #  If ACIS_VERSION is alreay set, it will NOT be modified by
 #  this function.
 #######################################################################################
-AC_DEFUN([SNL_ACIS_LIBDIR], [
+AC_DEFUN([FATHOM_ACIS_LIBDIR], [
 AC_REQUIRE([AC_PROG_LIBTOOL])
 AC_LANG_PUSH([C++])
 snl_acis_libdir=$1
@@ -185,4 +185,4 @@ printf("%d\n",
  fi
 ], [snl_acis_link_success=no])
 AC_LANG_POP
-]) # SNL_ACIS_LIBDIR
+]) # FATHOM_ACIS_LIBDIR

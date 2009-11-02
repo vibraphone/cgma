@@ -9,13 +9,13 @@ AM_INIT_AUTOMAKE([foreign])
 AC_DISABLE_SHARED
 
 EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
-SNL_CHECK_COMPILERS
+FATHOM_CHECK_COMPILERS
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_SED
 AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
 AC_SUBST(LITTLE_ENDIAN)
-SNL_COMPILER_FLAGS
+FATHOM_COMPILER_FLAGS
 
 ################################################################################
 #                Fortran Stuff for ITAPS C bindings
@@ -65,8 +65,8 @@ fi
 #                           CGM-specific Checks
 ################################################################################
 
-SNL_CANT_USE_STD
-SNL_TEMPLATE_DEFS_INCLUDED
+FATHOM_CANT_USE_STD
+FATHOM_TEMPLATE_DEFS_INCLUDED
 AC_SUBST(CANT_USE_STD)
 AC_SUBST(CANT_USE_STD_IO)
 AC_SUBST(TEMPLATE_DEFS_INCLUDED)
@@ -209,9 +209,9 @@ if test "x$ACIS_DIR" != "xno"; then
                  [AC_MSG_ERROR([ACIS source not present.  Checkout ACIS_SRC and move to ACIS])] )
 
   if test "$ACIS_DIR" == "yes"; then ACIS_DIR=.; fi
-  SNL_ACIS_ENV
+  FATHOM_ACIS_ENV
   
-  SNL_ACIS_TRANSLATOR
+  FATHOM_ACIS_TRANSLATOR
   if test x$ACIS_STEP_TRANSLATOR != x; then
     ACIS_LIBS="$ACIS_LIBS $ACIS_STEP_LIBS"
     ACIS_XLIBS="$ACIS_XLATE_LIBS"
