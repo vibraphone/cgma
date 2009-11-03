@@ -332,7 +332,7 @@ void iGeom_load( iGeom_Instance instance,
   // parallel
   if (parallel) {
 #ifdef USE_MPI
-    ParallelGeomTool pgt(reinterpret_cast<CGMTagManager*> (instance), NULL);
+    ParallelGeomTool pgt(NULL);
     CubitStatus status = pgt.load_file(name, options);
     if (CUBIT_SUCCESS != status) {
       ERROR(iBase_FAILURE, "Trouble loading geometry file in parallel.");
@@ -451,7 +451,7 @@ void iGeom_getBoundBox( iGeom_Instance,
                         double* max_z,
                         int* err ) 
 {
-  *err = CUBIT_FAILURE;
+  *err = iBase_NOT_SUPPORTED;
 }
 
 
