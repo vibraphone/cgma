@@ -3,25 +3,9 @@
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#  ifdef SEEK_SET
-#    define PTEST_SEEK_SET SEEK_SET
-#    define PTEST_SEEK_CUR SEEK_CUR
-#    define PTEST_SEEK_END SEEK_END
-#    undef SEEK_SET
-#    undef SEEK_CUR
-#    undef SEEK_END
-#  endif
-#include "mpi.h"
-#  ifdef PTEST_SEEK_SET
-#    define SEEK_SET PTEST_SEEK_SET
-#    define SEEK_CUR PTEST_SEEK_CUR
-#    define SEEK_END PTEST_SEEK_END
-#    undef PTEST_SEEK_SET
-#    undef PTEST_SEEK_CUR
-#    undef PTEST_SEEK_END
-#  endif
-
+#include "CGMmpi.h"
 #include "iGeom.h"
 
 #define IGEOM_ASSERT(ierr) if (ierr!=0) printf("igeom assert\n");
