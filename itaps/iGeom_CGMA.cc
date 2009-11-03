@@ -5201,7 +5201,7 @@ iGeom_subtract (iGeom_Instance instance,
     *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
     
-  set3->subtract(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
+  const_cast<RefGroup*>(set1)->subtract(const_cast<RefGroup*>(set2), set3);
   RETURN(iBase_SUCCESS);
 }
 
@@ -5225,7 +5225,7 @@ iGeom_intersect (iGeom_Instance instance,
     *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
 
-  set3->intersect(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
+  const_cast<RefGroup*>(set1)->intersect(const_cast<RefGroup*>(set2), set3);
   RETURN(iBase_SUCCESS);
 }
 
@@ -5249,7 +5249,7 @@ iGeom_unite (iGeom_Instance instance,
     *result_entity_set = reinterpret_cast<iBase_EntitySetHandle>(set3);
   }
 
-  set3->unite(const_cast<RefGroup*>(set2), const_cast<RefGroup*>(set1));
+  const_cast<RefGroup*>(set1)->unite(const_cast<RefGroup*>(set2), set3);
   RETURN(iBase_SUCCESS);
 }
 
