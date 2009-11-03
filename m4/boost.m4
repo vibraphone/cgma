@@ -24,7 +24,7 @@ else
   fi
   AC_LANG_SAVE
   AC_LANG_CPLUSPLUS
-  AC_CHECK_HEADERS( [$SNL_BOOST_OPT_HEADER_LIST],[def=`echo "$ac_header" | $as_tr_cpp`; DEFINES="$DEFINES -DHAVE_$def"] )
+  AC_CHECK_HEADERS( [$FATHOM_BOOST_OPT_HEADER_LIST],[def=`echo "$ac_header" | $as_tr_cpp`; DEFINES="$DEFINES -DHAVE_$def"] )
   AC_LANG_RESTORE
 fi
 ]) # FATHOM_CHECK_BOOST

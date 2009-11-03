@@ -147,8 +147,8 @@ fi
 
 # Try to determine compiler-specific flags.  This must be done
 # before setting up libtool so that it can override libtool settings.
-CFLAGS="$USER_CFLAGS $SNL_CC_SPECIAL"
-CXXFLAGS="$USER_CXXFLAGS $SNL_CXX_SPECIAL"
+CFLAGS="$USER_CFLAGS $FATHOM_CC_SPECIAL"
+CXXFLAGS="$USER_CXXFLAGS $FATHOM_CXX_SPECIAL"
 
 # On IBM/AIX, the check for OBJEXT fails for the mpcc compiler.
 # (Comment out this hack, it should be fixed correctly now)
@@ -211,13 +211,13 @@ AC_ARG_ENABLE( 32bit, AC_HELP_STRING([--enable-32bit],[Force 32-bit objects]),
 [
   if test "xyes" != "x$enableval"; then
     AC_MSG_ERROR([Unknown argument --enable-32bit=$enableval])
-  elif test "x" = "x$SNL_CXX_32BIT"; then
+  elif test "x" = "x$FATHOM_CXX_32BIT"; then
     AC_MSG_ERROR([Don't know how to force 32-bit C++ on this platform.  Try setting CXXFLAGS manually])
-  elif test "x" = "x$SNL_CC_32BIT"; then
+  elif test "x" = "x$FATHOM_CC_32BIT"; then
     AC_MSG_ERROR([Don't know how to force 32-bit C on this platform.  Try setting CFLAGS manually])
   fi
-  CXXFLAGS="$CXXFLAGS $SNL_CXX_32BIT"
-  CFLAGS="$CFLAGS $SNL_CC_32BIT"
+  CXXFLAGS="$CXXFLAGS $FATHOM_CXX_32BIT"
+  CFLAGS="$CFLAGS $FATHOM_CC_32BIT"
   enable_32bit=yes
 ])
 # This requires FATHOM_CXX_FLAGS and FATHOM_CC_FLAGS to have been called first
@@ -225,15 +225,15 @@ AC_ARG_ENABLE( 64bit, AC_HELP_STRING([--enable-64bit],[Force 64-bit objects]),
 [
   if test "xyes" != "x$enableval"; then
     AC_MSG_ERROR([Unknown argument --enable-64bit=$enableval])
-  elif test "x" = "x$SNL_CXX_64BIT"; then
+  elif test "x" = "x$FATHOM_CXX_64BIT"; then
     AC_MSG_ERROR([Don't know how to force 64-bit C++ on this platform.  Try setting CXXFLAGS manually])
-  elif test "x" = "x$SNL_CC_64BIT"; then
+  elif test "x" = "x$FATHOM_CC_64BIT"; then
     AC_MSG_ERROR([Don't know how to force 64-bit C on this platform.  Try setting CFLAGS manually])
   elif test "xyes" = "x$enable_32bit"; then
     AC_MSG_ERROR([Cannot do both --enable-32bit and --enable-64bit])
   fi
-  CXXFLAGS="$CXXFLAGS $SNL_CXX_64BIT"
-  CFLAGS="$CFLAGS $SNL_CC_64BIT"
+  CXXFLAGS="$CXXFLAGS $FATHOM_CXX_64BIT"
+  CFLAGS="$CFLAGS $FATHOM_CC_64BIT"
 ])
 
 ]) # FATHOM_COMPILER_FLAGS
