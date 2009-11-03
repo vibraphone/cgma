@@ -24,9 +24,6 @@ endif
 if build_OCC
   TESTS += testgeom_occ
 endif
-if build_parallel
-  TESTS += partest
-endif
 
 
 SUBDIRS = . $(SIDL_DIR)
@@ -74,12 +71,13 @@ chaman_LDADD = libiGeom.la
 chaman_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
 chaman_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 
-if build_parallel
-  partest_SOURCES = partest.cpp
-  partest_LDADD = $(testgeom_LDADD)
-  partest_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
-  partest_LDFLAGS = $(testgeom_LDFLAGS)
-  INCLUDES += -I$(top_srcdir)/geom/parallel
+if USE_MPI
+check_PROGRAMS += partest
+partest_SOURCES = partest.cpp
+partest_LDADD = $(testgeom_LDADD)
+partest_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
+partest_LDFLAGS = $(testgeom_LDFLAGS)
+INCLUDES += -I$(top_srcdir)/geom/parallel
 endif
 
 
