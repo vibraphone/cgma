@@ -524,7 +524,8 @@ iGeom_initEntArrIter (iGeom_Instance instance,
  * Get the next entity for this iterator.
  * @param gentity_iterator Iterator being iterated over
  * @param gentity_handle Next gentity
- * @return If true, there are more gentities, if false, this is the last one
+ * @return If true, there were more gentities, if false, the iterator was
+ *         already at the end.
  */
 void
 iGeom_getNextEntIter (iGeom_Instance instance,
@@ -536,8 +537,12 @@ iGeom_getNextEntIter (iGeom_Instance instance,
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   RefEntity** out_handle = reinterpret_cast<RefEntity**>(gentity_handle);
-  *has_data = 1;
-  iterator->next( out_handle, *has_data );
+  *has_data = !iterator->at_end();
+  if (*has_data) {
+    int count = 1;
+    iterator->next( out_handle, count );
+  }
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -553,8 +558,10 @@ iGeom_getNextEntArrIter(iGeom_Instance instance,
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(entArr_iterator);
   CHECK_SIZE(*entity_handles, iBase_EntityHandle, iterator->size());
-  iterator->next( (RefEntity**)*entity_handles, *entity_handles_size );
-  *has_data = iterator->at_end();
+  *has_data = !iterator->at_end();
+  if (has_data)
+    iterator->next( (RefEntity**)*entity_handles, *entity_handles_size );
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -1300,7 +1307,8 @@ iGeom_getTagHandle (iGeom_Instance instance,
   std::string tag_name_buf( tag_name, tag_name_len );
   tag_name = tag_name_buf.c_str();
   *tag_handle = reinterpret_cast<iBase_TagHandle>(static_cast<size_t>(TM->getTagHandle( tag_name )));
-  RETURN(iBase_SUCCESS);
+
+  *err = iGeom_getLastErrorType();
 }
 
 void

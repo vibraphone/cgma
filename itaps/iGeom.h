@@ -1965,8 +1965,9 @@ extern "C" {
      * \param entity_iterator Iterator being queried
      * \param entity_handle Pointer to an entity handle corresponding to the
      *        current value of iterator
-     * \param has_data Pointer to flag; if returned non-zero, next iterator
-     *        has an entity
+     * \param has_data Pointer to a flag indicating if the value returned
+     *        in entity_handle is valid. A non-zero value indicates the value
+     *        is valid. A zero value indicates the value is NOT valid.
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getNextEntIter( iGeom_Instance,
@@ -1989,8 +1990,10 @@ extern "C" {
      *        entity_handles array
      * \param *entity_handles_size Pointer to occupied size of entity_handles 
      *        array
-     * \param has_data Pointer to flag; if returned non-zero, next iterator
-     *        has a non-zero number of entities
+     * \param has_data Pointer to a flag indicating if the value(s) returned
+     *        in entity_handles are valid. A non-zero value indicates the 
+     *        value(s) are valid. A zero value indicates the value(s) are NOT
+     *        valid.
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getNextEntArrIter( iGeom_Instance,

@@ -257,23 +257,34 @@ iBase_ErrorType CGMTagManager::createTag (/*in*/ const char *tag_name,
                                           /*out*/ long *tag_handle)
 {
   std::string tmp_name(tag_name);
+  TagInfo tmp_info = {tag_length, tmp_name, tag_type, NULL, true};
+
   std::map<std::string,long>::iterator mit = tagNameMap.find(tmp_name);
   if (mit != tagNameMap.end()) {
+    // we found a tag with this name; is it still active?
+    bool active = (mit->second > 0 ? tagInfo[mit->second] :
+                   presetTagInfo[-mit->second]).isActive;
     *tag_handle = mit->second;
-    iGeom_setLastError( iBase_TAG_ALREADY_EXISTS );
-    return iBase_TAG_ALREADY_EXISTS;
+    if (active) {
+      iGeom_setLastError( iBase_TAG_ALREADY_EXISTS );
+      return iBase_TAG_ALREADY_EXISTS;
+    }
+
+    tagInfo[*tag_handle] = tmp_info;
   }
-    
-  TagInfo tmp_info = {tag_length, std::string(tag_name), tag_type, NULL, true};
-  tagInfo.push_back(tmp_info);
-  *tag_handle = tagInfo.size() - 1;
+  else {
+    // create a new tag entirely
+    tagInfo.push_back(tmp_info);
+    *tag_handle = tagInfo.size() - 1;
+
+    // put the name and handle into the map too
+    tagNameMap[std::string(tag_name)] = *tag_handle;
+  }
+
   if (default_value != NULL) {
     tagInfo[*tag_handle].defaultValue = (char *) malloc(tag_length);
     memcpy(tagInfo[*tag_handle].defaultValue, default_value, tag_length);
   }
-
-    // put the name and handle into the map too
-  tagNameMap[std::string(tag_name)] = *tag_handle;
 
   RETURN(iBase_SUCCESS);
 }
@@ -315,14 +326,16 @@ long CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
   std::map<std::string,long>::iterator it =
     tagNameMap.find(std::string(tag_name));
   if (it != tagNameMap.end()) {
+    bool active = (it->second > 0 ? tagInfo[it->second] :
+                   presetTagInfo[-it->second]).isActive;
+    if (active) {
       iGeom_clearLastError();
-      return (*it).second;
+      return it->second;
+    }
   }
-  
-  else {
-    iGeom_setLastError( iBase_TAG_NOT_FOUND );
-    return 0;
-  }
+
+  iGeom_setLastError( iBase_TAG_NOT_FOUND );
+  return 0;
 }
 
 int CGMTagManager::getTagType (/*in*/ const long tag_handle) 
