@@ -7,6 +7,7 @@
 
 //#include <iostream>
 #include <sstream>
+#include <algoritm>
 
 #ifdef USE_MPI
 #include "CGMmpi.h"

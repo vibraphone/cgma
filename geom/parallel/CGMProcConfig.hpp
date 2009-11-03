@@ -8,36 +8,7 @@
 
 
 #ifdef USE_MPI
-/* MPICH2 will fail if SEEK_* macros are defined
- * because they are also C++ enums. Undefine them
- * when including mpi.h and then redefine them
- * for sanity.
- */
-
-#  ifdef SEEK_SET
-#    define CGM_SEEK_SET SEEK_SET
-#    define CGM_SEEK_CUR SEEK_CUR
-#    define CGM_SEEK_END SEEK_END
-#    undef SEEK_SET
-#    undef SEEK_CUR
-#    undef SEEK_END
-#  endif
-#include "mpi.h"
-
-#  ifdef CGM_SEEK_SET
-#    define SEEK_SET CGM_SEEK_SET
-#    define SEEK_CUR CGM_SEEK_CUR
-#    define SEEK_END CGM_SEEK_END
-#    undef CGM_SEEK_SET
-#    undef CGM_SEEK_CUR
-#    undef CGM_SEEK_END
-#  endif
-//extern "C" 
-//{
-  //#include "types.h"
-  //#include "errmem.h"
-//#include "crystal.h"
-//}
+#  include "CGMmpi.h"
 #else
 typedef int MPI_Comm;
 #define MPI_COMM_WORLD 0
