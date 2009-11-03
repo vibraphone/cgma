@@ -12,7 +12,6 @@
 #include "GeometryQueryTool.hpp"
 #include "ParallelGeomTool.hpp"
 #include "CGMParallelConventions.h"
-#include "CATag.hpp"
 #include "CGMParallelComm.hpp"
 
 const bool debug = true;
@@ -45,12 +44,12 @@ const char* ParallelGeomTool::CGMpartitionOptsNames[] = { "NONE", "GEOM_DIMENSIO
 
 //ParallelGeomTool *ParallelGeomTool::instance_ = NULL;
 
-ParallelGeomTool::ParallelGeomTool(CGMTagManager* impl, CGMParallelComm *pc)
-  : cgmImpl(impl), myPcomm(pc) 
+ParallelGeomTool::ParallelGeomTool(CGMParallelComm *pc)
+  : myPcomm(pc) 
 {
   if (!myPcomm) {
-    myPcomm = CGMParallelComm::get_pcomm(impl, 0);
-    if (NULL == myPcomm) myPcomm = new CGMParallelComm(cgmImpl);
+    myPcomm = CGMParallelComm::get_pcomm(0);
+    if (NULL == myPcomm) myPcomm = new CGMParallelComm();
   }
   //gqt = GeometryQueryTool::instfance();
 }

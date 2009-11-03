@@ -10,41 +10,24 @@
 #ifndef CGM_PARALLEL_COMM_HPP
 #define CGM_PARALLEL_COMM_HPP
 
-//#include "CGMForward.hpp"
-#include "GeometryQueryTool.hpp"
-//#include "CGMRange.hpp"
 #include "CGMProcConfig.hpp"
-#include "CATag.hpp"
-#include <map>
-#include <set>
-#include <vector>
-#include "math.h"
 #include "CGMmpi.h"
+#include "DLIList.hpp"
+#include <vector>
 
-
-extern "C" {
-  struct tuple_list;
-}
-
-//class TagServer;
-//class SequenceManager;
-//template <typename KeyType, typename ValType, ValType NullVal> class RangeMap;
-//typedef RangeMap<CGMEntityHandle, CGMEntityHandle, 0> HandleMap;
-
-#define MAX_SHARING_PROCS 64
+class GeometryQueryTool;
+class RefEntity;
 
 class CGMParallelComm 
 {
 public:
 
     //! constructor
-  CGMParallelComm(CGMTagManager *impl,
-		  MPI_Comm comm = MPI_COMM_WORLD,
+  CGMParallelComm(MPI_Comm comm = MPI_COMM_WORLD,
 		  int* pcomm_id_out = 0);
   
   //! constructor taking buffer, for testing
-  CGMParallelComm(CGMTagManager *impl,
-		  std::vector<unsigned char> &tmp_buff,
+  CGMParallelComm(std::vector<unsigned char> &tmp_buff,
 		  MPI_Comm comm = MPI_COMM_WORLD,
 		  int* pcomm_id_out = 0);
   
@@ -52,18 +35,15 @@ public:
   int get_id() const { return pcommID; }
 
     //! get the indexed pcomm object from the interface
-  static CGMParallelComm *get_pcomm(CGMTagManager *impl,
-				    const int index);
+  static CGMParallelComm *get_pcomm(const int index);
   
     //! Get CGMParallelComm instance associated with partition handle
     //! Will create CGMParallelComm instance if a) one does not already
     //! exist and b) a valid value for MPI_Comm is passed.
-  static CGMParallelComm *get_pcomm(CGMTagManager *impl,
-                                    //CGMEntityHandle partitioning,
+  static CGMParallelComm *get_pcomm(//CGMEntityHandle partitioning,
                                     const MPI_Comm* comm = 0 );
 
-  static CubitStatus get_all_pcomm(CGMTagManager *impl,
-				   std::vector<CGMParallelComm*>& list );
+  static CubitStatus get_all_pcomm(std::vector<CGMParallelComm*>& list );
   
   //! destructor
   ~CGMParallelComm();
@@ -129,29 +109,21 @@ public:
   
 private:  
 
+  static std::vector<CGMParallelComm*> instanceList;
+
     //! add a pc to the iface instance tag PARALLEL_COMM
-  int add_pcomm(CGMParallelComm *pc);
+  static int add_pcomm(CGMParallelComm *pc);
   
     //! remove a pc from the iface instance tag PARALLEL_COMM
-  void remove_pcomm(CGMParallelComm *pc);
+  static void remove_pcomm(CGMParallelComm *pc);
 
   CubitStatus check_size(int& target_size, const CubitBoolean keep = CUBIT_FALSE);
   
     //! CGM query tool interface associated with this writer
   GeometryQueryTool *gqt;
 
-    //! CGM tag manager interface associated with this writer
-  CGMTagManager *cgmImpl;
-
     //! Proc config object, keeps info on parallel stuff
   CGMProcConfig procConfig;
-
-    //! Tag server, so we can get more info about tags
-  //TagServer *tagServer;
-
-    //! Sequence manager, to get more efficient access to entities
-  //SequenceManager *sequenceManager;
-  
   
     //! data buffer used to communicate
   std::vector<unsigned char> myBuffer;
@@ -161,31 +133,6 @@ private:
   int m_nBufferSize;
   
   int m_currentPosition;
-
-  //std::ofstream mOfstream;
-
-    //! more data buffers, proc-specific
-  //std::vector<unsigned char> ownerRBuffs[MAX_SHARING_PROCS],
-  //ownerSBuffs[MAX_SHARING_PROCS], ghostRBuffs[MAX_SHARING_PROCS],
-  // ghostSBuffs[MAX_SHARING_PROCS];
-
-    //! request objects, may be used if store_remote_handles is used
-  //MPI_Request sendReqs[2*MAX_SHARING_PROCS];
-
-    //! processor rank for each buffer index
-  //std::vector<int> buffProcs;
-
-    //! the partition, interface sets for this comm'n instance
-  //CGMRange partitionSets, interfaceSets;
-  
-    //! local entities ghosted to other procs
-  //std::map<unsigned int, CGMRange> ghostedEnts;
-  
-    //! tags used to save sharing procs and handles
-  //CGMTag sharedpTag, sharedpsTag, sharedhTag, sharedhsTag, pstatusTag, 
-  //ifaceSetsTag, partitionTag;
-    
-  //int globalPartCount; //!< Cache of global part count
   
   //CGMEntityHandle partitioningSet; //!< entity set containing all parts
   DLIList<RefEntity*> partitioningSurfList; // ref entity list containing all parts

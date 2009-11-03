@@ -1,17 +1,10 @@
 #include "CGMParallelComm.hpp"
-//#include "CubitAttrib.hpp"
-//#include "OCCQueryEngine.hpp"
 #include "TopologyEntity.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "RefEntity.hpp"
+#include "GeometryQueryTool.hpp"
 
-//#include <iostream>
-#include <sstream>
-#include <algoritm>
-
-#ifdef USE_MPI
-#include "CGMmpi.h"
-#endif
+#include <algorithm>
 
 #define INITIAL_BUFF_SIZE 1024
 #define RRA(a) if (CUBIT_SUCCESS != result) {	\
@@ -20,9 +13,10 @@
     PRINT_ERROR(tmp_str.c_str());		\
     return result;}
 
-CGMParallelComm::CGMParallelComm(CGMTagManager *impl,
-				 MPI_Comm comm, int* id )
-  : cgmImpl(impl), procConfig(comm)
+std::vector<CGMParallelComm*> CGMParallelComm::instanceList;
+
+CGMParallelComm::CGMParallelComm(MPI_Comm comm, int* id )
+  : procConfig(comm)
 {
   myBuffer.resize(INITIAL_BUFF_SIZE);
   
@@ -45,11 +39,10 @@ CGMParallelComm::CGMParallelComm(CGMTagManager *impl,
   m_currentPosition = 0;
 }
 
-CGMParallelComm::CGMParallelComm(CGMTagManager *impl,
-				 std::vector<unsigned char> &tmp_buff, 
+CGMParallelComm::CGMParallelComm(std::vector<unsigned char> &tmp_buff, 
 				 MPI_Comm comm,
 				 int* id) 
-  : cgmImpl(impl), procConfig(comm)
+  : procConfig(comm)
 {
   myBuffer.swap(tmp_buff);
   int flag = 1;
@@ -79,48 +72,34 @@ CGMParallelComm::~CGMParallelComm()
 
 int CGMParallelComm::add_pcomm(CGMParallelComm *pc) 
 {
-  // add this pcomm to instance tag
-  std::vector<CGMParallelComm *> pc_array;
-  pc_array = cgmImpl->get_pc_array();
-  pc_array.push_back(pc);
-
-  return pc_array.size() - 1;
+  instanceList.push_back(pc);
+  return instanceList.size() - 1;
 }
 
 void CGMParallelComm::remove_pcomm(CGMParallelComm *pc) 
 {
-  // remove this pcomm from instance tag
-  std::vector<CGMParallelComm *> pc_array;
-  pc_array = cgmImpl->get_pc_array();
-
   std::vector<CGMParallelComm*>::iterator pc_it = 
-    std::find(pc_array.begin(), pc_array.end(), pc);
-  assert(pc_it != pc_array.end());
-  pc_array.erase(pc_it);
+    std::find(instanceList.begin(), instanceList.end(), pc);
+  assert(pc_it != instanceList.end());
+  instanceList.erase(pc_it);
 }
 
 //! get the indexed pcomm object from the interface
-CGMParallelComm *CGMParallelComm::get_pcomm(CGMTagManager *impl,
-					    const int index) 
+CGMParallelComm *CGMParallelComm::get_pcomm(const int index) 
 {  
-  std::vector<CGMParallelComm *> pc_array;
-  pc_array = impl->get_pc_array();
-
-  if (pc_array.size() < (unsigned int) (index + 1)) return NULL;
-  else return pc_array[index];
+  if (instanceList.size() < (unsigned int) (index + 1)) return NULL;
+  else return instanceList[index];
 }
 
-CubitStatus CGMParallelComm::get_all_pcomm(CGMTagManager *impl,
-					   std::vector<CGMParallelComm*>& list )
+CubitStatus CGMParallelComm::get_all_pcomm(std::vector<CGMParallelComm*>& list )
 {
-  list = impl->get_pc_array();
+  list = instanceList;
   return CUBIT_SUCCESS;
 }
   
 
 //! get the indexed pcomm object from the interface
-CGMParallelComm *CGMParallelComm::get_pcomm(CGMTagManager *impl,
-					    //MBEntityHandle prtn,
+CGMParallelComm *CGMParallelComm::get_pcomm(//MBEntityHandle prtn,
 					    const MPI_Comm* comm ) 
 {
   //MBErrorCode rval;
@@ -139,8 +118,7 @@ CGMParallelComm *CGMParallelComm::get_pcomm(CGMTagManager *impl,
   int pcomm_id;
   //rval = impl->tag_get_data( prtn_tag, &prtn, 1, &pcomm_id );
   //if (MB_SUCCESS == rval) {
-    result= get_pcomm(impl, 
-		      pcomm_id );
+    result= get_pcomm( pcomm_id );
     //}
     /*
   else if (MB_TAG_NOT_FOUND == rval && comm) {

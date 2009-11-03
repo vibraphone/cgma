@@ -4,19 +4,13 @@
 #include <vector>
 #include "CubitDefines.h"
 #include "CGMParallelComm.hpp"
-//#include "ProcData.hpp"
 #include "FileOptions.hpp"
-//#include "CATag.hpp"
-//#include "CGMParallelComm.hpp"
-
-//class CGMTagManager;
-//class CGMParallelComm;
 
 class ParallelGeomTool 
 {
 public:
 
-  ParallelGeomTool(CGMTagManager* impl = NULL, CGMParallelComm *pc = NULL);
+  ParallelGeomTool(CGMParallelComm *pc = NULL);
 
   //static ParallelGeomTool *instance();
 
@@ -69,8 +63,6 @@ private:
 
 
   //static ParallelGeomTool *instance_;
-
-  CGMTagManager *cgmImpl;
 
   // each reader can keep track of its own pcomm
   CGMParallelComm *myPcomm;
