@@ -97,7 +97,7 @@ CFG_FILE = $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 install-data-hook:
 	echo "IGEOM_CXX_LDFLAGS = -L${libdir}" >> $(CFG_FILE)
 	echo "IGEOM_CXX_LTFLAGS = -R${libdir}" >> $(CFG_FILE)
-	echo "IGEOM_INCLUDES = -I${includedir}" >> $(CFG_FILE)
+	echo "IGEOM_INCLUDEDIR = ${includedir}" >> $(CFG_FILE)
 
 EXTRA_DIST = testgeom.sat size.sat
 

@@ -3,7 +3,7 @@ IGEOM_FCFLAGS = @FCFLAGS@
 IGEOM_FCDEFS = @DEFS@
 
 # These should never be required for the iGeom interface
-IGEOM_INCLUDES = -I@abs_srcdir@ -I@abs_builddir@
+IGEOM_INCLUDES = -I$(IGEOM_INCLUDEDIR)
 IGEOM_DEFINES = @HAVE_ACIS_DEF@ @HAVE_OCC_DEF@
 IGEOM_CPPFLAGS = $(IGEOM_DEFINES) $(IGEOM_INCLUDES)
 
@@ -16,4 +16,5 @@ IGEOM_LIBS    = $(IGEOM_LDFLAGS) -liGeom -lcgm @CGM_EXT_LIBS@ @CGM_CXX_LIBS@
 IGEOM_CXX_LDFLAGS = -L@abs_top_builddir@/.libs -L@abs_builddir@/.libs
 IGEOM_CXX_LTFLAGS = -R@abs_top_builddir@/.libs -R@abs_builddir@/.libs
 
+IGEOM_INCLUDEDIR = @abs_srcdir@
 # Below here goes the overrides that happen during installation
