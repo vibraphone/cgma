@@ -4966,15 +4966,15 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
                      int *v_offset_size,
                      int* err)
 {
-  if (entity_handles_size != 2*uv_size) {
+  if (2*entity_handles_size != uv_size) {
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
     RETURN(iBase_INVALID_ENTITY_COUNT);
   }
   
   CHECK_SIZE( *drvt_u, double, 3*entity_handles_size );
   CHECK_SIZE( *drvt_v, double, 3*entity_handles_size );
-  CHECK_SIZE( *u_offset, int, entity_handles_size );
-  CHECK_SIZE( *v_offset, int, entity_handles_size );
+  CHECK_SIZE( *u_offset, int, entity_handles_size+1 );
+  CHECK_SIZE( *v_offset, int, entity_handles_size+1 );
   
   size_t u_step, du_step, init;
   if (storage_order == iBase_BLOCKED) {
@@ -5015,15 +5015,18 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
     v += u_step;
     du_x += du_step;
     du_y += du_step;
-    du_y += du_step;
+    du_z += du_step;
     dv_x += du_step;
     dv_y += du_step;
-    dv_y += du_step;
+    dv_z += du_step;
 
     (*u_offset)[i] = off;
     (*v_offset)[i] = off;
     off += du_step;
   }
+  (*u_offset)[entity_handles_size] = off;
+  (*v_offset)[entity_handles_size] = off; 
+
   RETURN(iBase_SUCCESS);
 }
 
