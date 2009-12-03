@@ -451,7 +451,7 @@ void iGeom_getBoundBox( iGeom_Instance,
                         double* max_z,
                         int* err ) 
 {
-  *err = iBase_NOT_SUPPORTED;
+  RETURN(iBase_NOT_SUPPORTED);
 }
 
 
