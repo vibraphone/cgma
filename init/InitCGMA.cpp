@@ -5,6 +5,7 @@
 #include "FacetModifyEngine.hpp"
 #include "GeometryQueryTool.hpp"
 #include "GeometryModifyTool.hpp"
+#include "CubitUtil.hpp"
 
 #include <ctype.h>
 
@@ -49,9 +50,28 @@ static bool streq_nocase( const char* s, const char* t )
   return !*t;
 }
 
+static bool has_been_initialized = false;
+static char* first_engine_name = NULL;
+
 
 CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
 {
+  if( has_been_initialized ){
+    // CGM is already initialized.  Return success if previous initialization had
+    // the same parameter, failure otherwise.
+    if( default_engine_name == first_engine_name ){
+      return CUBIT_SUCCESS;
+    }
+    else if( default_engine_name && first_engine_name && 
+	     streq_nocase( default_engine_name, first_engine_name )){
+      return CUBIT_SUCCESS;
+    }
+    else{
+      PRINT_ERROR( "initialize_cgma() called again, but default engines differ.\n" );
+      return CUBIT_FAILURE;
+    }
+  }
+
   CGMApp::instance()->startup( 0, NULL );
   GeometryModifyEngine* default_engine = 0;
   bool ignore_default = false;
@@ -103,5 +123,12 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
       return rval;
   }
   
+  // set has_been_initialized only if everything worked
+  if( default_engine_name ){
+    first_engine_name = CubitUtil::util_strdup(default_engine_name); 
+  }
+  has_been_initialized = true;
+
   return CUBIT_SUCCESS;
 }
+
