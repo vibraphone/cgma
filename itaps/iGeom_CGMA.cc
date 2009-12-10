@@ -351,10 +351,26 @@ void iGeom_load( iGeom_Instance instance,
       }
     }
     else {
-      if (strstr(name, ".brep") != NULL || strstr(name, ".occ") != NULL)
-	status = gqt->read_geometry_file(name, NULL, "OCC");
-      else
-	status = gqt->read_geometry_file(name);
+      std::string file_type;
+      if (strstr(name, ".brep") != NULL ||
+	  strstr(name, ".BREP") != NULL ||
+	  strstr(name, ".occ") != NULL ||
+	  strstr(name, ".OCC") != NULL)
+	file_type = "OCC";
+      else if (strstr(name, ".stp") != NULL ||
+	       strstr(name, ".STP") != NULL ||
+	       strstr(name, ".step") != NULL ||
+	       strstr(name, ".STEP") != NULL)
+	file_type = "STEP";
+      else if (strstr(name, ".igs") != NULL ||
+	       strstr(name, ".IGS") != NULL ||
+	       strstr(name, ".iges") != NULL ||
+	       strstr(name, ".IGES") != NULL)
+	file_type = "IGES";
+      
+      if (file_type.empty()) status = gqt->read_geometry_file(name);
+      else status = gqt->read_geometry_file(name, NULL, file_type.c_str());
+
       if (CUBIT_SUCCESS != status) {
 	ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
       }
