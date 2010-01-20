@@ -444,6 +444,7 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/OCC/Makefile
            geom/parallel/Makefile
+           geom/testing/Makefile
            geom/virtual/Makefile 
            init/Makefile
            compat/Makefile
