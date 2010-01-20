@@ -12,8 +12,8 @@
 // Owner         : Darryl Melander
 //-------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <signal.h>
 #ifndef NT
 #  include <unistd.h>
@@ -173,6 +173,15 @@ AppUtil::~AppUtil()
       delete mProgressTool;
   mProgressTool = NULL;
 }
+
+void AppUtil::delete_instance()
+{
+  if( NULL != instance_ )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
+}    
 
 #ifdef CAT
 // Returns how many days until the app expires.  A negative
@@ -353,7 +362,7 @@ int AppUtil::shutdown()
    }
 
      // Delete the singletons
-   delete CubitMessage::instance();
+   CubitMessage::delete_instance();
 
    CubitObserver::term_static_observers();
 

@@ -25,10 +25,10 @@ public:
     static int get_id_inc( RefEntity *entity );
     static void set_error();
     static void add_error_id( int id );
+    static int performingUndo;
 
 protected:
    static int gsoSetsIds;
-
    static int gsoIncBodyId;
    static int gsoIncRefVolumeId;
    static int gsoIncRefFaceId;

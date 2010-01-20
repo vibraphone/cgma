@@ -2,7 +2,7 @@
 #define CUBITINPUTFILE_HPP
 
 #include "CubitString.hpp"
-#include <stdio.h>
+#include <cstdio>
 #include "CubitMessage.hpp"
 
 struct CubitInputFile

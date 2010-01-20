@@ -30,9 +30,10 @@
 #ifndef CubitFile_HPP
 #define CubitFile_HPP
 
-#include <stdio.h>
+#include <cstdio>
 #include <memory.h>
 #include "CubitUtilConfigure.h"
+#include <vector>
 
 namespace NCubitFile {
 
@@ -159,21 +160,30 @@ public:
                            ConstCharPtr xpachrGroupName,
                            UnsignedInt32 xintNumTypes, SGroupData* xpaGroupData);
   UnsignedInt32 WriteBlock(UnsignedInt32 xintIndex,
-                           UnsignedInt32 xintBlockID, UnsignedInt32 xintBlockType,
+                           UnsignedInt32 xintBlockID, 
+                           int block_unique_id, 
+                           UnsignedInt32 xintBlockType,
                            UnsignedInt32 xintBlockColor, UnsignedInt32 xintMixedElemType,
                            UnsignedInt32 xintDefPyramidType, UnsignedInt32 xintMaterialID,
                            UnsignedInt32 xintBlockDimension,
                            UnsignedInt32 xintNumTypes, SBlockData* xpaBlockData,
                            UnsignedInt32 xintAttributeOrder, double* xpadblAttributes);
   UnsignedInt32 WriteNodeSet(UnsignedInt32 xintIndex,
-                             UnsignedInt32 xintNodeSetID, UnsignedInt32 xintColor,
+                             UnsignedInt32 xintNodeSetID, 
+                             int nodeset_unique_id, 
+                             UnsignedInt32 xintColor,
                              UnsignedInt32 xintPointSymbol,
-                             UnsignedInt32 xintNumTypes, SNodeSetData* xpaNodeSetData);
+                             UnsignedInt32 xintNumTypes, SNodeSetData* xpaNodeSetData,
+                             const std::vector<char>& bcdata
+                             );
   UnsignedInt32 WriteSideSet_11(UnsignedInt32 xintIndex,
-                             UnsignedInt32 xintSideSetID, UnsignedInt32 xintColor,
+                             UnsignedInt32 xintSideSetID,
+                             int sideset_unique_id, 
+                             UnsignedInt32 xintColor,
                              UnsignedInt32 xintUseShells,
                              UnsignedInt32 xintNumTypes, SSideSetData_11* xpaSideSetData,
-                             UnsignedInt32 xintNumDistFact, double* xpadblDistribution);
+                             UnsignedInt32 xintNumDistFact, double* xpadblDistribution,
+                             const std::vector<char>& bcdata);
   UnsignedInt32 EndWriteFEModel();
   
   UnsignedInt32 BeginReadFEModel(HModel xintFEModel,
@@ -194,16 +204,17 @@ public:
   UnsignedInt32 ReadGroupMembers(UnsignedInt32 xintIndex,
                                  UnsignedInt32& xintNumTypes, SGroupData*& xpaGroupData);
     UnsignedInt32 ReadBlock(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintBlockID, UnsignedInt32& xintBlockType,
+        UnsignedInt32& xintBlockID, int& unique_id, UnsignedInt32& xintBlockType,
         UnsignedInt32& xintBlockColor, UnsignedInt32& xintMixedElemType,
         UnsignedInt32& xintDefPyramidType, UnsignedInt32& xintMaterialID,
         UnsignedInt32& xintBlockDimension,
         UnsignedInt32& xintNumTypes, SBlockData*& xpaBlockData,
         UnsignedInt32& xintAttributeOrder, double*& xpadblAttributes);
     UnsignedInt32 ReadNodeSet(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintNodeSetID, UnsignedInt32& xintColor,
+        UnsignedInt32& xintNodeSetID, int& unique_id, UnsignedInt32& xintColor,
         UnsignedInt32& xintPointSymbol,
-        UnsignedInt32& xintNumTypes, SNodeSetData*& xpaNodeSetData);
+        UnsignedInt32& xintNumTypes, SNodeSetData*& xpaNodeSetData,
+        std::vector<char>& bcdata);
 
     // read old sideset format
     UnsignedInt32 ReadSideSet_10(UnsignedInt32 xintIndex,
@@ -214,10 +225,11 @@ public:
     
     // read new sideset format
     UnsignedInt32 ReadSideSet_11(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintSideSetID, UnsignedInt32& xintColor,
+        UnsignedInt32& xintSideSetID, int& unique_id, UnsignedInt32& xintColor,
         UnsignedInt32& xintUseShells,
         UnsignedInt32& xintNumTypes, SSideSetData_11*& xpaSideSetData,
-        UnsignedInt32& xintNumDistFact, double*& xpadblDistribution);
+        UnsignedInt32& xintNumDistFact, double*& xpadblDistribution,
+        std::vector<char>& bcdata);
     
     UnsignedInt32 EndReadFEModel();
 

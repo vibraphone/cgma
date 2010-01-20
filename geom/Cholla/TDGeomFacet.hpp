@@ -15,8 +15,11 @@
 #include "ToolData.hpp"
 #include "CubitPoint.hpp"
 class FacetEntity;
+class ChollaEntity;
+class ChollaVolume;
 class ChollaSurface;
 class ChollaCurve;
+class ChollaPoint;
 class CubitFacet;
 class CubitFacetEdge;
 
@@ -41,6 +44,9 @@ private:
 
   DLIList<ChollaCurve*> ChollaCurveList;
     //- list of curves this element (edge) is on
+  
+  DLIList<ChollaPoint*> ChollaPointList;
+    //- list chollapoints this element (point) is on 
   
   DLIList<CubitPoint*> myPoints;
     //- list of associated points for this entity (could be one).
@@ -74,6 +80,11 @@ public:
 
   void set_hit_flag(int flag)
     {hitFlag = flag;}
+  
+  int on_boundary(){return onBoundaryFlag;}
+  void on_boundary( int status ){ onBoundaryFlag = status; }
+  
+  void add_cholla_owner(ChollaEntity *cholla_entity);
 
   void add_cholla_surf(ChollaSurface *f_s_m);
 
@@ -97,7 +108,19 @@ public:
 
   void remove_cholla_curve( ChollaCurve *chcurv_ptr )
     {ChollaCurveList.remove( chcurv_ptr );}
+  
+  void add_cholla_point(ChollaPoint *chpt_ptr)
+    {ChollaPointList.append_unique( chpt_ptr );}
 
+  void get_cholla_points(DLIList<ChollaPoint*> &point_list)
+    {point_list =  ChollaPointList;}
+  
+  void remove_cholla_points()
+    {ChollaPointList.clean_out();}
+  
+  void remove_cholla_point( ChollaPoint *point_ptr )
+    { ChollaPointList.remove( point_ptr ); }
+  
   void add_point(CubitPoint *point)
     {myPoints.append(point);}
 
@@ -143,6 +166,8 @@ public:
         return 0;
       else
         return partnerPointList->size(); }
+  
+  CubitBoolean is_in_volume( ChollaVolume *chvol_ptr );
 
   SetDynamicMemoryAllocation(memoryManager)
     //- class specific new and delete operators
@@ -177,6 +202,11 @@ public:
 
   CubitBoolean is_partner( CubitFacetEdge *edge_ptr );
   CubitBoolean is_partner( CubitPoint *point_ptr );
+
+  void reset_TD_as_new();
+  
+  int geo_type();
+  
 };
     
 

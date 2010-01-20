@@ -60,7 +60,12 @@ CompositeGeom::CompositeGeom( int size )
 //-------------------------------------------------------------------------
 CompositeGeom::~CompositeGeom()
 {
-  rem_all_attributes();
+  while(listHead)
+  {
+    CompositeAttrib* dead = listHead;
+    listHead = listHead->next;
+    delete dead;
+  }
 }
 
 //-------------------------------------------------------------------------
@@ -609,8 +614,8 @@ void CompositeGeom::rem_all_attributes()
     delete dead;
   }
   
- // if (entityList.size() == 1)
- //   entityList[0].entity->remove_all_simple_attribute_virt();
+  if (entityList.size() == 1)
+    entityList[0].entity->remove_all_simple_attribute_virt();
 }
 
 
@@ -820,6 +825,20 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
       assert(attrib->int_data_list()->size());
       if (*attrib->int_data_list()->get() == entityList.size())
       {
+        // Take the attributes off of the current entity and put them on the first entity
+        // in this list.  I believe this is ok to do because the attributes should apply to
+        // the whole composite surface and not just the underlying entity they are on 
+        // (the one exception to this might be UNIQUE_ID but I haven't seen any problems
+        // with this yet).  The reason for doing this is that there is some code (I believe
+        // in uncomposite() that assumes any attributes will be on the first entity
+        // in the list.  Previous code actually moved the entity to the beginning
+        // of the list but this reordering of the list does not fly with composite
+        // curves because there is code depending on the curves in the list being
+        // ordered so that they connect end to end in a contiguous manner (the 
+        // faceting code, for one, relies on this).  BWC 1/7/07.
+        entityList[i].entity->remove_simple_attribute_virt(attrib);
+        entityList[0].entity->append_simple_attribute_virt(attrib);
+
         delete attrib->int_data_list()->remove();
         attrib->string_data_list()->reset();
         delete attrib->string_data_list()->remove();
@@ -827,14 +846,6 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
         delete attrib;
       }
     }
-  }
-
-  if( index_of_entity_with_attribs != 0 && index_of_entity_with_attribs != -1 )
-  {
-    //Swap entities around so that one with attribs is first
-    CompositeEntry should_be_first =  entityList[ index_of_entity_with_attribs ];
-    entityList.remove( index_of_entity_with_attribs );
-    entityList.insert( should_be_first, 0 ); 
   }
 }
 

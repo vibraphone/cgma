@@ -19,6 +19,7 @@
 #include "TDFacetBoundaryEdge.hpp"
 #include "GfxDebug.hpp"
 #include "FacetEvalTool.hpp"
+#include "FacetDataUtil.hpp"
 
 //===============================================================================
 //Function:  ChollaSurface (PUBLIC) (constructor)
@@ -27,9 +28,11 @@ ChollaSurface::ChollaSurface(int block_id)
 {
   static int count = 100;
   id = count++;
+  myFlag = CUBIT_FALSE;
   mySurface = NULL;
   myEvalTool = NULL;
   blockId = block_id;
+  myMergePartner = NULL;
 }
 //===============================================================================
 //Function:  ~ChollaSurface (PUBLIC) (destructor)
@@ -58,7 +61,8 @@ void ChollaSurface::check_faceting()
 //Date: 12/22/00
 //=============================================================================
 CubitStatus ChollaSurface::split_surface( 
-  DLIList<ChollaSurface*> &facet_surface_list )
+  DLIList<ChollaSurface*> &facet_surface_list 
+  )
 {
   DLIList<ChollaSurface*> new_surface_list;
   CubitStatus stat = CUBIT_SUCCESS;
@@ -133,6 +137,7 @@ CubitStatus ChollaSurface::split_surface(
 
   return CUBIT_SUCCESS;
 }
+
 
 #if 0
 //=============================================================================
@@ -215,7 +220,9 @@ CubitStatus ChollaSurface::get_adj_facets(
 CubitStatus ChollaSurface::get_adj_facets( 
   FacetEntity *start_face_ptr,
   DLIList<FacetEntity*> &face_list,
-  int mydebug)
+  int mydebug,
+  bool bound_check,
+  bool feature_edge_check)
 {
   //int found = 0;
   int ii;
@@ -269,7 +276,7 @@ CubitStatus ChollaSurface::get_adj_facets(
         // of a feature angle.  Don't traverse past a feature angle edge
     
         TDGeomFacet *td_gm_edge = TDGeomFacet::get_geom_facet(edge_ptr);
-        if (td_gm_edge == NULL)
+        if (td_gm_edge == NULL || !feature_edge_check )
         {
           adj_face_list.clean_out();
           edge_ptr->get_parents( adj_face_list );
@@ -277,27 +284,39 @@ CubitStatus ChollaSurface::get_adj_facets(
           // keep traversing only if there are two adjacent faces to this edge,
           // otherwise, this is a boundary
 
-          if (adj_face_list.size() == 2)
+          if (adj_face_list.size() != 2)
           {
-            adj_face_ptr = adj_face_list.get_and_step();
-            if (adj_face_ptr == face_ptr)
-              adj_face_ptr = adj_face_list.get();
-
-            // go to its neighbor if it is part of the surface
-
-            td_gm_face = TDGeomFacet::get_geom_facet(adj_face_ptr); 
-            if (td_gm_face->get_hit_flag() == id)
-            {
-              temp_list.append( adj_face_ptr );
-              td_gm_face->set_hit_flag( 0 );
-            }
+            continue;
           }
+
+          if( bound_check )
+          {
+            TDFacetBoundaryEdge *td_facet_bnd_edge = TDFacetBoundaryEdge::get_facet_boundary_edge( edge_ptr );
+            if( td_facet_bnd_edge )
+              continue;
+          }
+            
+          adj_face_ptr = adj_face_list.get_and_step();
+          if (adj_face_ptr == face_ptr)
+            adj_face_ptr = adj_face_list.get();
+
+          // go to its neighbor if it is part of the surface
+
+          td_gm_face = TDGeomFacet::get_geom_facet(adj_face_ptr); 
+          if (td_gm_face->get_hit_flag() == id)
+          {
+            temp_list.append( adj_face_ptr );
+            td_gm_face->set_hit_flag( 0 );
+          }
+          
         }
       }
     }
   }
   return stat;
 }
+
+
 
 //=============================================================================
 //Function:  feature_angle (PRIVATE)
@@ -444,6 +463,32 @@ CubitStatus ChollaSurface::feature_angle(
   }
   return CUBIT_SUCCESS;
 }
+
+//=============================================================================
+//Function:  add_preexisting_feature_edges (PRIVATE)
+//Description: edges that were marked previously in function ChollaEngine::mark_features
+//             are added to the feature edge list
+//Author: sjowen
+//Date: 01/08
+//=============================================================================
+CubitStatus ChollaSurface::add_preexisting_feature_edges( 
+	DLIList<CubitFacetEdge *> &feature_edge_list)
+{
+	DLIList<CubitFacetEdge *> edge_list;
+	DLIList<CubitFacet *> facet_list;
+	CAST_LIST( surfaceElemList, facet_list, CubitFacet );
+	FacetDataUtil::get_edges( facet_list, edge_list );
+	int iedge;
+	CubitFacetEdge *edge;
+	for (iedge=0; iedge < edge_list.size(); iedge++)
+	{
+		edge = edge_list.get_and_step();
+		if (edge->is_feature())
+			feature_edge_list.append(edge);
+	}
+	return CUBIT_SUCCESS;
+}
+	
 
 //=============================================================================
 //Function:  non_manifold_edges (PRIVATE)
@@ -716,6 +761,63 @@ void ChollaSurface::debug_draw()
   dcolor(icolor);
   dldraw(surfaceElemList);
 }
+
+//=============================================================================
+//Function:  flip_facets (PUBLIC)
+//Description: invert all facets on this surface 
+//Author: sjowen
+//Date: 09/10/09
+//=============================================================================
+void ChollaSurface::flip_facets()
+{
+  FacetEntity *facet_entity;
+  CubitFacet *facet_ptr;
+  for (int ii=0; ii<surfaceElemList.size(); ii++)
+  {
+    facet_entity = surfaceElemList.get_and_step();
+    facet_ptr = dynamic_cast<CubitFacet *> (facet_entity);
+    assert( facet_ptr != NULL );
+    facet_ptr->flip();
+  }
+}
+
+//=============================================================================
+//Function:  is_in_volume (PUBLIC)
+//Description: return whether this surface is in a particular volume 
+//Author: sjowen
+//Date: 09/11/09
+//=============================================================================
+CubitBoolean ChollaSurface::is_in_volume( ChollaVolume *chvol_ptr )
+{
+  ChollaVolume *mychvol_ptr;
+  for (int ii=0; ii<volList.size(); ii++)
+  {
+    mychvol_ptr = volList.get_and_step();
+    if (mychvol_ptr == chvol_ptr)
+      return CUBIT_TRUE;
+  }
+  return CUBIT_FALSE;
+}
+
+//=============================================================================
+//Function:  get_vertices (PUBLIC)
+//Description: get the list of ChollaPoints on this surface
+//Author: sjowen
+//Date: 09/11/09
+//=============================================================================
+void ChollaSurface::get_vertices( DLIList<ChollaPoint *> &chpt_list )
+{
+  chpt_list.clean_out();
+  ChollaCurve *chcurv_ptr;
+  for (int ii=0; ii<curveList.size(); ii++)
+  {
+    chcurv_ptr = curveList.get_and_step();
+    DLIList<ChollaPoint *> chc_pts = chcurv_ptr->get_points(); 
+    chpt_list += chc_pts;
+  }
+  chpt_list.uniquify_unordered();
+}
+
 
 //EOF
 

@@ -1,7 +1,7 @@
 
 #include "CubitCoordinateSystem.hpp"
 
-#include <assert.h>
+#include <cassert>
 
 #include "CubitMessage.hpp"
 

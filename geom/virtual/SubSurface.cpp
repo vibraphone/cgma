@@ -35,8 +35,8 @@ SubSurface::SubSurface( Surface* real_surf )
   new SubEntitySet( real_surf, this );
 
   // ensure that the sense is the same on both entities
-  if( real_surf->bridge_sense() != this->bridge_sense() )
-    reverse_bridge_sense();
+  //if( real_surf->bridge_sense() != this->bridge_sense() )
+  //  reverse_bridge_sense();
 
   geometry_sense = CUBIT_FORWARD;
 }

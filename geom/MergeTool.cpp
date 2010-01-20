@@ -13,6 +13,10 @@
 #include "GeometryQueryTool.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "ModelQueryEngine.hpp"
+#include "GeometryModifyTool.hpp"
+#include "SurfaceOverlapTool.hpp"
+#include "GeometryModifyEngine.hpp"
+#include "CGMHistory.hpp"
 
 #include "CubitObserver.hpp"
 #include "MergeEvent.hpp"
@@ -103,8 +107,82 @@ MergeTool::~MergeTool()
   instance_ = 0;
 }
 
+void MergeTool::merge_with_auto_imprint(RefFace *surf1, RefFace *surf2)
+{
+  DLIList<CubitString*> ds, cs, ps;
+  RefFace *local_surf1 = surf1;
+  RefFace *local_surf2 = surf2;
+  bool time_to_stop = false;
+  int cntr = 0;
+  bool first_time = true;
+  while(!time_to_stop && local_surf1 && 
+        local_surf2 && !local_surf1->is_merged() &&
+        !local_surf2->is_merged() )
+  {
+    int surf1_id = local_surf1->id();
+    int surf2_id = local_surf2->id();
+    if(first_time)
+    {
+      Body *b1 = local_surf1->body();
+      Body *b2 = local_surf2->body();
+      if(b1 && b2)
+      {
+        DLIList<Body*> body_list, new_bodies;
+        body_list.append(b1);
+        body_list.append(b2);
+        GeometryModifyTool::instance()->tolerant_imprint( body_list, new_bodies, true );
+        first_time = false;
+      }
+    }
+    else
+    {
+      this->imprint_merge_solutions_for_overlapping_surfaces(local_surf1,
+          local_surf2, true, ds, cs, ps);
+    }
+    RefFace *new_surf1 = RefEntityFactory::instance()->get_ref_face(surf1_id);
+    RefFace *new_surf2 = RefEntityFactory::instance()->get_ref_face(surf2_id);
+    if(new_surf1 && new_surf1->is_merged())
+      time_to_stop = true;
+    else if(new_surf2 && new_surf2->is_merged())
+      time_to_stop = true;
+    else
+    {
+      if(new_surf1 && new_surf2)
+      {
+        DLIList<RefFace*> current_face_list, out1, out2;
+        DLIList<RefEntity*> faces_to_draw;
+        current_face_list.append(new_surf1);
+        current_face_list.append(new_surf2);
+        SurfaceOverlapTool::instance()->find_overlapping_surfaces(current_face_list,
+                                                out1,
+                                                out2,
+                                                faces_to_draw,
+                                                CUBIT_FALSE,
+                                                CUBIT_TRUE);
+        if(out1.size() == 1 && out2.size() == 1 &&
+          (out1.get() == new_surf1 && out2.get() == new_surf2) ||
+          (out1.get() == new_surf2 && out2.get() == new_surf1))
+        {
+          local_surf1 = new_surf1;
+          local_surf2 = new_surf2;
+        }
+        else
+          time_to_stop = true;
+      }
+      else
+      {
+        time_to_stop = true;
+      }
+    }
+    cntr++;
+    if(cntr > 5)
+      time_to_stop = true;
+  }
+}
+
 //Public Functions:
-CubitBoolean MergeTool::contains_merged_entities( DLIList<RefEntity*> &ref_entities)
+CubitBoolean MergeTool::contains_merged_entities( DLIList<RefEntity*> &ref_entities,
+                                                  DLIList<RefEntity*> *merged_ref_ents )
 {
      //Loop through the entities and their children to find
      //merged entities.  For now, just do it quickly, so
@@ -121,9 +199,18 @@ CubitBoolean MergeTool::contains_merged_entities( DLIList<RefEntity*> &ref_entit
   for (int i = all_entities.size(); i > 0; i--) {
     RefEntity *temp_entity = all_entities.get_and_step();
     if (entity_merged(CAST_TO(temp_entity, TopologyEntity)))
-      return CUBIT_TRUE;
+    {
+      if( NULL == merged_ref_ents )
+        return CUBIT_TRUE;
+      else
+        merged_ref_ents->append( temp_entity );
+    }
   }
   
+  if( merged_ref_ents )
+    if( merged_ref_ents->size() )
+      return CUBIT_TRUE;
+
   return CUBIT_FALSE;
 }
 
@@ -132,9 +219,8 @@ CubitBoolean MergeTool::contains_merged_children( Body *body,
 {
   
   RefEntity *ref_ent = NULL;
-  ref_ent = CAST_TO(body, RefEntity);
   DLIList<RefEntity*> ref_ent_list;
-  ref_ent->get_all_child_ref_entities( ref_ent_list );
+  body->get_all_child_ref_entities( ref_ent_list );
   int i;
   for( i=ref_ent_list.size(); i--;)
   {
@@ -170,6 +256,18 @@ CubitBoolean MergeTool::entity_merged( TopologyEntity *entity )
 
 CubitStatus MergeTool::merge_all_bodies()
 {
+   int number_volumes = GeometryQueryTool::instance()->num_ref_volumes();
+    
+   DLIList<RefEntity*> free_ref_ents;
+   int number_free_entities = 
+    GeometryQueryTool::instance()->get_free_ref_entities( free_ref_ents );
+    
+   if( number_volumes == 1 && free_ref_ents.size() == 0 )
+   {
+     PRINT_WARNING("Need more than 1 volume to merge anything\n");
+     return CUBIT_FAILURE;
+   }
+
    PRINT_INFO( "\n...Merging all features in the model\n" );
    set_merge_occurance( CUBIT_TRUE );
    
@@ -410,6 +508,16 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
                                             GeometryQueryTool::instance()->get_merge_test_internal() );
       if( status == CUBIT_FALSE )
         continue;
+
+      //don't merge 2 surfaces of solid volumes if they have
+      //opposite sense..indicative that they overlap
+      if( refface_ptr->compare_alignment(compare_refface_ptr) == CUBIT_FORWARD )
+      {
+        //if they are both on solid volumes...bail
+        if( refface_ptr->body()->is_sheet_body() == CUBIT_FALSE && 
+            compare_refface_ptr->body()->is_sheet_body() == CUBIT_FALSE ) 
+        continue;
+      } 
       
         // If we are in this block, we want to merge the 
         // two entities. If they do not merge, there was
@@ -446,6 +554,14 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
           if (print_info) PRINT_INFO( "Try changing the merge tolerance.\n" );
           continue;
       }
+   
+      /*
+      //don't merge 2 surfaces of solid volumes if they have 
+      //opposite sense..indicative that they overlap
+      if( refface_ptr->compare_alignment(compare_refface_ptr) == CUBIT_FORWARD )
+      {        
+        continue;
+      } */   
 
         // Always retain the entity with the lowest id.
       int nullify = j;
@@ -543,6 +659,8 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
   
   if( destroyDeadGeometry )
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
+
+  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
   
   PRINT_DEBUG_3( "cleanout time: %f secs\n", timer.cpu_secs() );
   if (print_info)
@@ -572,6 +690,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
     else
       return CUBIT_SUCCESS;
   }
+
     // The basic algorithm is to step through the input list,
     // compare every entity with every entity within range of
     // its bounding box and merge the spatially equivellant entities.
@@ -677,6 +796,16 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
                                             GeometryQueryTool::instance()->get_merge_test_internal() );
       if( status == CUBIT_FALSE )
         continue;
+
+      //don't merge 2 surfaces of solid volumes if they have
+      //opposite sense..indicative that they overlap
+      if( refface_ptr->compare_alignment(compare_refface_ptr) == CUBIT_FORWARD )
+      {
+        //if they are both on solid volumes...bail
+        if( refface_ptr->body()->is_sheet_body() == CUBIT_FALSE && 
+            compare_refface_ptr->body()->is_sheet_body() == CUBIT_FALSE ) 
+        continue;
+      } 
       
         // If we are in this block, we want to merge the 
         // two entities. If they do not merge, there was
@@ -1406,21 +1535,10 @@ CubitStatus MergeTool::find_only_mergeable_surfaces ( DLIList<BodySM*> &body_lis
   return CUBIT_SUCCESS;
 }
 
-CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
+CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Curve*> &all_curves, 
                   DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
 {
-  //collect all the curves from off the bodies
-  DLIList<Curve*> all_curves;
-  body_list.reset();
   int i;
-  for(i=body_list.size(); i--; )
-  {
-    BodySM* tmp_body = body_list.get_and_step();
-    DLIList<Curve*> tmp_curves;
-    tmp_body->curves( tmp_curves);
-    all_curves += tmp_curves;
-  }
- 
   double geom_factor = GeometryQueryTool::get_geometry_factor();
 
   //build up a tree for speed purposes
@@ -1436,6 +1554,8 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list,
     Curve *curr_curve = all_curves.get_and_step();
     if( curr_curve == NULL )
       continue;
+
+    BodySM *cur_sm = curr_curve->bodysm();
     
     //get close curves
     DLIList<Curve*> close_curves;
@@ -1448,51 +1568,108 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list,
       if( curr_curve == other_curve )
         continue;
   
-      CubitSense rel_sense;
-      CubitBoolean abs = about_spatially_equal( curr_curve, other_curve, rel_sense,
-                                             geom_factor ); 
-      if( abs )
+      BodySM *other_sm = other_curve->bodysm();
+
+      if(cur_sm != other_sm)
       {
-        //check to see if curves have already been inserted into lists
-        DLIList<Curve*> *curve1_list = NULL;
+        bool mergeable = false;
 
-        list_iter = curve_to_list_map.find( curr_curve );
-        if( list_iter != curve_to_list_map.end() )
-          curve1_list = list_iter->second;
+        // If these curves are already merged add them to the list.
+        if(curr_curve->bridge_manager() &&
+          curr_curve->bridge_manager() == other_curve->bridge_manager())
+        {
+          mergeable = true;
+        }
 
-        if( curve1_list == NULL ) 
+        if(!mergeable)
         {
-          curve1_list = new DLIList<Curve*>;
-          curve1_list->append( curr_curve );
-          curve1_list->append( other_curve );
-          curve_to_list_map.insert( std::map<Curve*,
-                DLIList<Curve*>*>::value_type( curr_curve , curve1_list )); 
-          curve_to_list_map.insert( std::map<Curve*,
-                DLIList<Curve*>*>::value_type( other_curve, curve1_list )); 
-          lists_of_mergeable_curves.append( curve1_list );
+          CubitSense rel_sense;
+          CubitBoolean abs = about_spatially_equal( curr_curve, other_curve, rel_sense,
+                                                geom_factor ); 
+          if(abs)
+            mergeable = true;
         }
-        else 
+
+        if( mergeable )
         {
-          curve1_list->append( other_curve );
-          curve_to_list_map.insert( std::map<Curve*,
-                DLIList<Curve*>*>::value_type( other_curve, curve1_list )); 
-        }
-      
-        //remove mergeable curves from list and reset list
-        int item_index = all_curves.where_is_item( other_curve );
-        if( item_index > 0 ) 
-        {
-          int curr_index = all_curves.get_index();
-          all_curves.reset();
-          all_curves.step( item_index );
-          all_curves.change_to( NULL );
-          all_curves.reset();
-          all_curves.step( curr_index );
+          //check to see if curves have already been inserted into lists
+          DLIList<Curve*> *curve1_list = NULL;
+
+          list_iter = curve_to_list_map.find( curr_curve );
+          if( list_iter != curve_to_list_map.end() )
+            curve1_list = list_iter->second;
+
+          if( curve1_list == NULL ) 
+          {
+            curve1_list = new DLIList<Curve*>;
+            curve1_list->append( curr_curve );
+            curve1_list->append( other_curve );
+            curve_to_list_map.insert( std::map<Curve*,
+                  DLIList<Curve*>*>::value_type( curr_curve , curve1_list )); 
+            curve_to_list_map.insert( std::map<Curve*,
+                  DLIList<Curve*>*>::value_type( other_curve, curve1_list )); 
+            lists_of_mergeable_curves.append( curve1_list );
+          }
+          else 
+          {
+            curve1_list->append( other_curve );
+            curve_to_list_map.insert( std::map<Curve*,
+                  DLIList<Curve*>*>::value_type( other_curve, curve1_list )); 
+          }
+        
+          //remove mergeable curves from list and reset list
+          int item_index = all_curves.where_is_item( other_curve );
+          if( item_index > 0 ) 
+          {
+            int curr_index = all_curves.get_index();
+            all_curves.reset();
+            all_curves.step( item_index );
+            all_curves.change_to( NULL );
+            all_curves.reset();
+            all_curves.step( curr_index );
+          }
         }
       }
     }
   }
   return CUBIT_SUCCESS;
+}
+
+CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Surface*> &surf_list, 
+                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
+{
+  //collect all the curves from off the bodies
+  DLIList<Curve*> all_curves;
+  surf_list.reset();
+  int i;
+  for(i=surf_list.size(); i--; )
+  {
+    Surface* tmp_surf = surf_list.get_and_step();
+    DLIList<Curve*> tmp_curves;
+    tmp_surf->curves(tmp_curves);
+    all_curves += tmp_curves;
+  }
+
+  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves);
+}
+
+CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
+                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
+{
+  //collect all the curves from off the bodies
+  DLIList<Curve*> all_curves;
+  body_list.reset();
+  int i;
+  for(i=body_list.size(); i--; )
+  {
+    BodySM* tmp_body = body_list.get_and_step();
+    DLIList<Curve*> tmp_curves;
+    tmp_body->curves( tmp_curves);
+    all_curves += tmp_curves;
+  }
+
+  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves);
+ 
 }
 
 CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities,
@@ -1771,6 +1948,20 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
                        refedge_ptr->id(), compare_refedge_ptr->id() );
         continue;
       }
+     
+     /*
+      //refuse to merge free edges
+      if( refedge_ptr->ref_volume() == NULL )
+      {
+        PRINT_WARNING("Merging of free curves prohibited:  Curve %d\n", refedge_ptr->id() );         
+        continue;
+      }
+
+      if( compare_refedge_ptr->ref_volume() == NULL )
+      {
+        PRINT_WARNING("Merging of free curves prohibited:  Curve %d\n", compare_refedge_ptr->id() );         
+        continue;
+      } */
       
         // Always retain the entity with the lowest id.
       int nullify = compare_refedge_ptr->marked();
@@ -2049,6 +2240,19 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
             std::swap(refedge_ptr, compare_refedge_ptr);
             nullify  = i;
          }
+/*
+         //refuse to merge free edges
+         if( refedge_ptr->ref_volume() == NULL )
+         {
+           PRINT_WARNING("Merging of free curves prohibited:  Curve %d\n", refedge_ptr->id() );         
+           continue;
+         }
+
+         if( compare_refedge_ptr->ref_volume() == NULL )
+         {
+           PRINT_WARNING("Merging of free curves prohibited:  Curve %d\n", compare_refedge_ptr->id() );         
+           continue;
+         } */
 
           // Now check if merge is okay with all assistants.
         CubitBoolean assistant_says_no = CUBIT_FALSE;
@@ -2138,7 +2342,12 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
       PRINT_DEBUG_3( "cleanout time: %f secs\n",
                    timer.cpu_secs() );
    }
-   if (print_info) PRINT_INFO( "Consolidated %d curves\n", merge_count );
+
+   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
+
+   if(print_info) 
+     PRINT_INFO( "Consolidated %d curves\n", merge_count );
+
    if( CubitMessage::instance()->Interrupt() )
    {
      PRINT_WARNING("Curve merging aborted.\n");
@@ -2259,6 +2468,19 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
                                                    CUBIT_TRUE );
       if( status == CUBIT_FALSE )
         continue;
+
+/*            //refuse to merge free edges
+      if( refvertex_ptr->ref_edge() == NULL )
+      {
+        PRINT_WARNING("Merging of free vertices prohibited: Vertex %d\n", refvertex_ptr->id() );         
+        continue;
+      }
+
+      if( compare_refvertex_ptr->ref_edge() == NULL )
+      {
+        PRINT_WARNING("Merging of free vertices prohibited: Vertex %d\n", compare_refvertex_ptr->id() );         
+        continue;
+      } */
          
       //Make sure we arn't merging two vertices on a
       //curve.
@@ -2511,7 +2733,20 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
                                                    CUBIT_TRUE );
          if( status == CUBIT_FALSE )
              continue;
-         
+/*
+         //refuse to merge free edges
+         if( refvertex_ptr->ref_edge() == NULL )
+         {
+           PRINT_WARNING("Merging of free vertices prohibited: Vertex %d\n", refvertex_ptr->id() );         
+           continue;
+         }
+
+         if( compare_refvertex_ptr->ref_edge() == NULL )
+         {
+           PRINT_WARNING("Merging of free vertices prohibited: Vertex %d\n", compare_refvertex_ptr->id() );         
+           continue;
+         }
+ */        
            //Make sure we arn't merging two vertices on a
            //curve.
          DLIList<RefEdge*> edges_1, edges_2;
@@ -2627,8 +2862,12 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
    PRINT_DEBUG_3( "cleanout time: %f secs\n",
                 timer.cpu_secs() );
+
+   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
    
-   if (print_info) PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
+   if(print_info) 
+     PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
+
    if( CubitMessage::instance()->Interrupt() )
    {
      PRINT_WARNING("Vertex merging aborted.\n");
@@ -2779,7 +3018,7 @@ CubitStatus MergeTool::unmerge( RefFace* face_ptr, CubitBoolean descend )
   CubitBoolean top = start_unmerge();
   CubitStatus result = CUBIT_SUCCESS;
   int i;
-  
+
   DLIList<TopologyBridge*> bridge_list;
   face_ptr->bridge_manager()->get_bridge_list(bridge_list);
   if (bridge_list.size() < 2)
@@ -2922,7 +3161,11 @@ void MergeTool::cleanup_unmerge()
     if (parents.size() == 0)
     {
       if (new_list.insert(new_ptr).second)
+      {
         CubitObserver::notify_static_observers( new_ptr, FREE_REF_ENTITY_GENERATED );
+        CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, new_ptr);
+        GeometryQueryTool::instance()->history().add_event(evt);
+      }
     }
     
     while (parents.size())
@@ -2939,7 +3182,11 @@ void MergeTool::cleanup_unmerge()
   
   std::set<CubitObservable*>::iterator iter;
   for (iter = modified_list.begin(); iter != modified_list.end(); ++iter)
+  {
     (*iter)->notify_all_observers( TOPOLOGY_MODIFIED );
+    CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, static_cast<RefEntity*>(*iter));
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
 
   for( int a = assistant_list_.size(); a--; )
     assistant_list_.get_and_step()->finish_unmerge();
@@ -2968,7 +3215,11 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
 {
   CubitStatus result = CUBIT_FAILURE;
   DLIList<ModelEntity*> query_results, query_results_2;
-  
+
+  // save to notify at end
+  DLIList<RefEntity*> dead_parents;
+  dead_entity->get_parent_ref_entities(dead_parents);
+
     // Make sure that the 2 BTE's are of the same type
   if( keeper_entity->dag_type() != dead_entity->dag_type() )
   {
@@ -3052,7 +3303,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
                  "numbers of GroupingEntities.\n"
                  "  THIS IS A BUG - PLEASE REPORT IT!\n" );
     assert(0);
-  }
+  }  
   
     // Merge all child BTEs
   BasicTopologyEntity *bte_ptr_1, *bte_ptr_2;
@@ -3086,7 +3337,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
         return CUBIT_FAILURE;
     }
   }
-      
+
     // If RefFace or RefEdge, adjust sense of parent sense entities,
     // if necessary.  This was previously handled by the 
     // switch_child_notify() callback in DAGNode/ModelEntity.
@@ -3096,6 +3347,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
     // compare_alignment() does not need to be called for every
     // SenseEntitiy merge.  We only need to call it once.
   CubitBoolean switch_sense = CUBIT_FALSE;
+
   if(CAST_TO( keeper_entity, RefFace ) )
   {
     RefFace* keep_face = CAST_TO(keeper_entity,RefFace);
@@ -3104,7 +3356,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
     {
       switch_sense = CUBIT_TRUE;
     }
-    warn_about_refface_sense( keep_face, dead_face, switch_sense );
+    //warn_about_refface_sense( keep_face, dead_face, switch_sense );
   }
   else if( CAST_TO( keeper_entity, RefEdge ) )
   {
@@ -3191,9 +3443,13 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
     // Merge the name(s) of dead_entity to those of keeper_entity
   keeper_entity->merge_entity_names( dead_entity );
  
-  bool is_free_entity = false;
+  bool is_dead_entity_free_entity = false;
   if( dead_entity->num_parent_ref_entities() == 0 )
-    is_free_entity = true;
+    is_dead_entity_free_entity = true;
+
+  bool is_keeper_entity_free_entity = false;
+  if( keeper_entity->num_parent_ref_entities() == 0 )
+    is_keeper_entity_free_entity = true;
 
     // Next, merge the links of these two BTEs
   SenseEntity* co_edge_ptr;
@@ -3236,8 +3492,12 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
   dead_entity->notify_all_observers( MergeEvent(dead_entity, keeper_entity) );
 
   dead_entity->notify_all_observers( MODEL_ENTITY_DESTRUCTED );
-  if( is_free_entity ) //is free entity...top level
+  if( is_dead_entity_free_entity ) //is free entity...top level
+  {
     dead_entity->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, dead_entity);
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
 
   dead_entity->deactivated(CUBIT_TRUE);
   
@@ -3267,7 +3527,22 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
   MergeEvent merge_event(dead_entity, keeper_entity);
   merge_event.set_event_type(ENTITY_SURVIVED_MERGE);
   CubitObserver::notify_static_observers(keeper_entity, merge_event);
-  
+
+  if( is_keeper_entity_free_entity && !is_dead_entity_free_entity ) //is free entity...top level
+  {
+    keeper_entity->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, keeper_entity);
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
+
+
+  for(int i=0; i<dead_parents.size(); i++)
+  {
+    dead_parents[i]->notify_all_observers(TOPOLOGY_MODIFIED);
+    CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, dead_parents[i]);
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
+    
   return CUBIT_SUCCESS;
 }
 
@@ -3941,6 +4216,8 @@ RefVertex* MergeTool::force_merge( RefVertex* vtx1, RefVertex* vtx2 )
   
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
+
+   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
   
   return vtx1;
 }
@@ -4033,6 +4310,9 @@ RefEdge* MergeTool::force_merge( RefEdge* edge1, RefEdge* edge2 )
   remove_compare_data();
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
+
+  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
+
   return edge1;
 }
 
@@ -4248,6 +4528,9 @@ RefFace* MergeTool::force_merge( RefFace* face1, RefFace* face2 )
   remove_compare_data();
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
+
+  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
+
   return face1;
 }
 
@@ -4654,6 +4937,7 @@ RefFace* MergeTool::separate_face( DLIList<Surface*>& surfaces,
   surfaces.step( j );
     // Create new face
   RefFace* new_face = RefEntityFactory::instance()->construct_RefFace( surfaces.get() );
+
   for (i = surfaces.size(); i > 1; i-- )
     new_face->bridge_manager()->add_bridge( surfaces.step_and_get() );
   
@@ -4792,6 +5076,7 @@ RefFace* MergeTool::separate_face( DLIList<Surface*>& surfaces,
       
         // Find the curve(s) in the just-unmerged refface
       bridge_list.reset();
+      DLIList<Curve*> other_curves_to_unmerge;
       for (j = bridge_list.size(); j--; )
       {
         TopologyBridge* bridge = bridge_list.get_and_step();
@@ -4799,6 +5084,7 @@ RefFace* MergeTool::separate_face( DLIList<Surface*>& surfaces,
         bridge->get_parents( bridge_parents );
         bridge_parents.reset();
         bool in_old = false, in_new = false;
+
         while (bridge_parents.size())
         {
           CoEdge* coedge = dynamic_cast<CoEdge*>(bridge_parents.pop()->topology_entity());
@@ -4817,7 +5103,28 @@ RefFace* MergeTool::separate_face( DLIList<Surface*>& surfaces,
         else if(in_new)
         {
           curve_list.append( dynamic_cast<Curve*>(bridge) );
+          continue;
         }
+
+        //Some other curves might be merge candidates now..
+        //If both surfaces on either side of the curve have been unmerged,
+        //then this curve can be unmerged too.
+        bool unmerge_curve = true;
+        bridge_parents.clean_out();
+        bridge->get_parents( bridge_parents );
+        while (bridge_parents.size())
+        {
+          CoEdge* coedge = dynamic_cast<CoEdge*>(bridge_parents.pop()->topology_entity());
+          if( coedge->bridge_manager()->number_of_bridges() != 1 )
+          {
+            unmerge_curve = false;
+            break;
+          }
+        }
+
+        if( unmerge_curve == true )
+          other_curves_to_unmerge.append_unique( dynamic_cast<Curve*>(bridge) );
+
       } // for( j in bridge_list )
       
         // Find curve(s) that must remain merged.
@@ -4851,6 +5158,10 @@ RefFace* MergeTool::separate_face( DLIList<Surface*>& surfaces,
       {
         separate_edge( curve_list, true );
       }
+      
+      if( other_curves_to_unmerge.size() )
+        separate_edge( other_curves_to_unmerge, true );
+
     } // for (i in edge_list)
   } // if (unmerge_curves)
   
@@ -4878,6 +5189,10 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
   RefEdge* old_edge = dynamic_cast<RefEdge*>( can_separate( bridge_list, true ) );
   if (!old_edge)
     return 0;
+
+  bool old_edge_free_before = true;
+  if( old_edge->num_parent_ref_entities() ) 
+    old_edge_free_before = false;
     
   CubitBoolean top = start_unmerge();
      
@@ -4895,6 +5210,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
   curves.step( j );
     // Create new edge
   RefEdge* new_edge = RefEntityFactory::instance()->construct_RefEdge( curves.get() );
+  
   for (i = curves.size(); i > 1; i-- )
     new_edge->bridge_manager()->add_bridge( curves.step_and_get() );
   
@@ -4987,10 +5303,11 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
         point_list.append( point );
       }
       
-      point_list.reset();
       for (j = 0; j < point_list.size(); j++)
       {
-        Point* point = point_list.get_and_step();
+        point_list.reset();
+        point_list.step(j);
+        Point* point = point_list.get();
         parent_curves.clean_out();
         point->get_parents( parent_curves );
         
@@ -5001,7 +5318,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
           BridgeManager* bm = curve->bridge_manager();
           bridge_list.clean_out();
           bm->get_bridge_list( bridge_list );
-          
+      
           bridge_list.reset();
           for (int l = bridge_list.size(); l--; )
           {
@@ -5015,10 +5332,17 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
           }
         }
       }
- 
       separate_vertex( point_list );
     }
   }
+
+  if( !old_edge_free_before && old_edge->num_parent_ref_entities() == 0 )
+  {
+    CubitObserver::notify_static_observers( old_edge, FREE_REF_ENTITY_GENERATED );
+    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, old_edge );
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
+
   
   end_unmerge(top);  
   return new_edge;
@@ -5038,15 +5362,17 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
 RefVertex* MergeTool::separate_vertex( DLIList<Point*>& points )
 {
   int i, j;
-  
   DLIList<TopologyBridge*> bridge_list( points.size() );
   CAST_LIST_TO_PARENT( points, bridge_list );
   RefVertex* old_vtx = dynamic_cast<RefVertex*>( can_separate( bridge_list, true ) );
   if (!old_vtx)
     return 0;
+
+  bool old_vtx_free_before = true;
+  if( old_vtx->num_parent_ref_entities() ) 
+    old_vtx_free_before = false;
   
   CubitBoolean top = start_unmerge();
-  
   
     // Split the RefVertex
   
@@ -5092,6 +5418,14 @@ RefVertex* MergeTool::separate_vertex( DLIList<Point*>& points )
   for (i = assistant_list_.size(); i--; )
     assistant_list_.get_and_step()->unmerged( old_vtx, new_vtx, false );
 
+  if( !old_vtx_free_before && old_vtx->num_parent_ref_entities() == 0 )
+  {
+    CubitObserver::notify_static_observers( old_vtx, FREE_REF_ENTITY_GENERATED );
+    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, old_vtx );
+    GeometryQueryTool::instance()->history().add_event(evt);
+  }
+
+
   end_unmerge(top);
   return new_vtx;
 }
@@ -5128,7 +5462,14 @@ CubitStatus MergeTool::check_saved_id( BasicTopologyEntity* bte )
   }
   
   if (smallest)
-    bte->set_id(smallest);
+  {
+    //make sure this id isn't in use already
+    RefEntity *tmp_ent = 
+      RefEntityFactory::instance()->get_ref_entity( bte->entity_type_info(), smallest ); 
+    
+    if( tmp_ent == NULL )
+      bte->set_id(smallest);
+  }
   
   return CUBIT_SUCCESS;
 }
@@ -5424,6 +5765,1141 @@ CubitBoolean MergeTool::about_spatially_equal( Point *point_1, Point *point_2,
     return CUBIT_FALSE;
 
    return CUBIT_TRUE;
+}
+
+void MergeTool::imprint_merge_solutions_for_overlapping_surfaces(
+                                          RefFace *face1,
+                                          RefFace *face2,
+                                          bool execute,
+                                          DLIList<CubitString*> &display_strings,
+                                          DLIList<CubitString*> &command_strings,
+                                          DLIList<CubitString*> &preview_strings )
+{
+  //collect all the unmerged curves between the 2 surfaces
+  DLIList<RefEdge*> edges1, edges2, tmp_list;
+  face1->ref_edges( edges1 );
+  face2->ref_edges( edges2 );
+  tmp_list += edges1;
+  tmp_list.intersect_unordered( edges2 );
+  
+  //remove all the common edges from both lists
+  edges1 -= tmp_list;
+  edges2 -= tmp_list;
+  
+  double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+
+  CubitString *preview_string;
+  
+  if(!execute)
+  {
+    preview_string = new CubitString("draw surface ");
+    *preview_string += face1->id();
+    *preview_string += " "; 
+    *preview_string += face2->id();
+    *preview_string += " overlap"; 
+  }
+
+  //if all curves of both surfaces are merged, suggest 'force merge'
+  if( edges1.size() == 0 && edges2.size() == 0 )
+  {
+    //quick check to make sure that centerpoints are nearly coincident
+    CubitVector center1 = face1->center_point();
+    CubitVector center2 = face2->center_point();
+
+    if( center1.distance_between( center2 ) <= (tolerance*5) )
+    {
+      if(execute)
+      {
+        MergeTool::instance()->force_merge(face1, face2);
+      }
+      else
+      {
+        //display strings
+        CubitString *display_string = new CubitString("Force merge Surface ");
+        *display_string += face1->id();
+        *display_string += " "; 
+        *display_string += face2->id();
+        display_strings.append( display_string );
+
+        CubitString *command_string = new CubitString("merge surface ");
+        *command_string += face1->id();
+        *command_string += " ";
+        *command_string += face2->id();
+        *command_string += " force";
+        command_strings.append( command_string );
+
+        preview_strings.append( preview_string );
+      }
+      
+      return;
+    }
+  }
+
+  //get all the vertices 
+  DLIList<RefVertex*> verts1, verts2, merged_vertices;
+  face1->ref_vertices( verts1 );
+  face2->ref_vertices( verts2 );
+  merged_vertices += verts1;
+  merged_vertices.intersect_unordered( verts2 );
+  
+  //remove all the merged vertices from both lists
+  verts1 -= merged_vertices;
+  verts2 -= merged_vertices;
+
+  int i,j,k;
+  //another force merge case...all vertices are merged, but some 
+  //coincident curves remain unmerged still.
+  if( verts1.size() == 0 && verts2.size() == 0 )
+  {
+    DLIList<RefEdge*> tmp_edges1( edges1 );
+    DLIList<RefEdge*> tmp_edges2( edges2 );
+
+    //find edges that are close to one another
+    for( i=tmp_edges1.size(); i--; )
+    {
+      RefEdge *edge1 = tmp_edges1.get_and_step();
+
+      //get some random point on curve edge1
+      CubitVector position_on_edge1;
+      edge1->position_from_fraction( 0.634, position_on_edge1 );
+
+      bool found_pair = false;
+      for( j=tmp_edges2.size(); j--; )
+      {
+        RefEdge *edge2 = tmp_edges2.get_and_step();
+
+        if( edge2 == NULL )
+          continue;
+
+        //make sure that they have the same vertices
+        if( (edge1->start_vertex() == edge2->start_vertex() ||
+             edge1->start_vertex() == edge2->end_vertex() ) &&
+            (edge1->end_vertex() == edge2->end_vertex() ||
+             edge1->end_vertex() == edge2->start_vertex() ) )
+        {
+          //find the closest point 
+          CubitVector close_pt;
+          edge2->closest_point_trimmed( position_on_edge1, close_pt ); 
+          
+          //adjust tolerance to be larger possibly, a thousandanth of the curve's length
+          double tmp_tolerance = edge2->measure()*0.01;
+          if( tolerance > tmp_tolerance )
+            tmp_tolerance = tolerance;
+
+          if( close_pt.distance_between( position_on_edge1 ) < tmp_tolerance )
+          {
+              //remove both from the list
+            tmp_edges2.back();
+            tmp_edges2.change_to( NULL );
+            found_pair = true;
+            break;
+          }
+        }
+      }
+      if( found_pair == true )
+      {
+        tmp_edges1.back();
+        tmp_edges1.change_to( NULL );
+        tmp_edges1.step();
+      }
+    }
+
+    tmp_edges1.remove_all_with_value( NULL );
+    tmp_edges2.remove_all_with_value( NULL );
+    
+    if( tmp_edges1.size() == 0 && tmp_edges2.size() == 0 )
+    {
+      if(execute)
+      {
+        MergeTool::instance()->force_merge(face1, face2);
+      }
+      else
+      {
+        //display strings
+        CubitString *display_string = new CubitString("Force merge Surface ");
+        *display_string += face1->id();
+        *display_string += " "; 
+        *display_string += face2->id();
+        display_strings.append( display_string );
+
+        CubitString *command_string = new CubitString("merge surface ");
+        *command_string += face1->id();
+        *command_string += " ";
+        *command_string += face2->id();
+        *command_string += " force";
+        command_strings.append( command_string );
+
+        preview_strings.append( preview_string );
+      }
+      return;
+    }
+  }
+
+  //Look for near-coincident vertices between surfaces.
+  //If any vertices are less than merge_tolerance*5 apart, 
+  //merge all the vertices
+  verts1.clean_out();
+  verts2.clean_out();
+  face1->ref_vertices( verts1 );
+  face2->ref_vertices( verts2 );
+  double tmp_tol = tolerance * 5; 
+  double recommended_tol = -1;
+  RefVertex *near_coincident_verts[2];
+  
+  for( i=verts1.size(); i--; )
+  {
+    RefVertex *vert1 = verts1.get_and_step();
+    CubitVector pos1 = vert1->coordinates();
+
+    for( j=verts2.size(); j--; )
+    {
+      RefVertex *vert2 = verts2.get_and_step();
+      if( vert2 == vert1 )//already merged case
+        continue;
+      CubitVector pos2 = vert2->coordinates();
+
+      double tmp_dist = pos1.distance_between( pos2 );
+      if( tmp_dist < tmp_tol )
+      {
+        if( tmp_dist > recommended_tol )
+        {
+          recommended_tol = tmp_dist;
+          near_coincident_verts[0] = vert1;
+          near_coincident_verts[1] = vert2;
+        }
+      }
+    }
+  }
+
+  if( recommended_tol > 0 )
+  {
+    double merge_tol = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+
+    if(execute)
+    {
+      double old_merge_tol = -1;
+      if( recommended_tol > merge_tol )
+      {
+        old_merge_tol = GeometryQueryTool::get_geometry_factor();
+        GeometryQueryTool::set_geometry_factor(recommended_tol);
+      }
+      DLIList<RefVertex*> merge_vert_list;
+      face1->ref_vertices(merge_vert_list);
+      face2->ref_vertices(merge_vert_list);
+      MergeTool::instance()->merge_refvertices( merge_vert_list );
+      if( old_merge_tol != -1 )
+        GeometryQueryTool::set_geometry_factor( old_merge_tol );
+    }
+    else
+    {
+      CubitString *display_string = new CubitString("Merge vertices of surface ");
+      *display_string += face1->id(); 
+      *display_string += " ";  
+      *display_string += face2->id(); 
+      if( recommended_tol > merge_tol )
+      {
+        recommended_tol *= 1.1;
+        *display_string += " tolerance ";
+        *display_string += CubitString( recommended_tol, 0, 7 ); 
+      }
+      display_strings.append( display_string );
+
+      CubitString *command_string = new CubitString("merge vertex in surface ");
+      *command_string += face1->id(); 
+      *command_string += " ";  
+      *command_string += face2->id(); 
+      if( recommended_tol > merge_tol )
+      {
+        *command_string += " tolerance ";
+        *command_string += CubitString( recommended_tol, 0, 7 ); 
+      }
+      command_strings.append( command_string );
+
+      preview_strings.append( preview_string );
+    }
+    return;
+  }
+
+  DLIList<CubitVector*> positions_to_imprint_onto_face1;
+  DLIList<CubitVector*> positions_to_imprint_onto_face2;
+
+  double possible_slivers_on_face1 = 0;
+  double possible_slivers_on_face2 = 0;
+  
+  double dist1, dist2, dist3;
+
+  //if you have overlapping curves, suggest imprinting owning volume with vertex
+  std::map<RefEdge*, DLIList<CurveOverlapFacet*>* > facet_map;
+  
+  DLIList<RefEdge*> overlapping_edges2;
+
+  for( i=edges1.size(); i--; )
+  {
+    RefEdge *edge1 = edges1.get_and_step();
+
+    DLIList<RefVertex*> verts1;
+    edge1->ref_vertices( verts1 ); 
+    RefVertex *s_vert1 = verts1.get_and_step(); 
+    RefVertex *e_vert1 = verts1.get(); 
+    
+    bool overlaps_with_another_curve = false;
+    double edge1_length = edge1->measure();
+    double curve_overlap_tolerance = 0.005;
+
+    for( j=edges2.size(); j--; )
+    {
+      RefEdge *edge2 = edges2.get_and_step();
+
+      if( edge2 == NULL )
+        continue;
+      
+      if( SurfaceOverlapTool::instance()->check_overlap( edge1, edge2, 
+                                                         &facet_map, 
+                                                         &curve_overlap_tolerance ))
+      {
+        overlapping_edges2.append_unique( edge2 );
+        overlaps_with_another_curve = true;
+
+        DLIList<RefVertex*> verts2; 
+        edge2->ref_vertices( verts2 ); 
+        RefVertex *s_vert2 = verts2.get_and_step(); 
+        RefVertex *e_vert2 = verts2.get(); 
+
+        CubitVector close_pt;
+        edge1->closest_point_trimmed( s_vert2->coordinates(), close_pt );
+        
+        double edge2_length = edge2->measure();
+        
+        double tmp_tolerance = edge2_length;
+        if( edge1_length < edge2_length )
+          tmp_tolerance = edge1_length;
+        
+        //For a vertex of curve A to be imprinted on curve B, that vertex of A
+        //must be a distance greater than 1/2 a percent of the lenght of  
+        //whichever curve is smaller (A or B)
+        tmp_tolerance *= 0.005;
+        double sliver_tolerance = tmp_tolerance * 2;
+
+        if( tolerance < tmp_tolerance )
+          tolerance = tmp_tolerance;
+
+        dist1 = close_pt.distance_between( s_vert2->coordinates() );
+        dist2 = close_pt.distance_between( s_vert1->coordinates() ); 
+        dist3 = close_pt.distance_between( e_vert1->coordinates() ); 
+
+        //decide what vertex needs to be imprinted where
+        if( dist1 < tolerance && 
+            dist2 > tolerance &&
+            dist3 > tolerance )
+        {
+
+          //make sure this position doesn't already exist
+          bool add_position = true;
+          for( k=positions_to_imprint_onto_face1.size(); k--; )
+          {
+            CubitVector *tmp_vec = positions_to_imprint_onto_face1.get_and_step();
+
+            if( close_pt.distance_between( *tmp_vec ) < tolerance )
+            {
+              add_position = false;
+              break;
+            }
+          }
+          
+          if( add_position )
+          {
+            //imprint body of edge1 with vertex at this location
+            CubitVector *tmp_vec = new CubitVector( close_pt );
+            positions_to_imprint_onto_face1.append( tmp_vec );
+            
+            //watch for possible sliver creation
+            if( dist2 < sliver_tolerance || dist3 < sliver_tolerance )
+              possible_slivers_on_face1++;
+          }
+        }
+
+        edge1->closest_point_trimmed( e_vert2->coordinates(), close_pt );
+
+        dist1 = close_pt.distance_between( e_vert2->coordinates() );
+        dist2 = close_pt.distance_between( s_vert1->coordinates() ); 
+        dist3 = close_pt.distance_between( e_vert1->coordinates() ); 
+
+        if( dist1 < tolerance && 
+            dist2 > tolerance &&
+            dist3 > tolerance )
+        {
+          //make sure this position doesn't already exist
+          bool add_position = true;
+          for( k=positions_to_imprint_onto_face1.size(); k--; )
+          {
+            CubitVector *tmp_vec = positions_to_imprint_onto_face1.get_and_step();
+
+            if( close_pt.distance_between( *tmp_vec ) < tolerance )
+            {
+              add_position = false;
+              break;
+            }
+          }
+          
+          if( add_position )
+          {
+            //imprint body of edge1 with vertex at this location
+            CubitVector *tmp_vec = new CubitVector( close_pt );
+            positions_to_imprint_onto_face1.append( tmp_vec );
+            
+            //watch for possible sliver creation
+            if( dist2 < sliver_tolerance || dist3 < sliver_tolerance )
+              possible_slivers_on_face1++;
+          }
+        }
+
+        edge2->closest_point_trimmed( s_vert1->coordinates(), close_pt );
+
+        dist1 = close_pt.distance_between( s_vert1->coordinates() );
+        dist2 = close_pt.distance_between( s_vert2->coordinates() ); 
+        dist3 = close_pt.distance_between( e_vert2->coordinates() ); 
+
+        if( dist1 < tolerance &&
+            dist2 > tolerance &&
+            dist3 > tolerance )
+        {
+          //make sure this position doesn't already exist
+          bool add_position = true;
+          for( k=positions_to_imprint_onto_face2.size(); k--; )
+          {
+            CubitVector *tmp_vec = positions_to_imprint_onto_face2.get_and_step();
+
+            if( close_pt.distance_between( *tmp_vec ) < tolerance )
+            {
+              add_position = false;
+              break;
+            }
+          }
+          
+          if( add_position )
+          {
+            //imprint body of edge1 with vertex at this location
+            CubitVector *tmp_vec = new CubitVector( close_pt );
+            positions_to_imprint_onto_face2.append( tmp_vec );
+            
+            //watch for possible sliver creation
+            if( dist2 < sliver_tolerance || dist3 < sliver_tolerance )
+              possible_slivers_on_face2++;
+          }
+        }
+
+        edge2->closest_point_trimmed( e_vert1->coordinates(), close_pt );
+
+        dist1 = close_pt.distance_between( e_vert1->coordinates() );
+        dist2 = close_pt.distance_between( s_vert2->coordinates() ); 
+        dist3 = close_pt.distance_between( e_vert2->coordinates() ); 
+
+        if( dist1 < tolerance &&
+            dist2 > tolerance && 
+            dist3 > tolerance )
+        {
+          //make sure this position doesn't already exist
+          bool add_position = true;
+          for( k=positions_to_imprint_onto_face2.size(); k--; )
+          {
+            CubitVector *tmp_vec = positions_to_imprint_onto_face2.get_and_step();
+
+            if( close_pt.distance_between( *tmp_vec ) < tolerance )
+            {
+              add_position = false;
+              break;
+            }
+          }
+          
+          if( add_position )
+          {
+            //imprint body of edge1 with vertex at this location
+            CubitVector *tmp_vec = new CubitVector( close_pt );
+            positions_to_imprint_onto_face2.append( tmp_vec );
+            
+            //watch for possible sliver creation
+            if( dist2 < sliver_tolerance || dist3 < sliver_tolerance )
+              possible_slivers_on_face2++;
+          }
+        }
+      }
+    }
+
+    //remove this curve if it really overlaps
+    if( overlaps_with_another_curve == true )
+    {
+      edges1.back();
+      edges1.change_to( NULL );
+      edges1.step();
+    }
+  }
+  
+  //clean up facets
+  std::map<RefEdge*, DLIList<CurveOverlapFacet*>* >::iterator facet_iter;
+  facet_iter=facet_map.begin(); 
+  for(; facet_iter != facet_map.end(); facet_iter++ )
+  {
+    DLIList<CurveOverlapFacet*> *co_facet_list = facet_iter->second;
+
+    //delete all the facets in the list
+    for( i=co_facet_list->size(); i--; )
+      delete co_facet_list->get_and_step();
+    delete co_facet_list;
+  }
+  
+  //reset tolerance
+  tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+
+  //after this you should only be left with unmerged, non-overlapping edges 
+  edges1.remove_all_with_value( NULL );
+  edges2 -= overlapping_edges2;
+
+  //if all the curves are either merged or overlapping and 
+  //no vertices of any curve will imprint onto any other curve... 
+  //suggest force merging the 2 surfaces
+  if( edges1.size() == 0 && edges2.size() == 0 &&  
+      positions_to_imprint_onto_face1.size() == 0 &&  
+      positions_to_imprint_onto_face2.size() == 0 )
+  {
+    
+    //make sure the 2 surfaces have same number of curves and vertices
+    if( face1->num_ref_vertices() == face2->num_ref_vertices() &&
+        face1->num_ref_edges() == face2->num_ref_edges() )
+    {
+      if(execute)
+      {
+        MergeTool::instance()->force_merge(face1, face2);
+      }
+      else
+      {
+        CubitString *display_string = new CubitString("Force merge Surface ");
+        *display_string += face1->id();
+        *display_string += " "; 
+        *display_string += face2->id();
+        display_strings.append( display_string );
+     
+        CubitString *command_string = new CubitString("merge surface ");
+        *command_string += face1->id();
+        *command_string += " ";
+        *command_string += face2->id();
+        *command_string += " force";
+        command_strings.append( command_string );
+        
+        preview_strings.append( preview_string );
+      }
+      return;
+    }
+  }
+
+  //try to suggest some curves you can imprint onto a surface 
+  if( edges1.size() || edges2.size() )
+  {
+    DLIList<RefFace*> face_list(1);
+    face_list.append( face2 );
+   
+    //see what edges in edges1 will imprint onto face2
+    DLIList<RefEdge*> edges_to_imprint_onto_face2;
+    for( i=edges1.size(); i--; )
+    {
+      RefEdge *edge1 = edges1.get_and_step();
+
+      //project
+      DLIList<RefEdge*> edge_list(1);
+      DLIList<RefEdge*> new_edges; 
+      edge_list.append( edge1);
+      bool print_error = false;
+
+      DLIList<Surface*> surface_list(1);
+      DLIList<Curve*> curves_to_project(1), projected_curves;
+      GeometryModifyEngine* gme = GeometryModifyTool::instance()->common_modify_engine( 
+                                                        face_list,
+                                                        edge_list,
+                                                        surface_list,
+                                                        curves_to_project);
+      CubitStatus status = gme->
+         project_edges( surface_list, curves_to_project, projected_curves);
+      
+      if( projected_curves.size() == 0 )
+        continue;
+
+      Curve *projected_curve = projected_curves.get(); 
+
+      //if midpoint of projected curve is far from original curve, continue 
+      CubitVector original_curve_mid_point = edge1->center_point(); 
+      if( original_curve_mid_point.distance_between( projected_curve->center_point() ) > tolerance )
+      {
+        gme->get_gqe()->delete_solid_model_entities( projected_curve );
+        continue;
+      }
+
+      bool is_curve_on_surface = false;
+      //do a surface-curve intersection to see if the curve lies on the surface
+      DLIList<Curve*> intersection_curves;
+      status = gme->curve_surface_intersection( surface_list.get(), 
+                                                projected_curve,
+                                                intersection_curves); 
+  
+      if( status == CUBIT_SUCCESS && intersection_curves.size() )
+      {
+        //remove any sliver curves
+        for( j=intersection_curves.size(); j--; )
+        {
+          Curve *tmp_curve = intersection_curves.get_and_step();
+          if( tmp_curve->measure() < tolerance )
+          {
+            gme->get_gqe()->delete_solid_model_entities( tmp_curve );
+            intersection_curves.back();
+            intersection_curves.change_to( NULL );
+            intersection_curves.step();
+          }
+        }
+
+        intersection_curves.remove_all_with_value( NULL );
+        
+        if( intersection_curves.size() ) 
+          is_curve_on_surface = true;
+
+        //delete the intersection curves
+        for( j=intersection_curves.size(); j--; )
+          gme->get_gqe()->delete_solid_model_entities( intersection_curves.get_and_step() );
+      }
+
+      //maybe the surface-curve intersection method above didn't work...do 
+      //this more primitive method instead
+      if( is_curve_on_surface == false ) 
+      {
+        double distances_on_curves[3];
+        distances_on_curves[0] = .235;
+        distances_on_curves[1] = .468;
+        distances_on_curves[2] = .894;
+
+        for( j=0; j<3; j++ )
+        {
+          CubitVector position_on_curve;
+          projected_curve->position_from_fraction( distances_on_curves[j],
+                                                   position_on_curve );
+
+          CubitVector closest_point_on_surface;
+          face2->find_closest_point_trimmed( position_on_curve, 
+                                             closest_point_on_surface );
+          
+          if( position_on_curve.distance_between( closest_point_on_surface ) < tolerance )
+          {
+            is_curve_on_surface = true;
+            break;
+          }
+        }
+      }
+
+      //delete the projected curve
+      gme->get_gqe()->delete_solid_model_entities( projected_curve );
+
+      if( is_curve_on_surface == false )
+        continue;
+
+      edges_to_imprint_onto_face2.append( edge1 );
+    }
+
+    //a possible force merge situation???
+    if( edges_to_imprint_onto_face2.size() )
+    {
+      //are the number of vertices on both faces the same?
+      if( face1->num_ref_vertices() == face2->num_ref_vertices() &&
+          face1->num_ref_edges() == face2->num_ref_edges() )
+      {
+        double overlapping_area = 0;
+        SurfaceOverlapTool::instance()->check_overlap(
+               face1, face2, CUBIT_FALSE, CUBIT_FALSE, &overlapping_area );
+        double face1_area = face1->area();
+        double face2_area = face2->area();
+       
+        //make sure overlapping area is more than 99% of both surface areas
+        double area_diff1 = fabs( overlapping_area - face1_area );
+        double area_diff2 = fabs( overlapping_area - face2_area );
+       
+        if( area_diff1 < (face1_area*0.01) &&
+            area_diff2 < (face2_area*0.01) )
+        {
+          if(execute)
+          {
+            MergeTool::instance()->force_merge(face1, face2);
+          }
+          else
+          {
+            CubitString *display_string = new CubitString("Force merge Surface ");
+            *display_string += face1->id();
+            *display_string += " "; 
+            *display_string += face2->id();
+            display_strings.append( display_string );
+
+            CubitString *command_string = new CubitString("merge surface ");
+            *command_string += face1->id();
+            *command_string += " ";
+            *command_string += face2->id();
+            *command_string += " force";
+            command_strings.append( command_string );
+            
+            preview_strings.append( preview_string );
+          }
+          return;
+        }
+      }
+    }
+
+    face_list.clean_out();
+    face_list.append( face1 );
+
+    DLIList<RefEdge*> edges_to_imprint_onto_face1;
+    //see what edges in edges2 will imprint onto face1
+    for( i=edges2.size(); i--; )
+    {
+      RefEdge *edge2 = edges2.get_and_step();
+
+      //project
+      DLIList<RefEdge*> edge_list(1);
+      DLIList<RefEdge*> new_edges; 
+      edge_list.append( edge2);
+      bool print_error = false;
+
+      DLIList<Surface*> surface_list(1);
+      DLIList<Curve*> curves_to_project(1), projected_curves;
+      GeometryModifyEngine* gme = GeometryModifyTool::instance()->common_modify_engine( 
+                                                        face_list,
+                                                        edge_list,
+                                                        surface_list,
+                                                        curves_to_project);
+      CubitStatus status = gme->
+         project_edges( surface_list, curves_to_project, projected_curves);
+      
+      if( projected_curves.size() == 0 )
+        continue;
+    
+      Curve *projected_curve = projected_curves.get(); 
+
+      //if midpoint of projected curve is far from original curve, continue 
+      CubitVector original_curve_mid_point = edge2->center_point(); 
+      if( original_curve_mid_point.distance_between( projected_curve->center_point() ) > tolerance )
+      {
+        gme->get_gqe()->delete_solid_model_entities( projected_curve );
+        continue;
+      }
+
+      bool is_curve_on_surface = false;
+      //do a surface-curve intersection to see if the curve lies on the surface
+      DLIList<Curve*> intersection_curves;
+      status = gme->curve_surface_intersection( surface_list.get(), 
+                                                projected_curve,
+                                                intersection_curves); 
+  
+      if( status == CUBIT_SUCCESS && intersection_curves.size() )
+      {
+        //remove any sliver curves
+        for( j=intersection_curves.size(); j--; )
+        {
+          Curve *tmp_curve = intersection_curves.get_and_step();
+          if( tmp_curve->measure() < tolerance )
+          {
+            gme->get_gqe()->delete_solid_model_entities( tmp_curve );
+            intersection_curves.back();
+            intersection_curves.change_to( NULL );
+            intersection_curves.step();
+          }
+        }
+
+        intersection_curves.remove_all_with_value( NULL );
+        
+        if( intersection_curves.size() ) 
+          is_curve_on_surface = true;
+
+        //delete the intersection curves
+        for( j=intersection_curves.size(); j--; )
+          gme->get_gqe()->delete_solid_model_entities( intersection_curves.get_and_step() );
+      }
+
+      //maybe the surface-curve intersection method above didn't work...do 
+      //this more primitive method instead
+      if( is_curve_on_surface == false ) 
+      {
+        double distances_on_curves[3];
+        distances_on_curves[0] = .235;
+        distances_on_curves[1] = .468;
+        distances_on_curves[2] = .894;
+
+        for( j=0; j<3; j++ )
+        {
+          CubitVector position_on_curve;
+          projected_curve->position_from_fraction( distances_on_curves[j],
+                                                   position_on_curve );
+
+          CubitVector closest_point_on_surface;
+          face1->find_closest_point_trimmed( position_on_curve, 
+                                             closest_point_on_surface );
+          
+          if( position_on_curve.distance_between( closest_point_on_surface ) < tolerance )
+          {
+            is_curve_on_surface = true;
+            break;
+          }
+        }
+      }
+
+      //delete the projected curve
+      gme->get_gqe()->delete_solid_model_entities( projected_curve );
+
+      if( is_curve_on_surface == false )
+        continue;
+
+      edges_to_imprint_onto_face1.append( edge2 ); 
+    }
+
+    //a possible force merge situation???
+    if( edges_to_imprint_onto_face1.size() )
+    {
+      //are the number of vertices on both faces the same?
+      if( face1->num_ref_vertices() == face2->num_ref_vertices() &&
+          face1->num_ref_edges() == face2->num_ref_edges() )
+      {
+        double overlapping_area = 0;
+        SurfaceOverlapTool::instance()->check_overlap(
+               face1, face2, CUBIT_FALSE, CUBIT_FALSE, &overlapping_area );
+        double face1_area = face1->area();
+        double face2_area = face2->area();
+       
+        //make sure overlapping area is less than 1% of both surface areas
+        double area_diff1 = fabs( overlapping_area - face1_area );
+        double area_diff2 = fabs( overlapping_area - face2_area );
+       
+        if( area_diff1 < (face1_area*0.01) &&
+            area_diff2 < (face2_area*0.01) )
+        {
+          if(execute)
+          {
+            MergeTool::instance()->force_merge(face1, face2);
+          }
+          else
+          {
+            CubitString *display_string = new CubitString("Force merge Surface ");
+            *display_string += face1->id();
+            *display_string += " "; 
+            *display_string += face2->id();
+            display_strings.append( display_string );
+
+            CubitString *command_string = new CubitString("merge surface ");
+            *command_string += face1->id();
+            *command_string += " ";
+            *command_string += face2->id();
+            *command_string += " force";
+            command_strings.append( command_string );
+            
+            preview_strings.append( preview_string );
+          }
+          return;
+        }
+      }
+    }
+
+    //imprint all the edges onto both surfaces in a single command
+    if( edges_to_imprint_onto_face1.size() && 
+        edges_to_imprint_onto_face2.size() ) 
+    {
+      if(execute)
+      {
+        DLIList<RefFace*> ref_face_list;
+        ref_face_list.append(face1);
+        ref_face_list.append(face2);
+        DLIList<RefEdge*> ref_edge_list;
+        for( i=edges_to_imprint_onto_face2.size(); i--; )
+          ref_edge_list.append(edges_to_imprint_onto_face2.get_and_step());
+        for( i=edges_to_imprint_onto_face1.size(); i--; )
+          ref_edge_list.append(edges_to_imprint_onto_face1.get_and_step());
+        DLIList<Body*> tmp_new_bodies; 
+        GeometryModifyTool::instance()->tolerant_imprint( ref_face_list,
+                                                          ref_edge_list, 
+                                                          tmp_new_bodies, true );
+        return;
+      }
+      else
+      {
+        CubitString *command_string = new CubitString("Imprint tolerant surface ");
+        *command_string += face1->id();
+        *command_string += " ";
+        *command_string += face2->id();
+        *command_string += " with curve ";
+        
+        CubitString *display_string = new CubitString("Imprint with curves ");
+
+        CubitString curve_ids;
+        for( i=edges_to_imprint_onto_face2.size(); i--; )
+        {
+          RefEdge *tmp_edge = edges_to_imprint_onto_face2.get_and_step();
+          curve_ids += tmp_edge->id();
+          curve_ids += " "; 
+        }
+        for( i=edges_to_imprint_onto_face1.size(); i--; )
+        {
+          RefEdge *tmp_edge = edges_to_imprint_onto_face1.get_and_step();
+          curve_ids += tmp_edge->id();
+          curve_ids += " "; 
+        }
+
+        *display_string += curve_ids;
+        *command_string += curve_ids;
+        *command_string += "merge";
+        
+        *preview_string += " &&& highlight curve ";
+        *preview_string += curve_ids;
+
+        display_strings.append( display_string );
+        command_strings.append( command_string );
+        preview_strings.append( preview_string );
+      }
+    }
+    //imprint edges onto a single surface  
+    else if( edges_to_imprint_onto_face2.size() )
+    {
+      if(execute)
+      {
+        DLIList<RefFace*> ref_face_list;
+        ref_face_list.append(face2);
+        DLIList<Body*> tmp_new_bodies; 
+        GeometryModifyTool::instance()->tolerant_imprint( ref_face_list,
+                                                          edges_to_imprint_onto_face2, 
+                                                          tmp_new_bodies, true );
+        return;
+      }
+      else
+      {
+        CubitString *command_string = new CubitString("Imprint tolerant surface ");
+        *command_string += face2->id();
+        *command_string += " with curve ";
+        
+        CubitString *display_string = new CubitString("Imprint with curves ");
+        *preview_string += " &&& highlight curve ";
+      
+        CubitString curve_ids;
+        for( i=edges_to_imprint_onto_face2.size(); i--; )
+        {
+          RefEdge *tmp_edge = edges_to_imprint_onto_face2.get_and_step();
+          curve_ids += tmp_edge->id();
+          curve_ids += " "; 
+        }
+
+        *command_string += curve_ids; 
+        *display_string += curve_ids; 
+        *preview_string += curve_ids; 
+
+        *command_string += " merge";
+
+        display_strings.append( display_string );
+        command_strings.append( command_string );
+        preview_strings.append( preview_string );
+      }
+    }
+    //imprint edges onto a single surface  
+    else if( edges_to_imprint_onto_face1.size() )
+    {
+      if(execute)
+      {
+        DLIList<RefFace*> ref_face_list;
+        ref_face_list.append(face1);
+        DLIList<Body*> tmp_new_bodies; 
+        GeometryModifyTool::instance()->tolerant_imprint( ref_face_list,
+                                                          edges_to_imprint_onto_face1, 
+                                                          tmp_new_bodies, true );
+        return;
+      }
+      else
+      {
+        CubitString *command_string = new CubitString("Imprint tolerant surface ");
+        *command_string += face1->id();
+        *command_string += " with curve ";
+
+        CubitString *display_string = new CubitString("Imprint with curves ");
+        *preview_string += " &&& highlight curve ";
+       
+        CubitString curve_ids;
+        for( i=edges_to_imprint_onto_face1.size(); i--; )
+        {
+          RefEdge *tmp_edge = edges_to_imprint_onto_face1.get_and_step();
+          curve_ids += tmp_edge->id();
+          curve_ids += " "; 
+        }
+
+        *command_string += curve_ids; 
+        *display_string += curve_ids; 
+        *preview_string += curve_ids; 
+
+        *command_string += " merge";
+
+        display_strings.append( display_string );
+        command_strings.append( command_string );
+        preview_strings.append( preview_string );
+      }
+    }
+
+    //if we came up with some solutions, get out
+    if( display_strings.size() )
+      return;
+  }
+
+  //just suggest some vertex imprints
+  if( positions_to_imprint_onto_face1.size() ||
+      positions_to_imprint_onto_face2.size() )
+  {
+    //Are you possibly generating sliver curves?  
+    //Offer a merge force merge instead if topology is identical 
+    if( face1->num_ref_vertices() == face2->num_ref_vertices() &&
+        face1->num_ref_edges() == face2->num_ref_edges() )
+    {
+      if((positions_to_imprint_onto_face1.size() &&
+          positions_to_imprint_onto_face1.size() == possible_slivers_on_face1 ) ||
+         (positions_to_imprint_onto_face2.size() &&
+          positions_to_imprint_onto_face2.size() == possible_slivers_on_face2 )) 
+      {
+        if(execute)
+        {
+          MergeTool::instance()->force_merge(face1, face2);
+        }
+        else
+        {
+          CubitString *display_string = new CubitString("Force merge Surface ");
+          *display_string += face1->id();
+          *display_string += " "; 
+          *display_string += face2->id();
+          display_strings.append( display_string );
+       
+          CubitString *command_string = new CubitString("merge surface ");
+          *command_string += face1->id();
+          *command_string += " ";
+          *command_string += face2->id();
+          *command_string += " force";
+          command_strings.append( command_string );
+        }
+     
+        return;
+      }
+    }
+
+    CubitString *command_string = NULL;
+  //  CubitString *preview_string = NULL;
+    if( positions_to_imprint_onto_face1.size() )
+    {
+      if(execute)
+      {
+        Body *b = face1->body();
+        if(b)
+        {
+          DLIList<Body*> body_list;
+          body_list.append(b);
+          DLIList<Body*> new_bodies;
+          GeometryModifyTool::instance()->imprint( body_list, positions_to_imprint_onto_face1,
+                                                        new_bodies, false, true );
+          while(positions_to_imprint_onto_face1.size())
+            delete positions_to_imprint_onto_face1.pop();
+        }
+      }
+      else
+      {
+        command_string = new CubitString("Imprint volume ");
+        RefVolume *volume1 = face1->ref_volume();
+        *command_string += volume1->id();
+        *command_string += " with";
+        *preview_string += " &&& highlight"; 
+        for( i=positions_to_imprint_onto_face1.size(); i--; )
+        {
+          //construct the command string
+          *command_string += " position {";
+          CubitVector *tmp_pos = positions_to_imprint_onto_face1.get_and_step();
+          *command_string += CubitString( tmp_pos->x(), 0, 7 ); 
+          *command_string += "} {"; 
+          *command_string += CubitString( tmp_pos->y(), 0, 7 ); 
+          *command_string += "} {"; 
+          *command_string += CubitString( tmp_pos->z(), 0, 7 ); 
+          *command_string += "}"; 
+
+          //construct the preview string
+          *preview_string += " location ";
+          *preview_string += CubitString( tmp_pos->x(), 0, 7 ); 
+          *preview_string += " ";
+          *preview_string += CubitString( tmp_pos->y(), 0, 7 ); 
+          *preview_string += " ";
+          *preview_string += CubitString( tmp_pos->z(), 0, 7 ); 
+          *preview_string += " ";
+
+          delete tmp_pos;
+        }
+        *command_string += " merge";
+      }
+    }
+
+    if( positions_to_imprint_onto_face2.size() )
+    {
+      if(execute)
+      {
+        Body *b = face2->body();
+        if(b)
+        {
+          DLIList<Body*> body_list;
+          body_list.append(b);
+          DLIList<Body*> new_bodies;
+          GeometryModifyTool::instance()->imprint( body_list, positions_to_imprint_onto_face2,
+                                                        new_bodies, false, true );
+          while(positions_to_imprint_onto_face2.size())
+            delete positions_to_imprint_onto_face2.pop();
+        }
+      }
+      else
+      {
+        if( command_string == NULL )
+          command_string = new CubitString("Imprint volume ");
+        else
+          *command_string += " &&& Imprint volume ";
+
+        if( positions_to_imprint_onto_face1.size() == 0 ) 
+          *preview_string += " &&& highlight"; 
+
+        RefVolume *volume2 = face2->ref_volume();
+        *command_string += volume2->id();
+        *command_string += " with";
+        for( i=positions_to_imprint_onto_face2.size(); i--; )
+        {
+          *command_string += " position {";
+          CubitVector *tmp_pos = positions_to_imprint_onto_face2.get_and_step();
+          
+          *command_string += CubitString( tmp_pos->x(), 0, 7 ); 
+          *command_string += "} {"; 
+          *command_string += CubitString( tmp_pos->y(), 0, 7 ); 
+          *command_string += "} {"; 
+          *command_string += CubitString( tmp_pos->z(), 0, 7 ); 
+          *command_string += "}"; 
+
+          //construct the preview string
+          *preview_string += " location ";
+          *preview_string += CubitString( tmp_pos->x(), 0, 7 ); 
+          *preview_string += " ";
+          *preview_string += CubitString( tmp_pos->y(), 0, 7 ); 
+          *preview_string += " ";
+          *preview_string += CubitString( tmp_pos->z(), 0, 7 ); 
+          *preview_string += " ";
+
+          delete tmp_pos;
+        }
+        *command_string += " merge";
+      }
+    }
+
+    if(!execute)
+    {
+      command_strings.append( command_string );
+      preview_strings.append( preview_string );
+
+      //create the display string
+      CubitString *display_string = new CubitString("Imprint with positions" ); 
+      display_strings.append( display_string );
+    }
+  }
+
+  return;
 }
 
 

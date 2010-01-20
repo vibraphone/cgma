@@ -4,7 +4,7 @@
 //- Version: $Id: 
 
 #include "DynamicArray.hpp"
-#include <string.h>
+#include <cstring>
 
 #if defined(NO_MEMMOVE)
 extern "C" void *CUBIT_memmove(void *s1, const void *s2, size_t n);

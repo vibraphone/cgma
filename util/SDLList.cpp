@@ -180,15 +180,12 @@ void SDLList::binary_search(int* min_location, int* max_location, void* item)
 
 // move_to_item_sorted finds the index of the given value, then sets the 
 // current index there
-int SDLList::move_to_item_sorted(void* value)
+CubitBoolean SDLList::move_to_item_sorted(void* value)
 {
   int item_index;
   CubitBoolean item_exists = where_is_item_sorted( value, item_index );
   index = item_index; // always
-  if ( item_exists ) {
-    return CUBIT_TRUE;
-  }
-  return CUBIT_FALSE;
+  return item_exists;
 }
 
 

@@ -413,4 +413,41 @@ inline CubitBoolean TDSplitSurface::is_c_collapsed()
 inline CubitBoolean TDSplitSurface::is_d_collapsed()
 { return sideD->is_collapsed(); }
 
+
+//================================================================================
+// Description: This class holds data on vertices for split across extend
+// Author     : Steve Storm
+// Date       : 10/7/2007
+//================================================================================
+class CUBIT_GEOM_EXPORT TDSplitSurfaceExtend : public ToolData
+{
+public:
+
+  TDSplitSurfaceExtend();
+  //- Constructor
+
+  ~TDSplitSurfaceExtend();
+  //- Destructor
+
+  void set_success();
+  //- This indicates we successfully extended from this vertex
+
+  CubitBoolean is_success();
+  //- Did we successfully extend from this vertex?
+
+  static int is_split_surface_extend(const ToolData* td)
+     {return (CAST_TO(td, const TDSplitSurfaceExtend) != NULL);}
+
+private:
+
+  CubitBoolean successFlg;
+};
+
+inline void
+TDSplitSurfaceExtend::set_success()
+{ successFlg = CUBIT_TRUE; }
+
+inline CubitBoolean
+TDSplitSurfaceExtend::is_success()
+{ return successFlg; }
 #endif // TD_SPLIT_SURFACE_HPP

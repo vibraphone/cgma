@@ -17,29 +17,43 @@
 template <class X> class DLIList;
 class RefFace;
 
+//! Tool to find surfaces and curves that overlap.
 class CUBIT_GEOM_EXPORT SurfaceOverlapTool
 {
 
 public :   
 
+   //! From the specified surfaces, find surfaces that overlap. 
    CubitStatus find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list, 
-                                          DLIList<RefEntity*> &faces_to_draw );
+                                          DLIList<RefEntity*> &faces_to_draw,
+                                          bool filter_slivers = false );
+
+   //! From the specified bodies, find surfaces that overlap. 
    CubitStatus find_overlapping_surfaces( DLIList<Body*> &body_list,
-                                          DLIList<RefEntity*> &faces_to_draw );
+                                          DLIList<RefEntity*> &faces_to_draw,
+                                          bool filter_slivers = false );
+
+   //! From the specified surfaces, find surfaces that overlap. 
    CubitStatus find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list,
                                           DLIList<RefFace*> &ref_face_list1,
                                           DLIList<RefFace*> &ref_face_list2,
                                           DLIList<RefEntity*> &faces_to_draw,
-                                          CubitBoolean show_messages = CUBIT_FALSE);
+                                          CubitBoolean show_messages = CUBIT_FALSE,
+                                          bool filter_slivers = false);
+
+   //! From the specified bodies, find surfaces that overlap. 
    CubitStatus find_overlapping_surfaces( DLIList<Body*> &body_list,
                                           DLIList<RefFace*> &ref_face_list1,
                                           DLIList<RefFace*> &ref_face_list2,
                                           DLIList<RefEntity*> &faces_to_draw,
-                                          CubitBoolean show_messages = CUBIT_FALSE);
+                                          CubitBoolean show_messages = CUBIT_FALSE,
+                                          bool filter_slivers = false);
 
+   //! From the specified bodies, find surfaces that overlap. 
    CubitStatus find_overlapping_surfaces( DLIList<BodySM*> &body_list,
                                           DLIList<Surface*> &surface_list1,
-                                          DLIList<Surface*> &surface_list2 );
+                                          DLIList<Surface*> &surface_list2,
+                                          bool filter_slivers = false );
 
    // Searches for surfaces that overlap each other and are good
    // candidates for imprinting.  It can even find those with gaps
@@ -55,20 +69,78 @@ public :
    // overlap...", and groupResults, listPairs and displayPairs will be
    // used, otherwise they will be false (default).
 
+   //! From the specified surfaces, find overlapping curves.
+   CubitStatus find_overlapping_curves( DLIList<Surface*> &surf_list,
+                                DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
+                                std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
+                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map);
+
+   //! From the specified curves, find those that overlap. 
+   CubitStatus find_overlapping_curves( DLIList<Curve*> &curve_list,
+                                DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
+                                std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
+                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map);
+
+   //! From the specified bodies, find curves that overlap. 
    CubitStatus find_overlapping_curves( DLIList<Body*> &bodies,
-                   std::multimap<RefEdge*, RefEdge*> &overlapping_edge_map );
+                   std::multimap<RefEdge*, RefEdge*> &overlapping_edge_map,
+                   double maxgap = -1);
+
+   //! From the specified bodies, find curves that overlap. 
    CubitStatus find_overlapping_curves( DLIList<BodySM*> &bodies,
                                 DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
-                                std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map );
+                                std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
+                                std::multimap<BodySM*, CubitVector> &body_vertex_imprint_map);
 
+   //! From the specified surfaces, find curves that overlap. 
+   CubitStatus find_overlapping_curves( DLIList<RefFace*> &faces,
+				        std::multimap<RefEdge*, 
+                        RefEdge*> &overlapping_edge_map,
+                        double maxgap = -1);
+
+
+   //! From the specified curves, find curves that overlap. 
+   CubitStatus find_overlapping_curves( DLIList<RefEdge*> &edgelist,
+				        std::multimap<RefEdge*, RefEdge*> &overlapping_edge_map,
+                        double maxgap = -1);
+
+   //! From the specified curves, find curves that overlap. 
+   CubitStatus find_overlapping_curves( DLIList<RefEdge*> &edges1, DLIList<RefEdge*> &edges2,
+					std::multimap<RefEdge*, RefEdge*> &overlapping_edge_map,
+                    double maxgap = -1);
+
+   //! Checks to see if two curves overlap.  Reuses graphic facets.
    CubitBoolean check_overlap( RefEdge *edge1, RefEdge *edge2, 
-               std::map<RefEdge*, DLIList<CurveOverlapFacet*>* > *facet_map );
+               std::map<RefEdge*, DLIList<CurveOverlapFacet*>* > *facet_map, 
+               double *overlap_tol = NULL );
 
+   //! Checks to see if two surfaces overlap.
+   CubitBoolean check_overlap( RefFace *ref_face_ptr1,
+                               RefFace *ref_face_ptr2,
+                               CubitBoolean abort,
+                               CubitBoolean draw_overlap = CUBIT_FALSE,
+                               double *overlap_area = NULL );
+
+   //! Checks to see if two curves overlap.  Reuses graphic facets.
    CubitBoolean check_overlap( Curve *curve1, Curve *curve2, 
-               std::map<Curve*, DLIList<CurveOverlapFacet*>* > *facet_map );
+               std::map<Curve*, DLIList<CurveOverlapFacet*>* > *facet_map, 
+               std::multimap<BodySM*, CubitVector > *body_point_imprint_map = NULL );
 
+   //! Checks to see the two groups of facets overlap. 
+   CubitBoolean check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
+                               DLIList<SurfaceOverlapFacet*> *facet_list2,
+                               AbstractTree<SurfaceOverlapFacet*> *a_tree, 
+                               CubitBoolean abort, 
+                               CubitBoolean draw_overlap,
+                               double *overlap_area );
+
+   //! Draws the overlapping surface pair.
+   CubitBoolean draw_overlapping_surface_pair( RefFace *ref_face_1,
+                                               RefFace *ref_face_2);
+
+
+   //! List the settings used for surface overlap detection
    void list_settings();
-     // List the settings used for surface overlap detection
 
    unsigned short get_facet_ang_tol();
    void set_facet_ang_tol( unsigned short angle_tol );
@@ -130,7 +202,8 @@ public :
 
    static CubitBoolean get_check_across_bodies();
    static void set_check_across_bodies( CubitBoolean setting );
-
+   CubitBoolean get_skip_facing_surfaces();
+   void set_skip_facing_surfaces( CubitBoolean setting );
    static SurfaceOverlapTool* instance();
      // Returns a static pointer to unique instance of this class.
    
@@ -141,19 +214,18 @@ protected :
    
 private :
 
+
   CubitStatus find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list,
                                          DLIList<RefFace*> &ref_face_list1,
                                          DLIList<RefFace*> &ref_face_list2,
                                          DLIList<RefEntity*> &pair_list,
                                          CubitBoolean list_pairs,
-                                         int prog_step );
+                                         int prog_step,
+                                         bool filter_slivers = false);
   // Private workhorse function for finding the overlapping surfaces. Here 
   // pair_list is a list of all the surfaces that were found that overlap.
   // If prog_step == -1 it does not step the progress bar. 
 
-   CubitBoolean check_overlap( RefFace *ref_face_ptr1,
-                               RefFace *ref_face_ptr2,
-                               CubitBoolean abort );
    CubitBoolean check_overlap( Surface *surface1,
                                Surface *surface2,
               std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
@@ -189,19 +261,65 @@ private :
    SurfaceOverlapTool();
      //- Constructor for the SurfaceOverlapTool object
 
-   static  double facetAbsTol;
+   /*! The angular tolerance indicates the maximum angle between 
+       normals of adjacent surface facets. The default angular 
+       tolerance is 15° - consider using a value of 5° . This will 
+       generate a more accurate facetted representation of the 
+       geometry for overlap detection.  */
    static  unsigned short facetAngTol;
+
+  /*!  The distance tolerance means the maximum actual distance 
+       between the generated facets and the surface. This value is 
+       by default ignored by the facetter - consider specifying a 
+       reasonable value here for more accurate results */
+   static  double facetAbsTol;
+
+   /*! The overlap algorithm will search for surfaces that are 
+   within a distance from the gapMin to gapMax. */
    static  double gapMin;
    static  double gapMax;
+
+   //@{
+   /*! Angle comparison for determining if facets are coplanar.  If
+   they are within angleMin and angleMax they are considered to be 
+   coplanar. */
    static  double angleMin;
    static  double angleMax;
+   //@}
+  
+   //! Searches for overlapping surface that have surface normals
+   //! in any, opposite, or the same direction.
    static  int normalType; // 1=any, 2=opposite, 3=same
+  
+   //! Controls if surfaces are put in a group or not.
    static  CubitBoolean groupResults;
+   
+   //! Prints out the lists of overlapping surface pairs.
    static  CubitBoolean listPairs;
+
+   //! Draws the lists of overlapping surface pairs.
    static  CubitBoolean displayPairs;
+  
+   //! Imprint overlapping surfaces parts onto one another. 
    static  CubitBoolean imprintResults;
+  
+   //! The area threshold that 2 surfaces have to actually overlap.
+   //! Prevents detection of sliver overlaps. 
    static  double overlapTolerance;
+
+   //! if the normalType is 2 skip surfaces that face each other
+   static CubitBoolean skipFacingSurfaces;
+
+   //! By default this tool will not search for overlapping 
+   //! pairs within bodies - only between different bodies. 
+   //! Turn this setting on to search for pairs within bodies. 
+   //! Note however that this will slow the algorithm down. 
    static  CubitBoolean checkWithinBodies;
+  
+   //! If true, by default, will try to find surfaces of body A
+   //! that overlap surfaces of body B.  Setting this flag to 
+   //! false will make the tool only check for surfaces that 
+   //! overlap in the same body. 
    static  CubitBoolean checkAcrossBodies;
 };
 
@@ -251,38 +369,30 @@ inline
 void SurfaceOverlapTool::set_overlap_tolerance( double val )
 {overlapTolerance=val;}
 
-#ifdef CAT
 inline
 int SurfaceOverlapTool::get_normal_type()
 {return normalType;}
-#endif
 inline
 void SurfaceOverlapTool::set_normal_type( int type )
 {normalType=type;}
 
-#ifdef CAT
 inline
 CubitBoolean SurfaceOverlapTool::get_group_results()
 {return groupResults;}
-#endif
 inline
 void SurfaceOverlapTool::set_group_results( CubitBoolean setting )
 {groupResults=setting;}
 
-#ifdef CAT
 inline
 CubitBoolean SurfaceOverlapTool::get_list_pairs()
 {return listPairs;}
-#endif
 inline
 void SurfaceOverlapTool::set_list_pairs( CubitBoolean setting )
 {listPairs=setting;}
 
-#ifdef CAT
 inline
 CubitBoolean SurfaceOverlapTool::get_display_pairs()
 {return displayPairs;}
-#endif
 inline
 void SurfaceOverlapTool::set_display_pairs( CubitBoolean setting )
 {displayPairs=setting;}
@@ -304,7 +414,12 @@ CubitBoolean SurfaceOverlapTool::get_check_across_bodies()
 inline
 void SurfaceOverlapTool::set_check_across_bodies( CubitBoolean setting )
 {checkAcrossBodies=setting;}  
-
+inline
+CubitBoolean SurfaceOverlapTool::get_skip_facing_surfaces()
+{return skipFacingSurfaces;}
+inline
+void SurfaceOverlapTool::set_skip_facing_surfaces( CubitBoolean setting )
+{skipFacingSurfaces=setting;}  
 #endif
 
 

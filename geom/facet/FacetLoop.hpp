@@ -45,6 +45,14 @@ public :
   virtual ~FacetLoop() ;
     //- The destructor
   
+  virtual CubitBoolean is_external() ;
+    //R CubitBoolean
+    //R- CUBIT_TRUE/CUBIT_FALSE
+    //- Returns CUBIT_TRUE if the Loop is an external Loop and CUBIT_FALSE
+    //- otherwise.
+  
+  virtual LoopType loop_type() ;
+
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 

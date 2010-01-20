@@ -147,11 +147,12 @@ CubitStatus FacetboolInterface::webcut_FB(BodySM *bodysm_ptr,
     CubitFacet *facet_ptr;
     if(mydebug)
       GfxDebug::clear();
-    for ( k = 0; k < coordsout.size(); k += 3 ) {    
+    for ( k = 0; k < coordsout.size(); k += 3 ) 
+    {    
       facet_ptr = new CubitFacetData( points[coordsout[k]],
                                       points[coordsout[k+1]],
                                       points[coordsout[k+2]] ); 
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex[k];
       cptr[1] = curveindex[k+1];
       cptr[2] = curveindex[k+2];
@@ -254,7 +255,7 @@ CubitStatus FacetboolInterface::webcut_FB(BodySM *bodysm_ptr,
       facet_ptr = new CubitFacetData( points[coordsout2[k]],
                                       points[coordsout2[k+1]],
                                       points[coordsout2[k+2]] );
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex2[k];
       cptr[1] = curveindex2[k+1];
       cptr[2] = curveindex2[k+2];
@@ -873,7 +874,7 @@ std::vector<int> curveindex;
       facet_ptr = new CubitFacetData( points[coordsout[k]],
                                       points[coordsout[k+1]],
                                       points[coordsout[k+2]] );
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex[k];
       cptr[1] = curveindex[k+1];
       cptr[2] = curveindex[k+2];
@@ -1371,7 +1372,7 @@ unsigned int k;
       facet_ptr = new CubitFacetData( points[coordsout[k]],
                                       points[coordsout[k+1]],
                                       points[coordsout[k+2]] );
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex[k];
       cptr[1] = curveindex[k+1];
       cptr[2] = curveindex[k+2];
@@ -1509,7 +1510,7 @@ unsigned int k;
       facet_ptr = new CubitFacetData( points[coordsout1[k]],
                                       points[coordsout1[k+1]],
                                       points[coordsout1[k+2]] );
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex1[k];
       cptr[1] = curveindex1[k+1];
       cptr[2] = curveindex1[k+2];
@@ -1569,7 +1570,7 @@ unsigned int k;
       facet_ptr = new CubitFacetData( points[coordsout2[k]],
                                       points[coordsout2[k+1]],
                                       points[coordsout2[k+2]] );
-      int *cptr = new int[3];
+      int cptr[3];
       cptr[0] = curveindex2[k];
       cptr[1] = curveindex2[k+1];
       cptr[2] = curveindex2[k+2];

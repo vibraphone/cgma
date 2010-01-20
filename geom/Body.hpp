@@ -30,6 +30,7 @@
 
 class CubitTransformMatrix;
 
+//! Body class.
 class CUBIT_GEOM_EXPORT Body : public GroupingEntity,
              public RefEntity
 {
@@ -45,36 +46,44 @@ public :
 
     /* topology */
   
+  //! Gets the dag type.
   DagType dag_type() const { return DagType::body_type(); }
+
+  //! Gets the type info.
   const type_info& entity_type_info() const { return typeid(Body); }
 
+  //! Gets the class name: "Body". 
   static const char* get_class_name()
      {
        return "Body";
      }
+
+  //! Gets the class name: "Body". 
   virtual const char* class_name() const
      {
        return get_class_name();
      }
   
+  //! Gets the underlying BodySM pointer.
   BodySM* get_body_sm_ptr() const;
 
+  //! Returns the bounding box of this body
   virtual CubitBox bounding_box();
-  /*- Returns the bounding box of this body
-   */
 
+  //! Return a CubitVector set to the centroid of this body
   virtual CubitVector center_point();
-  /*- Return a CubitVector set to the centroid of this body
-   */
 
+  //! Get certain mass props, cofg is center of gravity
   CubitBoolean get_mass_props(CubitVector& cofg);
-    /* Get certain mass props, cofg is center of gravity */
        
+  //! Determines whether a point is inside, outside, or on boundary
+  //! of a volume.
   CubitPointContainment point_containment( CubitVector &point );
-    //- Determines whether a point is inside, outside, or on boundary
-    //- of a volume.
   
+  //! Returns the volume of this body.
   virtual double measure();
+
+  //! Query to see if this is a sheet body.
   CubitBoolean is_sheet_body();
 
 #ifdef BOYD14
@@ -100,20 +109,15 @@ public :
    */
 #endif
 
+  //! Do a measure and api entity check.
   virtual int validate();
-  /*- do a measure and api entity check.
-   */
   
+  //! Functions related to "measuring" the Body
   virtual CubitString measure_label();
-  /*- Functions related to "measuring" the Body
-   */
 
-  void copiedFromId( int Id );
-  int copiedFromId ();
-  /*- Sets/Gets the id of the body that it was copied from */
-
-
+  //! Sets the color.
   virtual void color(int value);
+  //! Gets the color.
   virtual int color() const;
 
 protected: 
@@ -139,8 +143,6 @@ private:
    */
 #endif
 
-  int copied_from_body_id;
-  
   Body( const Body& );
   void operator=( const Body& );
 

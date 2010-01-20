@@ -23,6 +23,7 @@
 #include "debug.hpp"
 #include "TDFacetBoundaryEdge.hpp"
 #include "TDFacetBoundaryPoint.hpp"
+#include "TDGeomFacet.hpp"
 #include "GfxDebug.hpp"
 //#include "FacetParamTool.hpp"
 #include "KDDTree.hpp"
@@ -529,7 +530,6 @@ CubitStatus FacetEvalTool::get_close_points(
 //===========================================================================
 CubitStatus FacetEvalTool::mark_edge_pairs(CubitPoint* point)
 {
-  CubitStatus status = CUBIT_SUCCESS;
   int i,j;
   DLIList<CubitFacetEdge*> edge_list;
   DLIList<CubitFacetEdge*> edge_list_init;
@@ -1319,7 +1319,7 @@ CubitStatus FacetEvalTool::hodograph( CubitFacet *facet,
 CubitStatus FacetEvalTool::project_to_patch(
   CubitFacet *facet,     // (IN) the facet where the patch is defined                                                
   CubitVector &ac,       // (IN) area coordinate initial guess (from linear facet)
-  CubitVector &pt,       // (IN) point we are projecting to patch
+  const CubitVector &pt,       // (IN) point we are projecting to patch
   CubitVector &eval_pt,  // (OUT) The projected point
   CubitVector *eval_norm, // (OUT) normal at evaluated point
   CubitBoolean &outside, // (OUT) the closest point on patch to pt is on an edge
@@ -1606,7 +1606,7 @@ CubitStatus FacetEvalTool::project_to_patch(
 //===========================================================================
 CubitBoolean FacetEvalTool::is_at_vertex( 
   CubitFacet *facet,  // (IN) facet we are evaluating 
-  CubitVector &pt,    // (IN) the point
+  const CubitVector &pt,    // (IN) the point
   CubitVector &ac,    // (IN) the ac of the point on the facet plane
   double compare_tol, // (IN) return TRUE of closer than this
   CubitVector &eval_pt, // (OUT) location at vertex if TRUE
@@ -2033,7 +2033,7 @@ FacetEvalTool::project_to_facets(
                                        //      4 = b-spline patches
   double compare_tol,                  // (IN) tolerance for projection - 
                                        //      should be about 1e-3*edge
-  CubitVector &this_point,             // (IN) point we are projecting
+  const CubitVector &this_point,       // (IN) point we are projecting
   CubitBoolean trim,                   // (IN) trim to facet (always trimmed 
                                        //      if b-spline patch)
   CubitBoolean *outside,               // (OUT) TRUE if projected outside 
@@ -2539,7 +2539,7 @@ CubitStatus FacetEvalTool::eval_facet( CubitFacet *facet,
 //              a starting guess.
 //===========================================================================
 CubitStatus FacetEvalTool::project_to_facet( CubitFacet *facet, 
-                                       CubitVector &pt,
+                                       const CubitVector &pt,
                                        CubitVector &areacoord, 
                                        CubitVector &close_point,
                                        CubitBoolean &outside_facet,
@@ -2596,7 +2596,7 @@ CubitStatus FacetEvalTool::project_to_facet( CubitFacet *facet,
 //===========================================================================
 CubitStatus FacetEvalTool::project_to_facetedge( CubitFacet *facet, 
                                       int vert0, int vert1,
-                                      CubitVector &the_point,
+                                      const CubitVector &the_point,
                                       CubitVector &pt_on_plane, 
                                       CubitVector &close_point,
                                       CubitBoolean &outside_facet,
@@ -2999,7 +2999,7 @@ void FacetEvalTool::eval_quadric( CubitFacet *facet,
 //===========================================================================
 void FacetEvalTool::project_to_facet_plane(
   CubitFacet *facet,
-  CubitVector &pt,
+  const CubitVector &pt,
   CubitVector &point_on_plane,
   double &dist_to_plane)
 {
@@ -3029,7 +3029,7 @@ void FacetEvalTool::project_to_facet_plane(
 //===========================================================================
 void FacetEvalTool::facet_area_coordinate( 
   CubitFacet *facet,
-  CubitVector &pt_on_plane,
+  const CubitVector &pt_on_plane,
   CubitVector &areacoord )
 {
   double area2;
@@ -3924,16 +3924,16 @@ void FacetEvalTool::calculate_area()
 //===========================================================================
 CubitBoolean FacetEvalTool::is_boundary_facet( CubitFacet *facet_ptr )
 {
-  TDFacetBoundaryEdge *td_fbe = NULL;
-  TDFacetBoundaryPoint *td_fbp = NULL;
+  TDGeomFacet *td_fbe = NULL;
+  TDGeomFacet *td_fbp = NULL;
   int ii;
   for (ii=0; ii<3; ii++)
   {
-    td_fbe = TDFacetBoundaryEdge::get_facet_boundary_edge( facet_ptr->edge( ii ) );
-    if (td_fbe != NULL)
+    td_fbe = TDGeomFacet::get_geom_facet( facet_ptr->edge( ii ) );
+    if ( td_fbe->on_boundary() )
       return CUBIT_TRUE;
-    td_fbp = TDFacetBoundaryPoint::get_facet_boundary_point( facet_ptr->point( ii ) );
-    if (td_fbp != NULL)
+    td_fbp = TDGeomFacet::get_geom_facet( facet_ptr->point( ii ) );
+    if ( td_fbe->on_boundary() )
       return CUBIT_TRUE;
   }
   return CUBIT_FALSE;
@@ -4337,4 +4337,256 @@ CubitStatus FacetEvalTool::restore(
   compareTol = 1.0e-3 * diag;
 
   return CUBIT_SUCCESS;
+}
+
+CubitStatus FacetEvalTool::get_intersections(CubitVector point1,
+                                             CubitVector point2,
+                                             DLIList<CubitVector*>& intersection_list,
+                                             bool bounded)
+{
+    //Find the points were the line intersects the bounding box.
+  CubitVector intersect_1;
+  CubitVector intersect_2;
+  CubitBox bbox = *myBBox;
+
+    //Increase the size of the box in each direction.
+    //Don't use scale because the box may be too thin (planar surface).
+  double offset = 2.0 * (point1 - point2).length();
+  
+  CubitVector min;
+  min.x( bbox.min_x() - offset );
+  min.y( bbox.min_y() - offset );
+  min.z( bbox.min_z() - offset );
+  CubitVector max;
+  max.x( bbox.max_x() + offset );
+  max.y( bbox.max_y() + offset );
+  max.z( bbox.max_z() + offset );
+
+  bbox.reset( min, max );
+  int box_intersections = FacetDataUtil::get_bbox_intersections( point1, point2, bbox,
+                                                                 intersect_1, intersect_2 );
+
+    //The bounding box is larger than the surface we are checking.
+    //This means that if there are less than two intersections
+    //the line will not intersect the surface.
+  if( 2 > box_intersections )
+      return CUBIT_SUCCESS;
+
+  bbox.reset( intersect_1 );
+  bbox |= intersect_2;
+  
+    //Find the facets that are intersected by the bbox that was just created.
+  DLIList<CubitFacet*> search_facets;
+  if( aTree )
+  {
+      //Get the facets from the tree.
+    aTree->find( bbox, search_facets );
+  }
+  else
+      search_facets = myFacetList;
+
+  int ii;
+  for( ii = search_facets.size(); ii > 0; ii-- )
+  {
+    CubitFacet* test_facet = search_facets.get_and_step();
+
+    CubitVector intersection;
+    CubitVector area_coord;
+    CubitPointContainment contain = FacetDataUtil::intersect_facet( intersect_1, intersect_2, test_facet,
+                                                                    intersection, area_coord );
+
+    if( bounded )
+    {
+      CubitVector dir1 = point2 - point1;
+      CubitVector dir2 = intersection - point1;
+
+      if( dir2.length_squared() > (GEOMETRY_RESABS * GEOMETRY_RESABS) )
+      {
+        if( dir1 % dir2 < 0 ||
+            ( ( dir2.length_squared() - dir1.length_squared() ) >
+              ( GEOMETRY_RESABS * GEOMETRY_RESABS ) ) )
+        {
+            //The inserction point is not between the two end points.
+          contain = CUBIT_PNT_OUTSIDE;
+        }
+      }
+    }
+    
+    if( CUBIT_PNT_BOUNDARY == contain ||
+        CUBIT_PNT_INSIDE == contain )
+    {
+        //The point intersects the facets.
+      CubitVector* new_intersection = new CubitVector;
+      *new_intersection = intersection;
+      intersection_list.append( new_intersection );
+    }
+  }
+
+    //Remove duplicate intersections.
+  intersection_list.reset();
+  for( ii = 0; ii < intersection_list.size(); ii++ )
+  {
+    CubitVector* base_vec = intersection_list.next(ii);
+    if( NULL == base_vec )
+        continue;
+    
+    int jj;
+    for( jj = ii+1; jj < intersection_list.size(); jj++ )
+    {
+      CubitVector* compare_vec = intersection_list.next(jj);
+      if( NULL != compare_vec )
+      {
+        if( base_vec->distance_between_squared( *compare_vec ) < GEOMETRY_RESABS * GEOMETRY_RESABS )
+        {
+          intersection_list.step(jj);
+          delete intersection_list.get();
+          intersection_list.change_to( NULL );
+          intersection_list.reset();
+        }
+      }
+    }
+  }
+  intersection_list.remove_all_with_value( NULL );
+  
+  return CUBIT_SUCCESS;
+}
+
+int FacetEvalTool::intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance )
+{
+	// This algorithm can be found at http://geometryalgorithms.com/
+
+	CubitVector n;           // triangle vectors
+    CubitVector w0, w;       // ray vectors
+    double a, b;             // params to calc ray-plane intersect
+
+    // get triangle edge vectors and plane normal
+	CubitVector normal = facet->normal();
+	CubitPoint *pt0 = facet->point(0);
+	CubitPoint *pt1 = facet->point(1);
+	CubitPoint *pt2 = facet->point(2);
+	double tol = GEOMETRY_RESABS;
+	
+	CubitVector u( pt1->x() - pt0->x(),
+					pt1->y() - pt0->y(),
+					pt1->z() - pt0->z()); //(*p1-*p0);
+	CubitVector v( pt2->x() - pt0->x(),
+					pt2->y() - pt0->y(),
+					pt2->z() - pt0->z()); // = (*p2-*p0);
+
+	//u = T.V1 - T.V0;
+    //v = T.V2 - T.V0;
+    n = u * v;             // cross product
+    if (n.length_squared() == 0)   // triangle is degenerate
+        return -1;                 // do not deal with this case
+
+    //dir = R.P1 - R.P0;             // ray direction vector
+    //w0 = R.P0 - T.V0;
+	w0 = CubitVector(origin.x() - pt0->x(),
+		origin.y() - pt0->y(),
+		origin.z() - pt0->z());
+
+    a = -(n%w0);
+    b = (n%direction);
+    if (fabs(b) < tol) {     // ray is parallel to triangle plane
+        if (a == 0)                // ray lies in triangle plane
+            return 2;
+        else return 0;             // ray disjoint from plane
+    }
+
+    // get intersect point of ray with triangle plane
+    distance = a / b;
+    if (distance < 0.0)                   // ray goes away from triangle
+        return 0;                  // => no intersect
+    // for a segment, also test if (r > 1.0) => no intersect
+
+    point->set(origin + distance * direction);           // intersect point of ray and plane
+
+    // the distance we want to return is real distance, not distance/magnitude
+    distance *= direction.length();
+
+    // is point inside facet?
+    double uu, uv, vv, wu, wv, D;
+    uu = u%u;
+    uv = u%v;
+    vv = v%v;
+    //w = *I - T.V0;
+	w = CubitVector(point->x() - pt0->x(),
+					point->y() - pt0->y(),
+					point->z() - pt0->z());
+    wu = w%u;
+    wv = w%v;
+    D = uv * uv - uu * vv;
+
+    // get and test parametric coords
+    double s, t;
+    s = (uv * wv - vv * wu) / D;
+    if (s < 0.0 || s > 1.0)        // point is outside facet
+        return 0;
+    t = (uv * wu - uu * wv) / D;
+    if (t < 0.0 || (s + t) > 1.0)  // point is outside facet
+        return 0;
+
+    return 1;                      // point is in facet
+
+}
+
+int FacetEvalTool::intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacetEdge* facet_edge, CubitVector* point, double &hit_distance )
+{
+	// This algorithm can be found at http://geometryalgorithms.com/
+	double tol = GEOMETRY_RESABS;
+
+	CubitPoint* p0 = facet_edge->point(0);
+	CubitPoint* p1 = facet_edge->point(1);
+	CubitVector u0 = CubitVector(p0->x(), p0->y(), p0->z());
+    CubitVector u1 = CubitVector(p1->x(), p1->y(), p1->z());
+	
+	CubitVector u = CubitVector(u0, u1);
+	CubitVector v = direction;
+	v.normalize();
+
+	CubitVector w = CubitVector(origin, u0);
+
+	double sc, tc;         // sc is fraction along facet edge, tc is distance along ray
+	
+	double a = u%u;        // always >= 0
+    double b = u%v;
+    double c = v%v;        // always >= 0
+    double d = u%w;
+    double e = v%w;
+    double D = a*c - b*b;  // always >= 0
+
+    // compute the line parameters of the two closest points
+    if (D < tol)
+	{
+		// the lines are almost parallel
+        sc = 0.0;
+        tc = (b>c ? d/b : e/c);   // use the largest denominator
+    }
+    else
+	{
+        sc = (b*e - c*d) / D;
+        tc = (a*e - b*d) / D;
+    }
+
+    // get the difference of the two closest points
+    CubitVector dP = CubitVector(w + (sc * u) - (tc * v));  // = <0 0 0> if intersection
+
+    double distance = sqrt(dP % dP); // return the closest distance (0 if intersection)
+
+	point->set(u0 + (sc * u));
+	hit_distance = tc; //distance from origin to intersection point
+
+	if (distance < tol)
+	{
+		//check if parallel (infinite intersection)
+		if (D < tol)
+			return 2;
+		//check if on edge
+		if (sc <= 1.0 && sc >= 0.0)
+			return 1;
+		else
+			return 0;
+	}
+
+	return 0;
 }

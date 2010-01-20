@@ -51,6 +51,24 @@ SurfaceOverlapFacet::distance( SurfaceOverlapFacet &other_facet )
   return agt->MinTriangleTriangle( t, other_facet.t, s, t2, u, v );
 }
 
+CubitBoolean
+SurfaceOverlapFacet::facing( SurfaceOverlapFacet &other_facet )
+{
+    double norm1[3];
+    agt->Normal( t, norm1 );
+    double norm2[3];
+    agt->Normal( other_facet.t, norm2 );
+
+    // move to the origin
+    double o1[3];
+    o1[0] = other_facet.t.b.x-t.b.x;
+    o1[1] = other_facet.t.b.y-t.b.y;
+    o1[2] = other_facet.t.b.z-t.b.z;
+
+    double dot_p = agt->dot_vec(norm1,o1);
+    return (CubitBoolean)(dot_p >= 0.0);
+}
+
 double
 SurfaceOverlapFacet::angle( SurfaceOverlapFacet &other_facet )
 {
@@ -58,9 +76,9 @@ SurfaceOverlapFacet::angle( SurfaceOverlapFacet &other_facet )
 }
 
 double
-SurfaceOverlapFacet::projected_overlap( SurfaceOverlapFacet &other_facet )
+SurfaceOverlapFacet::projected_overlap( SurfaceOverlapFacet &other_facet, CubitBoolean draw_overlap )
 {
-  double tmp_double = agt->ProjectedOverlap( t, other_facet.t );
+  double tmp_double = agt->ProjectedOverlap( t, other_facet.t, draw_overlap );
 
   if( tmp_double > 0.00 ) 
   {
@@ -101,6 +119,7 @@ void SurfaceOverlapFacet::draw( int color )
   GfxPreview::draw_line( point1, point2, color );
   GfxPreview::draw_line( point2, point3, color );
   GfxPreview::draw_line( point1, point3, color );
+  
   return;
 }
 

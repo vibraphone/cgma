@@ -27,11 +27,12 @@
 
 *******************************************************************************/
 
-#include "CubitFileMetaData.hpp"
-#include "CubitUtilConfigure.h"
-
 #ifndef CubitFileFEModel_HPP
 #define CubitFileFEModel_HPP
+
+#include "CubitFileMetaData.hpp"
+#include "CubitUtilConfigure.h"
+#include <vector>
 
 namespace NCubitFile {
 
@@ -53,21 +54,23 @@ public:
         UnsignedInt32 xintGroupType, const char* xpachrGroupName,
         UnsignedInt32 xintNumTypes, SGroupData* xpaGroupData);
     void WriteBlock(UnsignedInt32 xintIndex,
-        UnsignedInt32 xintBlockID, UnsignedInt32 xintBlockType,
+        UnsignedInt32 xintBlockID, int unique_id, UnsignedInt32 xintBlockType,
         UnsignedInt32 xintBlockColor, UnsignedInt32 xintMixedElemType,
         UnsignedInt32 xintDefPyramidType, UnsignedInt32 xintMaterialID,
         UnsignedInt32 xintBlockDimension,
         UnsignedInt32 xintNumTypes, SBlockData* xpaBlockData,
         UnsignedInt32 xintAttributeOrder, double* xpadblAttributes);
     void WriteNodeSet(UnsignedInt32 xintIndex,
-        UnsignedInt32 xintNodeSetID, UnsignedInt32 xintColor,
+        UnsignedInt32 xintNodeSetID, int unique_id, UnsignedInt32 xintColor,
         UnsignedInt32 xintPointSymbol,
-        UnsignedInt32 xintNumTypes, SNodeSetData* xpaNodeSetData);
+        UnsignedInt32 xintNumTypes, SNodeSetData* xpaNodeSetData,
+        const std::vector<char>& bcdata);
     void WriteSideSet_11(UnsignedInt32 xintIndex,
-        UnsignedInt32 xintSideSetID, UnsignedInt32 xintColor,
+        UnsignedInt32 xintSideSetID, int unique_id, UnsignedInt32 xintColor,
         UnsignedInt32 xintUseShells,
         UnsignedInt32 xintNumTypes, SSideSetData_11* xpaSideSetData,
-        UnsignedInt32 xintNumDistFact, double* xpadblDistribution);
+        UnsignedInt32 xintNumDistFact, double* xpadblDistribution,
+        const std::vector<char>& bcdata);
     UnsignedInt32 EndWrite();
     
     void InitRead(FILE* xpFile, UnsignedInt32 xintAbsoluteOffset,
@@ -84,26 +87,28 @@ public:
     void ReadGroupMembers(UnsignedInt32 xintIndex,
         UnsignedInt32& xintNumTypes, SGroupData*& xpaGroupData);
     void ReadBlock(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintBlockID, UnsignedInt32& xintBlockType,
+        UnsignedInt32& xintBlockID, int& unique_id, UnsignedInt32& xintBlockType,
         UnsignedInt32& xintBlockColor, UnsignedInt32& xintMixedElemType,
         UnsignedInt32& xintDefPyramidType, UnsignedInt32& xintMaterialID,
         UnsignedInt32& xintBlockDimension,
         UnsignedInt32& xintNumTypes, SBlockData*& xpaBlockData,
         UnsignedInt32& xintAttributeOrder, double*& xpadblAttributes);
     void ReadNodeSet(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintNodeSetID, UnsignedInt32& xintColor,
+        UnsignedInt32& xintNodeSetID, int& unique_id, UnsignedInt32& xintColor,
         UnsignedInt32& xintPointSymbol,
-        UnsignedInt32& xintNumTypes, SNodeSetData*& xpaNodeSetData);
+        UnsignedInt32& xintNumTypes, SNodeSetData*& xpaNodeSetData,
+        std::vector<char>& bcdata);
     void ReadSideSet_10(UnsignedInt32 xintIndex,
         UnsignedInt32& xintSideSetID, UnsignedInt32& xintColor,
         UnsignedInt32& xintUseShells,
         UnsignedInt32& xintNumTypes, SSideSetData_10*& xpaSideSetData,
         UnsignedInt32& xintNumDistFact, double*& xpadblDistribution);
     void ReadSideSet_11(UnsignedInt32 xintIndex,
-        UnsignedInt32& xintSideSetID, UnsignedInt32& xintColor,
+        UnsignedInt32& xintSideSetID, int& unique_id, UnsignedInt32& xintColor,
         UnsignedInt32& xintUseShells,
         UnsignedInt32& xintNumTypes, SSideSetData_11*& xpaSideSetData,
-        UnsignedInt32& xintNumDistFact, double*& xpadblDistribution);
+        UnsignedInt32& xintNumDistFact, double*& xpadblDistribution,
+        std::vector<char>& bcdata);
     void EndRead();
     
     CMetaData& GetGeomMetaData();

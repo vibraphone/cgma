@@ -1,6 +1,6 @@
 // Class: ToolDataUser
 
-#include <assert.h>
+#include <cassert>
 #include "ToolDataUser.hpp"
 #include "ToolData.hpp"
 #include "DLIList.hpp"
@@ -106,6 +106,15 @@ void ToolDataUser::get_all_TDs(IdentityFn specified_type,
   }  
 }
 
+void ToolDataUser::get_all_TDs(DLIList <ToolData *> *all_tds) const
+{
+  ToolData *td = tool_data();
+  while (td) 
+  {
+    all_tds->append(td);
+    td = td->next_tool_data();
+  }  
+}
 
 ToolDataUser::~ToolDataUser()
 {

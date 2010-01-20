@@ -112,435 +112,111 @@ RefFace::~RefFace()
   remove_from_observers();	
 }
 
-double RefFace::get_crack_length()
-{          
-  double length = 0.0;
-  if( is_parametric() )
-  {
-    double u_period_val, v_period_val;
-//These just give the total period for the surface, I'm assuming that
-//it will usually be 2PI
-    double lower, upper;
-    CubitBoolean u_period = is_periodic_in_U( u_period_val );
-    CubitBoolean v_period = is_periodic_in_V( v_period_val );
-      //The Booleans tell us if (duh) it's periodic in that direction
-    if( ( u_period ) && ( v_period ) )//Uh-oh, periodic in both
-//directions, now we have to do some magic to find out the crack
-//length.
-    {
-        // find whether loops differ more in u or v direction.
-        // the direction that they differ the most in is the direction
-        // that we will step along to determine crack length.
-      int m;
-      double lowerv[2], upperv[2], loweru[2], upperu[2];
-        //the eight variables above keep track of the lowest and
-        //highest u- and v-parameter values for both boundaries of the
-        //surface
-      
-      lowerv[0] = lowerv[1] = CUBIT_DBL_MAX;
-      upperv[0] = upperv[1] = CUBIT_DBL_MAX;
-      loweru[0] = loweru[1] = CUBIT_DBL_MAX;
-      upperu[0] = upperu[1] = CUBIT_DBL_MAX;
-      DLIList<Loop*> loops;
-      this->loops( loops );
-        // should be exactly 2 loops
-      for( m = 0; m < loops.size() && m < 2; m++ )
-      {
-        int n;
-        Loop* func_loop = loops.get_and_step();
-        DLIList<RefEdge*> edges;
-        func_loop->ordered_ref_edges( edges );
-        for( n = edges.size(); n > 0; n-- )
-        {
-            // sample edges at 8 locations to approximate maximum and minimum
-            // parameter extents of the line
-          RefEdge* func_edge = edges.get_and_step();
-          const int num_segments = 8;
-          CubitVector location[num_segments];
-          int i;
-          for ( i = num_segments; i--; )
-          {
-            func_edge->position_from_fraction( ((double) i) / ((double) num_segments),
-                                               location[i] );
-            
-          }
-          CubitVector* closest_location = NULL;
-          double temp_u, temp_v;
 
-          for ( i = num_segments; i--; )
-          {
-              //now we fill temp_u and temp_v with the u and v values
-              //of the closest point on the surface to the location[i]
-              //vector--Note--the closest-point should be right where
-              //the vector is, since that's where we got the vector
-              //from
-            this->u_v_from_position( location[i], temp_u, temp_v, closest_location );
-            if( upperv[m] == CUBIT_DBL_MAX )
-               upperv[m] = temp_v;
-            if( lowerv[m] == CUBIT_DBL_MAX )
-               lowerv[m] = temp_v;
-            
-            if( temp_v > upperv[m] )
-               upperv[m] = temp_v;
-            if( temp_v < lowerv[m] )
-               lowerv[m] = temp_v;
-            
-            if( upperu[m] == CUBIT_DBL_MAX )
-               upperu[m] = temp_u;
-            if( loweru[m] == CUBIT_DBL_MAX )
-               loweru[m] = temp_u;
-            
-            if( temp_u > upperu[m] )
-               upperu[m] = temp_u;
-            if( temp_u < loweru[m] )
-               loweru[m] = temp_u;
-          }
-        }
-      }
-      if(DEBUG_FLAG(99))
-      {
-        int debug_int;
-        
-        for(debug_int = 0; debug_int <2; debug_int ++)
-        {
-          PRINT_INFO("Loweru[%d] = %f Upperu[%d] = %f\n",
-                     debug_int,loweru[debug_int],debug_int,upperu[debug_int]);
-        }
-        
-        for(debug_int = 0; debug_int <2; debug_int ++)
-        {
-          PRINT_INFO("Lowerv[%d] = %f Upperv[%d] = %f\n",
-                     debug_int,lowerv[debug_int],debug_int,upperv[debug_int]);
-        }
-      }
- 
-//Okay, we look at our u-params.  The upperu of one loop should be
-//lower than the loweru of the other loop.  If they cross, then we're
-//most likely looking at the direction parallel to the loop, and the
-//lower[1] and lower[0] values are probably very close to each other
-      double u_start, u_end, v_start, v_end;
-      u_start = u_end = v_start = v_end = 0.;
-//u_diff is the gap between the loops.
-        //u_start is the midpoint of the lower loop's u_space
-        //u_end is the midpoint of the upper loop's u_space
-      double u_diff = 0.;
-                  
-      if ( upperu[1] < loweru[0] )
-      {
-        u_diff = loweru[0] - upperu[1];
-        u_start = (loweru[1] + upperu[1]) / 2.;
-        u_end   = (loweru[0] + upperu[0]) / 2.;
-      }
-      else if ( upperu[0] < loweru[1] )
-      {
-        u_diff = loweru[1] - upperu[0];
-        u_start = (loweru[0] + upperu[0]) / 2.;
-        u_end   = (loweru[1] + upperu[1]) / 2.;
-      }
-
-        //Okay, we have u_start and u_end.  We have to decide how to
-        //get from one to the other.  This comes up because u_start
-        //might be smaller than u_end, but the trimmed surface might
-        //not exist in between.  If this is the case, then we need to
-        //go around the other way to get to u_end
-      double low_u, mid_u, high_u;
-      double low_v, mid_v, high_v;
-      
-      mid_u = (u_start + u_end )/2.0;
-      
-      get_param_range_V( low_v, high_v );
-      PRINT_DEBUG_99("low_v = %f high_v = %f\n",low_v, high_v);
-      PRINT_DEBUG_99("u_start = %f u_end = %f\n",u_start, u_end);
-      mid_v = (low_v + high_v) / 2.;
-      double delta_u = fabs(u_end - u_start);
-            
-      switch(point_containment(mid_u, mid_v))
-      {
-        case CUBIT_PNT_OUTSIDE:
-           PRINT_DEBUG_99("Point outside\n");
-           delta_u = -(u_period_val - delta_u);
-           break;
-        case CUBIT_PNT_INSIDE:
-           PRINT_DEBUG_99("Point inside\n");
-           break;
-        case CUBIT_PNT_BOUNDARY:
-           PRINT_DEBUG_99("Point on boundary\n");
-           break;
-        case CUBIT_PNT_UNKNOWN:
-        default:
-           PRINT_DEBUG_99("Point Unknown\n");
-           break;
-      }
-      
-      delta_u = delta_u / 10.;
-         
-
-      double v_diff = 0.;
-      if ( upperv[1] < lowerv[0] )
-      {
-        v_diff = lowerv[0] - upperv[1];
-        v_start = (lowerv[1] + upperv[1]) / 2.;
-        v_end   = (lowerv[0] + upperv[0]) / 2.;
-      }
-      
-      else if ( upperv[0] < lowerv[1] )
-      {
-        v_diff = lowerv[1] - upperv[0];
-        v_start = (lowerv[0] + upperv[0]) / 2.;
-        v_end   = (lowerv[1] + upperv[1]) / 2.;
-      }
-
-      mid_v = (v_start + v_end )/2.0;
-      
-      get_param_range_U( low_u, high_u );
-      PRINT_DEBUG_99("low_u = %f high_u = %f\n",low_u, high_u);
-      PRINT_DEBUG_99("v_start = %f v_end = %f\n",v_start, v_end);
-      mid_u = (low_u + high_u) / 2.;
-      double delta_v = fabs(v_end - v_start);
-            
-      switch(point_containment(mid_u, mid_v))
-      {
-        case CUBIT_PNT_OUTSIDE:
-           PRINT_DEBUG_99("Point outside\n");
-           delta_v = -(v_period_val - delta_v);
-           break;
-        case CUBIT_PNT_INSIDE:
-           PRINT_DEBUG_99("Point inside\n");
-           break;
-        case CUBIT_PNT_BOUNDARY:
-           PRINT_DEBUG_99("Point on boundary\n");
-           break;
-        case CUBIT_PNT_UNKNOWN:
-        default:
-           PRINT_DEBUG_99("Point Unknown\n");
-           break;
-      }
-      delta_v = delta_v / 10.;
-      
-        //Okay, by now we have the delta_u and delta_v values.
-        //Theoretically they are the distance between the two
-        //parameters' midpoints, divided by 10
-
-        //u_diff and v_diff are the gap between the lowest point on
-        //the high one and the highest point on the low loop, they
-        //will always be positive or zero
-
-        //Note, if a loop is a complete circle, then the parameter
-        //value going around that way will yield a delta_? and ?_diff
-        //of zero
-      int i;
-      CubitVector start1, end1;
-      CubitVector start2, end2;
-      double length1 = 0, length2 = 0;
-      PRINT_DEBUG_99("delta_v %e, delta_u %e\n",delta_v, delta_u); //zzyk
-      PRINT_DEBUG_99("v_diff %e, u_diff %e\n",v_diff, u_diff); //zzyk
-
-        //We want to get the longest crack length in the surface, so
-        //if v_diff is smaller than u_diff, we'll step around the
-        //u_direction, and vice versa
-      if( v_diff < u_diff )
-      { 
-        get_param_range_V( low_v, high_v );
-        PRINT_DEBUG_99("low_v = %f high_v = %f\n",low_v, high_v);
-        PRINT_DEBUG_99("u_start = %f u_end = %f\n",u_start, u_end);
-        mid_v = (low_v + high_v) / 2.;
-
-        for( i = 0; i < 10; i++ )
-        {
-          start1 = this->position_from_u_v( (u_start+(delta_u*i)), low_v );
-          end1 = this->position_from_u_v( (u_start+(delta_u*(i+1))), low_v );
-          if(DEBUG_FLAG(99))
-          {
-            GfxDebug::draw_vector(start1,end1, CUBIT_RED);
-            GfxDebug::flush();
-            PRINT_INFO("At position %f in u\n",u_start + (delta_u*i));
-          }
-          length1 += start1.distance_between( end1 );
-        }
-        for( i = 0; i < 10; i++ )
-        {
-          start2 = this->position_from_u_v( (u_start+(delta_u*i)), mid_v );
-          end2 = this->position_from_u_v( (u_start+(delta_u*(i+1))), mid_v );
-          if(DEBUG_FLAG(99))
-          {
-            GfxDebug::draw_vector(start2,end2, CUBIT_BLUE);
-            GfxDebug::flush();
-            PRINT_INFO("At position %f in u\n",u_start + (delta_u*i));
-          }
-          length2 += start2.distance_between( end2 );
-        }
-      }
-      else //u_diff is less than v_diff
-      {
-        get_param_range_U( low_u, high_u );
-        PRINT_DEBUG_99("low_u = %f high_u = %f\n",low_u, high_u);
-        PRINT_DEBUG_99("v_start = %f v_end = %f\n",v_start, v_end);
-          //Remember, v_start is halfway between the low and high
-          //points of the lower loop, v_end is halfway between the low
-          //and high points of the upper loop
-        mid_u = (low_u + high_u) / 2.;
-        mid_v = (v_start + v_end )/2.0;
-          //Now we step aroung the loop of edges in ten places, and
-          //add up the chord lengths of those 10 chords to get our
-          //crack length.  We do it twice and average just to make
-          //sure everything is kosher.
-        for( i = 0; i < 10; i++ )
-        {
-          start1 = this->position_from_u_v( low_u, (v_start+(delta_v*i)) );
-          end1 = this->position_from_u_v( low_u, (v_start+(delta_v*(i+1))) );
-          if(DEBUG_FLAG(99))
-          {
-            GfxDebug::draw_vector(start1,end1, CUBIT_RED);
-            GfxDebug::flush();
-            PRINT_INFO("At position %f in v\n",v_start + (delta_v*i));
-          }
-          length1 += start1.distance_between( end1 );
-        }
-        for( i = 0; i < 10; i++ )
-        {
-          start2 = this->position_from_u_v( mid_u, (v_start+(delta_v*i)) );
-          end2 = this->position_from_u_v( mid_u, (v_start+(delta_v*(i+1))) );
-          if(DEBUG_FLAG(99))
-          {
-            GfxDebug::draw_vector(start2,end2, CUBIT_BLUE);
-            GfxDebug::flush();
-            PRINT_INFO("At position %f in v\n",v_start + (delta_v*i));
-          }
-          length2 += start2.distance_between( end2 );
-        }
-      }
-      
-      length = ( (length1 + length2) / 2.0 );
-    }
-    else if( v_period )
-    {
-      int i;
-      get_param_range_U( lower, upper );
-      double low_v, high_v, mid_v;
-      get_param_range_V( low_v, high_v );
-      mid_v = (low_v + high_v) / 2.;
-      double delta = ( ( upper - lower ) / 10.0 );
-      CubitVector start, end;
-      for( i = 0; i < 10; i++ )
-      {
-        start = this->position_from_u_v( (lower+(delta*i)), mid_v );
-        end = this->position_from_u_v( (lower+(delta*(i+1))), mid_v );
-      //  GfxDebug::draw_vector(start, end, CUBIT_RED);
-      //  GfxDebug::flush();
-        length += start.distance_between( end );
-      }
-    }
-    else if( u_period )
-    {
-      int i;
-      get_param_range_V( lower, upper );
-      double low_u, high_u, mid_u;
-      get_param_range_U( low_u, high_u );
-      mid_u = (low_u + high_u) / 2.;
-      double delta = ( ( upper - lower ) / 10.0 );
-      CubitVector start, end;
-      for( i = 0; i < 10; i++ )
-      {
-        start = this->position_from_u_v( mid_u, (lower+(delta*i)) );
-        end = this->position_from_u_v( mid_u, (lower+(delta*(i+1))) );
-        length += start.distance_between( end );
-      }
-    }
-    else
-    {
-      PRINT_WARNING( "Surface %d is_periodic, but has neither a "
-                     "u_period or v_period.\n", id() );
-    }
-  }
-  if ( length == 0.0 )
-  {
-    PRINT_DEBUG_99("Crack length from uv was zero. Trying geometric method.\n");
-    //This basically means that this function failed.  Lets try another
-    //method that may be less generic but will work for map/submap type 
-    //surfaces where getting this crack length is more important.
-    length = find_crack_length_no_uv();
-
-  }
-  PRINT_DEBUG_99("Crack_length is %f\n",length);
-  return length;
-}
-double RefFace::find_crack_length_no_uv()
+static void dist_between(RefEdge* edge1, RefEdge* edge2, CubitVector& v1, CubitVector& v2, double& dist)
 {
-  double length = 0.0;
-  //assume that this surface has exactly 2 loops, again this is for
-  //map/submap.  This function also assumes the surface is periodic.
-  //ie, this basically assumes some sort of cylinder wall, torus wall or
-  //something that looks like that.
-  if ( this->num_loops() != 2 || !this->is_periodic() )
-    return length;
+  // check compatibility first
+  DLIList<TopologyEntity*> entity_list(2);
+  DLIList<TopologyBridge*> bridge_list(2);
+  entity_list.append(edge1);
+  entity_list.append(edge2);
+  GeometryQueryEngine* gqe = GeometryQueryTool::instance()->common_query_engine( entity_list, bridge_list );
+  if(gqe)
+  {
+    GeometryQueryTool::instance()->entity_entity_distance(edge1, edge2, v1, v2, dist);
+  }
+}
 
-  //Pick a point on one of the loops, find the closest point to that on the other
-  //loops.  Then find the closest point to that point on the first loop.  Keep iterating
-  //till we have the two closest points between the loops (may not be closest, but they
-  //are mutually the closest to each other.).
+double RefFace::get_crack_length()
+{
+  // find two loops to check the shortest distance between as that's where Cubit is most
+  // likely to crack surfaces
+
+  DLIList<Loop*> crack_loops;
+
   DLIList<Loop*> loops;
   this->loops(loops);
-  Loop *first_loop = loops.get();
-  Loop *other_loop = loops.next();
-  RefEdge *tmp_edge = first_loop->co_edge()->get_ref_edge_ptr();
-  CubitVector this_point, closest_point;
-   // use the mid point of the first curve as the start point.
-  if ( tmp_edge->mid_point(this_point) != CUBIT_SUCCESS )
-    return length;
-  CoEdge *other_co_edge = NULL;
-  GeometryUtil *gu = GeometryUtil::instance();
-  CoEdge *closest_co_edge = gu->closest_loop_coedge(other_loop, this_point,
-                                                 other_co_edge, &closest_point);
-  if ( closest_co_edge == NULL )
-    return length;
-  CubitVector this_closest;
-  int counter = 0;
-  const int MAX_LOOP_ITR = 6;
-  for(;;)
-  {
-    if ( counter >= MAX_LOOP_ITR )
-      break;
-    counter++;
-    //find a new this_closest from closest_point.
-    closest_co_edge = gu->closest_loop_coedge(first_loop, closest_point,
-                                           other_co_edge, &this_closest);
-    if ( closest_co_edge == NULL )
-      return length;
-    if ( (this_point-this_closest).length_squared() <= GEOMETRY_RESABS*GEOMETRY_RESABS )
-      break;
-    //make this_closest our point.
-    this_point = this_closest;
-    //get a new closest_point.
-    closest_co_edge = gu->closest_loop_coedge(other_loop, this_point,
-                                           other_co_edge, &closest_point);
-    if ( closest_co_edge == NULL )
-      return length;
-  }
-  //if we are here we succeeded.  Our points are, this_point and closest_point.
-  //Now, find some linear steps between these points, move them to the surface,
-  //and calculate the length.
-  int num_steps = 10;
-  //Find the num_steps positions by treating this_point and closest_point as the
-  //end points of a curve and parameterizing it...
-  int ii;
-  double param_step = 1/(double)num_steps;
-  double curr_param = param_step;
-  CubitVector start_point = this_point;
-  CubitVector next_point;
-  CubitVector diff_vec = closest_point - this_point;
-  for ( ii = 0; ii < num_steps; ii++ )
-  {
-    next_point = this_point + curr_param*(diff_vec);
-    this->move_to_surface(next_point);
-    length += (next_point-start_point).length();
-    start_point = next_point;
-    curr_param += param_step;
-  }
-  PRINT_INFO("Crack length (no u-v) is = %f\n", length);
 
-  return length;
+  int i, j;
+  for(i=0; i<loops.size(); i++)
+  {
+    Loop* l = loops.get_and_step();
+    LoopType loop_type = l->loop_type();
+    if(loop_type == LOOP_TYPE_U_PERIODIC || loop_type == LOOP_TYPE_V_PERIODIC)
+      crack_loops.append(l);
+  }
+
+  if(crack_loops.size() >= 2)
+  {
+    Loop* loop1 = crack_loops.get_and_step();
+    Loop* loop2 = crack_loops.get_and_step();
+
+    DLIList<RefEdge*> loop1_edges;
+    loop1->ref_edges(loop1_edges);
+    DLIList<RefEdge*> loop2_edges;
+    loop2->ref_edges(loop2_edges);
+
+    CubitVector p1, p2;
+    double min_dist = -1.0;
+
+    for(i=0; i<loop1_edges.size(); i++)
+    {
+      RefEdge* edge1 = loop1_edges.get_and_step();
+      for(j=0; j<loop2_edges.size(); j++)
+      {
+        RefEdge* edge2 = loop2_edges.get_and_step();
+        if(edge2 != edge1)
+        {
+          CubitVector v1, v2;
+          double dist = -1;
+          dist_between(edge1, edge2, v1, v2, dist);
+          if(min_dist < 0 || (dist < min_dist && dist > 0))
+          {
+            min_dist = dist;
+            p1 = v1;
+            p2 = v2;
+          }
+        }
+      }
+    }
+
+    // estimate distance along the surface in case of curvature
+    if(min_dist > 0)
+    {
+      double new_min_dist = 0;
+      double start_uv[2];
+      double end_uv[2];
+      this->u_v_from_position(p1, start_uv[0], start_uv[1]);
+      this->u_v_from_position(p2, end_uv[0], end_uv[1]);
+      double delta_uv[2];
+      delta_uv[0] = (end_uv[0] - start_uv[0]) / 10.0;
+      delta_uv[1] = (end_uv[1] - start_uv[1]) / 10.0;
+
+      CubitVector start = p1;
+      CubitVector next;
+      for(i=0; i<10; i++)
+      {
+        start_uv[0] += delta_uv[0];
+        start_uv[1] += delta_uv[1];
+        next = this->position_from_u_v( start_uv[0], start_uv[1] );
+        new_min_dist += start.distance_between(next);
+        start = next;
+      }
+      min_dist = new_min_dist;
+    }
+
+    if(min_dist < 0)
+    {
+      min_dist = 0;
+    }
+
+    PRINT_DEBUG_99("Crack_length is %f\n", min_dist);
+    return min_dist;
+  }
+
+  PRINT_DEBUG_99("No valid crack length for surface %i\n", this->id());
+  return 0.0;
 }
-
 
 CubitVector RefFace::normal_at ( const CubitVector& location, 
                                  RefVolume* volume, 
@@ -579,7 +255,7 @@ CubitVector RefFace::normal_at ( const CubitVector& location,
                   location.x(), location.y(), location.z(),
                   this->entity_name().c_str(),
                   this->id());
-      assert ( result == CUBIT_SUCCESS );
+      //assert ( result == CUBIT_SUCCESS );
       return CubitVector(0.0, 0.0, 0.0);
    }
    
@@ -693,7 +369,6 @@ CubitStatus RefFace::get_principal_curvatures( const CubitVector& point,
        
    if ( ref_volume_ptr ) {
       CubitSense s = sense( ref_volume_ptr );
-      assert( s == CUBIT_FORWARD || s == CUBIT_REVERSED );
       if (  s == CUBIT_REVERSED ) {
          curvature1 = -curvature1;
          curvature2 = -curvature2;
@@ -943,8 +618,11 @@ CubitBoolean RefFace::about_spatially_equal(
         return CUBIT_FALSE;
      }
    }
-
-   if ( test_internal != 0 )
+    
+   //if both lists of edges are zero, this is the concentric sphere or torus case.
+   //must look for a point on the surface then.
+   if ( (ref_edge_list_1.size() == 0 && ref_edge_list_2.size() == 0 ) ||
+         test_internal != 0 )
    {
        //test a point in the middle.
      CubitVector center_1, center_2;
@@ -1442,7 +1120,10 @@ CubitString RefFace::measure_label()
 //-------------------------------------------------------------------------
 Surface* RefFace::get_surface_ptr() 
 {
-  return CAST_TO(get_geometry_entity_ptr(), Surface);
+  // Just do one cast instead of two -- KGM
+  TopologyBridge* bridge = bridge_manager()->topology_bridge();
+  return CAST_TO(bridge, Surface);
+  //return CAST_TO(get_geometry_entity_ptr(), Surface);
 }
 
 const Surface* RefFace::get_surface_ptr() const
@@ -1484,7 +1165,40 @@ CubitBoolean RefFace::is_planar()
    }
 }
 
-//To get planar surface's origin and normal, both are pure output.
+
+//-------------------------------------------------------------------------
+// Purpose       : This function returns CUBIT_TRUE if the underlying 
+//                 geometry of the face is cylindrical. CUBIT_FALSE otherwise.
+//
+// Special Notes :
+//
+// Creator       : KGM
+//
+// Creation Date : 03/22/07
+//-------------------------------------------------------------------------
+CubitBoolean RefFace::is_cylindrical() 
+{
+     // Cast the generic GeometryEntity pointer to Surface pointer
+   Surface* surfacePtr = this->get_surface_ptr() ;
+   
+     // Check if we have a valid Surface. If so, return the result of
+     // querying the Surface if it is planar.
+   if ( surfacePtr != NULL )
+   {
+      GeometryType geo_type;
+      geo_type = surfacePtr->is_cylindrical();
+      return geo_type == CYLINDER_SURFACE_TYPE ? CUBIT_TRUE : CUBIT_FALSE;
+   }
+   else
+   {
+      PRINT_WARNING("In RefFace::is_cylindrical\n"
+                    "         %s (surface %d) is not associated with a valid\n"
+                    "         underlying geoemtric Surface\n",
+                    entity_name().c_str(), id()) ;
+      return CUBIT_FALSE ;
+   }
+}
+
 CubitStatus RefFace::get_point_normal( CubitVector& origin, CubitVector& normal )
 {
    if( is_planar() == CUBIT_FALSE)
@@ -1627,7 +1341,6 @@ CubitStatus RefFace::get_graphics( GMem& facets,
                                    double distance_tolerance,
                                    double longest_edge )
 {
-  int junk1, junk2, junk3;
   Surface* surf_ptr = get_surface_ptr();
   if (!surf_ptr)
   {
@@ -1636,7 +1349,7 @@ CubitStatus RefFace::get_graphics( GMem& facets,
   }
   
   return surf_ptr->get_geometry_query_engine()->
-    get_graphics(surf_ptr, junk1, junk2, junk3, &facets, 
+    get_graphics(surf_ptr, &facets, 
       normal_tolerance, distance_tolerance, longest_edge );
 }
 

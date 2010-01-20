@@ -39,3 +39,7 @@ CubitStatus GeometryQueryEngine::get_underlying_curves(Curve * curve_ptr,
 CubitStatus GeometryQueryEngine::get_underlying_surfaces(Surface * surf_ptr,
                                  DLIList<TopologyBridge*>& surf_list)
 { return CUBIT_SUCCESS; }
+
+CubitStatus GeometryQueryEngine::get_underlying_bridges(TopologyBridge* bridge_ptr,
+                                 DLIList<TopologyBridge*>& bridge_list)
+{ return CUBIT_SUCCESS; }

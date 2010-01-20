@@ -1,6 +1,6 @@
 
 // We have 4 different implementations here
-// Windows, Unix, MacOSX, HP-UX
+// Windows, Unix, , HP-UX
 
 #include "CubitDynamicLoader.hpp"
 
@@ -49,7 +49,7 @@ CubitBoolean CubitDynamicLoader::library_exists(const char* library)
   }
   
   // one more final attempt
-  if (stat(library, &buf))
+  if (stat(library, &buf) == 0)
     return CUBIT_TRUE;
 
   return CUBIT_FALSE;
@@ -190,83 +190,6 @@ const char* CubitDynamicLoader::library_prefix()
 const char* CubitDynamicLoader::library_extension()
 {
   return ".sl";
-}
-
-#elif defined(__APPLE__)
-
-#include <mach-o/dyld.h>
-
-CubitDynamicLoader::LibraryHandle CubitDynamicLoader::InvalidLibraryHandle = NULL;
-
-CubitDynamicLoader::LibraryHandle CubitDynamicLoader::load_library(const char* lib)
-{
-  NSObjectFileImageReturnCode rc;
-  NSObjectFileImage image;
-  
-  LibraryHandle handle = InvalidLibraryHandle;
-  
-  // if absolute path, test it directly
-  if(absolute_path(lib))
-  {
-    rc = NSCreateObjectFileImageFromFile(lib, &image);
-    handle = NSLinkModule(image, lib, TRUE);
-  }
-  else
-  { 
-    // try finding with our search paths
-    for(int i=0; i<gSearchPaths.size(); i++)
-    {
-      CubitString path = gSearchPaths[i]+CubitString("/")+lib;
-      rc = NSCreateObjectFileImageFromFile(path.c_str(), &image);
-      handle = NSLinkModule(image, lib, TRUE);
-      if(handle != InvalidLibraryHandle)
-        return handle;
-    }
-  }
-  
-  // one more final attempt
-  rc = NSCreateObjectFileImageFromFile(lib, &image);
-  handle = NSLinkModule(image, lib, TRUE);
-  return handle;
-}
-
-CubitString CubitDynamicLoader::get_error()
-{
-  return CubitString();
-}
-
-CubitStatus CubitDynamicLoader::unload_library(CubitDynamicLoader::LibraryHandle lib)
-{
-  return NSUnLinkModule(static_cast<NSModule>(lib), FALSE) == 0 ? CUBIT_SUCCESS : CUBIT_FAILURE;
-}
-
-void* CubitDynamicLoader::get_symbol_address(CubitDynamicLoader::LibraryHandle, const char* sym)
-{
-  void *result = 0;
-  // global 'C' symbols names are preceded with an underscore '_'
-  char *_sym = new char[ strlen(sym) + 2 ];
-  strcpy( _sym + 1, sym );
-  _sym[0] = '_';
-  if( NSIsSymbolNameDefined(_sym) )
-  {
-    NSSymbol symbol = NSLookupAndBindSymbol(_sym);
-    if(symbol)
-    {
-      result = NSAddressOfSymbol(symbol);
-    }
-  }
-  delete[] _sym;
-  return result;
-}
-
-const char* CubitDynamicLoader::library_prefix()
-{
-  return "lib";
-}
-
-const char* CubitDynamicLoader::library_extension()
-{
-  return ".so";
 }
 
 #else

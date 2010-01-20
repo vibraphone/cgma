@@ -12,7 +12,7 @@
 #ifndef NT
 #  include <unistd.h>
 #endif
-#include <string.h>
+#include <cstring>
 #include "AppUtil.hpp"
 #include "TtyProgressTool.hpp"
 #include "CubitUtil.hpp"

@@ -29,9 +29,12 @@ public:
     ParamTool() {}
     virtual ~ParamTool() {}
 
-    virtual CubitStatus transform_to_uv(CubitVector &xyz_location, CubitVector &uv_location) = 0;
+    virtual CubitStatus transform_to_uv(const CubitVector &xyz_location, CubitVector &uv_location) = 0;
 
-    virtual CubitStatus transform_to_xyz(CubitVector &xyz_location, CubitVector &uv_location) = 0;
+    virtual CubitStatus transform_to_xyz(CubitVector &xyz_location, const CubitVector &uv_location) = 0;
+
+	virtual CubitStatus uv_derivitives( double u_param, double v_param, 
+		CubitVector &du, CubitVector &dv ) {return CUBIT_FAILURE;}
 
 };
 

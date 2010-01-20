@@ -56,19 +56,9 @@ class Lump;
 class BodySM;
 
 class GeometryEntity;
-class BodySM;
-class Lump;
-class ShellSM;
-class Surface;
-class LoopSM;
-class Curve;
-class CoEdgeSM;
-class Point;
-class TopologyEntity;
 class CubitBox;
 class CubitString;
 
-class OtherSolidModelingEntity;
 class FacetLump;
 class FacetShell;
 class FacetLoop;
@@ -78,11 +68,6 @@ class FacetCoEdge;
 class FacetCurve;
 class FacetPoint;
 
-class RefEntity;
-class RefVertex;
-class RefEdge;
-class RefFace;
-class Loop;
 class CubitFacet;
 class CubitQuadFacet;
 class CubitFacetEdge;
@@ -182,15 +167,11 @@ public:
   Body* copy_body( Body *body_ptr );
 
   virtual CubitStatus get_graphics( Surface* surface_ptr,
-                                          int& number_triangles,
-                                          int& number_points,
-                                          int& number_facets,
                                           GMem* gMem,
                                           unsigned short normal_tolerance,
                                           double distance_tolerance,
                                           double max_edge_length ) const;
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    int& num_points,
                                     GMem* gMem = NULL,
                                     double tolerance = 0.0 ) const;
     //R CubitStatus
@@ -245,7 +226,7 @@ public:
                                         DLIList<CubitVector*>& intersection_list,
                                         CubitBoolean bounded = CUBIT_FALSE );
 
-  virtual CubitStatus entity_extrema( DLIList<GeometryEntity*> &ref_entity_list, 
+  virtual CubitStatus entity_extrema( DLIList<GeometryEntity*> &entity_list, 
                                       const CubitVector *dir1, 
                                       const CubitVector *dir2,
                                       const CubitVector *dir3, 
@@ -323,13 +304,22 @@ public:
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const;
   virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const;
 
-  virtual CubitStatus fire_ray(BodySM *body,
-                               const CubitVector &ray_point,
-                               const CubitVector &unit,
-                               DLIList<double>& ray_params,
-                               DLIList<GeometryEntity*> *entity_list = NULL) const;
-    //- fire a ray at the specified body, returning the entities hit and
-    //- the parameters along the ray; return CUBIT_FAILURE if error
+  virtual CubitStatus fire_ray( const CubitVector &origin,
+                                const CubitVector &direction,
+                                DLIList<TopologyBridge*> &at_entity_list,
+                                DLIList<double> &ray_params,
+                                int max_hits,
+                                double ray_radius,
+                                DLIList<TopologyBridge*> *hit_entity_list=0 ) const;
+    //- Fire a ray at specified entities, returning the parameters (distances)
+    //- along the ray and optionally the entities hit.  Returned lists are
+    //- appended to.  Input entities can be any of bodies, volumes, faces,
+    //- edges or vertices.  Optionally you can specify the maximum number of
+    //- hits to return (default = 0 = unlimited), and the ray radius to use for
+    //- intersecting the entities (default = 0.0 = use modeller default).
+    //- NOTE: returned entities hit might be "hidden" beneath virtual entities.
+    //-       To resolve to visible entities, use "get_visible_ents_for_hits"
+    //-       in GeometryQueryTool.
 
   virtual double get_sme_resabs_tolerance() const; // Gets solid modeler's resolution absolute tolerance
   virtual double set_sme_resabs_tolerance( double new_resabs );

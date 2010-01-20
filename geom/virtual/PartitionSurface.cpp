@@ -173,7 +173,8 @@ PartitionSurface::~PartitionSurface()
       if( point && !point->num_adj_facets() ) {
         if ( TDVGFacetOwner::get(point) ) {
           ppoint = dynamic_cast<PartitionPoint*>(TDVGFacetOwner::get(point));
-          ppoint->facet_point(0);
+          if( ppoint )
+            ppoint->facet_point(0);
         }
         delete point;
       }
@@ -320,6 +321,7 @@ void PartitionSurface::get_points( DLIList<PartitionPoint*>& list ) const
     do 
     {
       PartitionCurve* curve = coedge->get_curve();
+
       list.append( curve->start_point() );
       list.append( curve->end_point() );
       
@@ -985,14 +987,11 @@ CubitStatus PartitionSurface::init_facet_data()
   //assert(are_marks_cleared());
 
   CubitStatus res = CUBIT_SUCCESS;
-  int num_triangles;
-  int num_points;
-  int num_facets;
   GMem gMem;
   
   // TODO - tolerance arguments are defaulted.  Do we need to specify?
   res = real_surf->get_geometry_query_engine()->
-    get_graphics(real_surf, num_triangles, num_points,  num_facets, &gMem);
+    get_graphics(real_surf, &gMem);
   if( !res )
     return CUBIT_FAILURE;
 
@@ -1003,7 +1002,6 @@ CubitStatus PartitionSurface::init_facet_data()
   if( old_count != gMem.pointListCount ) {
     PRINT_WARNING("Possible invalid facetting for surface.  "
                   "Coincident points found.\n");
-    num_points = gMem.pointListCount;
   }
 
   DLIList<CubitFacetData*> surf_facets;
@@ -1021,8 +1019,23 @@ CubitStatus PartitionSurface::init_facet_data()
   }
 
   int junk = 0;
-  for ( i = 0; i < gMem.fListCount; i += 4 ) {
-    if(gMem.facet_list()[i] != 3) {
+  bool fail_out = false;
+  CubitPoint *p1, *p2, *p3;
+  for ( i = 0; i < gMem.fListCount; i += 4 ) 
+  {
+    if(gMem.facet_list()[i] != 3)
+      fail_out = true;
+    else
+    {
+      p1 = point_array[ gMem.facet_list()[i+1] ];
+      p2 = point_array[ gMem.facet_list()[i+2] ];
+      p3 = point_array[ gMem.facet_list()[i+3] ];
+
+      if(p1 == p2 || p1 == p3 || p2 == p3)
+        fail_out = true;
+    }
+    if(fail_out == true)
+    {
       PRINT_ERROR("Non-triangular facet encountered.  Aborting.\n");
       while (surf_facets.size())
         delete surf_facets.pop();
@@ -1031,12 +1044,11 @@ CubitStatus PartitionSurface::init_facet_data()
       delete [] point_array;
       return CUBIT_FAILURE;
     }
-
-    CubitFacetData* facet = new CubitFacetData(
-                           point_array[ gMem.facet_list()[i+1] ],
-                           point_array[ gMem.facet_list()[i+2] ],
-                           point_array[ gMem.facet_list()[i+3] ], &junk );
-    surf_facets.append(facet);
+    else
+    {
+      CubitFacetData* facet = new CubitFacetData(p1, p2, p3, &junk );
+      surf_facets.append(facet);
+    }
   }
   
   delete [] point_array; 

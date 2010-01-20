@@ -357,7 +357,12 @@ CubitStatus LoopParamTool::transform_to_bestfit_plane(DLIList<DLIList<CubitPoint
     for ( jj = 0; jj < sub_loop_cubit_points->size(); jj++ )
     {
       point_ptr = sub_loop_cubit_points->get_and_step();
-      TDVector *td_pos = new TDVector(point_ptr->coordinates());
+      ToolData* td = point_ptr->get_TD( &TDVector::is_td_vector );
+      TDVector* td_pos = NULL;
+      if( NULL == td )
+          td_pos = new TDVector(point_ptr->coordinates());
+      else
+          td_pos = static_cast<TDVector*>( td );
       point_ptr->add_TD(td_pos);
       point_coordinates = point_ptr->coordinates();
 			
@@ -383,7 +388,7 @@ CubitStatus LoopParamTool::transform_to_bestfit_plane(DLIList<DLIList<CubitPoint
 // Author: Shiraj Khan
 // Date: 1/21/2003
 //===================================================================================
-CubitStatus LoopParamTool::transform_to_uv(CubitVector &, CubitVector &) 
+CubitStatus LoopParamTool::transform_to_uv(const CubitVector &, CubitVector &) 
 {
   PRINT_ERROR("This function is not appropriate for the the LoopParamTool.\n");
   assert(0);
@@ -417,7 +422,7 @@ CubitStatus LoopParamTool::transform_to_uv_local(CubitVector &xyz_location, Cubi
 // Author: Shiraj Khan
 // Date: 1/21/2003
 //===================================================================================
-CubitStatus LoopParamTool::transform_to_xyz(CubitVector &, CubitVector &) 
+CubitStatus LoopParamTool::transform_to_xyz(CubitVector &, const CubitVector &) 
 {
   PRINT_ERROR("This function is not appropriate for the the LoopParamTool.\n");
   assert(0);
@@ -636,6 +641,11 @@ CubitStatus LoopParamTool::check_selfintersecting_coincident_edges(DLIList<DLILi
               if( (uv2.x() - uv1.x()) < CUBIT_RESABS &&
                   (uv2.x() - uv1.x()) > -CUBIT_RESABS )
               {
+		if( (uv2.y() - uv1.y() < CUBIT_RESABS &&
+		     uv2.y() - uv1.y() > -CUBIT_RESABS)){
+			PRINT_ERROR("Can't mesh due to zero-length edge.\n");
+			return CUBIT_FAILURE;
+		}
                 ua = (uv3.y() - uv1.y() ) / ( uv2.y() - uv1.y() );
                 ub = (uv4.y() - uv1.y() ) / ( uv2.y() - uv1.y() );
               }

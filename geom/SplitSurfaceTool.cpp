@@ -1,14 +1,15 @@
 //-------------------------------------------------------------------------
 // Filename      : SplitSurfaceTool.cpp
 //
-// Purpose       : Split a single or chain of surfaces (ie., split a fillet 
-//                 down the middle so that a mesh sweep can occur).  Used by
-//                 the "split surface" commands.
+// Purpose       : Split a single or chain of surfaces (e.g., split a fillet 
+//                 down the middle so that a mesh sweep can occur, or split
+//                 across a surface).  Used by the "split surface" commands.
 //
 //   Split Surface <id> Across [Pair] Location <options multiple locs>
 //       [Preview [Create]]
 //   Split Surface <id> Across Location <multiple locs> Onto Curve <id>
 //       [Preview [Create]]
+//   Split Surface <id_list> Extend [Vertex <id_list> | Auto] [Preview [Create]]
 //
 //   Split Surface <id_list> [Corner Vertex <id_list>] [Direction Curve <id>]
 //       [Segment <val> | Fraction|Distance <val> [From Curve <id>]]
@@ -56,6 +57,9 @@ double SplitSurfaceTool::splitTolerance = 1.0;
 CubitBoolean SplitSurfaceTool::autoDetectTriangles = CUBIT_TRUE;
 double SplitSurfaceTool::sideAngleThreshold = 27.0; // From 180
 double SplitSurfaceTool::pointAngleThreshold = 45.0; // Below is a point
+double SplitSurfaceTool::extendGapThreshold = CUBIT_DBL_MAX;
+CubitBoolean SplitSurfaceTool::extendNormalFlg = CUBIT_FALSE;
+double SplitSurfaceTool::extendTolerance = .1;
 
 SplitSurfaceTool::SplitSurfaceTool()
 {
@@ -91,22 +95,53 @@ SplitSurfaceTool::initialize_settings()
   SettingHandler::instance()->add_setting("Split Surface Point Angle Threshold", 
                                           SplitSurfaceTool::set_point_angle_threshold, 
 					                                SplitSurfaceTool::get_point_angle_threshold);
+
+  SettingHandler::instance()->add_setting("Split Surface Extend Gap Threshold", 
+                                          SplitSurfaceTool::set_extend_gap_threshold, 
+					                                SplitSurfaceTool::get_extend_gap_threshold);
+
+  SettingHandler::instance()->add_setting("Split Surface Extend Tolerance", 
+                                          SplitSurfaceTool::set_extend_tolerance, 
+					                                SplitSurfaceTool::get_extend_tolerance);
+
+  SettingHandler::instance()->add_setting("Split Surface Extend Normal", 
+                                          SplitSurfaceTool::set_extend_normal_flg, 
+					                                SplitSurfaceTool::get_extend_normal_flg);
 }
 
 CubitStatus                                
 SplitSurfaceTool::preview( RefFace *ref_face_ptr,
                            DLIList<CubitVector*> &locations,
                            DLIList<DLIList<CubitVector*>*> &vec_lists,
-                           CubitBoolean create_ref_edges_flg )
+                           CubitBoolean create_ref_edges_flg,
+                           CubitBoolean clear_previous_previews )
 {
   // Create curves from the input vec_lists (locations are just the original
   // locations the user specified - these need to be drawn)
-  int i;
+  int i, j;
   Curve *curve_ptr;
   DLIList<CubitVector*> *vec_list_ptr;
   vec_lists.reset();
+  DLIList<Surface*> surfs;
 
   Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
+
+  // Support composite surfaces by getting the surfaces underlying
+  // the composite and creating split curves for them individually.
+  GeometryQueryEngine *gqe = surf_ptr->get_geometry_query_engine();
+  DLIList<TopologyBridge*> tbs;
+  gqe->get_underlying_surfaces(surf_ptr, tbs);
+  if(tbs.size() > 0)
+  {
+    for(j=tbs.size(); j>0; j--)
+      surfs.append(dynamic_cast<Surface*>(tbs.get_and_step()));
+  }
+  else
+    surfs.append(surf_ptr);
+
+  // Clear previous previews if necessary
+  if( clear_previous_previews == CUBIT_TRUE )
+    GfxPreview::clear();
 
   for( i=vec_lists.size(); i--; )
   {
@@ -119,21 +154,112 @@ SplitSurfaceTool::preview( RefFace *ref_face_ptr,
       continue;
     }
 
-    curve_ptr = create_curve( *vec_list_ptr, surf_ptr );
-
-    if( curve_ptr )
+    for(j=surfs.size(); j>0; j--)
     {
-      if( create_ref_edges_flg == CUBIT_TRUE )
+      Surface *cur_surf = surfs.get_and_step();
+      curve_ptr = create_curve( *vec_list_ptr, cur_surf );
+
+      if( curve_ptr )
       {
-        GeometryQueryTool::instance()->make_free_RefEdge(curve_ptr);
-      }
-      else
-      {
-        draw_preview( curve_ptr, CUBIT_FALSE );
-         curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+        if( create_ref_edges_flg == CUBIT_TRUE )
+        {
+          RefEdge *ref_edge_ptr;
+          ref_edge_ptr = GeometryQueryTool::instance()->make_free_RefEdge(curve_ptr);
+          if( ref_edge_ptr )
+            PRINT_INFO( "Created new curve %d\n", ref_edge_ptr->id() );
+        }
+        else
+        {
+          draw_preview( curve_ptr, CUBIT_FALSE );
+          curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+        }
       }
     }
   }
+  
+  // Draw locations too
+  draw_points( locations, CUBIT_BLUE );
+  
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus                                
+SplitSurfaceTool::preview( DLIList<RefFace*> &ref_face_list,
+                           DLIList<CubitVector*> &locations,
+                           DLIList<DLIList<DLIList<CubitVector*>*>*> &list_of_vec_lists,
+                           CubitBoolean create_ref_edges_flg,
+                           CubitBoolean clear_previous_previews )
+{
+   //Reset ref_face_list and list_of_vec_lists (just in case)
+   ref_face_list.reset();
+   list_of_vec_lists.reset();
+
+   // Clear previous previews if necessary
+   if( clear_previous_previews == CUBIT_TRUE )
+      GfxPreview::clear();  
+   
+   int qq;
+   for( qq = ref_face_list.size(); qq > 0 ; qq--)
+   {
+      //Initialize the values to be used upon each iteration
+      RefFace* ref_face_ptr = ref_face_list.get_and_step();
+      DLIList<DLIList<CubitVector*>*> vec_lists = *( list_of_vec_lists.get_and_step() );
+
+      int i, j;
+      Curve *curve_ptr;
+      DLIList<CubitVector*> *vec_list_ptr;
+      vec_lists.reset();
+      DLIList<Surface*> surfs;
+
+      Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
+
+      // Support composite surfaces by getting the surfaces underlying
+      // the composite and creating split curves for them individually.
+      GeometryQueryEngine *gqe = surf_ptr->get_geometry_query_engine();
+      DLIList<TopologyBridge*> tbs;
+      gqe->get_underlying_surfaces(surf_ptr, tbs);
+      if(tbs.size() > 0)
+      {
+         for(j=tbs.size(); j>0; j--)
+            surfs.append(dynamic_cast<Surface*>(tbs.get_and_step()));
+      }
+      else
+         surfs.append(surf_ptr);
+
+      for( i=vec_lists.size(); i--; )
+      {
+         vec_list_ptr = vec_lists.get_and_step();
+
+         vec_list_ptr->reset();
+         if( vec_list_ptr->size() < 2 )
+         {
+            PRINT_ERROR( "Unable to create a curve from less than two locations.\n" );
+            continue;
+         }
+
+         for(j=surfs.size(); j>0; j--)
+         {
+            Surface *cur_surf = surfs.get_and_step();
+            curve_ptr = create_curve( *vec_list_ptr, cur_surf );
+
+            if( curve_ptr )
+            {
+               if( create_ref_edges_flg == CUBIT_TRUE )
+               {
+                  RefEdge *ref_edge_ptr;
+                  ref_edge_ptr = GeometryQueryTool::instance()->make_free_RefEdge(curve_ptr);
+                  if( ref_edge_ptr )
+                     PRINT_INFO( "Created new curve %d\n", ref_edge_ptr->id() );
+               }
+               else
+               {
+                  draw_preview( curve_ptr, CUBIT_FALSE );
+                  curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+               }
+            }
+         }
+      }
+   }
   
   // Draw locations too
   draw_points( locations, CUBIT_BLUE );
@@ -146,19 +272,23 @@ SplitSurfaceTool::preview( RefFace *ref_face_ptr,
 //       created curves when it is done with them.
 CubitStatus                                
 SplitSurfaceTool::calculate_split_curves( RefFace *ref_face_ptr,
-                                 DLIList<CubitVector*> &locations,
                                  DLIList<DLIList<CubitVector*>*> &vec_lists,
                                  DLIList<Curve*>& curve_list )
 {
-  // Create curves from the input vec_lists (locations are just the original
-  // locations the user specified - these need to be drawn).  NOTE: drawing
-  // the locations was removed 6/16/05 per Sandia request.
+  Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
+
+  return calculate_split_curves(surf_ptr, vec_lists, curve_list);
+}
+
+CubitStatus                                
+SplitSurfaceTool::calculate_split_curves( Surface *surf_ptr,
+                                 DLIList<DLIList<CubitVector*>*> &vec_lists,
+                                 DLIList<Curve*>& curve_list )
+{
   int i;
   Curve *curve_ptr;
   DLIList<CubitVector*> *vec_list_ptr;
   vec_lists.reset();
-
-  Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
 
   for( i=vec_lists.size(); i--; )
   {
@@ -207,6 +337,9 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr, DLIList<Curve*> &curve_l
     return CUBIT_FAILURE;
   }
 
+  // Clear any previews
+  GfxPreview::clear();
+
   // Perform the split on the real (e.g. ACIS) geometry. 
   Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
 
@@ -227,10 +360,6 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr, DLIList<Curve*> &curve_l
 
   while( curve_list.size() ) 
     delete curve_list.pop();
-  
-  // TODO: Need to find a better place to do the drawing.  Should not be 
-  // using debug graphics to do previews or highlights from within CGM. 
-  // This could create unwanted dependencies between CGM and the graphics. 
 
   // Draw locations too
   // draw_points( locations, CUBIT_BLUE );
@@ -252,14 +381,12 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr, DLIList<Curve*> &curve_l
 
 CubitStatus                                
 SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
-                                 DLIList<CubitVector*> &locations,
                                  DLIList<DLIList<CubitVector*>*> &vec_lists )
 {
   // Count number of surfaces in owning body prior to split - this is used to
   // determine if split is actually successful.
   Body *body_ptr;
   int num_surfaces_prior = count_surfaces_in_owning_body( ref_face_ptr, body_ptr );
-  int num_curves_prior = count_curves_in_body( body_ptr );
   if( num_surfaces_prior == -1 )
   {
     PRINT_ERROR( "Cannot split a surface that is not part of a volume\n" );
@@ -270,38 +397,88 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
     PRINT_ERROR( "Cannot split a surface that is contained by multiple volumes\n" );
     return CUBIT_FAILURE;
   }
+  int num_curves_prior = count_curves_in_body( body_ptr );
 
-  // Find the splitting curves
-  DLIList<Curve*> curve_list;
-  CubitStatus err  = calculate_split_curves( ref_face_ptr, locations, 
-                                             vec_lists, curve_list );
-  if( err == CUBIT_FAILURE )
-    return CUBIT_FAILURE;
-
-  // Perform the split on the real (e.g. ACIS) geometry. 
+  int original_id = ref_face_ptr->id();
   Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
 
+  // Clear any previews
+  GfxPreview::clear();
+
+  // Find the splitting curves
+  DLIList<DLIList<Curve*>*> curve_lists_list;
+
+  // Support composite surfaces by getting the surfaces underlying
+  // the composite and creating split curves for them individually.
+  GeometryQueryEngine *gqe = surf_ptr->get_geometry_query_engine();
+  DLIList<TopologyBridge*> tbs;
+  gqe->get_underlying_surfaces(surf_ptr, tbs);
+  CubitStatus err = CUBIT_SUCCESS;
+  if(tbs.size() > 0)
+  {
+    err = CUBIT_FAILURE;
+    for(int k=tbs.size(); k>0; k--)
+    {
+      Surface *srf = dynamic_cast<Surface*>(tbs.get_and_step());
+      if(srf)
+      {
+        DLIList<Curve*> *curve_list = new DLIList<Curve*>;
+        CubitStatus tmp_status = calculate_split_curves( srf, vec_lists, *curve_list );
+        // If at least one split is successful return success.  We anticipate that some curves
+        // won't imprint on some of the underlying surfaces of the composite surface.  Because
+        // we are allowing success this way there are sometimes errors that get printed even
+        // though we are calling it a success.  Need to find a good way to fix this.
+        if(tmp_status)
+          err = CUBIT_SUCCESS;
+        curve_lists_list.append(curve_list);
+      }
+    }
+  }
+  else
+  {
+    DLIList<Curve*> *curve_list = new DLIList<Curve*>;
+    err = calculate_split_curves( ref_face_ptr, vec_lists, *curve_list );
+    curve_lists_list.append(curve_list);
+  }
+
+  if( err == CUBIT_FAILURE )
+  {
+    while(curve_lists_list.size())
+    {
+      DLIList<Curve*> *cur_list = curve_lists_list.pop();
+      while(cur_list->size())
+        delete cur_list->pop();
+      delete cur_list;
+    }
+    return CUBIT_FAILURE;
+  }
+
+  // Perform the split on the real (e.g. ACIS) geometry. 
   DLIList<Surface*> surface_list;
   surface_list.append( surf_ptr );
-  DLIList<DLIList<Curve*>*> curve_lists_list;
-  curve_lists_list.append( &curve_list );
 
   Body *new_body_ptr;
 
   if( GeometryModifyTool::instance()->imprint( surface_list,
     curve_lists_list, new_body_ptr ) == CUBIT_FAILURE )
   {
-    while( curve_list.size() ) 
-      delete curve_list.pop();
+    while(curve_lists_list.size())
+    {
+      DLIList<Curve*> *cur_list = curve_lists_list.pop();
+      while(cur_list->size())
+        delete cur_list->pop();
+      delete cur_list;
+    }
     return CUBIT_FAILURE;
   }
 
-  while( curve_list.size() ) 
-    delete curve_list.pop();
-
-  // TODO: Need to find a better place to do the drawing.  Should not be 
-  // using debug graphics to do previews or highlights from within CGM. 
-  // This could create unwanted dependencies between CGM and the graphics. 
+  while(curve_lists_list.size())
+  {
+    DLIList<Curve*> *cur_list = curve_lists_list.pop();
+    while(cur_list->size())
+      delete cur_list->pop();
+    delete cur_list;
+  }
 
   // Draw locations too
   //draw_points( locations, CUBIT_BLUE );
@@ -317,8 +494,142 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
       return CUBIT_SUCCESS;
   }
   
-  PRINT_ERROR( "Split failed - surface %d was not split\n", ref_face_ptr->id() );
+  PRINT_ERROR( "Split failed - surface %d was not split\n", original_id );
   return CUBIT_FAILURE;
+}
+//ADDED BY GJS (CAT) 6/26/08 @ 11:00am
+CubitStatus                                
+SplitSurfaceTool::split_surface( DLIList<RefFace*> &ref_face_list,
+                                 DLIList<DLIList<DLIList<CubitVector*>*>*> &list_of_vec_lists )
+{
+   //Initialize inputs to imprint function call     
+   DLIList<Surface*> surface_list;
+   DLIList<DLIList<Curve*>*> curve_lists_list;
+
+   // Clear any previews
+   GfxPreview::clear();
+
+   //Reset all lists
+   ref_face_list.reset();
+   list_of_vec_lists.reset();
+
+   int hh;
+   for( hh = ref_face_list.size() ; hh > 0 ; hh--)
+   {
+      // Count number of surfaces in owning body prior to split - this is used to
+      // determine if split is actually successful.   0
+      RefFace* ref_face_ptr = ref_face_list.get_and_step();
+      Body* body_ptr;
+      
+      int num_surfaces_prior = count_surfaces_in_owning_body( ref_face_ptr, body_ptr );
+      if( num_surfaces_prior == -1 )
+      {
+         PRINT_ERROR( "Cannot split a surface that is not part of a volume\n" );
+         return CUBIT_FAILURE;
+      }
+      else if( num_surfaces_prior == -2 )
+      {
+         PRINT_ERROR( "Cannot split a surface that is contained by multiple volumes\n" );
+         return CUBIT_FAILURE;
+      }
+      int num_curves_prior = count_curves_in_body( body_ptr );
+
+      int original_id = ref_face_ptr->id();
+      Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
+
+
+
+      // Support composite surfaces by getting the surfaces underlying
+      // the composite and creating split curves for them individually.
+      GeometryQueryEngine *gqe = surf_ptr->get_geometry_query_engine();
+      DLIList<TopologyBridge*> tbs;
+      gqe->get_underlying_surfaces(surf_ptr, tbs);
+      CubitStatus err = CUBIT_SUCCESS;
+      if(tbs.size() > 0)
+      {
+         err = CUBIT_FAILURE;
+         for(int k=tbs.size(); k>0; k--)
+         {
+            Surface *srf = dynamic_cast<Surface*>(tbs.get_and_step());
+            if(srf)
+            {
+               DLIList<Curve*> *curve_list = new DLIList<Curve*>;
+               DLIList<DLIList<CubitVector*>*> temp_vec_lists = *( list_of_vec_lists.get_and_step() );
+               CubitStatus tmp_status = calculate_split_curves( srf, temp_vec_lists, *curve_list );
+               // If at least one split is successful return success.  We anticipate that some curves
+               // won't imprint on some of the underlying surfaces of the composite surface.  Because
+               // we are allowing success this way there are sometimes errors that get printed even
+               // though we are calling it a success.  Need to find a good way to fix this.
+               if(tmp_status)
+                  err = CUBIT_SUCCESS;
+               curve_lists_list.append(curve_list);
+            }
+         }
+      }
+      else
+      {
+         DLIList<Curve*> *curve_list = new DLIList<Curve*>;
+         DLIList<DLIList<CubitVector*>*> temp_vec_lists = *( list_of_vec_lists.get_and_step() );
+         err = calculate_split_curves( ref_face_ptr, temp_vec_lists, *curve_list );
+         curve_lists_list.append(curve_list);
+      }
+
+      if( err == CUBIT_FAILURE )
+      {
+         while(curve_lists_list.size())
+         {
+            DLIList<Curve*> *cur_list = curve_lists_list.pop();
+            while(cur_list->size())
+               delete cur_list->pop();
+            delete cur_list;
+         }
+         return CUBIT_FAILURE;
+      }
+
+      surface_list.append( surf_ptr );
+   }
+
+   // Perform the split on the real (e.g. ACIS) geometry. 
+   Body *new_body_ptr;
+
+   if( GeometryModifyTool::instance()->imprint( surface_list,
+      curve_lists_list, new_body_ptr ) == CUBIT_FAILURE )
+   {
+      while(curve_lists_list.size())
+      {
+         DLIList<Curve*> *cur_list = curve_lists_list.pop();
+         while(cur_list->size())
+            delete cur_list->pop();
+         delete cur_list;
+      }
+      return CUBIT_FAILURE;
+   }
+
+   while(curve_lists_list.size())
+   {
+      DLIList<Curve*> *cur_list = curve_lists_list.pop();
+      while(cur_list->size())
+         delete cur_list->pop();
+      delete cur_list;
+   }
+
+   //NOTE: current assumption is failure will not occur since user does not
+   //      control input parameters to this function (may need to fix).
+   //int num_surfaces_after = count_surfaces_in_body( body_ptr );
+
+   //if( num_surfaces_after > num_surfaces_prior )
+   //   return CUBIT_SUCCESS;
+   //else
+   //{
+   //   int num_curves_after = count_curves_in_body( body_ptr );
+   //   if( num_curves_after > num_curves_prior )
+   //      return CUBIT_SUCCESS;
+   //}
+
+   //PRINT_ERROR( "Split failed - surface %d was not split\n", original_id );
+   //return CUBIT_FAILURE;
+
+   return CUBIT_SUCCESS;
 }
 
 CubitStatus
@@ -367,6 +678,9 @@ SplitSurfaceTool::split_surfaces( DLIList<RefFace*> &ref_face_list,
 
   CubitBoolean just_curves_flg = CUBIT_FALSE;
   DLIList<DLIList<Curve*>*> curve_lists_list;
+
+  // Clear any previous previews
+  GfxPreview::clear();
 
   // Call the primary function
   status = split_surfaces( ref_face_list, num_segs, fraction, distance, 
@@ -644,6 +958,9 @@ SplitSurfaceTool::calculate_split_curves( DLIList<RefFace*> &ref_face_list,
   // Now build up the coordinates and get the curve(s) for each surface
   // curve_lists_list will contain a list of curve lists for each surface
 
+  // Keep track of new RefEdges created
+  DLIList<RefEdge*> new_ref_edge_list;
+
   TDSplitSurface *tdss;
   refFaceChain.reset();
   for(i=refFaceChain.size(); i--; )
@@ -691,12 +1008,21 @@ SplitSurfaceTool::calculate_split_curves( DLIList<RefFace*> &ref_face_list,
         draw_preview( *curve_list_ptr );
       else
       {
-        create_ref_edges( *curve_list_ptr );
+        create_ref_edges( *curve_list_ptr, new_ref_edge_list );
 
         // This just draws each curve as we go, same as preview does
         GfxPreview::flush();
       }
     }
+  }
+
+  // Let the user know if new curves were created
+  if( preview_flg == CUBIT_TRUE && create_ref_edges_flg == CUBIT_TRUE
+      && new_ref_edge_list.size() )
+  {
+    DLIList<CubitEntity*> cubit_entity_list;
+    CAST_LIST( new_ref_edge_list, cubit_entity_list, CubitEntity );
+    CubitUtil::list_entity_ids( "Created new curves: ", cubit_entity_list );
   }
 
   // Determine if all of the 'through' vertices were used - if not give a warning
@@ -3803,7 +4129,7 @@ SplitSurfaceTool::is_triangle()
 }
 
 CubitStatus
-SplitSurfaceTool::check_through_vertices( char *type )
+SplitSurfaceTool::check_through_vertices( const char *type )
 {
   if( throughVertexList.size() )
   {
@@ -4484,8 +4810,9 @@ SplitSurfaceTool::find_spline_curves( RefFace *ref_face_ptr, int num_segs,
     
     // Free matrix memory
     for( i=0; i<nr; i++ )
-      delete coords[i];
-    delete coords;
+      delete []coords[i];
+    delete []coords;
+    coords = NULL;
   }
   else
   {
@@ -4559,8 +4886,9 @@ SplitSurfaceTool::find_spline_curves( RefFace *ref_face_ptr, int num_segs,
     
     // Free matrix memory
     for( i=0; i<nr; i++ )
-      delete coords[i];
-    delete coords;
+      delete []coords[i];
+    delete []coords;
+    coords = NULL;
   }
 
   return CUBIT_SUCCESS; 
@@ -5021,8 +5349,9 @@ SplitSurfaceTool::smooth_interior_coords( RefFace *ref_face_ptr,
           delete frac_coords[r][c];
       }
       for( r=0; r<nr; r++ )
-        delete frac_coords[r];
-      delete frac_coords;
+        delete []frac_coords[r];
+      delete []frac_coords;
+      frac_coords = NULL;
       
       return CUBIT_FAILURE;
     }
@@ -5059,8 +5388,9 @@ SplitSurfaceTool::smooth_interior_coords( RefFace *ref_face_ptr,
           delete frac_coords[r][c];
       }
       for( r=0; r<nr; r++ )
-        delete frac_coords[r];
-      delete frac_coords;
+        delete []frac_coords[r];
+      delete []frac_coords;
+      frac_coords = NULL;
       
       return CUBIT_FAILURE;
     }
@@ -5108,9 +5438,10 @@ SplitSurfaceTool::smooth_interior_coords( RefFace *ref_face_ptr,
         
         // Free matrix memory
         for( r=0; r<nr; r++ )
-          delete frac_coords[r];
-        delete frac_coords;
-
+          delete []frac_coords[r];
+        delete []frac_coords;
+        frac_coords = NULL;
+        
         // Free spline
         curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
         return CUBIT_FAILURE;
@@ -5132,9 +5463,10 @@ SplitSurfaceTool::smooth_interior_coords( RefFace *ref_face_ptr,
   
   // Free matrix memory
   for( r=0; r<nr; r++ )
-    delete frac_coords[r];
-  delete frac_coords;
-
+    delete []frac_coords[r];
+  delete []frac_coords;
+  frac_coords = NULL;
+  
   // Free backup coords
   while( backup_coords.size() )
     delete backup_coords.pop();
@@ -5403,7 +5735,8 @@ SplitSurfaceTool::draw_preview( DLIList<Curve*> &curve_list, int color )
 {
   int i;
   Curve *curve_ptr;
-  curve_list.reset();  
+  curve_list.reset();
+
 
   // clear any old previews first
   GfxPreview::clear();
@@ -5423,7 +5756,6 @@ CubitStatus
 SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
                                 int color )
 {
-  int num_points;
   CubitStatus result;
   GMem g_mem;
 
@@ -5432,9 +5764,9 @@ SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
   
   // get the graphics 
   result = curve_ptr->get_geometry_query_engine()->
-    get_graphics( curve_ptr, num_points, &g_mem );
+    get_graphics( curve_ptr, &g_mem );
   
-  if (result==CUBIT_FAILURE || num_points == 0)
+  if (result==CUBIT_FAILURE || g_mem.pointListCount == 0)
   {
     PRINT_WARNING("Unable to preview a curve\n" );
   }
@@ -5448,15 +5780,18 @@ SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
 }
 
 CubitStatus
-SplitSurfaceTool::create_ref_edges( DLIList<Curve*> &curve_list )
+SplitSurfaceTool::create_ref_edges( DLIList<Curve*> &curve_list,
+                                    DLIList<RefEdge*> &ref_edge_list )
 {
   int i;
   Curve *curve_ptr;
+  RefEdge *ref_edge_ptr;
   curve_list.reset();  
   for( i=curve_list.size(); i--; )
   {
     curve_ptr = curve_list.get_and_step();
-    GeometryQueryTool::instance()->make_free_RefEdge(curve_ptr);
+    ref_edge_ptr = GeometryQueryTool::instance()->make_free_RefEdge(curve_ptr);
+    if( ref_edge_ptr ) ref_edge_list.append( ref_edge_ptr );
   }
   return CUBIT_SUCCESS;
 }
@@ -5490,7 +5825,7 @@ SplitSurfaceTool::create_curve( DLIList<CubitVector*> &vec_list,
 
   if (NULL == gme)
   {
-    PRINT_ERROR("No geometry modify engine available.  Unable to create split curve.");
+    PRINT_ERROR("No geometry modify engine available.  Unable to create split curve.\n");
     return NULL;
   }
 
@@ -5648,25 +5983,21 @@ SplitSurfaceTool::create_curve( DLIList<CubitVector*> &vec_list,
       PRINT_DEBUG_154( "Inserted %d points when creating spline\n", insert_num );
   }
 
-  if( surf_ptr->geometry_type() != PLANE_SURFACE_TYPE && 
-      project_curve == CUBIT_TRUE )
-  {
-    // Project the spline to the surface (if the surface is not planar)
-    DLIList<Surface*> surf_list;
-    surf_list.append( surf_ptr );
-    DLIList<Curve*> curve_list;
-    curve_list.append( curve_ptr );
-    DLIList<Curve*> curve_list_new;
+  // Project the spline to the surface (if the surface is not planar)
+  DLIList<Surface*> surf_list;
+  surf_list.append( surf_ptr );
+  DLIList<Curve*> curve_list;
+  curve_list.append( curve_ptr );
+  DLIList<Curve*> curve_list_new;
 
-    if( gme->project_edges( surf_list, curve_list, curve_list_new ) == CUBIT_FAILURE )
-    {
-      PRINT_WARNING( "Unable to project curve to surface - split may fail\n" );
-    }
-    else
-    {
-        curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
-        curve_ptr = curve_list_new.get();
-    }
+  if( gme->project_edges( surf_list, curve_list, curve_list_new ) == CUBIT_FAILURE )
+  {
+    PRINT_WARNING( "Unable to project curve to surface - split may fail\n" );
+  }
+  else
+  {
+      curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+      curve_ptr = curve_list_new.get();
   }
 
   if( curve_ptr && draw_pnts == CUBIT_TRUE )
@@ -6327,3 +6658,612 @@ SplitSurfaceTool::count_curves_in_body( Body *body_ptr )
   return ref_edge_list.size();
 }
 
+CubitStatus
+SplitSurfaceTool::split_surfaces_extend( DLIList<RefFace*> &ref_face_list,
+                                         DLIList<RefVertex*> &ref_vertex_list,
+                                         CubitBoolean preview_flg,
+                                         CubitBoolean create_ref_edges_flg )
+{
+  // In the below code, "manual" mode refers to when vertices are passed in. In
+  // this mode, an extension must occur from each given vertex for success.
+  // "Auto" mode refers to when no vertices are passed in.  In this mode the 
+  // vertices (curves to extend) are found automatically - the ends of 
+  // hardlines.  Only in auto mode are the gap threshold and normal settings
+  // valid.
+  int i, j;
+  RefFace *ref_face_ptr;
+  RefVertex *ref_vertex_ptr;
+  GeometryModifyEngine *gme;
+  TDSplitSurfaceExtend *tdsse = 0;
+
+  // Clear previous graphics previews
+  GfxPreview::clear();
+  
+  CubitBoolean auto_flg = CUBIT_TRUE;
+  if( ref_vertex_list.size() )
+    auto_flg = CUBIT_FALSE;
+
+  // Copy input face list since we don't want to modify it
+  DLIList<RefFace*> copied_ref_face_list = ref_face_list;
+  
+  // Check for errors
+  copied_ref_face_list.reset();
+  for( i=copied_ref_face_list.size(); i--; )
+  {
+    ref_face_ptr = copied_ref_face_list.get();
+
+    // Check for free and merged surfaces... for both manual and auto cases.
+    //  (we make this fatal for the auto case too since the user can correct
+    //   these and may not even know about them)
+    DLIList<Body*> body_list;
+    ref_face_ptr->bodies( body_list );
+    if( body_list.size()==0 )
+    {
+      PRINT_ERROR( "Surface %d is not contained within a parent body.\n"
+        "       It cannot be split.\n", ref_face_ptr->id() );
+      return CUBIT_FAILURE;
+    }
+    else if( body_list.size() > 1 )
+    {
+      PRINT_ERROR( "Surface %d is merged and cannot be split.\n",
+        ref_face_ptr->id() );
+      return CUBIT_FAILURE;
+    }
+
+    // Check for nonplanar surface.  For auto case, just remove these, but
+    // for manual case, give a fatal error.
+    if( ref_face_ptr->is_planar() == CUBIT_FALSE )
+    {
+      if( auto_flg == CUBIT_TRUE )
+      {
+        copied_ref_face_list.change_to( NULL );
+        copied_ref_face_list.step();
+        continue;
+      }
+      else
+      {
+        // Error out
+        PRINT_ERROR( "The 'split across extend' command only works on planar surfaces.\n"
+          "       Surface %d is nonplanar\n", ref_face_ptr->id() );
+        return CUBIT_FAILURE;
+      }
+    }
+    copied_ref_face_list.step();
+  }
+
+  copied_ref_face_list.remove_all_with_value( NULL );
+
+  // If we don't have any faces left, we exit (could only occur for auto case...
+  // make this a warning instead of an error).
+  if( !copied_ref_face_list.size() )
+  {
+    PRINT_WARNING( "No valid surfaces found to be split. Note to be split, they\n"
+      "         must be nonplanar, contained in a body, and not merged.\n" );
+    return CUBIT_SUCCESS;
+  }
+
+  // Mark each of the input vertices with a tooldata
+  ref_vertex_list.reset();
+  for( i=ref_vertex_list.size(); i--; )
+  {
+    ref_vertex_ptr = ref_vertex_list.get_and_step();
+    ref_vertex_ptr->add_TD( new TDSplitSurfaceExtend() );
+  }
+
+  // Store list of faces and new curves sorted by body and face
+  DLIList<DLIList<Surface*>*> body_surf_list_list;
+  DLIList<DLIList<DLIList<Curve*>*>*> curve_lists_lists_list;
+
+  // Store ids of Curves that are extended
+  DLIList<int> ext_curve_ids;
+
+  // Operate by common body - pull faces out of the input face list that are
+  // from a common Body and place them in a separate list (split_face_list).  
+  Body *curr_Body_ptr;
+  while( copied_ref_face_list.size() )
+  {
+    DLIList<RefFace*> split_face_list; // Holds faces from common body
+
+    // Store new curves for this body, sorted by face
+    DLIList<DLIList<Curve*>*> *curve_lists_list_ptr;
+    curve_lists_list_ptr = new DLIList<DLIList<Curve*>*>;
+    curve_lists_lists_list.append( curve_lists_list_ptr );
+
+    curr_Body_ptr = NULL;
+
+    copied_ref_face_list.reset();
+    for( i=copied_ref_face_list.size(); i--; )
+    {
+      ref_face_ptr = copied_ref_face_list.get();
+
+      DLIList<Body*> body_list;
+      ref_face_ptr->bodies( body_list );
+
+      if( curr_Body_ptr == NULL )
+        curr_Body_ptr = body_list.get();
+
+      if( curr_Body_ptr == body_list.get() )
+      {
+        split_face_list.append( ref_face_ptr );
+        copied_ref_face_list.change_to( NULL );
+      }
+
+      copied_ref_face_list.step();
+    }
+
+    copied_ref_face_list.remove_all_with_value( NULL );
+
+    DLIList<Surface*> *body_surf_list_ptr;
+    body_surf_list_ptr = new DLIList<Surface*>;
+    body_surf_list_list.append( body_surf_list_ptr );
+
+    // Loop through each face on the common body
+    RefFace *split_face_ptr;
+    DLIList<Curve*> *curve_list_ptr;
+    split_face_list.reset();
+    for( i=split_face_list.size(); i--; )
+    {
+      split_face_ptr = split_face_list.get_and_step();
+      body_surf_list_ptr->append( split_face_ptr->get_surface_ptr() );
+
+      curve_list_ptr = new DLIList<Curve*>;
+      curve_lists_list_ptr->append( curve_list_ptr );
+
+      // Get the RefEdges to fire a ray at (from surface)
+      DLIList<RefEdge*> ref_edge_list;
+      split_face_ptr->ref_edges( ref_edge_list );
+      DLIList<RefEntity*> at_entity_list;
+      CAST_LIST( ref_edge_list, at_entity_list, RefEntity );
+
+      // Fire a ray from each vertex in an outward direction from the tangent
+      // of the owning curve at the at_entity_list
+      DLIList<RefVertex*> tmp_vertex_list;
+      split_face_ptr->ref_vertices( tmp_vertex_list );
+
+      tmp_vertex_list.reset();
+      for( j=tmp_vertex_list.size(); j--; )
+      {
+        ref_vertex_ptr = tmp_vertex_list.get_and_step();
+
+        // The vertex must be part of the surface being considered, plus
+        // the attached curve must be on the surface.  We must have one and
+        // only one attached curve.  This curve must be linear.
+
+        // For manual case, only consider vertices that are in the input list
+        if( auto_flg == CUBIT_FALSE )
+        {
+          tdsse = (TDSplitSurfaceExtend *)ref_vertex_ptr->
+            get_TD(&TDSplitSurfaceExtend::is_split_surface_extend);
+          if( !tdsse ) continue;
+        }
+
+        // Get attached RefEdges to this vertex
+        DLIList<RefEdge*> att_ref_edge_list;
+        ref_vertex_ptr->ref_edges( att_ref_edge_list );
+
+        RefEdge *extend_edge_ptr = 0;
+        RefEdge *ref_edge_ptr;
+        int k;
+        for( k=att_ref_edge_list.size(); k--; )
+        {
+          ref_edge_ptr = att_ref_edge_list.get_and_step();
+          if( ref_edge_ptr->is_directly_related( split_face_ptr ) )
+            if( !extend_edge_ptr ) 
+              extend_edge_ptr = ref_edge_ptr;
+            else
+            {
+              extend_edge_ptr = 0;
+              break;
+            }
+        }
+
+        if( !extend_edge_ptr )
+          continue;
+
+        // For now, limit this to linear curves.  Technically, we should be able
+        // to extend non-linear curves though.
+        Curve *curve_ptr = extend_edge_ptr->get_curve_ptr();
+        if( curve_ptr->geometry_type() != STRAIGHT_CURVE_TYPE )
+          continue;
+
+        RefVertex *start_vertex_ptr, *end_vertex_ptr;
+
+        start_vertex_ptr = extend_edge_ptr->start_vertex();
+        end_vertex_ptr = extend_edge_ptr->end_vertex();
+
+        DLIList<double> ray_params;
+        CubitVector start_loc = ref_vertex_ptr->coordinates();
+
+        // Find direction to fire ray
+        CubitVector ray_dir;
+
+        if( ref_vertex_ptr == start_vertex_ptr )
+          ray_dir = start_vertex_ptr->coordinates() - 
+          end_vertex_ptr->coordinates();
+        else
+          ray_dir = end_vertex_ptr->coordinates() - 
+          start_vertex_ptr->coordinates();
+
+        ray_dir.normalize();
+
+        // Remove the curve being extended from the at_entity_list
+        DLIList<RefEntity*> tmp_at_entity_list = at_entity_list;
+        tmp_at_entity_list.remove_all_with_value( extend_edge_ptr );
+
+        // Fire the ray, asking for only one hit
+        DLIList<RefEntity*> hit_entity_list;
+        if( GeometryQueryTool::instance()->fire_ray( start_loc, ray_dir,
+          tmp_at_entity_list, ray_params, 1, 0.0, &hit_entity_list  ) 
+          == CUBIT_FAILURE  ||
+          ray_params.size() == 0 || ray_params.get() == 0.0 )
+          continue;
+
+        //PRINT_INFO( "Got hit from vertex %d on surface %d at distance %lf\n", 
+        //  ref_vertex_ptr->id(), split_face_ptr->id(), ray_params.get() )
+
+        CubitVector end_loc;
+        double ray_param = ray_params.get();
+
+        // Note the hit entity could be a curve or a vertex
+        RefEntity *hit_entity_ptr = 0;
+        RefEdge *hit_edge_ptr = 0;
+        if( hit_entity_list.size() ) // In case fire_ray didn't return hit ents
+        {
+          hit_entity_ptr = hit_entity_list.get();
+          hit_edge_ptr = CAST_TO( hit_entity_ptr, RefEdge );
+        }
+
+        if( extendNormalFlg == CUBIT_TRUE )
+        {
+          // Try going normal to the curve hit.
+          double norm_dist = CUBIT_DBL_MAX;
+
+          if( hit_edge_ptr )
+          {
+            hit_edge_ptr->closest_point( start_loc, end_loc );
+
+            // Only valid if end_loc is ON the curve
+            CubitPointContainment contain = hit_edge_ptr->
+                point_containment( end_loc );
+
+            if( contain != CUBIT_PNT_ON )
+            {
+                // find the nearest curve which the vertex can be extended to and normal
+                RefEdge* new_edge_ptr = NULL;
+                CubitVector new_end_loc;
+                find_nearest_curve_for_normal_projection(
+                    hit_edge_ptr, start_loc, split_face_ptr, ray_dir, new_edge_ptr, new_end_loc);
+
+                if (new_edge_ptr)
+                {
+                    hit_edge_ptr = new_edge_ptr;
+                    end_loc = new_end_loc;
+                }
+            }
+
+            norm_dist = start_loc.distance_between( end_loc );
+          }
+
+          // Use shortest distance between closest normal and ray_param
+          if( ray_param < norm_dist )
+            start_loc.next_point( ray_dir, ray_param, end_loc );
+        }
+        else
+          // Use ray_dir along ray
+          start_loc.next_point( ray_dir, ray_param, end_loc );
+
+        // For auto mode, check to see if we are out of the extendGapThreshold
+        if( auto_flg && 
+           ( start_loc.distance_between( end_loc ) > extendGapThreshold ) )
+          continue;
+
+        // Check for close vertex
+        if( hit_edge_ptr )
+        {
+          double arc_length;
+          
+          // Check distance to start of curve
+          arc_length = hit_edge_ptr->get_arc_length( end_loc, 0 );
+
+          if( arc_length <= extendTolerance )
+          {
+            end_loc = hit_edge_ptr->start_coordinates();
+            PRINT_INFO( "Snapping to close vertex for curve %d extended from vertex %d\n",
+              extend_edge_ptr->id(), ref_vertex_ptr->id() );
+          }
+          else
+          {
+            // Check distance to end of curve
+            arc_length = hit_edge_ptr->get_arc_length( end_loc, 1 );
+
+            if( arc_length <= extendTolerance )
+            {
+              end_loc = hit_edge_ptr->end_coordinates();
+              PRINT_INFO( "Snapping to close vertex for curve %d extended from vertex %d\n",
+                extend_edge_ptr->id(), ref_vertex_ptr->id() );
+            }
+          }
+        }
+
+        curve_ptr = NULL;
+
+        // Create curve (from start_vec to end_vec)
+        Surface *surf_ptr = split_face_ptr->get_surface_ptr();
+
+        gme = GeometryModifyTool::instance()->get_engine( surf_ptr );
+        if( gme == NULL )
+        {
+          PRINT_ERROR("No geometry modify engine available for surface %d\n"
+            "       Unable to create split curve.\n", split_face_ptr->id());
+          // Remove tooldatas and free memory
+          cleanup_for_extend_op( ref_vertex_list, body_surf_list_list,
+            curve_lists_lists_list );
+          return CUBIT_FAILURE;
+        }
+
+        // Create a straight line on the surface
+        Point *start_Point = gme->make_Point( start_loc );
+        Point *end_Point = gme->make_Point( end_loc );
+        if( start_Point == NULL || end_Point == NULL )
+        {
+          PRINT_ERROR("Unable to create points for curve on surface %d\n",
+            split_face_ptr->id() );
+          // Remove tooldatas and free memory
+          cleanup_for_extend_op( ref_vertex_list, body_surf_list_list,
+            curve_lists_lists_list );
+          return CUBIT_FAILURE;
+        }
+        curve_ptr = gme->make_Curve( start_Point, end_Point, surf_ptr );
+        if( !curve_ptr )
+        {
+          PRINT_ERROR( "Unable to create split curve from vertex %d on surface %d\n",
+            ref_vertex_ptr->id(), split_face_ptr->id() );
+          // Remove tooldatas and free memory
+          cleanup_for_extend_op( ref_vertex_list, body_surf_list_list,
+            curve_lists_lists_list );
+          return CUBIT_FAILURE;
+        }
+
+        curve_list_ptr->append( curve_ptr );
+
+        // Keep track of which curves are extended
+        ext_curve_ids.append( extend_edge_ptr->id() );
+
+        if( tdsse )
+          tdsse->set_success();
+      }
+
+    }
+
+    curr_Body_ptr = 0;
+  }
+
+  // For manual mode, check to make sure that all vertices had success,
+  // otherwise, this is an error.  Note... vertices seem to live through
+  // these operations.
+  DLIList<int> vertex_id_list;
+  for( i=ref_vertex_list.size(); i--; )
+  {
+    ref_vertex_ptr = ref_vertex_list.get_and_step();
+
+    tdsse = (TDSplitSurfaceExtend *)ref_vertex_ptr->
+      get_TD(&TDSplitSurfaceExtend::is_split_surface_extend);
+
+    if( !tdsse ) continue;
+
+    if( !tdsse->is_success() )
+      vertex_id_list.append( ref_vertex_ptr->id() );
+  }
+  if( vertex_id_list.size() )
+  {
+    if( vertex_id_list.size() == 1 )
+      PRINT_ERROR( "Unable to extend from vertex %d\n", ref_vertex_ptr->id() );
+    else
+    {
+      PRINT_ERROR( "Unable to extend from vertices\n" );
+      CubitUtil::list_entity_ids( "       Problem vertices: ", vertex_id_list );
+    }
+    PRINT_INFO( "       Vertices must be at the end of only one curve on the surface to split,\n"
+                "       extended curves must be linear, and surfaces to split must be planar.\n" );
+
+    // Remove tooldatas and free memory
+    cleanup_for_extend_op( ref_vertex_list, body_surf_list_list,
+      curve_lists_lists_list );
+    return CUBIT_FAILURE;
+  }
+
+  // Give message as to which curves were extended
+  char msg[50];
+  if( ext_curve_ids.size() )
+  {
+    // Remove duplicates (curves extended from both ends)
+    ext_curve_ids.uniquify_ordered();
+
+    // Give a nice message
+    if( ext_curve_ids.size() == 1 )
+      CubitUtil::list_entity_ids( "1 curve extended: ", ext_curve_ids );
+    else
+    {
+      sprintf( msg, "%d curves extended: ", ext_curve_ids.size() );
+      CubitUtil::list_entity_ids( msg, ext_curve_ids );
+    }
+  }
+  else
+  {
+    // Might as well exit
+    PRINT_INFO( "No curves found to extend\n" );
+    // Remove tooldatas and free memory
+    cleanup_for_extend_op( ref_vertex_list, body_surf_list_list, 
+      curve_lists_lists_list );
+    return CUBIT_SUCCESS;
+  }
+
+  // Do the splitting
+  DLIList<Surface*> *surf_list_ptr;
+  DLIList<DLIList<Curve*>*> *curve_lists_list_ptr;
+  body_surf_list_list.reset();
+  curve_lists_lists_list.reset();
+  if( preview_flg==CUBIT_FALSE && create_ref_edges_flg==CUBIT_FALSE )
+  {
+    for( i=body_surf_list_list.size(); i--; )
+    {
+      surf_list_ptr = body_surf_list_list.get_and_step();
+      curve_lists_list_ptr = curve_lists_lists_list.get_and_step();
+
+      Body *new_body_ptr;
+      if( GeometryModifyTool::instance()->imprint( *surf_list_ptr,
+        *curve_lists_list_ptr, new_body_ptr ) == CUBIT_FAILURE )
+      {
+        // Remove tooldatas and free memory
+        cleanup_for_extend_op( ref_vertex_list, body_surf_list_list, 
+          curve_lists_lists_list );
+        return CUBIT_FAILURE;
+      }
+    }
+  }
+  else if( preview_flg==CUBIT_TRUE && create_ref_edges_flg==CUBIT_TRUE )
+  {
+    // Just create the RefEdges
+    DLIList<RefEdge*> new_ref_edge_list;
+    curve_lists_lists_list.reset();
+
+    for( i=curve_lists_lists_list.size(); i--; )
+    {
+      curve_lists_list_ptr = curve_lists_lists_list.get_and_step();
+
+      curve_lists_list_ptr->reset();
+      for( j=curve_lists_list_ptr->size(); j--; )
+      {
+        DLIList<Curve*> *curve_list_ptr = curve_lists_list_ptr->get_and_step();
+        curve_list_ptr->reset();
+
+        create_ref_edges( *curve_list_ptr, new_ref_edge_list );
+      }
+    }
+    // Let the user know about the new curves created
+    if( new_ref_edge_list.size() )
+    {
+      DLIList<CubitEntity*> cubit_entity_list;
+      CAST_LIST( new_ref_edge_list, cubit_entity_list, CubitEntity );
+      CubitUtil::list_entity_ids( "Created new curves: ", cubit_entity_list );
+    }
+  }
+  else
+  {
+    // Just preview
+    for( i=body_surf_list_list.size(); i--; )
+    {
+      curve_lists_list_ptr = curve_lists_lists_list.get_and_step();
+
+      curve_lists_list_ptr->reset();
+      for( j=curve_lists_list_ptr->size(); j--; )
+      {
+        DLIList<Curve*> *curve_list_ptr = curve_lists_list_ptr->get_and_step();
+
+        // Draw the curves
+        draw_preview( *curve_list_ptr );
+      }
+    }
+  }
+
+  // Flush the graphics
+  GfxPreview::flush();
+
+  // Remove tooldatas and free memory
+  cleanup_for_extend_op( ref_vertex_list, body_surf_list_list, 
+    curve_lists_lists_list );
+
+  return CUBIT_SUCCESS;
+}
+
+void
+SplitSurfaceTool::cleanup_for_extend_op( DLIList<RefVertex*> &ref_vertex_list,
+                   DLIList<DLIList<Surface*>*> &body_surf_list_list,
+                   DLIList<DLIList<DLIList<Curve*>*>*> &curve_lists_lists_list,
+                   CubitBoolean free_curves_flg )
+{
+  int i;
+  RefVertex *ref_vertex_ptr;
+
+  // Remove tooldatas from vertices
+  ref_vertex_list.reset();
+  for( i=ref_vertex_list.size(); i--; )
+  {
+    ref_vertex_ptr = ref_vertex_list.get_and_step();
+    ref_vertex_ptr->delete_TD( &TDSplitSurfaceExtend::is_split_surface_extend );
+  }
+
+  // Free allocated lists in body_surf_list_list
+  while( body_surf_list_list.size() ) delete body_surf_list_list.pop();
+
+  // Free allocated lists in curve_list_lists_list, as well as Curves (if not
+  // attached to RefEdges).
+  DLIList<DLIList<Curve*>*> *curve_list_lists_ptr;
+  for( i=curve_lists_lists_list.size(); i--; )
+  {
+    curve_list_lists_ptr = curve_lists_lists_list.get();
+
+    free_curves_lists( *curve_list_lists_ptr );
+    delete curve_list_lists_ptr;
+
+    curve_lists_lists_list.step();
+  }
+
+  return;
+}
+
+void SplitSurfaceTool::find_nearest_curve_for_normal_projection(
+	RefEdge* hit_edge_ptr, CubitVector& start_loc, 
+	RefFace* face, CubitVector& ray_dir, RefEdge*& new_edge_ptr,
+	CubitVector& new_end_loc)
+{
+	// traverse the curves in the surface and find the closest curve to the hardline
+	// which the hardline can extend normal to
+
+	DLIList<RefEdge*> edge_list;
+	face->ref_edges(edge_list);
+
+	std::map<double, std::pair<RefEdge*, CubitVector> > potential_curves_map;
+
+	// maybe traverse all curves all of the time, and use the one closest to the point
+	int i;
+	for (i=edge_list.size(); i--;)
+	{
+		RefEdge* edge = edge_list.get_and_step();
+
+		if (edge == hit_edge_ptr)
+			continue;
+
+		CubitVector closest_point;
+		edge->closest_point(start_loc, closest_point);
+
+		// Only valid if location is ON the curve
+		CubitPointContainment contain = edge->point_containment( closest_point );
+		if( contain == CUBIT_PNT_ON )
+		{
+			// check to make sure angle isn't too bad
+			// have a user setting for this in the future
+			// but for now, use 90 degrees
+			CubitVector split_direction = closest_point - start_loc;
+			if (split_direction.length_squared() <= GEOMETRY_RESABS) //ignore self
+				continue;
+
+			double angle = ray_dir.interior_angle(split_direction);
+			if (fabs(angle) <= 90.0)
+			{
+				double dist = start_loc.distance_between(closest_point);
+				potential_curves_map.insert(std::map<double, std::pair<RefEdge*, CubitVector> >::value_type(
+					dist, std::make_pair<RefEdge*, CubitVector>(edge, closest_point)));
+			}
+		}
+	}
+
+	if (potential_curves_map.size())
+	{
+		std::map<double, std::pair<RefEdge*, CubitVector> >::iterator iter = potential_curves_map.begin();
+		new_edge_ptr = (iter->second).first;
+		new_end_loc = (iter->second).second;
+	}
+
+	return;
+}

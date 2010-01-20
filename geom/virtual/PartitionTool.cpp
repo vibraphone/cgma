@@ -64,6 +64,7 @@ const int PTT_EDGE_POINT_COUNT = 2;
 #include "RefEntityFactory.hpp"
 #include "GeometryQueryTool.hpp"
 #include "MergeTool.hpp"
+#include "CubitUndo.hpp"
 
 #include "TDUPtr.hpp"
 #include <vector>
@@ -378,9 +379,8 @@ CubitStatus PartitionTool::partition( RefFace* face_ptr,
   DLIList<RefEdge*> new_edges;
   GMem edge_facets;
   
-  int numpts;
   Curve* curve = edge_ptr->get_curve_ptr();
-  if( ! curve->get_geometry_query_engine()->get_graphics( curve, numpts, &edge_facets ) )
+  if( ! curve->get_geometry_query_engine()->get_graphics( curve, &edge_facets ) )
   {
     return CUBIT_FAILURE;
   }
@@ -436,7 +436,7 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
       for (j = 0; j < edge_list.size(); j++) 
       { 
         the_edge = edge_list.get_and_step();
-        the_edge->closest_point(pos, closest);
+        the_edge->closest_point_trimmed(pos, closest);
 
         if ( (pos - closest).length_squared() > TOL_SQR )
           continue;
@@ -522,6 +522,13 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
     pos = *segments.step_and_get();
     }
   }
+  
+  if( CubitUndo::get_undo_enabled() )
+  {
+    DLIList<RefFace*> tmp_face_list(1);
+    tmp_face_list.append( face_ptr );
+    CubitUndo::save_state_with_cubit_file( tmp_face_list );
+  }
 
   DLIList<TopologyBridge*> bridge_list;
   face_ptr->bridge_manager()->get_bridge_list( bridge_list );
@@ -548,7 +555,12 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
     if (!new_surf && level_of_recursion == 0)
     {
       level_of_recursion++;
-      return insert_edge( face_ptr, segments, CUBIT_FALSE, new_edges, level_of_recursion);
+      RefFace *return_face = insert_edge( face_ptr, segments, CUBIT_FALSE, new_edges, level_of_recursion);
+      
+      if( CubitUndo::get_undo_enabled() && return_face == NULL ) 
+        CubitUndo::remove_last_undo();
+
+      return return_face; 
     }
 
     if(!new_surf)
@@ -556,6 +568,9 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
       CompositeSurface* cs = dynamic_cast<CompositeSurface*>(old_surf);
       if(cs)
       {
+        Surface *tmp_srf = cs->get_surface(0);
+        GeometryQueryEngine *gqe = tmp_srf->get_geometry_query_engine();
+        double tmp_tol = gqe->get_sme_resabs_tolerance();
         DLIList<Curve*> hidden_curves;
         cs->get_hidden_curves(hidden_curves);
         int k;
@@ -568,12 +583,12 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
           int curve_on_polyline = 1;
           cur_curve->get_param_range(min, max);
           cur_curve->position_from_u(min, start_vec);
-          if(!int_tool.point_on_polyline(start_vec, segments))
+          if(!int_tool.point_on_polyline(start_vec, segments, &tmp_tol))
             curve_on_polyline = 0;
           if(curve_on_polyline)
           {
             cur_curve->position_from_u(max, end_vec);
-            if(!int_tool.point_on_polyline(end_vec, segments))
+            if(!int_tool.point_on_polyline(end_vec, segments, &tmp_tol))
               curve_on_polyline = 0;
           }
           if(curve_on_polyline)
@@ -586,7 +601,7 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
             for(n=0; n<num_mid_pts && curve_on_polyline; ++n)
             {
               cur_curve->position_from_u(cur_t, cur_vec);
-              if(!int_tool.point_on_polyline(cur_vec, segments))
+              if(!int_tool.point_on_polyline(cur_vec, segments, &tmp_tol))
                 curve_on_polyline = 0;
               cur_t += dt;
             }
@@ -695,12 +710,20 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
   }
   
   if ( !removed_composite_curve && !new_edges.size() )
+  {
+    if( CubitUndo::get_undo_enabled() ) 
+      CubitUndo::remove_last_undo();
+
     return 0;
+  }
     
   DLIList<RefEntity*> ref_list;
   CAST_LIST_TO_PARENT(new_edges, ref_list);
   notify_partition( ref_list, face_ptr, result, face_ptr );
   
+  if( CubitUndo::get_undo_enabled() && status == CUBIT_FAILURE ) 
+    CubitUndo::remove_last_undo();
+
   return status ? result : 0;
 }
 
@@ -987,6 +1010,13 @@ CubitStatus PartitionTool::make_point_curves( RefFace* face_ptr,
   CAST_LIST(bridge_list, surface_list, Surface);
   assert(bridge_list.size() == surface_list.size());
   surface_list.reset();
+  
+  if( CubitUndo::get_undo_enabled() )
+  {
+    DLIList<RefFace*> tmp_faces(1);
+    tmp_faces.append( face_ptr );
+    CubitUndo::save_state_with_cubit_file( tmp_faces );
+  }
 
     // For each position in the list
   positions.reset();
@@ -1082,6 +1112,10 @@ CubitStatus PartitionTool::make_point_curves( RefFace* face_ptr,
   if (new_vertices.size() > 1)
     new_vertices.uniquify_ordered();  
 
+
+  if( CubitUndo::get_undo_enabled() && new_points.size() == 0 )
+    CubitUndo::remove_last_undo();
+
   return rval; 
 }
 
@@ -1101,10 +1135,18 @@ RefVertex* PartitionTool::make_point_curve( RefFace* face_ptr,
   DLIList<CubitVector> positions(1);
   DLIList<RefVertex*> results(1);
   positions.append(position);
+  
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state_with_cubit_file( face_ptr );
+
   if (make_point_curves(face_ptr, positions, results) && results.size())
     return results.get();
   else
+  {
+    if( CubitUndo::get_undo_enabled() )
+      CubitUndo::remove_last_undo();
     return 0;
+  }
 }
 
 
@@ -1329,62 +1371,16 @@ CubitStatus PartitionTool::unpartitionAll(
   {
     RefEdge* edge = refedge_list.step_and_get();
     PartPTCurve* point_curve = dynamic_cast<PartPTCurve*>(edge->get_curve_ptr());
-    if ( !(point_curve || edge->marked() == 2) || !can_remove(edge) )
-      refedge_list.change_to(0);
-    else 
+    SegmentedCurve* seg_curve = dynamic_cast<SegmentedCurve*>(edge->get_curve_ptr());
+    if((point_curve || (seg_curve && edge->marked() == 2)) &&
+               can_remove(edge))
     {
-      // If we got to this point we think this is an "interior" edge that
-      // was introduced to partition a surface and we want to keep it
-      // in the list for unpartitioning.  However,
-      // we need to do one final check.  There are cases where
-      // two surfaces share an edge before either one is partitioned.
-      // Then both of them are partitioned in some way and so the
-      // original shared edge gets replaced with partition edges and
-      // partition coedges and when we get to this function it looks like
-      // an "interior" edge and that it should be unpartitioned 
-      // even though it was an original edge in the model and should not
-      // get unpartitioned.  True "interior" partition edges will have the
-      // same entitySet ptr for both of its coedges.  Check if this is the
-      // case and if it isn't mark the edge for removal from the list.
-      DLIList<CoEdge*> cur_coedges;
-      edge->get_co_edges(cur_coedges);
-      int coedge_size = cur_coedges.size();
-      Loop *loop_ptr;
-      RefFace *face_ptr;
-      Surface *surf_ptr;
-      PartitionSurface *part_surf_ptr;
-      SubEntitySet *common_sub_entity_set = NULL;
-      SubEntitySet *cur_sub_entity_set;
-      for(int g=0; g<coedge_size; g++)
-      {
-        CoEdge *cur_co_edge = cur_coedges.get_and_step();
-        if(g==0)
-        {
-          if((loop_ptr = cur_co_edge->get_loop_ptr()) &&
-            (face_ptr = loop_ptr->get_ref_face_ptr()) &&
-            (surf_ptr = face_ptr->get_surface_ptr()) &&
-            (part_surf_ptr = dynamic_cast<PartitionSurface*>(surf_ptr)))
-          {
-            common_sub_entity_set = &(part_surf_ptr->sub_entity_set());
-          }
-        }
-        else
-        {
-          cur_sub_entity_set = NULL;
-          if((loop_ptr = cur_co_edge->get_loop_ptr()) &&
-            (face_ptr = loop_ptr->get_ref_face_ptr()) &&
-            (surf_ptr = face_ptr->get_surface_ptr()) &&
-            (part_surf_ptr = dynamic_cast<PartitionSurface*>(surf_ptr)))
-          {
-            cur_sub_entity_set = &(part_surf_ptr->sub_entity_set());
-          }
-          if(cur_sub_entity_set != common_sub_entity_set)
-          {
-            refedge_list.change_to(0);
-            g = coedge_size;
-          }
-        }
-      }
+      // Try to remove this partition.
+    }
+    else
+    {
+      // Don't try to remove this partition.
+      refedge_list.change_to(0);
     }
     edge->marked(0);
   }
@@ -1449,18 +1445,26 @@ CubitStatus PartitionTool::partition_face_by_curves( RefFace* face_to_split,
   DLIList<CubitVector*> segments;
   GMem gmem;
   
+  if( CubitUndo::get_undo_enabled() )
+  {
+    DLIList<RefFace*> tmp_ref_face_list(1);
+    tmp_ref_face_list.append( face_to_split );
+    CubitUndo::save_state_with_cubit_file( tmp_ref_face_list );
+  }
+
   faces[0].append( face_to_split );
   for (i = 0; i < split_curves.size(); i++ )
   {
     Curve* curve = split_curves.next(i);
     GeometryQueryEngine* engine = curve->get_geometry_query_engine();
 
-    if (!engine->get_graphics( curve, numpts, &gmem ))
+    if (!engine->get_graphics( curve, &gmem ))
     {
       status = CUBIT_FAILURE;
       continue;
     }
-    assert( numpts == gmem.pointListCount);
+
+    numpts = gmem.pointListCount;
 /*
 This code causes a failure in virtual imprint because it compares
 against the number of graphics curve facets.  I think this is wrong but
@@ -1521,13 +1525,13 @@ If this hasn't been addressed in 6 months just kill this code. KGM 1/5/06
       if (curve->bridge_sense() == CUBIT_REVERSED)
       {
         CubitVector* p1 = new CubitVector;
-        CubitStatus sta = curve->position_from_u( curve->end_param(), *p1 );
+        curve->position_from_u( curve->end_param(), *p1 );
         segments.append( p1 );
       }
       else
       {
         CubitVector* p1 = new CubitVector;
-        CubitStatus sta = curve->position_from_u( curve->start_param(), *p1 );
+        curve->position_from_u( curve->start_param(), *p1 );
         segments.append( p1 );
       }
     
@@ -1541,13 +1545,13 @@ If this hasn't been addressed in 6 months just kill this code. KGM 1/5/06
       if (curve->bridge_sense() == CUBIT_REVERSED)
       {
         CubitVector* p1 = new CubitVector;
-        CubitStatus sta = curve->position_from_u( curve->start_param(), *p1 );
+        curve->position_from_u( curve->start_param(), *p1 );
         segments.append( p1 );
       }
       else
       {
         CubitVector* p1 = new CubitVector;
-        CubitStatus stat = curve->position_from_u( curve->end_param(), *p1 );
+        curve->position_from_u( curve->end_param(), *p1 );
         segments.append( p1 );
       }
     }
@@ -1567,8 +1571,13 @@ If this hasn't been addressed in 6 months just kill this code. KGM 1/5/06
     while (segments.size())
       delete segments.pop();
   }
-  
+
   result_set = faces[split_curves.size()%2];
+
+  //surface might not have gotton split
+  if( CubitUndo::get_undo_enabled() && result_set.size() == 1)
+    CubitUndo::remove_last_undo();
+  
   return status;
 }
 

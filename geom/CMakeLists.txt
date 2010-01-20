@@ -2,14 +2,28 @@
 
 PROJECT(cubit_geom)
 
+OPTION(CGM_FACET "Build CGM with Facet support" ON)
+IF(CGM_FACET)
+SUBDIRS(Cholla facetbool facet)
+ENDIF(CGM_FACET)
 
-SUBDIRS(Cholla facetbool facet virtual)
+OPTION(CGM_VIRTUAL "Build CGM with Virtual support" ON)
+IF(CGM_VIRTUAL)
+SUBDIRS(virtual)
+ENDIF(CGM_VIRTUAL)
 
-# build cgm with acis support, default to on
-OPTION(CGM_ACIS "Build CGM with ACIS support" ON)
+# build cgm with acis support, default to off
+OPTION(CGM_ACIS "Build CGM with ACIS support" OFF)
 IF(CGM_ACIS)
 SUBDIRS(ACIS)
 ENDIF(CGM_ACIS)
+
+
+OPTION(CGM_SMLIB "Build CGM with SMLIB support" OFF)
+IF(CGM_SMLIB)
+SUBDIRS(smlib)
+ENDIF(CGM_SMLIB)
+
 
 # build cgm with granite support, default to off
 OPTION(CGM_GRANITE "Build CGM with Granite support" OFF)
@@ -22,11 +36,23 @@ OPTION(CGM_OCC "Build CGM with OpenCASCADE support" ON)
 IF(CGM_OCC)
   SUBDIRS(OCC)
 ENDIF(CGM_OCC)
+OPTION(CGM_CATIA "Build CGM with CATIA support" OFF)
+IF(CGM_CATIA)
+  SET(CGM_ACIS OFF CACHE BOOL "ACIS not supported with CATIA" FORCE)
+  SET(FEATURE_OPTION OFF CACHE BOOL "Feature option not allowed with CATIA" FORCE)
+  SET(TOLERANT_TRI OFF CACHE BOOL "Geometry-tolerant meshing option not allowed with CATIA" FORCE)
+  SET(ACIS_IGES OFF CACHE BOOL "ACIS_IGES not allowed with CATIA" FORCE)
+  SET(ACIS_STEP OFF CACHE BOOL "ACIS_STEP not allowed with CATIA" FORCE)
+  SET(CUBIT_GEOM_BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
+  SET(CUBIT_UTIL_BUILD_SHARED_LIBS ON CACHE BOOL "UTIL_LIBS need to be shared when CATIA is used" FORCE)
+
+ENDIF(CGM_CATIA)
 
 INCLUDE(${cubit_geom_SOURCE_DIR}/../util/UseUtil.cmake)
 
 SET(GEOM_SRCS
     AnalyticGeometryTool.cpp
+    AutoMidsurfaceTool.cpp
     BasicTopologyEntity.cpp
     Body.cpp
     BodySM.cpp
@@ -44,6 +70,7 @@ SET(GEOM_SRCS
     CAUniqueId.cpp
     CGMApp.cpp
     CGMEngineDynamicLoader.cpp
+    CGMHistory.cpp
     Chain.cpp
     CoEdge.cpp
     CoEdgeSM.cpp
@@ -64,9 +91,7 @@ SET(GEOM_SRCS
     DagDrawingTool.cpp
     GeomDataObserver.cpp
     GeometryEntity.cpp
-    GeometryFeatureEngine.cpp
     GeometryFeatureTool.cpp
-    GeometryHealerEngine.cpp
     GeometryHealerTool.cpp
     GeometryModifyEngine.cpp
     GeometryModifyTool.cpp
@@ -85,11 +110,11 @@ SET(GEOM_SRCS
     MedialTool3D.cpp
     MergeToolAssistant.cpp
     MergeTool.cpp
-    MidPlaneTool.cpp
     ModelEntity.cpp
     ModelQueryEngine.cpp
     OffsetSplitTool.cpp
     OldUnmergeCode.cpp
+    PeriodicParamTool.cpp
     Point.cpp
     PointSM.cpp
     RefCollection.cpp
@@ -165,44 +190,27 @@ CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
 
 IF(CUBIT_GEOM_BUILD_SHARED_LIBS)
   ADD_LIBRARY(cubit_geom SHARED ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS} ${TEMPLATE_SRCS})
-
-  IF(CUBIT_COPY_DIR)
-    # The cubit copy dir should only be set on windows.
-    STRING(REGEX REPLACE "/" "\\\\" winbin "${CUBIT_COPY_DIR}")
-    IF(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-      ADD_CUSTOM_COMMAND(TARGET cubit_geom POST_BUILD
-                         COMMAND ${CMAKE_COMMAND}
-                         ARGS -E copy
-                           $\(TargetPath\) ${winbin}\\$\(TargetName\).dll)
-    ELSE(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-      STRING(REGEX REPLACE "/" "\\\\" winsrc "${LIBRARY_OUTPUT_PATH}")
-      ADD_CUSTOM_COMMAND(TARGET cubit_geom POST_BUILD
-                         COMMAND ${CMAKE_COMMAND}
-                         ARGS -E copy
-                           ${winsrc}\\cubit_geom.dll
-                           ${winlib}\\cubit_geom.dll)
-    ENDIF(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-  ENDIF(CUBIT_COPY_DIR)
 ELSE(CUBIT_GEOM_BUILD_SHARED_LIBS)
   ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS} ${TEMPLATE_SRCS})
 ENDIF(CUBIT_GEOM_BUILD_SHARED_LIBS)
 
 TARGET_LINK_LIBRARIES(cubit_geom cubit_util)
 
-IF(UNIX)
-ADD_CUSTOM_TARGET(switch_acis 
-                  rm -f *Acis*.o &&
-                  rm -f attrib*.o &&
-                  rm -f *ACIS*.o &&
-                  rm -f GeometryCommands.o &&
-                  rm -f Feature*.o &&
-                  rm -f *App.o &&
-                  cd ACIS && ${CMAKE_MAKE_PROGRAM} switch_acis)
-
-ENDIF(UNIX)
+IF(CUBIT_LIBRARY_PROPERTIES)
+  SET_TARGET_PROPERTIES(cubit_geom
+                        PROPERTIES ${CUBIT_LIBRARY_PROPERTIES})
+ENDIF(CUBIT_LIBRARY_PROPERTIES)
 
 SET(CMAKE_INSTALL_BINARY_DIR "bin" CACHE PATH "Install directory for binaries")
+
 IF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-  INSTALL_TARGETS(/${CMAKE_INSTALL_BINARY_DIR} cubit_geom)
+  INSTALL(TARGETS cubit_geom
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+          LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+          )
 ENDIF(CUBIT_GEOM_BUILD_SHARED_LIBS)
+
+IF(BUILD_TESTING)
+  #ADD_SUBDIRECTORY(testing)
+ENDIF(BUILD_TESTING)
 

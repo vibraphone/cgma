@@ -69,6 +69,9 @@ public:
 
   CubitStatus clear_simple_attribs();
     // Remove all CubitSimpleAttrib from TopologyBridges.
+
+  CubitStatus clear_simple_attribs_set_to_actuate();
+    // Remove all CubitSimpleAttrib from TopologyBridges if attrib type's actuate was set to true
   
 public:
   CubitStatus auto_read_cubit_attrib ();
@@ -157,6 +160,9 @@ public:
 
   static CubitStatus clear_all_simple_attrib( DLIList<RefEntity*>& entity_list );
     //- remove all CubitSimpleAttrib from TopologyBridges.
+
+  static CubitStatus clear_all_simple_attrib_set_to_actuate( DLIList<RefEntity*>& entity_list );
+    //- remove all CubitSimpleAttrib from TopologyBridges that have actuate flag set to true.
 
 private:
   static void auto_reset_cubit_attrib(DLIList<RefEntity*> ref_ents);

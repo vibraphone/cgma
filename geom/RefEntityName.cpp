@@ -64,6 +64,8 @@ void RefEntityName::remove_refentity_name(const CubitString &name,
       CubitAttrib *attrib = entity->get_cubit_attrib(CA_ENTITY_NAME);
       attrib->has_updated(CUBIT_FALSE);
       attrib->update();
+      if( attrib->delete_attrib() )
+        entity->remove_cubit_attrib( attrib );
     }
 
     delete name_map;
@@ -73,6 +75,25 @@ void RefEntityName::remove_refentity_name(const CubitString &name,
 void RefEntityName::remove_refentity_name(RefEntity *entity,
                                           CubitBoolean update_attribs)
 {
+  //update the attribute so the names are put into the entity list
+  if (update_attribs)
+  {
+    CubitAttrib *attrib = entity->get_cubit_attrib(CA_ENTITY_NAME,
+                                                   CUBIT_FALSE);
+    if (attrib) 
+    {
+      //update the attribute so that the names are on it.
+      attrib->has_written( CUBIT_FALSE );
+      attrib->has_updated(CUBIT_FALSE);
+      attrib->update();
+
+      //remove the attribute from the underlying entity
+      //of the solid modeling kernel
+      RefEntity *attrib_owner = attrib->attrib_owner();
+      attrib_owner->remove_attrib_geometry_entity( attrib );
+    }
+  }
+
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
     //       remove all of them. 
   
@@ -90,26 +111,28 @@ void RefEntityName::remove_refentity_name(RefEntity *entity,
     nameEntityList.step();
   }
   nameEntityList.compress();
-  
+
     // now tell the entity to update its name attribute
   if (update_attribs)
   {
     CubitAttrib *attrib = entity->get_cubit_attrib(CA_ENTITY_NAME,
                                                    CUBIT_FALSE);
-    if (attrib) {
+    if (attrib) 
+    {
       attrib->has_updated(CUBIT_FALSE);
       attrib->update();
+      entity->remove_cubit_attrib( attrib );
     }
   }
 
   for (i = old_maps.size(); i > 0; i--)
     delete old_maps.get_and_step();
-  
 }
 
 CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
-				      DLIList<CubitString*> &names,
-                                              CubitBoolean update_attribs)
+                                              DLIList<CubitString*> &names,
+                                              bool update_attribs, 
+                                              bool check_name_validity)
 {
   names.reset();
   //int num_new_names = names.size();
@@ -124,13 +147,16 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
     CubitBoolean warn_name_change = CUBIT_FALSE;
     
       // first, clean the name
-    if (clean(name))
+    if (check_name_validity)
     {
-//       PRINT_WARNING("Entity name '%s' is invalid. Changed to '%s'\n",
-//                     in_name.c_str(), name.c_str());
-      warn_name_change = CUBIT_TRUE;
+      if (clean(name))
+      {
+        // assign original name anyway, then
+        // continue on and assign modified name.
+        add_refentity_name(entity, in_name, false, false);
+        warn_name_change = CUBIT_TRUE;
+      }
     }
-    
       // now, check for valid name
     CubitBoolean name_valid = CUBIT_FALSE;
     
@@ -175,8 +201,9 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
                           entity->class_name(), entity->id(), name.c_str());
           if(warn_name_change)
           {
-            PRINT_WARNING("Entity name '%s' is invalid. Changed to '%s'\n",
-                          in_name.c_str(), name.c_str());
+            PRINT_WARNING("Entity name '%s' can't be used in commands.\n"
+                 "         Additional name '%s' assigned.\n",
+              in_name.c_str(), name.c_str());
           }
           
           name_valid = CUBIT_TRUE;
@@ -187,8 +214,9 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
     {
       if(warn_name_change)
       {
-        PRINT_WARNING("Entity name '%s' is invalid. Changed to '%s'\n",
-                      in_name.c_str(), name.c_str());
+        PRINT_WARNING("Entity name '%s' can't be used in commands.\n"
+          "         Additional name '%s' assigned.\n",
+          in_name.c_str(), name.c_str());
       }
       
         // else the name must be valid
@@ -244,8 +272,9 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
 }
 
 CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
-				      CubitString &name,
-                                              CubitBoolean update_attribs)
+                                              CubitString &name,
+                                              bool update_attribs,
+                                              bool check_name_validity)
 {
   if (name == "")
     return CUBIT_FAILURE;
@@ -253,9 +282,15 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
   CubitString in_name = name;
   bool warn_name_change = false;
   
-  if (clean(name))
+  if (check_name_validity)
   {
-    warn_name_change = true;
+    if (clean(name))
+    {
+      // Assign the invalid name anyway, then continue on and
+      // assign the modified name.
+      add_refentity_name(entity, in_name, false, false);
+      warn_name_change = true;
+    }
   }
   
   if (nameEntityList.move_to(name))
@@ -287,13 +322,14 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
         {
           if (warn_name_change)
           {
-            PRINT_WARNING("Entity name '%s' is invalid. Changed to '%s'\n",
+            PRINT_WARNING("Entity name '%s' can't be used in commands.\n"
+                 "         Additional name '%s' assigned.\n",
               in_name.c_str(), name.c_str());
           }
           if ( DEBUG_FLAG(92) )
             PRINT_WARNING("\t%s %d name changed to '%s'\n",
             entity->class_name(), entity->id(), name.c_str());
-          return add_refentity_name(entity, name);
+          return add_refentity_name(entity, name, update_attribs, false);
         }
       }
       return CUBIT_FAILURE;
@@ -302,7 +338,8 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
 
   if (warn_name_change)
   {
-    PRINT_WARNING("Entity name '%s' is invalid. Changed to '%s'\n",
+    PRINT_WARNING("Entity name '%s' can't be used in commands.\n"
+      "         Additional name '%s' assigned.\n",
       in_name.c_str(), name.c_str());
   }
 
@@ -519,8 +556,8 @@ void RefEntityName::set_fix_duplicate_names(int on_off)
 
 CubitStatus RefEntityName::clean(CubitString &raw_name)
 {
-
-  if (raw_name == "") return CUBIT_FAILURE;
+  if (raw_name == "")
+    return CUBIT_FAILURE;
   
     // A valid name consists of alphanumeric characters plus '.', '_', '-', or '@'
   CubitStatus found_invalid_character = CUBIT_FAILURE;
@@ -828,7 +865,7 @@ void RefEntityName::copy_refentity_names( DLIList<RefEntity*>& source_list,
     for( int i = source_list.size(); i > 0; i-- )
       get_refentity_name( source_list.get_and_step(), name_list );
     name_list.reset();
-    add_refentity_name( target, name_list, update_attribs );
+    add_refentity_name(target, name_list, update_attribs, false);
   }
 }
 

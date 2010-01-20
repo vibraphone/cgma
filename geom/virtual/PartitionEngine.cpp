@@ -49,6 +49,7 @@
 #include "CompositeCurve.hpp"
 #include "PartitionLumpImprint.hpp"
 #include "GfxDebug.hpp"
+#include "BridgeManager.hpp"
 
 #include "CADefines.hpp"
 
@@ -64,7 +65,24 @@ static CubitStatus get_edge_replacements(
                          std::vector<CubitFacetData*> &facet_list,
                          std::vector<CubitFacetEdgeData*> replacement_edges[3]);
 
-PartitionEngine::~PartitionEngine() {}
+
+PartitionEngine* PartitionEngine::instance_ = NULL; 
+
+
+PartitionEngine::~PartitionEngine()
+{
+  GeometryQueryTool::instance()->unregister_intermediate_engine(this);
+}
+
+void PartitionEngine::delete_instance()
+{
+  if( NULL != instance_ )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
+}    
+
 
 //-------------------------------------------------------------------------
 // Purpose       : Constructor
@@ -92,7 +110,12 @@ PartitionEngine::PartitionEngine()
 //-------------------------------------------------------------------------
 PartitionEngine& PartitionEngine::instance()
 {
-  static PartitionEngine* instance_ = new PartitionEngine();
+  if( instance_ == NULL )
+  {
+    instance_ = new PartitionEngine();
+    assert( instance != NULL );
+  }
+  
   return *instance_;
 }
 
@@ -713,6 +736,11 @@ bool PartitionEngine::is_partition(TBOwner *bridge_owner)
 }
 
 bool PartitionEngine::is_composite(TBOwner *bridge_owner)
+{
+  return false;
+}
+
+bool PartitionEngine::is_composite(TopologyBridge *bridge)
 {
   return false;
 }
@@ -1629,6 +1657,12 @@ Surface* PartitionEngine::remove_curve( PartitionCurve* passed_curve,
     loop2->remove( coedge2 );
     assert( loop2->first_coedge() == 0 );
     surf2->remove( loop2 );
+    if( loop1->num_coedges() == 0 )
+    {
+      surf1->remove( loop1 );
+      delete loop1;
+    }
+
     delete loop2;
   }
   
@@ -1943,14 +1977,32 @@ PartitionSurface* PartitionEngine::split_surface( PartitionSurface* surface,
     {
       edges.clean_out();
       curve->get_facet_data( edges );
-      edges.reset();
-      edge = edges.get();
-      CubitPoint* start_pt = curve->start_point()->facet_point();
-      bool forward = edge->point(0) == start_pt;
-      assert( forward || edge->point(1) == start_pt );
-      if ( coe->sense() == CUBIT_REVERSED )
-        forward = !forward;
-      face = find_facet( edge, forward, new_surf );
+      if (edges.size() > 0) // normal facet
+      {
+        edges.reset();
+        edge = edges.get();
+        CubitPoint* start_pt = curve->start_point()->facet_point();
+        bool forward = edge->point(0) == start_pt;
+        assert( forward || edge->point(1) == start_pt );
+        if ( coe->sense() == CUBIT_REVERSED )
+          forward = !forward;
+        face = find_facet( edge, forward, new_surf );
+      }
+      else // this is a hardpoint there is a curve with no facets (length)
+           // and the start and end points are the same
+      {
+        Point* hardpoint = curve->start_point()->real_point();
+        if (hardpoint && curve->start_point() == curve->end_point() )
+        {
+          CubitVector hardpoint_coord = hardpoint->coordinates(); 
+          CubitVector new_closest, old_closest;
+          new_surf->closest_point_trimmed( hardpoint_coord, new_closest );
+          surface->closest_point_trimmed( hardpoint_coord,  old_closest );
+          // It appears that the new_surf is really the original surface
+          if ( new_closest.length_squared() > old_closest.length_squared() )
+            face = reinterpret_cast<CubitFacetData*>(1); // just set the point to non-zero (true)
+        }
+      }
     }
     
     if( face )
@@ -2285,8 +2337,17 @@ CubitStatus PartitionEngine::insert_curve( DLIList<PartitionSurface*>& surface_l
       
     if (count < polyline_pts.size())
     {
-      for (i = 0; i < polyline_pts.size(); i++)
-        *(segment_points[i]) = polyline_pts[i]->coordinates();
+      for( i = 0; i < polyline_pts.size(); i++ )
+      {
+        if( polyline_pts[i] )
+        {
+          *(segment_points[i]) = polyline_pts[i]->coordinates();
+        }
+        else
+        {
+          return CUBIT_FAILURE;
+        }
+      }
     }
   }
 
@@ -2951,10 +3012,12 @@ CubitStatus PartitionEngine::project_to_surface(
       }
       else
       {
-        assert(pt_index >= 0 && pt_index < cubit_points.size());
-        CubitPoint* pt = cubit_points.next( pt_index );
-        CubitPointData* ptd = dynamic_cast<CubitPointData*>(pt);
-        assert(!!ptd);
+        CubitPointData* ptd = NULL;
+        if(pt_index >= 0 && pt_index < cubit_points.size())
+        {
+          CubitPoint* pt = cubit_points.next( pt_index );
+          ptd = dynamic_cast<CubitPointData*>(pt);
+        }
         polyline_points.append(ptd);
       }
     }
@@ -3350,9 +3413,9 @@ CubitStatus PartitionEngine::insert_point_curve( PartitionSurface* surf,
 Lump* PartitionEngine::insert_surface( Surface* surface, Lump* lump)
 {
   GMem gmem;
-  int i, num_tri, num_pts, num_facets;
+  int i;
   CubitStatus status = surface->get_geometry_query_engine()->
-    get_graphics( surface, num_tri, num_pts, num_facets, &gmem );
+    get_graphics( surface, &gmem );
   
   if( !status )
   {
@@ -3360,8 +3423,9 @@ Lump* PartitionEngine::insert_surface( Surface* surface, Lump* lump)
                 "get_graphics failed for surface.\n");
     return 0;
   }
+
+  int num_pts = gmem.pointListCount;
   
-  assert(gmem.pointListCount == num_pts && gmem.fListCount == num_facets );
   CubitPointData** ptarray = new CubitPointData*[num_pts];
   GPoint *p_itor = gmem.point_list();
   GPoint *p_end = p_itor + num_pts;
@@ -3371,7 +3435,7 @@ Lump* PartitionEngine::insert_surface( Surface* surface, Lump* lump)
   
   DLIList<CubitFacetData*> facets;
   int* f_itor = gmem.facet_list();
-  int* f_end = f_itor + num_facets;
+  int* f_end = f_itor + gmem.fListCount;
   i = 0;
   for( ; f_itor < f_end ; f_itor += (1 + *f_itor) )
   {
@@ -4820,11 +4884,14 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
                               polyline_edges, polyline_pts );
       while( positions.size() ) 
       {
-        assert(polyline_pts.size());
         CubitVector* position = positions.pop();
-        CubitPointData* point = polyline_pts.pop();
-        if (point->check_inverted_facets(*position))
-          point->set(*position);
+        if(s)
+        {
+   //       assert(polyline_pts.size());
+          CubitPointData* point = polyline_pts.pop();
+          if (point && point->check_inverted_facets(*position))
+            point->set(*position);
+        }
         delete position;
       }
       delete attrib;
@@ -6215,8 +6282,31 @@ void PartitionEngine::add_to_deactivated_list (PartitionPoint* point)
 void PartitionEngine::clean_out_deactivated_geometry()
 {
 }
-void PartitionEngine::remove_modified(DLIList<TopologyBridge*>& geometry_list)
+void PartitionEngine::remove_modified(DLIList<Surface*> &all_surfs,
+    DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts)
 {
 }
 
+void PartitionEngine::get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
+                                                            DLIList<TopologyBridge*> &tbs )
+{
+  SubEntitySet* set = dynamic_cast<SubEntitySet*>(source_bridge->owner());
+  if( !set ) 
+    return;
+
+  DLIList<PartitionEntity*> entity_list;
+  set->get_sub_entities( entity_list );
+  DLIList<TopologyBridge*> temp_list;
+  CAST_LIST( entity_list, temp_list, TopologyBridge );
+
+  int i;
+  for( i=temp_list.size(); i--; )
+  {
+    if( temp_list.get()->bridge_manager() )
+      tbs.append( temp_list.get() );
+    temp_list.step();
+  }
+  
+  return;
+}
   

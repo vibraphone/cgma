@@ -11,6 +11,7 @@ endif
 if build_parallel
   SUBDIRS += parallel
 endif
+SUBDIRS += testing
 if build_OCC
   SUBDIRS += OCC
 endif
@@ -32,6 +33,7 @@ libcubit_geom_la_includedir = $(includedir)
 libcubit_geom_la_SOURCES = \
     AllocMemManagersGeom.cpp \
     AnalyticGeometryTool.cpp \
+    AutoMidsurfaceTool.cpp \
     BasicTopologyEntity.cpp \
     Body.cpp \
     BodySM.cpp \
@@ -49,6 +51,7 @@ libcubit_geom_la_SOURCES = \
     CAUniqueId.cpp \
     CGMApp.cpp \
     CGMEngineDynamicLoader.cpp \
+    CGMHistory.cpp \
     Chain.cpp \
     CoEdge.cpp \
     CoEdgeSM.cpp \
@@ -95,6 +98,7 @@ libcubit_geom_la_SOURCES = \
     ModelQueryEngine.cpp \
     OffsetSplitTool.cpp \
     OldUnmergeCode.cpp \
+    PeriodicParamTool.cpp \
     Point.cpp \
     PointSM.cpp \
     RefCollection.cpp \
@@ -128,6 +132,7 @@ libcubit_geom_la_SOURCES = \
 # not be installed, move it to the _SOURCES list above.
 libcubit_geom_la_include_HEADERS = \
   AnalyticGeometryTool.hpp \
+  AutoMidsurfaceTool.hpp \
   BasicTopologyEntity.hpp \
   Body.hpp \
   BodySM.hpp \
@@ -146,6 +151,7 @@ libcubit_geom_la_include_HEADERS = \
   CAUniqueId.hpp \
   CGMApp.hpp \
   CGMEngineDynamicLoader.hpp \
+  CGMHistory.hpp \
   Chain.hpp \
   CoEdge.hpp \
   CoEdgeSM.hpp \
@@ -199,6 +205,7 @@ libcubit_geom_la_include_HEADERS = \
   ModelQueryEngine.hpp \
   OffsetSplitTool.hpp \
   OldUnmergeCode.hpp \
+  PeriodicParamTool.hpp \
   Point.hpp \
   PointSM.hpp \
   RefCollection.hpp \

@@ -1168,3 +1168,20 @@ void CubitFacet::add_edge(CubitFacetEdge *edge)
 
   edge->add_facet( this );
 }
+
+
+CubitPoint *CubitFacet::opposite_point( CubitFacetEdge *edge )
+{
+  int i;
+  for( i = 0; i < 3; i++ )
+    if( point(i) != edge->point(0) && point(i) != edge->point(1) )
+      return point(i);
+
+  return NULL;
+}
+
+CubitVector CubitFacet::update_normal( void )
+{
+   this->update_plane();
+   return normal();
+}

@@ -84,10 +84,10 @@ CubitStatus FacetProjectTool::project(
         
       // Do the work
     CubitBoolean point_changed;
-    do_projection(segments, point_changed, tolerance_length);
+    success = do_projection(segments, point_changed, tolerance_length);
     
       // fill in segmentPoints
-    assert (segPoints.size() == segments.size());
+//    assert (segPoints.size() == segments.size());
     segmentPoints.resize( segPoints.size() );
     segPoints.reset();
     for ( i = 0; i < segPoints.size(); i++ )
@@ -815,20 +815,24 @@ FacetProjectTool::do_projection( const DLIList<CubitVector*>& passed_list,
     
     PST_Point* start_point = last_point;
     PST_Point* end_point = end_pt;
-    project( last_point, end_pt );
-    if ((*start_point - *last_point).length_squared() > TOL_SQR)
+    if(project( last_point, end_pt ) == CUBIT_SUCCESS)
     {
-       segPoints.move_to(start_point);
-       segPoints.change_to(last_point);
-       point_changed = CUBIT_TRUE;
+      if ((*start_point - *last_point).length_squared() > TOL_SQR)
+      {
+        segPoints.move_to(start_point);
+        segPoints.change_to(last_point);
+        point_changed = CUBIT_TRUE;
+      }
+      if ((*end_pt - *end_point).length_squared() > TOL_SQR)
+      {
+        segPoints.move_to(end_point);
+        segPoints.change_to(end_pt);
+        point_changed = CUBIT_TRUE;
+      }
+      last_point = end_pt;
     }
-    if ((*end_pt - *end_point).length_squared() > TOL_SQR)
-    {
-       segPoints.move_to(end_point);
-       segPoints.change_to(end_pt);
-       point_changed = CUBIT_TRUE;
-    }
-    last_point = end_pt;
+    else
+      return CUBIT_FAILURE;
   
   } // end for( i = segments )
   
@@ -853,7 +857,7 @@ FacetProjectTool::do_projection( const DLIList<CubitVector*>& passed_list,
 //-------------------------------------------------------------------------
 CubitStatus FacetProjectTool::project( PST_Point* &start, PST_Point* &end )
 {
-  PST_Edge* edge,* closest_edge;
+  PST_Edge* edge,* closest_edge, *last_closest_edge=NULL;
   PST_Face* closest_face;
   PST_Point* point;
   PST_Point* start_point = start;
@@ -898,10 +902,14 @@ CubitStatus FacetProjectTool::project( PST_Point* &start, PST_Point* &end )
     
       // Get face or edge adjacent to start and closest to the polyline segment
     stat = next_around_point( start_point, *end, closest_face, closest_edge, 
-                              is_boundary_edge );
+                              is_boundary_edge, last_closest_edge);
+
+    if(closest_edge)
+      last_closest_edge = closest_edge;
+
     if (!stat || (closest_face && closest_edge))
     {
-      assert(false);
+ //     assert(false);
       return stat;
     }
     
@@ -1010,7 +1018,12 @@ CubitStatus FacetProjectTool::project( PST_Point* &start, PST_Point* &end )
           // Otherwise closest point to segment end is in the interior
           // of the edge -- split the edge.
         else
-          point = split_edge( closest_edge, t_edge );
+        {
+          if(start_point != closest_edge->start_point())
+            point = split_edge( closest_edge, 1.0 - t_edge );
+          else
+            point = split_edge( closest_edge, t_edge );
+        }
       }
     } // if(closest_edge)
 
@@ -1077,7 +1090,8 @@ CubitStatus FacetProjectTool::next_around_point ( PST_Point* start,
                                         const CubitVector& seg_end,
                                         PST_Face*& closest_face,
                                         PST_Edge*& closest_edge,
-                                        CubitBoolean & is_boundary_edge )
+                                        CubitBoolean & is_boundary_edge,
+                                        PST_Edge *last_closest_edge)
 {
   DLIList<PST_Face*> face_list;
   DLIList<PST_Edge*> boundary_edges;
@@ -1183,7 +1197,7 @@ CubitStatus FacetProjectTool::next_around_point ( PST_Point* start,
         const double dist_sqr = 
           tangent.length_squared() - dot_prod * dot_prod / prev.length_squared();
 
-        if (dist_sqr <= shortest_dist_sqr)
+        if (dist_sqr <= shortest_dist_sqr && coedge->edge() != last_closest_edge)
         {
           closest_face = 0;
           closest_edge = coedge->edge();
@@ -1226,7 +1240,7 @@ CubitStatus FacetProjectTool::next_around_point ( PST_Point* start,
     
     const double dist_sqr =
       tangent.length_squared() - dot_prod * dot_prod / edge_tan.length_squared();
-    if (dist_sqr < shortest_dist_sqr)
+    if (dist_sqr < shortest_dist_sqr && edge != last_closest_edge)
     {
       closest_edge = edge;
       is_boundary_edge = CUBIT_TRUE;

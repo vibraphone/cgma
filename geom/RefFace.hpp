@@ -450,6 +450,13 @@ public :
     //R CUBIT_TRUE/CUBIT_FALSE
     //- This function returns CUBIT_TRUE if the underlying geometry
     //- of the face is planar. CUBIT_FALSE otherwise.
+  
+  CubitBoolean is_cylindrical();
+    //R CubitBoolean
+    //R CUBIT_TRUE/CUBIT_FALSE
+    //- This function returns CUBIT_TRUE if the underlying geometry
+    //- of the face is conical (cylinders are subsets of cones). 
+    //- CUBIT_FALSE otherwise.
 
   CubitStatus get_point_normal( CubitVector& origin, CubitVector& normal );
     //- Only valid for planar surfaces
@@ -516,10 +523,6 @@ private:
 #endif
   int hardPointColor;
 
-  double find_crack_length_no_uv();
-  //- returns the crack length of the periodic surface (which can only have
-  //- two loops, if there is some problem with the uv space.
-     
 };
 #endif
 

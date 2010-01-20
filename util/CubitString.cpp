@@ -9,10 +9,10 @@
 
 #include <iomanip>
 
-#include <stddef.h>
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
+#include <cstddef>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
 
 class CubitStringRep
 {
@@ -114,7 +114,7 @@ CubitString::CubitString()
  // Create the empty string rep
   if (!sEmptyStringRep)
   {
-    static char dummy = CubitStringRep::initialize_empty_string_rep();
+    CubitStringRep::initialize_empty_string_rep();
   }
   rep = sEmptyStringRep;
   rep->increment();
@@ -136,7 +136,7 @@ CubitString::CubitString(const char *s)
 {
     // Use a static variable in order to call a function
     // once and only once.
-  static char dummy = CubitStringRep::initialize_empty_string_rep();
+  CubitStringRep::initialize_empty_string_rep();
   
     // If it's an empty string...
   if (!s || s[0] == '\0')
@@ -387,10 +387,14 @@ void CubitString::put_at(size_t pos, char c)
     else
     {
         // Append character the lazy way
-      char buf[2];
-      buf[0] = c;
-      buf[1] = '\0';
-      operator+=(buf);
+      size_t new_count = length() + 1;
+      char *buf = new char[new_count + 1];
+      memcpy(buf, rep->chars, length());
+      buf[new_count -1] = c;
+      buf[new_count] = '\0';
+      rep->decrement();
+      rep = new CubitStringRep(buf, 1);
+      rep->increment();
     }
   }
 }
@@ -439,6 +443,17 @@ void CubitString::to_upper()
   
     // convert this string to lower case
   to_upper(p);
+}
+
+void CubitString::tokenize( char *delimiter, std::vector<CubitString> &strings )
+{
+  char* tmp_word;
+  tmp_word = strtok( rep->chars, delimiter );
+  if( tmp_word != NULL )
+    strings.push_back( CubitString( tmp_word ) );
+
+  while( tmp_word=strtok( NULL, delimiter ) )
+    strings.push_back( CubitString( tmp_word ) );
 }
 
 bool CubitString::operator==(const CubitString& s2) const

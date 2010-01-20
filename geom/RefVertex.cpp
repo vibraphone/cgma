@@ -179,6 +179,10 @@ RefEdge *RefVertex::common_ref_edge(RefVertex *other_vertex,
   int i;
   for (i = temp_list.size(); i > 0; i--) {
     RefEdge *common_edge = CAST_TO(temp_list.get(), RefEdge);
+
+    if( NULL == common_edge )
+      continue;
+
       //This extra 'if' block is needed in case other_vertex == this
     if ( ( common_edge->start_vertex() == other_vertex &&
            common_edge->end_vertex() == this) ||
@@ -187,6 +191,8 @@ RefEdge *RefVertex::common_ref_edge(RefVertex *other_vertex,
     {
       if (common_edge && (!owning_face || common_edge->is_child(owning_face)))
         return common_edge;
+      else
+        temp_list.step();
     }
     else
       temp_list.step();

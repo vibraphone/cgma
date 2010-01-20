@@ -21,7 +21,7 @@
 #include "GeometryQueryTool.hpp"
 
 
-    
+
 
 CubitAttrib::CubitAttrib(RefEntity *attrib_owner)
 {
@@ -31,12 +31,12 @@ CubitAttrib::CubitAttrib(RefEntity *attrib_owner)
   hasWritten = CUBIT_FALSE;
   deleteAttrib = CUBIT_FALSE;
   nextAttrib = NULL;
-  
+
     // add this to the owner
   if (attrib_owner) attrib_owner->add_cubit_attrib(this);
 }
 
-CubitAttrib::~CubitAttrib() 
+CubitAttrib::~CubitAttrib()
 {
   if( !hasActuated )
     CADeferredAttrib::remove_unactuated_ca( this );
@@ -50,7 +50,7 @@ CubitStatus CubitAttrib::actuate_list(DLIList<RefEntity*> entity_list)
     ref_ent = entity_list.get_and_step();
     ref_ent->actuate_cubit_attrib(CA_ENTITY_NAME);
     ref_ent->actuate_cubit_attrib ( CA_UNIQUE_ID );
-    ref_ent->actuate_cubit_attrib(CA_SIZING_FUNCTION_SKELETON);    
+    ref_ent->actuate_cubit_attrib(CA_SIZING_FUNCTION_SKELETON);
     ref_ent->actuate_cubit_attrib(CA_MESH_INTERVAL);
     ref_ent->actuate_cubit_attrib(CA_GROUP);
     ref_ent->actuate_cubit_attrib(CA_GENESIS_ENTITY);
@@ -90,10 +90,10 @@ CubitStatus CubitAttrib::actuate_list(DLIList<RefEntity*> entity_list)
     ref_ent->actuate_cubit_attrib(CA_MATERIAL_BLOCK);
 //#endif
     ref_ent->actuate_cubit_attrib(CA_MERGE_STATUS);
-  } 
+  }
   return CUBIT_SUCCESS;
 }
-  
+
 void CubitAttrib::has_written(CubitBoolean set_has_written)
 {
   hasWritten = set_has_written;
@@ -121,7 +121,7 @@ int CubitAttrib::equivalent(CubitSimpleAttrib* csa_ptr)
 {
     //- return true if the csa and this are equivalent
    CubitSimpleAttrib* this_csa_ptr = cubit_simple_attrib();
-       
+
    CubitBoolean equivalent =
        CubitSimpleAttrib::equivalent(csa_ptr, this_csa_ptr);
    delete this_csa_ptr;

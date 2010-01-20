@@ -24,7 +24,7 @@
 
 #include <iostream>
 
-#include <string.h>
+#include <cstring>
 #include "CubitUtilConfigure.h"
 
 class CUBIT_UTIL_EXPORT GetLongOpt {

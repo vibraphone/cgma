@@ -20,7 +20,6 @@
 CubitStatus CompSurfFacets::setup( const SurfPtrList& surface_data )
 {
   GMem gmem;
-  int num_points, num_facets, num_triangles;
   
   // Set the size of this array of flags.
   ignoreFlags.resize(surface_data.size());
@@ -31,37 +30,37 @@ CubitStatus CompSurfFacets::setup( const SurfPtrList& surface_data )
     Surface* surface = surface_data[index];
     
     CubitStatus result = surface->get_geometry_query_engine()
-      ->get_graphics( surface, num_triangles, num_points, num_facets, &gmem );
+      ->get_graphics( surface, &gmem );
     if ( !result )
       return CUBIT_FAILURE;
       
     int* f_itor = gmem.facet_list();
-    int* f_end = f_itor + num_facets;
+    int* f_end = f_itor + gmem.fListCount;
     int tri_count = 0;
+    bool non_tri = false;
     while ( f_itor < f_end )
     {
         // If facet is not a triangle, it will be split into
         // triangles later.  Update tri_count accordingly.
       int pt_count = *f_itor;
+      if(pt_count != 3)
+        non_tri = true;
       tri_count += pt_count - 2;
       f_itor += (pt_count + 1);
     }
-    
-    if (tri_count != num_triangles)
+
+    if(non_tri)
       PRINT_WARNING("Non-triangular facets encountered in surface graphics.\n");
     
-    assert(gmem.fListCount == num_facets);
-    assert(gmem.pointListCount == num_points);
-    
     int offset = pointList.size();
-    pointList.resize( offset + num_points );
+    pointList.resize( offset + gmem.pointListCount );
     
     int tri_offset = triangleData.size();
     triangleData.resize( tri_offset + tri_count * 4 );
     
     PointList::iterator p_itor = pointList.begin() + offset;
     GPoint* g_itor = gmem.point_list();
-    GPoint* g_end = g_itor + num_points;
+    GPoint* g_end = g_itor + gmem.pointListCount;
     for ( ; g_itor != g_end; ++g_itor )
     {
       //CubitVector vect(g_itor->x, g_itor->y, g_itor->z);
@@ -74,7 +73,7 @@ CubitStatus CompSurfFacets::setup( const SurfPtrList& surface_data )
     
     IntegerList::iterator t_itor = triangleData.begin() + tri_offset;
     f_itor = gmem.facet_list();
-    f_end = f_itor + num_facets;
+    f_end = f_itor + gmem.fListCount;
     while ( f_itor != f_end )
     {
         // Copy facet into triangleData.
@@ -465,10 +464,12 @@ void CompSurfFacets::consolidate_few_points( double tolerance )
     // Update the facet list using values from index_map.
   IntegerList::iterator itor = triangleData.begin();
   IntegerList::iterator end = triangleData.end();
-  while( itor++ != end )
+  while( itor != end )
+  {
+	++itor;
     for( int count = 3; count--; itor++ )
       *itor = index_map[*itor];
-
+  }
   delete [] index_map;
   pointsConsolidated = true;
 }
@@ -530,10 +531,13 @@ void CompSurfFacets::consolidate_many_points( double tolerance )
     // Use index_map to update facet list
   IntegerList::iterator itor = triangleData.begin();
   IntegerList::iterator end  = triangleData.end();
-  while (itor++ != end)
-    for (int count = 3; count--; itor++)
+  while( itor != end )
+  {
+	  ++itor;
+	  for (int count = 3; count--; itor++)
       *itor = index_map[*itor];
-  
+  }
+
   delete [] index_map;
   pointsConsolidated = true;
 }

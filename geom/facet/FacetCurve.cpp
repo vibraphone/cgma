@@ -238,12 +238,17 @@ double FacetCurve::measure()
 //-------------------------------------------------------------------------
 double FacetCurve::length_from_u( double parameter1, double parameter2 )
 {
-  if( periodic )
-  {
-    adjust_periodic_parameter( parameter1 );
-    adjust_periodic_parameter( parameter2 );
-  }
-  return curveFacetEvalTool->length_from_u( parameter1, parameter2 );   
+
+    //Don't perform the periodic adjustment so that
+    // this function will satisfy the properties of
+    // the function as defined in RefEdge.hpp.
+    // Also, take the fabs of the arc length for the same reason.
+  //if( periodic )
+  //{
+  //  adjust_periodic_parameter( parameter1 );
+  //  adjust_periodic_parameter( parameter2 );
+  //}
+  return fabs(curveFacetEvalTool->length_from_u( parameter1, parameter2 ));   
 }
 
 //-------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <cstdio>
 #include "CpuTimer.hpp"
 
 #include "CubitMessage.hpp"
@@ -9,7 +9,7 @@
   #include <sys/times.h>
 #endif
 
-#include <time.h>	
+#include <time.h>
 #ifdef SOLARIS
 #include <unistd.h>
 #endif
@@ -43,8 +43,12 @@ CpuTimer::CpuTimer()
 
   // Added by Cat for NT port
 #ifdef NT
-  nt_times(&current);    
+  nt_times(&current);
+  wallTimeInitial = clock();
+  wallTime = wallTimeInitial;
 #else
+  gettimeofday(&wallTimeInitial, NULL);
+  wallTime = wallTimeInitial;
   times( &current );
 #endif
   
@@ -84,24 +88,76 @@ CpuTimer::cpu_secs()
 }
 
 double
-CpuTimer::elapsed()
+CpuTimer::clock_secs()
 {
-  tms current;
+  double elapsed_time;
+#ifdef NT
+  clock_t current;
+  current = clock();
+  elapsed_time = double( current - wallTime );
+  elapsed_time = elapsed_time / HZ;
+
+  wallTime = current;
+#else
+  timeval current;
+  gettimeofday( &current, NULL );
+  double prev_time = wallTime.tv_sec;
+  prev_time += double( wallTime.tv_usec ) / 1000000.0;
+  
+  elapsed_time = current.tv_sec;
+  elapsed_time += double( current.tv_usec ) / 1000000.0;
+  elapsed_time = elapsed_time - prev_time;
+  
+  wallTime = current;
+#endif
+  
+  return elapsed_time;
+}
+
+double
+CpuTimer::elapsed(bool wall_time)
+{
+  if( wall_time )
+  {
+    double elapsed;
+#ifdef NT
+    clock_t current;
+    current = clock();
+    elapsed = double( current - wallTimeInitial);
+    elapsed = elapsed / HZ;
+#else    
+    double current_time;
+    timeval current;
+    gettimeofday( &current, NULL );
+    double initial_time;
+    initial_time = wallTimeInitial.tv_sec;
+    initial_time += double(wallTimeInitial.tv_usec) / 1000000.0;
+    current_time = current.tv_sec;
+    current_time += double( current.tv_usec ) / 1000000.0;
+    
+    elapsed = current_time - initial_time;
+#endif
+    return elapsed;
+  }
+  else
+  {
+    tms current;
 
 // Added by Cat for NT port
 #ifdef NT
-  nt_times(&current);    
+    nt_times(&current);    
 #else
-  times( &current );
+    times( &current );
 #endif
 // Store totals
   
-  time_t cpu_now = current.tms_utime +
-    current.tms_stime +
-    current.tms_cutime +
-    current.tms_cstime;
-  time_t elapsed = cpu_now - cpuInitial;
-  return (double) elapsed / HZ;
+    time_t cpu_now = current.tms_utime +
+        current.tms_stime +
+        current.tms_cutime +
+        current.tms_cstime;
+    time_t elapsed = cpu_now - cpuInitial;
+    return (double) elapsed / HZ;
+  }
 }
 
 

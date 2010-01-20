@@ -30,7 +30,8 @@ public:
 
   double distance_point_line(const double point[3], const double start[3], 
                              const double end[3], double &t);
-  int point_on_polyline(CubitVector& pt, DLIList<CubitVector*> &pt_list);
+  int point_on_polyline(CubitVector& pt, DLIList<CubitVector*> &pt_list,
+                         double *tol_in = NULL);
 
   double parametric_position(const double node[3],
                            const double pt1[3],
@@ -48,6 +49,41 @@ public:
     ///
 
   virtual CubitStatus initialize(){return CUBIT_SUCCESS;}
+
+  // The following copyright applies to the following two functions...
+  //
+  // Copyright 2001, softSurfer (www.softsurfer.com)
+  //
+  // This code may be freely used and modified for any purpose
+  // providing that this copyright notice is included with it.
+  // SoftSurfer makes no warranty for this code, and cannot be held
+  // liable for any real or imagined damage resulting from its use.
+  // Users of this code must verify correctness for their application.
+
+  static int intersect_triangle_with_ray( CubitVector &ray_origin, CubitVector &ray_direction,
+	  const CubitVector *p0, const CubitVector *p1, const CubitVector *p2,
+	  CubitVector* point, double &distance, int &edge_hit );
+    //- Find intersection point of a ray and a triangle
+    //    Return: -1 = triangle is degenerate (a segment or point)
+    //             0 = disjoint (no intersect)
+    //             1 = intersect at unique point
+    //             2 = are in the same plane
+
+  static int intersect_segment_with_ray( CubitVector &ray_origin, CubitVector &ray_direction,
+	  const CubitVector *p0, const CubitVector *p1,
+	  CubitVector* point, double &distance, int &point_hit, double tol=0.0 );
+    //- Find intersection point of a ray and a facet edge
+    //    Return: -1 = edge is degenerate (a point)
+    //             0 = disjoint (no intersect)
+    //             1 = intersect at unique point
+    //             2 = are the same line (infinite points)
+
+  static int intersect_point_with_ray( CubitVector &ray_origin, CubitVector &ray_direction, 
+	  const CubitVector* point, double &distance, double tol=0.0);
+    //- Find intersection of a ray and a point
+    //	  Return: 0 = no intersection
+    //			  1 = intersection
+
 
 protected:
   double mTolerance;

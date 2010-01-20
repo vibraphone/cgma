@@ -394,9 +394,8 @@ CubitStatus ImprintBoundaryTool::get_curve_facets( RefEdge* curve, PointList &se
     //make sure the segments are larger than the tolerance.
   const double dist_tol = 2*myTolerance + .5*myTolerance;// + .05*myTolerance;
   //const double dist_tol_sqr = dist_tol*dist_tol;
-  int n;
   Curve* curve_ptr = curve->get_curve_ptr();
-  curve_ptr->get_geometry_query_engine()->get_graphics( curve_ptr, n, &curve_graphics );
+  curve_ptr->get_geometry_query_engine()->get_graphics( curve_ptr, &curve_graphics );
   
   GPoint* gp = curve_graphics.point_list();
   ImprintPointData* last = new ImprintPointData( gp[0].x, gp[0].y, gp[0].z );
@@ -6006,6 +6005,14 @@ RefEdge* ImprintBoundaryTool::create_virtual_edge(RefVertex *start,
       return NULL;
   }
 
+  bool start_vertex_is_free = true;
+  if( start->num_parent_ref_entities() )
+    start_vertex_is_free = false;
+
+  bool end_vertex_is_free = true;
+  if( end->num_parent_ref_entities() )
+    end_vertex_is_free = false;
+
   DLIList<CoEdgeSM*> coedgesms;
   GeometryEntity *ge = start->get_geometry_entity_ptr();
   Point *start_psm = CAST_TO(ge, Point);
@@ -6021,6 +6028,12 @@ RefEdge* ImprintBoundaryTool::create_virtual_edge(RefVertex *start,
     assert(new_facet_curve != NULL);
     return (RefEdge*)NULL;
   }
+  
+  //if vertices are consumed....notify that they are gone.
+  if( start_vertex_is_free )
+    start->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+  if( end_vertex_is_free )
+    end->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
   
   Curve *new_curve_ptr = (Curve*) new_facet_curve;
   return GeometryQueryTool::instance()->make_RefEdge(new_curve_ptr);

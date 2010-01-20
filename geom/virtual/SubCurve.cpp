@@ -435,9 +435,9 @@ CubitStatus SubCurve::get_graphics( GMem& result )
     return CUBIT_SUCCESS;
   }
 
-  int i, junk;
+  int i;
   if( !real_curve()->get_geometry_query_engine()->
-    get_graphics( real_curve(), junk, &result ) )
+    get_graphics( real_curve(), &result ) )
     return CUBIT_FAILURE;
 
   if (0 == result.pointListCount)

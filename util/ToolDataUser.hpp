@@ -44,29 +44,31 @@ public:
   virtual ~ToolDataUser();
   //- automatically deletes all the chained ToolDatas
   
-  CubitBoolean delete_TD(IdentityFn specified_type);
+  virtual CubitBoolean delete_TD(IdentityFn specified_type);
   //- delete the specific type of tool data from the chain.
   //- return true if something was actually found and deleted.
 
-  CubitBoolean delete_TD(ToolData *td);
+  virtual CubitBoolean delete_TD(ToolData *td);
   //- delete the specific tool data from the chain.
   //- return true if something was actually found and deleted.
   
-  ToolData *remove_TD(IdentityFn specified_type);
+  virtual ToolData *remove_TD(IdentityFn specified_type);
   //- remove the specific type of tool data from the chain, and
   //- return it.
 
-  ToolData *remove_TD(ToolData *td);
+  virtual ToolData *remove_TD(ToolData *td);
   //- remove the specific tool data from the chain, and
   //- return it.
   
-  void add_TD(ToolData *new_td);
+  virtual void add_TD(ToolData *new_td);
   //- add the new_td to the beginning of the tool_data chain
   
   virtual ToolData *get_TD(IdentityFn specified_type);
   virtual ToolData const *get_TD(IdentityFn specified_type) const;
   virtual void get_all_TDs(IdentityFn specified_type, 
                            DLIList <ToolData *> *all_tds) const;
+  
+  virtual void get_all_TDs(DLIList <ToolData *> *all_tds) const;
   //- get the specific type of ToolData in the chain.
   //- returns null if not found.
   

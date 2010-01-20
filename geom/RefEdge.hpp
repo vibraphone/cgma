@@ -116,7 +116,7 @@ public :
   
   CubitSense sense( RefFace *face );
     //- Sense of this edge wrt the given face.
-    //- Return CUBIT_FORWARD or CUBIT_REVERSE.
+    //- Return CUBIT_FORWARD or CUBIT_REVERSED.
     //- Returns CUBIT_UNKNOWN if there is more than one coedge, and
     //- senses don't agree, or if there are no coedges.
     
@@ -444,6 +444,26 @@ public :
 
   double length_from_u( double parameter1,
                         double parameter2 );
+    //R double arc length
+    //I double parameter1, parameter value of one end of arc
+    //I double parameter2, parameter value of the other end of arc
+    //
+    //Calculates, the distance along the curve between parameters
+    // parameter1 and parameter2.
+    //
+    // The order of the paramters does not affect the result.
+    // That is, switching parameter1 and parameter2 will
+    // result in the same arc length.
+    //
+    // The resulting length is always non-negative.
+    //
+    // For periodic curves, the length is calculated along
+    // the curve in the diretion of increasing parameter value.
+    // Therefore, if the caller wants the length calculation
+    // to be in a direction that crosses the periodic break,
+    // the interval [parameter1, parameter2] should span a
+    // break point in the period.
+  
 
   CubitBoolean is_periodic();
     //R CubitBoolean
@@ -501,6 +521,12 @@ public :
 
   virtual int validate();
     //- Check that entity is valid. Returns number of problems detected.
+
+  CubitStatus evaluate_exterior_angle(double *exterior_angle);
+    //- Calculate the exterior angle between this curve and the
+    //- attached surfaces.  This function assumes that the curve is
+    //- only attached to two (2) surfaces, otherwise it returns CUBIT_FAILURE;
+
 
 //=========  Add Code by SRS of Cat,  3/3/99 2:28:31 PM  =========
   CubitBoolean is_tolerant();

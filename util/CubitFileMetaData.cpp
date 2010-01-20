@@ -28,7 +28,7 @@
 
 #include "CubitFileMetaData.hpp"
 #include "CubitFileIOWrapper.hpp"
-#include <string.h>
+#include <cstring>
 
 using namespace NCubitFile;
 

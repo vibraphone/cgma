@@ -6,8 +6,8 @@
 #include "CubitDefines.h"
 #include "CubitString.hpp"
 #include "CubitUtil.hpp"
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #include <vector>
 
 #include "SettingHandler.hpp"
@@ -33,6 +33,7 @@ CubitMessageHandler* CubitMessage::mHandler = NULL;
 int CubitMessage::infoFlag = CUBIT_TRUE;
 int CubitMessage::diagnosticFlag = CUBIT_FALSE;
 int CubitMessage::warningFlag = CUBIT_TRUE;
+int CubitMessage::errorFlag = CUBIT_TRUE;
 std::ofstream* CubitMessage::loggingStream = NULL;
 CubitString* CubitMessage::loggingFile = NULL;
 std::ofstream* CubitMessage::loggingErrorStream = NULL;
@@ -56,6 +57,7 @@ CubitMessage::CubitMessage()
 {
   infoFlag      = CUBIT_TRUE;
   warningFlag   = CUBIT_TRUE;
+  errorFlag     = CUBIT_TRUE;
   diagnosticFlag= CUBIT_FALSE;
   loggingStream = NULL;
   loggingFile   = NULL;
@@ -66,108 +68,108 @@ CubitMessage::CubitMessage()
     // Initialize the debugFlag array
   static MessageFlag staticDebugFlag[] =
   {
-    MessageFlag( 0, "UNUSED"),
-    MessageFlag( 1, "Debug Graphics toggle for some debug options."),
-    MessageFlag( 2, "Whisker weaving information"),
-    MessageFlag( 3, "Timing information for 3D Meshing routines."),
-    MessageFlag( 4, "Graphics Debugging (DrawingTool)"),
-    MessageFlag( 5, "FastQ debugging"),
-    MessageFlag( 6, "Submapping graphics debugging"),
-    MessageFlag( 7, "Knife progress whisker weaving information"),
-    MessageFlag( 8, "Mapping Face debug / Linear Programing debug "),
-    MessageFlag( 9, "Paver Debugging"),
-    MessageFlag(10, "WW: removed hex seam flag"),
-    MessageFlag(11, "Nodeset Associativity debugging"),
-    MessageFlag(12, "Fastq activity"),
-    MessageFlag(13, "Mesh entities"),
-    MessageFlag(14, "Model activity"),
-    MessageFlag(15, "2.5D Debugging (Project, Translate, Rotate)"),
-    MessageFlag(16, "RefFace activity"),
-    MessageFlag(17, "Use Count debugging"),
-    MessageFlag(18, "Webcut debugging"),
-    MessageFlag(19, "Feature Merge / Unmerge debugging"),
-    MessageFlag(20, "Parallel meshing activity"),
-    MessageFlag(21, "Boundary Layer Tool Debugging"),
-    MessageFlag(22, "ExodusMesh sizing function debugging"),
-    MessageFlag(23, "Draw after joining chords in WW"),
-    MessageFlag(24, "SelfCrossingLoop (and derivatives) debug info"),
-    MessageFlag(25, "Extra invalidity checking in WW"),
-    MessageFlag(26, "Surface Smoothing"),
-    MessageFlag(27, "Primal Construction debugging, see also flag 70"),
-    MessageFlag(28, "Plastering debugging"),
-    MessageFlag(29, "Volume SubMapping"),
-    MessageFlag(30, "Volume Mapping"),
-    MessageFlag(31, "CleanUp debugging"),
-    MessageFlag(32, "Pyramid debugging"),
-    MessageFlag(33, "Whisker Weaving inside chord list face drawing"),
-    MessageFlag(34, "If on Whisker Weaving doesn't merge sheets"),
-    MessageFlag(35, "If on WW query displays sheets before joining chords"),
-    MessageFlag(36, "Enable/Disable idr_keyword_debugger function"),
-    MessageFlag(37, "Superdrive debugging"),
-    MessageFlag(38, "WW hex formation messages"),
-    MessageFlag(39, "Doublet Pillower graphics output"),
-    MessageFlag(40, "Element Quality debugging output"),
-    MessageFlag(41, "Check_join adjacency check"),
-    MessageFlag(42, "Auto vertex type and sweep verification"),
-    MessageFlag(43, "Programmer Errors for SubMapping"),
-    MessageFlag(44, "Submapping Graphics Debugging"),
-    MessageFlag(45, "Pillow Sheet debugging"),
-    MessageFlag(46, "Paver breakout detection (expensive)"),
-    MessageFlag(47, "Extra LP debugging (see flag 8 also)"),
-    MessageFlag(48, "Geometry sizing function."),
-    MessageFlag(49, "Draws Face by Face Creation in Paving"),
-    MessageFlag(50, "Debugging for AutoSchemeSelect"),
-    MessageFlag(51, "Modified Paver (row by row, more intersection checking)"),
-    MessageFlag(52, "User Interface: If flag is enabled, filenames being\n"
-                "\t\t\tused for input will be echoed and each input line\n"
-                "\t\t\twill be echoed prior to being parsed."),
-    MessageFlag(53, "Surface Morpher debugging"),
-    MessageFlag(54, "Parser debugging"),
-    MessageFlag(55, "Stairtool general debugging"),
-    MessageFlag(56, "Stairtool face intersection debugging"),
-    MessageFlag(57, "Relative Interval/Length setting"),
-    MessageFlag(58, "StcVertex debugging of Whisker Weaving" ),
-    MessageFlag(59, "VGI developer error"),
-    MessageFlag(60, "StcVertex debugging of Looping" ),
-    MessageFlag(61, "List number of points used in curve faceting" ),
-    MessageFlag(62, "Print verbose information on group operations"),
-    MessageFlag(63, "Label Whisker Weaving diagrams tersely"),
-    MessageFlag(64, "No label on Whisker Weaving diagrams"),
-    MessageFlag(65, "Volume Morpher debugging"),
-    MessageFlag(66, "Print debug information on importing Pro/E geometry"),
-    MessageFlag(67, "List number of triangles used in surface faceting" ),
-    MessageFlag(68, "Debug information on tetrizing volumes" ),
-    MessageFlag(69, "Debug information on tet mesher geometry access" ),
-    MessageFlag(70, "STC Pillowing, see also flag 27" ),
-    MessageFlag(71, "Hex-Tet Debug Flag"),
-    MessageFlag(72, "DoubletPillower text messages"),
-    MessageFlag(73, "Auto Surface debugging (use new auto surf select)"),
-    MessageFlag(74, "Feature-based decomposition info"),
-    MessageFlag(75, "Many-to-many sweep imprint debugging"),
-    MessageFlag(76, "Virtual point and partition curve"),
-    MessageFlag(77, "Volume interval matching"),
-    MessageFlag(78, "Tipton Smoother jacobian modification enabler"),
-    MessageFlag(79, "VoidCleanupTool debugging"),
-    MessageFlag(80, "Hex-Tet informational messages"),
-    MessageFlag(81, "Curve Morpher Debugging"),
-    MessageFlag(82, "Diamond debugging"),
-    MessageFlag(83, "AutoSizer debugging"),
-    MessageFlag(84, "Surface auto decomposition"),
-    MessageFlag(85, "U-SubMapping debugging"),
-    MessageFlag(86, "Virtual curve and partition surface"),
-    MessageFlag(87, "Composite curve and composite surface"),
-    MessageFlag(88, "Volume partitioning"),
-    MessageFlag(89, "Tet meshing warning and debug messages"),
-    MessageFlag(90, "Geometry attributes"),
-    MessageFlag(91, "Smoothing Debug Output"),
-    MessageFlag(92, "Print name changed warnings"),
-    MessageFlag(93, "Hex Fix Up"),
-    MessageFlag(94, "Entity name attribute"),
-    MessageFlag(95, "Group imprint errors"),
-    MessageFlag(96, "GraftTool debugging"),
-    MessageFlag(97, "Quality details"),
-    MessageFlag(98, "Color code imported THEX meshes"),
-    MessageFlag(99, "Geometry creation"),
+    MessageFlag(  0, "UNUSED"),
+    MessageFlag(  1, "Debug Graphics toggle for some debug options."),
+    MessageFlag(  2, "Whisker weaving information"),
+    MessageFlag(  3, "Timing information for 3D Meshing routines."),
+    MessageFlag(  4, "Graphics Debugging (DrawingTool)"),
+    MessageFlag(  5, "FastQ debugging"),
+    MessageFlag(  6, "Submapping graphics debugging"),
+    MessageFlag(  7, "Knife progress whisker weaving information"),
+    MessageFlag(  8, "Mapping Face debug / Linear Programing debug "),
+    MessageFlag(  9, "Paver Debugging"),
+    MessageFlag( 10, "WW: removed hex seam flag"),
+    MessageFlag( 11, "Nodeset Associativity debugging"),
+    MessageFlag( 12, "Fastq activity"),
+    MessageFlag( 13, "Mesh entities"),
+    MessageFlag( 14, "Model activity"),
+    MessageFlag( 15, "2.5D Debugging (Project, Translate, Rotate)"),
+    MessageFlag( 16, "RefFace activity"),
+    MessageFlag( 17, "Use Count debugging"),
+    MessageFlag( 18, "Webcut debugging"),
+    MessageFlag( 19, "Feature Merge / Unmerge debugging"),
+    MessageFlag( 20, "Parallel meshing activity"),
+    MessageFlag( 21, "Boundary Layer Tool Debugging"),
+    MessageFlag( 22, "ExodusMesh sizing function debugging"),
+    MessageFlag( 23, "Draw after joining chords in WW"),
+    MessageFlag( 24, "SelfCrossingLoop (and derivatives) debug info"),
+    MessageFlag( 25, "Extra invalidity checking in WW"),
+    MessageFlag( 26, "Surface Smoothing"),
+    MessageFlag( 27, "Primal Construction debugging, see also flag 70"),
+    MessageFlag( 28, "Plastering debugging"),
+    MessageFlag( 29, "Volume SubMapping"),
+    MessageFlag( 30, "Volume Mapping"),
+    MessageFlag( 31, "CleanUp debugging"),
+    MessageFlag( 32, "Pyramid debugging"),
+    MessageFlag( 33, "Whisker Weaving inside chord list face drawing"),
+    MessageFlag( 34, "If on Whisker Weaving doesn't merge sheets"),
+    MessageFlag( 35, "If on WW query displays sheets before joining chords"),
+    MessageFlag( 36, "Enable/Disable idr_keyword_debugger function"),
+    MessageFlag( 37, "Superdrive debugging"),
+    MessageFlag( 38, "WW hex formation messages"),
+    MessageFlag( 39, "Doublet Pillower graphics output"),
+    MessageFlag( 40, "Element Quality debugging output"),
+    MessageFlag( 41, "Check_join adjacency check"),
+    MessageFlag( 42, "Auto vertex type and sweep verification"),
+    MessageFlag( 43, "Programmer Errors for SubMapping"),
+    MessageFlag( 44, "Submapping Graphics Debugging"),
+    MessageFlag( 45, "Pillow Sheet debugging"),
+    MessageFlag( 46, "Paver breakout detection (expensive)"),
+    MessageFlag( 47, "Extra LP debugging (see flag 8 also)"),
+    MessageFlag( 48, "Geometry sizing function."),
+    MessageFlag( 49, "Draws Face by Face Creation in Paving"),
+    MessageFlag( 50, "Debugging for AutoSchemeSelect"),
+    MessageFlag( 51, "Modified Paver: row by row, more intersection checks"),
+    MessageFlag( 52, "User Interface: If flag is enabled, filenames being\n"
+                "\t\t\t\tused for input will be echoed and each input\n"
+                "\t\t\t\tline will be echoed prior to being parsed."),
+    MessageFlag( 53, "Surface Morpher debugging"),
+    MessageFlag( 54, "Parser debugging"),
+    MessageFlag( 55, "Stairtool general debugging"),
+    MessageFlag( 56, "Stairtool face intersection debugging"),
+    MessageFlag( 57, "Relative Interval/Length setting"),
+    MessageFlag( 58, "StcVertex debugging of Whisker Weaving" ),
+    MessageFlag( 59, "VGI developer error"),
+    MessageFlag( 60, "StcVertex debugging of Looping" ),
+    MessageFlag( 61, "List number of points used in curve faceting" ),
+    MessageFlag( 62, "Print verbose information on group operations"),
+    MessageFlag( 63, "Label Whisker Weaving diagrams tersely"),
+    MessageFlag( 64, "No label on Whisker Weaving diagrams"),
+    MessageFlag( 65, "Volume Morpher debugging"),
+    MessageFlag( 66, "Print debug information on importing Pro/E geometry"),
+    MessageFlag( 67, "List number of triangles used in surface faceting" ),
+    MessageFlag( 68, "Debug information on tetrizing volumes" ),
+    MessageFlag( 69, "Debug information on tet mesher geometry access" ),
+    MessageFlag( 70, "STC Pillowing, see also flag 27" ),
+    MessageFlag( 71, "Hex-Tet Debug Flag"),
+    MessageFlag( 72, "DoubletPillower text messages"),
+    MessageFlag( 73, "Auto Surface debugging (use new auto surf select)"),
+    MessageFlag( 74, "Feature-based decomposition info"),
+    MessageFlag( 75, "Many-to-many sweep imprint debugging"),
+    MessageFlag( 76, "Virtual point and partition curve"),
+    MessageFlag( 77, "Volume interval matching"),
+    MessageFlag( 78, "Tipton Smoother jacobian modification enabler"),
+    MessageFlag( 79, "VoidCleanupTool debugging"),
+    MessageFlag( 80, "Hex-Tet informational messages"),
+    MessageFlag( 81, "Curve Morpher Debugging"),
+    MessageFlag( 82, "Diamond debugging"),
+    MessageFlag( 83, "AutoSizer debugging"),
+    MessageFlag( 84, "Surface auto decomposition"),
+    MessageFlag( 85, "U-SubMapping debugging"),
+    MessageFlag( 86, "Virtual curve and partition surface"),
+    MessageFlag( 87, "Composite curve and composite surface"),
+    MessageFlag( 88, "Volume partitioning"),
+    MessageFlag( 89, "Tet meshing warning and debug messages"),
+    MessageFlag( 90, "Geometry attributes"),
+    MessageFlag( 91, "Smoothing Debug Output"),
+    MessageFlag( 92, "Print name changed warnings"),
+    MessageFlag( 93, "Hex Fix Up"),
+    MessageFlag( 94, "Entity name attribute"),
+    MessageFlag( 95, "Group imprint errors"),
+    MessageFlag( 96, "GraftTool debugging"),
+    MessageFlag( 97, "Quality details"),
+    MessageFlag( 98, "Color code imported THEX meshes"),
+    MessageFlag( 99, "Geometry creation"),
     MessageFlag(100, "Skew Control debugging"),
     MessageFlag(101, "Parsing debugging"),
     MessageFlag(102, "CAEntityId debugging"),
@@ -179,7 +181,7 @@ CubitMessage::CubitMessage()
     MessageFlag(108, "Simulog tetmesher debugging"),
     MessageFlag(109, "Transition schemes debugging"),
     MessageFlag(110, "Mesh Defined Geometry"),
-    MessageFlag(111, "Tri mesher debugging"),
+    MessageFlag(111, "TriAdvance mesher debugging"),
     MessageFlag(112, "Auto Detail Suppression"),
     MessageFlag(113, "Extra Multi-sweep/sweep debugging"),
     MessageFlag(114, "Blend Finder Debugging"),
@@ -191,8 +193,8 @@ CubitMessage::CubitMessage()
     MessageFlag(120, "Print unassociated node locations on import mesh"),
     MessageFlag(121, "Print verbose infeasible match interval messages"),
     MessageFlag(122, "Mesh-Based Geometry Debug Information"),
-    MessageFlag(123, "Collect memory statistics from Tetmesh-GHS3D"),
-    MessageFlag(124, "Print verbose debugging information from Tetmesh-GHS3D"),
+    MessageFlag(123, "Collect memory statistics from Tetmesher"),
+    MessageFlag(124, "Print verbose Tetmesher debugging information"),
     MessageFlag(125, "Mesh refinement debugging"),
     MessageFlag(126, "Surface Splicer debugging"),
     MessageFlag(127, "SculptingTool debug flag"),
@@ -225,7 +227,7 @@ CubitMessage::CubitMessage()
     MessageFlag(154, "Split Surface Debugging"),
     MessageFlag(155, "Meshing Benchmarks Summary"),
     MessageFlag(156, "CAMAL Paver CleanUp debuging"),
-    MessageFlag(157, "Skeleton Sizing Function Debugging (timing & counts)"),
+    MessageFlag(157, "Skeleton Sizing Function timing and counts"),
     MessageFlag(158, "Write a CAMAL debug file"),
     MessageFlag(159, "Read a CAMAL debug file"),
     MessageFlag(160, "CAMAL debug file format is binary"),
@@ -245,8 +247,43 @@ CubitMessage::CubitMessage()
     MessageFlag(174, "Enable Quad-Coarsening Pinch outside corners"),
     MessageFlag(175, "Disable creation of crashbackup.cub during crash"),
     MessageFlag(176, "Enable UCP database checking"),
-    MessageFlag(177, "Enable Unconstrained Plastering Debug Drawing")
-
+    MessageFlag(177, "Enable Unconstrained Plastering Debug Drawing"),
+    MessageFlag(178, "Enable Harris instead of Parrish hex refinement"),
+    MessageFlag(179, "Enable Camal Sweeper for UCP Front Advancements.\n"
+                "\t\t\t\tIgnored if debug 189 is on"),
+    MessageFlag(180, "DecompAide (decomposition helper) debugging"),
+    MessageFlag(181, "MBG.  Draw curve paths."),
+    MessageFlag(182, "UCP Detailed Debug Printing." ),
+    MessageFlag(183, "Use legacy tools for multisweep meshing." ),
+    MessageFlag(184, "Enable old sheet refinement command." ),
+    MessageFlag(185, "Enable straddle elements on hardlines." ),
+    MessageFlag(186, "Disable parametric coordinates in TriAdvMesher" ),
+    MessageFlag(187, "Custom Autoscheme" ),
+    MessageFlag(188, "Tolerant Triangle Meshing" ),
+    MessageFlag(189, "Enable Tri-Based Surface offset in UCP.\n"
+                "\t\t\t\tTakes precedence over debug flag 179." ),
+    MessageFlag(190, "Count CAMAL calls to move_to and normal_at" ),
+    MessageFlag(191, "Auto clean messages" ),
+    MessageFlag(192, "MBG - nonmanifold edge check" ),
+    MessageFlag(193, "Tetmesh with stand-alone INRIA execuable thru files" ),
+    MessageFlag(194, "Hex Mesh Matching Debug drawing" ),
+    MessageFlag(195, "CaptureMeshTool print debug information" ),
+    MessageFlag(196, "TriAdvance mesher debug timings" ),
+    MessageFlag(197, "CAMAL Paver debugging (no Cubit smoothing, etc.)" ),
+    MessageFlag(198, "Auto Midsurface debugging" ),
+    MessageFlag(199, "Angle smoothing debugging" ),
+    MessageFlag(200, "Paver quality data output" ),
+    MessageFlag(201, "Paver cleanup edge metrics" ),
+    MessageFlag(202, "Disable Paver cleanup 3-3 replace"),
+    MessageFlag(203, "Disable Paver cleanup 3-offset-3/5 replace"),
+    MessageFlag(204, "Enable Paver cleanup 3-valent quad cluster" ),
+    MessageFlag(205, "Enable Paver cleanup partial chord collapse"),
+    MessageFlag(206, "Hex Mesh Matching, match chords one at a time." ),
+    MessageFlag(207, "Defeature and Geometry tolerant meshing" ),
+    MessageFlag(208, "unassigned" ),
+    MessageFlag(209, "unassigned" ),
+    MessageFlag(210, "unassigned" )
+    
       // IMPORTANT!!!
       // If you add a new debug flag, make sure that you change
       // the result of CubitMessage::number_of_debug_flags().
@@ -290,6 +327,15 @@ CubitMessage::~CubitMessage()
   instance_ = 0;
 }
 
+void CubitMessage::delete_instance()
+{
+  if( NULL != instance )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
+}
+
 int CubitMessage::number_of_debug_flags()
 {
   return NUM_DEBUG_FLAGS;
@@ -307,10 +353,12 @@ void CubitMessage::internal_error ( const int message_type,
   switch (message_type)
   {
     case CUBIT_ERROR:
-
-       print_it = CUBIT_TRUE;
-       prefix = "ERROR: ";
-       break;
+      if (errorFlag)
+      {
+        print_it = CUBIT_TRUE;
+        prefix = "ERROR: ";
+      }
+      break;
     case CUBIT_WARNING:
       if (warningFlag)
       {
@@ -718,6 +766,11 @@ CubitBoolean CubitMessage::Interrupt()
   return cubit_intr;
 }
 
+void CubitMessage::clear_Interrupt()
+{
+  cubit_intr = CUBIT_FALSE;
+}
+
 void CubitMessage::set_message_handler(CubitMessageHandler *handler)
 {
   CubitMessage::mHandler = handler;
@@ -744,7 +797,7 @@ MessageFlag::MessageFlag()
 }
 
 
-void CubitMessage::set_logging_file_setting(char* filename)
+void CubitMessage::set_logging_file_setting(const char* filename)
 {
   if (loggingFile && *loggingFile == filename)
      return;
@@ -765,11 +818,17 @@ void CubitMessage::set_logging_file_setting(char* filename)
   }
 }
 
-void CubitMessage::set_error_logging_file_setting(char* filename)
+void CubitMessage::set_error_logging_file_setting(const char* filename, CubitBoolean resume_flag)
 {
   if (loggingErrorFile && *loggingErrorFile == filename)
      return;
 
+  if(loggingFile && *loggingFile == filename)
+  {
+    PRINT_ERROR("Can't explicitly set the Error logging file to be the same as the logging file.\n");
+    return;
+  }
+ 
   if (CubitUtil::compare(filename,"terminal")) { // Filename is 'terminal'
     if (loggingErrorStream != NULL) {
       loggingErrorStream->close();
@@ -782,7 +841,10 @@ void CubitMessage::set_error_logging_file_setting(char* filename)
   }
   else {
     loggingErrorFile   = new CubitString(filename);
-    loggingErrorStream = new std::ofstream(filename, std::ios::out | std::ios::app );
+    if(resume_flag)
+        loggingErrorStream = new std::ofstream(filename, std::ios::out | std::ios::app );
+    else
+        loggingErrorStream = new std::ofstream(filename );
   }
 }
 

@@ -72,6 +72,9 @@
 #include "CAPartitionVG.hpp"
 #include "CAVirtualVG.hpp"
 
+#include "HiddenEntitySet.hpp"
+#include "SubEntitySet.hpp"
+
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -109,8 +112,21 @@ VirtualQueryEngine::~VirtualQueryEngine( )
 //		PRINT_WARNING("Not all virtual geometry has been removed.  "
 //		              "This is a bug (memory leak).  Please report it.\n");
 //	assert( virtual_entity_list_.size() == 0 );
+
+  PartitionEngine::delete_instance();
+  CompositeEngine::delete_instance();
+
   instance_ = NULL;
 }
+
+void VirtualQueryEngine::delete_instance()
+{
+  if( NULL != instance_ )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
+}    
 
 
 //-------------------------------------------------------------------------
@@ -170,8 +186,7 @@ CubitStatus VirtualQueryEngine::transform_vec_position(
 // Creation Date : 
 //-------------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_graphics(
-  Surface* surf_ptr, int& number_triangles,
-  int& number_points, int& number_facets,
+  Surface* surf_ptr, 
   GMem* gMem,
   unsigned short normal_tol,
   double dist_tol,
@@ -181,24 +196,19 @@ CubitStatus VirtualQueryEngine::get_graphics(
   PartitionSurface* ps_ptr = CAST_TO(surf_ptr, PartitionSurface );
   if( cs_ptr != NULL )
   {
-    return get_composite_surface_facetting( cs_ptr,
-                                            number_triangles, number_points,
-                                            number_facets, gMem,
+    return get_composite_surface_facetting( cs_ptr, gMem,
                                             normal_tol, dist_tol, max_edge_length );
   }
   else if( ps_ptr != NULL )
   {
-    return get_partition_surface_facetting( ps_ptr,
-                                            number_triangles, number_points,
-                                            number_facets, gMem,
+    return get_partition_surface_facetting( ps_ptr, gMem,
                                             normal_tol, dist_tol, max_edge_length );
   }
   else
   {
     PRINT_INFO("VirtualQueryEngine::get_graphics_facets"
-               "( s%p, %d, %d, %d, %p, %d, %f ) = CUBIT_FAILURE\n",
-               surf_ptr, number_triangles, 
-               number_points, number_facets, gMem, normal_tol, dist_tol);
+               "( s%p, %p, %d, %f ) = CUBIT_FAILURE\n",
+               surf_ptr, gMem, normal_tol, dist_tol);
     return CUBIT_FAILURE;
   }
 }
@@ -214,7 +224,6 @@ CubitStatus VirtualQueryEngine::get_graphics(
 // Creation Date : 10/10/97
 //-----------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_graphics( Curve* curve_ptr,
-                                                 int& num_points,
                                                  GMem* gMem,
                                                  double ) const
 {
@@ -225,11 +234,11 @@ CubitStatus VirtualQueryEngine::get_graphics( Curve* curve_ptr,
   
   if( ccurve != NULL )
   {
-    result = get_composite_curve_facetting( ccurve, num_points, gMem );
+    result = get_composite_curve_facetting( ccurve, gMem );
   }
   else if( pcurve != NULL )
   {
-    result = get_partition_curve_facetting( pcurve, num_points, gMem );
+    result = get_partition_curve_facetting( pcurve, gMem );
   }
   else
   {
@@ -278,13 +287,11 @@ CubitStatus VirtualQueryEngine::get_v_isoparametric_points(Surface*,
 //-----------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_composite_curve_facetting(
   CompositeCurve* ccurve_ptr,
-  int& num_points,
   GMem* gMem ) const
 {
     // Just return if gMem is NULL
   if (gMem == NULL)
   {
-    num_points = 0;
     return CUBIT_SUCCESS;
   }
   
@@ -304,11 +311,12 @@ CubitStatus VirtualQueryEngine::get_composite_curve_facetting(
       curve_ptr->get_geometry_query_engine();
     
       // Get the GME to facet the curve
-    int this_point_count = 0;
     CubitStatus current_status = 
-      GQE_ptr->get_graphics (curve_ptr, this_point_count, &current_gmem);
+      GQE_ptr->get_graphics (curve_ptr, &current_gmem);
     if( current_status == CUBIT_FAILURE )
       return CUBIT_FAILURE;
+    
+    int this_point_count = current_gmem.pointListCount;
       
     // Make sure the passed in gmem is big enough
     gMem->allocate_more_polylines(this_point_count-1);
@@ -355,7 +363,6 @@ CubitStatus VirtualQueryEngine::get_composite_curve_facetting(
     gMem->pointListCount = point_count;
   }
   
-  num_points = point_count;
   gMem->pointListCount = point_count;
   return CUBIT_SUCCESS;
 }
@@ -374,11 +381,10 @@ CubitStatus VirtualQueryEngine::get_composite_curve_facetting(
 // Creation Date : 10/10/97
 //-----------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_partition_curve_facetting(
-  PartitionCurve* pcurve_ptr, int& num_steps, GMem* gMem ) const
+  PartitionCurve* pcurve_ptr, GMem* gMem ) const
 {
   assert( gMem != NULL );
   CubitStatus result = pcurve_ptr->get_graphics( *gMem );
-  num_steps = gMem->pointListCount;
   return result;
 }
 
@@ -394,9 +400,6 @@ CubitStatus VirtualQueryEngine::get_partition_curve_facetting(
 //-------------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_composite_surface_facetting(
   CompositeSurface* surf_ptr,
-  int& number_triangles,
-  int& number_points,
-  int& number_facets,
   GMem* gMem,
   unsigned short normal_tol,
   double dist_tol,
@@ -407,19 +410,16 @@ CubitStatus VirtualQueryEngine::get_composite_surface_facetting(
     
   if (surf_ptr->get_graphics(*gMem))
   {
-    number_triangles = gMem->fListCount / 4;
-    number_points = gMem->pointListCount;
-    number_facets = gMem->fListCount;
     return CUBIT_SUCCESS;
   }
     
-  number_triangles = 0;
-  number_points = 0;
-  number_facets = 0;
 
     // Get the underlying Surfaces
   GeometryQueryEngine* gqe_ptr;
   GMem *gMem_list = new GMem[ surf_ptr->num_surfs() ];
+  
+  int total_number_points = 0;
+  int total_number_facets = 0;
   
     // Get the facets of each Surface
   int i;
@@ -431,21 +431,19 @@ CubitStatus VirtualQueryEngine::get_composite_surface_facetting(
     gqe_ptr = surface_ptr->get_geometry_query_engine();
     
     tri_count = pt_count = facet_count = 0;
-    gqe_ptr->get_graphics( surface_ptr, tri_count, 
-                                  pt_count, facet_count, &(gMem_list[i]),
+    gqe_ptr->get_graphics( surface_ptr, &(gMem_list[i]),
                                   normal_tol, dist_tol, longest_edge );
     
-    number_triangles += tri_count;
-    number_facets += gMem_list[i].fListCount;
-    number_points += gMem_list[i].pointListCount;
+    total_number_facets += gMem_list[i].fListCount;
+    total_number_points += gMem_list[i].pointListCount;
   }
   
   int point_offset = 0;
   int face_offset = 0;
-  gMem->replace_point_list(new GPoint[number_points],
-                           number_points, number_points);
-  gMem->replace_facet_list(new int[number_facets],
-                           number_facets, number_facets);
+  gMem->replace_point_list(new GPoint[total_number_points],
+                           total_number_points, total_number_points);
+  gMem->replace_facet_list(new int[total_number_facets],
+                           total_number_facets, total_number_facets);
   
   for( i = 0; i < surf_ptr->num_surfs(); i++ )
   {
@@ -480,7 +478,6 @@ CubitStatus VirtualQueryEngine::get_composite_surface_facetting(
   }
   
   gMem->consolidate_points(10*GEOMETRY_RESABS);
-  number_points = gMem->pointListCount;
 //     // Debug!!!
 //   int q;
 //   for (q = 0; q < bte_list.size(); q++)
@@ -533,9 +530,6 @@ CubitStatus VirtualQueryEngine::get_composite_surface_facetting(
 //-------------------------------------------------------------------------
 CubitStatus VirtualQueryEngine::get_partition_surface_facetting(
   PartitionSurface* surf_ptr,
-  int& num_triangles,
-  int& num_points,
-  int& num_facets,
   GMem* gMem,
   unsigned short ,
   double,
@@ -576,11 +570,6 @@ CubitStatus VirtualQueryEngine::get_partition_surface_facetting(
   gMem->fListCount = surf_facets.size() * 4;
   gMem->pointListCount = surf_points.size();
     
-    // set return values and if gMem is NULL return
-  num_triangles = surf_facets.size();
-  num_facets = gMem->fListCount;
-  num_points = gMem->pointListCount;
-  
     // put points in GMem and mark each point with
     // its index in the array
   surf_points.reset();
@@ -1019,6 +1008,55 @@ CubitBoolean VirtualQueryEngine::is_virtual(DLIList<RefEntity*> &entity_list,
   return CUBIT_FALSE;
 }
 
+CubitBoolean VirtualQueryEngine::is_partition( RefEntity *ref_entity )
+{
+  RefEdge *ref_edge = CAST_TO( ref_entity, RefEdge );
+
+  if( ref_edge )
+  {
+    Curve *curve_ptr = ref_edge->get_curve_ptr();
+    PartitionCurve *part_curve = CAST_TO(curve_ptr, PartitionCurve);
+
+    if( part_curve )
+      return CUBIT_TRUE;
+  }
+
+  return CUBIT_FALSE;
+}
+
+CubitStatus VirtualQueryEngine::get_sister_partitions( RefEntity *ref_entity,
+                                                       DLIList<RefEntity*> &sisters)
+{
+  RefEdge *ref_edge = CAST_TO( ref_entity, RefEdge );
+
+  if( ref_edge )
+  {
+    Curve *curve_ptr = ref_edge->get_curve_ptr();
+    PartitionCurve *part_curve = CAST_TO(curve_ptr, PartitionCurve);
+
+    if( part_curve )
+    {
+      DLIList<TopologyBridge*> tb_list;
+      part_curve->sub_entity_set().get_owners( tb_list );
+      
+      int k;
+      for( k=tb_list.size(); k--; )
+      {
+        TopologyBridge *tmp_bridge = tb_list.get_and_step();
+        TopologyEntity *te = tmp_bridge->topology_entity();
+        if( te )
+        {
+          RefEntity *sister = CAST_TO(te, RefEntity ); 
+          if( sister )
+            sisters.append( sister );
+        }
+      }
+    }
+  }
+
+  return CUBIT_SUCCESS;
+}
+
 //-------------------------------------------------------------------------
 // Purpose	 : Sort a DLList of RefEdges to be used in the construction
 //		   of a CompositeCurve.
@@ -1190,6 +1228,28 @@ VirtualQueryEngine::get_intersections( Curve*, Surface*,
    return CUBIT_FAILURE;
 }
 
+int VirtualQueryEngine::curve_is_on_ignored_surface(Curve *curve_in, Surface *surf) 
+{ 
+  int i, ret = 0;
+
+  CompositeSurface *cs = dynamic_cast<CompositeSurface*>(surf);
+  if(cs && curve_in)
+  {
+    DLIList<Surface*> ignored_surfs;
+    cs->get_ignored_surfs(ignored_surfs);
+    for(i=ignored_surfs.size(); i>0 && !ret; i--)
+    {
+      Surface *surf = ignored_surfs.get_and_step();
+      DLIList<Curve*> crvs;
+      surf->curves(crvs);
+      if(crvs.is_in_list(curve_in))
+        ret = 1;
+    }
+  }
+
+  return ret;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : This function get underlying curves for virtual curves
 //
@@ -1258,6 +1318,77 @@ CubitStatus VirtualQueryEngine::get_underlying_surfaces(Surface * surf_ptr,
    else if ( part_surf )
      surf_list.append(CAST_TO(part_surf->partitioned_entity(),
                        TopologyBridge));
+   return CUBIT_SUCCESS;
+}
+
+CubitStatus VirtualQueryEngine::get_underlying_bridges(TopologyBridge* bridge_ptr,
+                                        DLIList<TopologyBridge*>& bridge_list)
+{
+   assert (bridge_ptr);
+   CompositeSurface *comp_surf = CAST_TO(bridge_ptr, CompositeSurface);
+   PartitionSurface *part_surf = CAST_TO(bridge_ptr, PartitionSurface);
+   CompositeCurve *comp_curve = CAST_TO(bridge_ptr, CompositeCurve);
+   PartitionCurve *part_curve = CAST_TO(bridge_ptr, PartitionCurve);
+   CompositePoint *comp_point = CAST_TO(bridge_ptr, CompositePoint);
+   PartitionPoint *part_point = CAST_TO(bridge_ptr, PartitionPoint);
+
+   if ( comp_surf )
+   {
+     int i;
+     for (i = 0; i < comp_surf->num_surfs(); i ++)
+     {
+       part_surf = CAST_TO(comp_surf->get_surface(i), PartitionSurface);
+       if (!part_surf)
+         bridge_list.append_unique(CAST_TO(comp_surf->get_surface(i),
+                                  TopologyBridge));
+       else
+       {
+         if(dynamic_cast<Surface*>(part_surf->partitioned_entity()))
+         {
+           bridge_list.append_unique(CAST_TO(part_surf->partitioned_entity(),
+                                    TopologyBridge));
+         }
+       }
+     }
+   }
+   else if ( part_surf )
+     bridge_list.append(CAST_TO(part_surf->partitioned_entity(),
+                       TopologyBridge));
+   else if ( comp_curve )
+   {
+     int i;
+     for (i = 0; i < comp_curve->num_curves(); i ++)
+     {
+       part_curve = CAST_TO(comp_curve->get_curve(i), PartitionCurve);
+       if (!part_curve)
+         bridge_list.append_unique(CAST_TO(comp_curve->get_curve(i),
+                                  TopologyBridge));
+       else
+       {
+         if(dynamic_cast<Curve*>(part_curve->partitioned_entity()))
+         {
+           bridge_list.append_unique(CAST_TO(part_curve->partitioned_entity(),
+                                    TopologyBridge));
+         }
+       }
+     }
+   }
+   else if ( part_curve )
+     bridge_list.append(CAST_TO(part_curve->partitioned_entity(),
+                       TopologyBridge));
+   else if ( part_point )
+   {
+     TopologyBridge *tb_point = part_point->real_point();
+     if( tb_point )
+       bridge_list.append( tb_point ); 
+   }
+   else if ( comp_point )
+   {
+     TopologyBridge *tb_point = comp_point->get_point();
+     if( tb_point )
+       bridge_list.append( tb_point ); 
+   }
+   
    return CUBIT_SUCCESS;
 }
 
@@ -1393,7 +1524,7 @@ VirtualQueryEngine::entity_entity_distance( GeometryEntity *ge1,
       for(j=geometry_entities_2.size(); j--;)
       {
         GeometryEntity *ge2 = geometry_entities_2.get_and_step();
-        GeometryQueryEngine *gqe2 = gqes_2.get_and_step();
+        //GeometryQueryEngine *gqe2 = gqes_2.get_and_step();
 
         CubitVector cur_pos1, cur_pos2;
         double cur_distance;
@@ -1672,16 +1803,163 @@ CubitStatus VirtualQueryEngine::delete_solid_model_entities( Point* ) const
   return CUBIT_FAILURE;
 }
 
-CubitStatus VirtualQueryEngine::fire_ray(BodySM *,
-                                            const CubitVector &,
-                                            const CubitVector &,
-                                            DLIList<double>& ,
-                                            DLIList<GeometryEntity*> *) const
+CubitStatus VirtualQueryEngine::fire_ray( const CubitVector &origin,
+                                          const CubitVector &direction,
+                                          DLIList<TopologyBridge*> &at_entity_list,
+                                          DLIList<double> &ray_params,
+                                          int max_hits,
+                                          double ray_radius,
+                                          DLIList<TopologyBridge*> *hit_entity_list_ptr) const
 {
-  PRINT_INFO("VirtualQueryEngine::fire_ray\n");
-  
-  default_error_message( "fire_ray()");
-  return CUBIT_FAILURE;
+  // Note: for now assume we will only get curves or surfaces
+
+  int i;
+  int prev_num_hits = ray_params.size();
+  GeometryQueryEngine *gqe = 0;
+  TopologyBridge *bridge_ptr;
+
+  // This is only needed because this function is "const"
+  VirtualQueryEngine *vqe = VirtualQueryEngine::instance();
+
+  at_entity_list.reset();
+  for( i=at_entity_list.size(); i--; )
+  {
+	prev_num_hits = ray_params.size();
+    bridge_ptr = at_entity_list.get_and_step();
+
+    gqe = bridge_ptr->get_geometry_query_engine();
+    if( !gqe )
+    {
+      PRINT_ERROR( "Unable to find geometry engine associated with an entity!\n" );
+      return CUBIT_FAILURE;
+    }
+
+    Curve *curve_ptr = CAST_TO( bridge_ptr, Curve );
+    if( curve_ptr )
+    {
+      DLIList<TopologyBridge*> tb_curve_list;
+      vqe->get_underlying_curves( curve_ptr, tb_curve_list );
+
+      if( tb_curve_list.size() > 0 )
+      {
+        gqe = tb_curve_list.get()->get_geometry_query_engine();
+
+        gqe->fire_ray( origin, direction, tb_curve_list, ray_params, max_hits,
+          ray_radius, hit_entity_list_ptr );
+
+		// If curve_ptr is a PartitionCurve, it could be smaller than the underlying curve.
+		// This means we have to check to make sure any hit points lie inside the curve. Remove if they don't.
+		if (CAST_TO(curve_ptr, PartitionCurve))
+		{
+			// start iterating at the first new ray_param
+			ray_params.reset();
+			ray_params.step(prev_num_hits);
+			hit_entity_list_ptr->reset();
+			hit_entity_list_ptr->step(prev_num_hits);
+			
+			int j;
+			for (j=prev_num_hits; j<ray_params.size(); j++)
+			{
+				CubitVector *loc_ptr;
+				double param = ray_params.get();
+
+				loc_ptr = new CubitVector;
+				origin.next_point( direction, param, *loc_ptr );
+				
+				CubitPointContainment containment = CUBIT_PNT_UNKNOWN;
+				containment = curve_ptr->point_containment(*loc_ptr);
+				if ( (containment != CUBIT_PNT_ON) && (containment != CUBIT_PNT_BOUNDARY) )
+				{
+					//remove from the hit list
+					ray_params.remove();
+					hit_entity_list_ptr->remove();
+				}
+				else
+				{
+					ray_params.step();
+					hit_entity_list_ptr->step();
+				}
+			}
+		}
+
+      }
+    }
+
+    Surface *surface_ptr = CAST_TO( bridge_ptr, Surface );
+    if( surface_ptr )
+    {
+      DLIList<TopologyBridge*> tb_surface_list;
+      vqe->get_underlying_surfaces( surface_ptr, tb_surface_list );
+
+      if( tb_surface_list.size() > 0 )
+      {
+        gqe = tb_surface_list.get()->get_geometry_query_engine();
+
+        gqe->fire_ray( origin, direction, tb_surface_list, ray_params, max_hits,
+          ray_radius, hit_entity_list_ptr );
+		
+		// If surface_ptr is a PartitionSurface, it could be smaller than the underlying surface.
+		// This means we have to check to make sure any hit points lie inside the surface. Remove if they don't.
+		if (CAST_TO(surface_ptr, PartitionSurface))
+		{
+			// start iterating at the first new ray_param
+			ray_params.reset();
+			ray_params.step(prev_num_hits);
+			hit_entity_list_ptr->reset();
+			hit_entity_list_ptr->step(prev_num_hits);
+			
+			int j;
+			for (j=prev_num_hits; j<ray_params.size(); j++)
+			{
+				CubitVector *loc_ptr;
+				double param = ray_params.get();
+
+				loc_ptr = new CubitVector;
+				origin.next_point( direction, param, *loc_ptr );
+				
+				CubitPointContainment containment = CUBIT_PNT_UNKNOWN;
+				containment = surface_ptr->point_containment(*loc_ptr);
+				if ( (containment != CUBIT_PNT_ON) && (containment != CUBIT_PNT_BOUNDARY) )
+				{
+					//remove from the hit list
+					ray_params.remove();
+					hit_entity_list_ptr->remove();
+				}
+				else
+				{
+					ray_params.step();
+					hit_entity_list_ptr->step();
+				}
+			}
+		}
+
+      }
+    }
+
+  }
+
+  if( hit_entity_list_ptr && hit_entity_list_ptr->size() != ray_params.size() )
+    PRINT_WARNING( "Hit entity list size not equal to number of hits\n" );
+
+  // Account for max hits
+  if( max_hits != 0 )
+  {
+    if( ray_params.size() <= max_hits )
+      return CUBIT_SUCCESS;
+
+    for( i=ray_params.size()-max_hits; i--; )
+    {
+      ray_params.last();
+      ray_params.remove();
+      if( hit_entity_list_ptr )
+      {
+        hit_entity_list_ptr->last();
+        hit_entity_list_ptr->remove();
+      }
+    }
+  }
+
+  return CUBIT_SUCCESS;
 }
 
 double VirtualQueryEngine::get_sme_resabs_tolerance() const
@@ -1929,4 +2207,255 @@ CubitBoolean VirtualQueryEngine::bodies_overlap (BodySM *body_ptr_1, BodySM *bod
 
 }
 
+TopologyBridge* VirtualQueryEngine::get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point)
+{
+	// Determine entity type; should only be Curve or Point
 
+	int j, k;
+	bool added_entity = false;
+	TopologyBridge* bridge_ptr = hidden_tb;
+	TopologyBridge* tb_owner = NULL;
+	bool hidden = CUBIT_TRUE;
+
+	TopologyBridge* visible_tb = NULL;
+
+	while (hidden)
+	{
+		tb_owner = dynamic_cast<TopologyBridge*>(bridge_ptr->owner());
+		if( tb_owner )
+		{
+			if( tb_owner->topology_entity() )
+			{
+				visible_tb = tb_owner;
+				hidden = CUBIT_FALSE;
+				added_entity = true;
+				continue;
+			}
+			else
+				hidden = CUBIT_TRUE;      
+		}
+		else
+		{
+			if( bridge_ptr->topology_entity() )
+			{
+				visible_tb = bridge_ptr;
+				hidden = CUBIT_FALSE;
+				added_entity = true;
+				continue;
+			}
+			else
+			{
+				hidden = CUBIT_TRUE;
+			}
+		}
+
+
+		TopologyBridge *tb_ptr;
+		if( tb_owner )
+			tb_ptr = tb_owner;
+		else
+			tb_ptr = bridge_ptr;
+
+		TBOwner* tb_owner = tb_ptr->owner();
+		if (CAST_TO(tb_owner, HiddenEntitySet)) // virtual geometry
+		{
+			TopologyBridge* parent = NULL;
+			while (CAST_TO(tb_owner, HiddenEntitySet)) // virtual geometry
+			{
+				HiddenEntitySet* hidden_set_ptr = CAST_TO(tb_owner, HiddenEntitySet);
+				parent = dynamic_cast<TopologyBridge*>(hidden_set_ptr->owner());
+				if (parent)
+					tb_owner = parent->owner();
+			}
+			if (parent)
+			{
+				bridge_ptr = parent;
+				added_entity = true;
+				continue;
+			}
+		}
+		else if (CAST_TO(tb_owner, SubEntitySet)) // partition geometry
+		{
+			SubEntitySet* sub_set_ptr = CAST_TO(tb_owner, SubEntitySet);
+
+			DLIList<TopologyBridge*> owner_list;
+			sub_set_ptr->get_owners(owner_list);
+			owner_list.reset();
+			// need to traverse all the entities that make up the original geometry
+			//  if intersected a surface, and the surface is partitioned into mult surfaces,
+			//  which surface did we hit? Did we hit the curve in between? The vertices? gahhhh...
+			for (j=0; j<owner_list.size(); j++)
+			{
+				TopologyBridge* owner_partition = owner_list.get_and_step();
+				//determine geometry type and call point_containment
+
+				CubitPointContainment containment = CUBIT_PNT_UNKNOWN;
+
+				if (CAST_TO(owner_partition, Surface))
+				{
+					containment = CAST_TO(owner_partition, Surface)->point_containment(*point);
+					switch (containment)
+					{
+					case CUBIT_PNT_OFF:
+						break;
+					case CUBIT_PNT_ON:
+						bridge_ptr = owner_partition;
+						added_entity = true;
+						break;
+					case CUBIT_PNT_UNKNOWN:
+						break;
+					case CUBIT_PNT_BOUNDARY:
+						{
+							DLIList<TopologyBridge*> children, related_loops, related_coedges;
+							DLIList<TopologyBridge*> related_curves, temp;
+
+							// Goal: get curves (incl. virtual ones)
+							// Note: can't use ->curves() func b/c it won't grab the virtual curves
+
+							// get all Loops, including virtual
+							owner_partition->get_children( related_loops, true );
+
+							related_loops.reset();
+							int ii;
+
+							// get all CoEdges
+							for (ii = related_loops.size(); ii--;)
+							{
+								temp.clean_out();
+								related_loops.get_and_step()->get_children(temp, true);
+								related_coedges.merge_unique(temp);
+							}
+							// get all Curves
+							for (ii = related_coedges.size(); ii--;)
+							{
+								temp.clean_out();
+								related_coedges.get_and_step()->get_children(temp, true);
+								related_curves.merge_unique(temp);
+							}
+
+							CAST_LIST(related_curves, children, TopologyBridge);
+							for (k=0; k<children.size(); k++)
+							{
+								// CAST and do point_containment for each curve
+								containment = CUBIT_PNT_UNKNOWN;
+								TopologyBridge* partition_curve = children.get_and_step();
+								containment = CAST_TO(partition_curve, Curve)->point_containment(*point);
+								switch (containment)
+								{
+								case CUBIT_PNT_OFF:
+								case CUBIT_PNT_UNKNOWN:
+									break;
+								case CUBIT_PNT_ON:
+									bridge_ptr = partition_curve;
+									added_entity = true;
+									break;
+								case CUBIT_PNT_BOUNDARY:
+									{
+										// CAST and do point_containment for each vertex
+										children.clean_out();
+										partition_curve->get_children(children, true);
+										int kk;
+										for (kk=0; kk<children.size(); kk++)
+										{
+											TopologyBridge* partition_vertex = children.get_and_step();
+											containment = CUBIT_PNT_UNKNOWN;
+											CubitVector coords = CAST_TO(partition_vertex, Point)->coordinates();
+											if (coords.distance_between_squared(*point) < GEOMETRY_RESABS*GEOMETRY_RESABS)
+											{
+												containment = CUBIT_PNT_ON;
+												bridge_ptr = partition_vertex;
+												added_entity = true;
+												break;
+											}
+											else
+												containment = CUBIT_PNT_OFF;
+										}
+									}
+								}
+
+								if (added_entity)
+									break;
+							}                              
+							break;
+						}
+					}
+					if (added_entity)
+						break;
+				}
+				else if (CAST_TO(owner_partition, Curve))
+				{
+					// CAST and do point_containment for each curve
+					containment = CUBIT_PNT_UNKNOWN;
+					containment = CAST_TO(owner_partition, Curve)->point_containment(*point);
+					switch (containment)
+					{
+					case CUBIT_PNT_OFF:
+					case CUBIT_PNT_UNKNOWN:
+						break;
+					case CUBIT_PNT_ON:
+						bridge_ptr = owner_partition;
+						added_entity = true;
+						break;
+					case CUBIT_PNT_BOUNDARY:
+						{
+							// CAST and do point_containment for each vertex
+							DLIList<TopologyBridge*> children;
+							children.clean_out();
+							owner_partition->get_children(children, true);
+							int kk;
+							for (kk=0; kk<children.size(); kk++)
+							{
+								TopologyBridge* partition_vertex = children.get_and_step();
+								containment = CUBIT_PNT_UNKNOWN;
+								CubitVector coords = CAST_TO(partition_vertex, Point)->coordinates();
+								if (coords.distance_between_squared(*point) < GEOMETRY_RESABS*GEOMETRY_RESABS)
+								{
+									containment = CUBIT_PNT_ON;
+									bridge_ptr = partition_vertex;
+									added_entity = true;
+									break;
+								}
+								else
+									containment = CUBIT_PNT_OFF;
+							}
+							break;
+						}
+					}
+
+					if (added_entity)
+						break;
+				}
+
+				else if (CAST_TO(owner_partition, Point))
+				{
+					CubitVector coords = CAST_TO(owner_partition, Point)->coordinates();
+					if (coords.distance_between_squared(*point) < GEOMETRY_RESABS*GEOMETRY_RESABS)
+					{
+						containment = CUBIT_PNT_ON;
+						bridge_ptr = owner_partition;
+						added_entity = true;
+						break;
+					}
+					else
+						containment = CUBIT_PNT_OFF;
+				}
+
+				else
+					PRINT_WARNING("Hit unknown partition entity.\n");
+
+
+			}
+			if (!added_entity)
+			{
+				visible_tb = NULL;
+				hidden = CUBIT_FALSE;
+				//break;
+			}
+
+		}
+
+
+	} //while
+
+	return visible_tb;
+}

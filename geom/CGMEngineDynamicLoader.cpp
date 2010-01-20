@@ -3,6 +3,7 @@
 #include "CGMEngineDynamicLoader.hpp"
 
 #include "CubitMessage.hpp"
+#include <string.h>
 
 extern "C"
 {
@@ -111,7 +112,17 @@ CubitStatus CGMEngineDynamicLoader::load_engine()
 }
 
 CubitStatus CGMEngineDynamicLoader::unload_engine()
-{
+{ 
+  return CUBIT_SUCCESS;
+
+  /*
+
+//don't unload cubitcatia.dll
+#ifdef CATIA 
+  if( mEngineName == "CATIA")
+    return CUBIT_SUCCESS;
+#endif 
+
   if(mLibraryHandle != CubitDynamicLoader::InvalidLibraryHandle)
   {
     CubitDynamicLoader::unload_library(mLibraryHandle);
@@ -119,8 +130,9 @@ CubitStatus CGMEngineDynamicLoader::unload_engine()
     mLibraryHandle = CubitDynamicLoader::InvalidLibraryHandle;
     mQueryEngine = NULL;
     mModifyEngine = NULL;
-  }
+  } 
   return CUBIT_SUCCESS;
+  */
 }
 
 
@@ -154,7 +166,7 @@ CubitBoolean CGMEngineDynamicLoader::check_engine_version()
 GeometryQueryEngine* CGMEngineDynamicLoader::get_gqe()
 {
   if(mQueryEngine)
-    return mQueryEngine;
+    return mQueryEngine;  
 
   if(mLoadAttempted == CUBIT_FALSE)
     load_engine();

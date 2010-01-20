@@ -40,6 +40,10 @@
 #include "ProgressTool.hpp"
 #include "AppUtil.hpp"
 
+#include <set>
+#include <map>
+#include <stack>
+#include <algorithm>
 
 void GeomMeasureTool::get_edges_from_list(DLIList <RefEntity*> &entity_list,
                                           DLIList <RefEdge*> &ref_edges )
@@ -1179,17 +1183,16 @@ void GeomMeasureTool::report_intersected_volumes(DLIList <RefVolume*> &ref_vols,
                                                  DLIList <RefVolume*> &intersection_list)
 {
   DLIList <RefVolume*> results;
-  RefVolume *curr_vol, *curr_vol_2;
+  RefVolume *curr_vol;
   int i, j;
   ProgressTool *progress_ptr = NULL;
-  char title[29];
   int total_volumes = ref_vols.size();
   if (total_volumes > 5)
   {
-    strcpy(title, "Overlapping Volumes Progress");
     progress_ptr = AppUtil::instance()->progress_tool();
     assert(progress_ptr != NULL);
-    progress_ptr->start(0, 100, title, NULL, CUBIT_TRUE, CUBIT_TRUE);
+    progress_ptr->start(0, 100, "Overlapping Volumes Progress", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
   }
   double curr_percent = 0.0;
 
@@ -1261,14 +1264,13 @@ void GeomMeasureTool::report_intersected_bodies(DLIList <Body*> &ref_bodies,
   Body *curr_body, *curr_body_2;
   int ii, jj;
   ProgressTool *progress_ptr = NULL;
-  char title[29];
   int total_bodies = ref_bodies.size();
   if (total_bodies > 5)
   {
-    strcpy(title, "Overlapping Volumes Progress");
     progress_ptr = AppUtil::instance()->progress_tool();
     assert(progress_ptr != NULL);
-    progress_ptr->start(0, 100, title, NULL, CUBIT_TRUE, CUBIT_TRUE);
+    progress_ptr->start(0, 100, "Overlapping Volumes Progress", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
   }
   double curr_percent = 0.0;
  
@@ -1442,20 +1444,6 @@ void GeomMeasureTool::find_shells( DLIList <RefVolume*> &input_vols,
   } 
 }
 
-void GeomMeasureTool::ratio_of_shells_to_volumes(int number_of_shells,
-                                                 DLIList <RefVolume*> &ref_volumes,
-                                                 int &number_of_volumes,
-                                                 double &ratio)
-{
-  int ii, number = 0;
-
-  for( ii = ref_volumes.size(); ii > 0; ii-- )
-    number++;
-  number_of_volumes = number;
-
-  ratio = (double) ((double)number_of_shells / (double)number_of_volumes);
-  
-}
 void GeomMeasureTool::print_surface_measure_summary( DLIList <RefFace*> &ref_faces )
                                                   
 {
@@ -1910,119 +1898,714 @@ void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_v
                                           double tol,
                                           DLIList <RefFace*> &surfs_with_narrow_regions)
 {
-  int i, j;
+  int j;
   double tol_sq = tol*tol;
-  for(i=ref_vols.size(); i--;)
+
+  int ii, jj;
+  DLIList <RefFace*> ref_faces, temp_faces;
+  RefVolume *ref_vol;
+  RefFace *curr_face;
+  for ( ii = 0; ii < ref_vols.size(); ii++ )
   {
-    RefVolume *cur_vol = ref_vols.get_and_step();
-    DLIList<RefFace*> vol_faces;
-    cur_vol->ref_faces(vol_faces);
-    for(j=vol_faces.size(); j--;)
+    DLIList<RefFace*> faces;
+    ref_vol = ref_vols.get_and_step();
+    ref_vol->ref_faces(faces);
+    for ( jj = faces.size(); jj > 0; jj-- )
     {
-      RefFace *cur_face = vol_faces.get_and_step();
-      if(has_narrow_region(cur_face, tol, tol_sq))
+      curr_face = faces.get_and_step();
+      curr_face->marked(0);
+      temp_faces.append(curr_face);
+    }
+  }
+
+  //uniquely add the faces.
+  for ( jj = temp_faces.size(); jj > 0; jj-- )
+  {
+    curr_face = temp_faces.get_and_step();
+    if ( curr_face->marked()== 0 )
+    {
+      curr_face->marked(1);
+      ref_faces.append(curr_face);
+    }
+  }
+
+  int num_faces = ref_faces.size();
+
+  ProgressTool *progress_ptr = NULL;
+  if (num_faces > 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Surfaces with Narrow Regions", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_faces = 0;
+  double curr_percent = 0.0;
+
+  for(j=0; j<num_faces; j++)
+  {
+    DLIList<CubitVector> split_pos1_list;
+    DLIList<CubitVector> split_pos2_list;
+    RefFace *cur_face = ref_faces.get_and_step();
+    total_faces++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_faces))/((double)(num_faces));
+      progress_ptr->percent(curr_percent);
+    }
+
+    if ( CubitMessage::instance()->Interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+    find_split_points_for_narrow_regions(cur_face,
+      tol, split_pos1_list, split_pos2_list); 
+    if(split_pos1_list.size() > 0)
+      surfs_with_narrow_regions.append_unique(cur_face);
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+}
+
+bool GeomMeasureTool::is_surface_narrow(RefFace *face, double small_curve_size)
+{
+  bool ret = true;
+  DLIList<RefEdge*> edges;
+  face->ref_edges(edges);
+  RefVolume *vol = face->ref_volume();
+  int i, j;
+  double dist_sq = small_curve_size*small_curve_size;
+  double proj_dist = 1.2 * small_curve_size;
+  for(i=edges.size(); i>0 && ret == true; i--)
+  {
+    RefEdge *cur_edge = edges.get_and_step();
+    double edge_length = cur_edge->measure();
+    if(edge_length > small_curve_size)
+    {
+      int num_incs = (int)(edge_length/small_curve_size) + 1;
+      double start, end;
+      cur_edge->get_param_range(start, end);
+      double dt = small_curve_size*((end-start)/edge_length);
+      double t = start;
+      bool one_bad = false;
+      for(j=0; j<num_incs && ret == true; j++)
       {
-        surfs_with_narrow_regions.append_unique(cur_face);
+        CubitVector pos1, tangent;
+        cur_edge->position_from_u(t, pos1);
+        cur_edge->tangent(pos1, tangent, face);
+        CubitVector norm = face->normal_at(pos1, vol);
+        CubitVector indir = norm * tangent;
+        indir.normalize();
+        CubitVector new_pos = pos1 + proj_dist * indir;
+        CubitVector pt_on_surf;
+        face->get_surface_ptr()->closest_point_trimmed(new_pos, pt_on_surf);
+        if((pt_on_surf-pos1).length_squared() < dist_sq)
+        {
+          one_bad = false;
+        }
+        else // we found one out of small_curve range
+        {
+          if(one_bad)  // if we had already found one out of range this makes two in a row
+            ret = false;
+          else  // this is the first one out of range
+            one_bad = true;
+        }
       }
     }
   }
+
+  return ret;
+}
+
+void GeomMeasureTool::find_split_points_for_narrow_regions(RefFace *face,
+                                                          double size, 
+                                                          DLIList<CubitVector> &split_pos1_list,
+                                                          DLIList<CubitVector> &split_pos2_list)
+{
+  int k, i, j;
+  double size_sq = size*size;
+  DLIList<RefEdge*> edges;
+  face->ref_edges(edges);
+  while(edges.size() > 1)
+  {
+    RefEdge *cur_edge = edges.extract();
+    for(k=edges.size(); k--;)
+    {
+      RefEdge *other_edge = edges.get_and_step();
+      DLIList<CubitVector*> e1_pos_list, e2_pos_list;
+      DLIList<RefVertex*> e1_vert_list, e2_vert_list;
+      if(narrow_region_exists(cur_edge, other_edge, face, size,
+        e1_pos_list, e2_pos_list, e1_vert_list, e2_vert_list))
+      {
+        e1_pos_list.reset();
+        e2_pos_list.reset();
+        e1_vert_list.reset();
+        e2_vert_list.reset();
+
+        // Loop through each pair of positions defining a split.
+        for(i=e1_pos_list.size(); i--;)
+        {
+          int do_the_split = 1;
+          RefVertex *e1_vert = e1_vert_list.get_and_step();
+          RefVertex *e2_vert = e2_vert_list.get_and_step();
+          CubitVector *e1_pos = e1_pos_list.get_and_step();
+          CubitVector *e2_pos = e2_pos_list.get_and_step();
+
+          // Snap to existing vertices if we are not already at at vertex.
+          if(!e1_vert)
+          {
+            if((cur_edge->start_vertex()->coordinates() - *e1_pos).length_squared() < size_sq)
+              e1_vert = cur_edge->start_vertex();
+            else if((cur_edge->end_vertex()->coordinates() - *e1_pos).length_squared() < size_sq)
+              e1_vert = cur_edge->end_vertex();
+          }
+          if(!e2_vert)
+          {
+            if((other_edge->start_vertex()->coordinates() - *e2_pos).length_squared() < size_sq)
+              e2_vert = other_edge->start_vertex();
+            else if((other_edge->end_vertex()->coordinates() - *e2_pos).length_squared() < size_sq)
+              e2_vert = other_edge->end_vertex();
+          }
+
+          // We may have multiple edges separating these two vertices but the accumulated
+          // length of them may still be within our narrow size so check this.  If this
+          // is the case we will not want to consider this as a place to split and 
+          // will as a result discard these positions.
+          if(e1_vert && e2_vert)
+          {
+            double dist = size*sqrt(2.0);
+            RefVertex *cur_vert = e1_vert;
+            RefEdge *edge = cur_edge;
+            double length = 0.0;
+            while(edge && cur_vert != e2_vert && length <= dist)
+            {
+              edge = edge->get_other_curve(cur_vert, face);
+              if(edge)
+              {
+                length += edge->get_arc_length();
+                cur_vert = edge->other_vertex(cur_vert);
+              }
+            }
+            if(length <= dist)
+              do_the_split = 0;
+            else
+            {
+              // We want to keep this split.
+              split_pos1_list.append(e1_vert->coordinates());
+              split_pos2_list.append(e2_vert->coordinates());
+            }
+          }
+          else
+          {
+            // We want to keep this split.
+            split_pos1_list.append(*e1_pos);
+            split_pos2_list.append(*e2_pos);
+          }
+        }
+      }
+      while(e1_pos_list.size())
+        delete e1_pos_list.pop();
+      while(e2_pos_list.size())
+        delete e2_pos_list.pop();
+    }
+  }
+
+  // Make splits unique
+  DLIList<CubitVector> unique_list1, unique_list2;
+  split_pos1_list.reset();
+  split_pos2_list.reset();
+  for(i=split_pos1_list.size(); i--;)
+  {
+    CubitVector p1 = split_pos1_list.get_and_step();
+    CubitVector p2 = split_pos2_list.get_and_step();
+    int unique = 1;
+    for(j=unique_list1.size(); j>0 && unique; j--)
+    {
+      CubitVector u1 = unique_list1.get_and_step();
+      CubitVector u2 = unique_list2.get_and_step();
+      if((p1.about_equal(u1) && p2.about_equal(u2)) ||
+        (p1.about_equal(u2) && p2.about_equal(u1)))
+      {
+          unique = 0;
+      }
+    }
+    if(unique)
+    {
+      unique_list1.append(p1);
+      unique_list2.append(p2);
+    }
+  }
+  split_pos1_list = unique_list1;
+  split_pos2_list = unique_list2;
 }
 
 // Checks to see if at the given position the two edges are close together and 
 // have the same tangent.
 int GeomMeasureTool::is_narrow_region_at_point(RefEdge *e1,
+                                               RefFace *face,
                                                const CubitVector &pt_on_e1,
                                                RefEdge *e2,
-                                               const double &tol_sq)
+                                               const double &tol_sq,
+                                               CubitVector &closest)
 {
   int ret = 0;
-  CubitVector closest, tan_1, tan_2;
+
+  CubitVector tan_1, tan_2;
   e2->closest_point_trimmed(pt_on_e1, closest);
   double dist = (pt_on_e1-closest).length_squared();
   if(dist < tol_sq)
   {
+    DLIList<CoEdge*> coes;
     e1->tangent(pt_on_e1, tan_1);
     e2->tangent(closest, tan_2);
-    tan_1.normalize();
-    tan_2.normalize();
-    if(fabs(tan_1 % tan_2) > .9)
-      ret = 1;
+    e1->get_co_edges(coes, face);
+    if(coes.size() == 1)
+    {
+      if(coes.get()->get_sense() == CUBIT_REVERSED)
+        tan_1 *= -1.0;
+      coes.clean_out();
+      e2->get_co_edges(coes, face);
+      if(coes.size() == 1)
+      {
+        if(coes.get()->get_sense() == CUBIT_REVERSED)
+          tan_2 *= -1.0;
+        tan_1.normalize();
+        tan_2.normalize();
+        if(tan_1 % tan_2 < -0.9)
+          ret = 1;
+      }
+    }
   }
   return ret;
 }
 
-// Checks to see if the face has a narrow region in it.  A narrow
-// region here is defined as a region where two of the edges on the
-// face come close enough to each other that a narrow region is 
-// formed.
-int GeomMeasureTool::has_narrow_region(RefFace* face, const double &tol,
-                                       const double &tol_sq)
+int GeomMeasureTool::narrow_region_exists(RefFace *face,
+                                          const double &tol)
 {
-  int i, j, k;
-  int ret = 0;
-  double small_step = 5.0*tol, step;
-  RefEdge *edge1, *edge2;
-  CubitVector closest1, closest2, closest3;
-  CubitVector p3, p2, p1, tan11, tan21, step_pos;
-  RefVertex *cur_e1_vert;
-
-  // Loop through all of the edges in the face and compare each
-  // one with every other edge in the face.
+  int k, ret = 0;
   DLIList<RefEdge*> edges;
   face->ref_edges(edges);
+  int num_curves = edges.size();
+  int num_small_curves = 0;
   while(edges.size() > 1 && !ret)
   {
     // Remove the current edge each time so that we aren't
     // doing redundant comparisons.
     RefEdge *cur_edge = edges.extract();
+    if(cur_edge->get_arc_length() < tol)
+      num_small_curves++;
 
     // Compare this edge with the remaining edges on the face.
     for(k=edges.size(); k && !ret; k--)
     {
       RefEdge *other_edge = edges.get_and_step();
 
-      // Loop through twice to compare each edge with
-      // the other.  One edge will be used as the source
-      // edge and points from the source edge will be 
-      // compared with points on the target edge.
-      for(i=0; i<2 && !ret; i++)
+      DLIList<CubitVector*> e1_pos_list, e2_pos_list;
+      DLIList<RefVertex*> e1_vert_list, e2_vert_list;
+      ret = narrow_region_exists(cur_edge, other_edge, face, tol,
+        e1_pos_list, e2_pos_list, e1_vert_list, e2_vert_list);
+      while(e1_pos_list.size())
+        delete e1_pos_list.pop();
+      while(e2_pos_list.size())
+        delete e2_pos_list.pop();
+    }
+  }
+  if(!ret)
+  {
+    if(edges.size() == 1 && edges.get()->get_arc_length() < tol)
+      num_small_curves++;
+  }
+
+  ret = ret || (num_small_curves == num_curves);
+
+  return ret;
+}
+
+int GeomMeasureTool::narrow_region_exists(RefFace *face,
+                                          RefEdge *edge,
+                                          const double &tol)
+{
+  int k, ret = 0;
+  DLIList<RefEdge*> edges;
+  face->ref_edges(edges);
+  if(edges.move_to(edge))
+  {
+    edges.extract();
+
+    // Compare this edge with the remaining edges on the face.
+    for(k=edges.size(); k && !ret; k--)
+    {
+      RefEdge *other_edge = edges.get_and_step();
+
+      DLIList<CubitVector*> e1_pos_list, e2_pos_list;
+      DLIList<RefVertex*> e1_vert_list, e2_vert_list;
+      ret = narrow_region_exists(edge, other_edge, face, tol,
+        e1_pos_list, e2_pos_list, e1_vert_list, e2_vert_list);
+      while(e1_pos_list.size())
+        delete e1_pos_list.pop();
+      while(e2_pos_list.size())
+        delete e2_pos_list.pop();
+    }
+  }
+  return ret;
+}
+
+int GeomMeasureTool::narrow_region_exists(
+                                            RefEdge *e1,
+                                            RefEdge *e2,
+                                            RefFace *face,
+                                            const double &tol,
+                                            DLIList<CubitVector*> &e1_pos_list,
+                                            DLIList<CubitVector*> &e2_pos_list,
+                                            DLIList<RefVertex*> &e1_vert_list,
+                                            DLIList<RefVertex*> &e2_vert_list)
+{
+  int ret = 0;
+  double tol_sq = tol*tol;
+  double small_step = 5.0*tol;
+  double small_step_sq = small_step*small_step;
+  double max_dist_sq = 0.0;
+  RefVertex *e1_start_vert = e1->start_vertex();
+  RefVertex *e1_end_vert = e1->end_vertex();
+
+  CubitVector closest;
+  DLIList<RefVertex*> e1_verts, e2_verts;
+
+  e1->ref_vertices(e1_verts);
+  e2->ref_vertices(e2_verts);
+  e1_verts.intersect_unordered(e2_verts);
+  int num_shared_verts = e1_verts.size();
+  RefVertex *shared_vert = NULL;
+  RefEdge *edge1 = NULL;
+  RefEdge *edge2 = NULL;
+  if(num_shared_verts == 1)
+  {
+    shared_vert = e1_verts.get();
+    DLIList<CoEdge*> coes;
+    e1->get_co_edges(coes, face);
+    if(coes.size() == 1)
+    {
+      RefVolume *vol = face->ref_volume();
+      CubitSense facevol_sense = face->sense(vol);
+      if((coes.get()->start_vertex() == shared_vert) ==
+        (facevol_sense == CUBIT_FORWARD))
       {
-        if(i==0)
-        {
-          edge1 = cur_edge;
-          edge2 = other_edge;
-        }
-        else
-        {
-          edge1 = other_edge;
-          edge2 = cur_edge;
-        }
+        edge1 = e1;
+        edge2 = e2;
+      }
+      else
+      {
+        edge1 = e2;
+        edge2 = e1;
+      }
+    }
+  }
 
-        DLIList<RefVertex*> e1_verts;
-        edge1->ref_vertices(e1_verts);
-        for(j=e1_verts.size(); j && !ret; j--)
-        {
-          cur_e1_vert = e1_verts.get_and_step();
-          p1 = cur_e1_vert->coordinates();
+  // Project cur endpoints onto other.
+  int do_narrow_region_check = 1;
+  if(num_shared_verts == 1 && shared_vert == e1_start_vert)
+  {
+    // Edges are next to each other.  Check the angle between them
+    // before doing anything else.
+    double interior_angle = edge1->angle_between(edge2, face);
+    if(interior_angle > CUBIT_PI/4.0)
+      do_narrow_region_check = 0;
+  }
+  if(do_narrow_region_check &&
+     is_narrow_region_at_point(e1, face, e1_start_vert->coordinates(), e2, tol_sq, closest))
+  {
+    max_dist_sq = (closest - e1_start_vert->coordinates()).length_squared();
+    e1_pos_list.append(new CubitVector(e1_start_vert->coordinates()));
+    e2_pos_list.append(new CubitVector(closest));
+    e1_vert_list.append(e1_start_vert);
+    e2_vert_list.append(NULL);
+  }
+  do_narrow_region_check = 1;
+  if(num_shared_verts == 1 && shared_vert == e1_end_vert)
+  {
+    // Edges are next to each other.  Check the angle between them
+    // before doing anything else.
+    double interior_angle = edge1->angle_between(edge2, face);
+    if(interior_angle > CUBIT_PI/4.0)
+      do_narrow_region_check = 0;
+  }
+  if(do_narrow_region_check &&
+     is_narrow_region_at_point(e1, face, e1_end_vert->coordinates(), e2, tol_sq, closest))
+  {
+    double cur_dist_sq = (closest - e1_end_vert->coordinates()).length_squared();
+    max_dist_sq = max_dist_sq > cur_dist_sq ? max_dist_sq : cur_dist_sq;
+    e1_pos_list.append(new CubitVector(e1_end_vert->coordinates()));
+    e2_pos_list.append(new CubitVector(closest));
+    e1_vert_list.append(e1_end_vert);
+    e2_vert_list.append(NULL);
+  }
 
-          // In trying to determine whether the face has a narrow region
-          // we will simply look for one point on the source edge that is
-          // close to the target edge and then step away from it a little
-          // and check another point.  This is working from the ends of
-          // the source edge which will not catch every case but should 
-          // catch most of the cases.
-          if(is_narrow_region_at_point(edge1, p1, edge2, tol_sq))
+  if(e1_pos_list.size() < 2)
+  {
+    RefVertex *e2_start_vert = e2->start_vertex();
+    RefVertex *e2_end_vert = e2->end_vertex();
+    do_narrow_region_check = 1;
+    if(num_shared_verts == 1 && shared_vert == e2_start_vert)
+    {
+      // Edges are next to each other.  Check the angle between them
+      // before doing anything else.
+      double interior_angle = edge1->angle_between(edge2, face);
+      if(interior_angle > CUBIT_PI/4.0)
+        do_narrow_region_check = 0;
+    }
+    if(do_narrow_region_check &&
+       is_narrow_region_at_point(e2, face, e2_start_vert->coordinates(), e1, tol_sq, closest))
+    {
+      if(e1_pos_list.size() == 0 || !closest.about_equal(*e1_pos_list.get()))
+      {
+        double cur_dist_sq = (closest - e2_start_vert->coordinates()).length_squared();
+        max_dist_sq = max_dist_sq > cur_dist_sq ? max_dist_sq : cur_dist_sq;
+        e2_pos_list.append(new CubitVector(e2_start_vert->coordinates()));
+        e1_pos_list.append(new CubitVector(closest));
+        e2_vert_list.append(e2_start_vert);
+        e1_vert_list.append(NULL);
+      }
+    }
+    if(e1_pos_list.size() < 2)
+    {
+      do_narrow_region_check = 1;
+      if(num_shared_verts == 1 && shared_vert == e2_end_vert)
+      {
+        // Edges are next to each other.  Check the angle between them
+        // before doing anything else.
+        double interior_angle = edge1->angle_between(edge2, face);
+        if(interior_angle > CUBIT_PI/4.0)
+          do_narrow_region_check = 0;
+      }
+      if(do_narrow_region_check &&
+         is_narrow_region_at_point(e2, face, e2_end_vert->coordinates(), e1, tol_sq, closest))
+      {
+        if(e1_pos_list.size() == 0 || !closest.about_equal(*e1_pos_list.get()))
+        {
+          double cur_dist_sq = (closest - e2_end_vert->coordinates()).length_squared();
+          max_dist_sq = max_dist_sq > cur_dist_sq ? max_dist_sq : cur_dist_sq;
+          e2_pos_list.append(new CubitVector(e2_end_vert->coordinates()));
+          e1_pos_list.append(new CubitVector(closest));
+          e2_vert_list.append(e2_end_vert);
+          e1_vert_list.append(NULL);
+        }
+      }
+    }
+  }
+
+  if(e1_pos_list.size() == 2)
+  {
+    int w;
+    int all_good = 1;
+ //   double dist_tol = sqrt(max_dist_sq)*5.0;
+    e1_pos_list.reset();
+    e2_pos_list.reset();
+    CubitVector *cur1 = e1_pos_list.get_and_step();
+    CubitVector *cur2 = e1_pos_list.get();
+    CubitVector *other1 = e2_pos_list.get_and_step();
+    CubitVector *other2 = e2_pos_list.get();
+
+    double len1 = e1->get_arc_length(*cur1, *cur2);
+    if(len1 > tol)
+    {
+      double len2 = e2->get_arc_length(*other1, *other2);
+      if(len2 > tol)
+      {
+        double cur_param1 = e1->u_from_position(*cur1);
+        double cur_param2 = e1->u_from_position(*cur2);
+        int num_divisions = 2;
+        CubitVector cur_pos;
+        double param_step = (cur_param2-cur_param1)/num_divisions;
+        double cur_param = cur_param1 + param_step;
+        for(w=1; w<num_divisions && all_good; w++)
+        {
+          e1->position_from_u(cur_param, cur_pos);
+          cur_param += param_step;
+          if(is_narrow_region_at_point(e1, face, cur_pos, e2, tol_sq, closest))
           {
-            step = small_step;
-            if(cur_e1_vert == edge1->end_vertex())
-              step *= -1.0;
-            edge1->point_from_arc_length(p1, step, p2);
-            if(is_narrow_region_at_point(edge1, p2, edge2, tol_sq))
-              ret = 1;
+            // Sanity check to make sure we aren't splitting off negative space.
+            CubitVector mid = (cur_pos + closest)/2.0;
+            CubitVector tmp_pt;
+            face->get_surface_ptr()->closest_point_trimmed(mid, tmp_pt);
+            if(!mid.about_equal(tmp_pt))
+            {
+              CubitVector norm = face->normal_at(tmp_pt);
+              CubitVector dir(tmp_pt - mid);
+              dir.normalize();
+              if(fabs(norm % dir) < .9)
+                all_good = 0;
+            }
+          }
+        }
+      }
+      else
+        all_good = 0;
+    }
+    else 
+      all_good = 0;
+
+    if(all_good)
+      ret = 1;
+    else
+    {
+      e1_pos_list.remove(cur1);
+      e1_pos_list.remove(cur2);
+      e2_pos_list.remove(other1);
+      e2_pos_list.remove(other2);
+      delete cur1;
+      delete cur2;
+      delete other1;
+      delete other2;
+    }
+  }
+
+  if(!ret && e1_pos_list.size() > 0)
+  {
+    int i;
+    e1_pos_list.reset();
+    e2_pos_list.reset();
+    e1_vert_list.reset();
+    e2_vert_list.reset();
+    for(i=e1_pos_list.size(); i--;)
+    {
+      CubitVector *e1_pos = e1_pos_list.get_and_step();
+      CubitVector *e2_pos = e2_pos_list.get_and_step();
+      RefVertex *e1_vert = e1_vert_list.get_and_step();
+      RefVertex *e2_vert = e2_vert_list.get_and_step();
+
+      RefVertex *cur_vert = NULL;
+      RefEdge *cur_edge = NULL, *other_edge = NULL;
+      if(e1_vert)
+      {
+        cur_edge = e1;
+        other_edge = e2;
+        cur_vert = e1_vert;
+      }
+      else if(e2_vert)
+      {
+        cur_edge = e2;
+        other_edge = e1;
+        cur_vert = e2_vert;
+      }
+      if(cur_vert)
+      {
+        CubitVector next_pos;
+        CubitVector prev_pos = cur_vert->coordinates();
+        int num_incs = 20;
+        double step = cur_edge->get_arc_length()/(double)num_incs;
+        int still_good = 1;
+        int cntr = 0;
+        double direction = (cur_vert == cur_edge->start_vertex() ? 1.0 : -1.0);
+        // Do coarse traversal along curve to see where we start deviating from
+        // narrow.
+        while(still_good)
+        {
+          cur_edge->point_from_arc_length(prev_pos, step*direction, next_pos);
+          if(is_narrow_region_at_point(cur_edge, face, next_pos, other_edge, tol_sq, closest) &&
+                      cntr < num_incs)
+          {
+            prev_pos = next_pos;
+            cntr++;
+          }
+          else
+            still_good = 0;
+        }
+        if(cntr < num_incs)
+        {
+          cntr = 0;
+          double cur_arc_length = cur_edge->get_arc_length(prev_pos, next_pos);
+          // Do bisection on remaining interval to zero in on point where
+          // we go from narrow to non-narrow.
+          CubitVector mid_pos;
+          double close_enough = tol/20.0;
+          while(cur_arc_length > close_enough && cntr < 100)
+          {
+            cntr++;  // prevent infinite looping
+            cur_edge->point_from_arc_length(prev_pos, cur_arc_length*direction/2.0, mid_pos);
+            if(is_narrow_region_at_point(cur_edge, face, mid_pos, other_edge, tol_sq, closest))
+              prev_pos = mid_pos;
+            else
+              next_pos = mid_pos;
+            cur_arc_length = cur_edge->get_arc_length(prev_pos, next_pos);
+          }
+          if(cur_edge->get_arc_length(cur_vert->coordinates(), prev_pos) > tol)
+          {
+            // end up with the position that guarantees a new split curve that
+            // is smaller than the small curve size.
+            other_edge->closest_point_trimmed(prev_pos, closest);
+            if(cur_edge == e1)
+            {
+              e1_pos_list.append(new CubitVector(prev_pos));
+              e2_pos_list.append(new CubitVector(closest));
+            }
+            else
+            {
+              e2_pos_list.append(new CubitVector(prev_pos));
+              e1_pos_list.append(new CubitVector(closest));
+            }
+            e1_vert_list.append(NULL);
+            e2_vert_list.append(NULL);
+            ret = 1;
           }
         }
       }
     }
+  }
+
+  if(ret)
+  {
+    int i, j;
+    e1_pos_list.reset();
+    e2_pos_list.reset();
+    e1_vert_list.reset();
+    e2_vert_list.reset();
+    for(i=e1_pos_list.size(); i--;)
+    {
+      CubitVector *e1_pos = e1_pos_list.get();
+      CubitVector *e2_pos = e2_pos_list.get();
+      int num_divisions = 6;
+      CubitVector step = (*e2_pos - *e1_pos)/num_divisions;
+      CubitVector cur_pos = *e1_pos + step;
+      int removed = 0;
+      for(j=1; j<num_divisions; j++)
+      {
+        CubitVector tmp_pt;
+        face->get_surface_ptr()->closest_point_trimmed(cur_pos, tmp_pt);
+        if(!cur_pos.about_equal(tmp_pt))
+        {
+          CubitVector norm = face->normal_at(tmp_pt);
+          CubitVector dir(tmp_pt - cur_pos);
+          dir.normalize();
+          if(fabs(norm % dir) < .9)
+          {
+            removed = 1;
+            j=num_divisions;
+            e1_pos_list.remove();
+            e2_pos_list.remove();
+            e1_vert_list.remove();
+            e2_vert_list.remove();
+          }
+        }
+        else
+          cur_pos += step;
+      }
+      if(!removed)
+      {
+        e1_pos_list.step();
+        e2_pos_list.step();
+        e1_vert_list.step();
+        e2_vert_list.step();
+      }
+    }
+
+    if(e1_pos_list.size() == 0)
+      ret = 0;
   }
 
   return ret;
@@ -2052,10 +2635,38 @@ void GeomMeasureTool::find_small_curves( DLIList <RefVolume*> &ref_vols,
       }
     }
   }
+
+  int num_curves = ref_edges.size();
+  ProgressTool *progress_ptr = NULL;
+  if (num_curves> 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Small Curves", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_curves = 0;
+  double curr_percent = 0.0;
   double length;
     //find the small curves and reset the marked flag.
   for ( ii = ref_edges.size(); ii > 0; ii-- )
   {
+    total_curves++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_curves))/((double)(num_curves));
+      progress_ptr->percent(curr_percent);
+    }
+    if ( CubitMessage::instance()->Interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+
     curr_edge = ref_edges.get_and_step();
 
     //skip point curves
@@ -2070,8 +2681,115 @@ void GeomMeasureTool::find_small_curves( DLIList <RefVolume*> &ref_vols,
       small_lengths.append(length);
     }
   }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
   return;
 }
+
+RefEdge* GeomMeasureTool::find_first_small_curve(RefVolume* vol,
+                                         double tol)
+{
+  RefEdge *ret = NULL;
+  int j;
+  DLIList <RefEdge*> ref_edges;
+  vol->ref_edges(ref_edges);
+  for(j=ref_edges.size(); j > 0 && !ret; j--)
+  {
+    RefEdge *curr_edge = ref_edges.get_and_step();
+    if(curr_edge->measure() <= tol)
+      ret = curr_edge;
+  }
+  return ret;
+}
+
+void GeomMeasureTool::find_narrow_faces(DLIList<RefVolume*> &ref_vols,
+                                        double small_curve_size,
+                                        DLIList<RefFace*> &narrow_faces,
+                                        DLIList<RefFace*> &surfs_to_ignore)
+{
+  int ii, jj;
+  DLIList <RefFace*> ref_faces, temp_faces;
+  RefVolume *ref_vol;
+  RefFace *curr_face;
+
+  for ( ii = 0; ii < ref_vols.size(); ii++ )
+  {
+    DLIList<RefFace*> faces;
+    ref_vol = ref_vols.get_and_step();
+    ref_vol->ref_faces(faces);
+    for ( jj = faces.size(); jj > 0; jj-- )
+    {
+      curr_face = faces.get_and_step();
+      curr_face->marked(0);
+      temp_faces.append(curr_face);
+    }
+  }
+
+  //uniquely add the faces.
+  for ( jj = temp_faces.size(); jj > 0; jj-- )
+  {
+    curr_face = temp_faces.get_and_step();
+    if ( curr_face->marked()== 0 )
+    {
+      curr_face->marked(1);
+      ref_faces.append(curr_face);
+    }
+  }
+
+  int num_faces = ref_faces.size();
+  ProgressTool *progress_ptr = NULL;
+  if (num_faces > 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Narrow Surfaces", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_faces = 0;
+  double curr_percent = 0.0;
+
+  for ( ii = ref_faces.size(); ii > 0; ii-- )
+  {
+    total_faces++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_faces))/((double)(num_faces));
+      progress_ptr->percent(curr_percent);
+    }
+
+    if ( CubitMessage::instance()->Interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+
+    curr_face = ref_faces.get_and_step();
+    if(!surfs_to_ignore.is_in_list(curr_face))
+    {
+      if(narrow_region_exists(curr_face, small_curve_size))
+      {
+        DLIList<CubitVector> split_pos1_list;
+        DLIList<CubitVector> split_pos2_list;
+        find_split_points_for_narrow_regions(curr_face,
+          small_curve_size, split_pos1_list, split_pos2_list); 
+        if(split_pos1_list.size() == 0)
+          narrow_faces.append_unique(curr_face);
+      }
+    }
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
+  return;
+}
+
 void GeomMeasureTool::find_small_faces( DLIList <RefVolume*> &ref_vols,
                                         double tol,
                                         DLIList <RefFace*> &small_faces)
@@ -2082,32 +2800,72 @@ void GeomMeasureTool::find_small_faces( DLIList <RefVolume*> &ref_vols,
   RefFace *curr_face;
   for ( ii = 0; ii < ref_vols.size(); ii++ )
   {
+    DLIList<RefFace*> faces;
     ref_vol = ref_vols.get_and_step();
-    ref_vol->ref_faces(temp_faces);
-      //uniquely add the faces.
-    for ( jj = temp_faces.size(); jj > 0; jj-- )
+    ref_vol->ref_faces(faces);
+    for ( jj = faces.size(); jj > 0; jj-- )
     {
-      curr_face = temp_faces.pop();
-      if ( curr_face->marked()== 0 )
-      {
-        curr_face->marked(1);
-        ref_faces.append(curr_face);
-      }
+      curr_face = faces.get_and_step();
+      curr_face->marked(0);
+      temp_faces.append(curr_face);
     }
   }
+
+  //uniquely add the faces.
+  for ( jj = temp_faces.size(); jj > 0; jj-- )
+  {
+    curr_face = temp_faces.get_and_step();
+    if ( curr_face->marked()== 0 )
+    {
+      curr_face->marked(1);
+      ref_faces.append(curr_face);
+    }
+  }
+
+  int num_faces = ref_faces.size();
+  ProgressTool *progress_ptr = NULL;
+  if (num_faces > 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Small Surfaces", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_faces = 0;
+  double curr_percent = 0.0;
   double area;
     //find the small curves and reset the marked flag.
   for ( ii = ref_faces.size(); ii > 0; ii-- )
   {
+    total_faces++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_faces))/((double)(num_faces));
+      progress_ptr->percent(curr_percent);
+    }
+
+    if ( CubitMessage::instance()->Interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+
     curr_face = ref_faces.get_and_step();
-      //reset the mark.
-    curr_face->marked(0);
     area = measure_area(curr_face);
     if ( area <= tol )
       small_faces.append(curr_face);
   }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
   return;
 }
+
 void GeomMeasureTool::find_small_faces_hydraulic_radius( DLIList <RefVolume*> &ref_vols,
                                                          double tol,
                                                          DLIList <RefFace*> &small_faces,
@@ -2145,13 +2903,12 @@ void GeomMeasureTool::find_small_faces_hydraulic_radius( DLIList <RefVolume*> &r
   DLIList <CoEdge*> co_edges;
   int num_faces = ref_faces.size();
   ProgressTool *progress_ptr = NULL;
-  char title[32];
   if (num_faces > 20)
   {
-    strcpy(title, "Small Surface Progress");
     progress_ptr = AppUtil::instance()->progress_tool();
     assert(progress_ptr != NULL);
-    progress_ptr->start(0, 100, title, NULL, CUBIT_TRUE, CUBIT_TRUE);
+    progress_ptr->start(0, 100, "Small Surface Progress", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
   }
   double curr_percent = 0.0;
   for ( ii = ref_faces.size(); ii > 0; ii-- )
@@ -2194,7 +2951,7 @@ void GeomMeasureTool::find_small_faces_hydraulic_radius( DLIList <RefVolume*> &r
       //compute the hydraulic radius 4*(A/P).
     if ( length <= CUBIT_RESABS )
     {
-      PRINT_INFO("Total Perimiter Length of Surface %d is less than tolerance.\n",
+      PRINT_INFO("Total Perimeter Length of Surface %d is less than tolerance.\n",
                  curr_face->id());
       
       continue;
@@ -2820,14 +3577,14 @@ void GeomMeasureTool::find_close_loops(RefFace *face,
   RefEdge *closest_edge_1, *closest_edge_2;
   CubitVector curr_loc;
   double closest_dist;
-  double min_for_loop;
+  double min_for_loop_squared;
   atree_list.reset();
   for ( ii = 0; ii < atree_list.size(); ii++ )
   {
     curr_points = boundary_point_loops.get_and_step();
     for ( jj = ii+1; jj < atree_list.size(); jj++ )
     {
-      min_for_loop = CUBIT_DBL_MAX;
+      min_for_loop_squared = CUBIT_DBL_MAX;
       closest_edge_1 = NULL;
       closest_edge_2 = NULL;
       curr_tree = atree_list.next(jj);
@@ -2846,7 +3603,7 @@ void GeomMeasureTool::find_close_loops(RefFace *face,
             //hmm, not sure what is wrong here.
           PRINT_ERROR("Can't find closest point between loops.\n");
         }
-        if (closest_dist <= tol*tol && closest_dist < min_for_loop*min_for_loop )
+        if (closest_dist <= tol*tol && closest_dist < min_for_loop_squared )
         {
             //just store the smaller ones.  Don't store
           RefEntity *ref_ent = curr_point->owner();
@@ -2889,7 +3646,7 @@ void GeomMeasureTool::find_close_loops(RefFace *face,
             continue;
           }
           
-          min_for_loop = sqrt(closest_dist);
+          min_for_loop_squared = closest_dist;
           closest_edge_1 = ref_edge_1;
           closest_edge_2 = ref_edge_2;
         }
@@ -2898,7 +3655,7 @@ void GeomMeasureTool::find_close_loops(RefFace *face,
       {
         close_edges.append(closest_edge_1);
         close_edges.append(closest_edge_2);
-        small_lengths.append(min_for_loop);
+        small_lengths.append(sqrt(min_for_loop_squared));
       }
     }
   }
@@ -3066,35 +3823,60 @@ void GeomMeasureTool::find_irregular_valence( RefVolume *ref_volume,
 ///
 ///  Find fillets and rounds.
 ///
+#define FACE_BLEND      1
+#define VERTEX_BLEND    2
+#define BLEND_PROCESSED 3
+
 void GeomMeasureTool::find_blends( RefVolume *ref_volume,
                                    DLIList <RefFace*> &blend_faces,
                                    DLIList <DLIList<RefFace*>*> &blend_groups )
 {
     //Assume for now that blends have cartesian angles between
     //all the attached faces and itself.
-    //Also a blend cannot be plannar.  And directly accross from
+    //Also a blend cannot be planar.  And directly accross from
     //one blend edge, there is usually another blended edge but
     //the angle between the two normals must be orthogonal. In other
     //words their must be some sort of transition.
   
-    //First go through each face and each edge on each face.
-  int ii, jj;
+    //mark all the faces as 0.  The mark is used here to find the
+    // blend groups.  The function is_vertex_blend() marks faces
+    // as being a vertex blend.  The group of faces is then traversed
+    // until the adjacent surface (across the cross curve) is either
+    // a vertex blend or not a blend.
   DLIList <RefFace*> ref_faces;
+  DLIList <RefFace*> vertex_blends, face_blends;
+  ref_volume->ref_faces(ref_faces);
+  int ii, jj;
+  for ( ii =0; ii < ref_faces.size(); ii++ )
+    ref_faces.get_and_step()->marked(0);
+
+    //First go through each face and each edge on each face.
   DLIList <RefEdge*> ref_edges;
   RefFace *ref_face;
   RefEdge *ref_edge, *other_edge;
-  ref_volume->ref_faces(ref_faces);
+  int num_vertex_blends = 0;
+  int num_face_blends = 0;
   for ( ii = ref_faces.size(); ii > 0; ii-- )
   {
     ref_face = ref_faces.get_and_step();
-      //Test the face to see if it is a blend.
+      //Test the face to see if it is a face or vertex blend.
     other_edge = NULL;
     ref_edge = NULL;
     if ( is_face_blend(ref_face, ref_volume,
                        ref_edge, other_edge ) )
-      blend_faces.append(ref_face);
+    {
+      face_blends.append(ref_face);
+      ref_face->marked(1);
+      num_face_blends++;
+    }
+    else if ( is_vertex_blend(ref_face, ref_volume) )
+    {
+      vertex_blends.append(ref_face);
+      ref_face->marked(2);
+      num_vertex_blends++;  // keep track of the number of vertex blends
+    }
   }
-  if ( blend_faces.size() == 0 )
+  if ( face_blends.size() + vertex_blends.size() == 0 )
   {
     return;
   }
@@ -3102,42 +3884,79 @@ void GeomMeasureTool::find_blends( RefVolume *ref_volume,
     //are that share curves.
   DLIList <RefFace*> *blend_group;
   DLIList <RefFace*> stack;
-  RefFace *other_face;
-    //mark all the faces as 0.
-  for ( ii =0; ii < ref_faces.size(); ii++ )
-    ref_faces.get_and_step()->marked(0);
-    //mark just the blends as 1.
-  for ( ii =0; ii < blend_faces.size(); ii++ )
-    blend_faces.get_and_step()->marked(1);
+  RefFace *start_face = NULL, *other_face;
   
-  for ( ii =0; ii < blend_faces.size(); ii++ )
+  // continue while there are blends to process
+  while ( vertex_blends.size() + face_blends.size() > 0 || 
+          start_face != NULL)
   {
-    ref_face = blend_faces.get_and_step();
-    if ( ref_face->marked() == 2 )
-      continue;
-    blend_group = new DLIList <RefFace*>;
-    blend_groups.append(blend_group);
-    stack.clean_out();
-    stack.append(ref_face);
-    while ( stack.size() > 0 )
+    // if we don't have a start_face, get a new one.
+    if (!start_face) 
     {
-      ref_face = stack.pop();
-      ref_face->marked(2);
-      blend_group->append(ref_face);
-      ref_edges.clean_out();
-      ref_face->ref_edges(ref_edges);
-      for ( jj = 0; jj < ref_edges.size(); jj++ )
+      // this is the start of a new group
+      blend_group = new DLIList <RefFace*>;
+      blend_groups.append(blend_group);
+
+      // always prefer to start at a vertex blend if one exists
+      if (vertex_blends.size() > 0 )
       {
-        ref_edge = ref_edges.get_and_step();
-        other_face = ref_edge->other_face(ref_face, ref_volume);
-        if ( other_face == NULL )
-            //shouldn't happend.
-          continue;
-        if ( other_face->marked() == 1 )
-          stack.append(other_face);
+        start_face = vertex_blends.pop();
+      }
+      else 
+      {
+        start_face = face_blends.pop();
       }
     }
+
+    blend_group->append(start_face);  // add ref_face to group
+    blend_faces.append(start_face);   // add the ref_face to the returned list
+    start_face->marked(BLEND_PROCESSED);
+
+    ref_edges.clean_out();
+    start_face->ref_edges(ref_edges);
+    for ( jj = 0; jj < ref_edges.size(); jj++ )
+    {
+      ref_edge = ref_edges.get_and_step();
+      other_face = ref_edge->other_face(start_face, ref_volume);
+      if (other_face == NULL)
+      {
+        start_face = NULL;
+        break;
+      }
+
+      // if this blend has been processed and isn't in the current group
+      if (other_face->marked() == BLEND_PROCESSED && 
+          !blend_group->is_in_list(other_face) )
+      {
+        start_face = NULL;
+        break;  // reached an end of this loop
+      }
+      else if (other_face->marked() == VERTEX_BLEND)
+      {
+        blend_group->append(other_face);  // add the ref_face to the group
+        blend_faces.append(other_face);   // add the ref_face to the returned list
+        vertex_blends.remove(other_face);
+        other_face->marked(BLEND_PROCESSED);
+        start_face = NULL;
+        break;  // a vertex blend is also end of the line
+      }
+      else if (other_face->marked() == FACE_BLEND)
+      {
+        start_face = other_face;
+        face_blends.remove(other_face);
+        break;  // continue using this face as the new start face
+      }
+    }
+    // if we traversed through all the edges of this blend without
+    // finding another blend attached, this is the end of the chain 
+    // and we need to find another starting place.
+    if ( jj >= ref_edges.size() ) 
+    {
+      start_face = NULL;
+    }
+    
   }
+
     //cleanup marks.
   for ( ii =0; ii < ref_faces.size(); ii++ )
     ref_faces.get_and_step()->marked(0);
@@ -3148,6 +3967,198 @@ void GeomMeasureTool::find_blends( RefVolume *ref_volume,
     //REMEMBER TO DELETE the dllists in blend_faces.
   return;
 }
+
+// struct type object private to the next function
+class NextBlend
+{
+  public:
+  RefEdge* ref_edge;
+  RefFace* ref_face;
+};
+
+void GeomMeasureTool::find_blends_from_edge( RefVolume* ref_volume, 
+                                                    RefFace *start_face, 
+                                                    RefEdge* start_edge,
+                                                    std::vector <RefFace*> &blend_faces)
+{
+  // initialize the mark on all surfaces in the volume
+  DLIList <RefFace*> ref_faces;
+  RefEdge *next_edge, *other_edge;
+  ref_volume->ref_faces(ref_faces);
+  int ii;
+  for ( ii =0; ii < ref_faces.size(); ii++ )
+    ref_faces.get_and_step()->marked(0);
+
+  std::stack<NextBlend> blend_stack;
+
+  NextBlend blend;
+  blend.ref_edge = start_edge;
+  blend.ref_face = start_face;
+  blend_faces.push_back(start_face);
+
+  blend_stack.push(blend);
+
+  while (blend_stack.size() > 0)
+  {
+    // this is an oddity with std::stack.  Get the top of the stack
+    // and then you have to remove it from the stack with pop
+    NextBlend next_blend = blend_stack.top();
+    blend_stack.pop();
+    RefEdge* ref_edge = next_blend.ref_edge;
+    RefFace* ref_face = next_blend.ref_face;
+
+    RefFace* next_face;
+    next_face = ref_edge->other_face(ref_face, ref_volume);
+
+    // the the next face exists and it's a face blend, save the current blend,
+    // create a new blend object and add it to the stack
+    if ( next_face && is_face_blend(next_face, ref_volume, next_edge, other_edge ) )
+    {
+      // if the next face is already processed, the chain loops back on itself.
+      if (next_face->marked() == BLEND_PROCESSED)
+      {
+        for ( ii =0; ii < ref_faces.size(); ii++ )
+          ref_faces.get_and_step()->marked(0);
+        return;
+      }
+
+      blend_faces.push_back(next_face);
+      next_face->marked(BLEND_PROCESSED);
+
+      // the is_face_blend function assumes (poorly) rectangular surfaces
+      // without any holes.  It returns the spring curves and we want
+      // the cross curves. So get all four edges and remove the two
+      // spring curves returned by is_face_blend
+      DLIList <RefEdge*> ref_edges;
+      next_face->ref_edges(ref_edges);
+      ref_edges.remove(next_edge);
+      ref_edges.remove(other_edge);
+
+      if (ref_edges.get() != ref_edge)
+      {
+        next_blend.ref_edge = ref_edges.get();
+      }
+      else
+      {
+        next_blend.ref_edge = ref_edges.next(1);
+      }
+      next_blend.ref_face = next_face;
+      blend_stack.push(next_blend);
+    }
+    else if ( next_face && is_vertex_blend(next_face, ref_volume) )
+    {
+      // we will stop the chain at a vertex blend
+      blend_faces.push_back(next_face);
+      next_face->marked(BLEND_PROCESSED);
+    }
+  }
+
+  // clean up the marks
+  std::vector<RefFace*>::iterator iter;
+  for ( iter = blend_faces.begin(); iter != blend_faces.end(); iter++)
+    (*iter)->marked(0);
+}
+
+// given a starting blend surface find a chain of blends from
+// that surface.  
+//
+// Note that this function intentionally does _not_
+// clear the blend_face list so that additional chains can be added.
+CubitStatus GeomMeasureTool::find_blend_chains( RefFace *start_face,
+                                std::vector<std::vector< RefFace*> > &blend_chains)
+{
+
+  if (start_face == NULL)
+  {
+    return CUBIT_FAILURE;
+  }
+
+  std::vector <RefFace*> blend_faces;
+
+  // get the owning volume of this blend
+  DLIList<RefEntity*> entity_list;
+  RefVolume* ref_volume;
+  int ii;
+
+  start_face->get_parent_ref_entities(entity_list);
+
+  // this indicates merged enitites and potential problems
+  if (entity_list.size() > 1)
+  {
+    return CUBIT_FAILURE;
+  }
+
+  // make sure we're at the beginning of the list and get the first
+  // and only item on the list and cast it to a RefVolume
+  entity_list.reset();
+  ref_volume = CAST_TO(entity_list.get(), RefVolume);
+ 
+  if (!ref_volume)
+  {
+    return CUBIT_FAILURE;
+  }
+
+  // initialize the mark on all surfaces in the volume
+  DLIList <RefFace*> ref_faces;
+  ref_volume->ref_faces(ref_faces);
+
+  RefEdge *spring_curve1, *spring_curve2;
+  if ( is_face_blend(start_face, ref_volume, spring_curve1, spring_curve2 ) )
+  {
+    // the is_face_blend function assumes (poorly) rectangular surfaces
+    // without any holes.  It returns the spring curves and we want
+    // the cross curves. So get all four edges and remove the two
+    // spring curves returned by is_face_blend
+    DLIList <RefEdge*> ref_edges;
+    start_face->ref_edges(ref_edges);
+    ref_edges.remove(spring_curve1);
+    ref_edges.remove(spring_curve2);
+
+    // there is a special case where the blend is a periodic surface
+    // meaning that there _are_ no cross curves
+    if ( ref_edges.size() == 0 )
+    {
+      blend_faces.push_back(start_face);
+    }
+    else
+    {
+      // now find additional blends extending from either side of the blend
+      blend_faces.clear();
+      find_blends_from_edge( ref_volume, start_face, ref_edges.get(), blend_faces);
+      find_blends_from_edge( ref_volume, start_face, ref_edges.next(1), blend_faces);
+
+      // make sure that we have a unique list (the start surface is probably here twice)
+      std::vector<RefFace*>::iterator new_end;
+      std::sort( blend_faces.begin(), blend_faces.end() );
+      new_end = std::unique( blend_faces.begin(), blend_faces.end() );
+      blend_faces.erase(new_end, blend_faces.end());
+    }
+
+    blend_chains.push_back(blend_faces);
+  }
+  else if ( is_vertex_blend(start_face, ref_volume) )
+  {
+    DLIList<RefEdge*> ref_edges;
+    start_face->ref_edges(ref_edges);
+
+    for (ii = 0; ii < ref_edges.size(); ii++)
+    {
+      RefEdge* start_edge = ref_edges.get_and_step();
+      blend_faces.clear();
+      find_blends_from_edge( ref_volume, start_face, start_edge, blend_faces);
+
+      blend_chains.push_back(blend_faces);
+    }
+  }
+  else
+  {
+    // the given face is not a blend
+    return CUBIT_FAILURE;
+  }
+
+  return CUBIT_SUCCESS;
+}
+
 //--------------------------------------------------------------------
 //Function: Public, is_face_blend
 //Description: Determines if a face is a blend surface, returns the
@@ -3274,6 +4285,93 @@ CubitBoolean GeomMeasureTool::is_face_blend(RefFace *ref_face,
     return CUBIT_TRUE;
   }
   return CUBIT_FALSE;
+}
+
+//--------------------------------------------------------------------
+//Function: Public, is_vertex_blend
+//Description: Determines if a face is a vertex blend surface.
+//   For this type of blend, all ref_edges must be meet tangentially
+//   with another surface.  This assumes blend surface with no holes. 
+//---------------------------------------------------------------------
+CubitBoolean GeomMeasureTool::is_vertex_blend(RefFace *ref_face,
+                                              RefVolume* ref_volume)
+{
+    //first we know that blend surfaces are not planar.
+    //so remove these first.
+    //Also, don't look at faces with more than 2 loops.
+  if ( ref_face->geometry_type() == PLANE_SURFACE_TYPE ||
+       ref_face->num_loops() > 2 )
+    return CUBIT_FALSE;
+  
+  CubitBoolean is_cartesian;
+  DLIList<RefEdge*> ref_edges;
+  RefFace *other_face;
+  RefEdge *ref_edge = NULL;
+  int jj;
+  double angle;
+  ref_face->ref_edges(ref_edges);
+  for ( jj = ref_edges.size(); jj > 0; jj-- )
+  {
+    ref_edge = ref_edges.get_and_step();
+
+    //Weed-out case where one edge is shared between more 
+    //than 2 surfaces of the same volume
+    DLIList<RefFace*> tmp_faces;
+    ref_edge->ref_faces( tmp_faces );
+
+    if( tmp_faces.size() > 2 )
+    {
+      int kk;
+      for(kk=tmp_faces.size(); kk--;)
+      {
+        if( !tmp_faces.get()->is_child( ref_volume ) )
+          tmp_faces.change_to(NULL);
+        tmp_faces.step();
+      }
+      tmp_faces.remove_all_with_value( NULL );
+      if( tmp_faces.size() > 2 )
+        //this isn't the type of surface we are looking for...
+        continue;
+    }
+
+    other_face = ref_edge->other_face(ref_face, ref_volume);
+    if ( other_face == NULL )
+    {
+        //this isn't the type of surface we are looking for...
+      break;
+    }
+    angle = GeometryQueryTool::instance()->surface_angle(ref_face,
+                                                         other_face,
+                                                         ref_edge,
+                                                         ref_volume);
+    angle *= 180.0/CUBIT_PI;
+    is_cartesian = CUBIT_TRUE;
+    if ( angle <= GEOM_SIDE_LOWER ||
+         angle >= GEOM_SIDE_UPPER )
+      is_cartesian = CUBIT_FALSE;
+      //Okay, we have one major criteria achieved, this edge is a cartesian meet.
+
+    if ( !is_cartesian )
+      return CUBIT_FALSE;
+      //Now we need to check the radius of curvatures between these
+      //two surfaces. I'm not totally sure about this but I think we
+      // want the same radius of curvature.
+    double k1_s1, k2_s1, k1_s2, k2_s2;
+    CubitVector mid_point;
+    ref_edge->mid_point(mid_point);
+    ref_face->get_principal_curvatures( mid_point, k1_s1, k2_s1, ref_volume);
+    other_face->get_principal_curvatures( mid_point, k1_s2, k2_s2, ref_volume);
+    if (( is_equal(k1_s1, k1_s2) || is_equal(k1_s1, k2_s2) ) &&
+        ( is_equal(k2_s1, k1_s2) || is_equal(k2_s1, k2_s2) ) )
+        //try a different edge.
+        continue;
+    else
+      return CUBIT_FALSE;
+  }
+
+  // if all edges are tangent and share curvatures then it must be a 
+  // vertex blend.
+  return CUBIT_TRUE;
 }
 
 CubitBoolean GeomMeasureTool::find_opposite_edge( RefEdge* ref_edge,
@@ -3441,26 +4539,22 @@ CubitBoolean GeomMeasureTool::is_equal(double v1, double v2)
 }
 CubitStatus GeomMeasureTool::get_centroid( RefFace *ref_face, CubitVector &centroid, double &tot_area )
 {
-  int i;
-  int num_tris, num_pnts, num_facets;
   GMem g_mem;
   unsigned short norm_tol = 5;
   double dist_tol = -1.0;
 
   ref_face->get_geometry_query_engine()->
-      get_graphics(ref_face->get_surface_ptr(),num_tris, num_pnts, num_facets,
-      &g_mem, norm_tol, dist_tol );
+      get_graphics(ref_face->get_surface_ptr(), &g_mem, norm_tol, dist_tol );
 
-  if(num_tris < 1)
+  if(g_mem.fListCount < 1)
   {
       // Decrease tolerance and try again (we can get this for small features)
       norm_tol /= 2;
       ref_face->get_geometry_query_engine()->
-          get_graphics(ref_face->get_surface_ptr(),num_tris, num_pnts, num_facets,
-          &g_mem, norm_tol, dist_tol );
+          get_graphics(ref_face->get_surface_ptr(), &g_mem, norm_tol, dist_tol );
   }
 
-  if(num_tris < 1)
+  if(g_mem.fListCount < 1)
   {
       // Lets give up 
       PRINT_ERROR( "Unable to find the center of a surface\n" );
@@ -3477,7 +4571,7 @@ CubitStatus GeomMeasureTool::get_centroid( RefFace *ref_face, CubitVector &centr
   GPoint* plist = g_mem.point_list();
   int* facet_list = g_mem.facet_list();
   int c = 0;
-  for( i=0; i<num_tris; i++ )
+  for( ; c < g_mem.fListCount; )
   {
       p[0] = plist[facet_list[++c]];
       p[2] = plist[facet_list[++c]];
@@ -3505,6 +4599,9 @@ CubitStatus GeomMeasureTool::get_centroid( RefFace *ref_face, CubitVector &centr
 	  tot_area += tri_area;
         
     }
+  if( tot_area == 0 )
+    return CUBIT_FAILURE;
+
   centroid /= tot_area;
   return CUBIT_SUCCESS;
 }    
@@ -3539,3 +4636,626 @@ GeomMeasureTool::center( DLIList<RefFace*> ref_faces )
                   id, centroid.x(), centroid.y(), centroid.z());
   return CUBIT_SUCCESS;
 }
+
+CubitStatus GeomMeasureTool::find_near_coincident_vertices( 
+                            DLIList<RefVolume*> &ref_volumes,
+                            DLIList<RefVertex*> &ref_vertices_out,
+                            DLIList<double> &distances,
+                            double low_tol,
+                            double high_tol,
+                            bool filter_same_volume_cases)
+{
+  DLIList<RefVertex*> tmp_vert_list;
+  DLIList<RefVertex*> ref_verts; 
+  int i,j;
+  for( i=ref_volumes.size(); i--; )
+  {
+    RefVolume *tmp_vol = ref_volumes.get_and_step();
+    tmp_vert_list.clean_out();
+    tmp_vol->ref_vertices( tmp_vert_list );
+    ref_verts += tmp_vert_list;
+  }
+
+  //put all the vertices in a tree 
+  AbstractTree <RefVertex*> *a_tree = new RTree<RefVertex*>( high_tol ); 
+  for (i=ref_verts.size(); i--;)
+    a_tree->add(ref_verts.get_and_step());
+
+  std::multimap<double, dist_vert_struct> distance_vertex_map; 
+
+  //for each vertex
+  for (i=ref_verts.size(); i--;)
+  {
+    RefVertex *tmp_vert = ref_verts.get_and_step();
+    RefVolume *v1 = tmp_vert->ref_volume();
+    CubitVector vert_xyz = tmp_vert->coordinates();
+
+    //get all close vertices
+    DLIList<RefVertex*> close_verts;
+    a_tree->find(tmp_vert->bounding_box(), close_verts);
+
+    //if any vertex is between low_tol and high_tol
+    //add it to the list
+    DLIList<RefVertex*> near_coincident_verts;
+    for( j=close_verts.size(); j--; )
+    {
+      RefVertex *close_vert = close_verts.get_and_step();
+      if( close_vert == tmp_vert ) 
+        continue;
+
+      RefVolume *v2 = close_vert->ref_volume();
+      bool check_distance = true;
+      if(filter_same_volume_cases && v1 && v2 && v1 == v2)
+        check_distance = false;
+      if(check_distance)
+      {
+        double distance = vert_xyz.distance_between( close_vert->coordinates() );
+        if( distance >= low_tol && distance <= high_tol )
+        {
+          dist_vert_struct tmp_struct;
+          tmp_struct.dist = distance;
+          tmp_struct.v1 = tmp_vert;
+          tmp_struct.v2 = close_vert;
+          distance_vertex_map.insert( std::multimap<double, dist_vert_struct>::
+                                      value_type( distance, tmp_struct ));
+        }
+      }
+    }
+
+    a_tree->remove( tmp_vert );
+  }
+
+  std::multimap<double, dist_vert_struct>::reverse_iterator iter;
+  
+  iter = distance_vertex_map.rbegin();
+  for(; iter!=distance_vertex_map.rend(); iter++ )
+  {
+    distances.append( (*iter).second.dist );
+    ref_vertices_out.append( (*iter).second.v1 );
+    ref_vertices_out.append( (*iter).second.v2 );
+  }
+
+  delete a_tree;
+
+  return CUBIT_SUCCESS;
+}
+
+// This function is similar to find_near_coincident_vertices except for the
+// fact that it will only find the closest vertex in a given volume for
+// a vertex in another volume to be close to.  This tries to exclude the case where
+// you would attempt to merge one vertex from one volume to two different
+// vertices in another volume.
+CubitStatus GeomMeasureTool::find_near_coincident_vertices_unique( 
+                            DLIList<RefVolume*> &ref_volumes,
+                            double high_tol,
+                            std::map <RefVertex*, DLIList<dist_vert_struct*>*> &vert_dist_map)
+{
+  DLIList<RefVertex*> tmp_vert_list;
+  DLIList<RefVertex*> ref_verts; 
+  int i,j;
+  for( i=ref_volumes.size(); i--; )
+  {
+    RefVolume *tmp_vol = ref_volumes.get_and_step();
+    tmp_vert_list.clean_out();
+    tmp_vol->ref_vertices( tmp_vert_list );
+    ref_verts += tmp_vert_list;
+  }
+
+  //put all the vertices in a tree 
+  AbstractTree <RefVertex*> *a_tree = new RTree<RefVertex*>( high_tol ); 
+  for (i=ref_verts.size(); i--;)
+    a_tree->add(ref_verts.get_and_step());
+
+  //for each vertex
+  for (i=ref_verts.size(); i--;)
+  {
+    RefVertex *tmp_vert = ref_verts.get_and_step();
+    RefVolume *vol1 = tmp_vert->ref_volume();
+    CubitVector vert_xyz = tmp_vert->coordinates();
+
+    //get all close vertices
+    DLIList<RefVertex*> close_verts;
+    a_tree->find(tmp_vert->bounding_box(), close_verts);
+
+    //if any vertex is between low_tol and high_tol
+    //add it to the list
+    DLIList<dist_vert_struct*> *near_coincident_verts = NULL;
+    for( j=close_verts.size(); j--; )
+    {
+      RefVertex *close_vert = close_verts.get_and_step();
+      if( close_vert == tmp_vert ) 
+        continue;
+
+      RefVolume *vol2 = close_vert->ref_volume();
+      if(vol1 && vol2 && vol1 != vol2)
+      {
+        if(!near_coincident_verts)
+        {
+          near_coincident_verts = new DLIList<dist_vert_struct*>;
+          vert_dist_map[tmp_vert] = near_coincident_verts;
+        }
+        double distance = vert_xyz.distance_between( close_vert->coordinates() );
+        int h;
+        bool found_entry_with_same_vol = false;
+        for(h=near_coincident_verts->size(); h>0 && !found_entry_with_same_vol; h--)
+        {
+          dist_vert_struct* vds = near_coincident_verts->get_and_step();
+          if(vds->vol2 == vol2)
+          {
+            found_entry_with_same_vol = true;
+            if(distance < vds->dist)
+            {
+              vds->dist = distance;
+              vds->vol2 = vol2;
+              vds->v2 = close_vert;
+            }
+          }
+        }
+        if(!found_entry_with_same_vol)
+        {
+          dist_vert_struct *new_vds = new dist_vert_struct;
+          new_vds->dist = distance;
+          new_vds->v2 = close_vert;
+          new_vds->vol2 = vol2;
+          near_coincident_verts->append(new_vds);
+        }
+      }
+    }
+    a_tree->remove( tmp_vert );
+  }
+
+  delete a_tree;
+
+  return CUBIT_SUCCESS;
+}
+
+struct dist_vert_vert_struct
+{
+  double dist;
+  RefVertex *vert1;
+  RefVertex *vert2;
+};
+
+struct dist_vert_curve_struct
+{
+  double dist;
+  RefVertex *vert;
+  RefEdge *edge;
+//  bool operator<( const dist_vert_curve_struct& b ) const
+//  {
+//    return this->dist < b.dist;
+ // }
+};
+
+struct vert_curve_dist_sort
+{
+  bool operator()( const dist_vert_curve_struct& a, const dist_vert_curve_struct& b ) const
+  {
+    return a.dist < b.dist;
+  }
+};
+
+struct vert_curve_dist_sort_ptr
+{
+  bool operator()( dist_vert_curve_struct *a, dist_vert_curve_struct *b ) const
+  {
+    if( a->dist < b->dist )
+      return true;
+    else if( a->dist > b->dist )
+      return false;
+    else 
+      return true;
+  }
+};
+
+struct vert_vert_dist_sort_ptr
+{
+  bool operator()( dist_vert_vert_struct *a, dist_vert_vert_struct *b ) const
+  {
+    if( a->dist < b->dist )
+      return true;
+    else if( a->dist > b->dist )
+      return false;
+    else 
+      return true;
+  }
+};
+
+CubitStatus GeomMeasureTool::find_closest_vertex_curve_pairs(
+                                  DLIList<RefVolume*> &vol_list,
+                                  int &num_to_return,
+                                  DLIList<RefVertex*> &vert_list,
+                                  DLIList<RefEdge*> &curve_list,
+                                  DLIList<double> &distances)
+{
+  DLIList<RefFace*> surfs;
+
+  int i, total_num_entries = 0;
+  for( i=vol_list.size(); i--; )
+  {
+    RefVolume *tmp_vol = vol_list.get_and_step();
+    tmp_vol->ref_faces( surfs );
+  }
+
+  std::set<dist_vert_curve_struct*,vert_curve_dist_sort_ptr> distance_vertex_curve_set; 
+
+  for(i=surfs.size(); i>0; i--)
+  {
+    RefFace *surf = surfs.get_and_step();
+    DLIList<RefVertex*> surf_verts;
+    surf->ref_vertices(surf_verts);
+    DLIList<RefEdge*> surf_curves;
+    surf->ref_edges(surf_curves);
+
+    int j;
+    for(j=surf_verts.size(); j>0; j--)
+    {
+      RefVertex *tmp_vert = surf_verts.get_and_step();
+      CubitVector vert_xyz = tmp_vert->coordinates();
+      CubitVector closest_pt;
+      int k;
+      for(k=surf_curves.size(); k>0; k--)
+      {
+        RefEdge *cur_edge = surf_curves.get_and_step();
+        if(cur_edge->start_vertex() != tmp_vert &&
+          cur_edge->end_vertex() != tmp_vert)
+        {
+          cur_edge->closest_point_trimmed(vert_xyz, closest_pt);
+          if(!closest_pt.about_equal(cur_edge->start_coordinates()) &&
+             !closest_pt.about_equal(cur_edge->end_coordinates()))
+          {
+            double dist_sq = vert_xyz.distance_between_squared(closest_pt);
+            dist_vert_curve_struct *tmp_struct = new dist_vert_curve_struct;
+            tmp_struct->dist = dist_sq;
+            tmp_struct->vert = tmp_vert;
+            tmp_struct->edge = cur_edge; 
+            distance_vertex_curve_set.insert( tmp_struct );
+            total_num_entries++;
+          }
+        }
+      }
+    }
+  }
+
+  std::set<dist_vert_curve_struct*, vert_curve_dist_sort_ptr>::iterator iter, upper_iter; 
+  
+  int local_num_to_return = num_to_return;
+  if(num_to_return == -1)
+  {
+    local_num_to_return = total_num_entries;
+  }
+  int cntr = 0;
+  iter = distance_vertex_curve_set.begin();
+  for(; iter!=distance_vertex_curve_set.end() && cntr < local_num_to_return; iter++ )
+  {
+    distances.append( sqrt((*iter)->dist) );
+    vert_list.append( (*iter)->vert );
+    curve_list.append( (*iter)->edge );
+    cntr++;
+  }
+
+  iter = distance_vertex_curve_set.begin();
+  for(; iter!=distance_vertex_curve_set.end(); iter++ )
+  {
+    delete *iter;
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeomMeasureTool::find_closest_vertex_vertex_pairs(
+                                  DLIList<RefVolume*> &vol_list,
+                                  int &num_to_return,
+                                  DLIList<RefVertex*> &vert_list1,
+                                  DLIList<RefVertex*> &vert_list2,
+                                  DLIList<double> &distances)
+{
+  std::set<dist_vert_vert_struct*,vert_vert_dist_sort_ptr> distance_vertex_vertex_set; 
+
+  int i, total_num_entries = 0;
+  for( i=vol_list.size(); i--; )
+  {
+    RefVolume *tmp_vol = vol_list.get_and_step();
+    DLIList<RefVertex*> vol_verts;
+    tmp_vol->ref_vertices(vol_verts);
+    while(vol_verts.size() > 1)
+    {
+      RefVertex *vert1 = vol_verts.pop();
+      CubitVector vert1_xyz = vert1->coordinates();
+      int j;
+      for(j=vol_verts.size(); j>0; j--)
+      {
+        RefVertex *vert2 = vol_verts.get_and_step();
+        double dist_sq = vert2->coordinates().distance_between_squared(vert1_xyz);
+        dist_vert_vert_struct *tmp_struct = new dist_vert_vert_struct;
+        tmp_struct->dist = dist_sq;
+        tmp_struct->vert1 = vert1;
+        tmp_struct->vert2 = vert2; 
+        distance_vertex_vertex_set.insert( tmp_struct );
+        total_num_entries++;
+      }
+    }
+  }
+
+  std::set<dist_vert_vert_struct*, vert_vert_dist_sort_ptr>::iterator iter, upper_iter; 
+  
+  int local_num_to_return = num_to_return;
+  if(num_to_return == -1)
+    local_num_to_return = total_num_entries;
+  int cntr = 0;
+  iter = distance_vertex_vertex_set.begin();
+  for(; iter!=distance_vertex_vertex_set.end() && cntr < local_num_to_return; iter++ )
+  {
+    distances.append( sqrt((*iter)->dist) );
+    vert_list1.append( (*iter)->vert1 );
+    vert_list2.append( (*iter)->vert2 );
+    cntr++;
+  }
+
+  iter = distance_vertex_vertex_set.begin();
+  for(; iter!=distance_vertex_vertex_set.end(); iter++ )
+  {
+    delete *iter;
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeomMeasureTool::find_near_coincident_vertex_curve_pairs( 
+                                DLIList<RefVolume*> &ref_vols,
+                                DLIList<RefEdge*> &ref_edges,
+                                DLIList<RefVertex*> &ref_verts,
+                                DLIList<double> &distances,
+                                double low_tol,
+                                double high_tol,
+                                bool filter_same_volume_cases)
+{
+  //get all the curves and vertices of volumes in list
+  DLIList<RefVertex*> verts;
+  DLIList<RefEdge*> curves;
+
+  RTree<RefEdge*> a_tree(high_tol);
+
+  int i,j;
+  for( i=ref_vols.size(); i--; )
+  {
+    RefVolume *tmp_vol = ref_vols.get_and_step();
+    tmp_vol->ref_vertices( verts );
+    
+    curves.clean_out();
+    tmp_vol->ref_edges( curves );
+    for( j=curves.size(); j--; )
+    {
+      RefEdge *tmp_edge = curves.get_and_step();
+      a_tree.add( tmp_edge );
+    }
+  }
+
+  ProgressTool *progress_ptr = NULL;
+  int total_verts = verts.size();
+  if (total_verts > 5)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Near Coincident Vertex-Curve Pairs", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+    
+  double curr_percent = 0.0;
+  int processed_verts = 0;
+  int times = 0;
+  std::multimap<double, dist_vert_curve_struct> distance_vertex_curve_map; 
+
+  //for each vertex
+  for( i=verts.size(); i--; )
+  {
+    processed_verts++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(processed_verts))/((double)(total_verts));
+      progress_ptr->percent(curr_percent);
+    }
+
+    RefVertex *tmp_vert = verts.get_and_step();
+    RefVolume *v1 = tmp_vert->ref_volume();
+    CubitBox vertex_box ( tmp_vert->coordinates(), tmp_vert->coordinates() );
+    DLIList<RefEdge*> close_curves;
+    a_tree.find( vertex_box, close_curves );
+
+    CubitVector vertex_xyz = tmp_vert->coordinates(); 
+
+    for( j=close_curves.size(); j--; )
+    {
+      RefEdge *tmp_edge = close_curves.get_and_step();
+      RefVolume *v2 = tmp_edge->ref_volume();
+
+      bool check_distance = true;
+      if(filter_same_volume_cases && v1 && v2 && v1 == v2)
+        check_distance = false;
+      if(check_distance)
+      {
+        CubitVector closest_location;
+        tmp_edge->closest_point_trimmed( vertex_xyz, closest_location );
+        double distance = closest_location.distance_between( vertex_xyz );
+
+        if( distance >= low_tol && distance <= high_tol )
+        {
+          dist_vert_curve_struct tmp_struct;
+          tmp_struct.dist = distance;
+          tmp_struct.vert = tmp_vert;
+          tmp_struct.edge = tmp_edge; 
+
+          distance_vertex_curve_map.insert( std::multimap<double, dist_vert_curve_struct>::
+                                            value_type( distance, tmp_struct ));
+        }
+      }
+    }
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
+  //std::set<dist_vert_curve_struct, vert_curve_dist_sort>::iterator iter, upper_iter; 
+  std::multimap<double, dist_vert_curve_struct>::reverse_iterator iter;
+  
+  iter = distance_vertex_curve_map.rbegin();
+  for(; iter!=distance_vertex_curve_map.rend(); iter++ )
+  {
+    distances.append( (*iter).second.dist );
+    ref_verts.append( (*iter).second.vert );
+    ref_edges.append( (*iter).second.edge );
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+
+struct dist_vert_surf_struct
+{
+  double dist;
+  RefVertex *vert;
+  RefFace *face;
+};
+
+struct vert_surf_dist_sort
+{
+  bool operator()( dist_vert_surf_struct a, dist_vert_surf_struct b ) const
+  {
+    if( a.dist < b.dist )
+      return true;
+    else if( a.dist > b.dist )
+      return false;
+    else 
+    {
+      if( a.vert < b.vert )
+        return true;
+      else if( a.vert > b.vert )
+        return false;
+      else if( a.face < b.face )
+        return true;
+      else if( a.face > b.face )
+        return false;
+    }
+    return false;
+  }
+};
+
+
+CubitStatus GeomMeasureTool::find_near_coincident_vertex_surface_pairs( 
+                                DLIList<RefVolume*> &ref_vols,
+                                DLIList<RefFace*> &ref_faces,
+                                DLIList<RefVertex*> &ref_verts,
+                                DLIList<double> &distances,
+                                double low_tol,
+                                double high_tol,
+                                bool filter_same_volume_cases)
+{
+  //get all the curves and vertices of volumes in list
+  DLIList<RefVertex*> verts;
+  DLIList<RefFace*> faces;
+
+  AbstractTree<RefFace*> *a_tree = new RTree<RefFace*>( high_tol );
+
+  int i,j;
+  for( i=ref_vols.size(); i--; )
+  {
+    RefVolume *tmp_vol = ref_vols.get_and_step();
+    tmp_vol->ref_vertices( verts );
+    
+    faces.clean_out();
+    tmp_vol->ref_faces( faces );
+    // Populate the Surface AbstractTree
+    for( j=faces.size(); j--; )
+    {
+      RefFace *tmp_face = faces.get_and_step();
+      a_tree->add( tmp_face );
+    }
+  }
+
+  ProgressTool *progress_ptr = NULL;
+  int total_verts = verts.size();
+  if (total_verts > 50)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Near Coincident Vertex-Surface Pairs", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+  double curr_percent = 0.0;
+  int processed_verts = 0;
+
+  std::multimap<double, dist_vert_surf_struct> distance_vertex_surface_map; 
+
+  //for each vertex
+  for( i=verts.size(); i--; )
+  {
+    processed_verts++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(processed_verts))/((double)(total_verts));
+      progress_ptr->percent(curr_percent);
+    }
+
+    RefVertex *tmp_vert = verts.get_and_step();
+    RefVolume *v1 = tmp_vert->ref_volume();
+    CubitBox vertex_box ( tmp_vert->coordinates(), tmp_vert->coordinates() );
+    DLIList<RefFace*> close_faces;
+    a_tree->find( vertex_box, close_faces);
+
+    CubitVector vertex_xyz = tmp_vert->coordinates(); 
+
+    for( j=close_faces.size(); j--; )
+    {
+      RefFace *tmp_face = close_faces.get_and_step();
+      RefVolume *v2 = tmp_face->ref_volume();
+
+      bool check = true;
+      if(filter_same_volume_cases && v1 && v2 && v1 == v2)
+        check = false;
+
+      if(check)
+      {
+        DLIList<RefVertex*> tmp_verts;
+        tmp_face->ref_vertices( tmp_verts );
+        if( tmp_verts.is_in_list( tmp_vert ) ) 
+          continue;
+
+        CubitVector closest_location;
+        tmp_face->find_closest_point_trimmed( vertex_xyz, closest_location );
+        double distance = closest_location.distance_between( vertex_xyz );
+
+        if( distance > low_tol && distance < high_tol )
+        {
+          dist_vert_surf_struct tmp_struct;
+          tmp_struct.dist = distance;
+          tmp_struct.vert = tmp_vert;
+          tmp_struct.face = tmp_face; 
+          distance_vertex_surface_map.insert( std::multimap<double, dist_vert_surf_struct>::
+                                      value_type( distance, tmp_struct ));
+        }
+      }
+    }
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
+  std::multimap<double, dist_vert_surf_struct>::reverse_iterator iter;
+
+  iter = distance_vertex_surface_map.rbegin();
+  for(; iter!=distance_vertex_surface_map.rend(); iter++ )
+  {
+    distances.append( (*iter).second.dist );
+    ref_verts.append( (*iter).second.vert );
+    ref_faces.append( (*iter).second.face);
+  }
+
+  delete a_tree;
+
+  return CUBIT_SUCCESS;
+}
+
+
+
+
+

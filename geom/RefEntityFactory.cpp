@@ -8,6 +8,62 @@
 #include "GeometryQueryTool.hpp"
 #include "DLIList.hpp"
 
+static int sort_by_ascending_ids(CubitEntity*& a, CubitEntity*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(RefVertex*& a, RefVertex*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(RefVolume*& a, RefVolume*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(RefEdge*& a, RefEdge*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(RefFace*& a, RefFace*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(Body*& a, Body*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
+static int sort_by_ascending_ids(RefGroup*& a, RefGroup*& b)
+{
+  if( a->id() < b->id() )
+    return -1;
+  else
+    return 1;
+} 
+
 RefEntityFactory *RefEntityFactory::instance_ = NULL;
 
 RefEntityFactory::RefEntityFactory(RefEntityFactory *factory) 
@@ -31,8 +87,24 @@ RefEntityFactory::RefEntityFactory(RefEntityFactory *factory)
     refVolumeList = NULL;
     bodyList = NULL;
   }
+
+  refVertexListIsSorted = true;
+  refEdgeListIsSorted = true;
+  refFaceListIsSorted = true;
+  refVolumeListIsSorted = true;
+  bodyListIsSorted = true;
+  refGroupListIsSorted = true;
   
   reset_ids();
+}
+
+void RefEntityFactory::delete_instance()
+{
+  if( NULL != instance_ )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
 }
 
 RefEntityFactory::~RefEntityFactory()
@@ -163,6 +235,12 @@ void RefEntityFactory::add(RefEntity* ref_entity)
 void RefEntityFactory::add(RefGroup* refGPtr)
 {
    assert(!refGroupList->is_in_list(refGPtr));
+   if(refGroupList->size() > 0)
+   {
+    refGroupList->last();
+    if(refGPtr->id() < refGroupList->get()->id())
+      refGroupListIsSorted = false;
+   }
    refGroupList->append(refGPtr);
    if (refGPtr->id() > maxRefGroupId) maxRefGroupId = refGPtr->id();
 }
@@ -170,6 +248,12 @@ void RefEntityFactory::add(RefGroup* refGPtr)
 void RefEntityFactory::add(Body* bodyPtr)
 {
    assert(!bodyList->is_in_list(bodyPtr));
+   if(bodyList->size() > 0)
+   {
+    bodyList->last();
+    if(bodyPtr->id() < bodyList->get()->id())
+      bodyListIsSorted = false;
+   }
    bodyList->append(bodyPtr);
    if (bodyPtr->id() > maxBodyId) maxBodyId = bodyPtr->id();
 }
@@ -177,6 +261,12 @@ void RefEntityFactory::add(Body* bodyPtr)
 void RefEntityFactory::add(RefVolume* refVPtr)
 {
    assert(!refVolumeList->is_in_list(refVPtr));
+   if(refVolumeList->size() > 0)
+   {
+    refVolumeList->last();
+    if(refVPtr->id() < refVolumeList->get()->id())
+      refVolumeListIsSorted = false;
+   }
    refVolumeList->append(refVPtr);
    if (refVPtr->id() > maxRefVolumeId)
        maxRefVolumeId = refVPtr->id();
@@ -185,6 +275,12 @@ void RefEntityFactory::add(RefVolume* refVPtr)
 void RefEntityFactory::add(RefFace* refFPtr)
 {
    assert(!refFaceList->is_in_list(refFPtr));
+   if(refFaceList->size() > 0)
+   {
+    refFaceList->last();
+    if(refFPtr->id() < refFaceList->get()->id())
+      refFaceListIsSorted = false;
+   }
    refFaceList->append(refFPtr);
    if (refFPtr->entityId > maxRefFaceId)
        maxRefFaceId = refFPtr->entityId;
@@ -193,6 +289,12 @@ void RefEntityFactory::add(RefFace* refFPtr)
 void RefEntityFactory::add(RefEdge* refEPtr)
 {
    assert(!refEdgeList->is_in_list(refEPtr));
+   if(refEdgeList->size() > 0)
+   {
+    refEdgeList->last();
+    if(refEPtr->id() < refEdgeList->get()->id())
+      refEdgeListIsSorted = false;
+   }
    refEdgeList->append(refEPtr);
    if (refEPtr->id() > maxRefEdgeId)
        maxRefEdgeId = refEPtr->id();
@@ -201,6 +303,12 @@ void RefEntityFactory::add(RefEdge* refEPtr)
 void RefEntityFactory::add(RefVertex* refVPtr)
 {
    assert(!refVertexList->is_in_list(refVPtr));
+   if(refVertexList->size() > 0)
+   {
+    refVertexList->last();
+    if(refVPtr->id() < refVertexList->get()->id())
+      refVertexListIsSorted = false;
+   }
    refVertexList->append(refVPtr);
    if (refVPtr->id() > maxRefVertexId)
        maxRefVertexId = refVPtr->id();
@@ -340,6 +448,18 @@ void RefEntityFactory::ref_vertices(DLIList<RefVertex*> &ref_vertices)
   ref_vertices = *refVertexList;
 }
 
+#ifdef PROE
+void RefEntityFactory::ref_parts(DLIList<RefPart*> &ref_parts)
+{
+	ref_parts = *refPartList;
+}
+
+void RefEntityFactory::ref_assemblies(DLIList<RefAssembly*> &ref_assemblies)
+{
+	ref_assemblies = *refAssemblyList;
+}
+#endif
+
 int RefEntityFactory::num_bodies() const {return bodyList->size();}
 int RefEntityFactory::num_ref_volumes() const {return refVolumeList->size();}
 int RefEntityFactory::num_ref_groups() const {return refGroupList->size();}
@@ -406,18 +526,46 @@ Body* RefEntityFactory::get_body (int id)
    if (!bodyList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   Body* body_ptr = bodyList->get();
-   if (body_ptr->id() > id)
-       bodyList->reset();
-   
-   for (int i = bodyList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!bodyListIsSorted)
    {
-      body_ptr = bodyList->get_and_step();
-      if (body_ptr->id() == id)
-          return body_ptr ;
+     bodyList->sort(sort_by_ascending_ids);
+     bodyListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = bodyList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*bodyList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*bodyList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*bodyList)[left_index])->id() == id)
+       return ((*bodyList)[left_index]);
+     else if(((*bodyList)[right_index])->id() == id)
+       return ((*bodyList)[right_index]);
+   }
+   else
+     return ((*bodyList)[mid_index]);
+   
    return NULL ;
 }
 
@@ -426,18 +574,46 @@ RefGroup* RefEntityFactory::get_ref_group   (int id)
    if (!refGroupList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   RefGroup* ref_group_ptr = refGroupList->get();
-   if (ref_group_ptr->id() > id)
-       refGroupList->reset();
-   
-   for (int i = refGroupList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!refGroupListIsSorted)
    {
-      ref_group_ptr = refGroupList->get_and_step();
-      if (ref_group_ptr->id() == id)
-          return ref_group_ptr ;
+     refGroupList->sort(sort_by_ascending_ids);
+     refGroupListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = refGroupList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*refGroupList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*refGroupList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*refGroupList)[left_index])->id() == id)
+       return ((*refGroupList)[left_index]);
+     else if(((*refGroupList)[right_index])->id() == id)
+       return ((*refGroupList)[right_index]);
+   }
+   else
+     return ((*refGroupList)[mid_index]);
+
    return NULL ;
 }
 
@@ -446,18 +622,46 @@ RefVolume* RefEntityFactory::get_ref_volume (int id)
    if (!refVolumeList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   RefVolume* ref_volume_ptr = refVolumeList->get();
-   if (ref_volume_ptr->id() > id)
-       refVolumeList->reset();
-   
-   for (int i = refVolumeList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!refVolumeListIsSorted)
    {
-      ref_volume_ptr = refVolumeList->get_and_step() ;
-      if (ref_volume_ptr->id() == id)
-          return ref_volume_ptr ;
+     refVolumeList->sort(sort_by_ascending_ids);
+     refVolumeListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = refVolumeList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*refVolumeList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*refVolumeList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*refVolumeList)[left_index])->id() == id)
+       return ((*refVolumeList)[left_index]);
+     else if(((*refVolumeList)[right_index])->id() == id)
+       return ((*refVolumeList)[right_index]);
+   }
+   else
+     return ((*refVolumeList)[mid_index]);
+
    return NULL ;
 }
 
@@ -466,18 +670,46 @@ RefFace* RefEntityFactory::get_ref_face (int id)
    if (!refFaceList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   RefFace* ref_face_ptr = refFaceList->get();
-   if (ref_face_ptr->id() > id)
-       refFaceList->reset();
-   
-   for (int i = refFaceList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!refFaceListIsSorted)
    {
-      ref_face_ptr = refFaceList->get_and_step() ;
-      if (ref_face_ptr->id() == id)
-          return ref_face_ptr ;
+     refFaceList->sort(sort_by_ascending_ids);
+     refFaceListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = refFaceList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*refFaceList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*refFaceList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*refFaceList)[left_index])->id() == id)
+       return ((*refFaceList)[left_index]);
+     else if(((*refFaceList)[right_index])->id() == id)
+       return ((*refFaceList)[right_index]);
+   }
+   else
+     return ((*refFaceList)[mid_index]);
+
    return NULL ;
 }
 
@@ -486,18 +718,46 @@ RefEdge* RefEntityFactory::get_ref_edge (int id)
    if (!refEdgeList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   RefEdge* ref_edge_ptr = refEdgeList->get();
-   if (ref_edge_ptr->id() > id)
-       refEdgeList->reset();
-   
-   for (int i = refEdgeList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!refEdgeListIsSorted)
    {
-      ref_edge_ptr = refEdgeList->get_and_step() ;
-      if (ref_edge_ptr->id() == id)
-          return ref_edge_ptr ;
+     refEdgeList->sort(sort_by_ascending_ids);
+     refEdgeListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = refEdgeList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*refEdgeList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*refEdgeList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*refEdgeList)[left_index])->id() == id)
+       return ((*refEdgeList)[left_index]);
+     else if(((*refEdgeList)[right_index])->id() == id)
+       return ((*refEdgeList)[right_index]);
+   }
+   else
+     return ((*refEdgeList)[mid_index]);
+
    return NULL ;
 }
 
@@ -506,18 +766,46 @@ RefVertex* RefEntityFactory::get_ref_vertex (int id)
    if (!refVertexList->size())
        return NULL;
    
-     // If the desired ID is less than the current list item's ID,
-     // it is 'probably' before current spot in list, so reset.
-   RefVertex* ref_vertex_ptr = refVertexList->get();
-   if (ref_vertex_ptr->id() > id)
-       refVertexList->reset();
-   
-   for (int i = refVertexList->size(); i--; )
+   // Make sure the list is sorted for the binary search.
+   if(!refVertexListIsSorted)
    {
-      ref_vertex_ptr = refVertexList->get_and_step() ;
-      if (ref_vertex_ptr->id() == id)
-          return ref_vertex_ptr ;
+     refVertexList->sort(sort_by_ascending_ids);
+     refVertexListIsSorted = true;
    }
+
+   // Do a binary search on the sorted list.  We are making the assumption
+   // here that there are no NULL entries in the list.
+   bool found = false;
+   int left_index = 0;
+   int right_index = refVertexList->size()-1;
+   int mid_index = (left_index + right_index)/2;
+   int mid_id = ((*refVertexList)[mid_index])->id();
+
+   while(!found && (right_index-left_index) > 1)
+   {
+     if(mid_id == id)
+       found = true;
+     else
+     {
+       if(mid_id > id)
+         right_index = mid_index;
+       else
+         left_index = mid_index;
+       mid_index = (left_index + right_index)/2;
+       mid_id = ((*refVertexList)[mid_index])->id();
+     }
+   }
+
+   if(!found)
+   {
+     if(((*refVertexList)[left_index])->id() == id)
+       return ((*refVertexList)[left_index]);
+     else if(((*refVertexList)[right_index])->id() == id)
+       return ((*refVertexList)[right_index]);
+   }
+   else
+     return ((*refVertexList)[mid_index]);
+
    return NULL ;
 }
 
@@ -553,6 +841,18 @@ int RefEntityFactory::next_ref_vertex_id ()
 {
    return ++maxRefVertexId;
 }
+
+#ifdef PROE
+int RefEntityFactory::next_ref_assembly_id ()
+{
+	return ++maxRefAssemblyId;
+}
+
+int RefEntityFactory::next_ref_part_id ()
+{
+	return ++maxRefPartId;
+}
+#endif
 
 Body *RefEntityFactory::get_first_body()
 {
@@ -792,15 +1092,6 @@ void RefEntityFactory::compress_ref_ids(const char *entity_type, int retain_max_
   }
 }
 
-//used to sort list below
-static int sort_by_ascending_ids(CubitEntity*& a, CubitEntity*& b)
-{
-  if( a->id() < b->id() )
-    return -1;
-  else
-    return 1;
-} 
-
 void RefEntityFactory::compress_ids(DLIList<CubitEntity*> &list)
 {
   int id = 1;
@@ -841,6 +1132,10 @@ void RefEntityFactory::reset_ids()
   maxSurfSubDomainId  = 0;
   maxCurveSubDomainId = 0;
   maxRefCoordSysId    = 0;
+#ifdef PROE
+  maxRefAssemblyId    = 0;
+  maxRefPartId        = 0;
+#endif
 }
 
 #if 0
@@ -874,9 +1169,26 @@ CubitStatus RefEntityFactory::notify_observer(CubitObservable *observable,
   if (!entity) return CUBIT_FAILURE;
   
     //- handle MODEL_ENTITY_DESTRUCTED/MODEL_ENTITY_CONSTRUCTED events
-  if (observer_event.get_event_type() == MODEL_ENTITY_CONSTRUCTED) add(entity);
-  
-  else if (observer_event.get_event_type() == MODEL_ENTITY_DESTRUCTED) remove(entity);
+  int event = observer_event.get_event_type();
+  if (event == MODEL_ENTITY_CONSTRUCTED) 
+    add(entity);
+  else if (event == MODEL_ENTITY_DESTRUCTED) 
+    remove(entity);
+  else if (event == ID_SET) 
+  {
+    if(CAST_TO(entity, RefEdge))
+      refEdgeListIsSorted = false;
+    else if(CAST_TO(entity, RefFace))
+      refFaceListIsSorted = false;
+    else if(CAST_TO(entity, RefVertex))
+      refVertexListIsSorted = false;
+    else if(CAST_TO(entity, RefVolume))
+      refVolumeListIsSorted = false;
+    else if(CAST_TO(entity, RefGroup))
+      refGroupListIsSorted = false;
+    else if(CAST_TO(entity, Body))
+      bodyListIsSorted = false;
+  }
 
   return CUBIT_SUCCESS;
 }

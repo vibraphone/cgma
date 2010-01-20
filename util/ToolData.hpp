@@ -11,7 +11,9 @@
 
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
-#include <assert.h>
+#include <cassert>
+
+class ToolDataUser;
 
 class CUBIT_UTIL_EXPORT ToolData
 {
@@ -37,6 +39,19 @@ class CUBIT_UTIL_EXPORT ToolData
     //- access to next tooldata in chain
   
     // handy for ToolDataUser::delete_TD, see e.g. DoubletPillower.cc
+
+        
+    virtual ToolData* propogate(ToolDataUser* new_td_user);
+    //- propogate() receives the ToolData User that has been copied or split off from the 
+    //- ToolDataUser this TD is on and returns the ToolData that should be put on the new 
+    //- ToolDataUser.  If no new TD should be created, it returns NULL.
+
+    virtual ToolData* merge(ToolDataUser* other_td_user);
+    //- merge() receives a ToolDataUser that is about to be merged with the ToolDataUser that this
+    //- TD is on.  It should process what should happen to this and any similar tooldata on the
+    //- other ToolDataUser and return the TD that should be assigned to the merged entity.
+    //- Note: ToolDataUser deletes any TD that is on it when itself is deleted.  The calling function
+    //- should probably remove any TD returned by this function from the entities before deleting them.
   
 };
 // ********** BEGIN INLINE FUNCTIONS       **********

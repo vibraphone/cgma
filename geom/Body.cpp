@@ -33,6 +33,7 @@
 #include "GeometryQueryEngine.hpp"
 #include "CastTo.hpp"
 
+
 //-------------------------------------------------------------------------
 // Purpose       : Default constructor.
 //
@@ -73,8 +74,6 @@ Body::Body(BodySM* OSMEPtr)
    // Set the Entity ID for this new Body
    entityId = RefEntityFactory::instance()->next_body_id();
 
-   copied_from_body_id = 0;
-
      // read and initialize attributes
    auto_read_cubit_attrib();
    auto_actuate_cubit_attrib();
@@ -111,73 +110,6 @@ BodySM* Body::get_body_sm_ptr() const
   TopologyBridge* bridge = bridge_manager()->topology_bridge();
   return dynamic_cast<BodySM*>(bridge);
 }
-
-//* Method: copiedFromId
-//** Sets the Id of the body that this body was copied from
-//*==
-
-void Body::copiedFromId( int Id )
-{
-    copied_from_body_id = Id;
-}
-
-//* Method: copiedFromId
-//** Returns the Id of the body that this body was copied from
-//*==
-
-int Body::copiedFromId ()
-{
-    return copied_from_body_id;
-}
-
-/* This is wrong for misc. arrangements of non-manifold topology
- * -- j.kraftcheck
-   
-CubitBoolean Body::is_sheet_body()
-{
-    //This function just checks for bodies which have a single coedge
-    // on a RefEdge, which would indicate an open sheet body.  This
-    // function will not find sheet bodies which are closed...
-  DLIList<CoEdge*> co_edges;
-  this->co_edges( co_edges );
-  DLIList<RefEdge*> edge_list_1, edge_list_2;
-  int i;
-  for( i = co_edges.size(); i > 0; i-- )
-  {
-    CoEdge* this_co_edge = co_edges.get_and_step();
-    RefEdge* this_ref_edge = this_co_edge->get_ref_edge_ptr();
-    if( edge_list_1.is_in_list( this_ref_edge ) )
-    {
-      edge_list_2.append( this_ref_edge );
-    }
-    else
-    {
-      edge_list_1.append_unique( this_ref_edge );
-    }
-  }
-  
-    //subtract edge_list_2 from edge_list_1
-  DLIList<RefEdge*> temp_list = edge_list_1;
-  for( i = temp_list.size(); i > 0; i-- )
-  {
-    RefEdge* this_edge = temp_list.get_and_step();
-    if( edge_list_2.is_in_list( this_edge ) )
-    {
-      edge_list_1.remove( this_edge );
-    }
-  }
-  
-  if( edge_list_1.size() > 0 )
-  {
-    for( i = edge_list_1.size(); i > 0; i-- )
-    {
-      if( edge_list_1.get_and_step()->geometry_type() != POINT_CURVE_TYPE )
-         return CUBIT_TRUE;
-    }
-  }
-  return CUBIT_FALSE;
-}
- */
 
 //-------------------------------------------------------------------------
 // Purpose       : Check if this body contains only sheet volumes.

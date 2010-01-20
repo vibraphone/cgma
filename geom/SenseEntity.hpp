@@ -192,7 +192,7 @@ CubitStatus SenseEntity::gpe_insert_after(SenseEntity* prev_ptr)
    
 CubitStatus SenseEntity::gpe_insert_before(SenseEntity* next_ptr)
 {
-  prevInParent = prevInParent;
+  prevInParent = next_ptr->prevInParent;
   if (prevInParent)
     prevInParent->nextInParent = this;
   nextInParent = next_ptr;

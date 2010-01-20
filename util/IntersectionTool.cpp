@@ -98,13 +98,18 @@ double IntersectionTool::parametric_position(const double node[3],
   return t;
 }
 
-int IntersectionTool::point_on_polyline(CubitVector& pt, DLIList<CubitVector*> &pt_list)
+int IntersectionTool::point_on_polyline(CubitVector& pt, DLIList<CubitVector*> &pt_list,
+                                        double *tol_in)
 {
   int i, ret;
   double t, distance;
   double pt_coords[3];
   double line_coords1[3];
   double line_coords2[3];
+  double tol = GEOMETRY_RESABS;
+
+  if(tol_in)
+    tol = *tol_in;
 
   ret = 0;
 
@@ -127,7 +132,7 @@ int IntersectionTool::point_on_polyline(CubitVector& pt, DLIList<CubitVector*> &
 
     distance = distance_point_line(pt_coords, line_coords1, line_coords2, t);
 
-    if(distance > -GEOMETRY_RESABS && distance < GEOMETRY_RESABS)
+    if(distance > -tol && distance < tol)
     {
       i = 1;
       ret = 1;
@@ -396,4 +401,183 @@ CubitStatus IntersectionTool::closest_points_on_segments( CubitVector &p0,
   point_1 = p0 + sc*u;
   point_2 = p2 + tc*v;
   return CUBIT_SUCCESS;
+}
+
+int IntersectionTool::intersect_triangle_with_ray( CubitVector &ray_origin, CubitVector &ray_direction,
+												  const CubitVector *p0, const CubitVector *p1, const CubitVector *p2,
+												  CubitVector* point, double &distance, int &edge_hit )
+{
+	// This algorithm can be found at http://geometryalgorithms.com/
+
+	CubitVector n;           // triangle vectors
+    CubitVector w0, w;       // ray vectors
+    double a, b;             // params to calc ray-plane intersect
+
+	double tol = GEOMETRY_RESABS;
+
+	// get triangle edge vectors and plane normal
+	CubitVector u(  p1->x() - p0->x(),
+					p1->y() - p0->y(),
+					p1->z() - p0->z()); //(*p1-*p0);
+	CubitVector v(  p2->x() - p0->x(),
+					p2->y() - p0->y(),
+					p2->z() - p0->z()); // = (*p2-*p0);
+
+    n = u * v; // cross product to get normal
+
+    if (n.length_squared() == 0)   // triangle is degenerate
+        return -1;                 // do not deal with this case
+
+    //dir = R.P1 - R.P0;             // ray direction vector
+    //w0 = R.P0 - T.V0;
+	w0 = CubitVector(ray_origin.x() - p0->x(),
+		ray_origin.y() - p0->y(),
+		ray_origin.z() - p0->z());
+
+    a = -(n%w0);
+    b = (n%ray_direction);
+    if (fabs(b) < tol) {     // ray is parallel to triangle plane
+        if (a == 0)                // ray lies in triangle plane
+            return 2;
+        else return 0;             // ray disjoint from plane
+    }
+
+    // get intersect point of ray with triangle plane
+    distance = a / b;
+    if (distance < 0.0)                   // ray goes away from triangle
+        return 0;                  // => no intersect
+    // for a segment, also test if (r > 1.0) => no intersect
+
+    point->set(ray_origin + distance * ray_direction);           // intersect point of ray and plane
+
+	// set distance to be absolute distance (if ray_direction was a unit vector)
+    distance = distance * ray_direction.length();
+
+    // is point inside facet?
+    double uu, uv, vv, wu, wv, D;
+    uu = u%u;
+    uv = u%v;
+    vv = v%v;
+    //w = *I - T.V0;
+	w = CubitVector(point->x() - p0->x(),
+					point->y() - p0->y(),
+					point->z() - p0->z());
+    wu = w%u;
+    wv = w%v;
+    D = uv * uv - uu * vv;
+
+    // get and test parametric coords
+    double s, t;
+    s = (uv * wv - vv * wu) / D;
+    if (s < 0.0 || s > 1.0)        // point is outside facet
+        return 0;
+    t = (uv * wu - uu * wv) / D;
+    if (t < 0.0 || (s + t) > 1.0)  // point is outside facet
+        return 0;
+
+	if (s==0)
+		edge_hit = 2; //lies along v, edge #2
+	if (t==0)
+		edge_hit = 1; //lies along u, edge #1
+	if (s+t==1)
+		edge_hit = 3; //lies along edge #3
+
+	// note:
+	// if s and t are both 0, hit the point p0
+	// if s=1 and t=0, hit point p1
+	// if s=0 and t=1, hit point p2
+
+    return 1; // point is in facet
+
+}
+
+int IntersectionTool::intersect_segment_with_ray( CubitVector &ray_origin, CubitVector &ray_direction,
+												 const CubitVector *p0, const CubitVector *p1,
+												 CubitVector* point, double &hit_distance, int &point_hit, double tol )
+{
+	// This algorithm can be found at http://geometryalgorithms.com/
+
+	if (tol == 0.0)
+		tol = GEOMETRY_RESABS;
+
+	CubitVector u = CubitVector(*p0, *p1);
+	CubitVector v = ray_direction;
+	v.normalize();
+
+	CubitVector w = CubitVector(ray_origin, *p0);
+
+	double sc, tc;         // sc is fraction along facet edge, tc is distance along ray
+	
+	double a = u%u;        // always >= 0
+    double b = u%v;
+    double c = v%v;        // always >= 0
+    double d = u%w;
+    double e = v%w;
+    double D = a*c - b*b;  // always >= 0
+
+    // compute the line parameters of the two closest points
+    if (D < tol)
+	{
+		// the lines are almost parallel
+        sc = 0.0;
+        tc = (b>c ? d/b : e/c);   // use the largest denominator
+    }
+    else
+	{
+        sc = (b*e - c*d) / D;
+        tc = (a*e - b*d) / D;
+    }
+
+    // get the difference of the two closest points
+    CubitVector dP = CubitVector(w + (sc * u) - (tc * v));  // = <0 0 0> if intersection
+
+    double distance = sqrt(dP % dP); // return the closest distance (0 if intersection)
+
+	point->set(*p0 + (sc * u));
+	hit_distance = tc; //distance from origin to intersection point
+
+	if (distance < tol)
+	{
+		//check if parallel (infinite intersection)
+		if (D < tol)
+			return 2;
+		//check if on edge
+		if (sc <= 1.0 && sc >= 0.0)
+		{
+			if (sc==0)
+				point_hit = 1; //hit point p0
+			if (sc==1)
+				point_hit = 2; //hit point p1
+
+			return 1;
+		}
+		else
+			return 0;
+	}
+
+	return 0;
+}
+
+int IntersectionTool::intersect_point_with_ray( CubitVector &ray_origin, CubitVector &ray_direction, 
+	  const CubitVector* point, double &distance, double tol)
+{
+	if (tol == 0.0)
+		tol = GEOMETRY_RESABS;
+
+	//Does the ray pass through the Point?
+	// Calc distance from ray origin to Point.
+	// Then compute coord's of point along ray that distance.
+	// Calc distance between Point and this ray-point. If less than tolerance, a hit.
+
+	CubitVector pointB;
+	double dist1 = point->distance_between(ray_origin);
+	ray_origin.next_point(ray_direction, dist1, pointB);
+
+	if ( pointB.distance_between_squared(*point) <= (tol*tol) )
+	{
+		distance = dist1;
+		return 1;
+	}
+	
+	return 0;
 }

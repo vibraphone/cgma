@@ -6,6 +6,7 @@
 
 #include "CurveOverlapFacet.hpp"
 #include "IntersectionTool.hpp"
+#include "GfxPreview.hpp"
 
 //AnalyticGeometryTool* CurveOverlapFacet::agt = AnalyticGeometryTool::instance();
 
@@ -270,3 +271,20 @@ double CurveOverlapFacet::facet_to_facet_distance( CurveOverlapFacet *other_face
 
   return dP.length();   // return the closest distance
 }
+
+void CurveOverlapFacet::draw( int color ) 
+{
+  GfxPreview::draw_line( p0, p1, color );
+  return;
+}
+
+CubitVector CurveOverlapFacet::start_point()
+{
+  return p0; 
+}
+
+CubitVector CurveOverlapFacet::end_point()
+{
+  return p1; 
+}
+

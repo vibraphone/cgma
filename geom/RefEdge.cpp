@@ -202,7 +202,7 @@ void RefEdge::move_to_curve( CubitVector& vector )
     // Move the point to the Curve (the following call modifes the values
     // of the input "vector", if necessary)
   CubitVector closest_point;
-  curvePtr->closest_point(vector, closest_point);
+  curvePtr->closest_point_trimmed(vector, closest_point);
   vector.set( closest_point.x(),
               closest_point.y(),
               closest_point.z() );
@@ -309,7 +309,12 @@ CubitStatus RefEdge::tangent( const CubitVector &point,
   DLIList<CoEdge*> co_edge_list;
   get_co_edges( co_edge_list, ref_face_ptr );
  
-  assert( co_edge_list.size() == 1 ); 
+  if( co_edge_list.size() != 1 )
+  {
+      PRINT_ERROR( "Ambiguous case in tangent calculation.\n" );
+	  return CUBIT_FAILURE;
+  }
+//  assert( co_edge_list.size() == 1 ); 
   
   if ( co_edge_list.get()->get_sense() == CUBIT_REVERSED )
       tangent_vec = -tangent_vec;
@@ -1278,18 +1283,16 @@ void RefEdge::initialize()
     {
       CubitVector start_pt = start_vertex()->coordinates();
       CubitVector end_pt   = end_vertex()->coordinates();
-      PRINT_WARNING (
-          "WARNING (RefEdge::initialize): Edge has zero arclength.\n"
-          "  Start vertex location is (%9.2f, %9.2f, %9.2f ).\n"
-          "  End   vertex location is (%9.2f, %9.2f, %9.2f ).\n",
+      PRINT_WARNING ( "(RefEdge::initialize): Edge has zero arclength.\n"
+                      "  Start vertex location is (%9.2f, %9.2f, %9.2f ).\n"
+                      "  End   vertex location is (%9.2f, %9.2f, %9.2f ).\n",
           start_pt.x(), start_pt.y(), start_pt.z(),
           end_pt.x(), end_pt.y(), end_pt.z() );
     }
     else if (!mSuppressEdgeLengthWarning)
     {
-      PRINT_WARNING(
-          "WARNING: Edge found with zero arclength\n"
-          "  For cones, this may be normal.\n");
+      PRINT_WARNING( "Edge found with zero arclength\n"
+                     "  For cones, this may be normal.\n");
     }
     
   }
@@ -1444,8 +1447,7 @@ CubitStatus RefEdge::get_graphics( GMem& polyline, double tolerance )
     return CUBIT_FAILURE;
   }
   
-  int junk;
-  return curve_ptr->get_geometry_query_engine()->get_graphics(curve_ptr,junk,
+  return curve_ptr->get_geometry_query_engine()->get_graphics(curve_ptr,
     &polyline, tolerance);
 }
 
@@ -1469,3 +1471,70 @@ void RefEdge::suppress_edge_length_warning(bool flag)
 	mSuppressEdgeLengthWarning = flag;
 }
     
+CubitStatus RefEdge::evaluate_exterior_angle(double *exterior_angle)
+{
+  //- Get the center point of this curve
+  CubitVector center = this->center_point();
+  CubitVector surf_norm[2];
+  CubitVector tangent;
+  RefFace* ref_face = NULL;
+  RefEdge* next_curve = NULL;
+
+  int i, j, k;
+
+    //- Get surfaces on this curve
+  DLIList<RefFace*> surf_list;
+  this->ref_faces(surf_list);
+  if(surf_list.size() == 2)
+  {
+    for( i = 0; i < surf_list.size(); i++)
+    {
+      RefFace* this_surf = surf_list.get_and_step();
+      surf_norm[i] = this_surf->normal_at(center);
+      if( i == 1)
+      {
+          //- Get the referance surface and curve to get exterior angle 
+        ref_face = this_surf;
+        DLIList<DLIList<RefEdge*>*> loop_lists;
+        ref_face->ref_edge_loops(loop_lists);
+        for( j = 0; j < loop_lists.size(); j++ )
+        {
+          DLIList<RefEdge*>* current_list = loop_lists.get_and_step();
+          for( k = 0; k < current_list->size(); k++ )
+          {
+            RefEdge* current_curve = current_list->get_and_step();
+            if( current_curve == this )
+            {
+              next_curve = current_list->get();
+              break;
+            }
+          }
+          if(next_curve != NULL)
+              break;
+        }
+      }
+    }
+  }
+  else
+  {
+    *exterior_angle = 0.0;
+    PRINT_ERROR("There aren't 2 surfaces on curve %d.  Can't compute angle.\n", this->id());
+    return CUBIT_FAILURE;
+  }
+
+  this->tangent(center, tangent, next_curve, ref_face);
+
+    //Find the angle from normal 1 to normal 0.
+  double rad_angle = tangent.vector_angle_quick(surf_norm[1], surf_norm[0]); //angle in radians
+  double angle = rad_angle * (180.0 / 3.14159); //angle in degrees
+
+    //Now convert to the exterior angle between the two surfaces.
+  angle += 180.0;
+  if( angle > 360.0 )
+      angle -= 360.0;
+    
+    //- Return the exterior angle for this curve in degrees.
+  *exterior_angle = angle;
+  return CUBIT_SUCCESS;
+}
+

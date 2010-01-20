@@ -3,7 +3,8 @@
 #include "GfxDebug.hpp"
 #include "GMem.hpp"
 #include "CubitVector.hpp"
-#include <assert.h>
+#include "DLIList.hpp"
+#include <cassert>
 
 GfxDebug* GfxDebug::mInstance = 0;
 
@@ -489,6 +490,16 @@ void GfxDebug::draw_point(CubitVector* vector, int color)
 {
   if(!mInstance) return;
   mInstance->p_draw_point(*vector, color);
+}
+
+void GfxDebug::draw_points( DLIList<CubitVector> &points, int color )
+{
+    if (!mInstance) return;
+    int i;
+    for ( i = 0; i < points.size(); i++ )
+    {
+        mInstance->p_draw_point( points[i], color );
+    }
 }
 
 // draw line of points {x,y,z}, {x,y,z} of color

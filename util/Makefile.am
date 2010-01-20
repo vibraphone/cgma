@@ -41,6 +41,7 @@ libcubit_util_la_SOURCES = \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
+  CubitUndo.cpp \
   CubitUtil.cpp \
   CubitVector.cpp \
   DIntArray.cpp \
@@ -49,6 +50,7 @@ libcubit_util_la_SOURCES = \
   GMem.cpp \
   GetLongOpt.cpp \
   GfxDebug.cpp \
+  GlobalCommandFeedback.cpp \
   IntersectionTool.cpp \
   MemoryBlock.cpp \
   MemoryManager.cpp \
@@ -74,6 +76,7 @@ libcubit_util_la_include_HEADERS = \
   AppUtil.hpp \
   ArrayBasedContainer.hpp \
   CastTo.hpp \
+  CommandFeedback.hpp \
   CpuTimer.hpp \
   Cubit2DPoint.hpp \
   CubitBox.hpp \
@@ -102,6 +105,7 @@ libcubit_util_la_include_HEADERS = \
   CubitStack.hpp \
   CubitString.hpp \
   CubitTransformMatrix.hpp \
+  CubitUndo.hpp \
   CubitUtil.hpp \
   CubitUtilConfigure.h \
   CubitVector.hpp \
@@ -122,10 +126,12 @@ libcubit_util_la_include_HEADERS = \
   DynamicDLIIterator.hpp \
   DynamicTreeIterator.hpp \
   ElementType.h \
+  ExternalCoordinateSystem.hpp \
   GMem.hpp \
   GeometryDefines.h \
   GetLongOpt.hpp \
   GfxDebug.hpp \
+  GlobalCommandFeedback.hpp \
   IGUIObservers.hpp \
   IdSetEvent.hpp \
   IndexedDouble.hpp \
@@ -134,11 +140,14 @@ libcubit_util_la_include_HEADERS = \
   KDDTree.hpp \
   KDDTreeNode.hpp \
   LocalStart.h \
+  ManagedPtrVector.hpp \
   MemoryBlock.hpp \
   MemoryManager.hpp \
   MergeEvent.hpp \
   OctTree.hpp \
   OctTreeCell.hpp \
+  OrderedMap.hpp \
+  OrderedSet.hpp \
   ParamCubitPlane.hpp \
   ParamTool.hpp \
   PlanarParamTool.hpp \

@@ -13,6 +13,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* A ModelEntity was deleted */
                  COMPARISON_FOUND,
                    /* A partner entity was found (they compare successfully) */
+                 DEVELOPER_COMMAND_FLAG_MODIFIED,
+                  /* The 'set developer command on/off' was issued */
                  ENTITY_SURVIVED_MERGE,
                    /* An entity was involved in a merge and survived */
                  MERGE_COMPLETED,
@@ -36,6 +38,20 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* The geometry of a RefEntity was altered. */
                  HEALER_COMPLETED,
                    /* Notifies that the healer completed */
+                 COMPOSITE_CREATION_COMPLETED,
+                   /* Notifies that a composite was created */
+                 SPLIT_SURFACE_COMPLETED,
+                   /* Notifies that a split face operation is done */
+                 COLLAPSE_CURVE_COMPLETED,
+                   /* Notifies that a collapse curve operation is done */
+                 AUTO_CLEAN_COMPLETED,
+                   /* Notifies that an auto_clean operation is done */
+                 REMOVE_SURFACE_COMPLETED,
+                   /* Notifies that a remove surface operation is done */
+                 REMOVE_TOPOLOGY_COMPLETED,
+                   /* Notifies that a remove_topology operation is done */
+                 REGULARIZE_ENTITY_COMPLETED,
+                   /* Notifies that a regularize entity operation is done */
                  NEW_ENTITY_UNMERGED,
                    /*A surface, curve, or vertex was unmerged. */
                  DAG_NODE_DESTRUCTED,
@@ -96,19 +112,30 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    // Block, nodeset or sideset was deleted.
                  GENESIS_ENTITY_MODIFIED,
                    // Block, nodeset or sideset was modified.
+                 MATERIAL_CREATED,
+                   // Material created
+                 MATERIAL_MODIFIED,
+                   // Material modified
+                 MATERIAL_DELETED,
+                   // Material deleted
                  SUSPEND_GENESIS_PROCESSING,
                    // Suspend processing (in CubitInterface) for Genesis events
                  RESUME_GENESIS_PROCESSING,
                    // Resume processing (in CubitInterface) for Genesis events
                  UPDATE_GENESIS_DISPLAY,
                    // Force an update of all genesis entity display
-
+                 UNDO_STATE_CHANGED,
+                   // Undo has been changed in some way
+                 UNDO_COMPLETE,
+                   // Undo has completed its processing
 
                    // ******** Assembly Events  *********
                    //   All assembly events pass an AssemblyEvent
                    //   object.  The functions used to get valid
                    //   data for a particular event type is listed
                    //   right after the event type name.
+                 WEBCUT_COMPLETED,
+                   // Inform regarding the completion of a webcut operation
                  
                  ASSEMBLY_ADD_CHILD,
                    // (get_assembly(), get_node())
@@ -149,7 +176,7 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    // Sent just after a property of the tree changes.
                    // These are properties that apply to the tree as a whole,
                    // not to any individual AssemblyNode.
-                 
+
                    // 
                    // ********* End of Assembly Events **********
 };

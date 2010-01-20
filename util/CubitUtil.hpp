@@ -19,7 +19,7 @@
 #ifndef CUBIT_UTIL_HPP
 #define CUBIT_UTIL_HPP
 
-#include <string.h>
+#include <cstring>
 #include "DLIList.hpp"
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
@@ -107,7 +107,11 @@ public:
   static void util_strdup_free(char* s1){free(s1);}
 
   static void cubit_sleep(int duration_in_seconds);
-
+    //Send in a string (in buffer) with two \007 characters next to each other
+    //This function will search from 00 up to 999 to find the next available
+    //filename
+  static int find_available_file_name(char* buffer);
+  
 private:
   CubitUtil(){}
 

@@ -51,7 +51,7 @@ CubitStatus RemoveBlends::remove_blend(RefFace* ref_face,
 
    vec_lists.append( vec_list );
 
-   sst.calculate_split_curves(the_face, locations, vec_lists, curve_list);
+   sst.calculate_split_curves(the_face, vec_lists, curve_list);
 
    //int num_segs = 2; 
    //double fraction =.5;
@@ -76,6 +76,16 @@ CubitStatus RemoveBlends::remove_blend(RefFace* ref_face,
    DLIList<RefFace*> result_faces;
    result = PartitionTool::instance()->
           partition_face_by_curves( the_face, curve_list, result_faces, CUBIT_TRUE, &new_edges );
+   // clean up curves
+   while (curve_list.size())
+   {
+     Curve* curve = curve_list.pop();
+     if (curve)
+     {
+       GeometryQueryEngine* gqe = curve->get_geometry_query_engine();
+       gqe->delete_solid_model_entities(curve);
+     }
+   }
    if( result == CUBIT_FAILURE )
    {
       PRINT_ERROR("Failed to partition surface %d into 2 distinct pieces\n", the_face->id());

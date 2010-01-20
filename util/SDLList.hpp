@@ -31,8 +31,8 @@
 #include "DLList.hpp"
 #include "CubitDefines.h"
 #include "CubitMessage.hpp"
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 #include "CubitUtilConfigure.h"
 
 const int ORDER_ASCENDING  = 0;
@@ -119,7 +119,7 @@ protected:
   //- (depending on the assignment of compare_order function pointer).  The
   //- list is sorted using a standard Heap Sort algorithm.
   
-  int move_to_item_sorted(void* value);
+  CubitBoolean move_to_item_sorted(void* value);
   //- move_to_item_sorted performs a binary search on the list to locate
   //- the item (object) that has functionType functionName() = value
   //- (see SSDLListdeclare macro for description of functionType and
@@ -318,7 +318,7 @@ class name : public SDLList                                                   \
     {                                                                        \
       return (typePtr) move_to_and_remove_item_sorted((void*) &value);       \
     }                                                                        \
-    int move_to(typePtr objPtr)                                              \
+    CubitBoolean move_to(typePtr objPtr)                                     \
     {                                                                        \
       if (nullItem && ((typePtr) nullItem == objPtr))                        \
         return CUBIT_FALSE;                                                  \
@@ -329,7 +329,7 @@ class name : public SDLList                                                   \
         return move_to_item_sorted((void*) &value);                          \
       }                                                                      \
     }                                                                        \
-    int move_to(functionType value)                                          \
+    CubitBoolean move_to(functionType value)                                 \
     {                                                                        \
       return move_to_item_sorted((void*) &value);                            \
     }                                                                        \

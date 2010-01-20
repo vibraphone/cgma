@@ -1,13 +1,15 @@
 //-------------------------------------------------------------------------
 // Filename      : SplitSurfaceTool.hpp
 //
-// Purpose       :
+// Purpose       : Split a single or chain of surfaces (e.g., split a fillet 
+//                 down the middle so that a mesh sweep can occur, or split
+//                 across a surface).  Used by the "split surface" commands.
 //
 // Special Notes : 
 //
-// Creator       :
+// Creator       : Steve Storm
 //
-// Creation Date :
+// Creation Date : 10/06/2002
 //-------------------------------------------------------------------------
 
 #ifndef SPLITSURFACETOOL_HPP
@@ -27,6 +29,7 @@ class GeometryModifyEngine;
 
 template <class X> class DLIList;
 
+//! Tool class for splitting surfaces.
 class CUBIT_GEOM_EXPORT SplitSurfaceTool
 {
 
@@ -35,25 +38,74 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
     SplitSurfaceTool();
     ~SplitSurfaceTool(){}
 
+    //! Preview function for simple surface splitting.  Temporary Curves are
+    //! created on the RefFace and displayed.  The curves are created from 
+    //! the input vec_lists (straight lines, arcs or splines).  The input 
+    //! locations are the original input locations from the user, which are 
+    //! displayed as well as the Curves.  The clear_previous_previews flag 
+    //! controls whether previous previews are cleared from the graphics
+    //! window.
     CubitStatus preview( RefFace *ref_face_ptr,
                          DLIList<CubitVector*> &locations,
                          DLIList<DLIList<CubitVector*>*> &vec_lists,
-                         CubitBoolean create_ref_edges_flg );
-    //- Preview function for simple surface splitting.  Temporary Curves are
-    //- created on the RefFace and displayed.  The curves are created from 
-    //- the input vec_lists (straight lines, arcs or splines).  The input 
-    //- locations are the original input locations from the user, which are 
-    //- displayed as well as the Curves.
+                         CubitBoolean create_ref_edges_flg,
+                         CubitBoolean clear_previous_previews = CUBIT_TRUE );
 
+    //! Overloaded preview function to handle multiple surfaces (see above).
+    CubitStatus preview( DLIList<RefFace*> &ref_face_list,
+                         DLIList<CubitVector*> &locations,
+                         DLIList<DLIList<DLIList<CubitVector*>*>*> &list_of_vec_lists,
+                         CubitBoolean create_ref_edges_flg,
+                         CubitBoolean clear_previous_previews = CUBIT_TRUE );
+   
+    //@{
+    //! Calculate the split curves based on the surface and user parameters.
+    //! The curves are created from the input vec_lists (straight lines, 
+    //! arcs or splines). The input locations are the original input locations 
+    //! from the user.
     CubitStatus calculate_split_curves( RefFace *ref_face_ptr,
-                                        DLIList<CubitVector*> &locations,
                                         DLIList<DLIList<CubitVector*>*> &vec_lists,
-                                        DLIList<Curve*>& curve_list );
-    //- Calculate the split curves based on the surface and user parameters.
-    //- The curves are created from the input vec_lists (straight lines, 
-    //- arcs or splines). The input locations are the original input locations 
-    //- from the user.
+                                        DLIList<Curve*> &curve_list );
+    CubitStatus calculate_split_curves( Surface *surf_ptr,
+                                        DLIList<DLIList<CubitVector*>*> &vec_lists,
+                                        DLIList<Curve*> &curve_list );
+    //@}
 
+    //! Calculates the curves to split a chain of surfaces.
+    //! ref_face_list - chain of surfaces to split.  Can be given in any order
+    //!                 as long as they are connected.  Can be a continuous
+    //!                 loop of surfaces.  If a single surface is given, by
+    //!                 default it will be split along the narrowest aspect
+    //!                 ratio of the surface (i.e., along a fillet).  Periodic
+    //!                 surfaces are not handled.
+    //! num_segs - the number of segments to create (must be >= 2 );
+    //! fraction - the fraction along the surfaces to split, not valid if
+    //!            num_segs > 2.  This value is not used if a distance is
+    //!            specified instead.  
+    //! distance - if 2 segments, allow the split to be at a user specified
+    //!            distance across the surface.  Specify -1.0 to use the
+    //!            fraction instead.
+    //! from_curve_ptr - (OPTIONAL) if user specified a fraction or distance,
+    //!                  orient from this curve.  If not specified, a default
+    //!                  is chosen automatically.
+    //! corner_vertex_list - (OPTIONAL) the user can specify the corners of the,
+    //!                      chain, typically if the detected corners are incorrect.
+    //!                      The split direction is from corners 0-1 to 
+    //!                      corners 2-3 (for single surfaces, if not overridden
+    //!                      by curve_dir_ptr).
+    //! through_vertex_list - (OPTIONAL) user specifies forced vertices for the split
+    //!                       to run through (on curves).  Not valid with
+    //!                       more than 2 segments.
+    //! curve_dir_ptr - (OPTIONAL) for single surfaces, the direction of split can be
+    //!                 specified by picking a curve on the surface.
+    //! preview_flg - if CUBIT_TRUE, just draw the curves that will be used to split 
+    //!               instead of actually splitting.              
+    //! create_ref_edges_flg - valid only if preview_flg=CUBIT_TRUE.  If CUBIT_TRUE,
+    //!                    create RefEdges *instead* of splitting.
+    //! Note this function also utilizes five additional settings which are 
+    //! supplied through the set_tolerance, set_parametric_flg, 
+    //! set_auto_detect_triangles_flg, set_side_angle_threshold, 
+    //! and set_point_angle_threshold functions.     
     CubitStatus calculate_split_curves( DLIList<RefFace*> &ref_face_list, 
                                         int num_segs, double fraction, 
                                         double distance, RefEdge *from_curve_ptr,
@@ -64,52 +116,57 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
                                         CubitBoolean create_ref_edges_flg,
                                         CubitBoolean just_curves_flg,
                                         DLIList<DLIList<Curve*>*> &curve_lists_list ); 
-    //- Calculates the curves to split a chain of surfaces.
-    //- ref_face_list - chain of surfaces to split.  Can be given in any order
-    //-                 as long as they are connected.  Can be a continuous
-    //-                 loop of surfaces.  If a single surface is given, by
-    //-                 default it will be split along the narrowest aspect
-    //-                 ratio of the surface (i.e., along a fillet).  Periodic
-    //-                 surfaces are not handled.
-    //- num_segs - the number of segments to create (must be >= 2 );
-    //- fraction - the fraction along the surfaces to split, not valid if
-    //-            num_segs > 2.  This value is not used if a distance is
-    //-            specified instead.  
-    //- distance - if 2 segments, allow the split to be at a user specified
-    //-            distance across the surface.  Specify -1.0 to use the
-    //-            fraction instead.
-    //- from_curve_ptr - (OPTIONAL) if user specified a fraction or distance,
-    //-                  orient from this curve.  If not specified, a default
-    //-                  is chosen automatically.
-    //- corner_vertex_list - (OPTIONAL) the user can specify the corners of the,
-    //-                      chain, typically if the detected corners are incorrect.
-    //-                      The split direction is from corners 0-1 to 
-    //-                      corners 2-3 (for single surfaces, if not overridden
-    //-                      by curve_dir_ptr).
-    //- through_vertex_list - (OPTIONAL) user specifies forced vertices for the split
-    //-                       to run through (on curves).  Not valid with
-    //-                       more than 2 segments.
-    //- curve_dir_ptr - (OPTIONAL) for single surfaces, the direction of split can be
-    //-                 specified by picking a curve on the surface.
-    //- preview_flg - if CUBIT_TRUE, just draw the curves that will be used to split 
-    //-               instead of actually splitting.              
-    //- create_ref_edges_flg - valid only if preview_flg=CUBIT_TRUE.  If CUBIT_TRUE,
-    //-                    create RefEdges *instead* of splitting.
-    //- Note this function also utilizes two additional settings which are 
-    //- supplied through the set_tolerance and set_parametric_flg functions.    
 
+    //! Split function for simple surface splitting.  Temporary Curves are
+    //! created on the RefFace and used to split the RefFace.  The curves are 
+    //! created from the input vec_lists (straight lines, arcs or splines).
+    //! The input locations are the original input locations from the user,
+    //! which are displayed for user reference.
     CubitStatus split_surface( RefFace *ref_face_ptr,
-                               DLIList<CubitVector*> &locations,
                                DLIList<DLIList<CubitVector*>*> &vec_lists );
-    //- Split function for simple surface splitting.  Temporary Curves are
-    //- created on the RefFace and used to split the RefFace.  The curves are 
-    //- created from the input vec_lists (straight lines, arcs or splines).
-    //- The input locations are the original input locations from the user,
-    //- which are displayed for user reference.
 
+    //! Overloaded split function to allow multiple surfaces to be split (see above).
+    CubitStatus split_surface( DLIList<RefFace*> &ref_face_list, 
+                               DLIList<DLIList<DLIList<CubitVector*>*>*> &list_of_vec_lists );
+
+    //! Split function for simple surface splitting using a list of predefined curves
     CubitStatus split_surface( RefFace *ref_face_ptr, DLIList<Curve*> &curve_list);
-    //- Split function for simple surface splitting using a list of predefined curves
     
+    //! Splits the chain of surfaces.
+    //! ref_face_list - chain of surfaces to split.  Can be given in any order
+    //!                 as long as they are connected.  Can be a continuous
+    //!                 loop of surfaces.  If a single surface is given, by
+    //!                 default it will be split along the narrowest aspect
+    //!                 ratio of the surface (i.e., along a fillet).  Periodic
+    //!                 surfaces are not handled.
+    //! num_segs - the number of segments to create (must be >= 2 );
+    //! fraction - the fraction along the surfaces to split, not valid if
+    //!            num_segs > 2.  This value is not used if a distance is
+    //!            specified instead.  
+    //! distance - if 2 segments, allow the split to be at a user specified
+    //!            distance across the surface.  Specify -1.0 to use the
+    //!            fraction instead.
+    //! from_curve_ptr - (OPTIONAL) if user specified a fraction or distance,
+    //!                  orient from this curve.  If not specified, a default
+    //!                  is chosen automatically.
+    //! corner_vertex_list - (OPTIONAL) the user can specify the corners of the,
+    //!                      chain, typically if the detected corners are incorrect.
+    //!                      The split direction is from corners 0-1 to 
+    //!                      corners 2-3 (for single surfaces, if not overridden
+    //!                      by curve_dir_ptr).
+    //! through_vertex_list - (OPTIONAL) user specifies forced vertices for the split
+    //!                       to run through (on curves).  Not valid with
+    //!                       more than 2 segments.
+    //! curve_dir_ptr - (OPTIONAL) for single surfaces, the direction of split can be
+    //!                 specified by picking a curve on the surface.
+    //! preview_flg - if CUBIT_TRUE, just draw the curves that will be used to split 
+    //!               instead of actually splitting.              
+    //! create_ref_edges_flg - valid only if preview_flg=CUBIT_TRUE.  If CUBIT_TRUE,
+    //!                    create RefEdges *instead* of splitting.
+    //! Note this function also utilizes five additional settings which are 
+    //! supplied through the set_tolerance, set_parametric_flg, 
+    //! set_auto_detect_triangles_flg, set_side_angle_threshold, 
+    //! and set_point_angle_threshold functions.    
     CubitStatus split_surfaces( DLIList<RefFace*> &ref_face_list,
                                 int num_segs,
                                 double fraction,
@@ -120,40 +177,13 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
                                 RefEdge *curve_dir_ptr = NULL,
                                 CubitBoolean preview_flg = CUBIT_FALSE,
                                 CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
-    //- Splits the chain of surfaces.
-    //- ref_face_list - chain of surfaces to split.  Can be given in any order
-    //-                 as long as they are connected.  Can be a continuous
-    //-                 loop of surfaces.  If a single surface is given, by
-    //-                 default it will be split along the narrowest aspect
-    //-                 ratio of the surface (i.e., along a fillet).  Periodic
-    //-                 surfaces are not handled.
-    //- num_segs - the number of segments to create (must be >= 2 );
-    //- fraction - the fraction along the surfaces to split, not valid if
-    //-            num_segs > 2.  This value is not used if a distance is
-    //-            specified instead.  
-    //- distance - if 2 segments, allow the split to be at a user specified
-    //-            distance across the surface.  Specify -1.0 to use the
-    //-            fraction instead.
-    //- from_curve_ptr - (OPTIONAL) if user specified a fraction or distance,
-    //-                  orient from this curve.  If not specified, a default
-    //-                  is chosen automatically.
-    //- corner_vertex_list - (OPTIONAL) the user can specify the corners of the,
-    //-                      chain, typically if the detected corners are incorrect.
-    //-                      The split direction is from corners 0-1 to 
-    //-                      corners 2-3 (for single surfaces, if not overridden
-    //-                      by curve_dir_ptr).
-    //- through_vertex_list - (OPTIONAL) user specifies forced vertices for the split
-    //-                       to run through (on curves).  Not valid with
-    //-                       more than 2 segments.
-    //- curve_dir_ptr - (OPTIONAL) for single surfaces, the direction of split can be
-    //-                 specified by picking a curve on the surface.
-    //- preview_flg - if CUBIT_TRUE, just draw the curves that will be used to split 
-    //-               instead of actually splitting.              
-    //- create_ref_edges_flg - valid only if preview_flg=CUBIT_TRUE.  If CUBIT_TRUE,
-    //-                    create RefEdges *instead* of splitting.
-    //- Note this function also utilizes two additional settings which are 
-    //- supplied through the set_tolerance and set_parametric_flg functions.    
 
+    //! Same as above except this method simply returns a list of lists of 
+    //! Curves (one list per input RefFace).  This method is intended for
+    //! use by a programmer (rather than a user from GeometryCommands).
+    //! Note it is the calling functions responsibility to free the memory
+    //! allocated in curve_lists_list, as well as the Curves (note this can
+    //! be accomplished with the function free_curves_lists).
     CubitStatus split_surfaces( DLIList<RefFace*> &ref_face_list,
                                 int num_segs,
                                 double fraction,
@@ -163,13 +193,8 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
                                 DLIList<RefVertex*> &through_vertex_list,
                                 RefEdge *curve_dir_ptr,
                                 DLIList<DLIList<Curve*>*> &curve_lists_list );
-    //- Same as above except this method simply returns a list of lists of 
-    //- Curves (one list per input RefFace).  This method is intended for
-    //- use by a programmer (rather than a user from GeometryCommands).
-    //- Note it is the calling functions responsibility to free the memory
-    //- allocated in curve_lists_list, as well as the Curves (note this can
-    //- be accomplished with the function free_curves_lists).
 
+    //! Same as above except this method simply returns a simple list of Curves.
     CubitStatus split_surfaces( DLIList<RefFace*> &ref_face_list,
                                 int num_segs,
                                 double fraction,
@@ -179,65 +204,118 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
                                 DLIList<RefVertex*> &through_vertex_list,
                                 RefEdge *curve_dir_ptr,
                                 DLIList<Curve*> &curve_list );
-    //- Same as above except this method simply returns a simple list of Curves.
 
+    //! Splits surfaces by extending curves at the end of hardlines across the
+    //! surface.  Only works on planar surfaces and by extending linear curves.
+    //! If specified vertex list is provided, only try to extend curves
+    //! attached to those vertices, and error out if unable to perform the
+    //! operation using any vertex.  If no vertex list is provided, find 
+    //! appropriate vertices automatically, and limit the split to gaps less
+    //! than or equal to the specified "split surface extend gap threshold".
+    //! {ref_face_list} - list of connected surfaces to split
+    //! {ref_vertex_list} - (OPTIONAL) - vertices to extend from. Function will
+    //!                     error out if unable to extend from any vertex. If
+    //!                     not supplied, function will automatically find
+    //!                     valid vertices to extend from on the surfaces, and
+    //!                     will limit the split to gaps less than or equal to 
+    //!                     the specified extend gap threshold (see setting 
+    //!                     below).
+    //! {preview_flg} - routine only displays graphics preview of splits
+    //! {create_ref_edges_flg} - valid only if preview_flg=CUBIT_TRUE.  If
+    //!                          CUBIT_TRUE, create RefEdges *instead* of
+    //!                          splitting.
+    //! Note this function also utilizes thress additional settings which are 
+    //! supplied through the set_extend_gap_threshold, set_extend_tolerance and
+    //! set_extend_normal functions. 
+    CubitStatus split_surfaces_extend( DLIList<RefFace*> &ref_face_list,
+                                     DLIList<RefVertex*> &ref_vertex_list,
+                                     CubitBoolean preview_flg = CUBIT_FALSE,
+                                     CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
+
+    //! Free the curves and lists memory.  If free_curves_flg is CUBIT_TRUE,
+    //! free the Curves as well (however, the function checks if a RefEdge is 
+    //! attached to the Curve - if a RefEdge is attached the Curve is not freed).
     void free_curves_lists( DLIList<DLIList<Curve*>*> &curve_lists_list,
                             CubitBoolean free_curves_flg = CUBIT_TRUE );
-    //- Free the curves and lists memory.  If free_curves_flg is CUBIT_TRUE,
-    //- free the Curves as well (however, the function checks if a RefEdge is 
-    //- attached to the Curve - if a RefEdge is attached the Curve is not freed).
 
+    //! Set the tolerance (function returns previous tolerance)
     static void set_tolerance( double tol );
-    //- Set the tolerance (function returns previous tolerance)
+
+    //! Get the tolerance.  In layman's terms, the tolerance controls how 
+    //! closely the split actually follows the center of the surface. In the
+    //! code, it determines how accurately to facet the bounding curves (the 
+    //! facets are used to interpolate points on the surface using a mapping 
+    //! concept).  It is also used in an iterative procedure in fitting splines
+    //! to the line segments generated by the mapping (just fitting a spline 
+    //! through the interpolated points was found to give very bad results - 
+    //! instead we check the deviation of the spline from the line segments and
+    //! add additional points until the resultant spline is within tolerance to
+    //! the line segments.
     static double get_tolerance();
-    //- Get the tolerance.  In layman's terms, the tolerance controls how 
-    //- closely the split actually follows the center of the surface. In the
-    //- code, it determines how accurately to facet the bounding curves (the 
-    //- facets are used to interpolate points on the surface using a mapping 
-    //- concept).  It is also used in an iterative procedure in fitting splines
-    //- to the line segments generated by the mapping (just fitting a spline 
-    //- through the interpolated points was found to give very bad results - 
-    //- instead we check the deviation of the spline from the line segments and
-    //- add additional points until the resultant spline is within tolerance to
-    //- the line segments.
 
+    //! Set the auto detect triangles flag
     static void set_auto_detect_triangles_flg( CubitBoolean auto_detect_flg );
-    //- Set the auto detect triangles flag
+
+    //! Get the auto detect triangles flag
     static CubitBoolean get_auto_detect_triangles_flg();
-    //- Get the auto detect triangles flag
 
+    //! Set the side angle threshold
     static void set_side_angle_threshold( double angle );
-    //- Set the side angle threshold
+
+    //! Get the side angle threshold.  If there is a corner angle within this
+    //! threshold to 180 and another corner angle less than the point threshold, a
+    //! triangle is created.
     static double get_side_angle_threshold();
-    //- Get the side angle threshold.  If there is a corner angle within this
-    // threshold to 180 and another corner angle less than the point threshold, a
-    // triangle is created.
 
+    //! Set the point angle threshold
     static void set_point_angle_threshold( double tol );
-    //- Set the point angle threshold
+
+    //! Get the point angle threshold.  If there is a corner angle less than
+    //! this value and another corner angle within the side threshold to 180, a
+    //! triangle is created.
     static double get_point_angle_threshold();
-    //- Get the point angle threshold.  If there is a corner angle less than
-    // this value and another corner angle within the side threshold to 180, a
-    // triangle is created.
 
+    //! Set the parametric flag
     static void set_parametric_flg( CubitBoolean parametric_flg );
-    //- Set the parametric flag
+
+    //! Get the parametric flag.  If the parametric_flg is CUBIT_TRUE, find
+    //! spline locations in the parametric space of the surface, otherwise
+    //! initially find the spline locations in 3D space then project back to
+    //! the surface.  Typically, the parametric space gives better results
+    //! (on curvy surfaces, it will result in a spline that is much closer to
+    //! the middle of the surface).  However, sometimes the parameter space
+    //! is bad or the mapping algorigm gets confused (frequently on conic
+    //! surfaces, resulting in points revolved 180 deg away), so the 3D method
+    //! gives a better result.  Note the default is thus 3D.
     static CubitBoolean get_parametric_flg();
-    //- Get the parametric flag.  If the parametric_flg is CUBIT_TRUE, find
-    //- spline locations in the parametric space of the surface, otherwise
-    //- initially find the spline locations in 3D space then project back to
-    //- the surface.  Typically, the parametric space gives better results
-    //- (on curvy surfaces, it will result in a spline that is much closer to
-    //- the middle of the surface).  However, sometimes the parameter space
-    //- is bad or the mapping algorigm gets confused (frequently on conic
-    //- surfaces, resulting in points revolved 180 deg away), so the 3D method
-    //- gives a better result.  Note the default is thus 3D.
 
+    //! Set the extend gap threshold.  Only split if gap is less than this.
+    static void set_extend_gap_threshold( double threshold = CUBIT_DBL_MAX );
+
+    //! Get the extend gap threshold.
+    static double get_extend_gap_threshold();
+
+    //! Set the extend tolerance.  Snaps to vertices along curves within this
+    //! tolerance so as to avoid creating short curves when splitting surfaces
+    //! with the extend method.
+    static void set_extend_tolerance( double tol );
+
+    //! Get the extend tolerance.
+    static double get_extend_tolerance();
+
+    //! Set the extend normal flag.  If projecting normal to curve is less
+    //! distance, use that instead of extending curve, if this setting is 
+    //! true.
+    static void set_extend_normal_flg( CubitBoolean extend_normal_flg );
+
+    //! Return extend normal setting.
+    static CubitBoolean get_extend_normal_flg();
+
+    //! Initialize settings for this class
     static void initialize_settings();
-    //- Initialize settings for this class
 
+    //! preview the curves
     CubitStatus draw_preview( DLIList<Curve*> &curve_list, int color=CUBIT_BLUE );
-    //- preview the curves
 
   private:
 
@@ -459,7 +537,7 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
     CubitBoolean is_triangle();
     //- Determines if a single surface chain is a triangle
 
-    CubitStatus check_through_vertices( char *type );
+    CubitStatus check_through_vertices( const char *type );
     //- Determines if the through vertices are on valid sides of the surface.
     //- Call this function after adjusting for a Curve direction.
     //- This function only checks - it gives an error if through vertices are 
@@ -554,8 +632,9 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
       int color=CUBIT_BLUE );
     //- Draw the curves
 
-    CubitStatus create_ref_edges( DLIList<Curve*> &curve_list );
-    //- Create RefEdges from the given Curves
+    CubitStatus create_ref_edges( DLIList<Curve*> &curve_list, 
+                                  DLIList<RefEdge*> &ref_edge_list );
+    //- Create RefEdges from the given Curves.  Appends to the output list.
 
     int number_coedges( RefEdge *ref_edge_ptr, RefFace *ref_face_ptr );
     //- Finds the number of coedges for the given edge on the given surface
@@ -674,6 +753,23 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
     int count_curves_in_body( Body *body_ptr );
     //- Return number of curves in the body
 
+    void cleanup_for_extend_op( DLIList<RefVertex*> &ref_vertex_list,
+      DLIList<DLIList<Surface*>*> &body_surf_list_list,
+      DLIList<DLIList<DLIList<Curve*>*>*> &curve_lists_lists_list,
+      CubitBoolean free_curves_flg = CUBIT_TRUE );
+    //- This function cleans up after the split extend operation.  It removes
+    //- the tooldatas from the vertices and frees the lists memory.  If
+    //- free_curves_flg is CUBIT_TRUE, free the Curves as well (however, the 
+    //- function checks if a RefEdge is attached to the Curve - if a RefEdge
+    //- is attached the Curve is not freed).
+
+	void find_nearest_curve_for_normal_projection(
+		RefEdge* hit_edge_ptr, CubitVector& start_loc, RefFace* face, 
+		CubitVector& ray_dir, RefEdge*& new_edge_ptr, CubitVector& new_end_loc);
+	//- This function is used when the split extend command is used with normal = TRUE and
+	//- the hardline does not intersect the curve found by fire_ray at a 90 degree angle.
+	//- This function traverses the curve's neighbors to find a curve that can be split normal.
+
     static CubitBoolean parametricFlg; // Split parametrically or not (3D)
     static double splitTolerance; // Length tolerance for tessellations, etc.
     static CubitBoolean autoDetectTriangles; // Detect triangles automatically?
@@ -683,6 +779,14 @@ class CUBIT_GEOM_EXPORT SplitSurfaceTool
     static double pointAngleThreshold; // Corner with angle below this becomes
                                        // the triangle point (if sideAngleThreshold
                                        // criteria also met)
+
+    static double extendGapThreshold; // Only gaps below this value are split
+    static CubitBoolean extendNormalFlg; // If true, extend normal to curve 
+                                         // instead of in curve direction if 
+                                         // distance is less
+    static double extendTolerance; // If split end is equal or closer than this
+                                   // to a vertex along a curve snap to the
+                                   // vertex.
 
     DLIList<RefFace*> refFaceChain;
     DLIList<RefVertex*> throughVertexList;
@@ -731,6 +835,30 @@ SplitSurfaceTool::set_parametric_flg( CubitBoolean parametric_flg )
 inline CubitBoolean
 SplitSurfaceTool::get_parametric_flg()
 { return parametricFlg; }
+
+inline void
+SplitSurfaceTool::set_extend_gap_threshold( double gap )
+{ extendGapThreshold = gap; }
+
+inline double
+SplitSurfaceTool::get_extend_gap_threshold()
+{ return extendGapThreshold; }
+
+inline void
+SplitSurfaceTool::set_extend_tolerance( double tol )
+{ extendTolerance = tol; }
+
+inline double
+SplitSurfaceTool::get_extend_tolerance()
+{ return extendTolerance; }
+
+inline void
+SplitSurfaceTool::set_extend_normal_flg( CubitBoolean extend_normal_flg )
+{ extendNormalFlg = extend_normal_flg; }
+
+inline CubitBoolean
+SplitSurfaceTool::get_extend_normal_flg()
+{ return extendNormalFlg; }
 
 #endif
 

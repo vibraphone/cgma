@@ -23,8 +23,10 @@ const double CUBIT_RESABS = 1.0E-12;
 /* than GEOMETRY_RESABS the points are considered to be identical. */
 #ifdef __cplusplus
 const double GEOMETRY_RESABS = 1.0E-6;
+const double DEFAULT_GEOM_FACTOR = 500.0;
 #else
 #define GEOMETRY_RESABS 1.0E-6
+#define DEFAULT_GEOM_FACTOR 500.0
 #endif
 
 /* Types of solid modeler engines. */
@@ -37,6 +39,8 @@ enum SolidModelerType
    OCC,
    ACIS,
    PROE_GEOM,                  /* Normal Pro/E model */
+   PROE_PART,
+   PROE_ASSEMBLY,
    PROE_FEM_MESH_SOLID,        /* Pro/Mesh models... */
    PROE_FEM_MESH_SHELL,
    PROE_FEM_MESH_MIXED,
@@ -80,6 +84,7 @@ enum GeometryType
   TORUS_SURFACE_TYPE,
   BEST_FIT_SURFACE_TYPE,
   FACET_SURFACE_TYPE,
+  CYLINDER_SURFACE_TYPE, // only currently defined in ACIS Engine
   BSPLINE_SURFACE_TYPE,     //OCC surface type
   REVOLUTION_SURFACE_TYPE,  //OCC surface type
   EXTRUSION_SURFACE_TYPE,   //OCC surface type
@@ -89,6 +94,36 @@ enum GeometryType
     /* Lump types */
   UNDEFINED_LUMP_TYPE
 };
+
+enum ImprintType
+{
+  NO_IMPRINT=0,
+  ONLY_INVOLVED_BODIES,
+  INCLUDE_NEIGHBORS,
+  TOL_IMPRINT,
+  TOL_IMPRINT_INCLUDE_NEIGHBORS
+};
+
+/* loops may be the following types */
+enum LoopType
+{
+  /* Unknown loop type */
+  LOOP_TYPE_UNKNOWN,
+  
+  /* The external loop of a surface */
+  LOOP_TYPE_EXTERNAL,
+  
+  /* The loop is a hole */
+  LOOP_TYPE_HOLE,
+  
+  /* The loop is a u or v periodic loop (only applies to periodic surfaces)
+   * An example of this is a cylindrical surface with only 2 loops with each
+   * loop defining a cap of the cylinder. 
+   * If its a u periodic loop, the face is periodic in u */
+  LOOP_TYPE_U_PERIODIC,
+  LOOP_TYPE_V_PERIODIC
+};
+
 
 #endif
 

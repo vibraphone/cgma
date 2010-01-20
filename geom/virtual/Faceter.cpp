@@ -583,10 +583,8 @@ CubitStatus Faceter::get_curve_facets( RefEdge* curve, DLIList<CubitPoint*>& seg
   GMem curve_graphics;
   const double dist_tol = GEOMETRY_RESABS;
   const double dist_tol_sqr = dist_tol*dist_tol;
-  int n;
   Curve* curve_ptr = curve->get_curve_ptr();
-  curve_ptr->get_geometry_query_engine()->get_graphics( 
-    curve_ptr, n, &curve_graphics );
+  curve_ptr->get_geometry_query_engine()->get_graphics( curve_ptr, &curve_graphics );
   
   GPoint* gp = curve_graphics.point_list();
   CubitPoint* last = (CubitPoint*) new FaceterPointData( gp->x, gp->y, gp->z );

@@ -66,6 +66,27 @@ FacetLoop::~FacetLoop()
 }
 
 //-------------------------------------------------------------------------
+// Purpose       : The purpose of this function is to see if a loop is an external
+//                  or internal loop of a surface.
+//
+// Special Notes : 
+//
+// Creator       : Jonathan Bugman
+//
+// Creation Date : 9/9/2008
+//-------------------------------------------------------------------------
+CubitBoolean FacetLoop::is_external()
+{
+		  PRINT_ERROR( "This command is not supported with this engine.\n");
+          return CUBIT_FAILURE;
+}
+
+LoopType FacetLoop::loop_type()
+{
+  return LOOP_TYPE_UNKNOWN;
+}
+
+//-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a
 //                 attribute to the GE. The name is attached to the
 //                 underlying solid model entity this one points to.

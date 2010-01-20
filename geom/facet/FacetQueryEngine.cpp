@@ -414,13 +414,13 @@ CubitStatus FacetQueryEngine::get_connected_patch(
 // Date       :
 //================================================================================
 CubitStatus FacetQueryEngine::get_graphics( Surface* surface_ptr,
-                                                     int& number_triangles,
-                                                     int& number_points,
-                                                     int& number_facets,
                                                      GMem* gMem,
                                                      unsigned short ,
                                                      double, double ) const
 {
+  if( !gMem )
+    return CUBIT_FAILURE;
+
     //  get the FacetSurface.
   int i;
   FacetSurface *facet_surf_ptr = CAST_TO(surface_ptr,FacetSurface);
@@ -434,16 +434,13 @@ CubitStatus FacetQueryEngine::get_graphics( Surface* surface_ptr,
 
     // set return values, and if GMem is NULL return
     // (caller just wanted to know the counts.)
-  number_facets = surface_facets.size() * 4;
-  number_points = surface_points.size();
-  number_triangles = surface_facets.size();
-  if( !gMem )
-    return CUBIT_SUCCESS;
+  int number_points = surface_points.size();
+  int number_triangles = surface_facets.size();
 
 
     // Allocate space in GMem
-  gMem->allocate_tri(surface_facets.size());
-  gMem->fListCount = number_facets;
+  gMem->allocate_tri(number_triangles);
+  gMem->fListCount = surface_facets.size() * 4;
   gMem->pointListCount = number_points;
 
     // Copy points to GMem
@@ -483,7 +480,6 @@ CubitStatus FacetQueryEngine::get_graphics( Surface* surface_ptr,
 // Date       :
 //================================================================================
 CubitStatus FacetQueryEngine::get_graphics( Curve* curve_ptr,
-                                            int& num_points,
                                             GMem* gMem,
                                             double /*tolerance*/ ) const
 {
@@ -497,12 +493,14 @@ CubitStatus FacetQueryEngine::get_graphics( Curve* curve_ptr,
   facet_curv_ptr->get_points(curve_points);
   curve_points.reset();
   curve_facets.reset();
-  num_points = curve_points.size();
+  int num_points = curve_points.size();
   GPoint *new_point_list = new GPoint[num_points];
   int *new_facet_list = new int [number_facets*3];
   int ii;
+  CubitPoint *cur_pnt;
   for ( ii = 0; ii < num_points; ii++ )
   {
+    cur_pnt = curve_points.get();
     new_point_list[ii].x = curve_points.get()->x();
     new_point_list[ii].y = curve_points.get()->y();
     new_point_list[ii].z = curve_points.get()->z();
@@ -2310,17 +2308,168 @@ FacetQueryEngine::delete_solid_model_entities( Point* point ) const
   return CUBIT_SUCCESS;
 }
 
-CubitStatus FacetQueryEngine::fire_ray(BodySM *,
-                                          const CubitVector &,
-                                          const CubitVector &,
-                                          DLIList<double>&,
-                                          DLIList<GeometryEntity*> *) const
+CubitStatus FacetQueryEngine::fire_ray( const CubitVector &origin,
+                                        const CubitVector &direction,
+                                        DLIList<TopologyBridge*> &at_entity_list,
+                                        DLIList<double> &ray_params,
+                                        int max_hits,
+                                        double ray_radius,
+                                        DLIList<TopologyBridge*> *hit_entity_list) const
 {
-  PRINT_ERROR("FacetQueryEngine::fire_ray not yet implemented.\n");
-  return CUBIT_FAILURE;
+  
+  TopologyBridge *bridge_ptr;
+  int i, j;
+  bool hit = false;
+
+  DLIList<double> tmp_ray_params;
+  DLIList<FacetSurface*> at_surface_list;
+  DLIList<FacetCurve*> at_curve_list;
+  DLIList<FacetPoint*> at_point_list;
+
+  if( ray_radius == 0.0 )
+	  ray_radius = get_sme_resabs_tolerance();
+  
+  at_entity_list.reset();
+  for (i=0; i<at_entity_list.size(); i++)
+  {
+	  hit = false;
+	  bridge_ptr = at_entity_list.get_and_step();
+
+	  //determine which type of geometry we have. body, lump, face, curve?
+	  if (CAST_TO(bridge_ptr, FacetBody))
+	  {
+		  FacetBody* f_body = CAST_TO(bridge_ptr, FacetBody);
+		  DLIList<Surface*> surface_list;
+		  f_body->surfaces(surface_list);
+	  }
+	  else if (CAST_TO(bridge_ptr, FacetLump))
+	  {
+		  FacetLump* f_lump = CAST_TO(bridge_ptr, FacetLump);
+		  PRINT_INFO("Found FacetLump.\n");
+		  DLIList<FacetSurface*> f_surface_list;
+		  f_lump->get_surfaces(f_surface_list);
+		  at_surface_list.merge_unique(f_surface_list);
+	  }
+	  else if (CAST_TO(bridge_ptr, Surface))
+	  {
+		  FacetSurface* f_surface = CAST_TO(bridge_ptr, FacetSurface);
+		  
+		  DLIList<CubitFacet*> facet_list;
+		  DLIList<CubitPoint*> point_list;
+		  f_surface->get_my_facets(facet_list, point_list);
+
+		  //PRINT_INFO("There are %d facets.\n", facet_list.size());
+
+		  //RTree<CubitFacet*> rtree(ray_radius);
+		  //for (j=0; j<facet_list.size(); j++)
+			//  rtree.add(facet_list.get_and_step();
+		  
+		  //DLIList<CubitFacet*> facet_list1;
+		  //CubitBox range_box();
+		  //make range box for the ray
+		  //rtree.find(range_box, facet_list1);
+
+		  CubitVector* intersection_pt = new CubitVector();		
+	      double distance;
+
+		  for (j=0; j<facet_list.size(); j++)
+		  {
+			  if (hit)
+				  break;
+
+			  CubitFacet* facet = facet_list.get_and_step();
+
+			  // Find intersection of ray with triangle
+			  int rv = FacetEvalTool::intersect_ray(origin, direction, facet, intersection_pt, distance);
+
+			  switch (rv)
+			  {
+			  case -1:
+				  //PRINT_INFO("Facet is degenerate (segment or point).\n");
+				  break;
+			  case 0:
+				  //PRINT_INFO("Ray does not intersect the facet.\n");
+				  break;
+			  case 1:
+				  {
+					  hit = true;
+					  if (hit_entity_list)
+						  hit_entity_list->append(bridge_ptr);
+					  ray_params.append(distance);
+					  //PRINT_INFO("Ray intersects facet at %f, %f, %f.\n", intersection_pt->x(), intersection_pt->y(), intersection_pt->z());
+					
+					  continue;
+				  }
+			  case 2:
+				  //PRINT_INFO("Ray is in same plane as the facet.\n");
+				  break;
+			  }
+		  }
+          if (intersection_pt)
+              delete intersection_pt;
+	  
+	  }
+	  else if (CAST_TO(bridge_ptr, Curve))
+	  {
+		  FacetCurve* f_curve = CAST_TO(bridge_ptr, FacetCurve);
+		  DLIList<CubitFacetEdge*> facet_edge_list;
+		  f_curve->get_facets(facet_edge_list);
+
+		  //PRINT_INFO("There are %d facetedges.\n", facet_edge_list.size());
+          CubitVector* intersection_pt = new CubitVector();		
+          double distance;
+
+          for (j=0; j<facet_edge_list.size(); j++)
+		  {
+			  if (hit)
+				  break;
+
+			  CubitFacetEdge* facet_edge = facet_edge_list.get_and_step();
+
+			  int rv = FacetEvalTool::intersect_ray(origin, direction, facet_edge, intersection_pt, distance);
+
+			  switch (rv)
+			  {
+			  case -1:
+				  //PRINT_INFO("Facet is degenerate (segment or point).\n");
+				  break;
+			  case 0:
+				  //PRINT_INFO("Ray does not intersect the facet edge.\n");
+				  break;
+			  case 1:
+				  {
+					  hit = true;
+					  if (hit_entity_list)
+						  hit_entity_list->append(bridge_ptr);
+					  ray_params.append(distance);
+					  //PRINT_INFO("Ray intersects facet at %f, %f, %f.\n", intersection_pt->x(), intersection_pt->y(), intersection_pt->z());
+					
+					  continue;
+				  }
+			  case 2:
+				  //PRINT_INFO("Ray is parallel to the facet.\n");
+				  break;
+			  }
+
+		  }
+          if (intersection_pt)
+              delete intersection_pt;
+	  }
+	  else if (CAST_TO(bridge_ptr, FacetPoint))
+	  {
+		  FacetPoint* f_point = CAST_TO(bridge_ptr, FacetPoint);
+		  at_point_list.append_unique(f_point);
+	  }
+	  else
+		  ;//PRINT_INFO("Cast error in FacetQueryEngine::fire_ray.\n");
+
+  }
+
+  return CUBIT_SUCCESS;
 }
-  //- fire a ray at the specified body, returning the entities hit and
-  //- the parameters along the ray; return CUBIT_FAILURE if error
+  //- fire a ray at the specified entities, returning the parameters
+  //- (distances) along the ray and optionally the entities hit
+
 
 double FacetQueryEngine::get_sme_resabs_tolerance() const
 {
@@ -2470,7 +2619,10 @@ CubitStatus FacetQueryEngine::ensure_is_ascii_stl_file(FILE * fp, CubitBoolean &
 
   unsigned int dummy_int=0;
 
-  while (isspace(line[dummy_int])&& dummy_int<strlen(line)) dummy_int++;
+  // One of the functions called by isspace() has an assert that can fail in debug mode if 
+  // line[dummy_int] is negative so check for it here.
+  while (line[dummy_int] > -1 && isspace(line[dummy_int]) && dummy_int < strlen(line)) 
+    dummy_int++;
 
   if (strlen(line)-dummy_int>5)
   {
@@ -3280,7 +3432,10 @@ CubitStatus FacetQueryEngine::import_facets(
       DLIList <Surface *> shell_surfaces;
       DLIList <CubitPoint *> mypoint_list;
       facet_list_ptr = shell_facet_list.get_and_step();
-      rv = FacetModifyEngine::instance()->build_facet_surface( NULL,
+      if(facet_list_ptr == NULL)
+        rv = CUBIT_FAILURE;
+      else
+        rv = FacetModifyEngine::instance()->build_facet_surface( NULL,
                                *facet_list_ptr, mypoint_list,
                                feature_angle, interp_order,
                                smooth_non_manifold,
@@ -3403,13 +3558,30 @@ CubitStatus FacetQueryEngine::read_facets( const char * file_name,
     return CUBIT_FAILURE;
   }
 
-  int n = sscanf(line, "%d %d", &npoints, &nfacets);
-  if (n < 1 || n > 2 && file_format == CUBIT_FACET_FILE )
+  int n;
+  char type_header[8];
+  CubitBoolean is_off_file = CUBIT_FALSE;
+  n = sscanf( line, "%s", type_header );
+  if( !strcmp( type_header, "OFF" ) || 
+      !strcmp( type_header, "off" ) )
   {
-    PRINT_ERROR("Format error in facet file %s on line %d\n", file_name, iline);
-    fclose( fp );
-    return CUBIT_FAILURE;
+    PRINT_INFO( "Reading OFF file...\n" );
+    fgets(line, 128, fp);
+    iline++;
+    is_off_file = CUBIT_TRUE;
   }
+  
+  n = sscanf(line, "%d %d", &npoints, &nfacets);
+  if( !is_off_file )
+  {
+    if (n < 1 || n > 2 && file_format == CUBIT_FACET_FILE )
+    {
+      PRINT_ERROR("Format error in facet file %s on line %d\n", file_name, iline);
+      fclose( fp );
+      return CUBIT_FAILURE;
+    }
+  }
+
   if (npoints <= 0)
   {
     PRINT_ERROR("Expecting number of nodes in facet file %s on line %d\n", file_name, iline);
@@ -3448,15 +3620,30 @@ CubitStatus FacetQueryEngine::read_facets( const char * file_name,
       fclose( fp );
       return CUBIT_FAILURE;
     }
-
-    n = sscanf(line, "%d %lf %lf %lf", &id, &xx, &yy, &zz );
-    if (n != 4)
+    if( is_off_file )
     {
-      PRINT_ERROR("Format error in facet file %s on line %d\n", file_name, iline);
-      PRINT_INFO("  Expecting 1 integer and 3 doubles, but instead read %d values\n", n);
-      fclose( fp );
-      return CUBIT_FAILURE;
+      n = sscanf( line, "%lf %lf %lf", &xx, &yy, &zz );
+      id = ii;
+      if (n != 3)
+      {
+        PRINT_ERROR("Format error in OFF file %s on line %d\n", file_name, iline);
+        PRINT_INFO("  Expecting 3 doubles, but instead read %d values\n", n);
+        fclose( fp );
+        return CUBIT_FAILURE;
+      }
     }
+    else
+    {
+      n = sscanf(line, "%d %lf %lf %lf", &id, &xx, &yy, &zz );
+      if (n != 4)
+      {
+        PRINT_ERROR("Format error in facet file %s on line %d\n", file_name, iline);
+        PRINT_INFO("  Expecting 1 integer and 3 doubles, but instead read %d values\n", n);
+        fclose( fp );
+        return CUBIT_FAILURE;
+      }
+    }
+    
     new_point = (CubitPoint *) new CubitPointData( xx, yy, zz );
     new_point->set_id( id );
     add_hash_point( new_point );
@@ -3537,28 +3724,56 @@ CubitStatus FacetQueryEngine::read_facets( const char * file_name,
     }
     else
     {
-      n = sscanf(line, "%d %d %d %d %d", &id, &conn[4*ii], &conn[4*ii+1],
-                 &conn[4*ii+2], &conn[4*ii+3] );
+//       if( is_off_file )
+//       {
+//         n = sscanf( line, "%d %d %d %d", &id, &conn[4*ii], &conn[4*ii+1],
+//                     &conn[4*ii+2], &conn[4*ii+3] );
+//         if (n < 4 || n > 5)
+//         {
+//           PRINT_ERROR("Format error in OFF file %s on line %d reading facets\n", file_name, iline);
+//           PRINT_INFO("  Expecting 4 or 5 integers, but instead read %d values\n", n);
+//           PRINT_INFO("  For example:  <facet_size> <i0> <i1> <i2> [<i3>]\n");
+//           fclose( fp );
+//           return CUBIT_FAILURE;
+//         } 
 
-      if (n < 4 || n > 5)
-      {
-        PRINT_ERROR("Format error in facet file %s on line %d reading facets\n", file_name, iline);
-        PRINT_INFO("  Expecting 4 or 5 integers, but instead read %d values\n", n);
-        PRINT_INFO("  For example:  <id> <i0> <i1> <i2> [<i3>]\n");
-        fclose( fp );
-        return CUBIT_FAILURE;
-      }
-
-        // for triangles -- duplicate the point
-      if (n==4)
-      {
-        conn[4*ii+3] = conn[4*ii+2];
-        ntri++;
-      }
-      else
-      {
-        nquad++;
-      }
+//           // for triangles -- duplicate the point
+// //        if( n==3 )
+//         if( id==3 )
+//         {
+//           conn[4*ii+3] = conn[4*ii+2];
+//           ntri++;
+//         }
+//         else
+//         {
+//           nquad++;
+//         }
+//       }
+//       else
+//       {
+        n = sscanf(line, "%d %d %d %d %d", &id, &conn[4*ii], &conn[4*ii+1],
+                   &conn[4*ii+2], &conn[4*ii+3] );
+        
+        if (n < 4 || n > 5)
+        {
+          PRINT_ERROR("Format error in facet file %s on line %d reading facets\n", file_name, iline);
+          PRINT_INFO("  Expecting 4 or 5 integers, but instead read %d values\n", n);
+          PRINT_INFO("  For example:  <id> <i0> <i1> <i2> [<i3>]\n");
+          fclose( fp );
+          return CUBIT_FAILURE;
+        }
+      
+          // for triangles -- duplicate the point
+        if (n==4)
+        {
+          conn[4*ii+3] = conn[4*ii+2];
+          ntri++;
+        }
+        else
+        {
+          nquad++;
+        }
+//       }
     }
   }
 

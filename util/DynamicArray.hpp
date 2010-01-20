@@ -23,7 +23,7 @@
 
 #include "MemoryManager.hpp"
 #include "ArrayBasedContainer.hpp"
-#include <string.h>
+#include <cstring>
 #include "CubitUtilConfigure.h"
 
 class CUBIT_UTIL_EXPORT DynamicArray : public ArrayBasedContainer

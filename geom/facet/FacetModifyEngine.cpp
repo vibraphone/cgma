@@ -70,24 +70,24 @@ CubitBoolean FacetModifyEngine::modifyEnabled = CUBIT_FALSE;
 // do nothing in some very rare cases.  From Steven Engelhardt's Weblog.
 
 #define MODIFY_CHECK_RETURN_NULL \
-do {if(!modifyEnabled){ \
+do {if(!modifyEnabled){                                                               \
     PRINT_INFO("Facet-based geometry modification is a beta capability.\n");\
     PRINT_ERROR("This capability is currently disabled.\n");\
-    PRINT_INFO("To enable this capability, issue the command 'set facet_modify on'. \n");\
+    PRINT_INFO("To enable this capability, issue the command 'set developer commands on'. \n");\
     return NULL;} }while(0)
 
 #define MODIFY_CHECK_RETURN_VOID \
 do {if(!modifyEnabled){ \
     PRINT_INFO("Facet-based geometry modification is a beta capability.\n");\
     PRINT_ERROR("This capability is currently disabled.\n");\
-    PRINT_INFO("To enable this capability, issue the command 'set facet_modify on'. \n");\
+    PRINT_INFO("To enable this capability, issue the command 'set developer commands on'. \n");\
     return;} }while(0)
 
 #define MODIFY_CHECK_RETURN_FAILURE \
 do {if(!modifyEnabled){ \
     PRINT_INFO("Facet-based geometry modification is a beta capability.\n");\
     PRINT_ERROR("This capability is currently disabled.\n");\
-    PRINT_INFO("To enable this capability, issue the command 'set facet_modify on'. \n");\
+    PRINT_INFO("To enable this capability, issue the command 'set developer commands on'. \n");\
     return CUBIT_FAILURE;} }while(0)
 //===============================================================================
 // Function   : FacetModifyEngine
@@ -170,6 +170,20 @@ Curve* FacetModifyEngine::make_Curve( Point const* /*point1_ptr*/,
 //===============================================================================
 // Function   : make_Curve
 // Member Type: PUBLIC
+// Description: make a curve using point_tangents to describe curvature
+// Author     : John Fowler
+// Date       : 10/02
+//===============================================================================
+Curve* FacetModifyEngine::make_Curve( DLIList<CubitVector*>& point_list,
+                   DLIList<CubitVector*>& point_tangents) const
+{
+    PRINT_ERROR("Option not supported for mesh based geometry.\n");
+    return (Curve*)NULL;
+}
+
+//===============================================================================
+// Function   : make_Curve
+// Member Type: PUBLIC
 // Description: make a curve
 // Author     : John Fowler
 // Date       : 10/02
@@ -213,6 +227,21 @@ Surface* FacetModifyEngine::make_Surface( Surface * /*old_surface_ptr*/,
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return (Surface*) NULL;
+}
+
+//===============================================================================
+// Function   : make_extended_sheet
+// Member Type: PUBLIC
+// Description: make an extended sheet from a set of surfaces
+// Author     : 
+// Date       : 
+//===============================================================================
+BodySM* FacetModifyEngine::make_extended_sheet( DLIList<Surface*> & /*surface_list*/,
+                                 CubitBox * /*clip_box_ptr*/,
+                                 bool /*preview*/ ) const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return (BodySM*) NULL;
 }
 
 //===============================================================================
@@ -609,6 +638,17 @@ BodySM* FacetModifyEngine::sphere(double radius) const
   return body_ptr;
 }
 
+CubitStatus FacetModifyEngine::remove_topology(DLIList<Curve*> &curves_to_remove,
+                                       DLIList<Surface*> &surfs_to_remove,
+                                       double backoff_distance,
+                                       double small_edge_size,
+                                       DLIList<BodySM*> &new_bodysm_list,
+                                       CubitBoolean preview) const
+{
+   PRINT_INFO("This functionality is not implemented for faceted geometry.\n");
+   return CUBIT_FAILURE;
+}
+
 void FacetModifyEngine::set_sphere_eval_data
 (
     ChollaEngine *cholla_ptr,
@@ -896,15 +936,182 @@ end_brick:
 // Function   : brick
 // Member Type: PUBLIC
 // Description: create a brick with facets given center axes and extension
-// Author     : John Fowler
-// Date       : 10/02
+// Author     : Steve Owen
+// Date       : 1/09
 //===============================================================================
-BodySM* FacetModifyEngine::brick( const CubitVector &/*center*/, 
-                                  const CubitVector* /*axes[3]*/,
-                                  const CubitVector &/*extension*/) const
+BodySM* FacetModifyEngine::brick( const CubitVector &center, 
+                                  const CubitVector axes[3],
+                                  const CubitVector &extension) const
 {
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (BodySM*) NULL;
+  
+	
+  MODIFY_CHECK_RETURN_NULL;
+  CubitStatus rv = CUBIT_SUCCESS;
+  CubitVector uvec, vvec, wvec, corner, mid;
+  DLIList <CubitFacet *>facet_list;
+  DLIList <CubitPoint *>point_list;
+  CubitPoint *new_point;
+  CubitFacet *facet_ptr;
+  int i, numpoints, numtris;
+  double feature_angle;
+  int interp_order;
+  CubitBoolean smooth_non_manifold, split_surfaces;
+  BodySM *body_ptr = NULL;
+  std::vector<CubitPoint *> points;
+  
+  numpoints = 14;
+  numtris = 24;
+  
+	uvec = extension.x() * axes[0];
+	vvec = extension.y() * axes[1];
+	wvec = extension.z() * axes[2];
+  
+	corner = center - uvec - vvec - wvec; 
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);
+	
+	corner = center + uvec - vvec - wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);
+	
+	corner = center + uvec - vvec + wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);
+  
+	corner = center - uvec - vvec + wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point); 
+	
+	corner = center - uvec + vvec - wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);
+	
+	corner = center + uvec + vvec - wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);
+	
+	corner = center + uvec + vvec + wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);  
+	
+	corner = center - uvec + vvec + wvec;
+  new_point = (CubitPoint *) new CubitPointData( corner.x(),corner.y(),corner.z() ); 
+  points.push_back(new_point);   
+	
+	mid = center - wvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point);
+	
+	mid = center + uvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point);  
+  
+	mid = center + wvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point);  
+	
+	mid = center - uvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point); 
+  
+	mid = center - vvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point); 
+  
+	mid = center + vvec;
+  new_point = (CubitPoint *) new CubitPointData( mid.x(), mid.y(), mid.z() ); 
+  points.push_back(new_point);   
+  
+  for ( i = 0; i < numpoints; i++ ) {
+    point_list.append(points[i]);
+  }    
+  
+  // bottom face      
+  facet_ptr = new CubitFacetData( points[0],points[1], points[12] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[1],points[2], points[12] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[2],points[3], points[12] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[3],points[0], points[12] );
+  // back face
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[1],points[0], points[8] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[5],points[1], points[8] );
+  facet_list.append( facet_ptr );  
+  facet_ptr = new CubitFacetData( points[4],points[5], points[8] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[0],points[4], points[8] );
+  facet_list.append( facet_ptr );
+  // left face
+  facet_ptr = new CubitFacetData( points[0],points[3], points[11] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[3],points[7], points[11] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[7],points[4], points[11] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[4],points[0], points[11] );
+  facet_list.append( facet_ptr ); 
+  // top face
+  facet_ptr = new CubitFacetData( points[7],points[6], points[13] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[6],points[5], points[13] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[5],points[4], points[13] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[4],points[7], points[13] );
+  facet_list.append( facet_ptr ); 
+  // right face
+  facet_ptr = new CubitFacetData( points[1],points[5], points[9] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[5],points[6], points[9] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[6],points[2], points[9] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[2],points[1], points[9] );
+  facet_list.append( facet_ptr ); 
+  // front face  
+  facet_ptr = new CubitFacetData( points[3],points[2], points[10] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[2],points[6], points[10] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[6],points[7], points[10] );
+  facet_list.append( facet_ptr );
+  facet_ptr = new CubitFacetData( points[7],points[3], points[10] );
+  facet_list.append( facet_ptr );   
+  
+  points.clear(); //  clear out the points vector since we are through with it.
+  
+  feature_angle = 100.0;
+  interp_order = 0;
+  smooth_non_manifold = CUBIT_TRUE;
+  split_surfaces = CUBIT_FALSE;
+  
+  ChollaEngine *cholla_ptr = NULL;
+  FacetModifyEngine *fme = const_cast<FacetModifyEngine *> (this);
+  rv = fme->build_cholla_surfaces( facet_list,
+																	point_list,
+																	feature_angle,
+																	interp_order,
+																	smooth_non_manifold,
+																	split_surfaces,
+																	cholla_ptr );
+  if ( rv == CUBIT_SUCCESS )
+  {
+		finish_facet_Body( cholla_ptr,
+											NULL,
+											feature_angle,
+											interp_order,
+											body_ptr);
+		if ( cholla_ptr )
+		{
+			cholla_ptr->delete_me();
+			delete cholla_ptr;
+		}
+		
+  }
+  return body_ptr;
 }
 
 //===============================================================================
@@ -1329,7 +1536,8 @@ CubitStatus     FacetModifyEngine::subtract(DLIList<BodySM*> &tool_body_list,
     status = fbint->dofacetboolean_subtract(tool_body,from_bodies,new_bodies,
                                             keep_old,to_be_deleted,op);
     delete fbint;
-    FacetQueryEngine::instance()->delete_solid_model_entities(tool_body);    
+    if( keep_old == false )
+      FacetQueryEngine::instance()->delete_solid_model_entities(tool_body);    
   }
 
   for ( i = 0; i < from_bodies.size(); i++ ) {
@@ -1442,6 +1650,7 @@ CubitStatus     FacetModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
 CubitStatus     FacetModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            DLIList<Curve*> &ref_edge_list,
                                            DLIList<BodySM*>& new_body_list,
+                                           DLIList<TopologyBridge*> &temporary_bridges,
                                            bool keep_old,
                                            bool show_messages) const
 {
@@ -1490,6 +1699,7 @@ CubitStatus     FacetModifyEngine::imprint( DLIList<BodySM*> &body_list,
 //===============================================================================
 CubitStatus     FacetModifyEngine::imprint( DLIList<Surface*> &/*ref_face_list*/,
                                            DLIList<Curve*> &/*ref_edge_list*/,
+                                           DLIList<TopologyBridge*> &temporary_bridges,
                                            DLIList<BodySM*>& /*new_body_list*/,
                                            bool /*keep_old_body*/ ) const
 {
@@ -1507,7 +1717,10 @@ CubitStatus     FacetModifyEngine::imprint( DLIList<Surface*> &/*ref_face_list*/
 CubitStatus     FacetModifyEngine::imprint( DLIList<Surface*> &/*surface_list*/,
                                            DLIList<DLIList<Curve*>*> &/*curve_lists_list*/,
                                            BodySM*& /*new_body*/,
-                                           bool /*keep_old_body*/ ) const
+                                           bool /*keep_old_body*/,
+                                           bool /*expand*/,
+                                           DLIList<TopologyBridge*> *new_tbs,
+                                           DLIList<TopologyBridge*> *att_tbs ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1525,7 +1738,9 @@ CubitStatus     FacetModifyEngine::imprint( DLIList<BodySM*> &/*body_list*/,
                                            DLIList<BodySM*>& /*new_body_list*/,
                                            bool keep_old, /* keep old body */
                                           DLIList<TopologyBridge*> *new_tbs,
-                                          DLIList<TopologyBridge*> *att_tbs ) const
+                                          DLIList<TopologyBridge*> *att_tbs,
+                                          double *tol_in,
+                                          bool clean_up_slivers) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -1581,7 +1796,6 @@ CubitStatus     FacetModifyEngine::project_edges( DLIList<Surface*> &/*ref_face_
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
-
 
 //===============================================================================
 // Function   : intersect
@@ -1700,6 +1914,11 @@ BodySM* outsideBody = NULL;
 
   return status;
   
+}
+
+void FacetModifyEngine::get_possible_invalid_tbs(DLIList<TopologyBridge*> &bridges_in,
+                             DLIList<TopologyBridge*> &bridges_out)
+{
 }
 
 //===============================================================================
@@ -1881,9 +2100,10 @@ CubitStatus FacetModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v1,
                               const CubitVector &v2,
                               const CubitVector &v3,
+                              DLIList<BodySM*>& neighbor_imprint_list,
                               DLIList<BodySM*>& results_list,
-                              bool imprint
-                              ) 
+                              ImprintType imprint_type,
+                              bool /*preview*/) const
 {
 
   MODIFY_CHECK_RETURN_FAILURE;
@@ -2006,8 +2226,10 @@ BodySM *body_sm;
 CubitStatus  FacetModifyEngine::webcut(
              DLIList<BodySM*>& /*webcut_body_list*/,
              BodySM const* /*tool_body*/,
+                                 DLIList<BodySM*>& /*neighbor_imprint_list*/,
              DLIList<BodySM*>& /*results_list*/,
-             bool /*imprint*/ )
+                                 ImprintType imprint_type,
+                                 bool /*preview*/) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2023,185 +2245,10 @@ CubitStatus  FacetModifyEngine::webcut(
 CubitStatus    FacetModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*body_list*/,
                                                           Surface* /*plane_surf1*/,
                                                           Surface* /*plane_surf2*/,
+                                                          DLIList<BodySM*>& /*neighbor_imprint_list*/,
                                                           DLIList<BodySM*>& /*results_list*/,
-                                                          bool /*imprint*/ ) const
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-//===============================================================================
-// Function   : webcut_with_sheet
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_sheet(DLIList<BodySM*> & /*webcut_body_list*/,
-                                                 BodySM * /*sheet_body*/,
-                                                 DLIList<BodySM*> & /*new_bodies*/,
-                                                 bool /*imprint*/ )
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-//===============================================================================
-// Function   : webcut_with_extended_surf
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_extended_surf(DLIList<BodySM*> & /*webcut_body_list*/,
-                                                         Surface * /*extend_from*/,
-                                                         DLIList<BodySM*> & /*new_bodies*/,
-                                                         int & /*num_cut*/,
-                                                         bool /*imprint*/ )
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-//===============================================================================
-// Function   : webcut_with_cylinder
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_cylinder(DLIList<BodySM*> &webcut_body_list,
-                                            double radius,
-                                            const CubitVector &axis,
-                                            const CubitVector &center,
-                                            DLIList<BodySM*>& results_list,
-                                            bool imprint )
-{
-
-  MODIFY_CHECK_RETURN_FAILURE;
-  
-CubitBox super_bbox;
-CubitStatus status;
-int i;
-CubitVector bodies_center, my_center, diagonal, my_axis;
-
-  CubitBoolean delete_bodies = (GeometryModifyTool::instance()->get_new_ids() ?
-                                CUBIT_FALSE : CUBIT_TRUE);
-
-  status = FacetQueryEngine::instance()->create_super_facet_bounding_box(
-    webcut_body_list,super_bbox);
-  std::vector<double> cutter_verts;
-  std::vector<int> cutter_connections;
-  int nr, nz;
-  double length;
-  
-  diagonal = super_bbox.diagonal();
-//  length = 2.3*diagonal.length() + 2.0*center.length();
-  bodies_center = super_bbox.center();
-  length = 3.*sqrt((bodies_center.x() - center.x())*(bodies_center.x() - center.x()) +
-                   (bodies_center.y() - center.y())*(bodies_center.y() - center.y()) +
-                   (bodies_center.z() - center.z())*(bodies_center.z() - center.z()) );
-  length += 3.*diagonal.length();
-    //length = sqrt(length*length + radius*radius);
-    //  bodies_center += center;
-
-  nr = 30;
-  nz = 5;
-
-  //  Make the cutter surface.
-  status = FBDataUtil::FBmake_cylinder(cutter_verts, cutter_connections, 
-                  radius, length, nr, nz);
-  my_center = center;
-  my_axis = axis;
-  status = FBDataUtil::rotate_FB_object(cutter_verts,my_axis,my_center);
-
-  FacetboolInterface *fbint;
-  bool cutter_is_plane = false;
-  //  Now make the facetbool objects for the bodies.                  
-  webcut_body_list.reset();                
-  BodySM* body_sm;
-  for ( i = webcut_body_list.size(); i > 0; i-- ) {
-    CubitBoolean intersects;
-    body_sm = webcut_body_list.get_and_step();
-    fbint = new FacetboolInterface;
-     status = fbint->webcut_FB(body_sm,cutter_verts,cutter_connections,
-                               cutter_is_plane,delete_bodies,
-                               intersects,results_list);   
-    delete fbint;    
-    if ( status == CUBIT_FAILURE )
-    {
-        PRINT_ERROR(" Unable to perform webcut.\n" );
-        return CUBIT_FAILURE;
-    }
-
-    if ( status == CUBIT_SUCCESS && intersects )  
-    {
-      instance()->get_gqe()->delete_solid_model_entities(body_sm);
-    }
-    else
-    {
-      PRINT_INFO("INFO: Cutting Tool overlaps the original volume,\n"
-                 "      Or cutting plane does not pass through volume.\n"
-                 "         The original volume is unaffected.\n" );
-    }
-  }
-
-  return status;
-  
-}
-
-//===============================================================================
-// Function   : webcut_with_brick
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-
-//CubitStatus FacetModifyEngine::webcut_with_brick( 
-//                                      DLIList<BodySM*>& /*webcut_body_list*/, 
-//                                      const CubitVector &/*center*/,
-//                                      const CubitVector* /*axes[3]*/, 
-//                                      const CubitVector &/*extension*/,
-//                                      DLIList<BodySM*> &/*results_list*/,
-//                                      bool /*imprint*/ )
-//{
-//  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-//  return CUBIT_FAILURE;
-//}
-
-//===============================================================================
-// Function   : webcut_with_planar_sheet
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_planar_sheet( 
-                                          DLIList<BodySM*>& /*webcut_body_list*/,
-                                          const CubitVector &/*center*/,
-                                          const CubitVector* /*axes[2]*/,
-                                          double /*width*/, 
-                                          double /*height*/,
-                                          DLIList<BodySM*> &/*results_list*/,
-                                          bool /*imprint*/ )
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-//===============================================================================
-// Function   : webcut_with_curve_loop
-// Member Type: PUBLIC
-// Description: 
-// Author     : John Fowler
-// Date       : 10/02
-//===============================================================================
-CubitStatus FacetModifyEngine::webcut_with_curve_loop(
-                                              DLIList<BodySM*> &/*webcut_body_list*/,
-                                              DLIList<Curve*> &/*ref_edge_list*/,
-                                              DLIList<BodySM*>& /*results_list*/,
-                                              bool /*imprint*/)
+                                                          ImprintType imprint_type,
+                                                          bool /*preview*/) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2271,6 +2318,21 @@ CubitStatus FacetModifyEngine::split_body( BodySM *body_ptr,
   return CUBIT_SUCCESS;
 }
 
+//===============================================================================
+// Function   : separate_surfaces
+// Member Type: PUBLIC
+// Description: Separates surfaces from sheet bodies into separate bodies.
+//              Connected surfaces will remain connected but be placed in a new
+//              body. NOT IMPLEMENTED
+// Author     : 
+// Date       : 
+//===============================================================================
+CubitStatus FacetModifyEngine::separate_surfaces( DLIList<Surface*> &surf_list,
+                                                  DLIList<BodySM*> &new_bodies )
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
 
 //===============================================================================
 // Function   : reverse_body
@@ -2337,7 +2399,13 @@ CubitStatus    FacetModifyEngine::regularize_body( BodySM * /*body_ptr*/,
 // Date       : 10/02
 //===============================================================================
 CubitStatus  FacetModifyEngine::regularize_entity( GeometryEntity * /*old_entity_ptr*/,  
-                                                      BodySM *& /*new_body_ptr*/ )
+                                                      BodySM *& /*new_body_ptr*/)
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus  FacetModifyEngine::test_regularize_entity( GeometryEntity *)
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2355,6 +2423,21 @@ CubitStatus FacetModifyEngine::offset_curves( DLIList<Curve*>& /*ref_edge_list*/
                                               double /*offset_distance*/,
                                               const CubitVector& /*offset_direction*/, 
                                               int /*gap_type*/ )
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+//===============================================================================
+// Function   : split_curve
+// Member Type: PUBLIC
+// Description: 
+// Author     : Alex Hays
+// Date       : 9/08
+//===============================================================================
+CubitStatus  FacetModifyEngine::split_curve( Curve* curve_to_split,
+											const CubitVector& split_location,
+											DLIList<Curve*>& created_curves )
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2386,7 +2469,8 @@ Curve* FacetModifyEngine::trim_curve( Curve* /*trim_curve*/,
 CubitStatus FacetModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> & ref_face_list,
                                                       DLIList<BodySM*> &new_bodies,
                                                       bool keep_old,
-                                                      bool heal) const
+                                                      bool heal,
+                                                      bool sheet ) const
 {
   //MODIFY_CHECK_RETURN_FAILURE;
   
@@ -2459,6 +2543,19 @@ CubitStatus FacetModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> 
   {
     surf_ptr = surface_list.get();
     new_body = surf_ptr->bodysm();
+
+    if( sheet == false ) 
+    {
+      CubitVector centroid;
+      double volume = 0.0;
+      new_body->mass_properties( centroid, volume);
+      if( volume <= 0.0 )
+      {
+        FacetQueryEngine::instance()->delete_solid_model_entities(new_body);
+        PRINT_INFO("Failing...Resulting body has no volume.\n");
+        return CUBIT_FAILURE; 
+      }
+    }
   
     // delete the old model
   
@@ -2641,7 +2738,7 @@ CubitStatus FacetModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
                                               const CubitVector & /*point_2*/,
                                               const CubitVector & /*point_3*/,
                                               BodySM * /*body_to_trim_to*/,
-                                              DLIList<BodySM*>& /*midplane_body*/ ) const
+                                              BodySM *& /*midplane_body*/ ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2655,9 +2752,9 @@ CubitStatus FacetModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
-			    	   Surface* surface_ptr2,
-			           BodySM* body_to_trim_to,
-                                   DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2671,9 +2768,9 @@ CubitStatus FacetModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
-				   Surface* surface_ptr2,
-				   BodySM* body_to_trim_to,
-                                   DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2687,12 +2784,37 @@ CubitStatus FacetModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
-				    Surface* surface_ptr2,
-				    BodySM* body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
+}
+
+//=============================================================================
+// Function   : tweak_bend
+// Member Type: PUBLIC
+// Description: Bend solid bodies based on a bend radius and angle
+// Author     : 
+// Date       : 
+//=============================================================================
+CubitStatus FacetModifyEngine::tweak_bend( DLIList<BodySM*>& bend_bodies,
+                                           DLIList<BodySM*>& new_bodysm_list,
+                                           CubitVector& neutral_root,
+                                           CubitVector& bend_axis,
+                                           CubitVector& bend_direction,
+                                           double radius,
+                                           double angle,
+                                           DLIList<CubitVector*> bend_regions,
+                                           double width,
+                                           CubitBoolean center_bend,
+                                           int num_points,
+                                           CubitBoolean keep_old_body,
+                                           CubitBoolean preview ) const
+{
+	PRINT_ERROR("Option not supported for mesh based geometry.\n");
+	return CUBIT_FAILURE;
 }
 
 //=============================================================================
@@ -2844,6 +2966,8 @@ CubitStatus FacetModifyEngine::tweak_move( DLIList<Curve*> & /*curve_list*/,
 //=============================================================================
 CubitStatus FacetModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*/, 
                                              double /*offset_distance*/,
+                                             DLIList<Surface*> * /*add_surface_list_ptr*/, 
+                                             DLIList<double> * /*add_offset_list_ptr*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
@@ -2862,6 +2986,8 @@ CubitStatus FacetModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*
 //=============================================================================
 CubitStatus FacetModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,  
                                              double /*offset_distance*/,
+                                             DLIList<Curve*> * /*add_curve_list_ptr*/, 
+                                             DLIList<double> * /*add_offset_list_ptr*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
@@ -2881,7 +3007,6 @@ CubitStatus FacetModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,
 CubitStatus FacetModifyEngine::tweak_remove( DLIList<Surface*> & /*surface_list*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*extend_adjoining*/,
-                                             CubitBoolean /*keep_surface*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
 {
@@ -2917,6 +3042,8 @@ CubitStatus FacetModifyEngine::tweak_remove( DLIList<Curve*> & /*curve_list*/,
 CubitStatus FacetModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*/,
                                              DLIList<Surface*> & /*target_surf_list*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
+                                             CubitBoolean /*extend_flg*/,
+                                             CubitPlane * /*limit_plane*/,
                                              CubitBoolean /*reverse_flg*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
@@ -2936,9 +3063,12 @@ CubitStatus FacetModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*
 CubitStatus FacetModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                              DLIList<Surface*> & /*target_surf_list*/, 
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
+                                             CubitBoolean /*extend_flg*/,
+                                             CubitPlane * /*limit_plane*/,
                                              CubitBoolean /*reverse_flg*/,
                                              CubitBoolean /*keep_old_body*/,
-                                             CubitBoolean /*preview*/ ) const
+                                             CubitBoolean /*preview*/,
+                                             double /*max_area_increase = 0*/ ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2956,15 +3086,40 @@ CubitStatus FacetModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
 //=============================================================================
 CubitStatus FacetModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                              DLIList<Curve*> & /*target_curve_list*/, 
-                                             DLIList<BodySM*> & /*new_bodysm_list*/, 
+                                             DLIList<BodySM*> & /*new_bodysm_list*/,
+                                             CubitBoolean /*extend_flg*/,
+                                             CubitPlane * /*limit_plane*/,
                                              CubitBoolean /*reverse_flg*/,
+                                             CubitBoolean /*keep_old_body*/,
+                                             CubitBoolean /*preview*/,
+                                             double /*max_area_increase = 0*/ ) const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+//=============================================================================
+// Function   : tweak_target
+// Member Type: PUBLIC
+// Description: Tweak specified point of a sheet body to a given location.  The
+//              given point must be part of a planar surface or surfaces 
+//              attached to linear curves only.  The user specified which of 
+//              those surfaces to actually modify.  The given location will be
+//              projected to be on the given planar surface(s) before being
+//              used - this projected location must be the same on all surfaces.
+// Author     :
+// Date       :
+//=============================================================================
+CubitStatus FacetModifyEngine::tweak_target( Point * /*point_ptr*/,
+                                             DLIList<Surface*> & /*modify_surface_list*/,
+                                             CubitVector & /*target_loc*/,
+                                             BodySM *& /*new_bodysm_ptr*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean /*preview*/ ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
-
 
 CubitStatus FacetModifyEngine::remove_curve_slivers( BodySM* /*body*/, 
                                                      double /*lengthlimit*/ ) const
@@ -3013,8 +3168,25 @@ CubitStatus FacetModifyEngine::create_offset_surface( Surface* /*ref_face_ptr*/,
                                                       BodySM*& /*new_body*/, 
                                                       double /*offset_distance*/ ) const
 {
-   PRINT_ERROR("Function not implemented in this engine.\n");
+   PRINT_ERROR("Function not implemented in Facet engine.\n");
    return CUBIT_FAILURE;
+}
+
+//================================================================================
+// Description: Creates an offset sheet.
+// Author     : 
+// Date       :
+//================================================================================
+CubitStatus
+FacetModifyEngine::create_offset_sheet( DLIList<Surface*> & /*surface_list*/,
+                                        double /*offset_distance*/,
+                                        DLIList<Surface*> * /*add_surface_list_ptr*/,
+                                        DLIList<double> * /*add_offset_list_ptr*/,
+                                        DLIList<BodySM*> & /*new_body_list*/,
+                                        CubitBoolean /*preview*/ ) const
+{
+  PRINT_ERROR("Function not implemented in Facet engine.\n");
+  return CUBIT_FAILURE;
 }
 
 //================================================================================
@@ -3036,7 +3208,8 @@ CubitStatus FacetModifyEngine::create_offset_body( BodySM* body_ptr,
 // Date       : 08/18/03
 //================================================================================
 CubitStatus FacetModifyEngine::create_skin_surface( DLIList<Curve*>& /*curves*/, 
-                                                    BodySM*& /*new_body*/ ) const
+                                                    BodySM*& /*new_body*/,
+                                                    DLIList<Curve*>& /*guides*/) const
 {
    PRINT_ERROR("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
@@ -3096,6 +3269,13 @@ CubitStatus FacetModifyEngine::create_surface( DLIList<CubitVector*>& /*vec_list
    return CUBIT_FAILURE;
 }
 
+CubitStatus FacetModifyEngine::create_surface( DLIList<Point*> & /*points*/,
+                                               BodySM *& /*new_body*/ ) const
+{
+   PRINT_ERROR("Function not implemented in this engine.\n");
+   return CUBIT_FAILURE;
+}
+
 //================================================================================
 // Description: Creates a weld surface.
 // Author     : Tyronne Lim
@@ -3111,6 +3291,17 @@ CubitStatus FacetModifyEngine::create_weld_surface( CubitVector & /*root*/,
    PRINT_ERROR("Function not implemented in this engine.\n");
    return CUBIT_FAILURE;
 }
+
+
+CubitStatus FacetModifyEngine::stitch( DLIList<BodySM*> &bodies_to_stitch,
+                                       DLIList<BodySM*> &new_bodies,
+                                       bool tighten_gaps,
+                                       double tolerance )const 
+{
+   PRINT_ERROR("Function not implemented in this engine.\n");
+   return CUBIT_FAILURE;
+}
+
 
 //================================================================================
 //    Facet-based geometry entities
@@ -3655,6 +3846,7 @@ CubitStatus FacetModifyEngine::build_cholla_surfaces
     rv = cholla_ptr->create_geometry( use_feature_angle, feature_angle, 
                                       interp_order, smooth_non_manifold, 
                                       split_surfaces );
+    
   }
   return rv;
 }
@@ -3842,6 +4034,8 @@ CubitStatus FacetModifyEngine::build_cholla_curve_geometry(
       ChollaPoint *fpm1_ptr = fpoint_list.get_and_step();
       CubitPoint *start_point, *end_point;
       chcurv_ptr->get_ends( start_point, end_point );
+      assert(start_point != NULL);
+      assert(end_point != NULL);
       if (fpm0_ptr->get_facets() != start_point)
       {
         ChollaPoint *temp_ptr;
@@ -4824,66 +5018,6 @@ CubitStatus FacetModifyEngine::create_shell_offset( BodySM *bodysm_ptr,
   return rv;
 }
 
-CubitStatus FacetModifyEngine::webcut_with_sweep_surfaces(
-                                 DLIList<BodySM*> &blank_bodies,
-                                 DLIList<Surface*> &surfaces,
-                                 const CubitVector& sweep_vector,
-                                 bool sweep_perp, 
-                                 bool through_all,
-                                 bool outward,
-                                 bool up_to_next, 
-                                 Surface *stop_surf, 
-                                 Curve *curve_to_sweep_along, 
-                                 DLIList<BodySM*> &results_list,
-                                 CubitBoolean imprint)
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-CubitStatus FacetModifyEngine::webcut_with_sweep_curves(
-                                 DLIList<BodySM*> &blank_bodies,
-                                 DLIList<Curve*> &curves,
-                                 const CubitVector& sweep_vector,
-                                 bool through_all, 
-                                 Surface *stop_surf, 
-                                 Curve *curve_to_sweep_along, 
-                                 DLIList<BodySM*> &results_list,
-                                 CubitBoolean imprint)
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-CubitStatus FacetModifyEngine::webcut_with_sweep_surfaces_rotated(
-                                 DLIList<BodySM*> &blank_bodies,
-                                 DLIList<Surface*> &surfaces,
-                                 const CubitVector &point, 
-                                 const CubitVector &sweep_axis, 
-                                 double angle, 
-                                 Surface *stop_surf, 
-                                 bool up_to_next, 
-                                 DLIList<BodySM*> &results_list,
-                                 CubitBoolean imprint)
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
-CubitStatus FacetModifyEngine::webcut_with_sweep_curves_rotated(
-                                 DLIList<BodySM*> &blank_bodies,
-                                 DLIList<Curve*> &curves,
-                                 const CubitVector &point, 
-                                 const CubitVector &sweep_axis, 
-                                 double angle, 
-                                 Surface *stop_surf, 
-                                 DLIList<BodySM*> &results_list,
-                                 CubitBoolean imprint)
-{
-  PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return CUBIT_FAILURE;
-}
-
 CubitStatus FacetModifyEngine::scale( BodySM *&body, const CubitVector& factors )
 {
   return FacetQueryEngine::instance()->scale( body, factors );
@@ -4897,5 +5031,33 @@ CubitStatus FacetModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
 }
+
+CubitStatus FacetModifyEngine::tolerant_imprint( DLIList<Surface*> &surfs_in,
+      DLIList<BodySM*> &new_bodysm_list)  const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetModifyEngine::tolerant_imprint_surface_with_curves( 
+                                                   Surface * /*surface_to_imprint*/,
+                                                   DLIList<Curve*> & /*curves*/,
+                                                   DLIList<TopologyBridge*> &temporary_bridges,
+                                                   BodySM *& /*new_body*/, 
+                                                   DLIList<TopologyBridge*> *new_tbs,
+                                                   DLIList<TopologyBridge*> *att_tbs) const 
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetModifyEngine::curve_surface_intersection( Surface * /*surface*/, 
+                                                           Curve* /*curve*/,
+                                                           DLIList<Curve*> &/*new_curves*/ ) const
+{
+  PRINT_ERROR("Option not supported for mesh based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
 
 // EOF

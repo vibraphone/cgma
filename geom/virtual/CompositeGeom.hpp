@@ -21,6 +21,7 @@
 class GeometryEntity;
 class CubitSimpleAttrib;
 class CompositeAttrib;
+class TopologyBridge;
 
 struct CompositeEntry
 {

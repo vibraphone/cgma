@@ -31,8 +31,8 @@
 #include "ArrayBasedContainer.hpp"
 #include "CubitDefines.h"
 #include "CubitMessage.hpp"
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 #include "CubitUtilConfigure.h"
 
 class CUBIT_UTIL_EXPORT DLList : public ArrayBasedContainer

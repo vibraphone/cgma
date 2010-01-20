@@ -245,15 +245,25 @@ CubitStatus Curve::closest_point_trimmed( CubitVector const& from_pt,
   {
       // If not within parameter range, return
       // the the closest endpoint
+    CubitVector start, end;
+    position_from_u( start_param, start );
+    position_from_u( end_param, end );
+
     if( (param < start_param) || (param > end_param) )
     {
-      CubitVector start, end;
-      position_from_u( start_param, start );
-      position_from_u( end_param, end );
       result = ( (start - result).length_squared() < 
                  (end - result).length_squared() ) ? start : end ;
     }
+    else
+    {
+      double tmp_dist_sq = (from_pt - result).length_squared();
+      if( (start-from_pt).length_squared() < tmp_dist_sq )
+        result = start;
+      else if( (end-from_pt).length_squared() < tmp_dist_sq )
+        result = end;
+    }
   }
+
   
   return CUBIT_SUCCESS;
 }

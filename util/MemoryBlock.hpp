@@ -9,7 +9,7 @@
 #ifndef MEMORY_BLOCK_HPP
 #define MEMORY_BLOCK_HPP
 
-#include <stdlib.h>
+#include <cstdlib>
 #include "CubitUtilConfigure.h"
 
 class CUBIT_UTIL_EXPORT MemoryBlock

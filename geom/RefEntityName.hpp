@@ -33,6 +33,8 @@ public:
   static RefEntityName *instance();
   ~RefEntityName();
 
+  static void delete_instance() { if(instance_) delete instance_; }
+
   void       remove_refentity_name(const CubitString &name,
                                    CubitBoolean update_attribs = CUBIT_TRUE);
   //- Remove the this name from the map. All other names for this
@@ -44,7 +46,8 @@ public:
 
   CubitStatus add_refentity_name(RefEntity *entity,
                                  CubitString &name,
-                                 CubitBoolean update_attribs = CUBIT_TRUE);
+                                 bool update_attribs = true,
+                                 bool check_name_validity = true);
   //- Add the map between this RefEntity and the name.
   //- If 'name' is invalid or duplicate, it is changed and
   //- new name is returned.
@@ -52,7 +55,8 @@ public:
 
   CubitStatus add_refentity_name(RefEntity *entity,
                                  DLIList<CubitString*> &names,
-                                 CubitBoolean update_attribs = CUBIT_TRUE);
+                                 bool update_attribs = true,
+                                 bool check_name_validity = true);
     //- add multiple names to the name map for this entity
   
   int        get_refentity_name(const RefEntity *entity,

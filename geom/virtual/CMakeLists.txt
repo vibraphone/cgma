@@ -50,6 +50,7 @@ SET(VIRTUAL_SRCS
     RemoveBlends.cpp
     SegmentedCurve.cpp
     SimplifyTool.cpp
+    SplitCompositeSurfaceTool.cpp
     SubCurve.cpp
     SubEntitySet.cpp
     SubSurface.cpp

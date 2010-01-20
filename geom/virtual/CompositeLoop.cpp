@@ -171,6 +171,27 @@ CubitStatus CompositeLoop::remove_all_coedges( DLIList<CompositeCoEdge*>* list )
 }
 
 //-------------------------------------------------------------------------
+// Purpose       : The purpose of this function is to see if a loop is an external
+//                  or internal loop of a surface.
+//
+// Special Notes : 
+//
+// Creator       : Jonathan Bugman
+//
+// Creation Date : 9/9/2008
+//-------------------------------------------------------------------------
+CubitBoolean CompositeLoop::is_external()
+{
+		  PRINT_ERROR( "This command is not supported with this engine.\n");
+          return CUBIT_FAILURE;
+}
+
+LoopType CompositeLoop::loop_type()
+{
+  return LOOP_TYPE_UNKNOWN;
+}
+
+//-------------------------------------------------------------------------
 // Purpose       : get parent bridges
 //
 // Special Notes : pure virtual in TopologyBridge

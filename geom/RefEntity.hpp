@@ -58,7 +58,7 @@ enum AutoMergeStatus {
 
 
 // ********** END ENUM DEFINITIONS       **********
-
+//! Base class for all geometry entities, body, volume, surface... 
 class CUBIT_GEOM_EXPORT RefEntity: public CubitEntity,
                  public CubitObservable,
                  public ToolDataUser,
@@ -73,117 +73,146 @@ public:
     //- A pure virtual destructor - this ensures that the class is
     //- non-instantiable.
 
-    // Class name related functions
+  //! \brief Gets the class name of a RefEntity type. 
   static const char* get_ref_class_name(const type_info& ref_type);
   
-    // Name-related functions
+  //! \brief Gets the RefEntity with the passed in name.
   static RefEntity* get_by_name(const CubitString& name);
+
+  //! \brief Gets the name of this RefEntity.
   CubitString entity_name() const;
+  
+  //! \brief Sets the name of this RefEntity.
   CubitStatus entity_name (CubitString name);
+
+  //! \brief Gets the names of this RefEntity.
   void entity_names(DLIList<CubitString*> &names) const;
+
+  //! \brief Get the number of names this RefEntity has.
   int num_names() const;
+
+  //! \brief Generates a default name for this RefEntity.  'name' is prepended
+  //! to the default name.
   CubitStatus generate_default_name ( CubitString &name );
+
+  //! \brief Assigns a default name to the entity. 
   CubitStatus assign_default_name( CubitBoolean user_setting = CUBIT_FALSE );
+
   CubitStatus remove_entity_name(CubitString const & name);
   CubitStatus remove_entity_names();
   void merge_entity_names(RefEntity* dead_entity);
   void switch_entity_names(RefEntity *other_entity);
-    //- Functions related to naming of RefEntity objects
-  
+ 
+  //@{
+  //- Generic flag for temporary use by algorithms.
+  //- Value is volatile and may change unexpectedly.
   virtual void marked(int value);
   virtual int  marked ();
-    //- Generic flag for temporary use by algorithms.
-    //- Value is volatile and may change unexpectedly.
-
+  //@}
+  
+  //! \brief Setting auto merge status flag.
   virtual void is_mergeable(AutoMergeStatus val);
+
+  //! \brief Gets auto merge status flag.
   AutoMergeStatus merge_status() const;
+
+  //! \brief Query to see if entity is free to merge.
   bool is_mergeable();
+
+  //! \brief Query to see if entity is merged.
   CubitBoolean is_merged();
   // return true if this RefEntity has multiple TopologyBridges.
 
+  //! Updates the auto merge state of the entity.   
   void update_auto_merge_state();
-    //- Set/Get the mergeable status for this entity.
     
+  //! \brief Get whether all child entities are mergeable.
   virtual bool children_mergeable();
-    //- Get whether all child entities are mergeable.
   
+  //! Allow unmerging and other operations.  Default in 
+  //! RefEntity always returns true.  Provided for
+  //! derived classes to override.
   virtual int can_modify();
-    //- Allow unmerging and other operations.  Default in 
-    //- RefEntity always returns true.  Provided for
-    //- derived classes to override.
   
+  //! Returns the geometric dimension of the entity. 
+  //! vertex == 0, edge == 1, etc.
   virtual int dimension() const; 
-    // Returns the geometric dimension of the entity. 
-    // vertex == 0, edge == 1, etc.
   
+  //! Appends all immediate (child) RefEntities owned by this RefEntity to 
+  //! entity_list. (The query goes down just one dimension.)
   virtual void get_child_ref_entities(DLIList<RefEntity*>& entity_list); 
-    //- Appends all immediate (child) RefEntities owned by this RefEntity to 
-    //- entity_list. (The query goes down just one dimension.)
   
+  //! Appends all child RefEntities owned by this entity to entity_list.
+  //! (The query recurses all the way down to RefEntities of dimension 0).
   void get_all_child_ref_entities(DLIList<RefEntity*>& entity_list);
-    //- Appends all child RefEntities owned by this entity to entity_list.
-    //- (The query recurses all the way down to RefEntities of dimension 0).
   
+  //! Appends all child RefEntities owned by entities in input_list to output_list
   static void get_all_child_ref_entities(DLIList<RefEntity*>& input_list,
 				  DLIList<RefEntity*>& output_list );
-  //- Appends all child RefEntities owned by entities in input_list to output_list
 
 
+  //! Gather the boundary entities of the entity_list into the bdy_list. 
+  //! Entities appear once in bdy_list, and will not appear in bdy_list
+  //! if they are already in the entity_list.
+  //! Uses listMark.
   static void gather_bdy_entities( DLIList<RefEntity*> &entity_list, 
                                    DLIList<RefEntity*> &bdy_list );
-    // Gather the boundary entities of the entity_list into the bdy_list. 
-    // Entities appear once in bdy_list, and will not appear in bdy_list
-    // if they are already in the entity_list.
-    // Uses listMark.
 
+  //! Appends all RefEntities that own this (parent RefEntities) to 
+  //! entity_list.
+  //! (The query goes up just one dimension. For example, if this is a
+  //! vertex, the resulting list contains only RefEdges).
   virtual void get_parent_ref_entities(DLIList<RefEntity*>& entity_list);
-    //- Appends all RefEntities that own this (parent RefEntities) to 
-    //- entity_list.
-    //- (The query goes up just one dimension. For example, if this is a
-    //- vertex, the resulting list contains only RefEdges).
   
+  //! Appends all parent RefEntities owned by this entity to entity_list.
+  //! Recurses up to RefVolumes, or RefBodies if get_bodies is true.
   void get_all_parent_ref_entities(DLIList<RefEntity*>& entity_list,
                                    const int get_bodies = CUBIT_FALSE );
-    //- Appends all parent RefEntities owned by this entity to entity_list.
-    //- Recurses up to RefVolumes, or RefBodies if get_bodies is true.
   
+  //! Modify the input list to contain the list of RefEntities that are
+  //! the parents of each of the RefEntities in the original list.
   static void change_to_parent_ref_entities( DLIList<RefEntity*>& ancestors );
-    //- Modify the input list to contain the list of RefEntities that are
-    //- the parents of each of the RefEntities in the original list.
-  
+ 
+  //@{
+  //! RefEntity* join( RefEntity* ref_entity_2 );
+  //! Computes the geometric "join" of elements (elements on the list or 
+  //! this and ref_entity_2).  
+  //! Definition "Join" = The lowest dimensional entitity that
+  //! is a higher dimensional ancestor of them all. 
+  //! Note join could be one of the entities itself, NULL, 
+  //! or multiple elements.
+  //! E.g. The join of a vertex and a curve containing the vertex is 
+  //! the curve. The join of two curves of a split cylinder is 
+  //! both containing surfaces.
+  //! The join of two entities in separate, unmerged volumes is null.
+  //! Returns the first element of the join_set, or NULL if set is empty.
   RefEntity *join( RefEntity* ref_entity_2, DLIList<RefEntity*> &join_set );
   static RefEntity *join( DLIList<RefEntity*> &ref_entities, 
                           DLIList<RefEntity*> &join_set );
-    // RefEntity* join( RefEntity* ref_entity_2 );
-    //- Computes the geometric "join" of elements (elements on the list or 
-    //- this and ref_entity_2).  
-    //- Definition "Join" = The lowest dimensional entitity that
-    //- is a higher dimensional ancestor of them all. 
-    //- Note join could be one of the entities itself, NULL, 
-    //- or multiple elements.
-    //- E.g. The join of a vertex and a curve containing the vertex is 
-    //- the curve. The join of two curves of a split cylinder is 
-    //- both containing surfaces.
-    //- The join of two entities in separate, unmerged volumes is null.
-    //- Returns the first element of the join_set, or NULL if set is empty.
+  //@}
   
+  //@{
+  //- like join, except returns the lower order entities common to the input 
+  //- entities
   RefEntity *meet( RefEntity* ref_entity_2, DLIList<RefEntity*> &join_set );
   static RefEntity *meet( DLIList<RefEntity*> &ref_entities, 
                           DLIList<RefEntity*> &join_set );
-    //- like join, except returns the lower order entities common to the input 
-    //- entities
+  //@}
 
+  //! the valence of this entity with respect to parent (absolute
+  //! valence if parent is null)
   int valence(RefEntity *parent = NULL);
-    //- the valence of this entity with respect to parent (absolute
-    //- valence if parent is null)
 
+  
+  //@{
+  //- Return TRUE if this is entity, or a direct child (parent) of entity.
   virtual CubitBoolean is_child(RefEntity *entity);
   virtual CubitBoolean is_parent(RefEntity *entity);
-    //- Return TRUE if this is entity, or a direct child (parent) of entity.
+  //@}
 
+  //! returns the number of parent entities of this; also useful for determining
+  //! whether an entity is free or not; returns -1 on error
   int num_parent_ref_entities();
-    //- returns the number of parent entities of this; also useful for determining
-    //- whether an entity is free or not; returns -1 on error
   
 //   void common_draw_label(int color, const int label_style);
 //     //- Common code used for drawing labels. Actually, the entire
@@ -193,67 +222,79 @@ public:
   //CubitBoolean is_free_ref_entity();
     //- return CUBIT_TRUE if this ref entity has no non-virtual parents
 
+  //! Return the approximate (spatial) center of this RefEntity
   virtual CubitVector center_point();
-    //- Return the approximate (spatial) center of this RefEntity
   
+  //! A generic geometric extent function.
+  //! Returns volume for RefVolumes, area for RefFaces, length for RefEdge,
+  //! and 1.0 for RefVertices
+  //! A RefGroup calculates the maximum dimension of its contained
+  //! entities and returns the sum of the measures() of all entities
+  //! of that dimension.
+  //! Default return value is 0.0 for all other entities.
   virtual double measure();
-    //- A generic geometric extent function.
-    //- Returns volume for RefVolumes, area for RefFaces, length for RefEdge,
-    //- and 1.0 for RefVertices
-    //- A RefGroup calculates the maximum dimension of its contained
-    //- entities and returns the sum of the measures() of all entities
-    //- of that dimension.
-    //- Default return value is 0.0 for all other entities.
   
+  //! Returns the type of measure: (volume, area, length, or N/A)
   virtual CubitString measure_label();
-    //- Returns the type of measure: (volume, area, length, or N/A)
   
+  //! Perform checks to see if entity valid.
   virtual int validate();
-    //- Perform checks to see if entity valid.
   
+  //! Returns the dag type of this enity.
   virtual DagType dag_type() const = 0;
+
+  //! Returns the type info of this enity.
   virtual const type_info& entity_type_info() const = 0;
+
+  //! Translates the type info into dag type. 
   static DagType dag_type( const type_info& );
-    //- Return the type of the entity
-  
+ 
+  //! Gets the parent RefEntity type.
   DagType get_parent_ref_entity_type() const;
+
+  //! Gets the child RefEntity type.
   DagType get_child_ref_entity_type() const;
+
+  //! Given a child dag type, returns the parent dag type.
   static DagType get_parent_ref_entity_type( DagType child_type );
+
+  //! Given a parent dag type, returns the child dag type.
   static DagType get_child_ref_entity_type( DagType parent_type );
   
-  // send event to all observers (static and non-static) for 
-  // this entity and all children
+  //! send event to all observers (static and non-static) for 
+  //! this entity and all children
   void notify_sub_all_observers(const CubitEvent& event);
 
-  
+  //!R void
+  //!I partner
+  //!I- The merge partner for this object
+  //!I event
+  //!I- The type of event
+  //! This function takes actions depending on the type of event it
+  //! is notified of.
+  //!   COMPARISON_FOUND:
+  //!     Make temporary TDCompare objects and attach to "this" and
+  //!     the "partner" object.
   void notify(RefEntity* partner, CubitEventType event);
-    //R void
-    //I partner
-    //I- The merge partner for this object
-    //I event
-    //I- The type of event
-    //- This function takes actions depending on the type of event it
-    //- is notified of.
-    //-   COMPARISON_FOUND:
-    //-     Make temporary TDCompare objects and attach to "this" and
-    //-     the "partner" object.
   
+  //!R void
+  //!I partner
+  //!I- The compare partner for this object
+  //! This function makes the connection between the two RefEntities,
+  //! this and partner. At the end of this function the two entities
+  //! would know who they compare with.
   void add_compare_data(RefEntity* partner) ;
-    //R void
-    //I partner
-    //I- The compare partner for this object
-    //- This function makes the connection between the two RefEntities,
-    //- this and partner. At the end of this function the two entities
-    //- would know who they compare with.
   
+  //!- This function clears the compare related temporary data.
   void remove_compare_data() ;
-    //R void
-    //- This function clears the compare related temporary data.
     
+  //!R RefEntity*
+  //!R- The partner set in add_compare_data(), or NULL if none
+  //!R- has been set.
   RefEntity* get_compare_partner() ;
-    //R RefEntity*
-    //R- The partner set in add_compare_data(), or NULL if none
-    //R- has been set.
+
+  //! Premodify function called after CGM has been modified
+  virtual void geometry_premodify() { return; };
 
 //========  Change Code by RY of Cat,  5/7/99 11:08:12 AM  ========
   void get_related_entity_list(const type_info& related_entity_type,
@@ -261,17 +302,22 @@ public:
   //- to parse group in <ref_entity> commands
 //========  Change End by RY of Cat,  5/7/99 11:08:12 AM  ========
 
+  //! Set the id of this RefEntity to i
   virtual void set_id(int i );
-    //- set the id of this entity to i
-  
+ 
+  //! Sets the id of this RefEntity and emits specified event static observers.
   void set_id(int i, CubitBoolean emit_event );
 
+  //! Returns the type of a class given the class name.
   static const type_info& get_entity_type_info(const char* entity_type);
-    //- Returns the type of a class given the class name.
-    
+   
+  //! Returns a dag type based on name passed in, i.e., body, volume, surface..
   static DagType dag_type( const char* cli_type_name );
-
+  
+  //! Sets the color of this RefEntity.
   virtual void color(int value);
+
+  //! Gets the color of this RefEntity.
   virtual int color() const;
 
 protected :

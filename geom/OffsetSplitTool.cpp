@@ -61,17 +61,20 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
     if(ref_face_list.size() < 1)
     {
         PRINT_ERROR( "No surfaces specified for splitting\n" );
-        return CUBIT_FAILURE;
-    }
+		return CUBIT_FAILURE;
+	}
 
-    if(edge_list.size() < 1)
-    {
-        PRINT_ERROR( "No curves specified for splitting\n" );
-        return CUBIT_FAILURE;
-    }
+	if(edge_list.size() < 1)
+	{
+		PRINT_ERROR( "No curves specified for splitting\n" );
+		return CUBIT_FAILURE;
+	}
 
-    DLIList<Curve*> offset_curves;
-    DLIList<DLIList<Curve*>*> imprint_list;
+	// clear the preview graphics
+	GfxPreview::clear();
+
+	DLIList<Curve*> offset_curves;
+	DLIList<DLIList<Curve*>*> imprint_list;
     for(int seg = 1;seg<num_segs+1;seg++)
     {
         // set the current distance
@@ -201,9 +204,6 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
             united_body_list = body_list;
         else
         {
-#ifdef BOYD17 
-            BodySM* return_body = 0;
-#endif
             if(!gme->unite(body_list,united_body_list))//united_body_list))
             {
                 if(body_list.size() == 1)
@@ -241,9 +241,9 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
 
                 // remove any very small curves from the intersection graph
                 // for some reason ACIS seems to return zero length curves
-                for(int k=0;k<intersection_curves.size();k++)
+                for(int k = intersection_curves.size();k--;)
                 {
-                    Curve* cur_curve = intersection_curves.get_and_step();
+                    Curve* cur_curve = intersection_curves[k];
                     double len = cur_curve->
                         length_from_u(cur_curve->start_param(),cur_curve->end_param());
 
@@ -323,7 +323,7 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
 
         Body *new_body_ptr;
         if( GeometryModifyTool::instance()->imprint( surface_list,
-            imprint_list, new_body_ptr ) == CUBIT_FAILURE )
+            imprint_list, new_body_ptr, false, false ) == CUBIT_FAILURE )
         {
             //Delete the Curve entities
             for(i= offset_curves.size();i--;)
@@ -383,7 +383,6 @@ CubitStatus OffsetSplitTool::draw_preview(
     CubitBoolean flush,
     int color )
 {
-    int num_points;
     CubitStatus result;
     GMem g_mem;
 
@@ -392,11 +391,15 @@ CubitStatus OffsetSplitTool::draw_preview(
 
     // get the graphics
     result = curve_ptr->get_geometry_query_engine()->
-        get_graphics( curve_ptr, num_points, &g_mem );
+        get_graphics( curve_ptr, &g_mem );
 
-    if (result==CUBIT_FAILURE || num_points == 0)
+    if (result==CUBIT_FAILURE || g_mem.pointListCount == 0)
     {
-        PRINT_WARNING("Unable to preview a curve\n" );
+        PRINT_WARNING("Unable to preview a curve\n" );;
+        double len = curve_ptr->
+            length_from_u(curve_ptr->start_param(),curve_ptr->end_param());
+
+        PRINT_WARNING("Curve len: %f\n",len);
     }
 
     // Draw the polyline

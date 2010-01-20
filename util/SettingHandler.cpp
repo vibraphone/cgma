@@ -2,9 +2,9 @@
 #pragma warning(disable : 4786)
 #endif
 
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
 
 #include <iostream>
 
@@ -57,7 +57,7 @@ SettingHandler::~SettingHandler()
   mSettingsList.clear();
 }
 
-void SettingHandler::add_setting(char* name, void (*setFn) (int), 
+void SettingHandler::add_setting(const char* name, void (*setFn) (int), 
 				int (*getFn)())
 {
   CubitString cs = name;
@@ -72,7 +72,7 @@ void SettingHandler::add_setting(char* name, void (*setFn) (int),
 }
 
 
-void SettingHandler::add_setting(char* name, void (*setFn) (double), 
+void SettingHandler::add_setting(const char* name, void (*setFn) (double), 
 				double (*getFn)())
 {
   CubitString cs = name;
@@ -88,7 +88,7 @@ void SettingHandler::add_setting(char* name, void (*setFn) (double),
 }
 
 
-void SettingHandler::add_setting(char* name, void (*setFn) (CubitBoolean), 
+void SettingHandler::add_setting(const char* name, void (*setFn) (CubitBoolean), 
 				CubitBoolean (*getFn)())
 {
    CubitString cs = name;
@@ -104,7 +104,7 @@ void SettingHandler::add_setting(char* name, void (*setFn) (CubitBoolean),
 }
 
 
-void SettingHandler::add_setting(char* name, void (*setFn) (CubitString), 
+void SettingHandler::add_setting(const char* name, void (*setFn) (CubitString), 
 				CubitString (*getFn)())
 {
    CubitString cs = name;
@@ -219,7 +219,7 @@ void SettingHandler::print_settings()
 void SettingHandler::save_settings()
 {
   
-  char* default_filename = "cubit.settings";
+  const char* default_filename = "cubit.settings";
 
   FILE* file = fopen(default_filename, "w");
   

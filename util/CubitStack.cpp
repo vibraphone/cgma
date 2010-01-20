@@ -5,7 +5,7 @@
 //- Checked by:
 //- Version: $Id: 
 
-#include <string.h>
+#include <cstring>
 #include "CubitStack.hpp"
 
 

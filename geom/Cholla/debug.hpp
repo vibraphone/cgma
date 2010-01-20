@@ -9,6 +9,8 @@ class CubitFacetEdge;
 class CubitPoint;
 class CubitVector;
 class CubitBox;
+class ChollaSurface;
+
 template <class X> class DLIList;
 
 void dcolor(int icol);
@@ -20,6 +22,8 @@ void dfdraw( CubitFacet *facet_ptr );
 void dedraw( CubitFacetEdge *facet_ptr );
 
 void dpdraw( CubitPoint *facet_ptr );
+
+void dsurfdraw( ChollaSurface *surf);
 
 void dview();
 

@@ -35,7 +35,10 @@ public:
                   CubitPoint *p3, int *tool_data);
   CubitFacetData( CubitFacetEdge *e1, CubitFacetEdge *e2, 
                   CubitFacetEdge *e3);
-  ~CubitFacetData(); 
+  ~CubitFacetData();
+  
+  void destruct_facet_internals();
+  
   virtual int id(){return entityId;} 
   virtual void set_id( int ii ) { entityId = ii; }
        

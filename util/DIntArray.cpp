@@ -4,7 +4,7 @@
 //- Checked by:
 
 #include "DIntArray.hpp"
-#include <assert.h>
+#include <cassert>
 
 void DIntArray::append(int item) 
 {

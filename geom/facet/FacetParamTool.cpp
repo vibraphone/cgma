@@ -191,7 +191,7 @@ CubitStatus FacetParamTool::set_up_space()
 // Author: chynes
 // Date: 7/10/02
 //===================================================================================
-CubitStatus FacetParamTool::transform_to_uv(CubitVector &xyz_location, CubitVector &uv_location) 
+CubitStatus FacetParamTool::transform_to_uv(const CubitVector &xyz_location, CubitVector &uv_location) 
 {
 	DLIList<CubitFacet *> facet_list; 
 	FacetEvalTool *fetool;
@@ -252,7 +252,7 @@ CubitStatus FacetParamTool::transform_to_uv(CubitVector &xyz_location, CubitVect
 // Author: chynes
 // Date: 7/10/02
 //===================================================================================
-CubitStatus FacetParamTool::transform_to_xyz(CubitVector &xyz_location, CubitVector &uv_location) 
+CubitStatus FacetParamTool::transform_to_xyz(CubitVector &xyz_location, const CubitVector &uv_location) 
 {
 	CubitStatus rv = CUBIT_SUCCESS;
 	CubitFacet *tri_ptr;
@@ -328,7 +328,7 @@ CubitStatus FacetParamTool::transform_to_xyz(CubitVector &xyz_location, CubitVec
 // Date: 7/10/02
 //===================================================================================
 CubitStatus FacetParamTool::
-locate_point_in_uv(FacetSurface *surf, CubitVector &the_point, CubitFacet *&tri_ptr) 
+locate_point_in_uv(FacetSurface *surf, const CubitVector &the_point, CubitFacet *&tri_ptr) 
 {
 	CubitStatus rv = CUBIT_SUCCESS;
 
@@ -392,7 +392,7 @@ locate_point_in_uv(FacetSurface *surf, CubitVector &the_point, CubitFacet *&tri_
 // Date: 7/10/02
 //===================================================================================
 CubitStatus FacetParamTool::
-exhaustive_locate_point_in_uv(FacetSurface *surf, CubitVector &the_point, CubitFacet *&tri_ptr) 
+exhaustive_locate_point_in_uv(FacetSurface *surf, const CubitVector &the_point, CubitFacet *&tri_ptr) 
 {
 	CubitStatus rv = CUBIT_SUCCESS;
 

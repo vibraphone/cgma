@@ -99,6 +99,10 @@ public:
   CubitVector project( const CubitVector& point ) const;
     //- Project a point onto plane
   
+  void reverse()
+  { normal_ = -normal_; d_ = -d_; }
+    //- flip the normal of the plane
+
   CubitPlane& operator=(const CubitPlane &plane);
     //- assignment
   

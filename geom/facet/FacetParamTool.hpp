@@ -32,13 +32,13 @@ public:
 
   CubitStatus set_up_space(void);
 
-  CubitStatus transform_to_uv(CubitVector &xyz_location, CubitVector &uv_location);
+  CubitStatus transform_to_uv(const CubitVector &xyz_location, CubitVector &uv_location);
 
-  CubitStatus transform_to_xyz(CubitVector &xyz_location, CubitVector &uv_location);
+  CubitStatus transform_to_xyz(CubitVector &xyz_location, const CubitVector &uv_location);
 
-  CubitStatus locate_point_in_uv(FacetSurface *surf, CubitVector &the_point, CubitFacet *&tri_ptr);
+  CubitStatus locate_point_in_uv(FacetSurface *surf, const CubitVector &the_point, CubitFacet *&tri_ptr);
 
-  CubitStatus exhaustive_locate_point_in_uv(FacetSurface *surf, CubitVector &the_point, CubitFacet *&tri_ptr); 
+  CubitStatus exhaustive_locate_point_in_uv(FacetSurface *surf, const CubitVector &the_point, CubitFacet *&tri_ptr); 
 
 #ifdef BOYD14
   CubitStatus export_facets(int numn, int numf, double *points, int *facets);

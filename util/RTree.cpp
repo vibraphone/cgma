@@ -292,5 +292,63 @@ CubitStatus RTree<Z>::k_nearest_neighbor(CubitVector &q,
   return CUBIT_FAILURE;
 }
 
-    
-    
+template <class Z> MY_INLINE
+CubitStatus RTree<Z>::find( const CubitVector &ray_origin, const CubitVector &ray_direction,
+      DLIList <Z> &range_members)
+{
+    //Find all of the members of the RTree that intersect this ray.
+  if ( myRoot == NULL )
+  {
+      // Nothing has been added to this Tree yet, so we are not going to find this
+      // object in it.
+      return CUBIT_SUCCESS;
+  }
+  CubitStatus stat = recursive_find(myRoot, ray_origin, ray_direction, range_members);
+  if ( stat != CUBIT_SUCCESS )
+    return CUBIT_FAILURE;
+  else
+    return CUBIT_SUCCESS;
+}
+
+template <class Z> MY_INLINE
+CubitStatus RTree<Z>::recursive_find(RTreeNode<Z> *rect_tree,
+                             const CubitVector &ray_origin,
+                             const CubitVector &ray_direction,
+                             DLIList <Z> &range_members)
+{
+  CubitBox rect_box = rect_tree->bounding_box();
+  //if ( !range_box.overlap(myTolerance, rect_box ) )
+  if ( !rect_box.intersect(&ray_origin, &ray_direction) )
+    return CUBIT_SUCCESS;
+
+    //Now see if this is a data member.  If it is, append the data to the
+    //list.
+  if (rect_tree->is_data() )
+  {
+    range_members.append(rect_tree->get_data());
+    return CUBIT_SUCCESS;
+  }
+    //Now if this is anything else we need to keep iterating...
+  int loop_size = rect_tree->num_children();
+    //We are doing a depth-first search of the tree.  Not
+    //all branches will need to be followed since they won't
+    //all overlap...
+  int ii;
+  RTreeNode<Z> *curr_node;
+  CubitStatus stat;
+  for ( ii = 0; ii < loop_size; ii++ )
+  {
+    curr_node = rect_tree->get_child(ii);
+    if ( curr_node == NULL )
+    {
+      PRINT_ERROR("Problems finding boxes in range.\n");
+      assert(curr_node != NULL);
+      return CUBIT_FAILURE;
+    }
+    stat = recursive_find(curr_node, ray_origin, ray_direction, range_members);
+    if ( stat != CUBIT_SUCCESS )
+      return stat;
+  }
+  
+  return CUBIT_SUCCESS;
+}

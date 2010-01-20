@@ -44,6 +44,13 @@ public:
   GeometryQueryEngine* get_geometry_query_engine() const;
   int layer() const { return COMPOSITE_LAYER; }
   
+  virtual LoopType loop_type() ;
+  virtual CubitBoolean is_external() ;
+    //R CubitBoolean
+    //R- CUBIT_TRUE/CUBIT_FALSE
+    //- Returns CUBIT_TRUE if the Loop is an external Loop and CUBIT_FALSE
+    //- otherwise.
+
   void append_simple_attribute_virt( CubitSimpleAttrib* );
   void remove_simple_attribute_virt( CubitSimpleAttrib* );
   void remove_all_simple_attribute_virt();

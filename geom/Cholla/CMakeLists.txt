@@ -8,6 +8,7 @@ SET(CHOLLA_SRCS
     ChollaPoint.cpp
     ChollaSkinTool.cpp
     ChollaSurface.cpp
+    ChollaVolume.cpp
     ChordalAxis.cpp
     CubitFacet.cpp
     CubitFacetData.cpp
@@ -42,6 +43,7 @@ SET(EXTRA_CHOLLA_SRCS
 IF(TEMPLATE_DEFS_INCLUDED)
 SET(TEMPLATE_SRCS
     FacetorTool.cpp
+    FacetorUtil.cpp
     TetFacetorTool.cpp
     TDDelaunay.cpp
     )

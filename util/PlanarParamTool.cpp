@@ -55,7 +55,7 @@ CubitStatus PlanarParamTool::set_up_space(CubitVector& du, CubitVector& dv, Cubi
 // Author: chynes
 // Date: 7/10/02
 //===================================================================================
-CubitStatus PlanarParamTool::transform_to_uv(CubitVector &xyz_location, CubitVector &uv_location) 
+CubitStatus PlanarParamTool::transform_to_uv(const CubitVector &xyz_location, CubitVector &uv_location) 
 {
   // Translate to local origin at center
 
@@ -65,7 +65,7 @@ CubitStatus PlanarParamTool::transform_to_uv(CubitVector &xyz_location, CubitVec
 
   uv_location.x( vect % Du );
   uv_location.y( vect % Dv );
-  uv_location.z( 1.0 );
+  uv_location.z( 0.0 );
 
   return CUBIT_SUCCESS;
 }
@@ -76,7 +76,7 @@ CubitStatus PlanarParamTool::transform_to_uv(CubitVector &xyz_location, CubitVec
 // Author: chynes
 // Date: 7/10/02
 //===================================================================================
-CubitStatus PlanarParamTool::transform_to_xyz(CubitVector &xyz_location, CubitVector &uv_location) 
+CubitStatus PlanarParamTool::transform_to_xyz(CubitVector &xyz_location, const CubitVector &uv_location) 
 {
 // Multiply by transformation matrix
 
@@ -95,6 +95,12 @@ CubitStatus PlanarParamTool::transform_to_xyz(CubitVector &xyz_location, CubitVe
   return CUBIT_SUCCESS;
 }
 
-
+CubitStatus PlanarParamTool::uv_derivitives( double u_param, double v_param, 
+                        		                 CubitVector &du, CubitVector &dv )
+{
+  du = Du;
+  dv = Dv;
+  return CUBIT_SUCCESS;
+}
 
 //EOF

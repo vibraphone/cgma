@@ -35,8 +35,17 @@ public:
     // destructor
 
   void add_facet(FacetEntity *exterior_node)
-    {myCubitPoint = exterior_node; }
+  { myCubitPoint = exterior_node; }
     //- define the node associated with this point
+
+  void remove_facet( void )
+  {myCubitPoint = NULL;}
+   //- sets myCubitPoint to NULL
+
+  void remove_facet( FacetEntity *facet_pnt )
+  {if( myCubitPoint == facet_pnt ) myCubitPoint = NULL;}
+   //- sets myCubitPoint to NULL only if specified facet_pnt matches with myCubitPoint
+
 
   FacetEntity *get_facets()
     {return myCubitPoint;}
@@ -45,6 +54,10 @@ public:
   void add_curve( ChollaCurve *fcm_ptr )
     {curveList.append_unique( fcm_ptr );}
     //- associate a curve with this point
+
+  inline void remove_curve( ChollaCurve *fcm_ptr )
+  { curveList.remove( fcm_ptr ); }
+  //- removes a curve attached with it
 
   DLIList<ChollaCurve*> &get_curves()
     {return curveList;}
@@ -66,6 +79,13 @@ public:
 
   void get_surfaces(DLIList<ChollaSurface *> &surf_list);
     //- get list of associated cholla surfaces
+  
+  CubitBoolean is_in_curve( ChollaCurve *chcurve );
+    // return whether this point is in the given curve
+  
+  CubitStatus verify_curves();
+    //- verify that all curves at this point have this point as an adjacency
+
 };
 
 #endif

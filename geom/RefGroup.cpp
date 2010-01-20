@@ -138,11 +138,7 @@ void RefGroup::get_child_ref_entities(DLIList<RefEntity*>& entity_list)
 
 void RefGroup::get_child_entities(DLIList<CubitEntity*>& cub_entity_list)
 {
-  entityList.reset();
-  DLIList<CubitEntity*> temp_list;
-  CAST_LIST_TO_PARENT( entityList, temp_list );
-  cub_entity_list.merge_unique(temp_list, CUBIT_TRUE);
-//  cub_entity_list.merge_unique(entityList, CUBIT_TRUE);
+  cub_entity_list.casting_merge_unique(entityList, CUBIT_TRUE);
 }
 
 void RefGroup::expand_group( DLIList<RefEntity*> & entity_list )

@@ -7,7 +7,10 @@
 #include "CubitFacetEdge.hpp"
 #include "CubitFacet.hpp"
 #include "CastTo.hpp"
+#include "ChollaVolume.hpp"
 #include "ChollaSurface.hpp"
+#include "ChollaCurve.hpp"
+#include "ChollaPoint.hpp"
 #include "CubitPoint.hpp"
 
 TDGeomFacet::TDGeomFacet()
@@ -16,6 +19,7 @@ TDGeomFacet::TDGeomFacet()
   hitFlag = 0;
   partnerEdgeList = NULL;
   partnerPointList = NULL;
+  onBoundaryFlag = 0;
 }
 
 TDGeomFacet::~TDGeomFacet()
@@ -145,6 +149,27 @@ int TDGeomFacet::get_block_id( CubitFacetEdge *edge_ptr )
   }
   return -1;
 }
+void TDGeomFacet::add_cholla_owner( ChollaEntity *cholla_entity )
+{
+  ChollaSurface *cholla_surface = dynamic_cast<ChollaSurface *> (cholla_entity);
+  if (cholla_surface != NULL)
+    add_cholla_surf(cholla_surface);
+  else
+  {
+    ChollaCurve *cholla_curve = dynamic_cast<ChollaCurve *> (cholla_entity);
+    if (cholla_curve != NULL)
+      add_cholla_curve( cholla_curve );
+    else
+    {
+      ChollaPoint *cholla_point = dynamic_cast<ChollaPoint *> (cholla_entity);
+      if (cholla_point != NULL)
+        add_cholla_point( cholla_point );
+      else
+        assert(0); // not a recognized cholla entity
+    }
+  }  
+  return;
+}
 void TDGeomFacet::add_cholla_surf( ChollaSurface *f_s_m )
 {
   int ii;
@@ -196,6 +221,51 @@ CubitBoolean TDGeomFacet::is_partner( CubitPoint *point_ptr )
   for (int ii=0; ii<partnerPointList->size(); ii++)
   {
     if (partnerPointList->get_and_step() == point_ptr)
+      return CUBIT_TRUE;
+  }
+  return CUBIT_FALSE;
+}
+
+void TDGeomFacet::reset_TD_as_new()
+{
+  blockId = -1;
+  hitFlag = 0;
+  partnerEdgeList = NULL;
+  partnerPointList = NULL;
+  onBoundaryFlag = 0;
+  ChollaSurfaceList.clean_out();
+  ChollaCurveList.clean_out();
+  myPoints.clean_out();
+    //normal??????;
+    //need to delete these?
+  partnerEdgeList=NULL;
+  partnerPointList=NULL;
+
+}
+
+int TDGeomFacet::geo_type()
+{
+  if (ChollaSurfaceList.size() > 0)
+    return 2;
+  else if (ChollaCurveList.size() > 0)
+    return 1;
+  else if (myPoints.size() > 0)
+    return 0;
+  return -1;
+}
+
+CubitBoolean TDGeomFacet::is_in_volume( ChollaVolume *chvol_ptr )
+{
+  for (int ii=0; ii<ChollaSurfaceList.size(); ii++)
+  {
+    ChollaSurface *chsurf_ptr = ChollaSurfaceList.get_and_step();
+    if (chsurf_ptr->is_in_volume( chvol_ptr ))
+      return CUBIT_TRUE;
+  }
+  for (int jj=0; jj<ChollaCurveList.size(); jj++)
+  {
+    ChollaCurve *chcurv_ptr = ChollaCurveList.get_and_step();
+    if (chcurv_ptr->is_in_volume( chvol_ptr ))
       return CUBIT_TRUE;
   }
   return CUBIT_FALSE;

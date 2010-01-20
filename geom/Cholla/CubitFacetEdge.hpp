@@ -231,6 +231,16 @@ public:
                                   double w[2] );
 
   double angle_between_facets();
+
+  inline int less_than(CubitFacetEdge*& e1, CubitFacetEdge*& e2)
+  {
+    double len1 = e1->length();
+    double len2 = e2->length();
+  
+    if (len1 == len2) return 0;
+    return (len1 < len2) ? -1 : 1;
+  }
+
 };
 
 inline void CubitFacetEdge::control_points(

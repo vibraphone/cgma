@@ -46,6 +46,7 @@ public:
 	
   //CubitStatus add( Surface* surface, CubitSense relative_sense );
   //CubitStatus remove( Surface* surface );	
+  void get_ignored_surfs(DLIList<Surface*> &surfs);
   int num_surfs() const;
   int index_of( Surface* surface ) const;
   void update();
@@ -53,6 +54,7 @@ public:
   CubitSense get_sense( int index ) const;
   Surface* remove_surface( int index );
   void ignore_surface(int surface_id);
+  void ignore_surface(Surface *surf);
   void unignore_surface(int surface_id);
   CompositeLoop* first_loop() const;
   CompositeLoop* next_loop( CompositeLoop* after_this = 0 ) const;
@@ -216,7 +218,7 @@ protected:
 private:
   int HadBridgeRemoved;
 
-  DLIList<int> surfacesToIgnore;	
+  DLIList<Surface*> surfacesToIgnore;	
 
     // these have no implementation, just private delcarations
     // to prevent the compiler from generating default implementations

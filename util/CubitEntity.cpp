@@ -11,8 +11,8 @@
 #endif
 
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
 #include "CubitDefines.h"
 #include "CubitVector.hpp"
@@ -65,7 +65,7 @@ CubitEntity::is_transparent() const
 
 int  CubitEntity::id() const { return entityId; }
 
-void CubitEntity::set_id(int i) {entityId = i;}
+void CubitEntity::set_id(int i) { entityId = i; }
     //- set the id of this entity to i
 
 int CubitEntity::validate()

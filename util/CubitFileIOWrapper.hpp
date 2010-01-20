@@ -63,6 +63,8 @@ public:
     virtual char* Read();
     virtual void EndReadBlock();
     virtual UnsignedInt32 get_endian() { return mintSwapEndian; }  
+    
+    virtual long GetLocation();
 
 private:
     FILE* mpFile;

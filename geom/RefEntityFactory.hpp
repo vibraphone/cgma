@@ -25,7 +25,10 @@ class RefVolume;
 class RefGroup;
 class Body;
 class RefEntity;
-
+#ifdef PROE
+class RefAssembly;
+class RefPart;
+#endif
 class Point;
 class Curve;
 class Surface;
@@ -44,9 +47,10 @@ class CUBIT_GEOM_EXPORT RefEntityFactory : public CubitObserver
 {
 public:
 
-
   static RefEntityFactory *instance();
     //- the function used to access the singleton instance
+
+  static void delete_instance();
 
   virtual RefVertex *construct_RefVertex(Point *point = NULL);
 
@@ -73,6 +77,10 @@ public:
   virtual void ref_faces            (DLIList<RefFace*> &ref_faces);
   virtual void ref_edges            (DLIList<RefEdge*> &ref_edges);
   virtual void ref_vertices         (DLIList<RefVertex*> &ref_vertices);
+#ifdef PROE
+  virtual void ref_parts			(DLIList<RefPart*> &ref_parts);
+  virtual void ref_assemblies		(DLIList<RefAssembly*> &ref_assemblies);
+#endif
 
   virtual int num_bodies() const;
   virtual int num_ref_volumes() const;
@@ -135,6 +143,10 @@ public:
   int next_ref_vertex_id ();
   int next_surf_sub_domain_id ();
   int next_curve_sub_domain_id();
+#ifdef PROE
+  int next_ref_assembly_id();
+  int next_ref_part_id();
+#endif
 
   int current_body_id() {return maxBodyId;};
   int current_volume_id() {return maxRefVolumeId;};
@@ -193,6 +205,10 @@ protected:
   int maxRefCoordSysId;
   int maxSurfSubDomainId;
   int maxCurveSubDomainId;
+#ifdef PROE
+  int maxRefAssemblyId;
+  int maxRefPartId;
+#endif
 
 #ifdef BOYD17 
   DLIList<RefEntity*> refEntityList;
@@ -201,12 +217,23 @@ protected:
 
 private:
 
+  bool refVertexListIsSorted;
+  bool refEdgeListIsSorted;
+  bool refFaceListIsSorted;
+  bool refVolumeListIsSorted;
+  bool bodyListIsSorted;
+  bool refGroupListIsSorted;
+
   DLIList<RefVertex*> *refVertexList;
   DLIList<RefEdge*> *refEdgeList;
   DLIList<RefFace*> *refFaceList;
   DLIList<RefGroup*> *refGroupList;
   DLIList<RefVolume*> *refVolumeList;
   DLIList<Body*> *bodyList;
+#ifdef PROE
+  DLIList<RefAssembly*> *refAssemblyList;
+  DLIList<RefPart*> *refPartList;
+#endif
 
 };
 

@@ -18,6 +18,7 @@
 
 #ifdef NT
 #pragma warning ( 4 : 4291 4244 4305 4018 4786)
+#pragma warning(error : 4239)
 #endif
 /* Adds DBL_MIN, DBL_MAX definitions on some platforms*/
 #include <float.h> 
@@ -75,8 +76,10 @@ enum CubitPointContainment {CUBIT_PNT_UNKNOWN = -1, CUBIT_PNT_OUTSIDE = 0,
 
 enum FirmnessType {LIMP, SOFT, FIRM, HARD};
 /* Firmness continuum - how bad does the user want something? 
-   LIMP means "don't care" or "unset", SOFT means "about right" or
-   "automatically set", HARD means "user set" or "must be this way".
+   LIMP - default setting--i.e. "don't care" or "unset"
+   SOFT - determined by basic geometric criteria--"about right" or "automatically set"
+   FIRM - determined by advanced heuristic data, including adjacent environmental data
+   HARD - user set--"must be this way"
 */
 
 /* Relationships between types of objects in the Entity Relationship

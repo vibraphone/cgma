@@ -49,7 +49,35 @@ void ChollaPoint::get_surfaces(DLIList<ChollaSurface *> &surf_list)
   }
 }
 
+//===============================================================================
+//Function:  is_in_curve (PUBLIC) 
+//===============================================================================
+CubitBoolean ChollaPoint::is_in_curve( ChollaCurve *chcurve )
+{
+  for (int ii=0; ii<curveList.size(); ii++)
+  {
+    ChollaCurve *curv = curveList.get_and_step();
+    if (curv == chcurve)
+      return CUBIT_TRUE;
+  }
+  return CUBIT_FALSE;
+}
 
+//=============================================================================
+//Function:  verify_curves (PUBLIC)
+//Description:  verify that all curves at this point have this point as an adjacency
+//Notes: 
+//=============================================================================
+CubitStatus ChollaPoint::verify_curves()
+{
+  for(int ii=0; ii<curveList.size(); ii++)
+  {
+    ChollaCurve *crv = curveList.get_and_step();
+    if (!crv->has_point(this))
+      return CUBIT_FAILURE;
+  }
+  return CUBIT_SUCCESS;
+}
 
 //EOF
 
