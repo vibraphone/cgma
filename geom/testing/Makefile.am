@@ -11,8 +11,11 @@ if build_OCC
   TESTS += $(BASE_TESTS:.engine=.occ)
 endif
 
+INCLUDES = -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
+LDADD = ../../util/libcubit_util.la \
+        ../libcubit_geom.la
 
-SUFFIXES += .acis .occ
+SUFFIXES = .acis .occ
 check_PROGRAMS = $(TESTS) cgm_test
 cgm_test_SOURCES = cgm_test.cpp \
                    cgm_test.hpp \
