@@ -105,8 +105,10 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
   FacetModifyEngine::instance();
   VirtualQueryEngine::instance()->register_attributes();
 
-  if (default_engine_name && streq_nocase("FACET",default_engine_name))
+  if (default_engine_name && streq_nocase("FACET",default_engine_name)) {
     default_engine = FacetModifyEngine::instance();
+    FacetModifyEngine::instance()->set_modify_enabled(CUBIT_TRUE);
+  }
 
   if(default_engine_name && !ignore_default) {
     if (!default_engine) {
