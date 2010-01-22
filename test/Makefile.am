@@ -12,7 +12,7 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS = init sheet
+TESTS = init sheet brick_facet
 if build_ACIS
   TESTS += webcut hollow_acis brick_acis
 else
