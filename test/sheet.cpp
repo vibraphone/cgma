@@ -17,7 +17,6 @@
 #include "DLIList.hpp"
 
 #include <typeinfo>
-#include <assert.h>
 
 int test_sheet_query( GeometryModifyEngine* engine );
 

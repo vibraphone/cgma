@@ -6,36 +6,15 @@
  * This program acts as a simple driver for CGM.  It reads in a geometry,
  * and performs varies checks for bodies, surfaces, curves and vertices.
  */
-#include "config.h"
-#include "CpuTimer.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
-#include "OCCQueryEngine.hpp"
-#include "CubitUtil.hpp"
 #include "CubitMessage.hpp"
-#include "CubitDefines.h"
-#include "RefEntity.hpp"
 #include "Body.hpp"
 #include "RefVolume.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
-#include "CubitObserver.hpp"
-#include "CastTo.hpp"
-#include "OCCModifyEngine.hpp"
-#include "AppUtil.hpp"
-#include "RefEntityFactory.hpp"
-#include "RefEdge.hpp"
-#include "BodySM.hpp"
-#include "Lump.hpp"
-#include "OCCLump.hpp"
-#include "OCCBody.hpp"
-#include "OCCSurface.hpp"
-#include "OCCCurve.hpp"
-#include "OCCShell.hpp"
-#include "TopoDS_Shape.hxx"
-#include "RefEntityName.hpp"
-#include "RefEntityFactory.hpp"
+#include "InitCGMA.hpp"
 
 #include <algorithm>
 
@@ -57,23 +36,8 @@ CubitStatus make_Point();
 // main program - initialize, then send to proper function
 int main (int argc, char **argv)
 {
-
-  CubitObserver::init_static_observers();
-    // Initialize the GeometryTool
-  
-  CGMApp::instance()->startup( argc, argv );
-  OCCQueryEngine::instance();
-  OCCModifyEngine::instance();
-
-    // If there aren't any file arguments, print usage and exit
-  //if (argc == 1) {
-  //  PRINT_INFO("Usage: mergechk <geom_file> [<geom_file> ...]\n");
-  //  exit(0);
-  //}
-  
-  CubitStatus status = CUBIT_SUCCESS;
-
-
+  CubitStatus status = InitCGMA::initialize_cgma("OCC");
+  if (CUBIT_SUCCESS != status) return 1;
 
   //Do make point.
   status = make_Point();
@@ -142,8 +106,6 @@ CubitStatus make_Point()
 {
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
-
-  OCCQueryEngine::instance();
 
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
