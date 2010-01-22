@@ -610,7 +610,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
 
   CubitVector axis(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,true, false,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,false, false,NULL,NULL,new_bodies);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 

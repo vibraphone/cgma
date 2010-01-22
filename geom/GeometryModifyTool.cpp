@@ -2925,8 +2925,8 @@ CubitStatus GeometryModifyTool::sweep_translational(
   return status;
 }
 
-CubitStatus GeometryModifyTool::sweep_target(CubitPlane ref_plane,
-											 DLIList<RefEntity*>& ref_ent_list)
+CubitStatus GeometryModifyTool::sweep_target( CubitPlane ref_plane,
+                                              DLIList<RefEntity*>& ref_ent_list)
 {
 	double distance1;
 	double distance2;
@@ -3197,8 +3197,8 @@ CubitStatus GeometryModifyTool::sweep_target(CubitPlane ref_plane,
 	return CUBIT_SUCCESS; 
 }
 
-CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
-													 DLIList<RefEntity*>& ref_ent_list)
+CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
+                                                      DLIList<RefEntity*>& ref_ent_list)
 {
 	DLIList<RefFace*> surface_list;
 	CAST_LIST(ref_ent_list, surface_list, RefFace);
@@ -9586,7 +9586,7 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
 
     else if (sweep_perp )
       stat = gme->sweep_perpendicular(ref_ent_list, swept_bodies,
-                                 tmp_sweep_vector.length(),0.0,0,outward,false,
+                                 tmp_sweep_vector.length(),0.0,0,!outward,false,
                                  stop_surf, to_body);
     else
       stat = gme->sweep_translational(ref_ent_list, swept_bodies,
@@ -9594,7 +9594,7 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
                                  to_body);
   }
 
-  if(stat == CUBIT_FAILURE && swept_bodies.size() == 0)
+  if(stat == CUBIT_FAILURE || swept_bodies.size() == 0)
     {
        //delete copied faces
        GeometryEntity * temp_entity = NULL;
