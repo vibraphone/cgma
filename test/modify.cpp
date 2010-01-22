@@ -6,6 +6,10 @@
  * This program acts as a simple driver for CGM.  It reads in a geometry,
  * and performs varies checks for bodies, surfaces, curves and vertices.
  */
+
+#undef NDEBUG
+#include <cassert>
+
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "OCCQueryEngine.hpp"

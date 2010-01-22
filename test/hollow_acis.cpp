@@ -10,6 +10,9 @@
  *
  */
 
+#undef NDEBUG
+#include <cassert>
+
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "Body.hpp"

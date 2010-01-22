@@ -1,3 +1,7 @@
+
+#undef NDEBUG
+#include <cassert>
+
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "ModelQueryEngine.hpp"
@@ -10,7 +14,6 @@
 #include "CoEdge.hpp"
 #include "InitCGMA.hpp"
 
-#include <assert.h>
 #include <algorithm>
 
 
