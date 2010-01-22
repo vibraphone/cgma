@@ -20,6 +20,10 @@
  */
 
 
+#ifndef TEST_ENGINE
+# define TEST_ENGINE 0
+#endif
+
 void check_valid_edge( RefEdge* edge );
 void check_valid_face( RefFace* face );
 void check_valid_loop( Loop* loop );
@@ -27,7 +31,7 @@ void check_valid_loop( Loop* loop );
 int main( int argc, char* argv[] )
 {
     // Start up CGM
-  CubitStatus result = InitCGMA::initialize_cgma();
+  CubitStatus result = InitCGMA::initialize_cgma(TEST_ENGINE);
   if (CUBIT_SUCCESS != result) return 1;
 
     // Create a brick
