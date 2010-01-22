@@ -4420,7 +4420,7 @@ CubitStatus GeometryModifyTool::sweep_curve_target(DLIList<RefEdge*>& edge_list,
 
 //Author: Jonathan Bugman
 //Sept 10, 2006
-CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
+CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
                                     DLIList<RefEntity*>& ref_ent_list)
 {
 	DLIList<RefFace*> surface_list;
@@ -17480,4 +17480,143 @@ void GeometryModifyTool::body_premodify(Body* body) const
 			}
 		}
 	}
+}
+
+
+CubitStatus GeometryModifyTool::prepare_surface_sweep(
+                              DLIList<BodySM*> &blank_bodies,
+                              DLIList<Surface*> &surfaces,
+                              const CubitVector& sweep_vector,
+                              bool sweep_perp,
+                              bool through_all,
+                              bool outward,
+                              bool up_to_next,
+                              Surface *stop_surf,
+                              Curve *curve_to_sweep_along,
+                              BodySM* &cutting_tool_ptr ,
+                              const CubitVector* point,
+                              double *angle)
+{
+  GeometryModifyEngine* gme = get_engine(blank_bodies.get());
+
+  if(surfaces.size() == 0 )
+    return CUBIT_FAILURE;
+
+  DLIList<GeometryEntity*> ref_ent_list;
+  Surface * temp_face = NULL;
+  for(int i = 0; i < surfaces.size(); i++)
+    {
+      //copy the faces before sweep
+      temp_face = gme->make_Surface(surfaces.get_and_step());
+      if (temp_face)
+        ref_ent_list.append((GeometryEntity*)temp_face);
+    }
+
+  BodySM* to_body = NULL;
+  CubitStatus stat = CUBIT_SUCCESS;
+  if(up_to_next && blank_bodies.size() > 1) //unite all bland_bodies
+    {
+       DLIList<BodySM*> newBodies;
+       DLIList<BodySM*> copied_bodies;
+       for(int i = 0; i < blank_bodies.size(); i++)
+         copied_bodies.append(gme->copy_body(blank_bodies.get_and_step()));
+
+       stat = gme->unite(copied_bodies, newBodies);
+       if(stat == CUBIT_FAILURE)
+         {
+           PRINT_ERROR("Cannot use 'up_to_next' option with specified geometry\n");
+           PRINT_INFO("Try the 'stop surface <id>' option instead\n");
+           return stat;
+         }
+       to_body = newBodies.get();
+    }
+
+  else if(up_to_next && blank_bodies.size() == 1)
+    to_body = gme->copy_body(blank_bodies.get());
+
+  DLIList<BodySM*> swept_bodies;
+  if (point && angle) //sweep_surface_rotated
+    stat = gme->sweep_rotational(ref_ent_list,swept_bodies,*point,
+                           sweep_vector, *angle,0, 0.0,0,false,false,
+                           false,stop_surf, to_body);  
+	
+  else
+  {
+    CubitVector tmp_sweep_vector = sweep_vector;
+
+    //get model bbox info...will scale sweep vector by its diagonal
+    //so that we go far enough
+    if( through_all || stop_surf || up_to_next)
+    {
+      CubitBox bounding_box = GeometryQueryTool::instance()->model_bounding_box();
+      tmp_sweep_vector.normalize();
+      tmp_sweep_vector*=(2*bounding_box.diagonal().length());
+    }
+    
+    //see if we're sweeping along a specified curve
+    if( curve_to_sweep_along )
+      {
+        DLIList<Curve*> curves_to_sweep_along;
+        curves_to_sweep_along.append(curve_to_sweep_along);
+        stat = gme->sweep_along_curve(ref_ent_list, swept_bodies,
+                                 curves_to_sweep_along, 0.0,0,false,stop_surf,
+                                 to_body);
+      }
+
+    else if (sweep_perp )
+      stat = gme->sweep_perpendicular(ref_ent_list, swept_bodies,
+                                 tmp_sweep_vector.length(),0.0,0,!outward,false,
+                                 stop_surf, to_body);
+    else
+      stat = gme->sweep_translational(ref_ent_list, swept_bodies,
+                                 tmp_sweep_vector,0.0,0, false, false, stop_surf,
+                                 to_body);
+  }
+
+  if(stat == CUBIT_FAILURE || swept_bodies.size() == 0)
+    {
+       //delete copied faces
+       GeometryEntity * temp_entity = NULL;
+       for(int i = ref_ent_list.size();i--;)
+         {
+            temp_entity = ref_ent_list.get_and_step();
+            if (temp_entity)
+              gme->get_gqe()->delete_solid_model_entities( (Surface*)temp_entity);
+         }
+
+       return stat;
+    }
+
+  //if there are more than 1, unite them all
+  DLIList<BodySM*>  newBodies;
+  if (swept_bodies.size() > 1)
+     stat = gme->unite(swept_bodies, newBodies);
+  else
+     newBodies = swept_bodies;
+
+  if(stat == CUBIT_FAILURE || newBodies.size()!= 1)
+    {
+       PRINT_ERROR("webcut tool body is not created from acis.\n");
+       //delete the swept_bodies
+       BodySM* tmp_body = NULL;
+       for (int i = swept_bodies.size(); i--;)
+         {
+           tmp_body= swept_bodies.get_and_step();
+           if (tmp_body)
+             gme->get_gqe()->delete_solid_model_entities(tmp_body);
+         }
+
+       //delete copied faces
+       GeometryEntity * temp_entity = NULL;
+       for(int i = ref_ent_list.size();i--;)
+         {
+            temp_entity = ref_ent_list.get_and_step();
+            if (temp_entity)
+              gme->get_gqe()->delete_solid_model_entities( (Surface*)temp_entity);
+         }
+       return CUBIT_FAILURE;
+    }
+  
+    cutting_tool_ptr = newBodies.get();
+    return stat;
 }
