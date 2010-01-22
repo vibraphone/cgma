@@ -10,27 +10,14 @@
  *
  */
 
-#include "CpuTimer.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
-#include "AcisQueryEngine.hpp"
-#include "MergeTool.hpp"
-#include "CubitUtil.hpp"
-#include "CubitMessage.hpp"
-#include "CubitDefines.h"
-#include "RefEntity.hpp"
 #include "Body.hpp"
 #include "RefVolume.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
-#include "CubitObserver.hpp"
-#include "CastTo.hpp"
-#include "AcisQueryEngine.hpp"
-#include "AcisModifyEngine.hpp"
-#include "AppUtil.hpp"
-#include "RefEntityFactory.hpp"
-#include "RefEdge.hpp"
+#include "InitCGMA.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -48,24 +35,9 @@ CubitStatus hollow();
 // main program - initialize, then send to proper function
 int main (int argc, char **argv)
 {
-
-  CubitObserver::init_static_observers();
-    // Initialize the GeometryTool
-  
-  CGMApp::instance()->startup( argc, argv );
-  GeometryQueryTool::instance();
-  AcisQueryEngine::instance();
-  AcisModifyEngine::instance();
-
-    // If there aren't any file arguments, print usage and exit
-  //if (argc == 1) {
-  //  PRINT_INFO("Usage: mergechk <geom_file> [<geom_file> ...]\n");
-  //  exit(0);
-  //}
-  
-  CubitStatus status = CUBIT_SUCCESS;
-
-
+    // Start up CGM
+  CubitStatus status = InitCGMA::initialize_cgma("ACIS");
+  if (CUBIT_SUCCESS != status) return 1;
 
   //Do hollow operation to make thick body.
   status = hollow();
