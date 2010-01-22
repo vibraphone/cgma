@@ -34,7 +34,8 @@
 #define XSTRINGIFY(S) #S
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **);
+void read_geometry(int, char **);
+void read_model6( Body*& brick, Body*& sheet );
 CubitStatus evaluate_overlaps();
 CubitStatus imprint_bodies();
 CubitStatus print_unmerged_surfaces();
@@ -51,7 +52,7 @@ CubitStatus webcut_with_sweep_surfaces();
 CubitStatus webcut_with_sweep_surfaces_along_curve();
 CubitStatus webcut_with_sweep_surfaces_perp();
 // macro for printing a separator line
-#define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
+#define PRINT_SEPARATOR   PRINT_INFO("===================%s:%d===================\n",__FILE__,__LINE__);
 
 
 // main program - initialize, then send to proper function
@@ -91,7 +92,7 @@ int main (int argc, char **argv)
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, const char **argv) 
+void read_geometry(int num_files, const char **argv) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -99,17 +100,50 @@ CubitStatus read_geometry(int num_files, const char **argv)
   int i;
   
     // For each file, open and read the geometry
-  PRINT_SEPARATOR;
-
   for (i = 0; i < num_files; i++) {
     status = gti->import_solid_model(argv[i], "ACIS_SAT");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", argv[i]);
+      abort();
     }
   }
-  PRINT_SEPARATOR;
 
-  return CUBIT_SUCCESS;
+  if (gti->num_bodies() == 0) {
+    PRINT_ERROR("No bodies read; aborting.\n");
+    abort();
+  }
+}
+
+void read_model6( Body*& volume, Body*& sheet )
+{
+  const char *filename = STRINGIFY(SRCDIR) "/model6.sat";
+  read_geometry( 1, &filename );
+  
+  DLIList<Body*> bodies;
+  GeometryQueryTool::instance()->bodies(bodies);
+  volume = sheet = 0;
+  for (int i = 0; i < bodies.size(); ++i, bodies.step()) {
+    DLIList<RefVolume*> vols;
+    bodies.get()->ref_volumes( vols );
+    if (vols.size() != 1) {
+      PRINT_ERROR("Unexpected number of volumes in body read from file: %s\n", filename);
+      abort();
+    }
+    if (vols.get()->is_sheet()) {
+      if (sheet) {
+        PRINT_ERROR("Unexpected number of sheet bodies read from file: %s\n",filename);
+        abort();
+      }
+      sheet = bodies.get();
+    }
+    else {
+      if (volume) {
+        PRINT_ERROR("Unexpected number of non-sheet bodies read from file: %s\n",filename);
+        abort();
+      }
+      volume = bodies.get();
+    }
+  }
 }
 
 CubitStatus webcut_with_brick()
@@ -119,14 +153,8 @@ CubitStatus webcut_with_brick()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   //int num_bodies = gti->num_bodies();
   DLIList<Body*> old_bodies, new_bodies,junk;
@@ -151,18 +179,7 @@ CubitStatus webcut_with_brick()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  DLIList<RefEntity*> free_entities;
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -174,14 +191,8 @@ CubitStatus webcut_with_cylinder()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -202,18 +213,7 @@ CubitStatus webcut_with_cylinder()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  DLIList<RefEntity*> free_entities;
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -225,14 +225,8 @@ CubitStatus webcut_with_planar_sheet()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model2.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
 
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -255,18 +249,7 @@ CubitStatus webcut_with_planar_sheet()
   rsl =  gti->export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
   
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  DLIList<RefEntity*> free_entities;
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
  
 }
@@ -279,14 +262,8 @@ CubitStatus webcut_with_sweep_curves_rotated()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/huge.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -323,18 +300,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  free_entities.clean_out(); 
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -345,14 +311,8 @@ CubitStatus webcut_with_sweep_curves()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model3.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
 
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -383,18 +343,7 @@ CubitStatus webcut_with_sweep_curves()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  free_entities.clean_out(); 
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -405,14 +354,8 @@ CubitStatus webcut_with_sweep_along_curve()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model3.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -454,18 +397,7 @@ CubitStatus webcut_with_sweep_along_curve()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  free_entities.clean_out(); 
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -476,14 +408,8 @@ CubitStatus webcut_with_curve_loop()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model4.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -511,18 +437,7 @@ CubitStatus webcut_with_curve_loop()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-  free_entities.clean_out(); 
-  gti->get_free_ref_entities(free_entities);
-  gti->delete_Body(bodies);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -533,14 +448,8 @@ CubitStatus webcut_with_extended_surf()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model5.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
 
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -555,8 +464,10 @@ CubitStatus webcut_with_extended_surf()
   ref_faces.append(refface);
   int num_cut = 0;
   CubitStatus rsl= gmti->webcut_with_extended_sheet(old_bodies,ref_faces,new_bodies, junk, num_cut);
-  if (rsl== CUBIT_FAILURE)
+  if (rsl== CUBIT_FAILURE) {
+     gti->delete_geometry();
      return rsl;
+  }
 
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
@@ -566,12 +477,7 @@ CubitStatus webcut_with_extended_surf()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-
-  gti->delete_Body(bodies);
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -582,14 +488,8 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
 
   // Read in the geometry from files specified on the command line
   const char *argv = STRINGIFY(SRCDIR) "/model7.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  PRINT_SEPARATOR;
+  read_geometry(1, &argv);
   
   DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
@@ -616,12 +516,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-
-  gti->delete_Body(bodies);
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -630,29 +525,17 @@ CubitStatus webcut_with_sweep_surfaces()
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
-  // Read in the geometry from files specified on the command line
-  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  // Read file containing one block and one sheet body
+  PRINT_SEPARATOR;
+  Body *vol, *sheet;
+  read_model6( vol, sheet );
   
   DLIList<Body*> old_bodies, new_bodies, junk;
-  gti->bodies(old_bodies);
-
-  old_bodies.reset();
-
-  old_bodies.step();
-
+  old_bodies.append( vol );
   DLIList<RefFace*> faces;
-  old_bodies.remove()->ref_faces(faces);
+  sheet->ref_faces( faces );
 
-  CubitVector axis;
-  axis.set(1.,0.,0.);
+  CubitVector axis(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false,true,false, false,NULL,NULL,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
@@ -666,12 +549,7 @@ CubitStatus webcut_with_sweep_surfaces()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-
-  gti->delete_Body(bodies);
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -680,25 +558,15 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
-  // Read in the geometry from files specified on the command line
-  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
+  // Read file containing one block and one sheet body
+  PRINT_SEPARATOR;
+  Body *vol, *sheet;
+  read_model6( vol, sheet );
   
   DLIList<Body*> old_bodies, new_bodies, junk;
-  gti->bodies(old_bodies);
-
-  old_bodies.reset();
-  old_bodies.step();
-
+  old_bodies.append( vol );
   DLIList<RefFace*> faces;
-  old_bodies.remove()->ref_faces(faces);
+  sheet->ref_faces( faces );
 
   //use curve 2 as the sweep along curve
   DLIList<RefEdge*> temp_curves;
@@ -710,8 +578,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
      edge_to_sweep_along = temp_curves.get_and_step();
   }
 
-  CubitVector axis;
-  axis.set(1.,0.,0.);
+  CubitVector axis(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false, true,false,false,NULL,
                                                   edge_to_sweep_along,new_bodies, junk);
@@ -726,12 +593,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-
-  gti->delete_Body(bodies);
-
+  gti->delete_geometry();
   return rsl;
 }
 
@@ -740,31 +602,19 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
-  // Read in the geometry from files specified on the command line
-  const char *argv = STRINGIFY(SRCDIR) "/model6.sat";
-  CubitStatus status = read_geometry(1, &argv);
-  if (status == CUBIT_FAILURE) exit(1);
-  else if (gti->num_bodies() == 0) {
-    PRINT_WARNING("No bodies read; exiting.\n");
-    int ret_val = ( CubitMessage::instance()->error_count() );
-
-    exit(ret_val);
-  }
-
+  // Read file containing one block and one sheet body
+  PRINT_SEPARATOR;
+  Body *vol, *sheet;
+  read_model6( vol, sheet );
+  
   DLIList<Body*> old_bodies, new_bodies, junk;
-  gti->bodies(old_bodies);
-
-  old_bodies.reset();
-
-  old_bodies.step();
-
+  old_bodies.append( vol );
   DLIList<RefFace*> faces;
-  old_bodies.remove()->ref_faces(faces);
+  sheet->ref_faces( faces );
 
-  CubitVector axis;
-  axis.set(1.,0.,0.);
+  CubitVector axis(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,true, false,NULL,NULL,new_bodies,junk);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,false, false,NULL,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -776,12 +626,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  //delete all entities
-  DLIList<Body*> bodies;
-  gti->bodies(bodies);
-
-  gti->delete_Body(bodies);
-
+  gti->delete_geometry();
   return rsl;
 }
 
