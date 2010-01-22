@@ -12,8 +12,7 @@ if build_OCC
 endif
 
 INCLUDES = -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
-LDADD = ../../util/libcubit_util.la \
-        ../libcubit_geom.la
+LDADD = ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 SUFFIXES = .acis .occ
 check_PROGRAMS = $(TESTS) cgm_test

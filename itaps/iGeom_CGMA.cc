@@ -6397,34 +6397,20 @@ iGeom_fire_ray( const CubitVector& point,
                 DLIList<RefEntity*>& entities,
                 DLIList<double>& ray_params )
 {
-  DLIList<Body*> bodies;
-  DLIList<RefEntity*> tmp_entities;
-  DLIList<double> tmp_params;
-  double length = direction.length();
-  CubitVector unit_dir(direction);
-  unit_dir /= length;
+  const double EPSILON = 0.0;
+  CubitStatus s;
   
-  RefEntityFactory::instance()->bodies( bodies );
-  bodies.reset();
-  for (int i = bodies.size(); i > 0; --i)
-  {
-    Body* bod = bodies.get_and_step();
-    if (!iBase_intersect_ray_box(bod->bounding_box(), point, unit_dir))
-      continue;
+    // get all free entities in model
+  DLIList<RefEntity*> target_entities;
+  s = GeometryQueryTool::instance()->get_free_ref_entities( target_entities );
+  if (CUBIT_SUCCESS != s) return s;
+  DLIList<Body*> bodies;
+  GeometryQueryTool::instance()->bodies( bodies );
+  CAST_LIST_TO_PARENT( bodies, target_entities );
     
-    tmp_entities.clean_out();
-    tmp_params.clean_out();
-    int rval = GeometryQueryTool::instance()
-      ->fire_ray( bod, point, unit_dir, tmp_params, &tmp_entities );
-    if (rval == CUBIT_FAILURE)
-      return CUBIT_FAILURE;
-    
-    entities += tmp_entities;
-    tmp_params.reset();
-    for (int j = tmp_params.size(); j > 0; j--)
-      ray_params.append( tmp_params.get_and_step() / length );
-  }
-  return CUBIT_SUCCESS;
+    // do ray fire at list of free entities
+  return GeometryQueryTool::instance()->
+    fire_ray( point, direction, target_entities, ray_params, 0, EPSILON, &entities );
 }
 
 static CubitStatus

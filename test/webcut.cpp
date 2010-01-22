@@ -129,7 +129,7 @@ CubitStatus webcut_with_brick()
   }
   
   //int num_bodies = gti->num_bodies();
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies,junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
   //old_bodies.remove();
@@ -139,7 +139,7 @@ CubitStatus webcut_with_brick()
   axes[1].set(0.,1.,0.);
   axes[2].set(0.,0.,1.);
   CubitVector extension(0.5,0.5,0.5);
-  CubitStatus rsl= gmti->webcut_with_brick(old_bodies,center,axes,extension,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_brick(old_bodies,center,axes,extension,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -183,14 +183,14 @@ CubitStatus webcut_with_cylinder()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
   //old_bodies.remove();
   CubitVector center(4.,4.,4.);
   CubitVector axis(1.,0.,0.);
   double radius = 1.0;
-  CubitStatus rsl= gmti->webcut_with_cylinder(old_bodies,radius,axis, center,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_cylinder(old_bodies,radius,axis, center,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -234,7 +234,7 @@ CubitStatus webcut_with_planar_sheet()
     exit(ret_val);
   }
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
 
@@ -243,7 +243,7 @@ CubitStatus webcut_with_planar_sheet()
   axes[0].set(1.,1.,0.);
   axes[1].set(0.,1.,1.);  
   
-  CubitStatus rsl= gmti->webcut_with_planar_sheet(old_bodies,center,axes,40.,40.,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_planar_sheet(old_bodies,center,axes,40.,40.,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -288,7 +288,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -308,7 +308,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   axis.set(0.,-1.,0.);
 
   CpuTimer webcut_BODYs_timer;
-  CubitStatus rsl= gmti->webcut_with_sweep_curves_rotated(old_bodies,curves,center,axis,1.58,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_curves_rotated(old_bodies,curves,center,axis,1.58,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -354,7 +354,7 @@ CubitStatus webcut_with_sweep_curves()
     exit(ret_val);
   }
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -371,7 +371,7 @@ CubitStatus webcut_with_sweep_curves()
   CubitVector axis;
   axis.set(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -414,7 +414,7 @@ CubitStatus webcut_with_sweep_along_curve()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -442,7 +442,7 @@ CubitStatus webcut_with_sweep_along_curve()
   axis.set(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,
-                                                  edge_to_sweep_along,new_bodies);
+                                                  edge_to_sweep_along,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -485,7 +485,7 @@ CubitStatus webcut_with_curve_loop()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -499,7 +499,7 @@ CubitStatus webcut_with_curve_loop()
 
   old_bodies.reset();
 
-  CubitStatus rsl= gmti->webcut_with_curve_loop(old_bodies,curves,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_curve_loop(old_bodies,curves,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -542,7 +542,7 @@ CubitStatus webcut_with_extended_surf()
     exit(ret_val);
   }
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -551,8 +551,10 @@ CubitStatus webcut_with_extended_surf()
   DLIList<RefFace*> ref_faces;
   old_bodies.remove()->ref_faces(ref_faces);
   RefFace *refface = ref_faces.get();
+  ref_faces.clean_out();
+  ref_faces.append(refface);
   int num_cut = 0;
-  CubitStatus rsl= gmti->webcut_with_extended_surf(old_bodies,refface,new_bodies, num_cut);
+  CubitStatus rsl= gmti->webcut_with_extended_sheet(old_bodies,ref_faces,new_bodies, junk, num_cut);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -589,7 +591,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -599,11 +601,10 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   old_bodies.remove()->ref_faces(faces);
 
   CubitVector center(4.0,14.0,14.0);
-  CubitVector axis;
-  axis.set(0.,-1.,0.);
+  CubitVector axis(0.,-1.,0.);
 
   // set 7th parameter to be false to indicate of to_next_surf = false
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces_rotated(old_bodies,faces,center,axis,1.6,NULL,true,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces_rotated(old_bodies,faces,center,axis,1.6,NULL,true,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -640,7 +641,7 @@ CubitStatus webcut_with_sweep_surfaces()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -653,7 +654,7 @@ CubitStatus webcut_with_sweep_surfaces()
   CubitVector axis;
   axis.set(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false,true,false, false,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false,true,false, false,NULL,NULL,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -690,7 +691,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
     exit(ret_val);
   }
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -713,7 +714,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   axis.set(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false, true,false,false,NULL,
-                                                  edge_to_sweep_along,new_bodies);
+                                                  edge_to_sweep_along,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -750,7 +751,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
     exit(ret_val);
   }
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -763,7 +764,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   CubitVector axis;
   axis.set(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,true, false,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,true, false,NULL,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
