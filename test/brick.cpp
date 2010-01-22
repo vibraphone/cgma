@@ -1,3 +1,7 @@
+
+#undef NDEBUG
+#include <cassert>
+
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "ModelQueryEngine.hpp"
@@ -10,7 +14,6 @@
 #include "CoEdge.hpp"
 #include "InitCGMA.hpp"
 
-#include <assert.h>
 #include <algorithm>
 
 
@@ -20,6 +23,10 @@
  */
 
 
+#ifndef TEST_ENGINE
+# define TEST_ENGINE 0
+#endif
+
 void check_valid_edge( RefEdge* edge );
 void check_valid_face( RefFace* face );
 void check_valid_loop( Loop* loop );
@@ -27,7 +34,7 @@ void check_valid_loop( Loop* loop );
 int main( int argc, char* argv[] )
 {
     // Start up CGM
-  CubitStatus result = InitCGMA::initialize_cgma();
+  CubitStatus result = InitCGMA::initialize_cgma(TEST_ENGINE);
   if (CUBIT_SUCCESS != result) return 1;
 
     // Create a brick
@@ -202,8 +209,10 @@ void check_valid_face( RefFace* face )
   face->get_child_ref_entities( edges );
   
   double u_min, u_max, v_min, v_max, u, v;
-  face->get_param_range_U( u_min, u_max );
-  face->get_param_range_V( v_min, v_max );
+  if (face->is_parametric()) {
+    face->get_param_range_U( u_min, u_max );
+    face->get_param_range_V( v_min, v_max );
+  }
   
     // Check that each edge is on the face
   for (int i = 0; i < edges.size(); ++i) {
@@ -223,14 +232,17 @@ void check_valid_face( RefFace* face )
       face->move_to_surface( close );
       assert( (close - p[j]).length() < 1e-6 );
         // Check that point is within UV bounds
-      CubitStatus s = face->u_v_from_position( p[j], u, v );
-      assert( CUBIT_SUCCESS == s );
-      assert( (u - u_min) > -1e-6 );
-      assert( (u_max - u) > -1e-6 );
-      assert( (v - v_min) > -1e-6 );
-      assert( (v_max - v) > -1e-6 );
+      if (face->is_parametric()) {
+        CubitStatus s = face->u_v_from_position( p[j], u, v );
+        assert( CUBIT_SUCCESS == s );
+        assert( (u - u_min) > -1e-6 );
+        assert( (u_max - u) > -1e-6 );
+        assert( (v - v_min) > -1e-6 );
+        assert( (v_max - v) > -1e-6 );
+      }
     }
   }
+  
   
     // Check reverse query from edge to face brings us back to the
     // input face.

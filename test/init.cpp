@@ -6,7 +6,6 @@
 #include "InitCGMA.hpp"
 
 #include <typeinfo>
-#include <assert.h>
 
 
 // main program - initialize, then send to proper function

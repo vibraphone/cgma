@@ -1,3 +1,4 @@
+#undef NDEBUG
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -5,11 +6,6 @@
 #include <map>
 #include <string>
 
-#include "AppUtil.hpp"
-#include "CGMApp.hpp"
-#include "CubitObserver.hpp"
-#include "CubitVector.hpp"
-#include "DLIList.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "GMem.hpp"
@@ -19,6 +15,7 @@
 #include "RefEdge.hpp"
 #include "RefFace.hpp"
 #include "RefVolume.hpp"
+#include "InitCGMA.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -34,20 +31,13 @@ using std::vector;
 
 int main( int argc, char** argv ) {
 
-  AppUtil::instance()->startup(argc, argv);
-  CGMApp::instance()->startup(argc, argv);
-
-  CubitObserver::init_static_observers();
-
-  OCCQueryEngine::instance();
-  OCCModifyEngine::instance();
+  CubitStatus status = InitCGMA::initialize_cgma("OCC");
+  if (CUBIT_SUCCESS != status) return 1;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
-  GeometryModifyTool::instance();
-  assert(gti);
-  
+   
   // Read in the geometry from files specified on the command line
   const char* filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
-  CubitStatus status = gti->import_solid_model(filename, "OCC");
+  status = gti->import_solid_model(filename, "OCC");
   if (status != CUBIT_SUCCESS) {
     PRINT_ERROR("Problems reading geometry file %s.\n", filename);
     return 1;

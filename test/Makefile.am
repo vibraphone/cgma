@@ -12,23 +12,24 @@ INCLUDES = -I$(top_srcdir)/geom \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS = init sheet brick
+TESTS = init sheet brick_facet
 if build_ACIS
-  TESTS += webcut hollow_acis
+  TESTS += webcut hollow_acis brick_acis
 else
 if WITH_CUBIT
-  TESTS += webcut
+  TESTS += webcut brick_acis
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ operation
+  TESTS += modify makept r_w test_occ operation brick_occ
 endif
 
 AM_CPPFLAGS =
 AM_CPPFLAGS += -DSRCDIR=@srcdir@ $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 check_PROGRAMS = $(TESTS)
 
-LINK_FLAGS = $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+LDADD = ../libcgm.la
+LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
@@ -38,20 +39,16 @@ sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
 operation_SOURCES = operation.cpp
-LDADD = ../libcgm.la
-webcut_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-hollow_acis_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-makept_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-modify_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-sheet_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-r_w_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-test_occ_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-operation_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
-brick_SOURCES = brick.cpp
-brick_LDFLAGS = $(LDFLAGS) $(LINK_FLAGS)
 init_SOURCES = init.cpp
 init_LDFLAGS= $(LDFLAGS) $(LINK_FLAGS)
 
+brick_sources = brick.cpp
+brick_acis_SOURCES = $(brick_sources)
+brick_acis_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="ACIS"'
+brick_occ_SOURCES = $(brick_sources)
+brick_occ_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="OCC"'
+brick_facet_SOURCES = $(brick_sources)
+brick_facet_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="FACET"'
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.
