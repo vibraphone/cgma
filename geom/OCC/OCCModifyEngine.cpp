@@ -306,7 +306,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   gp_Pnt pt;
   int size = 2+vector_list.size();
   TColgp_Array1OfPnt points(1, size);
-  CubitVector* vector = NULL;
+  CubitVector vector;
   CubitVector closest_location;
   for(int i = 1; i <= size; i++)
   {
@@ -314,23 +314,23 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
      {
        TopoDS_Vertex *point = occ_point1->get_TopoDS_Vertex();
        pt = BRep_Tool::Pnt(*point);
-       vector = new CubitVector(point1_ptr->coordinates());
+       vector = point1_ptr->coordinates();
      }
      else if (i == size)
      {
        TopoDS_Vertex *point = occ_point2->get_TopoDS_Vertex();
        pt = BRep_Tool::Pnt(*point);
-       vector = new CubitVector(point2_ptr->coordinates()); 
+       vector = point2_ptr->coordinates(); 
      } 
      else
      {
-       vector = vector_list.get_and_step();
-       pt.SetCoord(vector->x(), vector->y(), vector->z());
+       vector = *vector_list.get_and_step();
+       pt.SetCoord(vector.x(), vector.y(), vector.z());
      } 
 
      if (occ_face != NULL)
      {
-       occ_face->closest_point(*vector, &closest_location);
+       occ_face->closest_point(vector, &closest_location);
        pt.SetCoord(closest_location.x(), closest_location.y(), closest_location.z()) ;  	 
      }
 

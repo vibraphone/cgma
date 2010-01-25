@@ -453,6 +453,7 @@ CubitStatus webcut_with_extended_surf()
   ref_faces.clean_out();
   ref_faces.append(refface);
   int num_cut = 0;
+  PRINT_INFO("Webcut body %d with surface extended from %d\n", old_bodies.get()->id(), refface->id() );
   CubitStatus rsl= gmti->webcut_with_extended_sheet(old_bodies,ref_faces,new_bodies, junk, num_cut);
   if (rsl== CUBIT_FAILURE) {
      gti->delete_geometry();
