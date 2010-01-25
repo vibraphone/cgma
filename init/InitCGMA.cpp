@@ -31,6 +31,14 @@ class dummym
   char dummyvar[4096];
 };
 
+#ifdef ACIS_TWEAK_TOOL_CAT
+class AcisTweakToolCAT
+{
+  public:
+    static AcisTweakToolCAT* instance();
+};
+#endif
+
 #elif defined(HAVE_ACIS) 
 #  include "AcisQueryEngine.hpp"
 #  include "AcisModifyEngine.hpp"
@@ -87,6 +95,10 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
                        // without the complete definition of AcisModifyEngine.
                        // But it shouldn't matter, as ACIS is the default for
                        // Cubit anyway.
+#ifdef ACIS_TWEAK_TOOL_CAT
+  AcisTweakToolCAT::instance();
+#endif
+
 #elif defined(HAVE_ACIS)
   AcisQueryEngine::instance();
   AcisModifyEngine::instance();

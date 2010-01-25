@@ -136,6 +136,19 @@ elif test "x$CUBIT_DIR" != "xno"; then
        break],
       [AC_MSG_RESULT(no)])
   done
+
+  if test "x$CUBIT_LIBS" = "xno"; then
+    AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
+  fi
+  
+  # Test for CAT-proprietary code that must be initialized in Cubit12
+  AC_MSG_CHECKING([For AcisTweekToolCAT in ${CUBIT_LIBS}])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM(
+    [class AcisTweakToolCAT{ public: static AcisTweakToolCAT* instance(); };],
+    [AcisTweakToolCAT::instance();])],
+    [CUBIT_CAT_DEFINES=-DACIS_TWEAK_TOOL_CAT; AC_MSG_RESULT([yes])],
+    [CUBIT_CAT_DEFINES=; AC_MSG_RESULT([no])])
+
   LIBS="$old_LIBS"
   LDFLAGS="$old_LDFLAGS"
   LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
@@ -146,13 +159,10 @@ elif test "x$CUBIT_DIR" != "xno"; then
   export PATH
   AC_LANG_POP([C++])
   
-  if test "x$CUBIT_LIBS" = "xno"; then
-    AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
-  fi
   CGM_EXT_LIBS="$CGM_EXT_LIBS $CUBIT_LIBS"
   CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $CUBIT_LDFLAGS"
   CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $CUBIT_LTFLAGS"
-  CUBIT_CGM="-DCUBIT_CGM"
+  CUBIT_CGM="-DCUBIT_CGM $CUBIT_CAT_DEFINES"
 dnl  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
   HAVE_ACIS_DEF=-DHAVE_ACIS
 fi
