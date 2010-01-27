@@ -253,7 +253,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- Returns the ID of the new Body or CUBIT_FAILURE
 
       virtual BodySM* cylinder( double hi, double r1, double r2, 
-                                double r3) const = 0;
+                              double r3 ) const = 0 ;
       //- Creates an ACIS frustum and assigns it to a Body $
       //- {hi} input height $
       //- {r1} input radius in x-direction at base $
@@ -527,14 +527,12 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       virtual CubitStatus scale( BodySM *&body, const CubitVector& factors ) = 0;
 
       //HEADER- Webcut-related functions
-      virtual CubitStatus webcut( 
-              DLIList<BodySM*>& webcut_body_list, 
-              const CubitVector &v1,
-              const CubitVector &v2,
-              const CubitVector &v3,
-              DLIList<BodySM*>& results_list,
-              bool imprint = false             
- )  = 0;
+      virtual CubitStatus webcut( DLIList<BodySM*>& webcut_body_list, 
+                                  const CubitVector &v1,
+                                  const CubitVector &v2,
+                                  const CubitVector &v3,
+                                  DLIList<BodySM*>& results_list,
+                                  bool imprint = false ) const = 0;
       //R int
       //R- Number of bodies that were webcut ( >= 0 )
       //I webcut_body_list
@@ -551,12 +549,10 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- The newly created bodies are merged and imprinted depeding on 
       //- the respective flags.
 
-      virtual CubitStatus webcut(
-                    DLIList<BodySM*>& webcut_body_list, 
-                    BodySM const* tool_body,
-                    DLIList<BodySM*>& results_list,
-                    bool imprint = false
-                    ) = 0 ;
+      virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list, 
+                                 BodySM const* tool_body,
+                                 DLIList<BodySM*>& results_list,
+                                 bool imprint = false ) const = 0 ;
       //R int       
       //R- Number of bodies that were webcut ( >= 0 )
       //I webcut_body_list
@@ -718,10 +714,10 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- intersection graph.
 
   virtual CubitStatus get_mid_plane( const CubitVector &point_1,
-		                     const CubitVector &point_2,
+                                     const CubitVector &point_2,
                                      const CubitVector &point_3,
-		                     BodySM *body_to_trim_to,
-		                     DLIList<BodySM*>& midplane_bodies ) const = 0;
+                                     BodySM *body_to_trim_to,
+                                     BodySM *&midplane_body ) const = 0;
     //- Finds the mid plane described by the 3 points and trims
     //- it to the body.  It returns the mid planes as part of the 
     //- midplane_body
@@ -729,17 +725,17 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
   virtual CubitStatus get_spheric_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
+					       BodySM *&midsurface_body ) const = 0;
 
   virtual CubitStatus get_conic_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
+					       BodySM *&midsurface_body ) const = 0;
 
   virtual CubitStatus get_toric_mid_surface( Surface *surface_ptr1,
 					       Surface *surface_ptr2,
 					       BodySM *body_to_trim_to,
-					       DLIList<BodySM*>& midsurface_bodies ) const = 0;
+					       BodySM *&midsurface_body ) const = 0;
 
   virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, 
                                      double left_offset,

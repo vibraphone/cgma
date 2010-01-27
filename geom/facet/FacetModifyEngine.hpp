@@ -325,12 +325,12 @@ public:
     const CubitVector &v3,
     DLIList<BodySM*>& results_list,
     bool imprint = false 
-    ) ;
+    ) const;
   
   virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list,
     BodySM const* tool_body,
     DLIList<BodySM*>& results_list,
-    bool imprint = false);
+    bool imprint = false) const;
   
   virtual CubitStatus webcut_across_translate( DLIList<BodySM*>& body_list,
     Surface* plane_surf1,
@@ -469,20 +469,23 @@ public:
     const CubitVector &point_2,
     const CubitVector &point_3,
     BodySM *body_to_trim_to,
-    DLIList<BodySM *>& midplane_bodies ) const;
+    BodySM *&midplane_body ) const;
 
   virtual CubitStatus get_spheric_mid_surface( Surface *surface_ptr1,
-				    Surface *surface_ptr2,
-				    BodySM *body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const; 
+					       Surface *surface_ptr2,
+					       BodySM *body_to_trim_to,
+					       BodySM *&midsurface_body ) const;
+  
   virtual CubitStatus get_conic_mid_surface( Surface *surface_ptr1,
-				    Surface *surface_ptr2,
-	    		            BodySM *body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const; 
+					       Surface *surface_ptr2,
+					       BodySM *body_to_trim_to,
+					       BodySM *&midsurface_body ) const;
+  
   virtual CubitStatus get_toric_mid_surface( Surface *surface_ptr1,
-				    Surface *surface_ptr2,
-				    BodySM *body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const; 
+					       Surface *surface_ptr2,
+					       BodySM *body_to_trim_to,
+					       BodySM *&midsurface_body ) const;
+  
   virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, 
                                      double left_offset,
                                      DLIList<BodySM*> &new_bodysm_list,

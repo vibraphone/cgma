@@ -1876,7 +1876,7 @@ CubitStatus FacetModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v3,
                               DLIList<BodySM*>& results_list,
                               bool imprint
-                              ) 
+                              ) const
 {
 
   MODIFY_CHECK_RETURN_FAILURE;
@@ -2000,7 +2000,7 @@ CubitStatus  FacetModifyEngine::webcut(
              DLIList<BodySM*>& /*webcut_body_list*/,
              BodySM const* /*tool_body*/,
              DLIList<BodySM*>& /*results_list*/,
-             bool /*imprint*/ )
+             bool /*imprint*/ ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2634,7 +2634,7 @@ CubitStatus FacetModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
                                               const CubitVector & /*point_2*/,
                                               const CubitVector & /*point_3*/,
                                               BodySM * /*body_to_trim_to*/,
-                                              DLIList<BodySM*>& /*midplane_body*/ ) const
+                                              BodySM *& /*midplane_body*/ ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2648,9 +2648,9 @@ CubitStatus FacetModifyEngine::get_mid_plane( const CubitVector & /*point_1*/,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
-			    	   Surface* surface_ptr2,
-			           BodySM* body_to_trim_to,
-                                   DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2664,9 +2664,9 @@ CubitStatus FacetModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
-				   Surface* surface_ptr2,
-				   BodySM* body_to_trim_to,
-                                   DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;
@@ -2680,9 +2680,9 @@ CubitStatus FacetModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
 // Date       : 03/06
 //===============================================================================
 CubitStatus FacetModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
-				    Surface* surface_ptr2,
-				    BodySM* body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const
+							Surface* surface_ptr2,
+							BodySM* body_to_trim_to,
+							BodySM*& midsurface_body ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
   return CUBIT_FAILURE;

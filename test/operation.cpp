@@ -128,12 +128,12 @@ CubitStatus make_Point()
   CubitVector v1(1,1,3);
   CubitVector v2(1,2,2);
   CubitVector v3(1,1,1);
-  DLIList<BodySM*> mid_planes;
-  status = OCCModifyEngine::instance()->get_mid_plane(v1, v2, v3, from_body, mid_planes);
-  if(mid_planes.size() > 0)
+  BodySM* midplane_bodysm = 0;
+  status = OCCModifyEngine::instance()->get_mid_plane(v1, v2, v3, from_body, midplane_bodysm);
+  if(midplane_bodysm)
   {
     Body *midplane_body;
-    midplane_body = gti->make_Body(mid_planes.pop());
+    midplane_body = gti->make_Body(midplane_bodysm);
     double d = midplane_body->measure();
     //d = 100
   }
@@ -142,28 +142,14 @@ CubitStatus make_Point()
   v2.x(2);
   v3.x(2);
   
-  status = OCCModifyEngine::instance()->get_mid_plane(v1, v2, v3, from_body, mid_planes);
-  if(mid_planes.size() > 0)
+  midplane_bodysm = 0;
+  status = OCCModifyEngine::instance()->get_mid_plane(v1, v2, v3, from_body, midplane_bodysm);
+  if(midplane_bodysm)
   {
     Body *midplane_body;
-    midplane_body = gti->make_Body(mid_planes.pop());
+    midplane_body = gti->make_Body(midplane_bodysm);
     double d = midplane_body->measure();
     //d = 70
-  }
-
-  CubitVector v4(0,0,0);
-  CubitVector v5(1,0,2); 
-  CubitVector v6(0,1,0);
-  status = OCCModifyEngine::instance()->get_mid_plane(v4, v5, v6, from_body, mid_planes);
-  if(mid_planes.size() > 0)
-  {
-    Body *midplane_body;
-    for(int i = 0; i < mid_planes.size(); i++)
-    {
-      midplane_body = gti->make_Body(mid_planes.get_and_step());
-      double d = midplane_body->measure();
-      //d = 22.36 & 78.26
-    }
   }
 
   status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, CUBIT_TRUE);
