@@ -275,7 +275,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- Returns the ID of the new Body or CUBIT_FAILURE
 
       virtual BodySM* cylinder( double hi, double r1, double r2, 
-                                double r3) const = 0;
+                              double r3 ) const = 0 ;
       //- Creates an ACIS frustum and assigns it to a Body $
       //- {hi} input height $
       //- {r1} input radius in x-direction at base $
@@ -686,6 +686,8 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       //- data from a refentity.
 	    virtual CubitStatus test_regularize_entity( GeometryEntity *old_entity_ptr) = 0;
    
+
+      // Added by CAT
       virtual CubitStatus offset_curves( DLIList<Curve*>& ref_edge_list, 
                                          DLIList<Curve*>& result_curve_list,
                                          double offset_distance, 
@@ -793,10 +795,10 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- intersection graph.
 
   virtual CubitStatus get_mid_plane( const CubitVector &point_1,
-		                     const CubitVector &point_2,
+                                     const CubitVector &point_2,
                                      const CubitVector &point_3,
-		                     BodySM *body_to_trim_to,
-		                     BodySM *&midsurface_body ) const = 0;
+                                     BodySM *body_to_trim_to,
+                                     BodySM *&midplane_body ) const = 0;
     //- Finds the mid plane described by the 3 points and trims
     //- it to the body.  It returns the mid planes as part of the 
     //- midplane_body

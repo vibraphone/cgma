@@ -4572,18 +4572,18 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v2,
                               const CubitVector &v3,
                               DLIList<BodySM*>& results_list,
-                              bool imprint ) 
+                              bool imprint ) const
 {
   CubitStatus stat;
   DLIList<BodySM*> new_BodySMs;
-  stat = section(webcut_body_list, v1, v2, v3, new_BodySMs, true, true,false);
+  stat = OCCModifyEngine::instance()->section(webcut_body_list, v1, v2, v3, new_BodySMs, true, true,false);
   if(stat == CUBIT_FAILURE)
   {
     PRINT_ERROR("Can't webcut the bodies using a plane determined by 3 points.\n");
     return stat;
   }
   
-  stat = section(webcut_body_list, v1, v2, v3, new_BodySMs, false, false, false);
+  stat = OCCModifyEngine::instance()->section(webcut_body_list, v1, v2, v3, new_BodySMs, false, false, false);
   if(stat == CUBIT_FAILURE)
   {
     PRINT_ERROR("Can't webcut the bodies using a plane determined by 3 points.\n");
@@ -4622,7 +4622,7 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
 CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                                 BodySM const* tool_body,
                                 DLIList<BodySM*>& results_list,
-                                bool imprint ) 
+                                bool imprint ) const
 {
   //do intersect and subtract separately and with imprint option and keep_old
   // is true.
@@ -5700,7 +5700,7 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
                                             const CubitVector & point_2,
                                             const CubitVector & point_3,
                                             BodySM * body_to_trim_to,
-                                            DLIList<BodySM*>& midplane_bodies ) const
+                                            BodySM *& result_body ) const
 {
   //Calculate normal of the mid  plane
   CubitVector v1, v2, normal;
@@ -5729,11 +5729,17 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
   BodySM* tool = CAST_TO(surf, OCCSurface)->my_body();
   DLIList<BodySM*> from_bodies;
   from_bodies.append(body_to_trim_to);
-   
+  DLIList<BodySM*> midplane_bodies;
   CubitStatus stat = intersect(tool, from_bodies, midplane_bodies, 
                                CUBIT_TRUE);
   OCCQueryEngine::instance()->delete_solid_model_entities(tool);
-
+  if (midplane_bodies.size() == 1)
+    result_body = midplane_bodies.get();
+  else {
+    for (int i = 0; i < midplane_bodies.size(); ++i)
+      OCCQueryEngine::instance()->delete_solid_model_entities(midplane_bodies.get_and_step());
+    stat = CUBIT_FAILURE;
+  }
   return stat;
 }
 
@@ -5747,7 +5753,7 @@ CubitStatus OCCModifyEngine::get_mid_plane( const CubitVector & point_1,
 CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
                                     Surface* surface_ptr2,
                                     BodySM* body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const
+                                    BodySM*& result_body ) const
 {
   OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
   OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
@@ -5778,12 +5784,19 @@ CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
   CubitVector center(center1.X(), center1.Y(), center1.Z());
   OCCQueryEngine::instance()->translate(tool, center);
 
-  DLIList<BodySM*> from_bodies;
+  DLIList<BodySM*> from_bodies, midsurface_bodies;
   from_bodies.append(body_to_trim_to);
-  
+
   CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
                                CUBIT_TRUE);
   OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+  if (midsurface_bodies.size() == 1)
+    result_body = midsurface_bodies.get();
+  else {
+    for (int i = 0; i < midsurface_bodies.size(); ++i)
+      OCCQueryEngine::instance()->delete_solid_model_entities(midsurface_bodies.get_and_step());
+    stat = CUBIT_FAILURE;
+  }
 
   return stat;  
 }
@@ -5798,7 +5811,7 @@ CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
 CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
                                     Surface* surface_ptr2,
                                     BodySM* body_to_trim_to,
-                                    DLIList<BodySM *>&midsurface_bodies ) const
+                                    BodySM*& result_body ) const
 {
   OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
   OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
@@ -5892,12 +5905,19 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
       OCCQueryEngine::instance()->populate_topology_bridge(face, CUBIT_TRUE);
     tool = CAST_TO(surface,OCCSurface)->my_body();  
   } 
-  DLIList<BodySM*> from_bodies;
+  DLIList<BodySM*> from_bodies, midsurface_bodies;
   from_bodies.append(body_to_trim_to);
 
   CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
                                CUBIT_TRUE);
   OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+  if (midsurface_bodies.size() == 1)
+    result_body = midsurface_bodies.get();
+  else {
+    for (int i = 0; i < midsurface_bodies.size(); ++i)
+      OCCQueryEngine::instance()->delete_solid_model_entities(midsurface_bodies.get_and_step());
+    stat = CUBIT_FAILURE;
+  }
 
   return stat;
 }
@@ -5912,7 +5932,7 @@ CubitStatus OCCModifyEngine::get_conic_mid_surface( Surface* surface_ptr1,
 CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
                                      Surface* surface_ptr2,
                                      BodySM* body_to_trim_to,
-                                     DLIList<BodySM *>&midsurface_bodies ) const
+                                     BodySM*& result_body ) const
 {
   OCCSurface* occ_surf1 = CAST_TO(surface_ptr1, OCCSurface);
   OCCSurface* occ_surf2 = CAST_TO(surface_ptr2, OCCSurface);
@@ -5971,12 +5991,19 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
 
   BodySM* tool = CAST_TO(lump, OCCLump)->get_body();
 
-  DLIList<BodySM*> from_bodies;
+  DLIList<BodySM*> from_bodies, midsurface_bodies;
   from_bodies.append(body_to_trim_to);
 
   CubitStatus stat = intersect(tool, from_bodies, midsurface_bodies,
                                CUBIT_TRUE);
   OCCQueryEngine::instance()->delete_solid_model_entities(tool);
+  if (midsurface_bodies.size() == 1)
+    result_body = midsurface_bodies.get();
+  else {
+    for (int i = 0; i < midsurface_bodies.size(); ++i)
+      OCCQueryEngine::instance()->delete_solid_model_entities(midsurface_bodies.get_and_step());
+    stat = CUBIT_FAILURE;
+  }
 
   return stat; 
 }

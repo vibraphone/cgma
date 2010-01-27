@@ -917,13 +917,6 @@ CubitStatus FacetModifyEngine::finish_facet_Body( ChollaEngine *&cholla_ptr,
     goto end_brick;
   }
    
-  PRINT_INFO("Body successfully created.\n");
-  PRINT_INFO("  Number of vertices = %d\n", gti->num_ref_vertices());
-  PRINT_INFO("  Number of edges = %d\n", gti->num_ref_edges());
-  PRINT_INFO("  Number of faces = %d\n", gti->num_ref_faces());
-  PRINT_INFO("  Number of volumes = %d\n", gti->num_ref_volumes());
-  PRINT_INFO("  Number of bodies = %d\n", gti->num_bodies());
-   
   return rv;
   
 end_brick:
