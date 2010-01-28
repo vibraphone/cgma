@@ -13,6 +13,7 @@
 // Creation Date : 7/17/00
 //
 //-------------------------------------------------------------------------
+#include <Standard_Version.hxx>
 #include <Standard_Stream.hxx>
 //#include <Standard_SStream.hxx>
 //#include <Standard_String.hxx>
@@ -116,10 +117,6 @@ using namespace NCubitFile;
 
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
-const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
-const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
-const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
-
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
@@ -177,29 +174,22 @@ OCCQueryEngine::~OCCQueryEngine()
 
 int OCCQueryEngine::get_major_version()
 {
-  return OCCQE_MAJOR_VERSION;
+  return OCC_VERSION_MAJOR;
 }
 
 int OCCQueryEngine::get_minor_version()
 {
-  return OCCQE_MINOR_VERSION;
+  return OCC_VERSION_MINOR;
 }
 
 int OCCQueryEngine::get_subminor_version()
 {
-  return OCCQE_SUBMINOR_VERSION;
+  return OCC_VERSION_MAINTENANCE;
 }
 
 CubitString OCCQueryEngine::get_engine_version_string()
 {
-  CubitString version_string = "OCC Geometry Engine version ";
-  version_string += CubitString(get_major_version());
-  version_string += CubitString(".");
-  version_string += CubitString(get_minor_version());
-  version_string += CubitString(".");
-  version_string += CubitString(get_subminor_version());
-  
-  return version_string;
+  return CubitString("OpenCascade ") + OCC_VERSION_STRING;
 }
 
 //================================================================================

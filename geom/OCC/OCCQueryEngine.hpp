@@ -425,10 +425,6 @@ private:
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class
-
-  static const int OCCQE_MAJOR_VERSION;
-  static const int OCCQE_MINOR_VERSION;
-  static const int OCCQE_SUBMINOR_VERSION;
 };
 
 // ********** BEGIN INLINE FUNCTIONS          **********
