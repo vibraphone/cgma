@@ -3285,6 +3285,12 @@ CubitStatus FacetModifyEngine::create_weld_surface( CubitVector & /*root*/,
    return CUBIT_FAILURE;
 }
 
+CubitBoolean FacetModifyEngine::bodies_interfering( BodySM* /*body1*/,  BodySM* /*body2*/ ) const
+{
+   PRINT_ERROR("Function not implemented in this engine.\n");
+   return CUBIT_FALSE;
+}
+
 
 CubitStatus FacetModifyEngine::stitch( DLIList<BodySM*> &bodies_to_stitch,
                                        DLIList<BodySM*> &new_bodies,
