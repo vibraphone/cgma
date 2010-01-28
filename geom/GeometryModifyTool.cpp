@@ -5931,6 +5931,129 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*> &bodies,
   return CUBIT_SUCCESS;
 }
 
+CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
+                                        DLIList<RefFace*> faces_to_remove,
+                                        DLIList<Body*>& new_bodies,
+                                        double depth)
+{
+  if (bodies.size() <= 0 || faces_to_remove.size() <= 0)
+  {
+     PRINT_WARNING("Needs at least one body and one face. Nothing modified\n");
+     return CUBIT_FAILURE;
+  }
+
+  if (!okay_to_modify( bodies, "HOLLOW" ))
+    return CUBIT_FAILURE;
+
+  // Get the GeometryEngine for each Body of the list to check
+  // if they are the same and if they are GeometryModifyEngine
+
+  const int count = bodies.size();
+  DLIList<TopologyEntity*> entity_list(count);
+  DLIList<TopologyBridge*> bridge_list(count);
+  CAST_LIST_TO_PARENT(bodies, entity_list);
+  GeometryModifyEngine* gme = common_modify_engine( entity_list, bridge_list );
+
+  if (!gme)
+  {
+     PRINT_ERROR("Performing THICKEN with volumes containing geometry\n"
+                 " from different modeling engines is not allowed.\n"
+                 "Delete uncommon geometry on these volumes before operation.\n\n");
+     return CUBIT_FAILURE;
+  }
+
+  DLIList<BodySM*> new_sms(count);
+  DLIList<BodySM*> body_sms(count);
+  CAST_LIST(bridge_list, body_sms, BodySM);
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    CubitUndo::save_state_with_cubit_file( bodies );
+  }
+
+  DLIList <Surface*> surfs_to_remove;
+  for(int i = 0 ; i < faces_to_remove.size(); i++)
+  {
+    Surface* surf = faces_to_remove.get_and_step()->get_surface_ptr();
+    if(surf)
+      surfs_to_remove.append(surf); 
+  }
+
+
+  DLIList<int> merged_surface_ids;
+  DLIList<int> merged_curve_ids;
+  get_merged_curve_and_surface_ids( bodies, merged_surface_ids, merged_curve_ids );
+  do_attribute_setup();
+  
+  // Push attributes down onto the bodies to be hollowed
+  push_vg_attributes_before_modify( body_sms );
+
+  CubitStatus result = gme->hollow( body_sms, surfs_to_remove, new_sms, depth);
+
+   if( result == CUBIT_FAILURE )
+   {
+     if( CubitUndo::get_undo_enabled() )
+       CubitUndo::remove_last_undo();
+
+     PRINT_ERROR("Hollow failed\n");
+     remove_pushed_attributes(body_sms, bodies);
+     do_attribute_cleanup();
+     return CUBIT_FAILURE;
+   }
+
+  // check for resued entities, they have been moved and we need to notify observers
+  DLIList<RefEntity*> entities_to_update;
+  int i;
+  for(i=0; i<new_sms.size(); i++)
+  {
+    BodySM* bodysm = new_sms.get_and_step();
+    DLIList<TopologyBridge*> to_check;
+    DLIList<TopologyBridge*> tmp;
+    DLIList<Surface*> surfs;
+    bodysm->surfaces(surfs);
+    DLIList<Curve*> curves;
+    bodysm->curves(curves);
+    DLIList<Point*> points;
+    bodysm->points(points);
+    to_check.append(bodysm);
+    to_check.append(bodysm->lump());
+    CAST_LIST_TO_PARENT(surfs, tmp);
+    to_check += tmp;
+    CAST_LIST_TO_PARENT(curves, tmp);
+    to_check += tmp;
+    CAST_LIST_TO_PARENT(points, tmp);
+    to_check += tmp;
+
+    int k;
+    for(k=0; k<to_check.size(); k++)
+      if(BridgeManager* m = to_check.get_and_step()->bridge_manager())
+        if(TopologyEntity* t = m->topology_entity())
+          entities_to_update.append(CAST_TO(t, RefEntity));
+
+  }
+  
+  restore_vg_after_modify( new_sms, bodies, gme );
+  remove_pushed_attributes( new_sms, bodies );
+
+  result = finish_sm_op(bodies, new_sms, new_bodies);
+  fixup_merged_entities( merged_surface_ids, merged_curve_ids);
+ 
+  if (CUBIT_FAILURE == result) {
+    if( CubitUndo::get_undo_enabled() )
+      CubitUndo::remove_last_undo();
+
+    PRINT_ERROR("Hollow failed\n");
+    do_attribute_cleanup();
+    return CUBIT_FAILURE;
+  }
+  else if( CubitUndo::get_undo_enabled() ) {
+    CubitUndo::note_result_bodies( new_bodies );
+  }
+
+  do_attribute_cleanup();
+  return CUBIT_SUCCESS; 
+}
+
 CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
                                          DLIList<Body*>& new_bodies,
                                          double depth,
