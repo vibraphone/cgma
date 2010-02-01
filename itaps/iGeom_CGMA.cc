@@ -6809,8 +6809,11 @@ void append_all_ibase_type( int ibase_type,
 {
   RefEntityFactory *const ref = RefEntityFactory::instance();
   if (ibase_type == iBase_ALL_TYPES) {
-    for (int i = 0; i < 4; ++i)
-      ref->ref_entity_list( iGeom_entity_type_names[i], target_list );
+    for (int i = 0; i < 4; ++i) {
+      DLIList<RefEntity*> tmp;
+      ref->ref_entity_list( iGeom_entity_type_names[i], tmp );
+      target_list += tmp;
+    }
   }
   else if (abs(ibase_type) < iBase_ALL_TYPES) {
     ref->ref_entity_list( iGeom_entity_type_names[ibase_type], target_list );
