@@ -5996,18 +5996,8 @@ iGeom_mergeEnts (iGeom_Instance instance,
   
   CubitStatus status = CUBIT_SUCCESS, temp_status;
     
-  if (bods.size() != 0) {
-    temp_status = MergeTool::instance()->merge_bodies(bods);
-    if (CUBIT_SUCCESS != temp_status) status = temp_status;
-  }
-    
-  if (vols.size() != 0) {
-    temp_status = MergeTool::instance()->merge_volumes(vols, false);
-    if (CUBIT_SUCCESS != temp_status) status = temp_status;
-  }
-    
-  if (faces.size() != 0) {
-    temp_status = MergeTool::instance()->merge_reffaces(faces, false);
+  if (verts.size() != 0) {
+    temp_status = MergeTool::instance()->merge_refvertices(verts, false);
     if (CUBIT_SUCCESS != temp_status) status = temp_status;
   }
     
@@ -6016,8 +6006,18 @@ iGeom_mergeEnts (iGeom_Instance instance,
     if (CUBIT_SUCCESS != temp_status) status = temp_status;
   }
     
-  if (verts.size() != 0) {
-    temp_status = MergeTool::instance()->merge_refvertices(verts, false);
+  if (faces.size() != 0) {
+    temp_status = MergeTool::instance()->merge_reffaces(faces, false);
+    if (CUBIT_SUCCESS != temp_status) status = temp_status;
+  }
+    
+  if (vols.size() != 0) {
+    temp_status = MergeTool::instance()->merge_volumes(vols, false);
+    if (CUBIT_SUCCESS != temp_status) status = temp_status;
+  }
+    
+  if (bods.size() != 0) {
+    temp_status = MergeTool::instance()->merge_bodies(bods);
     if (CUBIT_SUCCESS != temp_status) status = temp_status;
   }
 
