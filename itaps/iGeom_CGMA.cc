@@ -121,7 +121,7 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #define gqt GeometryQueryTool::instance()
 #define gmt GeometryModifyTool::instance()
 
-const char *iGeom_entity_type_names[] = {"vertex", "curve", "surface", "volume", "body"};
+const char *iGeom_entity_type_names[] = {"vertex", "curve", "surface", "body"};
 
 // declare private-type functions here, so they aren't visible outside
 // this implementation file
@@ -216,6 +216,29 @@ iGeom_normal_from_uv( RefFace* face, double u, double v, CubitVector& normal );
 static CubitStatus iGeom_is_periodic( RefEntity* entity, int& u, int& v );
 
 static bool iGeom_is_face_degenerate( RefFace* face );
+
+static
+int count_ibase_type( int ibase_type, 
+                      const DLIList<CubitEntity*>& list, 
+                      int* err );
+
+static 
+void copy_ibase_type( int ibase_type, 
+                      const DLIList<CubitEntity*>& list,
+                      iBase_EntityHandle** entity_handles,
+                      int* entity_handles_alloc,
+                      int* entity_handles_size,
+                      int* err );
+
+static 
+void append_ibase_type( int ibase_type, 
+                        const DLIList<CubitEntity*>& source_list,
+                        DLIList<RefEntity*>& target_list,
+                        int* err );
+static 
+void append_all_ibase_type( int ibase_type, 
+                            DLIList<RefEntity*>& target_list,
+                            int* err );
 
 
 static CubitStatus init_cgm( const std::string& engine )
@@ -467,7 +490,14 @@ void iGeom_getBoundBox( iGeom_Instance,
                         double* max_z,
                         int* err ) 
 {
-  RETURN(iBase_NOT_SUPPORTED);
+  CubitBox box = GeometryQueryTool::instance()->model_bounding_box();
+  *min_x = box.min_x();
+  *min_y = box.min_y();
+  *min_z = box.min_z();
+  *max_x = box.max_x();
+  *max_y = box.max_y();
+  *max_z = box.max_z();
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -497,41 +527,19 @@ iGeom_initEntArrIter (iGeom_Instance instance,
                       int* err)
 {
   DLIList<RefEntity*> entities;
-  if (entity_set_handle) {
-    DLIList<CubitEntity*> cub_entities;
-    RefGroup* group = reinterpret_cast<RefGroup*>(entity_set_handle);
-    if (type == iBase_ALL_TYPES) {
-      group->get_child_entities( cub_entities );
-      CAST_LIST( cub_entities, entities, RefEntity );
-    }
-    else {
-      DLIList<RefEntity*> group_entities;
-      group->get_child_entities( cub_entities );
-      CAST_LIST( cub_entities, group_entities, RefEntity );
-      group_entities.last();
-      for (int i = 0; i < group_entities.size(); ++i)
-        if (group_entities.step_and_get()->dimension() == type)
-          entities.append( group_entities.get() );
-    }
+  if (RefGroup* group = reinterpret_cast<RefGroup*>(entity_set_handle)) {
+    DLIList<CubitEntity*> centities;
+    group->get_child_entities( centities );
+    append_ibase_type( type, centities, entities, err );
   }
-  else if (type == iBase_ALL_TYPES) {
-    DLIList<RefEntity*> temp_entities;
-    for (int i = 0; i < 4; ++i) {
-      temp_entities.clean_out();
-      RefEntityFactory::instance()->ref_entity_list( 
-        iGeom_entity_type_names[i],
-        temp_entities, CUBIT_FALSE);
-      entities += temp_entities;
-    }
+  else {
+    append_all_ibase_type( type, entities, err );
   }
-  else
-    RefEntityFactory::instance()->ref_entity_list(
-      iGeom_entity_type_names[type],
-      entities, CUBIT_FALSE);
   
-  CGMAIterator* iter = new CGMAIterator(entities, requested_array_size);
-  *entArr_iterator = reinterpret_cast<iGeom_EntityArrIterator>(iter);
-  RETURN(iBase_SUCCESS);
+  if (*err == iBase_SUCCESS) {
+    CGMAIterator* iter = new CGMAIterator(entities, requested_array_size);
+    *entArr_iterator = reinterpret_cast<iGeom_EntityArrIterator>(iter);
+  }
 }
 
 
@@ -812,48 +820,27 @@ iGeom_getEntities (iGeom_Instance instance,
                    int *gentity_handles_size,
                    int* err)
 {
-  const RefGroup *this_set = SET_HANDLE(set_handle);
-  static DLIList<RefEntity*> dim_entities;
-  dim_entities.clean_out();
-  if (0 == this_set) {
-    if (gentity_type == iBase_ALL_TYPES) {
-      for (int i = 0; i < 4; i++) {
-        static DLIList<RefEntity*> temp_entities;
-        RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[i], 
-                                                      temp_entities, CUBIT_FALSE);
-        dim_entities += temp_entities;
-      }
-    }
-    else {
-      RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[gentity_type], 
-                                                    dim_entities, CUBIT_FALSE);
-    }
+  if (RefGroup *this_set = SET_HANDLE(set_handle)) {
+    static DLIList<CubitEntity*> centities;
+    centities.clean_out();
+    this_set->get_child_entities(centities);
+    copy_ibase_type( gentity_type, centities, 
+                     gentity_handles,
+                     gentity_handles_allocated,
+                     gentity_handles_size,
+                     err );
   }
   else {
-    static DLIList<CubitEntity*> centities;
-    static DLIList<RefEntity*> entities;
-    centities.clean_out();
-    entities.clean_out();
-    const_cast<RefGroup*>(this_set)->get_child_entities(centities);
-    CAST_LIST(centities, entities, RefEntity);
-    if (gentity_type == 4) {
-      dim_entities += entities;
-    }
-    else {
-      entities.reset();
-      int num_ents = entities.size();
-      for (int i = 0; i < num_ents; i++) {
-        if (entities.get()->dimension() == gentity_type)
-          dim_entities.append(entities.get_and_step());
-        else
-          entities.step();
-      }
-    }
-  }
+    static DLIList<RefEntity*> dim_entities;
+    dim_entities.clean_out();
+    append_all_ibase_type( gentity_type, dim_entities, err );
+    if (iBase_SUCCESS != *err)
+      return;
     
-  CHECK_SIZE(*gentity_handles, iBase_EntityHandle, dim_entities.size());
-  dim_entities.copy_to((RefEntity**)*gentity_handles);
-  RETURN(iBase_SUCCESS);
+    CHECK_SIZE(*gentity_handles, iBase_EntityHandle, dim_entities.size());
+    dim_entities.copy_to((RefEntity**)*gentity_handles);
+    RETURN(iBase_SUCCESS);
+  }  
 }
 
 /**
@@ -871,47 +858,38 @@ iGeom_getNumOfType (iGeom_Instance instance,
                     int* err)
 {
   const RefGroup *this_set = SET_HANDLE(set_handle);
-  static DLIList<RefEntity*> *dim_entities = NULL;
-  if (NULL == dim_entities) dim_entities = new DLIList<RefEntity*>();
-  dim_entities->clean_out();
   if (0 == this_set) {
-    if (gentity_type == iBase_ALL_TYPES) {
-      for (int i = 0; i < 4; i++) {
-        static DLIList<RefEntity*> temp_entities;
-        RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[i], 
-                                                      temp_entities, CUBIT_FALSE);
-        *dim_entities += temp_entities;
-      }
+    switch (gentity_type) {
+      case iBase_ALL_TYPES:
+        *count  = GeometryQueryTool::instance()->num_bodies();
+        *count += GeometryQueryTool::instance()->num_ref_faces();
+        *count += GeometryQueryTool::instance()->num_ref_edges();
+        *count += GeometryQueryTool::instance()->num_ref_vertices();
+        break;
+      case iBase_REGION:
+        *count = GeometryQueryTool::instance()->num_bodies();
+        break;
+      case iBase_FACE:
+        *count = GeometryQueryTool::instance()->num_ref_faces();
+        break;
+      case iBase_EDGE:
+        *count = GeometryQueryTool::instance()->num_ref_edges();
+        break;
+      case iBase_VERTEX:
+        *count = GeometryQueryTool::instance()->num_ref_vertices();
+        break;
+      default:
+        RETURN(iBase_BAD_TYPE_AND_TOPO);
+        break;
     }
-    else {
-      RefEntityFactory::instance()->ref_entity_list(iGeom_entity_type_names[gentity_type], 
-                                                    *dim_entities, CUBIT_FALSE);
-    }
+    RETURN (iBase_SUCCESS);
   }
   else {
     static DLIList<CubitEntity*> centities;
-    static DLIList<RefEntity*> entities;
     centities.clean_out();
-    entities.clean_out();
     const_cast<RefGroup*>(this_set)->get_child_entities(centities);
-    CAST_LIST(centities, entities, RefEntity);
-    if (gentity_type == 4) {
-      *dim_entities += entities;
-    }
-    else {
-      entities.reset();
-      int num_ents = entities.size();
-      for (int i = 0; i < num_ents; i++) {
-        if (entities.get()->dimension() == gentity_type)
-          dim_entities->append(entities.get_and_step());
-        else
-          entities.step();
-      }
-    }
+    *count = count_ibase_type( gentity_type, centities, err );
   }
-
-  *count = dim_entities->size();
-  RETURN (iBase_SUCCESS);
 }
 
 void
@@ -921,7 +899,10 @@ iGeom_getEntType (iGeom_Instance instance,
                   int* err)
 {
   RefEntity* entity = reinterpret_cast<RefEntity*>(handle);
-  *gtype = static_cast<int>(entity->dimension());
+  if (dynamic_cast<Body*>(entity))
+    *gtype = iBase_REGION;
+  else
+    *gtype = static_cast<int>(entity->dimension());
   RETURN(iBase_SUCCESS);
 }
 
@@ -944,7 +925,10 @@ iGeom_getArrType (iGeom_Instance instance,
   const RefEntity **tmp_handles = (const RefEntity**)(gentity_handles);
   
   for (int i = 0; i < gentity_handles_size; i++) {
-    (*gtype)[i] = (int) tmp_handles[i]->dimension();
+    if (dynamic_cast<const Body*>(tmp_handles[i]))
+      (*gtype)[i] = iBase_REGION;
+    else
+      (*gtype)[i] = tmp_handles[i]->dimension();
   }
 
   RETURN(iBase_SUCCESS);
@@ -6206,7 +6190,7 @@ iGeom_get_adjacent_entities( const RefEntity *from,
   static DLIList<RefVertex*> tmp_verts;
   static DLIList<RefEdge*> tmp_edges;
   static DLIList<RefFace*> tmp_faces;
-  static DLIList<RefVolume*> tmp_volumes;
+  static DLIList<Body*> tmp_bodies;
   
   switch (to_dim) {
     case 0:
@@ -6225,9 +6209,9 @@ iGeom_get_adjacent_entities( const RefEntity *from,
       CAST_LIST_TO_PARENT(tmp_faces, adj_ents);
       break;
     case 3:
-      tmp_volumes.clean_out();
-      topo_ent->ref_volumes(tmp_volumes);
-      CAST_LIST_TO_PARENT(tmp_volumes, adj_ents);
+      tmp_bodies.clean_out();
+      topo_ent->bodies(tmp_bodies);
+      CAST_LIST_TO_PARENT(tmp_bodies, adj_ents);
       break;
     default:
       ERROR(iBase_INVALID_ARGUMENT, "Bad input dimension getting adjacent entities.");
@@ -6655,4 +6639,185 @@ process_attribs(iGeom_Instance instance)
   }
 
   return iBase_SUCCESS;
+}
+
+
+template <typename T> static inline 
+int count_type( const DLIList<CubitEntity*>& list )
+{
+  int count = 0, size = list.size();
+  for (int i = 0; i < size; ++i)
+    if (dynamic_cast<T*>(list[i]))
+      ++count;
+  return count;
+}
+
+static inline
+int count_ibase_type( int ibase_type, const DLIList<CubitEntity*>& list, int* err )
+{
+  *err = iBase_SUCCESS;
+  switch (ibase_type) {
+    case iBase_ALL_TYPES: return list.size() - count_type<RefGroup>(list);
+    case iBase_REGION:    return count_type<Body>(list);
+    case iBase_FACE:      return count_type<RefFace>(list);
+    case iBase_EDGE:      return count_type<RefEdge>(list);
+    case iBase_VERTEX:    return count_type<RefVertex>(list);
+    default:
+      *err = iBase_INVALID_ENTITY_TYPE;
+      iGeom_setLastError( *err );
+      return -1;
+  }
+}
+
+template <typename TARGET_TYPE, typename LIST_TYPE> static inline 
+void append_type( const DLIList<CubitEntity*>& source_list,
+                  DLIList<LIST_TYPE*>& target_list )
+{
+  int size = source_list.size();
+  for (int i = 0; i < size; ++i) 
+    if (TARGET_TYPE* ent = dynamic_cast<TARGET_TYPE*>(source_list[i]))
+      target_list.append(ent);
+}
+
+template <typename SKIP_TYPE, typename LIST_TYPE> static inline 
+void append_not_type( const DLIList<CubitEntity*>& source_list,
+                      DLIList<LIST_TYPE*>& target_list )
+{
+  int size = source_list.size();
+  for (int i = 0; i < size; ++i) 
+    if (!dynamic_cast<SKIP_TYPE*>(source_list[i]))
+      if (RefEntity* ent = dynamic_cast<LIST_TYPE*>(source_list[i]))
+        target_list.append(ent);
+}
+
+// Returns count of entities appended.
+template <typename TARGET_TYPE> static inline 
+int append_type( const DLIList<CubitEntity*>& source_list,
+                 iBase_EntityHandle* array, int array_size )
+{
+  RefEntity* re_ptr;
+  int len = source_list.size();
+  int count = 0;
+  for (int i = 0; i < len; ++i) {
+    if (TARGET_TYPE* ent = dynamic_cast<TARGET_TYPE*>(source_list[i])) {
+      if (count < array_size)
+        array[count] = reinterpret_cast<iBase_EntityHandle>(re_ptr = ent);
+      ++count;
+    }
+  }
+  return count;
+}
+
+template <typename SKIP_TYPE> static inline 
+int append_not_type( const DLIList<CubitEntity*>& source_list,
+                     iBase_EntityHandle* array, int array_size )
+{
+  int len = source_list.size();
+  int count = 0;
+  for (int i = 0; i < len; ++i) {
+    if (!dynamic_cast<SKIP_TYPE*>(source_list[i])) {
+      if (count == array_size) 
+        return -1;
+      else if (RefEntity* ent = dynamic_cast<RefEntity*>(source_list[i]))
+        array[count++] = reinterpret_cast<iBase_EntityHandle>(ent);
+    }
+  }
+  return count;
+}
+
+static 
+void copy_ibase_type( int ibase_type, 
+                      const DLIList<CubitEntity*>& list,
+                      iBase_EntityHandle** entity_handles,
+                      int* entity_handles_alloc,
+                      int* entity_handles_size,
+                      int* err )
+{
+  int count;
+  if (*entity_handles_alloc == 0) {
+    count = count_ibase_type( ibase_type, list, err );
+    if (count < 0)
+      return;
+    *entity_handles = (iBase_EntityHandle*)malloc( count * sizeof(iBase_EntityHandle) );
+    if (!*entity_handles) 
+      RETURN(iBase_MEMORY_ALLOCATION_FAILED);
+    *entity_handles_alloc = count;
+  }
+  
+  switch (ibase_type) {
+    case iBase_ALL_TYPES:
+      count = append_not_type<RefGroup>(list,*entity_handles, *entity_handles_alloc);
+      break;
+    case iBase_REGION:
+      count = append_type<Body>(list,*entity_handles, *entity_handles_alloc);
+      break;
+    case iBase_FACE:
+      count = append_type<RefFace>(list,*entity_handles, *entity_handles_alloc);
+      break;
+    case iBase_EDGE:
+      count = append_type<RefEdge>(list,*entity_handles, *entity_handles_alloc);
+      break;
+    case iBase_VERTEX:
+      count = append_type<RefVertex>(list,*entity_handles, *entity_handles_alloc);
+      break;
+    default:
+      RETURN(iBase_INVALID_ENTITY_TYPE);
+      break;
+  }
+  
+  *entity_handles_size = count;
+  if (count > *entity_handles_alloc)
+    RETURN(iBase_BAD_ARRAY_DIMENSION);
+  
+  RETURN(iBase_SUCCESS);
+}
+
+static 
+void append_ibase_type( int ibase_type, 
+                        const DLIList<CubitEntity*>& source_list,
+                        DLIList<RefEntity*>& target_list,
+                        int* err )
+{
+  switch (ibase_type) {
+    case iBase_ALL_TYPES:
+      append_not_type<RefGroup>(source_list, target_list);
+      break;
+    case iBase_REGION:
+      append_type<Body>(source_list, target_list);
+      break;
+    case iBase_FACE:
+      append_type<RefFace>(source_list, target_list);
+      break;
+    case iBase_EDGE:
+      append_type<RefEdge>(source_list, target_list);
+      break;
+    case iBase_VERTEX:
+      append_type<RefVertex>(source_list, target_list);
+      break;
+    default:
+      RETURN(iBase_INVALID_ENTITY_TYPE);
+      break;
+  }
+  
+  RETURN(iBase_SUCCESS);
+}
+
+static 
+void append_all_ibase_type( int ibase_type, 
+                            DLIList<RefEntity*>& target_list,
+                            int* err )
+{
+  RefEntityFactory *const ref = RefEntityFactory::instance();
+  if (ibase_type == iBase_ALL_TYPES) {
+    for (int i = 0; i < 4; ++i)
+      ref->ref_entity_list( iGeom_entity_type_names[i], target_list );
+  }
+  else if (abs(ibase_type) < iBase_ALL_TYPES) {
+    ref->ref_entity_list( iGeom_entity_type_names[ibase_type], target_list );
+  }
+  else {
+    RETURN(iBase_INVALID_ENTITY_TYPE);
+  }
+  
+  RETURN(iBase_SUCCESS);
 }
