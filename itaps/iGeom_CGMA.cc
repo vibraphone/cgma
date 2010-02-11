@@ -3206,11 +3206,11 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
 }
 
 /**
- * Return the sense of a gface with respect to a gregion.  Sense is either
+ * Return the sense of a face with respect to a region.  Sense is either
  * forward (=1), reverse (=-1), both (=0).  Error is returned
  * if first entity is not a gface or second entity is not a gregion.
- * @param gface Gface whose sense is being queried.
- * @param gregion Gregion gface is being queried with respect to
+ * @param gface face whose sense is being queried.
+ * @param gregion region gface is being queried with respect to
  */
 void
 iGeom_getEntNrmlSense (iGeom_Instance instance,
@@ -3221,12 +3221,28 @@ iGeom_getEntNrmlSense (iGeom_Instance instance,
 {
   const RefFace *face_ent = dynamic_cast<const RefFace*>(ENTITY_HANDLE(gface));
   if (NULL == face_ent) {
-    ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getGnormalSense must be a face.");
+    ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getEntNrmlSense must be a face.");
   }
-  const RefVolume *volume_ent = dynamic_cast<const RefVolume*>(ENTITY_HANDLE(gregion));
+
+  // XXX: workaround; remove this when we switch iBase_REGIONs to RefVolume
+  const RefVolume *volume_ent;
+  Body *body_ent = dynamic_cast<Body*>(ENTITY_HANDLE(gregion));
+  if (NULL != body_ent) {
+    DLIList<RefEntity*> children;
+    body_ent->get_child_ref_entities(children);
+    if (children.size() != 1) {
+      ERROR(iBase_FAILURE, "Can only support bodies with one volume");
+    }
+    volume_ent = dynamic_cast<const RefVolume*>(children[0]);
+  }
+  else {
+    volume_ent = dynamic_cast<const RefVolume*>(ENTITY_HANDLE(gregion));
+  }
+
   if (NULL == volume_ent) {
-    ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGnormalSense must be a region.");
+    ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getEntNrmlSense must be a region.");
   }
+
   *rel_sense = iGeom_get_nonmanifold_sense( face_ent, volume_ent, err );
 }
 
@@ -3268,12 +3284,28 @@ iGeom_getArrNrmlSense(iGeom_Instance instance,
   for (int i = 0; i < count; ++i) {
     RefFace *face_ent = dynamic_cast<RefFace*>(*face_iter);
     if (NULL == face_ent) {
-      ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getGnormalSense must be a face.");
+      ERROR(iBase_INVALID_ENTITY_TYPE, "1st argument to getArrNrmlSense must be a face.");
     }
-    RefVolume *volume_ent = dynamic_cast<RefVolume*>(*region_iter);
+
+    // XXX: workaround; remove this when we switch iBase_REGIONs to RefVolume
+    const RefVolume *volume_ent;
+    Body *body_ent = dynamic_cast<Body*>(*region_iter);
+    if (NULL != body_ent) {
+      DLIList<RefEntity*> children;
+      body_ent->get_child_ref_entities(children);
+      if (children.size() != 1) {
+        ERROR(iBase_FAILURE, "Can only support bodies with one volume");
+      }
+      volume_ent = dynamic_cast<const RefVolume*>(children[0]);
+    }
+    else {
+      volume_ent = dynamic_cast<const RefVolume*>(*region_iter);
+    }
+
     if (NULL == volume_ent) {
-      ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGnormalSense must be a region.");
+      ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getArrNrmlSense must be a region.");
     }
+
     (*senses)[i] = iGeom_get_nonmanifold_sense( face_ent, volume_ent, err );
     if (iBase_SUCCESS != *err)
       return;
