@@ -7,6 +7,8 @@
 #include "CubitEntity.hpp"
 #include "CastTo.hpp"
 #include "CubitUtil.hpp"
+#include "CubitAttrib.hpp"
+#include "CADefines.hpp"
 
 #include "TopologyBridge.hpp"
 #include "GeometryQueryTool.hpp"
@@ -60,11 +62,11 @@ CubitStatus ParallelGeomTool::load_file(const char *file_name,
 					const int* set_tag_values,
 					int num_set_tag_values) 
 {
-  FileOptions opts(options);
+  CGMFileOptions opts(options);
 
   // Get parallel settings
   int parallel_mode;
-  FOErrorCode result = opts.match_option("PARALLEL", CGMparallelOptsNames, 
+  CGMFOErrorCode result = opts.match_option("PARALLEL", CGMparallelOptsNames, 
 					 parallel_mode);
   if (FO_FAILURE == result) {
     PRINT_ERROR( "Unexpected value for 'PARALLEL' option\n" );
@@ -215,7 +217,7 @@ CubitStatus ParallelGeomTool::load_file(const char *file_name,
 					std::vector<int> &partition_tag_vals, 
 					bool distrib,
 					std::vector<int> &pa_vec,
-					const FileOptions &opts,
+					const CGMFileOptions &opts,
 					const char* set_tag_name,
 					const int* set_tag_values,
 					const int num_set_tag_values,

@@ -1,17 +1,17 @@
-/**\file FileOptions.hpp
+/**\file CGMFileOptions.hpp
  *\copied from MOAB
  *\date 2009-06-11
  */
 
-#ifndef FILE_OPTIONS_HPP
-#define FILE_OPTIONS_HPP
+#ifndef CGM_FILE_OPTIONS_HPP
+#define CGM_FILE_OPTIONS_HPP
 
 #include <string>
 #include <vector>
 #include "CubitDefines.h"
 
 /* file option type */
-enum FOErrorCode
+enum CGMFOErrorCode
 {
   FO_SUCCESS = 0,
   FO_TYPE_OUT_OF_RANGE,
@@ -24,7 +24,7 @@ enum FOErrorCode
  * This is a utility class used by file-IO-related code to 
  * parse the options string passed to ParallelMeshTool::load_file
  */
-class FileOptions {
+class CGMFileOptions {
 public:
 
   /*\param options_string The concatenation of a list of 
@@ -33,12 +33,12 @@ public:
    *          the beginning of the string (semicolon followed by
    *          destired separator character.)
    */
-  FileOptions( const char* option_string );
+  CGMFileOptions( const char* option_string );
   
-  FileOptions( const FileOptions& copy );
-  FileOptions& operator=( const FileOptions& copy );
+  CGMFileOptions( const CGMFileOptions& copy );
+  CGMFileOptions& operator=( const CGMFileOptions& copy );
   
-  ~FileOptions();
+  ~CGMFileOptions();
   
   /**\brief Check for option with no value 
    *
@@ -48,7 +48,7 @@ public:
    *        - CUBIT_TYPE_OUT_OF_RANGE if options is found, but has value
    *        - CUBIT_ENTITY_NOT_FOUND if option is not found.
    */
-  FOErrorCode get_null_option( const char* name ) const;
+  CGMFOErrorCode get_null_option( const char* name ) const;
   
   /**\brief Check for option with an integer value.
    *
@@ -59,7 +59,7 @@ public:
    *        - CUBIT_TYPE_OUT_OF_RANGE if options is found, but does not have an integer value
    *        - CUBIT_ENTITY_NOT_FOUND if option is not found.
    */
-  FOErrorCode get_int_option( const char* name, int& value ) const;
+  CGMFOErrorCode get_int_option( const char* name, int& value ) const;
   
   /**\brief Check for option with a double value.
    *
@@ -70,7 +70,7 @@ public:
    *        - CUBIT_TYPE_OUT_OF_RANGE if options is found, but does not have a double value
    *        - CUBIT_ENTITY_NOT_FOUND if option is not found.
    */
-  FOErrorCode get_real_option( const char* name, double& value ) const;
+  CGMFOErrorCode get_real_option( const char* name, double& value ) const;
   
   /**\brief Check for option with any value.
    *
@@ -81,7 +81,7 @@ public:
    *        - CUBIT_TYPE_OUT_OF_RANGE if options is found, but does not have a value
    *        - CUBIT_ENTITY_NOT_FOUND if option is not found.
    */
-  FOErrorCode get_str_option( const char* name, std::string& value ) const;
+  CGMFOErrorCode get_str_option( const char* name, std::string& value ) const;
   
   /**\brief Check for option 
    *
@@ -90,7 +90,7 @@ public:
    *\param value The option value, or an empty string if no value.
    *\return CUBIT_SUCCESS or CUBIT_ENTITY_NOT_FOUND
    */
-  FOErrorCode get_option( const char* name, std::string& value ) const;
+  CGMFOErrorCode get_option( const char* name, std::string& value ) const;
   
   /**\brief Check the string value of an option
    *
@@ -104,7 +104,7 @@ public:
    *        CUBIT_ENTITY_NOT_FOUND if the option was not specified
    *        CUBIT_FAILURE if the option value is not in the input <code>values</code> array.
    */
-  FOErrorCode match_option( const char* name, const char* const* values, int& index ) const;
+  CGMFOErrorCode match_option( const char* name, const char* const* values, int& index ) const;
   
   /**\brief Check if an option matches a string value
    *
@@ -115,7 +115,7 @@ public:
    *        CUBIT_ENTITY_NOT_FOUND if the option was not specified
    *        CUBIT_FAILURE if the option value doesn't match the passed string/
    */
-  FOErrorCode match_option( const char* name, const char* value ) const;
+  CGMFOErrorCode match_option( const char* name, const char* value ) const;
   
   /**\brief Check for option for which the value is a list of ints
    *
@@ -130,7 +130,7 @@ public:
    *        - CUBIT_TYPE_OUT_OF_RANGE if options is found, but does not contain an ID list
    *        - CUBIT_ENTITY_NOT_FOUND if option is not found.
    */
-  FOErrorCode get_ints_option( const char* name, std::vector<int>& values) const;
+  CGMFOErrorCode get_ints_option( const char* name, std::vector<int>& values) const;
   
   /** number of options */
   inline unsigned size() const 
@@ -152,7 +152,7 @@ private:
    *\param value The option value, or an empty string if no value.
    *\return CUBIT_SUCCESS or CUBIT_ENTITY_NOT_FOUND
    */
-  FOErrorCode get_option( const char* name, const char*& value) const;
+  CGMFOErrorCode get_option( const char* name, const char*& value) const;
 
   char* mData;
   std::vector<const char*> mOptions;

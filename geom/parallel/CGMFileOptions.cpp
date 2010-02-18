@@ -1,9 +1,9 @@
-/**\file FileOptions.cpp
+/**\file CGMFileOptions.cpp
  *\ copied from MOAB
  *\date 2009-06-11
  */
 
-#include "FileOptions.hpp"
+#include "CGMFileOptions.hpp"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@ const char DEFAULT_SEPARATOR = ';';
 
 static inline bool strempty( const char* s ) { return !*s; }
 
-FileOptions::FileOptions( const char* str )
+CGMFileOptions::CGMFileOptions( const char* str )
   : mData(0)
 {
     // if option string is null, just return
@@ -42,7 +42,7 @@ FileOptions::FileOptions( const char* str )
   }
 }
 
-FileOptions::FileOptions( const FileOptions& copy ) :
+CGMFileOptions::CGMFileOptions( const CGMFileOptions& copy ) :
   mData(0), mOptions( copy.mOptions.size() )
 {
   if (!copy.mOptions.empty()) {
@@ -56,7 +56,7 @@ FileOptions::FileOptions( const FileOptions& copy ) :
   }
 }
 
-FileOptions& FileOptions::operator=( const FileOptions& copy )
+CGMFileOptions& CGMFileOptions::operator=( const CGMFileOptions& copy )
 {
   free( mData );
   mData = 0;
@@ -75,24 +75,24 @@ FileOptions& FileOptions::operator=( const FileOptions& copy )
   return *this;
 }
 
-FileOptions::~FileOptions()
+CGMFileOptions::~CGMFileOptions()
 {
   free( mData );
 }
 
-FOErrorCode FileOptions::get_null_option( const char* name ) const
+CGMFOErrorCode CGMFileOptions::get_null_option( const char* name ) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   return strempty(s) ? FO_SUCCESS : FO_TYPE_OUT_OF_RANGE;
 }
 
-FOErrorCode FileOptions::get_int_option( const char* name, int& value ) const
+CGMFOErrorCode CGMFileOptions::get_int_option( const char* name, int& value ) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   
@@ -114,11 +114,11 @@ FOErrorCode FileOptions::get_int_option( const char* name, int& value ) const
   return FO_SUCCESS;
 }
 
-FOErrorCode FileOptions::get_ints_option( const char* name, 
+CGMFOErrorCode CGMFileOptions::get_ints_option( const char* name, 
                                           std::vector<int>& values) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   
@@ -165,10 +165,10 @@ FOErrorCode FileOptions::get_ints_option( const char* name,
   return FO_SUCCESS;
 }
 
-FOErrorCode FileOptions::get_real_option ( const char* name, double& value ) const
+CGMFOErrorCode CGMFileOptions::get_real_option ( const char* name, double& value ) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   
@@ -185,10 +185,10 @@ FOErrorCode FileOptions::get_real_option ( const char* name, double& value ) con
   return FO_SUCCESS;
 }
 
-FOErrorCode FileOptions::get_str_option( const char* name, std::string& value ) const
+CGMFOErrorCode CGMFileOptions::get_str_option( const char* name, std::string& value ) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   if (strempty(s))
@@ -197,10 +197,10 @@ FOErrorCode FileOptions::get_str_option( const char* name, std::string& value ) 
   return FO_SUCCESS;
 }
 
-FOErrorCode FileOptions::get_option( const char* name, std::string& value ) const
+CGMFOErrorCode CGMFileOptions::get_option( const char* name, std::string& value ) const
 {
   const char* s;
-  FOErrorCode rval = get_option( name, s );
+  CGMFOErrorCode rval = get_option( name, s );
   if (FO_SUCCESS != rval)
     return rval;
   
@@ -208,7 +208,7 @@ FOErrorCode FileOptions::get_option( const char* name, std::string& value ) cons
   return FO_SUCCESS;
 }  
 
-FOErrorCode FileOptions::get_option( const char* name, const char*& value ) const
+CGMFOErrorCode CGMFileOptions::get_option( const char* name, const char*& value ) const
 {
   std::vector<const char*>::const_iterator i;
   for (i = mOptions.begin(); i != mOptions.end(); ++i) {
@@ -227,7 +227,7 @@ FOErrorCode FileOptions::get_option( const char* name, const char*& value ) cons
   return FO_ENTITY_NOT_FOUND;
 }
 
-FOErrorCode FileOptions::match_option( const char* name, 
+CGMFOErrorCode CGMFileOptions::match_option( const char* name, 
                                        const char* value ) const
 {
   int idx;
@@ -235,12 +235,12 @@ FOErrorCode FileOptions::match_option( const char* name,
   return match_option( name, array, idx );
 }
 
-FOErrorCode FileOptions::match_option( const char* name, 
+CGMFOErrorCode CGMFileOptions::match_option( const char* name, 
                                        const char* const* values, 
                                        int& index ) const
 {
   const char* optval;
-  FOErrorCode rval = get_option( name, optval );
+  CGMFOErrorCode rval = get_option( name, optval );
   if (FO_SUCCESS != rval)
     return rval;
   
@@ -253,7 +253,7 @@ FOErrorCode FileOptions::match_option( const char* name,
 }
 
 
-bool FileOptions::compare( const char* name, const char* option )
+bool CGMFileOptions::compare( const char* name, const char* option )
 {
   while (!strempty(name) && toupper(*name) == toupper(*option)) {
     ++name;
@@ -265,7 +265,7 @@ bool FileOptions::compare( const char* name, const char* option )
   return strempty(name) && (strempty(option) || *option == '=');
 }
 
-void FileOptions::get_options( std::vector<std::string>& list ) const
+void CGMFileOptions::get_options( std::vector<std::string>& list ) const
 {
   list.clear();
   list.resize( mOptions.size() );
@@ -290,12 +290,12 @@ void FileOptions::get_options( std::vector<std::string>& list ) const
 
 int main()
 {
-  FileOptions tool( "INT1=1;NUL1;STR1=ABC;DBL1=1.0;dbl2=2.0;DBL3=3.0;INT2=2;nul2;NUL3;INT3=3;str2=once upon a time;str3==fubar=;;" );
+  CGMFileOptions tool( "INT1=1;NUL1;STR1=ABC;DBL1=1.0;dbl2=2.0;DBL3=3.0;INT2=2;nul2;NUL3;INT3=3;str2=once upon a time;str3==fubar=;;" );
 
   std::string s;
   int i;
   double d;
-  FOErrorCodeyy rval;
+  CGMFOErrorCodeyy rval;
   
     // test basic get_option method without deleting entry
   rval = tool.get_option( "STR1", s );
@@ -392,7 +392,7 @@ int main()
   
     // test alternate separator
   
-  FileOptions tool2( ";+OPT1=ABC+OPT2=" );
+  CGMFileOptions tool2( ";+OPT1=ABC+OPT2=" );
   l = tool2.size();
   EQUAL( l, 2 );
   
@@ -411,19 +411,19 @@ int main()
     
     // test empty options string
     
-  FileOptions tool3( ";;;;" );
+  CGMFileOptions tool3( ";;;;" );
   e = tool3.empty();
   EQUAL( e, true );
   l = tool3.size();
   EQUAL( l, 0 );
   
-  FileOptions tool4(NULL);
+  CGMFileOptions tool4(NULL);
   e = tool4.empty();
   EQUAL( e, true );
   l = tool4.size();
   EQUAL( l, 0 );
   
-  FileOptions tool5(";+");
+  CGMFileOptions tool5(";+");
   e = tool5.empty();
   EQUAL( e, true );
   l = tool5.size();
@@ -431,7 +431,7 @@ int main()
   
     // test copy constructor
   
-  FileOptions tool6( tool2 );
+  CGMFileOptions tool6( tool2 );
   
   rval = tool6.get_option( "opt1", s );
   CHECK( rval );
@@ -445,7 +445,7 @@ int main()
   l = tool6.size();
   EQUAL( l, 2 );
   
-  FileOptions tool7( tool5 );
+  CGMFileOptions tool7( tool5 );
   e = tool7.empty();
   EQUAL( e, true );
   l = tool7.size();
@@ -453,7 +453,7 @@ int main()
   
     // test assignment operator
   
-  FileOptions tool8( tool2 );
+  CGMFileOptions tool8( tool2 );
   tool8 = tool;
   EQUAL( tool8.size(), tool.size() );
     

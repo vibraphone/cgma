@@ -23,7 +23,7 @@ libcubit_parallel_la_includedir = $(includedir)
 libcubit_parallel_la_SOURCES = \
     CGMProcConfig.cpp \
     CGMParallelComm.cpp \
-    FileOptions.cpp \
+    CGMFileOptions.cpp \
     ParallelGeomTool.cpp
 
 # The non-template headers
@@ -34,6 +34,6 @@ libcubit_parallel_la_include_HEADERS = \
     CGMmpi_config.h \
     CGMProcConfig.hpp \
     CGMParallelComm.hpp \
-    FileOptions.hpp \
+    CGMFileOptions.hpp \
     ParallelGeomTool.hpp
 
