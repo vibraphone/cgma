@@ -4,7 +4,7 @@
 #include <vector>
 #include "CubitDefines.h"
 #include "CGMParallelComm.hpp"
-#include "FileOptions.hpp"
+#include "CGMFileOptions.hpp"
 
 class ParallelGeomTool 
 {
@@ -28,7 +28,7 @@ public:
                         std::vector<int> &partition_tag_vals, 
                         bool distrib,
                         std::vector<int> &pa_vec,
-                        const FileOptions &opts,
+                        const CGMFileOptions &opts,
                         const char* set_tag_name,
                         const int* set_tag_values,
                         const int num_set_tag_values,
