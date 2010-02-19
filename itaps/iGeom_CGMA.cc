@@ -106,7 +106,9 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #include "CubitVector.hpp"
 
 #ifdef USE_MPI
+#ifdef build_OCC
 #include "ParallelGeomTool.hpp"
+#endif
 #endif
 
 #include "CGMApp.hpp"
@@ -355,6 +357,7 @@ void iGeom_load( iGeom_Instance instance,
   // parallel
   if (parallel) {
 #ifdef USE_MPI
+#ifdef build_OCC
     ParallelGeomTool pgt(NULL);
     CubitStatus status = pgt.load_file(name, options);
     if (CUBIT_SUCCESS != status) {
@@ -362,7 +365,8 @@ void iGeom_load( iGeom_Instance instance,
     }
 #else
     ERROR(iBase_NOT_SUPPORTED, "Parallel not enabled in this version.");
-#endif    
+#endif
+#endif
   }
   else {
     CubitStatus status = CUBIT_SUCCESS;
