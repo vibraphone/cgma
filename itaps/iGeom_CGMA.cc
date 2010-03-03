@@ -190,8 +190,8 @@ iGeom_fire_ray( const CubitVector& point,
                 DLIList<RefEntity*>& entities,
                 DLIList<double>& ray_params );
 
-static CubitStatus
-iGeom_get_point_containment( const CubitVector& pt, RefEntity*& entity );
+static RefEntity*
+iGeom_get_point_containment( const CubitVector& pt );
 
 static int iGeom_get_nonmanifold_sense( const BasicTopologyEntity* child,
                                         const BasicTopologyEntity* parent,
@@ -3162,8 +3162,8 @@ iGeom_getPntClsf (iGeom_Instance instance,
 {
   RefEntity** ptr = (RefEntity**)entity_handle;
   const CubitVector pt(x,y,z);
-  CubitStatus s = iGeom_get_point_containment( pt, *ptr );
-  RETURN( (s == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
+  *ptr = iGeom_get_point_containment( pt );
+  RETURN( iBase_SUCCESS );
 }
 
 void
@@ -3198,9 +3198,7 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
   for (int i = 0; i < count; ++i)
   {
     const CubitVector pt( *x, *y, *z );
-    CubitStatus s = iGeom_get_point_containment( pt, array[i] );
-    if (s != CUBIT_SUCCESS)
-      result = iBase_FAILURE;
+    array[i] = iGeom_get_point_containment( pt );
     x += step;
     y += step;
     z += step;
@@ -6447,72 +6445,100 @@ iGeom_fire_ray( const CubitVector& point,
   return CUBIT_SUCCESS;
 }
 
-static CubitStatus
-iGeom_get_point_containment( const CubitVector& pt, RefEntity*& entity )
+static RefEntity* point_classification( const CubitVector& pt, RefVertex* vtx )
 {
-  int i;
+  return (pt - vtx->coordinates()).length_squared() > GEOMETRY_RESABS*GEOMETRY_RESABS ? 0 : vtx;
+}
+
+static RefEntity* point_classification( const CubitVector& pt, RefEdge* edge )
+{
+  CubitVector closest;
+  edge->closest_point_trimmed( pt, closest );
+  if ((pt - closest).length_squared() > GEOMETRY_RESABS*GEOMETRY_RESABS)
+    return 0;
   
-  DLIList<RefVertex*> vertices;
-  RefEntityFactory::instance()->ref_vertices( vertices );
-  for (i = vertices.size(); i > 0; i--)
-  {
-    RefVertex* vtx = vertices.get_and_step();
-    if ((pt - vtx->coordinates()).length_squared() < GEOMETRY_RESABS*GEOMETRY_RESABS) {
-      entity = vtx;
-      return CUBIT_SUCCESS;
-    }
-  }
+  if (RefEntity* vtx = point_classification( pt, edge->start_vertex() ))
+    return vtx;
+  else if (RefEntity* vtx = point_classification( pt, edge->end_vertex() ))
+    return vtx;
+  else
+    return edge;
+}
+
+static RefEntity* point_classification( const CubitVector& pt, RefFace* face )
+{
+  CubitBox extents = face->bounding_box();
+  if (extents.distance_squared(pt) > GEOMETRY_RESABS*GEOMETRY_RESABS)
+    return 0;
+  
+  CubitVector closest;
+  face->find_closest_point_trimmed( pt, closest );
+  if ((pt - closest).length_squared() > GEOMETRY_RESABS*GEOMETRY_RESABS)
+    return 0;
   
   DLIList<RefEdge*> edges;
-  RefEntityFactory::instance()->ref_edges( edges );
+  face->ref_edges( edges );
   edges.last();
-  for (i = edges.size(); i > 0; --i)
-  {
-    switch( edges.step_and_get()->point_containment( pt ) ) {
-      case CUBIT_PNT_INSIDE:
-          //case CUBIT_PNT_ON:
-      case CUBIT_PNT_BOUNDARY:
-        entity = edges.get();
-        return CUBIT_SUCCESS;
-      default:
-        ;
-    }
-  }
+  for (int i = 0; i < edges.size(); ++i)
+    if (RefEntity* ent = point_classification( pt, edges.step_and_get() ))
+      return ent;
   
+  return face;
+}
+
+static RefEntity* point_classification( const CubitVector& pt, Body* body )
+{
+  CubitVector nonconst_pt(pt);
+  CubitPointContainment pc = body->point_containment( nonconst_pt );
+  if (CUBIT_PNT_INSIDE == pc) 
+    return body;
+  else if (CUBIT_PNT_BOUNDARY != pc)
+    return 0;
+  
+    // If we're here, then we're on the boundary.  
+    // Find which boundary entity we're on.
   DLIList<RefFace*> faces;
-  RefEntityFactory::instance()->ref_faces( faces );
+  body->ref_faces( faces );
   faces.last();
-  for (i = faces.size(); i > 0; --i)
-  {
-    switch( faces.step_and_get()->point_containment( pt ) ) {
-      case CUBIT_PNT_INSIDE:
-          //case CUBIT_PNT_ON:
-      case CUBIT_PNT_BOUNDARY:
-        entity = faces.get();
-        return CUBIT_SUCCESS;
-      default:
-        ;
-    }
-  }
+  for (int i = 0; i < faces.size(); ++i)
+    if (RefEntity* ent = point_classification( pt, faces.step_and_get() ))
+      return ent;
   
+    // We don't appear to be on any face.  Is the tolerance for
+    // Body::point_classification something other than GEOMETRY_RESABS??
+  return body;
+}
+
+
+
+static RefEntity*
+iGeom_get_point_containment( const CubitVector& pt )
+{
+  DLIList<RefEntity*> ents;
+  gqt->get_free_ref_entities( ents );
+  
+  ents.reset();
+  for (int i = 0; i < ents.size(); ++i)
+    if (RefVertex* vtx = dynamic_cast<RefVertex*>(ents.get_and_step()))
+      if (RefEntity* ent = point_classification( pt, vtx ))
+        return ent;
+  for (int i = 0; i < ents.size(); ++i)
+    if (RefEdge* edge = dynamic_cast<RefEdge*>(ents.get_and_step()))
+      if (RefEntity* ent = point_classification( pt, edge ))
+        return ent;
+  for (int i = 0; i < ents.size(); ++i)
+    if (RefFace* face = dynamic_cast<RefFace*>(ents.get_and_step()))
+      if (RefEntity* ent = point_classification( pt, face ))
+        return ent;
+        
   DLIList<Body*> bodies;
-  RefEntityFactory::instance()->bodies( bodies );
-  bodies.last();
-  for (i = bodies.size(); i > 0; --i)
-  {
-    CubitVector nonconst_pt(pt);
-    switch( bodies.step_and_get()->point_containment( nonconst_pt ) ) {
-      case CUBIT_PNT_INSIDE:
-          //case CUBIT_PNT_ON:
-      case CUBIT_PNT_BOUNDARY:
-        entity = dynamic_cast<RefVolume*>(bodies.get()->get_first_sense_entity_ptr()->get_basic_topology_entity_ptr());
-        return CUBIT_SUCCESS;
-      default:
-        ;
-    }
-  }
+  gqt->bodies( bodies );
+  bodies.reset();
+  for (int i = 0; i < bodies.size(); ++i)
+   if (RefEntity* ent = point_classification( pt, bodies.get_and_step() ))
+     return ent;
   
-  return CUBIT_FAILURE;
+  return 0;
 }
 
 static int iGeom_get_nonmanifold_sense( const BasicTopologyEntity* child,
