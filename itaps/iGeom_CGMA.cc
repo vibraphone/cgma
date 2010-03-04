@@ -3191,22 +3191,27 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
   const double *y = x + init;
   const double *z = y + init;
   
+  const bool allocated = !!*entity_handles;
   CHECK_SIZE( *entity_handles, iBase_EntityHandle, count );
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** array = (RefEntity**)*entity_handles;
   for (int i = 0; i < count; ++i)
   {
     const CubitVector pt( *x, *y, *z );
     array[i] = iGeom_get_point_containment( pt );
-    if (!array[i])
-      result = iBase_FAILURE;
+    if (!array[i]) {
+      if (allocated) {
+        free(*entity_handles);
+        *entity_handles_allocated = 0;
+      }
+      RETURN(iBase_FAILURE);
+    }
     x += step;
     y += step;
     z += step;
   }
   
-  RETURN(result);
+  RETURN(iBase_SUCCESS);
 }
 
 /**
