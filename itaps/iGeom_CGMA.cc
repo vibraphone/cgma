@@ -42,33 +42,21 @@ const bool debug = false;
 #define ARRAY_INOUT(b) \
   b, b ## _allocated, b ## _size  
 
-#define CHECK_SIZE(array, type, this_size)  \
-  if (NULL != array && 0 != array ## _allocated && array ## _allocated < (this_size)) {\
-    ERROR(iBase_MEMORY_ALLOCATION_FAILED, \
-          "Allocated array not large enough to hold returned contents.");\
-  }\
-  if (NULL == array) {\
-    array = (type*)malloc((this_size)*sizeof(type));\
-    array ## _allocated=(this_size);\
-    if (NULL == array) {ERROR(iBase_MEMORY_ALLOCATION_FAILED, \
-          "Couldn't allocate array."); }\
-  }; \
-  array ## _size = (this_size);
+// Check the array size, and allocate the array if necessary.
+// Free the array upon leaving scope unless KEEP_ARRAY
+// is invoked.
+#define ALLOC_CHECK_ARRAY(array, this_size) \
+  iGeomArrayManager array ## _manager ( reinterpret_cast<void**>(array), *(array ## _allocated), *(array ## _size), this_size, sizeof(**array), err ); \
+  if (iBase_SUCCESS != *err) return
 
-// TAG_CHECK_SIZE is like CHECK_SIZE except it checks for and makes the allocated memory
-// size a multiple of sizeof(void*), and the pointer is assumed to be type char*
-#define TAG_CHECK_SIZE(array, allocated, size)  \
-  if (NULL != array && 0 != array ## _allocated && array ## _allocated < (size)) {\
-    ERROR(iBase_MEMORY_ALLOCATION_FAILED, \
-          "Allocated array not large enough to hold returned contents.");\
-  }\
-  if (NULL == array) {\
-    allocated=(size); \
-    if (allocated%sizeof(void*) != 0) allocated=((size)/sizeof(void*)+1)*sizeof(void*);\
-    array = (char*)malloc(allocated); \
-    if (NULL == array) {ERROR(iBase_MEMORY_ALLOCATION_FAILED, \
-          "Couldn't allocate array."); }\
-  }
+#define KEEP_ARRAY(array) \
+  array ## _manager .keep_array()
+
+// Check the array size, and allocate the array if necessary.
+// Do NOT free the array upon leaving scope.
+#define ALLOC_CHECK_ARRAY_NOFAIL(array, this_size) \
+  ALLOC_CHECK_ARRAY(array, this_size); KEEP_ARRAY(array)
+
 #define TAG_HANDLE(handle) reinterpret_cast<long>(handle)
 
 #define ENTITY_HANDLE(handle) reinterpret_cast<RefEntity*>(handle)
@@ -124,6 +112,53 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #define gmt GeometryModifyTool::instance()
 
 const char *iGeom_entity_type_names[] = {"vertex", "curve", "surface", "body"};
+
+
+// Implement RAII pattern for allocated arrays
+class iGeomArrayManager
+{
+  void** arrayPtr;
+
+public:
+
+
+  iGeomArrayManager( void** array_ptr,
+                     int& array_allocated_space,
+                     int& array_size,
+                     int count,
+                     int val_size,
+                     int* err ) : arrayPtr(0)
+  {
+    if (!*array_ptr) {
+      *array_ptr = malloc(val_size * count);
+      array_allocated_space = array_size = count;
+      if (!*array_ptr) {
+        ERROR(iBase_MEMORY_ALLOCATION_FAILED, "Couldn't allocate array.");
+      }
+      arrayPtr = array_ptr;
+    }
+    else {
+      array_size = count;
+      if (array_allocated_space < count) {
+        ERROR(iBase_BAD_ARRAY_DIMENSION, 
+          "Allocated array not large enough to hold returned contents.");
+      }
+    }
+    RETURN(iBase_SUCCESS);
+  }
+  
+  ~iGeomArrayManager() 
+  {
+    if (arrayPtr) {
+      free(*arrayPtr);
+      *arrayPtr = 0;
+    }
+  }
+  
+  void keep_array()
+    { arrayPtr = 0; }
+};
+
 
 // declare private-type functions here, so they aren't visible outside
 // this implementation file
@@ -585,10 +620,11 @@ iGeom_getNextEntArrIter(iGeom_Instance instance,
                         )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(entArr_iterator);
-  CHECK_SIZE(*entity_handles, iBase_EntityHandle, iterator->size());
   *has_data = !iterator->at_end();
-  if (has_data)
+  if (has_data) {
+    ALLOC_CHECK_ARRAY_NOFAIL(entity_handles, iterator->size());
     iterator->next( (RefEntity**)*entity_handles, *entity_handles_size );
+  }
   RETURN(iBase_SUCCESS);
 }
 
@@ -692,8 +728,7 @@ iGeom_getChldn (iGeom_Instance instance,
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
   TM->get_pc_groups(const_cast<RefGroup*>(this_grp), 1, num_hops, group_ptrs);
-  CHECK_SIZE(*entity_set_handles, iBase_EntitySetHandle, 
-             (int)group_ptrs.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(entity_set_handles, group_ptrs.size());
 
   iBase_EntitySetHandle* ent_arr = reinterpret_cast<iBase_EntitySetHandle*>(&group_ptrs[0]);
   std::copy( ent_arr, ent_arr + group_ptrs.size(), *entity_set_handles);
@@ -717,8 +752,7 @@ iGeom_getPrnts (iGeom_Instance instance,
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
   TM->get_pc_groups(const_cast<RefGroup*>(this_grp), 0, num_hops, group_ptrs);
-  CHECK_SIZE(*entity_set_handles, iBase_EntitySetHandle, 
-             (int)group_ptrs.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(entity_set_handles, group_ptrs.size());
 
   iBase_EntitySetHandle* ent_arr = reinterpret_cast<iBase_EntitySetHandle*>(&group_ptrs[0]);
   std::copy( ent_arr, ent_arr + group_ptrs.size(), *entity_set_handles);
@@ -841,7 +875,7 @@ iGeom_getEntities (iGeom_Instance instance,
     if (iBase_SUCCESS != *err)
       return;
     
-    CHECK_SIZE(*gentity_handles, iBase_EntityHandle, dim_entities.size());
+    ALLOC_CHECK_ARRAY_NOFAIL(gentity_handles, dim_entities.size());
     dim_entities.copy_to((RefEntity**)*gentity_handles);
     RETURN(iBase_SUCCESS);
   }  
@@ -924,7 +958,7 @@ iGeom_getArrType (iGeom_Instance instance,
                   int* err)
 {
     // go through each entity and look up its dimension
-  CHECK_SIZE(*gtype, int, gentity_handles_size);
+  ALLOC_CHECK_ARRAY_NOFAIL(gtype, gentity_handles_size);
 
   const RefEntity **tmp_handles = (const RefEntity**)(gentity_handles);
   
@@ -963,7 +997,7 @@ iGeom_getEntAdj (iGeom_Instance instance,
   iGeom_get_adjacent_entities(tmp_hndl, to_dimension, tmp_ents, err);
   if (iBase_SUCCESS != *err) return;
 
-  CHECK_SIZE(*adj_gentities, iBase_EntityHandle, (int) tmp_ents.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(adj_gentities, tmp_ents.size());
   tmp_ents.copy_to((RefEntity**)*adj_gentities);
   RETURN(iBase_SUCCESS);
 }
@@ -981,7 +1015,7 @@ iGeom_getArrAdj(iGeom_Instance instance,
                 int *offset_size,
                 int* err)
 {
-  CHECK_SIZE(*offset, int, entity_handles_size+1);
+  ALLOC_CHECK_ARRAY(offset, entity_handles_size+1);
   DLIList<RefEntity*> temp_list, total_list;
   for (int i = 0; i < entity_handles_size; ++i) {
     (*offset)[i] = total_list.size();
@@ -992,8 +1026,9 @@ iGeom_getArrAdj(iGeom_Instance instance,
   }
   (*offset)[entity_handles_size] = total_list.size();
 
-  CHECK_SIZE(*adj_entity_handles, iBase_EntityHandle, total_list.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(adj_entity_handles, total_list.size());
   total_list.copy_to((RefEntity**)*adj_entity_handles);
+  KEEP_ARRAY(offset);
   RETURN(iBase_SUCCESS);
 }
   
@@ -1037,7 +1072,7 @@ iGeom_getEnt2ndAdj (iGeom_Instance instance,
 
   to_ents.uniquify_unordered();
 
-  CHECK_SIZE(*adjacent_gentities, iBase_EntityHandle, (int) to_ents.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(adjacent_gentities, to_ents.size());
   to_ents.copy_to((RefEntity**)*adjacent_gentities);
 
   RETURN(iBase_SUCCESS);
@@ -1057,7 +1092,7 @@ iGeom_getArr2ndAdj(iGeom_Instance instance,
                    int *offset_size,
                    int *err)
 {
-  CHECK_SIZE(*offset, int, entity_handles_size+1);
+  ALLOC_CHECK_ARRAY(offset, entity_handles_size+1);
   DLIList<RefEntity*> bridge_list, temp_list, entity_list, total_list;
    
   for (int i = 0; i < entity_handles_size; ++i) {
@@ -1078,8 +1113,9 @@ iGeom_getArr2ndAdj(iGeom_Instance instance,
   }
   (*offset)[entity_handles_size] = total_list.size();
 
-  CHECK_SIZE(*adj_entity_handles, iBase_EntityHandle, total_list.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(adj_entity_handles, total_list.size());
   total_list.copy_to((RefEntity**)*adj_entity_handles);
+  KEEP_ARRAY(offset);
   RETURN(iBase_SUCCESS);
 }
 
@@ -1139,7 +1175,7 @@ iGeom_isArrAdj (iGeom_Instance instance,
     RETURN(iBase_INVALID_ENTITY_COUNT);
   }
   
-  CHECK_SIZE(*is_adjacent_info, int, count);
+  ALLOC_CHECK_ARRAY_NOFAIL(is_adjacent_info, count);
   for (int i = 0; i < count; ++i)
   {
     TopologyEntity* ent1 = dynamic_cast<TopologyEntity*>(*list_1_iter);
@@ -1841,7 +1877,7 @@ iGeom_getArrClosestPt (iGeom_Instance instance,
   else {
     ERROR( iBase_INVALID_ENTITY_COUNT, "Mismatched array sizes" );
   }
-  CHECK_SIZE( *on_coordinates, double, 3*count );
+  ALLOC_CHECK_ARRAY( on_coordinates, 3*count );
   
   const double *near_x, *near_y, *near_z;
   double *on_x, *on_y, *on_z;
@@ -1888,6 +1924,7 @@ iGeom_getArrClosestPt (iGeom_Instance instance,
     ERROR(iBase_FAILURE, "Problems getting closest point for some entity.");
   }
 
+  KEEP_ARRAY(on_coordinates);
   RETURN(iBase_SUCCESS);
 }
 
@@ -1965,8 +2002,8 @@ iGeom_getArrNrmlPlXYZ (iGeom_Instance instance,
   else {
     ERROR( iBase_INVALID_ENTITY_COUNT, "Mismatched array sizes" );
   }
-  CHECK_SIZE( *on_coordinates, double, 3*count );
-  CHECK_SIZE( *normals, double, 3*count );
+  ALLOC_CHECK_ARRAY( on_coordinates, 3*count );
+  ALLOC_CHECK_ARRAY( normals, 3*count );
   
   const double *near_x, *near_y, *near_z;
   double *on_x, *on_y, *on_z;
@@ -2024,6 +2061,8 @@ iGeom_getArrNrmlPlXYZ (iGeom_Instance instance,
     ERROR(iBase_FAILURE, "Problems getting closest point for some entity.");
   }
 
+  KEEP_ARRAY(on_coordinates);
+  KEEP_ARRAY(normals);
   RETURN(iBase_SUCCESS);
 }
 
@@ -2096,7 +2135,7 @@ iGeom_getArrNrmlXYZ (iGeom_Instance instance,
   }
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *normals, double, 3*count );
+  ALLOC_CHECK_ARRAY( normals, 3*count );
   
   const double *coord_x, *coord_y, *coord_z;
   double *norm_x, *norm_y, *norm_z;
@@ -2121,14 +2160,12 @@ iGeom_getArrNrmlXYZ (iGeom_Instance instance,
     norm_step = 3;
   }
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** entities = (RefEntity**)(gentity_handles);
   for (int i = 0; i < count; ++i)
   {
     RefFace* face = dynamic_cast<RefFace*>(*entities);
     if (NULL == face) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "Entities passed into gentityNormal must be faces.");
-      result = iBase_INVALID_ENTITY_TYPE;
     }
     else {
       CubitVector normal, coords( *coord_x, *coord_y, *coord_z );
@@ -2144,7 +2181,8 @@ iGeom_getArrNrmlXYZ (iGeom_Instance instance,
     norm_z += norm_step;
   }
 
-  RETURN(result);
+  KEEP_ARRAY(normals);
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -2217,7 +2255,7 @@ iGeom_getArrTgntXYZ (iGeom_Instance instance,
   }
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *tangents, double, 3*count );
+  ALLOC_CHECK_ARRAY( tangents, 3*count );
   
   const double *coord_x, *coord_y, *coord_z;
   double *tan_x, *tan_y, *tan_z;
@@ -2264,6 +2302,7 @@ iGeom_getArrTgntXYZ (iGeom_Instance instance,
     tan_z += tan_step;
   }
 
+  KEEP_ARRAY(tangents);
   RETURN(iBase_SUCCESS);
 }
 
@@ -2372,8 +2411,8 @@ iGeom_getEntArrCvtrXYZ(iGeom_Instance instance,
     }
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *cvtr_1, double, 3*count );
-  CHECK_SIZE( *cvtr_2, double, have_surfs ? 3*count : 0 );
+  ALLOC_CHECK_ARRAY( cvtr_1, 3*count );
+  ALLOC_CHECK_ARRAY( cvtr_2, have_surfs ? 3*count : 0 );
   
   const double *coord_x, *coord_y, *coord_z;
   double *c1x, *c1y, *c1z, *c2x, *c2y, *c2z;
@@ -2441,7 +2480,12 @@ iGeom_getEntArrCvtrXYZ(iGeom_Instance instance,
     c2z += cvtr_step;
   }
   
-  RETURN( (result == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
+  if (result == CUBIT_FAILURE)
+    RETURN(iBase_FAILURE);
+  
+  KEEP_ARRAY( cvtr_1 );
+  KEEP_ARRAY( cvtr_2 );
+  RETURN( iBase_SUCCESS );
 }
 
 
@@ -2559,9 +2603,9 @@ iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
   }
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *on_coords, double, 3*count );
-  CHECK_SIZE( *tangents, double, 3*count );
-  CHECK_SIZE( *curvatures, double, 3*count );
+  ALLOC_CHECK_ARRAY( on_coords, 3*count );
+  ALLOC_CHECK_ARRAY( tangents, 3*count );
+  ALLOC_CHECK_ARRAY( curvatures, 3*count );
   
   const double *coord_x, *coord_y, *coord_z;
   double *on_x, *on_y, *on_z;
@@ -2606,7 +2650,6 @@ iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
     RefEdge* edge = dynamic_cast<RefEdge*>(*ent_iter);
     if (!edge) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "Non-edge input handle.");
-      result = iBase_INVALID_ENTITY_TYPE;
     }
     else {
       const CubitVector coords( *coord_x, *coord_y, *coord_z );
@@ -2634,6 +2677,9 @@ iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
     curv_z += on_step;
   }
   
+  KEEP_ARRAY( on_coords );
+  KEEP_ARRAY( tangents );
+  KEEP_ARRAY( curvatures );
   RETURN(result);
 }
                        
@@ -2684,10 +2730,10 @@ iGeom_getArrFcEvalXYZ (iGeom_Instance instance,
   }
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *on_coords, double, 3*count );
-  CHECK_SIZE( *normals, double, 3*count );
-  CHECK_SIZE( *curvatures_1, double, 3*count );
-  CHECK_SIZE( *curvatures_2, double, 3*count );
+  ALLOC_CHECK_ARRAY( on_coords, 3*count );
+  ALLOC_CHECK_ARRAY( normals, 3*count );
+  ALLOC_CHECK_ARRAY( curvatures_1, 3*count );
+  ALLOC_CHECK_ARRAY( curvatures_2, 3*count );
   
   const double *coord_x, *coord_y, *coord_z;
   double *on_x, *on_y, *on_z;
@@ -2772,6 +2818,10 @@ iGeom_getArrFcEvalXYZ (iGeom_Instance instance,
     curv2_z += on_step;
   }
   
+  KEEP_ARRAY( on_coords );
+  KEEP_ARRAY( normals );
+  KEEP_ARRAY( curvatures_1 );
+  KEEP_ARRAY( curvatures_2 );
   RETURN(result);
 }
 
@@ -2794,7 +2844,7 @@ iGeom_measure( iGeom_Instance instance,
   RefEntity **handle_array = (RefEntity**)(gentity_handles);
 
     // check or pre-allocate the measure arrays
-  CHECK_SIZE(*measures, double, gentity_handles_size);
+  ALLOC_CHECK_ARRAY_NOFAIL(measures, gentity_handles_size);
   for (int i = 0; i < gentity_handles_size; i++)
     (*measures)[i] = handle_array[i]->measure();
   
@@ -2879,8 +2929,8 @@ iGeom_getArrBoundBox (iGeom_Instance instance,
                       int* err)
 {
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE(*min_corner, double, 3*gentity_handles_size);
-  CHECK_SIZE(*max_corner, double, 3*gentity_handles_size);
+  ALLOC_CHECK_ARRAY(min_corner, 3*gentity_handles_size);
+  ALLOC_CHECK_ARRAY(max_corner, 3*gentity_handles_size);
   
   size_t step, init;
   if (storage_order == iBase_BLOCKED) {
@@ -2918,6 +2968,8 @@ iGeom_getArrBoundBox (iGeom_Instance instance,
     max_z += step;
   }
 
+  KEEP_ARRAY(min_corner);
+  KEEP_ARRAY(max_corner);
   RETURN(result);
 }
 
@@ -2957,7 +3009,7 @@ iGeom_getVtxArrCoords (iGeom_Instance instance,
   const RefEntity **handle_array = (const RefEntity**)(gentity_handles);
 
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE(*coordinates, double, 3*gentity_handles_size);
+  ALLOC_CHECK_ARRAY(coordinates, 3*gentity_handles_size);
   
   CubitVector dumvec;
   const RefVertex *this_vertex;
@@ -2977,14 +3029,10 @@ iGeom_getVtxArrCoords (iGeom_Instance instance,
     step = 3;
   }
 
-  iBase_ErrorType result = iBase_SUCCESS;
-  
   for (int i = 0; i < gentity_handles_size; i++) {
     this_vertex = dynamic_cast<const RefVertex*>(handle_array[i]);
     if (NULL == this_vertex) {
       ERROR(iBase_INVALID_ENTITY_TYPE, "Entities passed into getGvertexCoordinates must be vertices.");
-      //result = iBase_INVALID_ENTITY_TYPE;
-      //continue;
     }
     else {
       dumvec = this_vertex->coordinates();
@@ -2995,7 +3043,8 @@ iGeom_getVtxArrCoords (iGeom_Instance instance,
     }
   }
 
-  RETURN(result);
+  KEEP_ARRAY(coordinates);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -3025,9 +3074,9 @@ iGeom_getPntRayIntsct( iGeom_Instance instance,
   if (status != CUBIT_SUCCESS)
     RETURN(iBase_FAILURE);
   
-  CHECK_SIZE( *intersect_entity_handles, iBase_EntityHandle, entities.size() );
-  CHECK_SIZE( *intersect_coords, double, 3*ray_params.size() );
-  CHECK_SIZE( *param_coords, double, ray_params.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( intersect_entity_handles, entities.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( intersect_coords, 3*ray_params.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( param_coords, ray_params.size() );
   
   size_t init, step;
   if (storage_order == iBase_BLOCKED) {
@@ -3082,7 +3131,7 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
   }
   
   const int count = points_size / 3;
-  CHECK_SIZE( *offset, int, count );
+  ALLOC_CHECK_ARRAY( offset, count );
   
   const double *px, *py, *pz, *dx, *dy, *dz;
   size_t init, step;
@@ -3102,7 +3151,6 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
   dy = dx + init;
   dz = dy + init;
   
-  CubitStatus result = CUBIT_SUCCESS;
   DLIList<RefEntity*> entities, tmp_entities;
   DLIList<double> params, tmp_params;
   std::vector<CubitVector> coords;
@@ -3113,16 +3161,15 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
     (*offset)[i] = params.size();
     const CubitVector point(*px, *py, *pz), dir(*dx, *dy, *dz);
     CubitStatus s = iGeom_fire_ray( point, dir, tmp_entities, tmp_params );
-    if (s == CUBIT_SUCCESS) {
-      entities += tmp_entities;
-      params += tmp_params;
-      tmp_params.reset();
-      for (int j = tmp_params.size(); j > 0; --j) 
-        coords.push_back( tmp_params.get_and_step() * dir + point );
+    if (CUBIT_SUCCESS != s) {
+      RETURN(iBase_FAILURE);
     }
-    else {
-      result = CUBIT_FAILURE;
-    }
+
+    entities += tmp_entities;
+    params += tmp_params;
+    tmp_params.reset();
+    for (int j = tmp_params.size(); j > 0; --j) 
+      coords.push_back( tmp_params.get_and_step() * dir + point );
     
     px += step;
     py += step;
@@ -3132,9 +3179,9 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
     dz += step;
   }
   
-  CHECK_SIZE( *intersect_entity_handles, iBase_EntityHandle, entities.size() );
-  CHECK_SIZE( *intersect_coords, double, (int)coords.size() );
-  CHECK_SIZE( *param_coords, double, (int)params.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( intersect_entity_handles, entities.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( intersect_coords, coords.size() );
+  ALLOC_CHECK_ARRAY_NOFAIL( param_coords, params.size() );
   entities.copy_to( (RefEntity**)*intersect_entity_handles );
   params.copy_to( *param_coords );
   
@@ -3149,7 +3196,8 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
     z += step;
   }
   
-  RETURN( (result == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
+  KEEP_ARRAY(offset);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -3191,8 +3239,7 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
   const double *y = x + init;
   const double *z = y + init;
   
-  const bool allocated = !!*entity_handles;
-  CHECK_SIZE( *entity_handles, iBase_EntityHandle, count );
+  ALLOC_CHECK_ARRAY( entity_handles, count );
   
   RefEntity** array = (RefEntity**)*entity_handles;
   for (int i = 0; i < count; ++i)
@@ -3200,10 +3247,6 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
     const CubitVector pt( *x, *y, *z );
     array[i] = iGeom_get_point_containment( pt );
     if (!array[i]) {
-      if (allocated) {
-        free(*entity_handles);
-        *entity_handles_allocated = 0;
-      }
       RETURN(iBase_FAILURE);
     }
     x += step;
@@ -3211,6 +3254,7 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
     z += step;
   }
   
+  KEEP_ARRAY(entity_handles);
   RETURN(iBase_SUCCESS);
 }
 
@@ -3289,7 +3333,7 @@ iGeom_getArrNrmlSense(iGeom_Instance instance,
   
   RefEntity** face_iter = (RefEntity**)faces;
   RefEntity** region_iter = (RefEntity**)regions;
-  CHECK_SIZE( *senses, int, count );
+  ALLOC_CHECK_ARRAY( senses, count );
   for (int i = 0; i < count; ++i) {
     RefFace *face_ent = dynamic_cast<RefFace*>(*face_iter);
     if (NULL == face_ent) {
@@ -3323,6 +3367,7 @@ iGeom_getArrNrmlSense(iGeom_Instance instance,
     region_iter += regions_step;
   }
   
+  KEEP_ARRAY(senses);
   RETURN(iBase_SUCCESS);
 }
 
@@ -3386,7 +3431,7 @@ iGeom_getEgFcArrSense(iGeom_Instance instance,
   
   RefEntity** face_iter = (RefEntity**)faces;
   RefEntity** edge_iter = (RefEntity**)edges;
-  CHECK_SIZE( *senses, int, count );
+  ALLOC_CHECK_ARRAY( senses, count );
   for (int i = 0; i < count; ++i) {
     RefEdge *edge_ent = dynamic_cast<RefEdge*>(*edge_iter);
     if (NULL == edge_ent) {
@@ -3404,6 +3449,7 @@ iGeom_getEgFcArrSense(iGeom_Instance instance,
     edge_iter += edges_step;
   }
   
+  KEEP_ARRAY(senses);
   RETURN(iBase_SUCCESS);
 }
 
@@ -3468,7 +3514,7 @@ iGeom_getEgVtxArrSense (iGeom_Instance instance,
   else
     count = end_vertices_size;
     
-  CHECK_SIZE( *senses, int, count );
+  ALLOC_CHECK_ARRAY( senses, count );
   
   RefEntity** edge_iter = (RefEntity**)edges;
   RefEntity** start_iter = (RefEntity**)start_vertices;
@@ -3489,6 +3535,7 @@ iGeom_getEgVtxArrSense (iGeom_Instance instance,
     end_iter += end_step;
   }
   
+  KEEP_ARRAY(senses);
   RETURN(iBase_SUCCESS);
 }
   
@@ -3558,7 +3605,7 @@ iGeom_getEntSets (iGeom_Instance instance,
     CAST_LIST(tmp_ents, groups, RefGroup);
   }
   
-  CHECK_SIZE(*contained_entity_set_handles, iBase_EntitySetHandle, groups.size());
+  ALLOC_CHECK_ARRAY_NOFAIL(contained_entity_set_handles, groups.size());
 
   groups.copy_to(*SET_HANDLE_ARRAY_PTR(contained_entity_set_handles));
   
@@ -3750,14 +3797,16 @@ void iGeom_isEntArrContained( iGeom_Instance instance,
                       /*out*/ int* err )
 {
     // go through each entity and look up its dimension
-  CHECK_SIZE(*is_contained, int, num_entity_handles);
-  *is_contained_size = num_entity_handles;
+  ALLOC_CHECK_ARRAY(is_contained, num_entity_handles);
 
-  *err = iBase_SUCCESS;
-  for (int i = 0; i < num_entity_handles && iBase_SUCCESS == *err; ++i) 
+  for (int i = 0; i < num_entity_handles; ++i) {
     iGeom_isEntContained( instance, containing_set, entity_handles[i], (*is_contained)+i, err );
+    if (iBase_SUCCESS != *err)
+      return;
+  }
 
-  RETURN(*err);
+  KEEP_ARRAY(is_contained);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -3878,7 +3927,7 @@ iGeom_getArrTolerance (iGeom_Instance instance,
                        int *tolerances_size,
                        int* err)
 {
-  CHECK_SIZE(*tolerances, double, gentity_handles_size);
+  ALLOC_CHECK_ARRAY_NOFAIL(tolerances, gentity_handles_size);
   double dum_abs_tol = gqt->get_sme_resabs_tolerance();
   for (int i = 0; i < gentity_handles_size; i++) {
     (*tolerances)[i] = dum_abs_tol;
@@ -3918,7 +3967,7 @@ iGeom_isArrParametric (iGeom_Instance instance,
                        int *is_parametric_size,
                        int* err)
 {
-  CHECK_SIZE( *is_parametric, int, entity_handles_size );
+  ALLOC_CHECK_ARRAY_NOFAIL( is_parametric, entity_handles_size );
   RefEntity** const ent_array = (RefEntity**)entity_handles;
   for (int i = 0; i < entity_handles_size; ++i)
     (*is_parametric)[i] = iGeom_is_parametric( ent_array[i] );
@@ -3986,7 +4035,7 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
 
-  CHECK_SIZE( *coordinates, double, 3*count );
+  ALLOC_CHECK_ARRAY( coordinates, 3*count );
     
   const double *u, *v;
   double *x, *y, *z;
@@ -4025,6 +4074,7 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
     z += coord_step;
   }
   
+  KEEP_ARRAY(coordinates);
   RETURN(iBase_SUCCESS);
 }
 
@@ -4081,7 +4131,7 @@ iGeom_getArrUtoXYZ (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
     
-  CHECK_SIZE( *coordinates, double, 3*count );
+  ALLOC_CHECK_ARRAY( coordinates, 3*count );
   
   const double *u_iter;
   double *x, *y, *z;
@@ -4119,6 +4169,7 @@ iGeom_getArrUtoXYZ (iGeom_Instance instance,
     z += coord_step;
   }
   
+  KEEP_ARRAY(coordinates);
   RETURN(result);
 }
 
@@ -4184,7 +4235,7 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
 
-  CHECK_SIZE( *uv, double, 2*count );
+  ALLOC_CHECK_ARRAY( uv, 2*count );
 
   double *u, *v;
   const double *x, *y, *z;
@@ -4205,7 +4256,6 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
     uv_step = 2;
   }
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** ent = (RefEntity**)gentity_handles;
   for (int i = 0; i < count; ++i) {
     RefFace* face = dynamic_cast<RefFace*>(*ent);
@@ -4216,7 +4266,7 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
     CubitVector xyz( *x, *y, *z );
     CubitStatus s = face->u_v_from_position( xyz, *u, *v );
     if (CUBIT_SUCCESS != s)
-      result = iBase_FAILURE;
+      RETURN(iBase_FAILURE);
     
     ent += ent_step;
     u += uv_step;
@@ -4226,7 +4276,8 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
     z += coord_step;
   }
   
-  RETURN(result);
+  KEEP_ARRAY(uv);
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -4296,7 +4347,7 @@ iGeom_getArrXYZtoU (iGeom_Instance instance,
     coord_step *= 3;
   }
   
-  CHECK_SIZE( *u, double, count );
+  ALLOC_CHECK_ARRAY( u, count );
   
   RefEntity** ent = (RefEntity**)gentity_handles;
   for (int i = 0; i < count; ++i) {
@@ -4314,6 +4365,7 @@ iGeom_getArrXYZtoU (iGeom_Instance instance,
     z += coord_step;
   }
   
+  KEEP_ARRAY(u);
   RETURN(iBase_SUCCESS);
 }
 
@@ -4398,7 +4450,7 @@ iGeom_getArrXYZtoUVHint (iGeom_Instance instance,
     uv_step = 2;
   }
   
-  CHECK_SIZE( *uv, double, 2*count );
+  ALLOC_CHECK_ARRAY( uv, 2*count );
   
   RefEntity** ent = (RefEntity**)gentity_handles;
   for (int i = 0; i < count; ++i) {
@@ -4418,6 +4470,7 @@ iGeom_getArrXYZtoUVHint (iGeom_Instance instance,
     z += coord_step;
   }
   
+  KEEP_ARRAY(uv);
   RETURN(iBase_SUCCESS);
 }
 
@@ -4478,8 +4531,8 @@ iGeom_getArrUVRange (iGeom_Instance instance,
                      int *uv_max_size,
                      int* err)
 {
-  CHECK_SIZE(*uv_min, double, 2*gentity_handles_size);
-  CHECK_SIZE(*uv_max, double, 2*gentity_handles_size);
+  ALLOC_CHECK_ARRAY(uv_min, 2*gentity_handles_size);
+  ALLOC_CHECK_ARRAY(uv_max, 2*gentity_handles_size);
   
   size_t init, step;
   if (storage_order == iBase_BLOCKED) {
@@ -4496,7 +4549,6 @@ iGeom_getArrUVRange (iGeom_Instance instance,
   double *u_max = *uv_max;
   double *v_max = u_max + init;
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** entities = (RefEntity**)gentity_handles;
   for (int i = 0; i < gentity_handles_size; ++i) {
     RefFace* face = dynamic_cast<RefFace*>(entities[i]);
@@ -4506,8 +4558,9 @@ iGeom_getArrUVRange (iGeom_Instance instance,
     
     CubitBoolean r1 = face->get_param_range_U(*u_min, *u_max);
     CubitBoolean r2 = face->get_param_range_V(*v_min, *v_max);
-    if (!(r1 && r2))
-      result = iBase_FAILURE;
+    if (!(r1 && r2)) {
+      RETURN(iBase_FAILURE);
+    }
     
     u_min += step;
     v_min += step;
@@ -4515,7 +4568,9 @@ iGeom_getArrUVRange (iGeom_Instance instance,
     v_max += step;
   }
   
-  RETURN(result);
+  KEEP_ARRAY(uv_min);
+  KEEP_ARRAY(uv_max);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -4530,10 +4585,9 @@ iGeom_getArrURange (iGeom_Instance instance,
                     int *u_max_size,
                     int* err)
 {
-  CHECK_SIZE(*u_min, double, gentity_handles_size);
-  CHECK_SIZE(*u_max, double, gentity_handles_size);
+  ALLOC_CHECK_ARRAY(u_min, gentity_handles_size);
+  ALLOC_CHECK_ARRAY(u_max, gentity_handles_size);
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** entities = (RefEntity**)gentity_handles;
   for (int i = 0; i < gentity_handles_size; ++i) {
     RefEdge* edge = dynamic_cast<RefEdge*>(entities[i]);
@@ -4542,11 +4596,14 @@ iGeom_getArrURange (iGeom_Instance instance,
     }
     
     CubitBoolean r1 = edge->get_param_range((*u_min)[i], (*u_max)[i]);
-    if (!r1)
-      result = iBase_FAILURE;
+    if (!r1) {
+      RETURN(iBase_FAILURE);
+    }
   }
   
-  RETURN(result);
+  KEEP_ARRAY(u_min);
+  KEEP_ARRAY(u_max);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -4609,7 +4666,7 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
 
   count = std::max(edge_handles_size, std::max(face_handles_size, in_u_size));
 
-  CHECK_SIZE( *uv, double, 2*count );
+  ALLOC_CHECK_ARRAY( uv, 2*count );
   
   const double *in_u_iter;
   double *u, *v;
@@ -4624,7 +4681,6 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
     coord_step = 2;
   }
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** edge_ent = (RefEntity**)edge_handles;
   RefEntity** face_ent = (RefEntity**)face_handles;
   for (int i = 0; i < count; ++i) {
@@ -4638,10 +4694,10 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
     CubitStatus s;
     s = edge->position_from_u( *in_u_iter, xyz );
     if (CUBIT_SUCCESS != s)
-      result = iBase_FAILURE;
+      RETURN(iBase_FAILURE);
     s = face->u_v_from_position( xyz, *u, *v );
     if (CUBIT_SUCCESS != s)
-      result = iBase_FAILURE;
+      RETURN(iBase_FAILURE);
 
     edge_ent += edge_step;
     face_ent += face_step;
@@ -4650,7 +4706,8 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
     v += coord_step;
   }
   
-  RETURN(result);
+  KEEP_ARRAY(uv);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -4703,7 +4760,7 @@ iGeom_getVtxArrToUV (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
   
-  CHECK_SIZE( *uv, double, 2*count );
+  ALLOC_CHECK_ARRAY( uv, 2*count );
 
   double *u, *v;
   u = *uv;
@@ -4736,6 +4793,7 @@ iGeom_getVtxArrToUV (iGeom_Instance instance,
     u += uv_step;
     v += uv_step;
   }
+  KEEP_ARRAY(uv);
   RETURN(iBase_SUCCESS);
 }
 
@@ -4787,7 +4845,7 @@ iGeom_getVtxArrToU (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
   }
   
-  CHECK_SIZE( *u, double, count );
+  ALLOC_CHECK_ARRAY( u, count );
   
   RefEntity** vtx_iter = (RefEntity**)vertex_handles;
   RefEntity** edge_iter = (RefEntity**)edge_handles;
@@ -4806,6 +4864,7 @@ iGeom_getVtxArrToU (iGeom_Instance instance,
     vtx_iter += vtx_step;
     edge_iter += edge_step;
   }
+  KEEP_ARRAY(u);
   RETURN(iBase_SUCCESS);
 }
 
@@ -4871,7 +4930,7 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
   }
   
     // check or pre-allocate the coordinate arrays
-  CHECK_SIZE( *normals, double, 3*count );
+  ALLOC_CHECK_ARRAY( normals, 3*count );
 
   const double *u, *v;
   double *x, *y, *z;
@@ -4892,7 +4951,6 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
     param_step *= 2;
   }
   
-  iBase_ErrorType result = iBase_SUCCESS;
   RefEntity** face_iter = (RefEntity**)gface_handles;
   for (int i = 0; i < count; ++i) {
     RefFace* face = dynamic_cast<RefFace*>(*face_iter);
@@ -4901,8 +4959,9 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
     CubitVector normal;
     CubitStatus s = iGeom_normal_from_uv( face, *u, *v, normal );
     normal.get_xyz( *x, *y, *z );
-    if (CUBIT_SUCCESS != s) 
-      result = iBase_FAILURE;
+    if (CUBIT_SUCCESS != s) {
+      RETURN(iBase_FAILURE);
+    }
     
     face_iter += face_step;
     x += norm_step;
@@ -4912,7 +4971,8 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
     v += param_step;
   }
   
-  RETURN(result);
+  KEEP_ARRAY(normals);
+  RETURN(iBase_SUCCESS);
 }
 
 
@@ -4977,13 +5037,17 @@ iGeom_getEnt1stDrvt (iGeom_Instance instance,
     ERROR( iBase_INVALID_ENTITY_TYPE, "Derivatives only for faces." );
   }
   
-  CHECK_SIZE( *dvrt_u, double, 3 );
-  CHECK_SIZE( *dvrt_v, double, 3 );
   CubitVector du, dv;
   CubitStatus s = face->get_surface_ptr()->uv_derivitives( u, v, du, dv );
+  if (CUBIT_SUCCESS != s) {
+    RETURN(iBase_FAILURE);
+  }
+  
+  ALLOC_CHECK_ARRAY_NOFAIL( dvrt_u, 3 );
+  ALLOC_CHECK_ARRAY_NOFAIL( dvrt_v, 3 );
   du.get_xyz( *dvrt_u );
   dv.get_xyz( *dvrt_v );
-  RETURN ((CUBIT_SUCCESS == s ? iBase_SUCCESS : iBase_FAILURE));
+  RETURN (iBase_SUCCESS);
 }
 
 void
@@ -5012,10 +5076,10 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
     RETURN(iBase_INVALID_ENTITY_COUNT);
   }
   
-  CHECK_SIZE( *drvt_u, double, 3*entity_handles_size );
-  CHECK_SIZE( *drvt_v, double, 3*entity_handles_size );
-  CHECK_SIZE( *u_offset, int, entity_handles_size+1 );
-  CHECK_SIZE( *v_offset, int, entity_handles_size+1 );
+  ALLOC_CHECK_ARRAY( drvt_u, 3*entity_handles_size );
+  ALLOC_CHECK_ARRAY( drvt_v, 3*entity_handles_size );
+  ALLOC_CHECK_ARRAY( u_offset, entity_handles_size+1 );
+  ALLOC_CHECK_ARRAY( v_offset, entity_handles_size+1 );
   
   size_t u_step, du_step, init;
   if (storage_order == iBase_BLOCKED) {
@@ -5068,6 +5132,10 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
   (*u_offset)[entity_handles_size] = off;
   (*v_offset)[entity_handles_size] = off; 
 
+  KEEP_ARRAY( drvt_u );
+  KEEP_ARRAY( drvt_v );
+  KEEP_ARRAY( u_offset );
+  KEEP_ARRAY( v_offset );
   RETURN(iBase_SUCCESS);
 }
 
@@ -5186,15 +5254,16 @@ iGeom_isArrPeriodic (iGeom_Instance instance,
                      int *in_uv_size,
                      int* err)
 {
-  CHECK_SIZE( *in_uv, int, 2*entity_handles_size );
+  ALLOC_CHECK_ARRAY( in_uv, entity_handles_size );
   RefEntity** ents = (RefEntity**)entity_handles;
-  iBase_ErrorType result = iBase_SUCCESS;
   for (int i = 0; i < entity_handles_size; ++i) {
     CubitStatus s = iGeom_is_periodic( ents[i], (*in_uv)[2*i], (*in_uv)[2*i+1] );
-    if (s != CUBIT_SUCCESS)
-      result = iBase_FAILURE;
+    if (s != CUBIT_SUCCESS) {
+      RETURN(iBase_FAILURE);
+    }
   }
-  RETURN(result);
+  KEEP_ARRAY(in_uv);
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -5218,13 +5287,14 @@ iGeom_isFcArrDegenerate (iGeom_Instance instance,
                          int *degenerate_size,
                          int* err)
 {
-  CHECK_SIZE( *degenerate, int, face_handles_size );
+  ALLOC_CHECK_ARRAY( degenerate, face_handles_size );
   RefEntity** faces = (RefEntity**)face_handles;
   for (int i = 0; i < face_handles_size; ++i) {
     RefFace* face = dynamic_cast<RefFace*>(faces[i]);
     if (!face) { RETURN (iBase_INVALID_ENTITY_TYPE); }
     (*degenerate)[i] = iGeom_is_face_degenerate( face );
   }
+  KEEP_ARRAY(degenerate);
   RETURN(iBase_SUCCESS);
 }
                
