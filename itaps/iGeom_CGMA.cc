@@ -5254,7 +5254,7 @@ iGeom_isArrPeriodic (iGeom_Instance instance,
                      int *in_uv_size,
                      int* err)
 {
-  ALLOC_CHECK_ARRAY( in_uv, entity_handles_size );
+  ALLOC_CHECK_ARRAY( in_uv, 2*entity_handles_size );
   RefEntity** ents = (RefEntity**)entity_handles;
   for (int i = 0; i < entity_handles_size; ++i) {
     CubitStatus s = iGeom_is_periodic( ents[i], (*in_uv)[2*i], (*in_uv)[2*i+1] );
