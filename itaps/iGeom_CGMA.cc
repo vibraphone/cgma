@@ -3211,7 +3211,7 @@ iGeom_getPntClsf (iGeom_Instance instance,
   RefEntity** ptr = (RefEntity**)entity_handle;
   const CubitVector pt(x,y,z);
   *ptr = iGeom_get_point_containment( pt );
-  RETURN( ptr ? iBase_SUCCESS : iBase_FAILURE );
+  RETURN( *ptr ? iBase_SUCCESS : iBase_FAILURE );
 }
 
 void
