@@ -6444,7 +6444,8 @@ iGeom_bounding_box( RefEntity* entity, CubitVector& minc, CubitVector& maxc )
   return CUBIT_SUCCESS;
 }
 
-/** Smits' algorithm */
+/** We could use Smits' algorithm here, but only if we turned of
+    floating-point exceptions */
 static inline void box_min_max( double dir,
                                 double min,
                                 double max,
@@ -6452,7 +6453,11 @@ static inline void box_min_max( double dir,
                                 double& tmin,
                                 double& tmax )
 {
-  if (dir >= 0.0) {
+  if (dir == 0) {
+    tmin = -INFINITY;
+    tmax = INFINITY;
+  }
+  else if (dir > 0.0) {
     tmin = (min - pt) / dir;
     tmax = (max - pt) / dir;
   }
