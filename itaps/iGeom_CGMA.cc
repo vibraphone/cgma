@@ -6008,6 +6008,9 @@ iGeom_imprintEnts (iGeom_Instance instance,
                    int gentity_handles_size,
                    int* err) 
 {
+  if (gentity_handles_size < 1) // GMT::imprint segfaults if passed an empty list
+    RETURN(iBase_SUCCESS);
+
   DLIList<Body*> bods;
   DLIList<RefVolume*> vols, temp_vols;
   RefEntity* const* handle_array = ENTITY_HANDLE_CONST_ARRAY(gentity_handles);
