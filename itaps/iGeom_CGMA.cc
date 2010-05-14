@@ -501,12 +501,24 @@ void iGeom_save (iGeom_Instance instance,
       ERROR(iBase_FAILURE, "Unknown geometry file extension and no file type.");
   }
   
+  /** 
+   * Work around AcisQueryEngine log file handling bug:
+   * If the export format is iges or step, be sure the log file name is not null
+   */
+  const char* logfile_name = NULL;
+  if( file_type == "IGES" ){
+    logfile_name = "igeom_iges_export.log";
+  }
+  else if( file_type == "STEP" ){
+    logfile_name = "igeom_step_export.log";
+  }
+
     // process options (none right now...)
   DLIList<RefEntity*> bodies;
   int num_ents_exported;
   CubitString cubit_version(" (iGeom)");
   CubitStatus status = gqt->export_solid_model(bodies, name, file_type.c_str(),
-                                               num_ents_exported, cubit_version);
+                                               num_ents_exported, cubit_version, logfile_name );
   if (CUBIT_SUCCESS != status) 
     ERROR(iBase_FAILURE, "Trouble saving geometry file.");
 
