@@ -134,3 +134,9 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
   return CUBIT_SUCCESS;
 }
 
+CubitStatus InitCGMA::deinitialize_cgma() 
+{
+  CGMApp::instance()->shutdown();
+  return CUBIT_SUCCESS;
+}
+
