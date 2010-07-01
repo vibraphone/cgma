@@ -14,16 +14,16 @@ INCLUDES = -I$(top_srcdir)/geom \
 
 TESTS = init sheet
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis
 else
 if WITH_CUBIT
-  TESTS += webcut brick_acis
+  TESTS += webcut brick_acis merge_acis
 else
-  TESTS += brick_facet
+  TESTS += brick_facet merge_facet
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ operation brick_occ
+  TESTS += modify makept r_w test_occ operation brick_occ #merge_occ
 endif
 
 AM_CPPFLAGS =
@@ -51,6 +51,14 @@ brick_occ_SOURCES = $(brick_sources)
 brick_occ_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="OCC"'
 brick_facet_SOURCES = $(brick_sources)
 brick_facet_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="FACET"'
+
+merge_sources = merge_test.cpp
+merge_acis_SOURCES = $(merge_sources)
+merge_acis_CPPFLAGS = $(CPPFLAGS) -DTEST_ACIS
+merge_occ_SOURCES = $(merge_sources)
+merge_occ_CPPFLAGS = $(CPPFLAGS) -DTEST_OCC
+merge_facet_SOURCES = $(merge_sources)
+merge_facet_CPPFLAGS = $(CPPFLAGS) -DTEST_FACET
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.
