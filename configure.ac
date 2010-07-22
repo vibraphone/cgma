@@ -304,7 +304,10 @@ AC_ARG_WITH( occ,
 CUBIT_OCC_LIB=
 HAVE_OCC_DEF=
 if test "x$occ_DIR" != "xno"; then
-  OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase -lTKLCAF -lTKBinL"
+  OCC_CORE_LIBS="-lTKMesh -lTKTopAlgo -lTKGeomAlgo -lTKBRep -lTKGeomBase -lTKG3d -lTKG2d -lTKMath -lTKernel"
+  OCC_GEOM_LIBS="-lTKHLR -lTKOffset -lTKShHealing -lTKFillet -lTKFeat -lTKBool -lTKBO -lTKPrim"
+  OCC_LCAF_LIBS="-lTKLCAF -lTKBinL"
+  OCC_LIBS="$OCC_LCAF_LIBS $OCC_GEOM_LIBS $OCC_CORE_LIBS"
   CUBIT_OCC_LIB="-lcubit_OCC"
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
@@ -390,12 +393,28 @@ if test "x$occ_DIR" != "xno"; then
                                [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])],
                                [-ldl] )
                 ] )
+
+  HAVE_OCC_DEF="-DHAVE_OCC"
+  # Check for IGES, STEP, and STL support
+  AC_CHECK_LIB( [TKIGES], [igesread], 
+                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_IGES"
+                 OCC_LIBS="-lTKIGES -lTKXSBase $OCC_LIBS"], 
+                [], [$OCC_LIBS] )
+  AC_CHECK_LIB( [TKSTEP], [main], 
+                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STEP"
+                 OCC_LIBS="-lTKSTEP -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKXSBase $OCC_LIBS"], 
+                [], [$OCC_LIBS] )
+  AC_CHECK_LIB( [TKSTL], [main], 
+                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STL"
+                 OCC_LIBS="-lTKSTL $OCC_LIBS"], 
+                [], [$OCC_LIBS] )
+         
+                
   AC_LANG_POP(C++)
 
   # Restore original values of variables
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
-  HAVE_OCC_DEF="-DHAVE_OCC"
   
   # Append to CGM global values
   CGM_EXT_LIBS="$CGM_EXT_LIBS $OCC_LIBS"

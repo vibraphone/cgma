@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 
 # Override default defines with the ones we want from the configure script
 DEFAULT_INCLUDES=-I.
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN) $(HAVE_OCC_DEF)
 INCLUDES = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
            $(OCC_INC_FLAG)

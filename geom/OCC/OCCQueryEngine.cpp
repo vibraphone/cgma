@@ -40,11 +40,15 @@
 #include "Handle_Poly_Triangulation.hxx"
 #include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
-#include "STEPControl_Reader.hxx"
-#include "IGESControl_Reader.hxx"
-#include "STEPControl_Writer.hxx"
-#include "IGESControl_Writer.hxx"
-#include "STEPControl_StepModelType.hxx"
+#ifdef HAVE_OCC_STEP
+#  include "STEPControl_Reader.hxx"
+#  include "STEPControl_Writer.hxx"
+#  include "STEPControl_StepModelType.hxx"
+#endif
+#ifdef HAVE_OCC_IGES
+#  include "IGESControl_Reader.hxx"
+#  include "IGESControl_Writer.hxx"
+#endif
 #include "IFSelect_ReturnStatus.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
@@ -1172,6 +1176,7 @@ OCCQueryEngine::write_topology( const char* file_name,
     if(!Write(Co, const_cast<char*>(file_name),label))
       return CUBIT_FAILURE;
   } 
+#ifdef HAVE_OCC_STEP
   else if(strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Writer writer;
@@ -1184,8 +1189,9 @@ OCCQueryEngine::write_topology( const char* file_name,
        return CUBIT_FAILURE;
     }
   }
-
-  else // IGES file
+#endif
+#ifdef HAVE_OCC_IGES
+  else if (strcmp(file_type, "IGES") == 0) // IGES file
   {
     IGESControl_Writer writer;
     writer.AddShape(Co);
@@ -1196,6 +1202,11 @@ OCCQueryEngine::write_topology( const char* file_name,
        PRINT_INFO("%s: Cannot open file", file_name );
        return CUBIT_FAILURE;
     }
+  }
+#endif
+  else {
+    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    return CUBIT_FAILURE;
   }
 
   return CUBIT_SUCCESS;
@@ -1788,12 +1799,7 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                       const char* file_type,
                                       DLIList<TopologyBridge*> &bridge_list )
 {
-  //make sure that file_type == "OCC"
-  if( !strcmp( file_type,"OCC") || !strcmp( file_type,"IGES") ||
-      !strcmp( file_type,"STEP") )
-    return import_solid_model( file_name, file_type, bridge_list );
-  else
-    return CUBIT_FAILURE;
+  return import_solid_model( file_name, file_type, bridge_list );
 }
 
 //===========================================================================
@@ -1824,7 +1830,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
     Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
     if (result==0) return CUBIT_FAILURE;
   }
- 
+#ifdef HAVE_OCC_STEP 
   else if (strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Reader reader;
@@ -1837,7 +1843,8 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots();
     *aShape = reader.OneShape(); 
   }
-
+#endif
+#ifdef HAVE_OCC_IGES
   else if(strcmp(file_type, "IGES") == 0)
   {
     IGESControl_Reader reader;
@@ -1851,6 +1858,13 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots(); 
     *aShape = reader.OneShape();
   } 
+#endif
+  else 
+  {
+    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    return CUBIT_FAILURE;
+  }
+    
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
