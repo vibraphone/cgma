@@ -23,7 +23,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ operation brick_occ #merge_occ
+  TESTS += modify makept r_w test_occ operation brick_occ merge_occ
 endif
 
 AM_CPPFLAGS =

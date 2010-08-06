@@ -523,10 +523,10 @@ CubitStatus make_Point()
   int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
   DLIList<RefEdge*> *ref_edges1;
   ref_edges1 = ref_edge_loops.get();
-  RefEdge* edge1 = ref_edges1->get();
-  RefEdge* edge2 = ref_edges1->step_and_get();
-  double angle = edge1->angle_between(edge2, ref_face);
-  assert(fabs(angle - 1.57) < 0.001);
+  RefEdge* edge1 = ref_edges1->pop();
+  RefEdge* edge2 = ref_edges1->pop();
+  double angle = edge2->angle_between(edge1, ref_face);
+  assert(fabs(angle - 4.712) < 0.001);
 
   //test for curve
   CubitVector c_point, tangent, center;
@@ -643,17 +643,17 @@ CubitStatus make_Point()
   // bounding box
 
   d = ref_edge->measure();
-  assert(fabs(d - 13.9987) < 0.001);
+  assert(fabs(d - 11.042) < 0.001);
 
   ref_edge->get_param_range(lower,upper);
-  assert(lower - 19988 <= 0 && fabs(upper-20001.998) < 0.001);
+  assert(lower - 2.6024 <= 0.0001 && fabs(upper-6.2832) < 0.001);
   // paremeter range.
 
   d = ref_edge->length_from_u(lower,upper);
-  assert(fabs(d - 13.9987) < 0.001);
+  assert(fabs(d - 11.042) < 0.001);
 
   d = ref_edge->length_from_u(lower/2+upper/2, upper);
-  assert(fabs(d-6.99939) < 0.0001);
+  assert(fabs(d-5.52106) < 0.0001);
   // half curve length.
 
   periodic = ref_edge->is_periodic(p);
@@ -664,12 +664,12 @@ CubitStatus make_Point()
   // middle point.
 
   u = ref_edge->u_from_position(vi); 
-  assert(fabs(u - 19994.999) < 0.001);
+  assert(fabs(u - 4.4428) < 0.001);
   // middle point's u value.
 
   double radius;
   ref_edge->closest_point(vi, c_point, &tangent, & curvature1_ptr);
-  vii.set(0, -0.00913, 0.9999);
+  vii.set(0.26630, -0.008803, 0.96384);
   assert(tangent.distance_between(vii) < 0.001);
   // Closed point on middle point.
 
