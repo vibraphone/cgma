@@ -2099,6 +2099,30 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
+
+    if(sense == CUBIT_REVERSED )
+    {
+      //When the loop has only one curve, the wire and face sense usually 
+      //are the same, so don't need to reverse again.   
+      //have to reverse wire direction and coedge sense for multi-curve situ.
+      DLIList<OCCLoop*> loops;
+      DLIList<OCCCoEdge*> coedges;
+      occ_surface->get_loops(loops);
+      for (int i = 0; i < loops.size(); i++)
+      {
+        OCCLoop* loop = loops.get_and_step();
+        coedges = loop->coedges();
+        if(coedges.size() == 1)
+          continue;
+        coedges.reverse();
+        for (int j = 0; j < coedges.size(); j++)
+        {
+          OCCCoEdge* coedge = coedges.get_and_step();
+          coedge->set_sense(coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        } 
+        loop->coedges(coedges); 
+      }  
+    } 
     for(int i = 0; i < size; i++)
     {
       coface = cofaces_old.get_and_step();
