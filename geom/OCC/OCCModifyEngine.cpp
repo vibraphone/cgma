@@ -2842,7 +2842,9 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
      sprintf(message, "Imprinting %d OCC Bodies", from_body_list.size() ); 
      AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
   }
-
+  
+  //double volume;
+  //CubitVector center;
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* shape1 = shape_list[i];
@@ -4064,8 +4066,8 @@ CubitStatus OCCModifyEngine:: sweep_translational(
             OCCCoEdge* temp_coedge = coedges[j];
             if(temp_coedge == NULL)
               continue; 
-            if(coedge->curve() == temp_coedge->curve() &&
-               coedge->sense() != temp_coedge->sense())
+            if(coedge->curve() == temp_coedge->curve()) //Since the shell 
+            // is open, the sense of curve can be either the same or opposite. 
             {
               coedges.move_to(coedge);
               coedges.change_to((OCCCoEdge*)NULL);
