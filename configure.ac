@@ -309,6 +309,7 @@ if test "x$occ_DIR" != "xno"; then
   OCC_LCAF_LIBS="-lTKLCAF -lTKBinL"
   OCC_LIBS="$OCC_LCAF_LIBS $OCC_GEOM_LIBS $OCC_CORE_LIBS"
   CUBIT_OCC_LIB="-lcubit_OCC"
+  OCC_STEP_LIBS="-lTKSTEP -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKXSBase" 
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
@@ -400,15 +401,27 @@ if test "x$occ_DIR" != "xno"; then
                 [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_IGES"
                  OCC_LIBS="-lTKIGES -lTKXSBase $OCC_LIBS"], 
                 [], [$OCC_LIBS] )
-  AC_CHECK_LIB( [TKSTEP], [main], 
-                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STEP"
-                 OCC_LIBS="-lTKSTEP -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKXSBase $OCC_LIBS"], 
-                [], [$OCC_LIBS] )
-  AC_CHECK_LIB( [TKSTL], [main], 
-                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STL"
-                 OCC_LIBS="-lTKSTL $OCC_LIBS"], 
-                [], [$OCC_LIBS] )
-         
+  AC_MSG_CHECKING([for OpenCascade STEP support (libTKSTEP)])
+  old_LIBS="$LIBS"
+  LIBS="$OCC_STEP_LIBS $OCC_LIBS $LIBS"
+  CPPFLAGS="$CPPFLAGS $OCC_INC_FLAG"
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "STEPControl_Reader.hxx"], 
+                      [STEPControl_Reader reader;])],
+     [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STEP"
+      OCC_LIBS="$OCC_STEP_LIBS $OCC_LIBS"
+      AC_MSG_RESULT([yes])],
+     [AC_MSG_RESULT([no])])
+  AC_MSG_CHECKING([for OpenCascade STL support (libTKSTL)])
+  LIBS="-lTKSTL $OCC_LIBS $old_LIBS"                         
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "StlAPI_Reader.hxx"], 
+                      [StlAPI_Reader reader;])],
+     [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STL"
+      OCC_LIBS="-lTKSTL $OCC_LIBS"
+      AC_MSG_RESULT([yes])],
+     [AC_MSG_RESULT([no])])
+  LIBS="$old_LIBS"                         
                 
   AC_LANG_POP(C++)
 
