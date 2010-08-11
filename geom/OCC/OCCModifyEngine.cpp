@@ -3508,17 +3508,18 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopTools_ListOfShape shapes;
     shapes.Assign(intersector.Modified(*tool_shape));
-    if (shapes.IsEmpty())
-    {
-      PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
-    continue;
-    }
+    
     if ( shapes.Extent() > 1)
     {
       PRINT_ERROR("Tool has multiple intersection with the shape, make it simpler. \n");
       continue;
     }
-    TopoDS_Shape common_shape = shapes.First();
+    TopoDS_Shape common_shape;
+    if (shapes.IsEmpty())
+      common_shape = intersector.Shape();
+    else 
+      common_shape = shapes.First();
+
     if (is_volume[i] == CUBIT_TRUE && 
         (common_shape.TShape()->ShapeType() == TopAbs_SHELL || 
          common_shape.TShape()->ShapeType() == TopAbs_FACE ||
