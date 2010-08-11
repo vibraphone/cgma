@@ -3506,8 +3506,37 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
     TopoDS_Shape* from_shape = shape_list.get_and_step();
     BodySM* from_body = from_bodies.get_and_step();
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
-    TopoDS_Shape common_shape = intersector.Shape();
-    check_operation(common_shape, from_shape, is_volume[i], has_changed, 
+    TopTools_ListOfShape shapes;
+    shapes.Assign(intersector.Modified(*tool_shape));
+    if (shapes.IsEmpty())
+    {
+      PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
+    continue;
+    }
+    if ( shapes.Extent() > 1)
+    {
+      PRINT_ERROR("Tool has multiple intersection with the shape, make it simpler. \n");
+      continue;
+    }
+    TopoDS_Shape common_shape = shapes.First();
+    if (is_volume[i] == CUBIT_TRUE && 
+        (common_shape.TShape()->ShapeType() == TopAbs_SHELL || 
+         common_shape.TShape()->ShapeType() == TopAbs_FACE ||
+         common_shape.TShape()->ShapeType() == TopAbs_EDGE ||
+         common_shape.TShape()->ShapeType() == TopAbs_VERTEX))
+    {  
+      has_changed = CUBIT_TRUE;
+      *from_shape = common_shape;
+    }
+    else if(is_volume[i] == CUBIT_FALSE && 
+            (common_shape.TShape()->ShapeType() == TopAbs_EDGE ||
+             common_shape.TShape()->ShapeType() == TopAbs_VERTEX))
+    {
+      has_changed = CUBIT_TRUE;
+      *from_shape = common_shape;
+    }
+    else
+      check_operation(common_shape, from_shape, is_volume[i], has_changed, 
                     &intersector, keep_old); 
 
     if(from_shape->IsNull() )
