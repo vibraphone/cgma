@@ -1020,6 +1020,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*> refentities;
   refentities.append(sweep_face);
   RefFace* draft_face = gmti->make_RefFace(sweep_face);
+  RefFace* draft_face2 = gmti->make_RefFace(sweep_face);
   RefFace* perp_face = gmti->make_RefFace(sweep_face);
   RefFace* rotate_face = gmti->make_RefFace(sweep_face);
 
@@ -1037,6 +1038,16 @@ CubitStatus make_Point()
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
   assert(d - 66.3676 < 0.0001 && d > 66.3676);
 
+  v_move8ii.z(-10);
+  refentities.clean_out();
+  refentities.append(draft_face2);
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
+  body = CAST_TO(refentities.get(), Body);
+  d = body->measure();
+  //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
+  assert(d - 66.3676 < 0.0001 && d > 66.3676);
+
+  v_move8ii.z(10);
   DLIList<RefEdge*> edges;
   body->ref_edges(edges);
   refentities.clean_out();
