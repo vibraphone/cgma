@@ -13,6 +13,7 @@
 // Creation Date : 7/17/00
 //
 //-------------------------------------------------------------------------
+#include <Standard_Version.hxx>
 #include <Standard_Stream.hxx>
 //#include <Standard_SStream.hxx>
 //#include <Standard_String.hxx>
@@ -39,11 +40,15 @@
 #include "Handle_Poly_Triangulation.hxx"
 #include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
-#include "STEPControl_Reader.hxx"
-#include "IGESControl_Reader.hxx"
-#include "STEPControl_Writer.hxx"
-#include "IGESControl_Writer.hxx"
-#include "STEPControl_StepModelType.hxx"
+#ifdef HAVE_OCC_STEP
+#  include "STEPControl_Reader.hxx"
+#  include "STEPControl_Writer.hxx"
+#  include "STEPControl_StepModelType.hxx"
+#endif
+#ifdef HAVE_OCC_IGES
+#  include "IGESControl_Reader.hxx"
+#  include "IGESControl_Writer.hxx"
+#endif
 #include "IFSelect_ReturnStatus.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
@@ -116,10 +121,6 @@ using namespace NCubitFile;
 
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
-const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
-const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
-const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
-
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
@@ -177,29 +178,22 @@ OCCQueryEngine::~OCCQueryEngine()
 
 int OCCQueryEngine::get_major_version()
 {
-  return OCCQE_MAJOR_VERSION;
+  return OCC_VERSION_MAJOR;
 }
 
 int OCCQueryEngine::get_minor_version()
 {
-  return OCCQE_MINOR_VERSION;
+  return OCC_VERSION_MINOR;
 }
 
 int OCCQueryEngine::get_subminor_version()
 {
-  return OCCQE_SUBMINOR_VERSION;
+  return OCC_VERSION_MAINTENANCE;
 }
 
 CubitString OCCQueryEngine::get_engine_version_string()
 {
-  CubitString version_string = "OCC Geometry Engine version ";
-  version_string += CubitString(get_major_version());
-  version_string += CubitString(".");
-  version_string += CubitString(get_minor_version());
-  version_string += CubitString(".");
-  version_string += CubitString(get_subminor_version());
-  
-  return version_string;
+  return CubitString("OpenCascade ") + OCC_VERSION_STRING;
 }
 
 //================================================================================
@@ -1182,6 +1176,7 @@ OCCQueryEngine::write_topology( const char* file_name,
     if(!Write(Co, const_cast<char*>(file_name),label))
       return CUBIT_FAILURE;
   } 
+#ifdef HAVE_OCC_STEP
   else if(strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Writer writer;
@@ -1194,8 +1189,9 @@ OCCQueryEngine::write_topology( const char* file_name,
        return CUBIT_FAILURE;
     }
   }
-
-  else // IGES file
+#endif
+#ifdef HAVE_OCC_IGES
+  else if (strcmp(file_type, "IGES") == 0) // IGES file
   {
     IGESControl_Writer writer;
     writer.AddShape(Co);
@@ -1206,6 +1202,11 @@ OCCQueryEngine::write_topology( const char* file_name,
        PRINT_INFO("%s: Cannot open file", file_name );
        return CUBIT_FAILURE;
     }
+  }
+#endif
+  else {
+    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    return CUBIT_FAILURE;
   }
 
   return CUBIT_SUCCESS;
@@ -1798,12 +1799,7 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                       const char* file_type,
                                       DLIList<TopologyBridge*> &bridge_list )
 {
-  //make sure that file_type == "OCC"
-  if( !strcmp( file_type,"OCC") || !strcmp( file_type,"IGES") ||
-      !strcmp( file_type,"STEP") )
-    return import_solid_model( file_name, file_type, bridge_list );
-  else
-    return CUBIT_FAILURE;
+  return import_solid_model( file_name, file_type, bridge_list );
 }
 
 //===========================================================================
@@ -1834,7 +1830,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
     Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
     if (result==0) return CUBIT_FAILURE;
   }
- 
+#ifdef HAVE_OCC_STEP 
   else if (strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Reader reader;
@@ -1847,7 +1843,8 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots();
     *aShape = reader.OneShape(); 
   }
-
+#endif
+#ifdef HAVE_OCC_IGES
   else if(strcmp(file_type, "IGES") == 0)
   {
     IGESControl_Reader reader;
@@ -1861,6 +1858,13 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots(); 
     *aShape = reader.OneShape();
   } 
+#endif
+  else 
+  {
+    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    return CUBIT_FAILURE;
+  }
+    
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
@@ -2095,6 +2099,30 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
+
+    if(sense == CUBIT_REVERSED )
+    {
+      //When the loop has only one curve, the wire and face sense usually 
+      //are the same, so don't need to reverse again.   
+      //have to reverse wire direction and coedge sense for multi-curve situ.
+      DLIList<OCCLoop*> loops;
+      DLIList<OCCCoEdge*> coedges;
+      occ_surface->get_loops(loops);
+      for (int i = 0; i < loops.size(); i++)
+      {
+        OCCLoop* loop = loops.get_and_step();
+        coedges = loop->coedges();
+        if(coedges.size() == 1)
+          continue;
+        coedges.reverse();
+        for (int j = 0; j < coedges.size(); j++)
+        {
+          OCCCoEdge* coedge = coedges.get_and_step();
+          coedge->set_sense(coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        } 
+        loop->coedges(coedges); 
+      }  
+    } 
     for(int i = 0; i < size; i++)
     {
       coface = cofaces_old.get_and_step();
