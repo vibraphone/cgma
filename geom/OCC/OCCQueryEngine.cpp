@@ -13,7 +13,6 @@
 // Creation Date : 7/17/00
 //
 //-------------------------------------------------------------------------
-#include <Standard_Version.hxx>
 #include <Standard_Stream.hxx>
 //#include <Standard_SStream.hxx>
 //#include <Standard_String.hxx>
@@ -40,15 +39,11 @@
 #include "Handle_Poly_Triangulation.hxx"
 #include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
-#ifdef HAVE_OCC_STEP
-#  include "STEPControl_Reader.hxx"
-#  include "STEPControl_Writer.hxx"
-#  include "STEPControl_StepModelType.hxx"
-#endif
-#ifdef HAVE_OCC_IGES
-#  include "IGESControl_Reader.hxx"
-#  include "IGESControl_Writer.hxx"
-#endif
+#include "STEPControl_Reader.hxx"
+#include "IGESControl_Reader.hxx"
+#include "STEPControl_Writer.hxx"
+#include "IGESControl_Writer.hxx"
+#include "STEPControl_StepModelType.hxx"
 #include "IFSelect_ReturnStatus.hxx"
 #include "BndLib_Add3dCurve.hxx"
 #include "Poly_Polygon3D.hxx"
@@ -121,6 +116,10 @@ using namespace NCubitFile;
 
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
+const int OCCQueryEngine::OCCQE_MAJOR_VERSION = 6;
+const int OCCQueryEngine::OCCQE_MINOR_VERSION = 2;
+const int OCCQueryEngine::OCCQE_SUBMINOR_VERSION = 0;
+
 typedef std::map<int, TopologyBridge*>::value_type valType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
@@ -178,22 +177,29 @@ OCCQueryEngine::~OCCQueryEngine()
 
 int OCCQueryEngine::get_major_version()
 {
-  return OCC_VERSION_MAJOR;
+  return OCCQE_MAJOR_VERSION;
 }
 
 int OCCQueryEngine::get_minor_version()
 {
-  return OCC_VERSION_MINOR;
+  return OCCQE_MINOR_VERSION;
 }
 
 int OCCQueryEngine::get_subminor_version()
 {
-  return OCC_VERSION_MAINTENANCE;
+  return OCCQE_SUBMINOR_VERSION;
 }
 
 CubitString OCCQueryEngine::get_engine_version_string()
 {
-  return CubitString("OpenCascade ") + OCC_VERSION_STRING;
+  CubitString version_string = "OCC Geometry Engine version ";
+  version_string += CubitString(get_major_version());
+  version_string += CubitString(".");
+  version_string += CubitString(get_minor_version());
+  version_string += CubitString(".");
+  version_string += CubitString(get_subminor_version());
+  
+  return version_string;
 }
 
 //================================================================================
@@ -731,7 +737,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
     {
-      TopoDS_Compound* theShape = body_ptr->get_TopoDS_Shape();
+      TopoDS_CompSolid* theShape = body_ptr->get_TopoDS_Shape();
       if (!theShape)
 	{
 	  PRINT_ERROR("OCCBody without TopoDS_Shape at %s:%d.\n", __FILE__, __LINE__ );
@@ -1105,7 +1111,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   for (i = 0; i < OCC_bodies.size(); i++)
     {
       OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_Compound *shape = body->get_TopoDS_Shape();
+      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
 
       if (shape == NULL) //sheet body or shell body
       {
@@ -1176,7 +1182,6 @@ OCCQueryEngine::write_topology( const char* file_name,
     if(!Write(Co, const_cast<char*>(file_name),label))
       return CUBIT_FAILURE;
   } 
-#ifdef HAVE_OCC_STEP
   else if(strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Writer writer;
@@ -1189,9 +1194,8 @@ OCCQueryEngine::write_topology( const char* file_name,
        return CUBIT_FAILURE;
     }
   }
-#endif
-#ifdef HAVE_OCC_IGES
-  else if (strcmp(file_type, "IGES") == 0) // IGES file
+
+  else // IGES file
   {
     IGESControl_Writer writer;
     writer.AddShape(Co);
@@ -1202,11 +1206,6 @@ OCCQueryEngine::write_topology( const char* file_name,
        PRINT_INFO("%s: Cannot open file", file_name );
        return CUBIT_FAILURE;
     }
-  }
-#endif
-  else {
-    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
-    return CUBIT_FAILURE;
   }
 
   return CUBIT_SUCCESS;
@@ -1419,7 +1418,7 @@ OCCQueryEngine::write_topology( char*& p_buffer,
   for (i = 0; i < OCC_bodies.size(); i++)
     {
       OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_Compound *shape = body->get_TopoDS_Shape();
+      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
 
       if (shape == NULL) //sheet body or shell body
       {
@@ -1799,7 +1798,12 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                       const char* file_type,
                                       DLIList<TopologyBridge*> &bridge_list )
 {
-  return import_solid_model( file_name, file_type, bridge_list );
+  //make sure that file_type == "OCC"
+  if( !strcmp( file_type,"OCC") || !strcmp( file_type,"IGES") ||
+      !strcmp( file_type,"STEP") )
+    return import_solid_model( file_name, file_type, bridge_list );
+  else
+    return CUBIT_FAILURE;
 }
 
 //===========================================================================
@@ -1830,7 +1834,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
     Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
     if (result==0) return CUBIT_FAILURE;
   }
-#ifdef HAVE_OCC_STEP 
+ 
   else if (strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Reader reader;
@@ -1843,8 +1847,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots();
     *aShape = reader.OneShape(); 
   }
-#endif
-#ifdef HAVE_OCC_IGES
+
   else if(strcmp(file_type, "IGES") == 0)
   {
     IGESControl_Reader reader;
@@ -1858,13 +1861,6 @@ CubitStatus OCCQueryEngine::import_solid_model(
     reader.TransferRoots(); 
     *aShape = reader.OneShape();
   } 
-#endif
-  else 
-  {
-    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
-    return CUBIT_FAILURE;
-  }
-    
   imported_entities = populate_topology_bridge(*aShape);
   return CUBIT_SUCCESS;
 }
@@ -1894,10 +1890,10 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
   DLIList<TopologyBridge*> tblist;
   // suitable to populate for a TopoDS_CompSolid or TopoDS_Compound shape.
   TopExp_Explorer Ex;
-  for (Ex.Init(aShape, TopAbs_COMPOUND); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::Compound(Ex.Current())));
+  for (Ex.Init(aShape, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
+    tblist.append(populate_topology_bridge(TopoDS::CompSolid(Ex.Current())));
 
-  for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPOUND); Ex.More(); Ex.Next())
+  for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
   {
     Lump *lump = 
     populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE);
@@ -1931,21 +1927,20 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
   return tblist;
 }
 
-//This deals only all compound materials are solids.
-BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
+BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
 {
   if(aShape.IsNull())
     return (BodySM*)NULL;
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
     {
-      TopoDS_Compound *comsolid = new TopoDS_Compound;
-      *comsolid = aShape;
+      TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
+      *posolid = aShape;
       (iTotalTBCreated)++;
-      body = new OCCBody(comsolid);
-      OCCMap->Bind(*comsolid, iTotalTBCreated);
+      body = new OCCBody(posolid);
+      OCCMap->Bind(*posolid, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
-                               (TopologyBridge*)body));
+			       (TopologyBridge*)body));
       BodyList->append(body);
     }
   else
@@ -2001,7 +1996,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
     lump->set_TopoDS_Solid(aShape);
     OCCBody* body = CAST_TO(lump->get_body(), OCCBody);
     DLIList<Lump*> lumps = body->lumps();
-    TopoDS_Compound* new_top = body->make_Compound(lumps);
+    TopoDS_CompSolid* new_top = body->make_CompSolid(lumps);
     body->set_TopoDS_Shape(*new_top);
     new_top->Nullify();
     delete new_top;
@@ -2100,30 +2095,6 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
-
-    if(sense == CUBIT_REVERSED )
-    {
-      //When the loop has only one curve, the wire and face sense usually 
-      //are the same, so don't need to reverse again.   
-      //have to reverse wire direction and coedge sense for multi-curve situ.
-      DLIList<OCCLoop*> loops;
-      DLIList<OCCCoEdge*> coedges;
-      occ_surface->get_loops(loops);
-      for (int i = 0; i < loops.size(); i++)
-      {
-        OCCLoop* loop = loops.get_and_step();
-        coedges = loop->coedges();
-        if(coedges.size() == 1)
-          continue;
-        coedges.reverse();
-        for (int j = 0; j < coedges.size(); j++)
-        {
-          OCCCoEdge* coedge = coedges.get_and_step();
-          coedge->set_sense(coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
-        } 
-        loop->coedges(coedges); 
-      }  
-    } 
     for(int i = 0; i < size; i++)
     {
       coface = cofaces_old.get_and_step();
@@ -2251,8 +2222,6 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       loop->set_TopoDS_Wire(aShape);
     }
 
-  CubitVector v;
-  double d;
   BRepTools_WireExplorer Ex;
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
   coedges_old = loop->coedges();
@@ -3597,9 +3566,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
      assert(0);
 
   if ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
-      OCCMap->IsBound(new_shape))|| new_shape.IsNull() ||
-      (TopAbs_SOLID == old_shape.ShapeType() && 
-       TopAbs_COMPOUND == new_shape.ShapeType())) 
+      OCCMap->IsBound(new_shape))|| new_shape.IsNull()) 
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
@@ -3607,7 +3574,6 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
       delete_solid_model_entities( ge, CUBIT_FALSE );
-
     else
     {
       ShellSM * shell = CAST_TO(tb, ShellSM);
@@ -3702,7 +3668,7 @@ void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
 {
   BodySM* body = CAST_TO(tb, BodySM);
   if(body)
-    return CAST_TO(body, OCCBody)->set_TopoDS_Shape(TopoDS::Compound(shape));
+    return CAST_TO(body, OCCBody)->set_TopoDS_Shape(TopoDS::CompSolid(shape));
 
   Lump* lump = CAST_TO(tb, Lump);
   if(lump)

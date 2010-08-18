@@ -43,7 +43,6 @@
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "LocOpe_SplitShape.hxx"
-#include "TopoDS_Compound.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
