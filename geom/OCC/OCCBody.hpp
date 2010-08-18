@@ -24,7 +24,6 @@
 #include "OCCAttribSet.hpp"
 #include "CubitBox.hpp"
 
-#include <TopoDS_CompSolid.hxx>
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -42,13 +41,15 @@ class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
+class TopoDS_Compound;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCBody : public BodySM
 {
 public:
   
-  OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody = CUBIT_FALSE, 
+  // Currently, the compound should only consists solids.
+  OCCBody(TopoDS_Compound *theShape, CubitBoolean isSheetBody = CUBIT_FALSE, 
           OCCSurface* surface = NULL, OCCShell* shell = NULL);
 
   OCCBody(DLIList<Lump*>& my_lumps);
@@ -68,8 +69,8 @@ public:
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-  TopoDS_CompSolid *get_TopoDS_Shape() {return myTopoDSShape; }
-  void set_TopoDS_Shape( TopoDS_CompSolid theshape);
+  TopoDS_Compound *get_TopoDS_Shape() {return myTopoDSShape; }
+  void set_TopoDS_Shape( TopoDS_Compound theshape);
 
   virtual CubitStatus get_transforms( CubitTransformMatrix &tfm );
   //R CubitStatus
@@ -185,7 +186,7 @@ public:
 
   virtual CubitBoolean is_sheet_body(){return IsSheetBody;}
 
-  TopoDS_CompSolid* make_CompSolid(DLIList<Lump*>& my_lumps);
+  TopoDS_Compound* make_Compound(DLIList<Lump*>& my_lumps);
 protected: 
 private:
 
@@ -193,7 +194,7 @@ private:
     //List of the attached lumps for the traversal functions.
   OCCAttribSet attribSet;
     //List of OCCAttrib*'s instead of CubitSimpleAttribs 
-  TopoDS_CompSolid *myTopoDSShape;
+  TopoDS_Compound *myTopoDSShape;
 
   CubitBox boundingbox;
 

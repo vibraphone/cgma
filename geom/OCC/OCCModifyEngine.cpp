@@ -2310,7 +2310,12 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 			  break;
 			}
 		    }
-		  else if(list_of_edges.Extent() == 1 && (d2 - d1) <= TOL)
+                  else if((list_of_edges.Extent() == 1 ||
+                          list_of_edges.Extent() == 2) &&
+                          (d2 - d1) <= TOL)
+                    //just saw a case that the intersection is a circle but 
+                    //the intersector returns 2 curves, one with paramenter
+                    // (0, PI/2), the other is (P2/2, 2*PI).
 		    skipped = CUBIT_TRUE;
 		} 
 	      if(list_of_edges.Extent() == 1 && !skipped) 
@@ -2834,7 +2839,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
  
   int size = shape_list.size();
   // total number of imprints to be done
-  int total_imprints = (size * (size -1))/2;
+  int total_imprints = size * (size -1);
 
   if( size > 2 )
   {

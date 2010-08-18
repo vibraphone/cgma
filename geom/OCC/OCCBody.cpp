@@ -52,13 +52,14 @@
 #include "BRepGProp.hxx"
 #include "Standard_Boolean.hxx"
 #include "LocOpe_SplitShape.hxx"
+#include "TopoDS_Compound.hxx"
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
 //
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-OCCBody::OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody,
+OCCBody::OCCBody(TopoDS_Compound *theShape, CubitBoolean isSheetBody,
                  OCCSurface* surface, OCCShell* shell)
 {
   myTopoDSShape = theShape;
@@ -82,45 +83,45 @@ void OCCBody::lumps(DLIList<Lump*>& my_lumps)
   myLumps += my_lumps;
 }
 
-void OCCBody::set_TopoDS_Shape( TopoDS_CompSolid theshape)
+void OCCBody::set_TopoDS_Shape( TopoDS_Compound theshape)
 {
   if(theshape.IsEqual(*myTopoDSShape))
     return;
 
-  TopoDS_CompSolid * the_comp = new TopoDS_CompSolid(theshape);
+  TopoDS_Compound * the_comp = new TopoDS_Compound(theshape);
   if(myTopoDSShape)
-    delete (TopoDS_CompSolid*)myTopoDSShape;
+    delete (TopoDS_Compound*)myTopoDSShape;
   myTopoDSShape = the_comp;
 }
 
 OCCBody::OCCBody(DLIList<Lump*>& my_lumps)
 {
   myLumps += my_lumps;
-  TopoDS_CompSolid* new_top = make_CompSolid(my_lumps);
+  TopoDS_Compound* new_top = make_Compound(my_lumps);
   myTopoDSShape = new_top;
   IsSheetBody = CUBIT_FALSE;
   myShell = NULL;
   update_bounding_box();
 }
 
-TopoDS_CompSolid* OCCBody::make_CompSolid(DLIList<Lump*>& my_lumps)
+TopoDS_Compound* OCCBody::make_Compound(DLIList<Lump*>& my_lumps)
 {
   BRep_Builder B;
-  TopoDS_CompSolid Co;
-  B.MakeCompSolid(Co);
+  TopoDS_Compound Co;
+  B.MakeCompound(Co);
   for(int i = 0; i < myLumps.size(); i ++)
   {
      TopoDS_Solid * solid = CAST_TO(myLumps.get_and_step(), OCCLump)->get_TopoDS_Solid();
      B.Add(Co, *solid);
   }
-  TopoDS_CompSolid* new_top = new TopoDS_CompSolid(Co);
+  TopoDS_Compound* new_top = new TopoDS_Compound(Co);
   return new_top; 
 }
 
 OCCBody::~OCCBody() 
 {
   if (myTopoDSShape)
-    delete (TopoDS_CompSolid*)myTopoDSShape;
+    delete (TopoDS_Compound*)myTopoDSShape;
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
@@ -386,9 +387,9 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 }
 
 //----------------------------------------------------------------
-// Function: private function to update the core compsolid and      
+// Function: private function to update the core compound and      
 //           for any movement of the body.
-// Note:     input shape must have the same number of CompSolids
+// Note:     input shape must have the same number of Compound
 //           as the body's lumps number.
 // Author: Jane Hu
 //----------------------------------------------------------------
@@ -400,11 +401,11 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
 
   assert(aBRepTrsf != NULL || op != NULL);
 
-  TopoDS_CompSolid compsolid;
+  TopoDS_Compound compsolid;
   if(aBRepTrsf)
   {
     TopoDS_Shape shape = aBRepTrsf->ModifiedShape(*myTopoDSShape);
-    TopoDS_CompSolid compsolid = TopoDS::CompSolid(shape);
+    compsolid = TopoDS::Compound(shape);
   
     if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )
        OCCQueryEngine::instance()->update_OCC_map(*myTopoDSShape, shape);

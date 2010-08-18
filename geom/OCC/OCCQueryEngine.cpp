@@ -731,7 +731,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
     {
-      TopoDS_CompSolid* theShape = body_ptr->get_TopoDS_Shape();
+      TopoDS_Compound* theShape = body_ptr->get_TopoDS_Shape();
       if (!theShape)
 	{
 	  PRINT_ERROR("OCCBody without TopoDS_Shape at %s:%d.\n", __FILE__, __LINE__ );
@@ -1105,7 +1105,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   for (i = 0; i < OCC_bodies.size(); i++)
     {
       OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
+      TopoDS_Compound *shape = body->get_TopoDS_Shape();
 
       if (shape == NULL) //sheet body or shell body
       {
@@ -1419,7 +1419,7 @@ OCCQueryEngine::write_topology( char*& p_buffer,
   for (i = 0; i < OCC_bodies.size(); i++)
     {
       OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
+      TopoDS_Compound *shape = body->get_TopoDS_Shape();
 
       if (shape == NULL) //sheet body or shell body
       {
@@ -1894,10 +1894,10 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
   DLIList<TopologyBridge*> tblist;
   // suitable to populate for a TopoDS_CompSolid or TopoDS_Compound shape.
   TopExp_Explorer Ex;
-  for (Ex.Init(aShape, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
-    tblist.append(populate_topology_bridge(TopoDS::CompSolid(Ex.Current())));
+  for (Ex.Init(aShape, TopAbs_COMPOUND); Ex.More(); Ex.Next())
+    tblist.append(populate_topology_bridge(TopoDS::Compound(Ex.Current())));
 
-  for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPSOLID); Ex.More(); Ex.Next())
+  for (Ex.Init(aShape, TopAbs_SOLID, TopAbs_COMPOUND); Ex.More(); Ex.Next())
   {
     Lump *lump = 
     populate_topology_bridge(TopoDS::Solid(Ex.Current()), CUBIT_TRUE);
@@ -1931,20 +1931,21 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
   return tblist;
 }
 
-BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_CompSolid& aShape)
+//This deals only all compound materials are solids.
+BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
 {
   if(aShape.IsNull())
     return (BodySM*)NULL;
   OCCBody *body;
   if (!OCCMap->IsBound(aShape))
     {
-      TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
-      *posolid = aShape;
+      TopoDS_Compound *comsolid = new TopoDS_Compound;
+      *comsolid = aShape;
       (iTotalTBCreated)++;
-      body = new OCCBody(posolid);
-      OCCMap->Bind(*posolid, iTotalTBCreated);
+      body = new OCCBody(comsolid);
+      OCCMap->Bind(*comsolid, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
-			       (TopologyBridge*)body));
+                               (TopologyBridge*)body));
       BodyList->append(body);
     }
   else
@@ -2000,7 +2001,7 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
     lump->set_TopoDS_Solid(aShape);
     OCCBody* body = CAST_TO(lump->get_body(), OCCBody);
     DLIList<Lump*> lumps = body->lumps();
-    TopoDS_CompSolid* new_top = body->make_CompSolid(lumps);
+    TopoDS_Compound* new_top = body->make_Compound(lumps);
     body->set_TopoDS_Shape(*new_top);
     new_top->Nullify();
     delete new_top;
@@ -2250,6 +2251,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       loop->set_TopoDS_Wire(aShape);
     }
 
+  CubitVector v;
+  double d;
   BRepTools_WireExplorer Ex;
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
   coedges_old = loop->coedges();
@@ -3594,7 +3597,9 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
      assert(0);
 
   if ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
-      OCCMap->IsBound(new_shape))|| new_shape.IsNull()) 
+      OCCMap->IsBound(new_shape))|| new_shape.IsNull() ||
+      (TopAbs_SOLID == old_shape.ShapeType() && 
+       TopAbs_COMPOUND == new_shape.ShapeType())) 
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
@@ -3602,6 +3607,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
       delete_solid_model_entities( ge, CUBIT_FALSE );
+
     else
     {
       ShellSM * shell = CAST_TO(tb, ShellSM);
@@ -3696,7 +3702,7 @@ void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
 {
   BodySM* body = CAST_TO(tb, BodySM);
   if(body)
-    return CAST_TO(body, OCCBody)->set_TopoDS_Shape(TopoDS::CompSolid(shape));
+    return CAST_TO(body, OCCBody)->set_TopoDS_Shape(TopoDS::Compound(shape));
 
   Lump* lump = CAST_TO(tb, Lump);
   if(lump)
