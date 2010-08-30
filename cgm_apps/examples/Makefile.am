@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = foreign
-
 if build_ACIS
   ACIS_SUBDIRS = driverc++
 else

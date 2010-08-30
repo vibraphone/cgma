@@ -56,6 +56,6 @@ libcgm_la_SOURCES =
 # directory until we're doing the install.
 CFG_FILE = $(DESTDIR)$(cfgdir)/cgm.make
 install-data-hook:
-	echo "CGM_INT_INCLUDE = -I$(includedir)"  >> $(CFG_FILE)
-	echo "CGM_INT_LDFLAGS = -L$(libdir)"      >> $(CFG_FILE)
-	echo "CGM_INT_LTFLAGS = -R$(libdir)"      >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_INCLUDE = -I$(includedir)"  >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_LDFLAGS = -L$(libdir)"      >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_LTFLAGS = -R$(libdir)"      >> $(CFG_FILE)

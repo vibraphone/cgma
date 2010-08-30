@@ -5,16 +5,17 @@ AC_INIT(CGMA, 10.2.3)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([foreign])
+m4_ifdef([AM_SILENT_RULES],
+ [AM_INIT_AUTOMAKE([foreign -Wall silent-rules color-tests parallel-tests])],
+ [AM_INIT_AUTOMAKE([foreign -Wall])])
 AC_DISABLE_SHARED
 
-EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
+EXTRA_GNU_FLAGS="-pipe -pedantic"
 FATHOM_CHECK_COMPILERS
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_SED
-AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
-AC_SUBST(LITTLE_ENDIAN)
+AC_C_BIGENDIAN( [], [AM_CPPFLAGS="$AM_CPPFLAGS -DLITTLE_ENDIAN=BYTE_ORDER"] )
 FATHOM_COMPILER_FLAGS
 
 ################################################################################
@@ -43,7 +44,7 @@ AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
 FATHOM_CHECK_MPI
 FATHOM_CONFIG_MPI_EXEC
 if test "x$WITH_MPI" != "xno"; then
-  CXXFLAGS="$CXXFLAGS -DUSE_MPI"
+  AM_CXXFLAGS="$AM_CXXFLAGS -DUSE_MPI"
   CGM_PARALLEL_INCLUDE='-I${CGM_DIR}/geom/parallel'
   CGM_PARALLEL_LIB='-L${CGM_DIR}/geom/parallel -lcubit_parallel'
   CGM_PARALLEL_LIB_FILE='${CGM_LIBDIR}/libcubit_parallel.la'
@@ -67,9 +68,7 @@ fi
 
 FATHOM_CANT_USE_STD
 FATHOM_TEMPLATE_DEFS_INCLUDED
-AC_SUBST(CANT_USE_STD)
-AC_SUBST(CANT_USE_STD_IO)
-AC_SUBST(TEMPLATE_DEFS_INCLUDED)
+AM_CPPFLAGS="$AM_CPPFLAGS $CANT_USE_STD $CANT_USE_STD_IO $TEMPLATE_DEFS_INCLUDED"
 AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
 
 ################################################################################
@@ -231,7 +230,7 @@ if test "x$ACIS_DIR" != "xno"; then
   CGM_EXT_INCLUDE="$CGM_EXT_INCLUDE $ACIS_INCLUDES"
   CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $ACIS_LTFLAGS"
   if test "x$GXX" = "xyes"; then
-    CPPFLAGS="$CPPFLAGS -isystem $ACIS_DIR/include"
+    AM_CPPFLAGS="$AM_CPPFLAGS -isystem $ACIS_DIR/include"
   fi
   ACIS_DEFS='$(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS'
 dnl  AC_DEFINE( HAVE_ACIS )
@@ -481,8 +480,10 @@ AM_CONDITIONAL( build_OCC, [test "x$occ_DIR" != "xno"] )
 #                           Output Files
 ################################################################################
 AC_SUBST(AM_CPPFLAGS)
+AC_SUBST(AM_LDFLAGS)
 AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
+AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
 AC_CONFIG_HEADERS(config.h)

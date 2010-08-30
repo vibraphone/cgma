@@ -1,6 +1,5 @@
 TESTS = mergechk_merge mergechk_huge
 EXTRA_DIST = README merge.sat huge.sat $(TESTS)
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 
 check_PROGRAMS = mergechk
 CLEANFILES = mmgr.log
