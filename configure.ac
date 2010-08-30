@@ -394,17 +394,37 @@ if test "x$occ_DIR" != "xno"; then
                                [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])],
                                [-ldl] )
                 ] )
+  
+  # Common setup for tests below
+  old_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS $OCC_INC_FLAG"
+
+  # Check if OpenCascade requires -lpthread
+  AC_MSG_CHECKING([if OpenCascade requires -lpthread])
+  LIBS="$OCC_LIBS $old_LIBS"
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "Standard_Mutex.hxx"], [Standard_Mutex mutex; mutex.TryLock();])],
+     [AC_MSG_RESULT([no])],
+     [# Try test again with pthreads library
+      LIBS="$LIBS -lpthread"
+      AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([#include "Standard_Mutex.hxx"], [Standard_Mutex mutex; mutex.TryLock();])],
+        [AC_MSG_RESULT([yes]); OCC_LIBS="$OCC_LIBS -lpthread"],
+        [AC_MSG_ERROR([Cannot link libTKKernel with Standard_Mutex])]
+      )])
+  
 
   HAVE_OCC_DEF="-DHAVE_OCC"
-  # Check for IGES, STEP, and STL support
+ 
+  # Check for IGES support
   AC_CHECK_LIB( [TKIGES], [igesread], 
                 [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_IGES"
                  OCC_LIBS="-lTKIGES -lTKXSBase $OCC_LIBS"], 
-                [], [$OCC_LIBS] )
+                [], [-lTKXSBase $OCC_LIBS] )
+
+  # Check for STEP support
   AC_MSG_CHECKING([for OpenCascade STEP support (libTKSTEP)])
-  old_LIBS="$LIBS"
-  LIBS="$OCC_STEP_LIBS $OCC_LIBS $LIBS"
-  CPPFLAGS="$CPPFLAGS $OCC_INC_FLAG"
+  LIBS="$OCC_STEP_LIBS $OCC_LIBS $old_LIBS"
   AC_LINK_IFELSE(
      [AC_LANG_PROGRAM([#include "STEPControl_Reader.hxx"], 
                       [STEPControl_Reader reader;])],
@@ -412,6 +432,8 @@ if test "x$occ_DIR" != "xno"; then
       OCC_LIBS="$OCC_STEP_LIBS $OCC_LIBS"
       AC_MSG_RESULT([yes])],
      [AC_MSG_RESULT([no])])
+     
+  # Check for STL support
   AC_MSG_CHECKING([for OpenCascade STL support (libTKSTL)])
   LIBS="-lTKSTL $OCC_LIBS $old_LIBS"                         
   AC_LINK_IFELSE(
@@ -421,11 +443,10 @@ if test "x$occ_DIR" != "xno"; then
       OCC_LIBS="-lTKSTL $OCC_LIBS"
       AC_MSG_RESULT([yes])],
      [AC_MSG_RESULT([no])])
-  LIBS="$old_LIBS"                         
-                
-  AC_LANG_POP(C++)
-
+     
   # Restore original values of variables
+  AC_LANG_POP(C++)
+  LIBS="$old_LIBS"                         
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
   
