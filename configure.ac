@@ -10,7 +10,7 @@ m4_ifdef([AM_SILENT_RULES],
  [AM_INIT_AUTOMAKE([foreign -Wall])])
 AC_DISABLE_SHARED
 
-EXTRA_GNU_FLAGS="-pipe -pedantic"
+EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
 FATHOM_CHECK_COMPILERS
 AC_PROG_LIBTOOL
 LIBS="-lm"
