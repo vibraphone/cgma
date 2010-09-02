@@ -34,6 +34,10 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
                -I$(top_srcdir)/geom \
 	       -I$(top_srcdir)/init
 
+if USE_MPI
+  AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
+endif
+
 libiGeom_la_SOURCES = \
         CGMAIterator.hpp \
         CATag.hpp \
@@ -61,10 +65,9 @@ testgeom_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DFORCE_OCC
 chaman_SOURCES = chaman.cc
 
 if USE_MPI
-check_PROGRAMS += partest
-partest_SOURCES = partest.cpp
-partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
-AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel
+  check_PROGRAMS += partest
+  partest_SOURCES = partest.cpp
+  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
 endif
 
 
