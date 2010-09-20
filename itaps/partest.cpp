@@ -1,6 +1,6 @@
 // Test parallel iGeom
 // July 09
-// Author : Hongjun Kim
+// Author : Hong-Jun Kim
 // read OCC geometry file and distribute it to remote processors
 // with various methods
 
@@ -68,30 +68,30 @@ int main(int argc, char* argv[]){
   // do body partitioning with round robin distribution
   options += "PARTITION=GEOM_DIMENSION;PARTITION_VAL=3;PARTITION_DISTRIBUTE;";
 
-  // 
   struct rusage r_usage;
   long int rss_before, rss_after, size_before, size_after;
   static size_t pagesize = getpagesize();
-  //if (rank == 0) {
+
+  if (rank == 0) {
     util_getrusage(r_usage);
     rss_before = r_usage.ru_maxrss*pagesize;
     size_before = r_usage.ru_idrss*pagesize;
-    //}
-
+  }
+    
   double tStart = MPI_Wtime();
   iGeom_load(igeom, filename, options.c_str(), &ierr, strlen(filename), options.length());
 	    
   MPI_Barrier(MPI_COMM_WORLD); 
   double tEnd = MPI_Wtime();
 
-  //if (rank == 0) {
+  if (rank == 0) {
     util_getrusage(r_usage);
     rss_after = r_usage.ru_maxrss*pagesize;
     size_after = r_usage.ru_idrss*pagesize;
 
     printf("proc=%d, rss_before=%ld, size_before=%ld\n", rank, rss_before, size_before);
     printf("proc=%d, rss_after=%ld, size_after=%ld\n", rank, rss_after, size_after);
-    //}
+  }
 
   IGEOM_ASSERT(ierr);
   

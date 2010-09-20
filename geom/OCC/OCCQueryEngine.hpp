@@ -412,7 +412,8 @@ private:
   CubitBoolean Write(const TopoDS_Shape& Sh,
 		     char*& p_buffer,
 		     int& n_buffer_size,
-		     bool b_export_buffer);
+		     bool b_export_buffer,
+		     TDF_Label label);
   
   CubitBoolean Read(TopoDS_Shape& Sh,
                     const Standard_CString File,
@@ -421,7 +422,9 @@ private:
 
   CubitBoolean Read(TopoDS_Shape& Sh,
 		    const char* pBuffer,
-		    const int n_buffer_size);
+		    const int n_buffer_size,
+		    TDF_Label label,
+		    CubitBoolean print_results);
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class

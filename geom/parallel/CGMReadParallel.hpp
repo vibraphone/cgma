@@ -1,18 +1,17 @@
-#ifndef PARALLELGEOMTOOL_HPP
-#define PARALLELGEOMTOOL_HPP
+#ifndef CGM_READ_PARALLEL_HPP
+#define CGM_READ_PARALLEL_HPP
 
 #include <vector>
 #include "CubitDefines.h"
+#include "GeometryQueryTool.hpp"
 #include "CGMParallelComm.hpp"
 #include "CGMFileOptions.hpp"
 
-class ParallelGeomTool 
+class CGMReadParallel 
 {
 public:
 
-  ParallelGeomTool(CGMParallelComm *pc = NULL);
-
-  //static ParallelGeomTool *instance();
+  CGMReadParallel(GeometryQueryTool* gqt = NULL, CGMParallelComm *pc = NULL);
 
   enum ParallelLoadOption {BCAST, BCAST_AND_DELETE, SCATTER};
   
@@ -26,15 +25,14 @@ public:
                         int parallel_mode, 
                         std::string &partition_tag_name, 
                         std::vector<int> &partition_tag_vals, 
-                        bool distrib,
                         std::vector<int> &pa_vec,
                         const CGMFileOptions &opts,
                         const char* set_tag_name,
                         const int* set_tag_values,
                         const int num_set_tag_values,
                         const int reader_rank,
-			const bool surf_partition,
-			const bool body_partition);
+			const bool surf_partition
+			);
   
   static const char *CGMparallelOptsNames[];
 
@@ -45,36 +43,28 @@ public:
 			PORT_SCATTER_DELETE, POPT_READ_PARALLEL,
 			POPT_FORMAT, POPT_DEFAULT};
 
+  void set_reader(unsigned int reader);
+
 private:
 
+  GeometryQueryTool* m_gqt;
+
+  CGMParallelComm *m_pcomm;
+
+  bool m_round_robin, m_scatter, m_reader;
+
+  unsigned int m_rank, m_proc_size;
+
   // surf ref entity list to be partitioned
-  DLIList<RefEntity*> msurf_entity_list;
+  DLIList<RefEntity*> m_surf_entity_list;
 
-  // body ref entity list to be partitioned
-  DLIList<RefEntity*> mbody_entity_list;
+  CubitStatus read_entities(const char* file_name);
 
-  CubitStatus delete_nonlocal_entities(std::string &ptag_name,
-                                       std::vector<int> &ptag_vals,
-				       DLIList<RefEntity*> surf_entity_list,
-				       DLIList<RefEntity*> body_entity_list,
-				       bool distribute);
-  
-  //CubitStatus delete_nonlocal_entities(MBEntityHandle file_set);
+  // balance and save the information as attribute
+  CubitStatus balance();
 
-
-  //static ParallelGeomTool *instance_;
-
-  // each reader can keep track of its own pcomm
-  CGMParallelComm *myPcomm;
-
-  //GeometryQueryTool *gqt;
+  CubitStatus delete_nonlocal_entities(int reader,
+				       std::string &ptag_name,
+                                       std::vector<int> &ptag_vals);
 };
-
-/*
-inline ParallelGeomTool *ParallelGeomTool::instance()
-{
-  if (!instance_) instance_ = new ParallelGeomTool();
-  return instance_;
-  }*/
-
 #endif

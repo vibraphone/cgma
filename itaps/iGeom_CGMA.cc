@@ -94,8 +94,8 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #include "CubitVector.hpp"
 
 #ifdef USE_MPI
-#ifdef build_OCC
-#include "ParallelGeomTool.hpp"
+#ifdef HAVE_OCC
+#include "CGMReadParallel.hpp"
 #endif
 #endif
 
@@ -392,9 +392,10 @@ void iGeom_load( iGeom_Instance instance,
   // parallel
   if (parallel) {
 #ifdef USE_MPI
-#ifdef build_OCC
-    ParallelGeomTool pgt(NULL);
-    CubitStatus status = pgt.load_file(name, options);
+#ifdef HAVE_OCC
+    CGMParallelComm* p_comm = new CGMParallelComm();
+    CGMReadParallel* p_reader = new CGMReadParallel(GeometryQueryTool::instance(), p_comm);
+    CubitStatus status = p_reader->load_file(name, options);
     if (CUBIT_SUCCESS != status) {
       ERROR(iBase_FAILURE, "Trouble loading geometry file in parallel.");
     }

@@ -22,7 +22,9 @@ libcubit_parallel_la_SOURCES = \
     CGMProcConfig.cpp \
     CGMParallelComm.cpp \
     CGMFileOptions.cpp \
-    ParallelGeomTool.cpp
+    CABodies.cpp \
+    TDParallel.cpp \
+    CGMReadParallel.cpp
 
 # The non-template headers
 # If any of these do not need to be installed, move them
@@ -33,5 +35,7 @@ libcubit_parallel_la_include_HEADERS = \
     CGMProcConfig.hpp \
     CGMParallelComm.hpp \
     CGMFileOptions.hpp \
-    ParallelGeomTool.hpp
+    CABodies.hpp \
+    TDParallel.hpp \
+    CGMReadParallel.hpp
 

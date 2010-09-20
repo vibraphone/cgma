@@ -272,7 +272,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
     double angle  = 0.5;
     BRepAdaptor_Surface asurface(*Topo_Face);
     Bnd_Box aBox;
-    BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
+    BndLib_AddSurface::Add(asurface,  distance_tolerance, aBox);
     BRepMesh_FastDiscret *myMesh =
     new BRepMesh_FastDiscret(deflection, *Topo_Face, aBox, angle, Standard_True, Standard_True);
     if (myMesh != NULL) delete myMesh;
@@ -1211,194 +1211,7 @@ OCCQueryEngine::write_topology( const char* file_name,
 
   return CUBIT_SUCCESS;
 }
-/*
-CubitStatus
-OCCQueryEngine::write_topology( //const unsigned char* p_buffer,
-			       //char* p_buffer,
-			       ofstream& os,
-				DLIList<OCCBody*> &OCC_bodies,
-				DLIList<OCCSurface*> &OCC_surfaces,
-				DLIList<OCCCurve*> &OCC_curves,
-				DLIList<OCCPoint*> &OCC_points)
-{
 
-  int i;
-  //Create a compound shape to export
-  BRep_Builder B;
-  TopoDS_Compound Co;
-  B.MakeCompound(Co);
-
-  //Add every shape to the compound
-  for (i = 0; i < OCC_bodies.size(); i++)
-    {
-      OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
-
-      if (shape == NULL) //sheet body or shell body
-      {
-         OCCSurface* surface = body->my_sheet_surface();
-         OCCShell* shell = body->shell();
-         if (surface == NULL && shell == NULL)
-         {
-           
-	   PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
-	   continue;
-         }
-         if(surface)
-           B.Add(Co,*(surface->get_TopoDS_Face())); 
-         else
-    	   B.Add(Co,*(shell->get_TopoDS_Shell()));
-         continue;
-      }
-
-      //check if this body is build backwards from lump. if so,
-      //the body and its CompSolid doesn't have bounded relationship
-      //established. In this case, each individual lump of the body 
-      // will be exported as TopoDS_Solid without a CompSolid
-      if(OCCMap->IsBound(*shape))
-	B.Add(Co, *shape);
-      else
-	{   
-	  DLIList<Lump*> lumps = body->lumps();
-	  for(int i = 0; i < lumps.size(); i++)
-	    {
-	      OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
-              TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
-	      B.Add(Co, solid);
-	    }
-	}
-    }
-
-  for (i = 0; i < OCC_surfaces.size(); i++)
-    {
-      TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
-    }
-
-  //Add standalone wires to the export BRep file
-  for (i = 0; i < WireList->size(); i++)
-    {
-      TopoDS_Wire *wire = WireList->get_and_step()->get_TopoDS_Wire();
-      B.Add(Co, *wire);
-    }
-
-  for (i = 0; i < OCC_curves.size(); i++)
-    {
-      TopoDS_Edge *edge = OCC_curves.get_and_step()->get_TopoDS_Edge();
-      B.Add(Co, *edge);
-    }
-
-  for (i = 0; i < OCC_points.size(); i++)
-    {
-      TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
-      B.Add(Co, *vertex);
-    }
- 
-  //if(strcmp(file_type, "OCC") == 0)
-  //{
-    TDF_Label label;
-    if(EXPORT_ATTRIB)
-      label = mainLabel;
-
-    if(!Write(Co, os))
-      return CUBIT_FAILURE;
-
-  return CUBIT_SUCCESS;
-}
-
-CubitStatus
-OCCQueryEngine::write_topology(
-			       std::ostringstream& os,
-				DLIList<OCCBody*> &OCC_bodies,
-				DLIList<OCCSurface*> &OCC_surfaces,
-				DLIList<OCCCurve*> &OCC_curves,
-				DLIList<OCCPoint*> &OCC_points)
-{
-
-  int i;
-  //Create a compound shape to export
-  BRep_Builder B;
-  TopoDS_Compound Co;
-  B.MakeCompound(Co);
-
-  //Add every shape to the compound
-  for (i = 0; i < OCC_bodies.size(); i++)
-    {
-      OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
-
-      if (shape == NULL) //sheet body or shell body
-      {
-         OCCSurface* surface = body->my_sheet_surface();
-         OCCShell* shell = body->shell();
-         if (surface == NULL && shell == NULL)
-         {
-           
-	   PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
-	   continue;
-         }
-         if(surface)
-           B.Add(Co,*(surface->get_TopoDS_Face())); 
-         else
-    	   B.Add(Co,*(shell->get_TopoDS_Shell()));
-         continue;
-      }
-
-      //check if this body is build backwards from lump. if so,
-      //the body and its CompSolid doesn't have bounded relationship
-      //established. In this case, each individual lump of the body 
-      // will be exported as TopoDS_Solid without a CompSolid
-      if(OCCMap->IsBound(*shape))
-	B.Add(Co, *shape);
-      else
-	{   
-	  DLIList<Lump*> lumps = body->lumps();
-	  for(int i = 0; i < lumps.size(); i++)
-	    {
-	      OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
-              TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
-	      B.Add(Co, solid);
-	    }
-	}
-    }
-
-  for (i = 0; i < OCC_surfaces.size(); i++)
-    {
-      TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
-    }
-
-  //Add standalone wires to the export BRep file
-  for (i = 0; i < WireList->size(); i++)
-    {
-      TopoDS_Wire *wire = WireList->get_and_step()->get_TopoDS_Wire();
-      B.Add(Co, *wire);
-    }
-
-  for (i = 0; i < OCC_curves.size(); i++)
-    {
-      TopoDS_Edge *edge = OCC_curves.get_and_step()->get_TopoDS_Edge();
-      B.Add(Co, *edge);
-    }
-
-  for (i = 0; i < OCC_points.size(); i++)
-    {
-      TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
-      B.Add(Co, *vertex);
-    }
- 
-  //if(strcmp(file_type, "OCC") == 0)
-  //{
-    TDF_Label label;
-    if(EXPORT_ATTRIB)
-      label = mainLabel;
-
-    if(!Write(Co, os))
-      return CUBIT_FAILURE;
-
-  return CUBIT_SUCCESS;
-}
-*/
 CubitStatus
 OCCQueryEngine::write_topology( char*& p_buffer,
 				int& n_buffer_size,
@@ -1408,88 +1221,82 @@ OCCQueryEngine::write_topology( char*& p_buffer,
 				DLIList<OCCCurve*> &OCC_curves,
 				DLIList<OCCPoint*> &OCC_points)
 {
-
+  
   int i;
   //Create a compound shape to export
   BRep_Builder B;
   TopoDS_Compound Co;
   B.MakeCompound(Co);
-
+  
   //Add every shape to the compound
-  for (i = 0; i < OCC_bodies.size(); i++)
-    {
-      OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
-
-      if (shape == NULL) //sheet body or shell body
-      {
-         OCCSurface* surface = body->my_sheet_surface();
-         OCCShell* shell = body->shell();
-         if (surface == NULL && shell == NULL)
-         {
-           
-	   PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
-	   continue;
-         }
-         if(surface)
-           B.Add(Co,*(surface->get_TopoDS_Face())); 
-         else
-    	   B.Add(Co,*(shell->get_TopoDS_Shell()));
-         continue;
+  for (i = 0; i < OCC_bodies.size(); i++) {
+    OCCBody* body = OCC_bodies.get_and_step();
+    TopoDS_CompSolid *shape = body->get_TopoDS_Shape();
+    
+    if (shape == NULL) { //sheet body or shell body
+      OCCSurface* surface = body->my_sheet_surface();
+      OCCShell* shell = body->shell();
+      if (surface == NULL && shell == NULL) {
+	PRINT_ERROR( "Wrong body structure. Internal ERROR\n" );
+	continue;
       }
-
-      //check if this body is build backwards from lump. if so,
-      //the body and its CompSolid doesn't have bounded relationship
-      //established. In this case, each individual lump of the body 
-      // will be exported as TopoDS_Solid without a CompSolid
-      if(OCCMap->IsBound(*shape))
-	B.Add(Co, *shape);
+      if(surface)
+	B.Add(Co,*(surface->get_TopoDS_Face())); 
       else
-	{   
-	  DLIList<Lump*> lumps = body->lumps();
-	  for(int i = 0; i < lumps.size(); i++)
-	    {
-	      OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
-              TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
-	      B.Add(Co, solid);
-	    }
-	}
+	B.Add(Co,*(shell->get_TopoDS_Shell()));
+      continue;
     }
-
-  for (i = 0; i < OCC_surfaces.size(); i++)
-    {
-      TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
+    
+    //check if this body is build backwards from lump. if so,
+    //the body and its CompSolid doesn't have bounded relationship
+    //established. In this case, each individual lump of the body 
+    // will be exported as TopoDS_Solid without a CompSolid
+    if(OCCMap->IsBound(*shape))
+      B.Add(Co, *shape);
+    else {/*
+      DLIList<Lump*> lumps = body->lumps();
+      for(int i = 0; i < lumps.size(); i++) {
+	OCCLump *occ_lump = (OCCLump *) lumps.get_and_step();
+	TopoDS_Solid solid = *(occ_lump->get_TopoDS_Solid());
+	B.Add(Co, solid);
+	}*/
+      TopoDS_CompSolid *posolid =  new TopoDS_CompSolid;
+      *posolid = *shape;
+      (iTotalTBCreated)++;
+      OCCMap->Bind(*posolid, iTotalTBCreated);
+      OccToCGM->insert(valType(iTotalTBCreated,
+      (TopologyBridge*)body));
+      B.Add(Co, *shape);
     }
-
+  }
+  
+  for (i = 0; i < OCC_surfaces.size(); i++) {
+    TopoDS_Face *face = OCC_surfaces.get_and_step()->get_TopoDS_Face();
+    B.Add(Co, *face);
+  }
+  
   //Add standalone wires to the export BRep file
-  for (i = 0; i < WireList->size(); i++)
-    {
-      TopoDS_Wire *wire = WireList->get_and_step()->get_TopoDS_Wire();
-      B.Add(Co, *wire);
-    }
-
-  for (i = 0; i < OCC_curves.size(); i++)
-    {
-      TopoDS_Edge *edge = OCC_curves.get_and_step()->get_TopoDS_Edge();
-      B.Add(Co, *edge);
-    }
-
-  for (i = 0; i < OCC_points.size(); i++)
-    {
-      TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
-      B.Add(Co, *vertex);
-    }
- 
-  //if(strcmp(file_type, "OCC") == 0)
-  //{
-    TDF_Label label;
-    if(EXPORT_ATTRIB)
-      label = mainLabel;
-
-    if(!Write(Co, p_buffer, n_buffer_size, b_export_buffer))
-      return CUBIT_FAILURE;
-
+  for (i = 0; i < WireList->size(); i++) {
+    TopoDS_Wire *wire = WireList->get_and_step()->get_TopoDS_Wire();
+    B.Add(Co, *wire);
+  }
+  
+  for (i = 0; i < OCC_curves.size(); i++) {
+    TopoDS_Edge *edge = OCC_curves.get_and_step()->get_TopoDS_Edge();
+    B.Add(Co, *edge);
+  }
+  
+  for (i = 0; i < OCC_points.size(); i++) {
+    TopoDS_Vertex *vertex = OCC_points.get_and_step()->get_TopoDS_Vertex();
+    B.Add(Co, *vertex);
+  }
+  
+  TDF_Label label;
+  if(EXPORT_ATTRIB) label = mainLabel;
+  
+  if (!Write(Co, p_buffer, n_buffer_size, b_export_buffer, label))
+    return CUBIT_FAILURE;
+  
   return CUBIT_SUCCESS;
 }
 
@@ -1520,195 +1327,33 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
 
   return isGood;
 }
-/*
-CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
-				   //const unsigned char* pbuffer,
-				   //streambuf* rpsbuf)
-				   //char* pbuffer,
-				   //TDF_Label label) 
-				   std::ofstream& os)
-{
-  os.open("test.txt", std::ios::out);
-  std::filebuf* pbuf_os = os.rdbuf();
-  if (!pbuf_os->is_open()) return Standard_False;
-  
-  CubitBoolean isGood = (os.good() && !os.eof());
-  if (!isGood) return isGood;
 
-  long os_size1 = pbuf_os->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "size os1 = " << os_size1 << std::endl;
-  
-  BinTools_ShapeSet SS;
-  SS.Add(Sh);
-  isGood = os.good();
-  SS.Write(os);
-  isGood = os.good();
- 
-  //std::streamsize size = pbuf->in_avail();
-  long os_size = pbuf_os->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "size os2 = " << os_size << std::endl;
-  
-  char* buffer = new char[os_size];
-  //os.write(buffer, os_size);
-  //pbuf_os->sputn(buffer, os_size);
-
-  //memcpy(buffer, pbuf_os, os_size);
-  
-  return CUBIT_TRUE;
-}
-
-CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
-				   std::ostringstream& os)
-{
-
-  CubitBoolean isGood = (os.good() && !os.eof());
-  if (!isGood) return isGood;
-
-  std::stringbuf* pbuf = os.rdbuf();
-  std::streamsize ssize = pbuf->in_avail(); 
-  long size = pbuf->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "size os1 = " << size << " " << ssize << std::endl;
-  
-  BinTools_ShapeSet SS;
-  SS.Add(Sh);
-  isGood = os.good();
-  SS.Write(os);
-  isGood = os.good();
- 
-  ssize = pbuf->in_avail();
-  size = pbuf->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "size os2 = " << size << " " << ssize << std::endl;
-
-  char* buffer = new char[size];
-  //os.write(buffer, os_size);
-  pbuf->sputn(buffer, size);
-
-  std::istringstream is;
-  pbuf = is.rdbuf();
-
-  ssize = pbuf->in_avail();
-  size = pbuf->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "size io1 = " << size << " " << ssize << std::endl;
-
-  //is.tie(&os);
-  //is.read(buffer, size1);
-  pbuf->pubseekpos(0, std::ios::in);
-  pbuf->sgetn(buffer, size);
-
-  ssize = pbuf->in_avail();
-  size = is.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "size io2 = " << size << " " << ssize << std::endl;
-
-  pbuf->pubsetbuf(buffer, size);
-
-  ssize = pbuf->in_avail();
-  size = is.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "size io3 = " << size << " " << ssize << std::endl;
-
-  BinTools_ShapeSet SS2;
-  SS2.Read(is);
-  int nShape = SS2.NbShapes();
-  std::cout << "nShpae = %d" << nShape << std::endl;
-
-  
-  // test
-  std::ostringstream oss("test");
-  pbuf = oss.rdbuf();
-  ssize = pbuf->in_avail();
-  size = pbuf->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "test size os1 = " << size << " " << ssize << std::endl;
-
-  char* tbuffer = new char[size];
-  //pbuf->sputn(tbuffer, size);
-  ssize = pbuf->sgetn(tbuffer, size);
-
-  std::istringstream iss;
-  pbuf = iss.rdbuf();
-
-  //ssize = pbuf->in_avail();
-  size = pbuf->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "test size io1 = " << size << " " << ssize << std::endl;
-
-  //is.tie(&os);
-  //is.read(buffer, size1);
-  pbuf->pubseekpos(0, std::ios::in);
-  //pbuf->sgetn(tbuffer, size);
-  //ssize = pbuf->sputn(tbuffer, size);
-  pbuf->pubsetbuf(tbuffer, size);
-
-  //ssize = pbuf->in_avail();
-  size = iss.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "test size io2 = " << size << " " << ssize << std::endl;
-
-  pbuf->pubsetbuf(tbuffer, size);
-
-  ssize = pbuf->in_avail();
-  size = iss.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "test size io3 = " << size << " " << ssize << std::endl;
-
-  // 
-  std::stringstream ssos("test2");
-  ssize = ssos.rdbuf()->in_avail();
-  size = ssos.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "test size os4 = " << size << " " << ssize << std::endl;
-  std::string mystr = ssos.rdbuf()->str();
-  std::stringstream ssis(mystr);
-  ssize = ssis.rdbuf()->in_avail();
-  size = ssis.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::in);
-  std::cout << "test size is4 = " << size << " " << ssize << std::endl;
-
-  std::stringbuf sbos;
-  std::stringbuf sbis;
-  std::iostream tos(&sbos);
-  std::iostream tis(&sbis);
-  BinTools_ShapeSet tSS1;
-  tSS1.Add(Sh);
-  isGood = tos.good();
-  std::cout << "isGood=" << isGood << std::endl;
-  tSS1.Write(tos);
-  isGood = tos.good();
-  std::cout << "isGood=" << isGood << std::endl;
-  size = tos.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::out);
-  std::cout << "test fos size = " << size << std::endl;
-  char* tbuffer1 = new char[size];
-  tos.read(tbuffer1, size);
-
-  tis.write(tbuffer1, size);
-  BinTools_ShapeSet tSS2;
-  tSS2.Read(tis);
-  isGood = tis.good();
-  std::cout << "isGood=" << isGood << std::endl;
-  nShape = tSS2.NbShapes();
-  std::cout << "test nShpae = " << nShape << std::endl;
-
-  return CUBIT_TRUE;
-}
-*/
 CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
 				   char*& pBuffer,
 				   int& n_buffer_size,
-				   bool b_write_buffer)
+				   bool b_write_buffer,
+				   TDF_Label label)
 {
   std::stringbuf sb;
   std::iostream os(&sb);
-  BinTools_ShapeSet SS;
 
-  SS.Add(Sh);
   CubitBoolean isGood = os.good();
-  //std::cout << "isGood=" << isGood << std::endl;
+  std::cout << "isGood1=" << isGood << std::endl;
   if (!isGood) return isGood;
+
+  OCCShapeAttributeSet SS;
+  SS.Add(Sh);
+
+  os << "DBRep_DrawableShape\n";  // for easy Draw read
   SS.Write(os);
   isGood = os.good();
-  //std::cout << "isGood=" << isGood << std::endl;
+  if (isGood)
+    SS.Write(Sh, os, &label);
+
+  isGood = os.good();
   if (!isGood) return isGood;
 
-  n_buffer_size = os.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::out);
-  //std::cout << "test fos size = " << n_buffer_size 
-  //  << " nShape= " << SS.NbShapes() << std::endl;
-
   if (b_write_buffer) {
-    //delete pBuffer;
-    //pBuffer = new char[n_buffer_size];
     os.read(pBuffer, n_buffer_size);
   }
 
@@ -1737,59 +1382,19 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
                                    
 CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
 				  const char* pBuffer,
-				  const int n_buffer_size)
+				  const int n_buffer_size,
+				  TDF_Label label,
+                                  CubitBoolean print_results)
 {
   std::stringbuf sb;
-  std::iostream is(&sb);
-  is.write(pBuffer, n_buffer_size);
-  /*
-  BinTools_ShapeSet SS;
-  SS.Read(is);
-  CubitBoolean isGood = is.good();
-  std::cout << "isGood=" << isGood << std::endl;
-  int nShape = SS.NbShapes();
-  std::cout << "test nShpae = " << nShape << std::endl;
-  if (!nShape) return CUBIT_FALSE;
-  //Sh = SS.TopoDS_Shape();
-  //SS.Read(Sh, is, nShape);
-  */
-  //TDF_Label label;
-  //CubitBoolean print_results = false;
-  //OCCBinToolsShapeSet SS;
-  BinTools_ShapeSet SS;
-  SS.Read(is);
+  std::iostream in(&sb);
+  in.write(pBuffer, n_buffer_size);
+
+  OCCShapeAttributeSet SS;
+  SS.Read(in, print_results);
   int nbshapes = SS.NbShapes();
   if (!nbshapes) return CUBIT_FALSE;
-  
-  //TopoDS_Shape fs = SS.Shape(1);
-  //TopoDS_Shape ls = SS.Shape(nbshapes);
-  /* for (int i = 1; i <= nbshapes; i++) {
-    TopoDS_Shape s = SS.Shape(i);
-    std::cout << "shape type" << i << "=" << s.ShapeType() << std::endl;
-    }*/
-  
-  //SS.Read(Sh, is, nbshapes);
-  Sh = SS.Shape(nbshapes);
-  
-  //is.seekg (0, std::ios::beg);
-  //do {
-  //SS.Read(Sh, is, nbshapes);
-    //if (!Sh.IsNull()) {
-      //AddShapes(S,SS);
-      //break;
-    //}
-  //} while(!Sh.IsNull());
-  
-  /*
-  BRep_Builder B;
-  TopoDS_Compound Co;
-  B.MakeCompound(Co);
-  for (int i = 1; i <= nShape; i++) {
-    B.Add(Co, SS.Shape(i));
-  }
-
-  Sh = Co;
-  */
+  SS.Read(Sh, in, nbshapes, &label);
   return CUBIT_TRUE;
 }
 
@@ -1874,7 +1479,7 @@ CubitStatus OCCQueryEngine::import_solid_model(DLIList<TopologyBridge*> &importe
 					       const int n_buffer_size)
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
-  Standard_Boolean result = Read(*aShape, pBuffer, n_buffer_size);
+  Standard_Boolean result = Read(*aShape, pBuffer, n_buffer_size, mainLabel, true);
   if (result==0) return CUBIT_FAILURE;
   
   imported_entities = populate_topology_bridge(*aShape);

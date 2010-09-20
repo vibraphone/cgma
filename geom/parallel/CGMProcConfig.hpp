@@ -1,18 +1,11 @@
 #ifndef CGM_PROC_CONFIG_HPP
 #define CGM_PROC_CONFIG_HPP
 
-//#include "MBTypes.h"
-//#include "MBRange.hpp"
-
-//class MBInterface;
-
-
 #ifdef USE_MPI
 #  include "CGMmpi.h"
 #else
 typedef int MPI_Comm;
 #define MPI_COMM_WORLD 0
-//typedef void* crystal_data;
 #endif
 
 /**\brief Multi-CPU information for parallel CGM */
@@ -31,12 +24,12 @@ public:
   unsigned proc_size() const 
     { return procSize; }
       
-    //! get a crystal router for this parallel job
-  //crystal_data *crystal_router(bool construct_if_missing = true);
-
     //! get/set the communicator for this proc config
   const MPI_Comm proc_comm() const {return procComm;}
   void proc_comm(MPI_Comm this_comm) {procComm = this_comm;}
+
+  void set_master(unsigned int proc);
+  unsigned int get_master();
   
 private:
 
@@ -52,9 +45,16 @@ private:
     //! whether the crystal router's been initialized or not
   bool crystalInit;
   
-    //! crystal router for this parallel job
-  //crystal_data crystalData;
+  unsigned int master;
   
 };
+
+inline void CGMProcConfig::set_master(unsigned int proc) {
+  master = proc;
+}
+
+inline unsigned int CGMProcConfig::get_master() {
+  return master;
+}
 
 #endif
