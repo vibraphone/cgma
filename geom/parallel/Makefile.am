@@ -4,6 +4,10 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
 	       -I$(ACIS_DIR)/include \
                $(MPI_INCLUDE)
 
+if USE_MPI
+  AM_CPPFLAGS += -DUSE_MPI
+endif
+
 # The name of the library to build
 noinst_LTLIBRARIES = 
 if BUILD_CGM
