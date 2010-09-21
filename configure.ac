@@ -265,6 +265,39 @@ AC_SUBST(HAVE_ACIS_DEF)
 AM_CONDITIONAL(build_ACIS, test x$ACIS_DIR != xno)
 
 ################################################################################
+#                           iGeom Part 1 of 2
+################################################################################
+
+FORCE_IGEOM=no
+AC_ARG_ENABLE( [igeom],
+[AC_HELP_STRING([--disable-igeom],[Do not build support for iGeom interface])],
+[FORCE_IGEOM=yes],
+[enableval=yes] )
+
+case $enableval in
+  yes)
+    ENABLE_igeom=yes
+    ;;
+  nofortran|NoFortran|noFORTRAN|NoFORTRAN|Nofortran)
+    AC_MSG_ERROR([Depricated value for --enable-igeom: \"$enableval\".  Try \"FC= F77=\"])
+    ;;
+  no)
+    ENABLE_igeom=no
+    ;;
+  *)
+    AC_MSG_ERROR([Invalid argument to --enable-igeom : $enableval])
+    ;;
+esac
+
+################################################################################
+#                           iGeom Part 2 of 2
+################################################################################
+
+AC_MSG_CHECKING([if iGeom support is to be built])
+AC_MSG_RESULT([$ENABLE_igeom])
+AM_CONDITIONAL([ENABLE_igeom],[test "xyes" = "x$ENABLE_igeom"])
+
+################################################################################
 #                           iGeom Babel
 ################################################################################
 AC_ARG_WITH(babel, 
