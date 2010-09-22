@@ -18,11 +18,18 @@ Build OCC-based engine
 Go to http://www.opencascade.org/getocc/download/loadocc/ and get 
 desired source files.
 
-Untar the files, then under OpenCASCADE6.3.0/ros directory, to
-autoreconf -fi
-./configure (Add --prefix=dir for your install directory)
-make 
-make install
+Untar the files.  Change directory to OpenCASCADE6.3.0.
+Patch OCC by doing:
+
+  patch -p0 <cgm_source>/geom/OCC/occ_patches
+
+This will update the OCC distribution.
+Change directories to ros.  Build OCC by doing:
+
+  autoreconf -fi
+  ./configure (Add --prefix=dir for your install directory)
+  make 
+  make install
 
 =====================================
 Dependencies
