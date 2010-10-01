@@ -137,6 +137,7 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
 CubitStatus InitCGMA::deinitialize_cgma() 
 {
   CGMApp::instance()->shutdown();
+  has_been_initialized = false;
   return CUBIT_SUCCESS;
 }
 
