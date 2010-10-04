@@ -12,6 +12,7 @@
 #include "TopoDS_Edge.hxx"
 #include "TopoDS_Vertex.hxx"
 #include "TopoDS_CompSolid.hxx"
+#include "TopoDS_Compound.hxx"
 #include "TopoDS_Solid.hxx"
 #include "TopoDS_Shell.hxx"
 #include "TopTools_IndexedMapOfShape.hxx"

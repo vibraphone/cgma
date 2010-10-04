@@ -44,7 +44,9 @@
 #include "BRepTools_WireExplorer.hxx"
 #include "TopExp.hxx"
 #include "BRep_Tool.hxx"
+#include "BRep_Builder.hxx"
 #include "LocOpe_SplitShape.hxx"
+#include "TopoDS_Compound.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 
@@ -87,6 +89,8 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
   myShell = NULL;
   myLump = NULL;
   myBody = NULL;
+  if(myTopoDSFace && !myTopoDSFace->IsNull())
+    assert(myTopoDSFace->ShapeType() == TopAbs_FACE);
 }
 
 
@@ -703,8 +707,23 @@ void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
   for(int i = 0; i <  bodies->size(); i++)
   {
      body = bodies->get_and_step();
-     TopExp::MapShapesAndAncestors(*(body->get_TopoDS_Shape()),
-                                   TopAbs_FACE, TopAbs_SHELL, M);
+     TopoDS_Shape* shape = body->get_TopoDS_Shape();
+     if(!shape)
+     {
+       DLIList<Lump*> lumps;
+       DLIList<OCCShell*> shells;
+       DLIList<OCCSurface*> surfaces;
+       surfaces = body->my_sheet_surfaces();
+       shells = body->shells();
+       lumps = body->lumps();
+       if(lumps.size() == 1)
+         shape = CAST_TO(lumps.get(),OCCLump)->get_TopoDS_Solid();
+       else if(shells.size() == 1)
+         shape = shells.get()->get_TopoDS_Shell();
+     }
+     if (!shape)
+       continue;
+     TopExp::MapShapesAndAncestors(*shape, TopAbs_FACE, TopAbs_SHELL, M);
      if(!M.Contains(*(get_TopoDS_Face())))
 	continue;
 
@@ -861,9 +880,30 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
                                           TopoDS_Vertex* removed_vertex,
                                           LocOpe_SplitShape* sp) 
 {
-  //set the Wires
   TopTools_IndexedMapOfShape M, M2;
-  TopoDS_Shape shape, shape2, shape_edge, shape_vertex;
+  TopoDS_Shape shape_face, shape, shape2, shape_edge, shape_vertex;
+  double dTOL = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+
+  //First check if new_surface is type shell.
+  TopExp::MapShapes(new_surface, TopAbs_FACE,M);
+  if(M.Extent() > 1 )
+  {
+    //update all attributes first.
+    for(int ii=1; ii<=M.Extent(); ii++)
+    {
+      TopoDS_Face surface = TopoDS::Face(M(ii));
+      OCCQueryEngine::instance()->copy_attributes(old_surface, surface);
+    }
+    OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
+    return CUBIT_SUCCESS;
+  }
+
+  
+  if(M.Extent() == 1 )
+    shape_face = M(1);
+
+  M.Clear(); 
+  //set the Wires
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
 
   TopTools_ListOfShape shapes;  
@@ -906,7 +946,14 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
        TopExp::MapShapes(new_surface, TopAbs_WIRE, M_new);
        if (M_new.Extent()== 1)
          shape = M_new(1);
-       else
+       else if(!shape_face.IsNull())
+       {
+         M_new.Clear();
+         TopExp::MapShapes(shape_face, TopAbs_WIRE, M_new);
+         if (M_new.Extent()== 1)
+           shape = M_new(1);
+       }
+       else 
          shape.Nullify();
      }
      else
@@ -972,8 +1019,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          assert(removed_vertex != NULL);
 
        if(op && ! test_op )
+       {
          shapes.Assign(op->Modified(vertex));
-       else if(sp)
+         if(shapes.Extent() == 0)
+           shapes.Assign(op->Generated(vertex));
+       }
+       if(sp)
          shapes.Assign(sp->DescendantShapes(vertex));
 
        if (shapes.Extent() == 1)
@@ -992,8 +1043,27 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          shape_vertex.Nullify() ;
        }
        else if(op->IsDeleted(vertex) || (test_op && vertex.IsSame( *removed_vertex)))
-         shape_vertex.Nullify() ;
-         
+       {
+	 if(!shape.IsNull() && !shape_edge.IsNull() && !shape_edge.Closed()) 
+         //there should be a vertex corresponding to the old_vertex.
+         //find the vertices within tolerance distance with old_vertex.
+         {
+           TopoDS_Iterator It(shape_edge);
+           for(It; It.More(); It.Next())
+           {
+             TopoDS_Vertex v = TopoDS::Vertex(It.Value());
+             gp_Pnt pt1 = BRep_Tool::Pnt(v);
+             gp_Pnt pt2 = BRep_Tool::Pnt(vertex);
+             if(pt1.IsEqual(pt2, dTOL))
+             {
+               shape_vertex = v;  
+               break;
+             }
+           }
+         }
+         else   
+           shape_vertex.Nullify() ;
+       } 
        else
          shape_vertex = vertex;
       
@@ -1006,7 +1076,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      if (!wire.IsSame(shape))
        OCCQueryEngine::instance()->update_OCC_map(wire, shape);
   }
-  double dTOL = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+
   if (!old_surface.IsSame(new_surface))
   {
     TopAbs_ShapeEnum shapetype =  TopAbs_SHAPE;
@@ -1058,9 +1128,43 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
      body = all_bodies->get_and_step();
      TopExp_Explorer Ex;
      TopoDS_Face the_face;
-     TopoDS_Shape ashape = *(body->get_TopoDS_Shape());
+     TopoDS_Shape* pshape = body->get_TopoDS_Shape();
+     TopoDS_Shape ashape;
+     if (pshape && !pshape->IsNull() && 
+         OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == CUBIT_TRUE)
+       ashape = *pshape;
+     else
+     {
+       BRep_Builder B;
+       TopoDS_Compound Co;
+       B.MakeCompound(Co);
+       DLIList<Lump*> lumps = body->lumps();
+       for(int i = 0; i < lumps.size(); i ++)
+       {
+         OCCLump* lump = CAST_TO(lumps.get_and_step(), OCCLump);
+         assert(lump != NULL);
+         TopoDS_Solid * solid = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
+         B.Add(Co, *solid);
+       }
+
+       DLIList<OCCShell*> shells = body->shells();
+       for(int i = 0; i < shells.size(); i ++)
+       {
+         TopoDS_Shell * shell = shells.get_and_step()->get_TopoDS_Shell();
+         B.Add(Co, *shell);
+       }
+
+       DLIList<OCCSurface*> surfaces = body->my_sheet_surfaces();
+       for(int i = 0; i < surfaces.size(); i ++)
+       {
+         TopoDS_Face * face = surfaces.get_and_step()->get_TopoDS_Face();
+         B.Add(Co, *face);
+       }
+
+       ashape = Co;
+     }
      M.Clear();
-     TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPSOLID, M);
+     TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPOUND, M);
      if(!M.Contains(*topo_face))
        continue;
      bodies.append_unique(body);

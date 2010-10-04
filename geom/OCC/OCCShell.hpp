@@ -54,7 +54,8 @@ public:
   DLIList<OCCCoFace*> cofaces() {return myCoFaceList;}
 
   OCCCoFace* remove_coface(OCCCoFace *coface);
-  TopoDS_Shell* get_TopoDS_Shell() {return myTopoDSShell;}
+  TopoDS_Shell* get_TopoDS_Shell() 
+  {if(myTopoDSShell && !myTopoDSShell->IsNull()) assert (myTopoDSShell->ShapeType() == TopAbs_SHELL); return myTopoDSShell;}
   void set_TopoDS_Shell(TopoDS_Shell shell);
 
   OCCLump* my_lump() {return myLump;}

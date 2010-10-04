@@ -180,12 +180,14 @@ CubitStatus make_Point()
   gmti->tweak_move( tweak_edges, delta, tweak_bodies, CUBIT_FALSE,
                     CUBIT_FALSE);
   assert(tweak_bodies.size() == 1);
-  double area = tweak_bodies.get()->measure();
+  CubitBoolean is_sheet = tweak_bodies.get()->is_sheet_body();
+  assert(is_sheet == CUBIT_FALSE);
+  DLIList<OCCSurface*> _surfaces;
+  OCCBody *occ_body;
+  occ_body = CAST_TO(tweak_bodies.get()->get_body_sm_ptr(), OCCBody);
+  occ_body->get_all_surfaces(_surfaces);
+  double area = _surfaces.get_and_step()->measure() + _surfaces.get()->measure();
   assert(fabs(area - 110) <= 0.00001);
-  n = tweak_bodies.get()->num_ref_edges();
-  assert(n == 7);
-  n = tweak_bodies.get()->num_ref_faces();
-  assert(n == 2);
 
   Body* sheet_body = face->body();
   Body* sheet_body2 = face2->body();
@@ -254,7 +256,7 @@ CubitStatus make_Point()
 
   ref_vertices.clean_out();
   ref_vertices2.clean_out();
-  body2->ref_vertices(ref_vertices);
+  new_bodies.get()->ref_vertices(ref_vertices);
   
   for(int i = 0; i < 3; i++)
   {
@@ -513,13 +515,14 @@ CubitStatus make_Point()
   rsl = gmti->subtract(tool_body,from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
   d = new_bodies.step_and_get()->measure(); //d = 50
-  v = new_bodies.get()->center_point(); //v = (7.5, 5, .05)
+  v = new_bodies.get()->center_point(); //v = (5, 5, .05)
   n = new_bodies.get()->num_ref_faces();
-  assert( n == 6);
-  assert (50 -d < 0.0001 && d <= 50);
-  CubitVector test_v(7.5, 5, .5);
+  assert(new_bodies.size() == 1);
+  assert( n == 12);
+  assert (60 -d < 0.0001 && d <= 60);
+  CubitVector test_v(5, 5, .5);
   assert (v == test_v);
-  //new bodies has 2 bodies, one has a volume = 10 and the other has a 
+  //new bodies has 1 body with 2 volumes, a volume = 10 and the other  
   //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
   //remaining (unchanged or modified).
 
@@ -664,8 +667,19 @@ CubitStatus make_Point()
   //test flip_normal for a shell body.
   from_body2 = gti->make_Body(bodysm); 
   test_body = gmti->copy_body(from_body2);
+  is_sheet = test_body->is_sheet_body();
+  assert(is_sheet == CUBIT_FALSE); //2 faces shell
+
+  RefEntity* ref_body =  CAST_TO(test_body, RefEntity);
+  DLIList<RefEntity*> ref_entities;
   ref_faces.clean_out();
-  test_body->ref_faces(ref_faces);
+  ref_body->get_all_child_ref_entities(ref_entities);
+  for(int i = 0; i < ref_entities.size(); i++) 
+  {
+    RefFace *face = CAST_TO(ref_entities.get_and_step(), RefFace);
+    if (face != NULL)
+      ref_faces.append(face);
+  }
   normal = ref_faces.get()->normal_at(v1); //(1,0,0)
   CubitVector test_normal0(1,0,0);
   assert(normal == test_normal0);
@@ -899,6 +913,13 @@ CubitStatus make_Point()
   d = new_bodies.get()->measure(); //d = 2
   n = new_bodies.get()->num_ref_faces(); //n = 10  
   assert(d-2<0.0001 && d>2 && n == 10); 
+
+  filename = "glue.occ";
+  filetype = "OCC";
+  ref_entity_list.clean_out();
+ 
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                num_ents_exported, cubit_version);
 
   bodies.clean_out();
   gti->bodies(bodies); //bodies.size() = 1

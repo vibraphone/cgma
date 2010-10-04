@@ -73,10 +73,6 @@ public :
                                        LocOpe_SplitShape* sp = NULL);
 
 
-  void add_shell(OCCShell* shell) { myShellList.append_unique(shell);}
-  DLIList<OCCShell*> shells() {return myShellList;}
-  void remove_shell(OCCShell* shell) {myShellList.remove(shell);}
-  void clean_shells(){myShellList.clean_out();}
 
   void add_hardpoint(OCCPoint* HardPoint){myHardPoints.append(HardPoint);}
   void remove_hardpoint(OCCPoint* HardPoint){myHardPoints.remove(HardPoint);}
@@ -311,7 +307,8 @@ public :
     //- Determines the u and v derivitives from the given parameter
     //- values.
   
-  TopoDS_Face *get_TopoDS_Face(){return myTopoDSFace;}
+  TopoDS_Face *get_TopoDS_Face()
+  {if (myTopoDSFace && !myTopoDSFace->IsNull()) assert (myTopoDSFace->ShapeType() == TopAbs_FACE); return myTopoDSFace;}
   void set_TopoDS_Face(TopoDS_Face& face); 
 
   int get_loops(DLIList<OCCLoop*>&);
@@ -433,7 +430,6 @@ private:
 
   TopoDS_Face *myTopoDSFace;
 
-  DLIList<OCCShell*> myShellList;
   //Following 3 members are only for sheeted body.
   OCCShell* myShell;
   OCCLump* myLump;

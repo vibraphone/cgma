@@ -96,6 +96,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 {
   myTopoDSEdge = theEdge;
   myMarked = CUBIT_FALSE;
+  assert (myTopoDSEdge->ShapeType() == TopAbs_EDGE);
 }
 
 //-------------------------------------------------------------------------

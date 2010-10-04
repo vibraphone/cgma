@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ operation brick_occ merge_occ
+  TESTS += modify subtract makept r_w test_occ operation brick_occ merge_occ
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -34,6 +34,7 @@ webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
+subtract_SOURCES = subtract.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp

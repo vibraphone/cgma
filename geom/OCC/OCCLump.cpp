@@ -70,6 +70,8 @@ OCCLump::OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface, OCCShell* shell)
   myTopoDSSolid = theSolid;
   mySheetSurface = surface;
   myShell = shell;
+  if(myTopoDSSolid && !myTopoDSSolid->IsNull())
+    assert(myTopoDSSolid->ShapeType() == TopAbs_SOLID);
 }
 
 OCCLump::~OCCLump()
@@ -398,6 +400,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
      shell->update_OCC_entity(aBRepTrsf, op);
   }
   OCCQueryEngine::instance()->update_OCC_map(*myTopoDSSolid, solid);
+
   return CUBIT_SUCCESS;
 }
 
@@ -416,7 +419,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   TopoDS_Shape shape, shape2;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
   TopoDS_Solid new_solid;
-  if(M.Extent() > 1)
+  if(M.Extent() > 1 )
   {
     //update all attributes first.
     for(int ii=1; ii<=M.Extent(); ii++)
@@ -424,7 +427,10 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
       TopoDS_Solid solid = TopoDS::Solid(M(ii));
       OCCQueryEngine::instance()->copy_attributes(old_solid, solid);
     }
+    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_shape);
+    return CUBIT_SUCCESS;
   }
+
   if(M.Extent() == 1 )
     new_solid = TopoDS::Solid(M(1));  
 

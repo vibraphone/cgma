@@ -313,7 +313,7 @@ public :
     //- Gets the list of points describing this curve.
 
   TopoDS_Edge *get_TopoDS_Edge( )
-    { return myTopoDSEdge; } 
+    { assert (myTopoDSEdge->ShapeType() == TopAbs_EDGE); return myTopoDSEdge; } 
   void set_TopoDS_Edge(TopoDS_Edge edge);
 
   void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,

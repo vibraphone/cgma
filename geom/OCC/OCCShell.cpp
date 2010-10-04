@@ -43,6 +43,7 @@
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
 #include "LocOpe_SplitShape.hxx"
+#include "TopoDS_Compound.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -61,6 +62,8 @@ OCCShell::OCCShell(TopoDS_Shell *theShell, OCCSurface* surface)
 {
   myTopoDSShell = theShell;
   mySheetSurface = surface;
+  if(myTopoDSShell && !myTopoDSShell->IsNull())
+    assert (myTopoDSShell->ShapeType() == TopAbs_SHELL);
 }
 
 //-------------------------------------------------------------------------
