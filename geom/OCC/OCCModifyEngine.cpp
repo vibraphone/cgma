@@ -2518,33 +2518,45 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		{
 		  TopoDS_Compound old_csolid = TopoDS::Compound(*from_shape);
 		  OCCBody::update_OCC_entity(old_csolid, new_from_shape, &splitor);
-		  from_shape->Nullify();
-		  delete from_shape;
-		  from_shape = new TopoDS_Shape(new_from_shape);
+                  if(!from_shape->IsNull())
+                  {
+		    from_shape->Nullify();
+		    delete from_shape;
+                  }
+                  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 
 	      else if(from_shape->TShape()->ShapeType() == TopAbs_SOLID)
 		{
 		  TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
 		  OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-		  from_shape->Nullify();
-		  delete from_shape;
+                  if(!from_shape->IsNull())
+                  {
+                    from_shape->Nullify();
+                    delete from_shape;
+                  }
 		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 	      else if(from_shape->TShape()->ShapeType() == TopAbs_SHELL)
 		{
 		  TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
 		  OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
-		  from_shape->Nullify();
-		  delete from_shape;
+                  if(!from_shape->IsNull())
+                  {
+                    from_shape->Nullify();
+                    delete from_shape;
+                  }
 		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 	      else if(from_shape->TShape()->ShapeType() == TopAbs_FACE)
 		{
 		  TopoDS_Face old_face = TopoDS::Face(*from_shape);
 		  OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
-		  from_shape->Nullify();
-		  delete from_shape;
+                  if(!from_shape->IsNull())
+                  {
+                    from_shape->Nullify();
+                    delete from_shape;
+                  }
 		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 
@@ -3426,8 +3438,11 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                     shapes.First(), 
                     (BRepBuilderAPI_MakeShape*) NULL, NULL, &splitor);
 
-           from_shape->Nullify();
-           delete from_shape;
+           if(!from_shape->IsNull())
+           {
+             from_shape->Nullify();
+             delete from_shape;
+           }
            from_shape = new TopoDS_Shape(shapes.First());
            break;
          }  
