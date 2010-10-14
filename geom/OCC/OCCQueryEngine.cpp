@@ -1922,102 +1922,87 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
   OCCBody *body = (OCCBody*)NULL;
   if (!OCCMap->IsBound(aShape))
     {
-      TopoDS_Compound *comsolid = new TopoDS_Compound;
-      *comsolid = aShape;
-
       //check to see if this compound has only one lump which is already in 
       //in another body. Unite operation will return a one lump compound.
       //Check also if this compound has only shells. which is or has faces that
       //are already in another body. Unite faces will return such shell.
       TopExp_Explorer Ex;
       int num_lumps = 0, num_shells = 0, num_faces = 0;
-      int count1 = 0, count2 = 0, count3 = 0;
       TopoDS_Solid solid;
       for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next()) 
       {
         num_lumps++;
         solid = TopoDS::Solid(Ex.Current());
-        if(count1 < 1 && OCCMap->IsBound(solid))
-        {
-          int k = OCCMap->Find(solid);
-          OCCLump * lump = (OCCLump*)(OccToCGM->find(k))->second;
-          body = CAST_TO(lump->get_body(), OCCBody); 
-          body->set_TopoDS_Shape(*comsolid);
-            comsolid->Nullify();
-          delete comsolid;
-          lump->set_TopoDS_Solid(solid);
-          count1++;
-        }
       }
 
       TopoDS_Shell shell;
-      for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); count1 == 0 && Ex.More(); Ex.Next())
+      for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
       {
         num_shells++;
         shell = TopoDS::Shell(Ex.Current());
-        if(count2 < 1 && OCCMap->IsBound(shell))
-        {
-          int k = OCCMap->Find(shell);
-          OCCShell * occ_shell = (OCCShell*)(OccToCGM->find(k))->second;
-          OCCBody* body = CAST_TO(occ_shell->my_body(), OCCBody);  
-          body->set_TopoDS_Shape(*comsolid);
-            comsolid->Nullify();
-          delete comsolid;
-          occ_shell->set_TopoDS_Shell(shell);
-          count2++;
-        }
       }
 
       TopoDS_Face face;
-      for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL); count1 == 0 && Ex.More()
-           && count2 == 0; Ex.Next())
+      for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL);  Ex.More(); Ex.Next())
       {
         num_faces++;
         face = TopoDS::Face(Ex.Current());
-        if(count3 < 1 && OCCMap->IsBound(face))
-        {
-          int k = OCCMap->Find(face);
-          OCCSurface * surface = (OCCSurface*)(OccToCGM->find(k))->second;
-          OCCBody* body = CAST_TO(surface->my_body(), OCCBody);
-          body->set_TopoDS_Shape(*comsolid);
-            comsolid->Nullify();
-          delete comsolid;
-          surface->set_TopoDS_Face(face);
-          count3++;
-        }
       }
 
-      if (count1 + count2 + count3 == 0)
+      if(num_faces + num_shells + num_lumps == 1)
       {
-        if(num_faces + num_shells + num_lumps == 1)
+        if (num_faces  == 1 && !OCCMap->IsBound(face))
         {
-          comsolid->Nullify();
-          delete comsolid;
-          if (num_faces  == 1)
+          Surface* surface = populate_topology_bridge(face, CUBIT_TRUE);
+          return CAST_TO(surface, OCCSurface)->my_body();
+        }
+        else if (num_shells == 1 && !OCCMap->IsBound(shell))
+        {
+          OCCShell* occ_shell = populate_topology_bridge(shell, CUBIT_TRUE);
+          return occ_shell->my_body();
+        }
+        else if( num_lumps == 1 && !OCCMap->IsBound(solid))
+        {
+          Lump* lump= populate_topology_bridge(solid, CUBIT_TRUE);
+          return CAST_TO(lump, OCCLump)->get_body();
+        }
+        else //find existing body
+        {
+          int k;
+          if(num_lumps == 1)
           {
-            Surface* surface = populate_topology_bridge(face, CUBIT_TRUE);
-            return CAST_TO(surface, OCCSurface)->my_body();
+            k = OCCMap->Find(solid);
+            OCCLump* lump = (OCCLump*)(OccToCGM->find(k))->second;
+            body = CAST_TO(lump->get_body(), OCCBody);
           }
           else if (num_shells == 1)
           {
-            OCCShell* occ_shell = populate_topology_bridge(shell, CUBIT_TRUE);
-            return occ_shell->my_body();
+            k = OCCMap->Find(shell);
+            OCCShell* occ_shell = (OCCShell*)(OccToCGM->find(k))->second;
+            body = occ_shell->my_body();
           }
           else
           {
-            Lump* lump= populate_topology_bridge(solid, CUBIT_TRUE);
-            return CAST_TO(lump, OCCLump)->get_body();
+            k = OCCMap->Find(face);
+            OCCSurface* occ_surface = (OCCSurface*) (OccToCGM->find(k))->second;
+            body = occ_surface->my_body();
           }
-        } 
+        }
+      } 
+
+      else
+      {
+        TopoDS_Compound *comsolid = new TopoDS_Compound;
+        *comsolid = aShape;
         (iTotalTBCreated)++;
         body = new OCCBody(comsolid);
         OCCMap->Bind(*comsolid, iTotalTBCreated);
         OccToCGM->insert(valType(iTotalTBCreated,
-                               (TopologyBridge*)body));
+                             (TopologyBridge*)body));
         BodyList->append(body);
       }
     }
-  else
+    else
     {
       int k = OCCMap->Find(aShape);
       body = (OCCBody*)(OccToCGM->find(k))->second;
@@ -2111,17 +2096,8 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
 
   if(build_body && OCCMap->IsBound(aShape) && shape && !shape->IsNull())
   {
-    shape->Nullify();
-    delete shape;
-
-    DLIList<Lump*> lumps;
-    DLIList<OCCShell*> shells;
-    DLIList<OCCSurface*> surfaces;
-    lumps.append(lump);
-    TopoDS_Compound* new_top = body->make_Compound(lumps,shells, surfaces);
-    body->set_TopoDS_Shape(*new_top);
-    new_top->Nullify();
-    delete new_top;
+    PRINT_ERROR("Single lump body shouldn't have Compound shape.\n");
+    return (Lump*) NULL;
   }
 
   TopExp_Explorer Ex;
@@ -3705,7 +3681,8 @@ void OCCQueryEngine::copy_attributes(TopoDS_Shape& old_shape,
 int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape, 
                                    TopoDS_Shape& new_shape)
 {
-  if (!OCCMap->IsBound(old_shape) || old_shape.IsEqual(new_shape))
+  if (old_shape.IsNull() || !OCCMap->IsBound(old_shape) || 
+      old_shape.IsEqual(new_shape))
     return -1;
 
   //update the attribute label tree
@@ -3781,10 +3758,10 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
         BodySM* body = CAST_TO(lump,OCCLump)->get_body();
         if(body)
         {
-          OCCBody* occ_body = CAST_TO(body, OCCBody);
-          TopoDS_Compound* pshape = occ_body->get_TopoDS_Shape(); 
-          if(!pshape || pshape->IsNull())
-            delete_solid_model_entities(body);
+          //OCCBody* occ_body = CAST_TO(body, OCCBody);
+          //TopoDS_Compound* pshape = occ_body->get_TopoDS_Shape(); 
+          //if(!pshape || pshape->IsNull())
+          delete_solid_model_entities(body);
         }
       }
 

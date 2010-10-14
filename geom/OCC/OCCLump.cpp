@@ -468,7 +468,7 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
       else if(M2.Extent() > 1)
       {
          shapes.Clear(); 
-         for(int jj = 0; jj < M2.Extent(); jj++) 
+         for(int jj = 1; jj <= M2.Extent(); jj++) 
            shapes.Append(M2(jj));
       }
     }

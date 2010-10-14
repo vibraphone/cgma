@@ -3775,9 +3775,19 @@ void OCCModifyEngine::check_operation(TopoDS_Shape& cut_shape,
        cut_shape.Nullify();
      has_changed = CUBIT_TRUE;
      TopExp_Explorer Ex;
+     int num_solid = 0;
      Ex.Init(*from_shape, TopAbs_SOLID);
-     TopoDS_Solid old_solid = TopoDS::Solid(Ex.Current()); 
-     OCCLump::update_OCC_entity(old_solid , cut_shape, op);
+     TopoDS_Solid old_solid;
+     for(; Ex.More(); Ex.Next())
+     {
+       num_solid ++;
+       old_solid = TopoDS::Solid(Ex.Current());
+     }
+     if(num_solid == 1)
+       OCCLump::update_OCC_entity(old_solid , cut_shape, op);
+     
+     else if(num_solid > 1)
+       OCCBody::update_OCC_entity(*from_shape, cut_shape, op);
    }
    else
    {

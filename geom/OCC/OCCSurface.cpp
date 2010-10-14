@@ -968,6 +968,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
      for(Ex.Init(wire); Ex.More();Ex.Next())
      {
        TopoDS_Edge edge = Ex.Current();
+       //check to see if the edge made itself into a curve.
+       GProp_GProps myProps;
+       BRepGProp::LinearProperties(edge, myProps);
+       double length =  myProps.Mass();
+       if(length < dTOL)
+         continue;
        if(op && !test_op)
        {
          shapes.Assign(op->Modified(edge));
