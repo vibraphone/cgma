@@ -2307,13 +2307,52 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  sort_curves(common_curves, temp_edge_lists);
 	  DLIList<TopoDS_Edge*>* edge_list;
 	  int size = temp_edge_lists.size();
+          //if size > 1 , check to make sure they are not outer wire
+          // and inner wires.
+          DLIList<CubitBox*> bs;
+          temp_edge_lists.reset();
+          CubitBox box, box1;
+          for(int i = 0; i < size; i++)
+          {
+            edge_list = temp_edge_lists.get_and_step();
+            box.reset(box1);
+            for(int j = 0; j < edge_list->size(); j++)
+            {
+              TopoDS_Edge e = *(edge_list->get_and_step());
+              int k = OCCQueryEngine::instance()->OCCMap->Find(e);
+              Curve* curve = NULL;
+              curve = (Curve*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second; 
+              box |= curve->bounding_box();
+            } 
+            bs.append(&box);
+          }
+          for(int i = 0; i < bs.size()-1; i++)
+          {
+            for(int j = i + 1; j < bs.size(); j ++)
+            {
+              if(bs[j] < bs[i])
+              {
+                bs[size] = bs[i];
+                bs[i] = bs[j];
+                bs[j] = bs[size];
+              }
+              if(bs[i] < bs[j]) 
+              {
+                temp_edge_lists.step(i);
+                temp_edge_lists.change_to((DLIList<TopoDS_Edge*>*)NULL);
+                continue;
+              }
+            }
+          }
 	  for(int i = 0; i < size; i++)
 	    {
 	      edge_list = temp_edge_lists.pop();
+              if(edge_list == NULL)
+                continue;
 	      //make sure the copied edges are sharing vertices.
 	      BRepBuilderAPI_MakeWire myWire;
 	      edge_list->reset();
-	      for(int i = 0; i < edge_list->size(); i++)
+	      for(int j = 0; j < edge_list->size(); j++)
 		{
 		  TopoDS_Edge e = *(edge_list->get_and_step());
 		  myWire.Add(e);

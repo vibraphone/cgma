@@ -189,6 +189,11 @@ GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
 
 void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 { 
+  if (myTopoDSShape != NULL)
+  {
+    OCCAttribSet::append_attribute(csa, *myTopoDSShape);
+    return;
+  }
   int i = 0;
   for (i; i < mySheetSurfaces.size();i++)
   {
@@ -206,12 +211,15 @@ void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
     TopoDS_Solid* solid = lump->get_TopoDS_Solid();
     OCCAttribSet::append_attribute(csa, *solid); 
   }
-  if (myTopoDSShape != NULL)
-    OCCAttribSet::append_attribute(csa, *myTopoDSShape);
 }
   
 void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 { 
+  if (myTopoDSShape != NULL)
+  {
+    OCCAttribSet::remove_attribute(csa, *myTopoDSShape);
+    return;
+  }
   for(int i = 0; i < myShells.size(); i++)
   {
     TopoDS_Shell* shell = myShells.get_and_step()->get_TopoDS_Shell();
@@ -228,8 +236,6 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
     TopoDS_Solid* solid = lump->get_TopoDS_Solid();
     OCCAttribSet::remove_attribute(csa, *solid); 
   }
-  if (myTopoDSShape != NULL)
-    OCCAttribSet::remove_attribute(csa, *myTopoDSShape);
 }
 
 
@@ -238,6 +244,9 @@ void OCCBody::remove_all_simple_attribute_virt()
   
 CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
 { 
+  if (myTopoDSShape != NULL)
+    return OCCAttribSet::get_attributes(*myTopoDSShape,csa_list);
+
   for (int i=0; i < mySheetSurfaces.size();i++)
   {
     TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
@@ -254,14 +263,15 @@ CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
     TopoDS_Solid* solid = lump->get_TopoDS_Solid();
     OCCAttribSet::get_attributes(*solid, csa_list);
   }
-  if (myTopoDSShape != NULL)
-    return OCCAttribSet::get_attributes(*myTopoDSShape,csa_list); 
   return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
                                           DLIList<CubitSimpleAttrib*>& csa_list )
 { 
+  if (myTopoDSShape != NULL)
+    return OCCAttribSet::get_attributes( name, *myTopoDSShape, csa_list );
+
   for (int i=0; i < mySheetSurfaces.size();i++)
   {
     TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
@@ -278,8 +288,6 @@ CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
     TopoDS_Solid* solid = lump->get_TopoDS_Solid();
     OCCAttribSet::get_attributes(name, *solid, csa_list);
   }
-  if (myTopoDSShape != NULL)
-    return OCCAttribSet::get_attributes( name, *myTopoDSShape, csa_list ); 
   return CUBIT_SUCCESS;
 }
 
