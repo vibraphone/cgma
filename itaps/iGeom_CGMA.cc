@@ -313,22 +313,17 @@ void iGeom_newGeom( const char* options,
     // scan options for default engine option
   std::string engine;
   if (options && options_size) {
-    char* opt = (char*)malloc( options_size + 1 );
-    memcpy(opt, options, options_size);
-    opt[options_size] = '\0';
-    const char delim[] = { opt[0], '\0' };
-    for (char* s = strtok(opt+1, delim); s; s = strtok(0,delim)) {
-      char* v = strchr( s, '=' );
-      if (v) {
-        *v = '\0';
-        ++v;
-      }
-      if (!strcmp(s,"engine")) {
-        engine = std::string(v);
-        break;
-      }
+    std::string tmp(options, options_size);
+    char f[] = ";engine="; f[0]=tmp[0]; // correct delimiter
+    size_t p = tmp.find( f );
+    if (p != std::string::npos) { // if we found engine option
+      p += strlen(f); // advance to value (past '=')
+      size_t e = tmp.find( tmp[0], p ); // find end delimiter
+      if (e == std::string::npos) // if no end delim, then must be last option
+        engine = tmp.substr( p, std::string::npos );
+      else
+        engine = tmp.substr( p, e-p );
     }
-    free(opt);
   }
   
     // initialize static var with result so that call happens only once
