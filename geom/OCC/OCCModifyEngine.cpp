@@ -2307,48 +2307,9 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  sort_curves(common_curves, temp_edge_lists);
 	  DLIList<TopoDS_Edge*>* edge_list;
 	  int size = temp_edge_lists.size();
-          //if size > 1 , check to make sure they are not outer wire
-          // and inner wires.
-          DLIList<CubitBox*> bs;
-          temp_edge_lists.reset();
-          CubitBox box, box1;
-          for(int i = 0; i < size; i++)
-          {
-            edge_list = temp_edge_lists.get_and_step();
-            box.reset(box1);
-            for(int j = 0; j < edge_list->size(); j++)
-            {
-              TopoDS_Edge e = *(edge_list->get_and_step());
-              int k = OCCQueryEngine::instance()->OCCMap->Find(e);
-              Curve* curve = NULL;
-              curve = (Curve*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second; 
-              box |= curve->bounding_box();
-            } 
-            bs.append(&box);
-          }
-          for(int i = 0; i < bs.size()-1; i++)
-          {
-            for(int j = i + 1; j < bs.size(); j ++)
-            {
-              if(bs[j] < bs[i])
-              {
-                bs[size] = bs[i];
-                bs[i] = bs[j];
-                bs[j] = bs[size];
-              }
-              if(bs[i] < bs[j]) 
-              {
-                temp_edge_lists.step(i);
-                temp_edge_lists.change_to((DLIList<TopoDS_Edge*>*)NULL);
-                continue;
-              }
-            }
-          }
 	  for(int i = 0; i < size; i++)
 	    {
-	      edge_list = temp_edge_lists.pop();
-              if(edge_list == NULL)
-                continue;
+	      edge_list = temp_edge_lists.get_and_step();
 	      //make sure the copied edges are sharing vertices.
 	      BRepBuilderAPI_MakeWire myWire;
 	      edge_list->reset();
@@ -2397,6 +2358,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  GProp_GProps myProps2;
 		  BRepGProp::LinearProperties(from_edge, myProps2);
 		  double d2 = myProps2.Mass();
+                  gp_Pnt pt2 = myProps2.CentreOfMass();
 		  Curve* curve = NULL;
 		  if (OCCQueryEngine::instance()->OCCMap->IsBound(from_edge))
 		    {
@@ -2428,13 +2390,14 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 			  break;
 			}
 		    }
-		  else if((list_of_edges.Extent() == 1 ||
-                          list_of_edges.Extent() == 2) &&
-                          (d2 - d1) <= TOL)
+		  else //non-straight curve, check only center points
+                  {
                     //just saw a case that intersection in a circle but 
                     //the intersector returns with 2 curves, one with paramenter
                     // (0, PI/2), the other is (P2/2, 2*PI). 
-		    skipped = CUBIT_TRUE;
+                    if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap
+		      skipped = CUBIT_TRUE;
+                  } 
 		} 
 	      if(list_of_edges.Extent() == 1 && !skipped) 
 		{
@@ -2483,6 +2446,59 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	    }
 	  DLIList<TopoDS_Edge*>* edge_list;
           int size = edge_lists.size();
+        
+          //if size > 1 , outer wire first. 
+          DLIList<CubitBox*> bs;
+          edge_lists.reset();
+          CubitBox box;
+          for(int i = 0; i < size, size > 1; i++)
+          {
+            edge_list = edge_lists.get_and_step();
+            for(int j = 0; j < edge_list->size(); j++)
+            {
+              TopoDS_Edge e = *(edge_list->get_and_step());
+              int k = OCCQueryEngine::instance()->OCCMap->Find(e);
+              Curve* curve = NULL;
+              curve = (Curve*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+              if(j == 0)
+                box = curve->bounding_box();
+              else
+                box |= curve->bounding_box();
+            }
+            CubitBox* pbox = new CubitBox(box);
+            bs.append(pbox);
+          }
+          bs.append((CubitBox*) NULL);
+
+          for(int i = 0; i < size-1; i++)
+          {
+            for(int j = i + 1; j < size; j ++)
+            {
+              edge_lists.reset();
+              if(*bs[j] <= *bs[i])
+              {
+                edge_lists.step(j);
+                edge_lists.get()->clean_out();
+                delete edge_lists.get();
+                edge_lists.change_to((DLIList<TopoDS_Edge*>*)NULL);
+                continue;
+              }
+              if(*bs[i] <= *bs[j])
+              {
+                edge_lists.step(i);
+                edge_lists.get()->clean_out();
+                delete edge_lists.get();
+                edge_lists.change_to((DLIList<TopoDS_Edge*>*)NULL);
+                break;
+              }
+            }
+          }
+          for(int i = 0; i < size, size > 1; i++)
+            delete bs.pop();
+
+          edge_lists.remove_all_with_value((DLIList<TopoDS_Edge*>*)NULL);
+
+          size = edge_lists.size();
           for (int iii = 0; iii < size; iii++)
 	    {
 	      edge_list = edge_lists.pop();
