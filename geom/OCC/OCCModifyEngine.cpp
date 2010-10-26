@@ -2451,7 +2451,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           DLIList<CubitBox*> bs;
           edge_lists.reset();
           CubitBox box;
-          for(int i = 0; i < size, size > 1; i++)
+          for(int i = 0; i < size && size > 1; i++)
           {
             edge_list = edge_lists.get_and_step();
             for(int j = 0; j < edge_list->size(); j++)
@@ -2493,7 +2493,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               }
             }
           }
-          for(int i = 0; i < size, size > 1; i++)
+          for(int i = 0; i < size && size > 1; i++)
             delete bs.pop();
 
           edge_lists.remove_all_with_value((DLIList<TopoDS_Edge*>*)NULL);
