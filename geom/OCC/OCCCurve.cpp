@@ -33,6 +33,7 @@
 #include "OCCLoop.hpp"
 #include "OCCCoEdge.hpp"
 #include "OCCPoint.hpp"
+#include "OCCAttribSet.hpp"
 
 #include <BRepAdaptor_Curve.hxx>
 #include <TopExp.hxx>

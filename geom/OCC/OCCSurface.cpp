@@ -23,12 +23,11 @@
 #include "OCCCoEdge.hpp"
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
-
+#include "OCCAttribSet.hpp"
 // ********** END OCC INCLUDES           **********
 
 // ********** BEGIN CUBIT INCLUDES       **********
 
-#include "CubitSimpleAttrib.hpp"
 #include "CubitVector.hpp"
 #include "GeometryDefines.h"
 #include "CubitUtil.hpp"

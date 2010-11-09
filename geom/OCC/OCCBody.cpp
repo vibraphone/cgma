@@ -35,6 +35,7 @@
 #include "OCCShell.hpp"
 #include "OCCLump.hpp"
 #include "OCCModifyEngine.hpp"
+#include "OCCAttribSet.hpp"
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
@@ -194,23 +195,12 @@ void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
     OCCAttribSet::append_attribute(csa, *myTopoDSShape);
     return;
   }
-  int i = 0;
-  for (i; i < mySheetSurfaces.size();i++)
-  {
-    TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-    OCCAttribSet::append_attribute(csa, *face);
-  }
-  for(i = 0; i < myShells.size(); i++)
-  {
-    TopoDS_Shell* shell = myShells.get_and_step()->get_TopoDS_Shell();
-    OCCAttribSet::append_attribute(csa, *shell);
-  }
-  for(i = 0; i < myLumps.size(); i++)
-  {
-    OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-    TopoDS_Solid* solid = lump->get_TopoDS_Solid();
-    OCCAttribSet::append_attribute(csa, *solid); 
-  }
+  DLIList<CubitString*> *string_list = csa->string_data_list();
+  DLIList<double*> *doubles = csa->double_data_list();
+  DLIList<int*> *ints = csa->int_data_list();
+  CubitSimpleAttrib* csa_new = new CubitSimpleAttrib;
+  csa_new->initialize_from_lists_of_ptrs(string_list, doubles, ints);
+  csa_list.append_unique(csa_new);
 }
   
 void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
@@ -220,21 +210,21 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
     OCCAttribSet::remove_attribute(csa, *myTopoDSShape);
     return;
   }
-  for(int i = 0; i < myShells.size(); i++)
+ 
+  if (csa == NULL)
   {
-    TopoDS_Shell* shell = myShells.get_and_step()->get_TopoDS_Shell();
-    OCCAttribSet::remove_attribute(csa, *shell);
+    csa_list.clean_out();
+    return;
   }
-  for (int i=0; i < mySheetSurfaces.size();i++)
+
+  for(int i = 0; i < csa_list.size(); i++)
   {
-    TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-    OCCAttribSet::remove_attribute(csa, *face);
-  }
-  for(int i = 0; i < myLumps.size(); i++)
-  {
-    OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-    TopoDS_Solid* solid = lump->get_TopoDS_Solid();
-    OCCAttribSet::remove_attribute(csa, *solid); 
+    CubitBoolean IsEqual = CubitSimpleAttrib::equivalent(csa_list.get(), csa);
+    if (IsEqual)
+      csa_list.remove();
+    
+    else
+      csa_list.step();
   }
 }
 
@@ -242,51 +232,27 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 void OCCBody::remove_all_simple_attribute_virt()
   { remove_simple_attribute_virt(NULL); }
   
-CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
+CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csas)
 { 
   if (myTopoDSShape != NULL)
-    return OCCAttribSet::get_attributes(*myTopoDSShape,csa_list);
+    return OCCAttribSet::get_attributes(*myTopoDSShape,csas);
 
-  for (int i=0; i < mySheetSurfaces.size();i++)
-  {
-    TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-    OCCAttribSet::get_attributes(*face, csa_list);
-  }
-  for(int i = 0; i < myShells.size(); i++)
-  {
-    TopoDS_Shell* shell = myShells.get_and_step()->get_TopoDS_Shell();
-    OCCAttribSet::get_attributes(*shell, csa_list);
-  }
-  for(int i = 0; i < myLumps.size(); i++)
-  {
-    OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-    TopoDS_Solid* solid = lump->get_TopoDS_Solid();
-    OCCAttribSet::get_attributes(*solid, csa_list);
-  }
+  else
+    csas = csa_list;
   return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
-                                          DLIList<CubitSimpleAttrib*>& csa_list )
+                                          DLIList<CubitSimpleAttrib*>& csas )
 { 
   if (myTopoDSShape != NULL)
     return OCCAttribSet::get_attributes( name, *myTopoDSShape, csa_list );
 
-  for (int i=0; i < mySheetSurfaces.size();i++)
+  for(int i = 0 ; i < csa_list.size(); i ++)
   {
-    TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-    OCCAttribSet::get_attributes(name, *face, csa_list);
-  }
-  for(int i = 0; i < myShells.size(); i++)
-  {
-    TopoDS_Shell* shell = myShells.get_and_step()->get_TopoDS_Shell();
-    OCCAttribSet::get_attributes(name, *shell, csa_list);
-  }
-  for(int i = 0; i < myLumps.size(); i++)
-  {
-    OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-    TopoDS_Solid* solid = lump->get_TopoDS_Solid();
-    OCCAttribSet::get_attributes(name, *solid, csa_list);
+    CubitSimpleAttrib* csa = csa_list.get_and_step();
+    if(*csa->string_data_list()->get() == name)
+      csas.append(csa);
   }
   return CUBIT_SUCCESS;
 }

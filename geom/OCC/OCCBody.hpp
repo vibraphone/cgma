@@ -21,7 +21,7 @@
 #include "CubitDefines.h"
 #include "BodySM.hpp"
 #include "CubitTransformMatrix.hpp"
-#include "OCCAttribSet.hpp"
+#include "CubitSimpleAttrib.hpp"
 #include "CubitBox.hpp"
 #include <TopAbs_ShapeEnum.hxx>
 // ********** END CUBIT INCLUDES           **********
@@ -30,7 +30,6 @@
 class Body;
 class TopologyEntity;
 class CubitString;
-class OCCAttrib;
 class OCCLump;
 class OCCShell;
 class OCCSurface;
@@ -41,6 +40,7 @@ class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
+class TopoDS_Shape;
 class TopoDS_Compound;
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -198,8 +198,8 @@ private:
 
   DLIList<Lump*> myLumps;
     //List of the attached lumps for the traversal functions.
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
+  DLIList<CubitSimpleAttrib*> csa_list;
+    //List of CubitSimpleAttribs 
   TopoDS_Compound *myTopoDSShape;
 
   CubitBox boundingbox;

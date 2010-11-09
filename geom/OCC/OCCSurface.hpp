@@ -21,7 +21,6 @@
 
 // ********** BEGIN OCC INCLUDES          **********
 
-#include "OCCAttribSet.hpp"
 #include "TopoDS_Face.hxx"
 
 // ********** END OCC INCLUDES          **********
@@ -424,9 +423,6 @@ private:
     //- MJP NOTE:
     //- Not only does the RefFace have a sense wrt its Surface, but each
     //- Facet FACE has a sense wrt its underlying "surface" object.
-
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
 
   TopoDS_Face *myTopoDSFace;
 

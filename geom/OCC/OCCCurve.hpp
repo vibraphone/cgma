@@ -20,7 +20,6 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "Curve.hpp"
-#include "OCCAttribSet.hpp"
 #include "TopoDS_Edge.hxx"
 // ********** END CUBIT INCLUDES           **********
 
@@ -328,9 +327,6 @@ protected:
 private:
   
   void adjust_periodic_parameter(double& param);
-  
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
   
   TopoDS_Edge *myTopoDSEdge;
   DLIList<OCCLoop*> myLoopList;

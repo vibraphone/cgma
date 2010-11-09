@@ -1932,9 +1932,6 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
   if(is_tool_volume.is_in_list(CUBIT_FALSE) && !is_volume.is_in_list(CUBIT_FALSE))
   {
      PRINT_WARNING("Surfaces or Shells can't be used to cut a solid.\n");
-     while (tool_boxes->size())
-       delete tool_boxes->pop();
-     delete tool_boxes;
      while (tool_bodies_copy.size())
        delete tool_bodies_copy.pop();
      while (from_bodies_copy.size())
@@ -1966,9 +1963,6 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
       if (cmi->Interrupt())
       {
          PRINT_ERROR("Subtraction interrupted.  Aborting...\n");
-         while (tool_boxes->size())
-           delete tool_boxes->pop();
-         delete tool_boxes;
          while (tool_bodies_copy.size())
             delete tool_bodies_copy.pop();
          while (from_bodies_copy.size())
@@ -6434,10 +6428,11 @@ OCCModifyEngine::tweak_chamfer_solid( DLIList<Point*> &point_list,
   for(int i = 0; i < point_list.size(); i++)
   {
     DLIList<TopologyBridge*> parents;
-    OCCPoint* point = CAST_TO(point_list.get_and_step(), OCCPoint);
+    Point* point = point_list.get_and_step();
+    OCCPoint* occ_point = CAST_TO(point, OCCPoint);
     OCCBody* body = bodies.get_and_step();
-    if(point != NULL)
-      point->get_parents_virt(parents); //OCCCurves
+    if(occ_point != NULL)
+      occ_point->get_parents_virt(parents); //OCCCurves
     assert(parents.size() == 3);
     DLIList<Curve*> curves;
     for(int j = 0; j < 3; j++)
@@ -7294,9 +7289,10 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
     Standard_Real first;
     Standard_Real last;
     Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last);
-    Geom_SurfaceOfLinearExtrusion new_surface(myCurve, offset_dir); 
+    Handle(Geom_SurfaceOfLinearExtrusion) new_surface = 
+               new Geom_SurfaceOfLinearExtrusion(myCurve, offset_dir); 
     Handle(Geom_RectangularTrimmedSurface) trimmed_surface = 
-               new  Geom_RectangularTrimmedSurface(&new_surface, first, last,
+               new  Geom_RectangularTrimmedSurface(new_surface, first, last,
                                                    0, length);    
     if(trimmed_surface == NULL)
     { 

@@ -31,6 +31,7 @@
 #include "OCCCoEdge.hpp"
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
+#include "OCCAttribSet.hpp"
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>

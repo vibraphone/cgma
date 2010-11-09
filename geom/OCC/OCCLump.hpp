@@ -19,7 +19,6 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "Lump.hpp"
-#include "OCCAttribSet.hpp"
 #include <stdio.h>
 #include "TopoDS_Solid.hxx"
 // ********** END CUBIT INCLUDES           **********
@@ -161,9 +160,6 @@ private:
   BodySM *myBodyPtr;
 
   TopoDS_Solid *myTopoDSSolid;
-
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
 
   OCCSurface *mySheetSurface;
   OCCShell * myShell;
