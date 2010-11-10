@@ -2704,7 +2704,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 
   gp_Pnt pt1(0,0,0), pt2(0,0,0); 
   gp_Pnt intsec_pnt[2] = {pt1, pt2} ;
-  for(int j = 0; j < edge_list->size(); j++)
+  for(int kk = 0; kk < edge_list->size(); kk++)
   {
     TopoDS_Edge* edge = edge_list->get_and_step();
     BRepAdaptor_Curve acurve(*edge);
@@ -2720,7 +2720,9 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
       double lower_bound2 = acurve2.FirstParameter();
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
-      CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
+      DLIList<CubitBoolean> qualified;
+      //CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
+
       if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
         newP[0] = distShapeShape.PointOnShape1(1);
@@ -2737,7 +2739,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 		if ((newVal[j]-lower_bound) >= -TOL && 
                     (upper_bound - newVal[j]) >= -TOL)
 		{
-		  qualified[j] = CUBIT_TRUE;
+		  qualified.append(CUBIT_TRUE);
 		  break;
 		}
 	      }
@@ -2746,9 +2748,9 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
         }
         for(int j = 0; j < distShapeShape.NbSolution(); j++)
         {
-	  if (qualified[j])
+	  if (qualified.get())
 	  {
-	    qualified[j] = CUBIT_FALSE;
+	    qualified.change_to( CUBIT_FALSE );
 	    Extrema_ExtPC ext(newP[j], acurve2, Precision::Approximation());
 	    double newVal;
 	    if (ext.IsDone() && (ext.NbExt() > 0)) {
@@ -2758,17 +2760,18 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
                   if ((newVal-lower_bound2) >= -TOL &&
                       (upper_bound2 - newVal) >= -TOL)
 		  {
-		    qualified[j] = CUBIT_TRUE;
+		    qualified.change_to( CUBIT_TRUE);
 		    break;
 		  }
 		}
     	      }
 	    }
 	  }
+          qualified.step();
         }
         for(int k = 0; count_intersection < 3 && k < distShapeShape.NbSolution(); k++)
         {
-          if (qualified[k])
+          if (qualified.get_and_step())
             count_intersection++;
           intsec_pnt[count_intersection-1] = newP[k];
           if (count_intersection == 2)
