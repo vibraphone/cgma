@@ -2412,26 +2412,26 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
 
   TopoDS_Shape* shape = occ_body->get_TopoDS_Shape();
 
-  if (!shape || shape->IsNull())
-    return CUBIT_SUCCESS;
-
-  //remove the entry from label tree
-  OCCAttribSet::remove_attribute(*shape) ;
-
-  //remove the entry from the map
-  int k;
-  OCCBody* occ_body_find = NULL;
-  if(shape && !shape->IsNull() && OCCMap->IsBound(*shape))
+  if (shape && !shape->IsNull())
   {
-      k = OCCMap->Find(*shape);
+    //remove the entry from label tree
+    OCCAttribSet::remove_attribute(*shape) ;
 
-      if(!OCCMap->UnBind(*shape))
-        PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+    //remove the entry from the map
+    int k;
+    OCCBody* occ_body_find = NULL;
+    if(shape && !shape->IsNull() && OCCMap->IsBound(*shape))
+    {
+        k = OCCMap->Find(*shape);
 
-      occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
+        if(!OCCMap->UnBind(*shape))
+          PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
 
-      if(!OccToCGM->erase(k))
-        PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+        occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
+
+        if(!OccToCGM->erase(k))
+          PRINT_ERROR("The OccBody and TopoDS_Shape pair is not in the map!");
+    }
   }
 
   DLIList<Lump*> lumps = occ_body->lumps();
@@ -2445,7 +2445,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
      unhook_Lump_from_OCC(lump);
   }
 
-  if (!shape->IsNull())
+  if (shape && !shape->IsNull())
     shape->Nullify();
   return CUBIT_SUCCESS;
 } 

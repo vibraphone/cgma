@@ -2418,7 +2418,15 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      CubitBox aBox_e(min, max);
 	      aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
 	      CubitBox aBox_f(min, max);
-	      if (aBox_e <= aBox_f)
+              //hexlat3 has tolerance issue where aBox_e.x_min is within 
+              //tolerance and greater than aBox_f.x_min, coursing no edge
+              //imprint of the faces. change to add consideration of tolerance
+	      if (aBox_e.min_x() >= aBox_f.min_x() - TOL &&
+                  aBox_e.min_y() >= aBox_f.min_y() - TOL &&
+                  aBox_e.min_z() >= aBox_f.min_z() - TOL &&
+                  aBox_e.max_x() <= aBox_f.max_x() + TOL &&
+                  aBox_e.max_y() <= aBox_f.max_y() + TOL &&
+                  aBox_e.max_z() <= aBox_f.max_z() + TOL)
 		{
 		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 		  curve_list.append(curve);
@@ -3755,8 +3763,8 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
       new_bodies.append(bodysm);
   }
   
-  if(tbs.size() == 0)
-    stat = CUBIT_FAILURE;
+  //if(tbs.size() == 0)
+  //  stat = CUBIT_FAILURE;
     
   //ok, we're done with all cuts, delete unnecessaries.
   if(!keep_old)
