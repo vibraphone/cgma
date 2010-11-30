@@ -56,7 +56,7 @@ int main (int argc, char **argv)
      PRINT_INFO("Operation Failed");
 
   int ret_val = ( CubitMessage::instance()->error_count() );
-  if ( ret_val != 9 )
+  if ( ret_val != 7 )
   {
     PRINT_ERROR("Errors found during Mergechk session.\n");
   }
@@ -128,8 +128,7 @@ CubitStatus make_Point()
     if(max-11. < 0.000001 && max-11. > -0.000001 &&
        min-11. < 0.000001 && min-11. > -0.000001)
       test_ref_faces2.append(test_ref_faces.get());
-    else
-      test_ref_faces.step();
+    test_ref_faces.step();
   }
   sweep_direction.set(0,0,-6);
   all_bodies.clean_out();
@@ -576,15 +575,6 @@ CubitStatus make_Point()
 
   new_bodies.clean_out();
   face_list.clean_out();
-  cp_from_body2->ref_faces(face_list);
-  for(int i = 0; i < size; i++)
-  {
-    CubitVector v = face_list.get()->center_point();
-    if(!v.about_equal(vv))
-      face_list.remove();
-    else
-      face_list.step();
-  }
 
   //imprint a point on an edge, split it
   CubitVector pp1(10,1,8);
@@ -601,6 +591,16 @@ CubitStatus make_Point()
 
   n = new_bodies.get()->num_ref_edges();//n = 17
   assert( n == 17);
+
+  new_bodies.get()->ref_faces(face_list);
+  for(int i = 0; i < size; i++)
+  {
+    CubitVector v = face_list.get()->center_point();
+    if(!v.about_equal(vv))
+      face_list.remove();
+    else
+      face_list.step();
+  }
   new_bodies.clean_out();
   stat = gmti->imprint(face_list, ref_edges, new_bodies, CUBIT_FALSE);
 
@@ -836,12 +836,12 @@ CubitStatus make_Point()
   //nothing changed 
   stat =  gmti->intersect(tool_body, from_bodies, new_bodies, CUBIT_TRUE);
   //"The 1 body did not have common part with the tool_body."
-  assert(stat == CUBIT_FAILURE);
+  assert(0 == new_bodies.size());
 
   //from_body get deleted
   stat =  gmti->intersect(tool_body, from_bodies, new_bodies, CUBIT_FALSE);
   //"The 1 body did not have common part with the tool_body."
-  assert(stat == CUBIT_FAILURE);
+  assert(0 == new_bodies.size());
   //Destroyed volume(s): 44, 46
 
   bodies.clean_out();
