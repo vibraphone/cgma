@@ -1,0 +1,25 @@
+This is a list of the known issues with CGM on OCC. 
+
+
+   Severity  Summary/Details
+ ========  ===================================================================
+ critical  imprint special cases fail with crash.
+
+ minor     CGM memory leak
+
+ major     3-D scale with different scale factors doesn't work.
+
+ major     Unite function doesn't unite smoothly connected surfaces.
+
+ major     Steve Jackson's test suite lat1-7 not working, needs debugging.
+
+ major     There are lots new functions or added functions to exsisting 
+           functions requirements to port OCC to cubit12. 
+
+ minor     Lack of good cases for testing purpose.
+
+ minor     Dirty geometry/imported geometry is not tested for read/repair yet. 
+
+ minor     Don't have proper tool to visualize the TopoDS_Shapes, debugging
+           process is long preparing for graphics to understand the issue 
+
