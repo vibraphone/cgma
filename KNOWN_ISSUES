@@ -1,25 +1,27 @@
-This is a list of the known issues with CGM on OCC. 
+This is a list of the known issues with CGM on OCC.For more details please see
+the online ticket system at the MOAB website:
+    https://trac.mcs.anl.gov/projects/ITAPS/wiki
+ 
 
 
-   Severity  Summary/Details
- ========  ===================================================================
- critical  imprint special cases fail with crash.
+ID   Severity  Summary/Details
+===  ========  ===================================================================
+175 critical  imprint special cases fail with crash.
 
- minor     CGM memory leak
+176 minor     CGM memory leak
 
- major     3-D scale with different scale factors doesn't work.
+177 minor     3-D scale with different scale factors doesn't work.
 
- major     Unite function doesn't unite smoothly connected surfaces.
+178 major     Unite function doesn't unite smoothly connected surfaces.
 
- major     Steve Jackson's test suite lat1-7 not working, needs debugging.
+179 major     mcnp2cad test suite lat1-7 not working, needs debugging.
 
- major     There are lots new functions or added functions to exsisting 
-           functions requirements to port OCC to cubit12. 
+180 major     There are lots new functions or added functions to exsisting 
+              functions requirements to port OCC to cubit12. 
 
- minor     Lack of good cases for testing purpose.
+181 minor     Lack of good cases for testing purpose.
 
- minor     Dirty geometry/imported geometry is not tested for read/repair yet. 
-
- minor     Don't have proper tool to visualize the TopoDS_Shapes, debugging
+182 minor     Dirty geometry/imported geometry is not tested for read/repair yet 
+183 minor     Don't have proper tool to visualize the TopoDS_Shapes, debugging
            process is long preparing for graphics to understand the issue 
 
