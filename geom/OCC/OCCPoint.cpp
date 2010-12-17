@@ -21,7 +21,7 @@
 #include "OCCCurve.hpp"
 #include "OCCQueryEngine.hpp"
 #include "CastTo.hpp"
-#include "CubitSimpleAttrib.hpp"
+#include "OCCAttribSet.hpp"
 #include "BRep_Tool.hxx"
 #include "TopExp.hxx"
 #include "TopoDS_Edge.hxx"

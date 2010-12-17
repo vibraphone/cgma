@@ -19,7 +19,6 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "Lump.hpp"
-#include "OCCAttribSet.hpp"
 #include <stdio.h>
 #include "TopoDS_Solid.hxx"
 // ********** END CUBIT INCLUDES           **********
@@ -60,7 +59,8 @@ public:
   void add_body(BodySM* new_body)
     {myBodyPtr = new_body;}
     
-  TopoDS_Solid *get_TopoDS_Solid(){ return myTopoDSSolid; }
+  TopoDS_Solid *get_TopoDS_Solid()
+  {if(myTopoDSSolid && !myTopoDSSolid->IsNull()) assert (myTopoDSSolid->ShapeType() == TopAbs_SOLID); return myTopoDSSolid; }
   void set_TopoDS_Solid(TopoDS_Solid solid); 
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
@@ -160,9 +160,6 @@ private:
   BodySM *myBodyPtr;
 
   TopoDS_Solid *myTopoDSSolid;
-
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
 
   OCCSurface *mySheetSurface;
   OCCShell * myShell;

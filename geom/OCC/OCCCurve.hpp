@@ -20,7 +20,6 @@
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "Curve.hpp"
-#include "OCCAttribSet.hpp"
 #include "TopoDS_Edge.hxx"
 // ********** END CUBIT INCLUDES           **********
 
@@ -313,7 +312,7 @@ public :
     //- Gets the list of points describing this curve.
 
   TopoDS_Edge *get_TopoDS_Edge( )
-    { return myTopoDSEdge; } 
+    { assert (myTopoDSEdge->ShapeType() == TopAbs_EDGE); return myTopoDSEdge; } 
   void set_TopoDS_Edge(TopoDS_Edge edge);
 
   void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
@@ -328,9 +327,6 @@ protected:
 private:
   
   void adjust_periodic_parameter(double& param);
-  
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
   
   TopoDS_Edge *myTopoDSEdge;
   DLIList<OCCLoop*> myLoopList;

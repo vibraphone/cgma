@@ -3,6 +3,7 @@
 #include "GeometryQueryEngine.hpp"
 #include "RefEntity.hpp"
 #include "GeometryQueryTool.hpp"
+#include "TDParallel.hpp"
 
 #include <algorithm>
 
@@ -37,6 +38,7 @@ CGMParallelComm::CGMParallelComm(MPI_Comm comm, int* id )
   m_pBuffer = NULL;
   m_nBufferSize = 0;
   m_currentPosition = 0;
+  set_master(0);
 }
 
 CGMParallelComm::CGMParallelComm(std::vector<unsigned char> &tmp_buff, 
@@ -62,6 +64,7 @@ CGMParallelComm::CGMParallelComm(std::vector<unsigned char> &tmp_buff,
   m_pBuffer = NULL;
   m_nBufferSize = 0;
   m_currentPosition = 0;
+  set_master(0);
 }
 
 CGMParallelComm::~CGMParallelComm() 
@@ -102,63 +105,34 @@ CubitStatus CGMParallelComm::get_all_pcomm(std::vector<CGMParallelComm*>& list )
 CGMParallelComm *CGMParallelComm::get_pcomm(//MBEntityHandle prtn,
 					    const MPI_Comm* comm ) 
 {
-  //MBErrorCode rval;
   CGMParallelComm* result = 0;
-  
-  //MBTag prtn_tag;
-  //rval = impl->tag_create( PARTITIONING_PCOMM_TAG_NAME, 
-  //                       sizeof(int),
-  //                       MB_TAG_SPARSE,
-  //                       MB_TYPE_INTEGER,
-  //                       prtn_tag,
-  //                       0, true );
-  //if (MB_SUCCESS != rval)
-  //return 0;
-  
   int pcomm_id;
-  //rval = impl->tag_get_data( prtn_tag, &prtn, 1, &pcomm_id );
-  //if (MB_SUCCESS == rval) {
-    result= get_pcomm( pcomm_id );
-    //}
-    /*
-  else if (MB_TAG_NOT_FOUND == rval && comm) {
-    result = new MBParallelComm( impl, *comm, &pcomm_id );
-    if (!result)
-      return 0;
-    result->set_partitioning( prtn );
-    
-    rval = impl->tag_set_data( prtn_tag, &prtn, 1, &pcomm_id );
-    if (MB_SUCCESS != rval) {
-      delete result;
-      result = 0;
-    }
-    }*/
-  
+  result= get_pcomm( pcomm_id );
+
   return result;
 }
 
 CubitStatus CGMParallelComm::bcast_buffer(const unsigned int from_proc) 
 {
   //- broadcasts the buffer contained in this object
-
-  if ((int)procConfig.proc_rank() == from_proc) {
-    PRINT_DEBUG_100("Broadcasting buffer size from %d.\n", from_proc);
+  if (procConfig.proc_rank() == from_proc) {
+    printf("Broadcasting buffer size from %d.\n", from_proc);
     MPI_Bcast(&m_nBufferSize, 1, MPI_INT, from_proc, MPI_COMM_WORLD);
-    PRINT_DEBUG_100("Broadcasting buffer from %d, %d bytes.\n", from_proc,
-		    m_nBufferSize);
+    printf("Broadcasting buffer from %d, %d bytes.\n", from_proc,
+	   m_nBufferSize);
     MPI_Bcast(m_pBuffer, m_nBufferSize, MPI_BYTE, from_proc, 
               MPI_COMM_WORLD);
   }
   else {
     int this_size;
-    PRINT_DEBUG_100("Broadcasting buffer size from proc %d.\n",
-		    procConfig.proc_rank());
+    printf("Broadcasting buffer size from proc %d.\n",
+	   procConfig.proc_rank());
     MPI_Bcast(&this_size, 1, MPI_INT, from_proc, 
               MPI_COMM_WORLD);
-    PRINT_DEBUG_100("Processor %d: received size of %d.\n", procConfig.proc_rank(), this_size);
+    printf("Processor %d: received size of %d.\n", procConfig.proc_rank(), this_size);
     check_size(this_size);
-    PRINT_DEBUG_100("Broadcasting buffer from proc %d, %d bytes.\n", 
-                    procConfig.proc_rank(), this_size);
+    printf("Broadcasting buffer from proc %d, %d bytes.\n", 
+	   procConfig.proc_rank(), this_size);
     MPI_Bcast(m_pBuffer, this_size, MPI_BYTE, from_proc, 
               MPI_COMM_WORLD);
   }
@@ -174,7 +148,7 @@ CubitStatus CGMParallelComm::broadcast_entities(const unsigned int from_proc,
 #else
   CubitStatus result = CUBIT_SUCCESS;
 
-  if ((int)procConfig.proc_rank() == from_proc) {
+  if (procConfig.proc_rank() == from_proc) {
     int nBufferSize = 0;
     result = write_buffer(ref_entity_list, m_pBuffer, nBufferSize, false);
     RRA("Failed to write ref entity list to buffer.");
@@ -183,7 +157,6 @@ CubitStatus CGMParallelComm::broadcast_entities(const unsigned int from_proc,
     RRA("Failed to write ref entity list to buffer.");
 
     result = write_buffer(ref_entity_list, m_pBuffer, nBufferSize, true);
-    //m_currentPosition = m_nBufferSize;
     RRA("Failed to write ref entity list to buffer.");
   }
   
@@ -207,84 +180,55 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
   return CUBIT_FAILURE;
 #else
   CubitStatus result = CUBIT_SUCCESS;
-  CubitStatus status;
-  double tScatter;
-  int mySendCount;
-  int nEntity;
-  DLIList<RefEntity*> temp_list, temp_ref_list;
-
+  int i, mySendCount, nEntity;
   int nProcs = procConfig.proc_size();
   int *sendCounts = new int[nProcs];
   int *displacements = new int[nProcs];
-  int nBarEntity;
-  int restEntity;
-  int nEndEntity;
   displacements[0] = 0;
 
   if (procConfig.proc_rank() == from_proc) {
-    int curPosition = 0;
-    nEntity = ref_entity_list.size();
-    nBarEntity = nEntity/nProcs;
-    restEntity = nEntity%nProcs;
-    nEndEntity = nBarEntity + restEntity;
-    
-    ref_entity_list.reset();
+    // make a balanced entity lists
     int sum = 0;
-
-    // make temporary lists to contain geometry information for each processors
-    for (int i = 0; i < nProcs; i++) {
-      if (i == from_proc) {
-	ref_entity_list.step(nBarEntity);
-	if (i < restEntity) ref_entity_list.step();
-	sendCounts[i] = 0;
-      }
-      else {
-	for ( int j = 0; j < nBarEntity; j++) {
-	  RefEntity* body_ptr = ref_entity_list.get_and_step();
-	  temp_list.append(body_ptr);
-	}
-	
-	if (i < restEntity) {
-	  RefEntity* body_ptr = ref_entity_list.get_and_step();
-	  temp_list.append(body_ptr);
-	}
-	
-	//sendCounts[i] = get_ref_list_buffer_size(temp_list);
-	result = write_buffer(temp_list, m_pBuffer, sendCounts[i], false);
-	RRA("Failed to write ref entity list to buffer.");
-	
-	sum += sendCounts[i];
-	temp_list.clean_out();
-      }
+    DLIList<RefEntity*> **balancedLists = new DLIList<RefEntity*>*[nProcs];
+    
+    for (i = 0; i < nProcs; i++) {
+      balancedLists[i] = new DLIList<RefEntity*>;
     }
-
+    
+    nEntity = ref_entity_list.size();
+    ref_entity_list.reset();
+    for (i = 0; i < nEntity; i++) {
+      RefEntity* entity = ref_entity_list.get_and_step();
+      TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
+      
+      if (td_par == NULL) {
+	PRINT_ERROR("Partitioned entities should have TDParallel data.");
+	return CUBIT_FAILURE;
+      }
+      balancedLists[td_par->get_charge_proc()]->append(entity);
+    }
+    
+    // add buffer size for each processors
+    for (i = 0; i < nProcs; i++) {
+      result = write_buffer(*(balancedLists[i]), m_pBuffer, sendCounts[i], false);
+      RRA("Failed to write ref entity list to buffer.");
+      sum += sendCounts[i];
+    }
+  
     // check the size of the buffer and resize if necessary
     check_size(sum);
     
     // now append the real information
     ref_entity_list.reset();
-    for (int i = 0; i < nProcs; i++) {
-      if (i == from_proc) {
-	ref_entity_list.step(nBarEntity);
-	if (i < restEntity) ref_entity_list.step();
-      }
-      else {
-	for ( int j = 0; j < nBarEntity; j++) {
-	  temp_list.append(ref_entity_list.get_and_step());
-	}
-	
-	if (i < restEntity) {
-	  temp_list.append(ref_entity_list.get_and_step());
-	}
-	
-	append_to_buffer(temp_list, sendCounts[i]);
-	temp_list.clean_out();
-      }
+    for (i = 0; i < nProcs; i++) {
+      append_to_buffer(*(balancedLists[i]), sendCounts[i]);
     }
+
+    delete [] balancedLists;
   }
 
   // broadcast buffer size array
-  PRINT_DEBUG_100("Broadcasting buffer size array from master.\n");
+  printf("Broadcasting buffer size array from master.\n");
   MPI_Bcast(sendCounts, nProcs, MPI_INT, from_proc, MPI_COMM_WORLD);
   
   for (int i = 1; i < nProcs; i++) {
@@ -295,7 +239,7 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
 
   if (procConfig.proc_rank() != from_proc) check_size(mySendCount);
 
-  PRINT_DEBUG_100("Scattering buffer from master.\n");
+  printf("Scattering buffer from master.\n");
 
   // scatter geometry
   MPI_Scatterv(m_pBuffer, sendCounts, displacements, MPI_BYTE, m_pBuffer, 
@@ -309,35 +253,7 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
   return CUBIT_SUCCESS;
 #endif
 }
-/*
-CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
-					 std::ofstream& os)
-{
-#ifndef USE_MPI
-  return CUBIT_FAILURE;
-#else
-  //ofstream os;
-  //CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, p_buffer);
-  CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, os);
-  RRA("Failed to compute buffer size in broadcast_entities.");
-  
-  return CUBIT_SUCCESS;
-#endif
-}
 
-CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
-					 std::ostringstream& os)
-{
-#ifndef USE_MPI
-  return CUBIT_FAILURE;
-#else
-  CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, os);
-  RRA("Failed to compute buffer size in broadcast_entities.");
-  
-  return CUBIT_SUCCESS;
-#endif
-}
-*/
 CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
 					  char* pBuffer,
 					  int& n_buffer_size,
@@ -346,10 +262,15 @@ CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
 #ifndef USE_MPI
   return CUBIT_FAILURE;
 #else
+  if (ref_entity_list.size() == 0) {
+    n_buffer_size = 0;
+    return CUBIT_SUCCESS;
+  }
+
   CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, pBuffer,
 									 n_buffer_size, b_write_buffer);
   RRA("Failed to write ref entities to buffer.");
-  
+
   if (b_write_buffer) m_currentPosition += n_buffer_size;
   return CUBIT_SUCCESS;
 #endif
@@ -362,6 +283,8 @@ CubitStatus CGMParallelComm::read_buffer(DLIList<RefEntity*> &ref_entity_list,
 #ifndef USE_MPI
   return CUBIT_FAILURE;
 #else
+  if (n_buffer_size == 0) return CUBIT_SUCCESS;
+
   CubitStatus result = GeometryQueryTool::instance()->import_solid_model(&ref_entity_list, pBuffer,
 									 n_buffer_size);
   RRA("Failed to read ref entities from buffer.");
@@ -372,11 +295,11 @@ CubitStatus CGMParallelComm::read_buffer(DLIList<RefEntity*> &ref_entity_list,
 
 CubitStatus CGMParallelComm::check_size(int& target_size, const CubitBoolean keep) 
 {
-  PRINT_DEBUG_100("Checking buffer size on proc %d, target size %d.\n", 
+  printf("Checking buffer size on proc %d, target size %d.\n", 
                   procConfig.proc_rank(), target_size);
 
   if (m_nBufferSize < target_size) {
-    PRINT_DEBUG_100("Increasing buffer size on proc %d.\n", procConfig.proc_rank());
+    printf("Increasing buffer size on proc %d.\n", procConfig.proc_rank());
     void *temp_buffer = malloc(target_size);
     if (keep && 0 != m_currentPosition) memcpy(temp_buffer, m_pBuffer, m_currentPosition);
     delete m_pBuffer;
@@ -394,7 +317,5 @@ CubitStatus CGMParallelComm::append_to_buffer(DLIList<RefEntity*> &ref_entity_li
   CubitStatus result = write_buffer(ref_entity_list, m_pBuffer + m_currentPosition, add_size, true);
   RRA("Failed to append ref entity list to buffer.");
   
-  //m_currentPosition += add_size;
-
   return CUBIT_SUCCESS;
 }

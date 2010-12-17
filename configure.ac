@@ -5,7 +5,9 @@ AC_INIT(CGMA, 10.2.3)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([foreign])
+m4_ifdef([AM_SILENT_RULES],
+ [AM_INIT_AUTOMAKE([foreign -Wall silent-rules color-tests parallel-tests])],
+ [AM_INIT_AUTOMAKE([foreign -Wall])])
 AC_DISABLE_SHARED
 
 EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
@@ -13,8 +15,7 @@ FATHOM_CHECK_COMPILERS
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_SED
-AC_C_BIGENDIAN( [LITTLE_ENDIAN=], [LITTLE_ENDIAN=-DLITTLE_ENDIAN=BYTE_ORDER] )
-AC_SUBST(LITTLE_ENDIAN)
+AC_C_BIGENDIAN( [], [AM_CPPFLAGS="$AM_CPPFLAGS -DLITTLE_ENDIAN=BYTE_ORDER"] )
 FATHOM_COMPILER_FLAGS
 
 ################################################################################
@@ -24,6 +25,14 @@ if test "x" != "x$FC"; then
   AC_FC_WRAPPERS
 fi
 
+################################################################################
+#                Create libtool script
+################################################################################
+# We need the libtool script both for the calls to the ITAPS_LIBTOOL_VAR
+# macro and for us in testing for ACIS libraries.  If we're using a newer
+# version of libtool, the script normally isn't generated until AC_OUTPUT
+# at the end of the configure script.  Ask that it be created now instead.
+m4_ifdef([LT_OUTPUT],[LT_OUTPUT])
 
 
 ################################################################################
@@ -43,7 +52,7 @@ AM_CONDITIONAL(build_parallel, [test "x$WITH_MPI" != "xno"])
 FATHOM_CHECK_MPI
 FATHOM_CONFIG_MPI_EXEC
 if test "x$WITH_MPI" != "xno"; then
-  CXXFLAGS="$CXXFLAGS -DUSE_MPI"
+  AM_CXXFLAGS="$AM_CXXFLAGS -DUSE_MPI"
   CGM_PARALLEL_INCLUDE='-I${CGM_DIR}/geom/parallel'
   CGM_PARALLEL_LIB='-L${CGM_DIR}/geom/parallel -lcubit_parallel'
   CGM_PARALLEL_LIB_FILE='${CGM_LIBDIR}/libcubit_parallel.la'
@@ -67,10 +76,10 @@ fi
 
 FATHOM_CANT_USE_STD
 FATHOM_TEMPLATE_DEFS_INCLUDED
-AC_SUBST(CANT_USE_STD)
-AC_SUBST(CANT_USE_STD_IO)
-AC_SUBST(TEMPLATE_DEFS_INCLUDED)
+CGM_DEFINES="$CANT_USE_STD $CANT_USE_STD_IO $TEMPLATE_DEFS_INCLUDED"
+AM_CPPFLAGS="$AM_CPPFLAGS $CGM_DEFINES"
 AM_CONDITIONAL(INCLUDE_TEMPLATE_DEFS, test x$TEMPLATE_DEFS_INCLUDED != x)
+AC_SUBST(CGM_DEFINES)
 
 ################################################################################
 #                         Use Cubit shared libraries
@@ -129,7 +138,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
     AC_LINK_IFELSE([AC_LANG_PROGRAM(
       [class AcisQueryEngine { public: static AcisQueryEngine* instance_; };],
       [AcisQueryEngine::instance_ = 0;])],
-      [CUBIT_LIBS="-lcubiti$num"
+      [CUBIT_LIBS="-L${CUBIT_BIN_DIR} -lcubiti$num"
        CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
        CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
        AC_MSG_RESULT(yes)
@@ -241,7 +250,7 @@ if test "x$ACIS_DIR" != "xno"; then
   CGM_EXT_INCLUDE="$CGM_EXT_INCLUDE $ACIS_INCLUDES"
   CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $ACIS_LTFLAGS"
   if test "x$GXX" = "xyes"; then
-    CPPFLAGS="$CPPFLAGS -isystem $ACIS_DIR/include"
+    AM_CPPFLAGS="$AM_CPPFLAGS -isystem $ACIS_DIR/include"
   fi
   ACIS_DEFS='$(ACIS_STEP_TRANSLATOR) $(ACIS_IGES_TRANSLATOR) -DCUBIT_ACIS_VERSION=$(ACIS_VERSION) -DACIS_VERSION=$(ACIS_VERSION) -D$(ACIS_PLATFORM) -DACIS_LOCAL_OPS'
 dnl  AC_DEFINE( HAVE_ACIS )
@@ -272,6 +281,39 @@ AC_SUBST(ACIS_STEP_TRANSLATOR)
 AC_SUBST(ACIS_IGES_TRANSLATOR)
 AC_SUBST(HAVE_ACIS_DEF)
 AM_CONDITIONAL(build_ACIS, test x$ACIS_DIR != xno)
+
+################################################################################
+#                           iGeom Part 1 of 2
+################################################################################
+
+FORCE_IGEOM=no
+AC_ARG_ENABLE( [igeom],
+[AC_HELP_STRING([--disable-igeom],[Do not build support for iGeom interface])],
+[FORCE_IGEOM=yes],
+[enableval=yes] )
+
+case $enableval in
+  yes)
+    ENABLE_igeom=yes
+    ;;
+  nofortran|NoFortran|noFORTRAN|NoFORTRAN|Nofortran)
+    AC_MSG_ERROR([Depricated value for --enable-igeom: \"$enableval\".  Try \"FC= F77=\"])
+    ;;
+  no)
+    ENABLE_igeom=no
+    ;;
+  *)
+    AC_MSG_ERROR([Invalid argument to --enable-igeom : $enableval])
+    ;;
+esac
+
+################################################################################
+#                           iGeom Part 2 of 2
+################################################################################
+
+AC_MSG_CHECKING([if iGeom support is to be built])
+AC_MSG_RESULT([$ENABLE_igeom])
+AM_CONDITIONAL([ENABLE_igeom],[test "xyes" = "x$ENABLE_igeom"])
 
 ################################################################################
 #                           iGeom Babel
@@ -314,8 +356,12 @@ AC_ARG_WITH( occ,
 CUBIT_OCC_LIB=
 HAVE_OCC_DEF=
 if test "x$occ_DIR" != "xno"; then
-  OCC_LIBS="-lTKMath -lTKXSBase -lTKernel -lTKShHealing -lTKBRep -lTKG3d -lTKBO -lTKFeat -lTKFillet -lTKG2d -lTKOffset -lTKBool -lTKGeomAlgo -lTKGeomBase -lTKPrim -lTKTopAlgo -lTKHLR -lTKIGES -lTKMesh -lTKPrim -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKSTEP -lTKSTL -lTKTopAlgo -lTKXSBase -lTKLCAF -lTKBinL"
+  OCC_CORE_LIBS="-lTKMesh -lTKTopAlgo -lTKGeomAlgo -lTKBRep -lTKGeomBase -lTKG3d -lTKG2d -lTKMath -lTKernel"
+  OCC_GEOM_LIBS="-lTKHLR -lTKOffset -lTKShHealing -lTKFillet -lTKFeat -lTKBool -lTKBO -lTKPrim"
+  OCC_LCAF_LIBS="-lTKLCAF -lTKBinL"
+  OCC_LIBS="$OCC_LCAF_LIBS $OCC_GEOM_LIBS $OCC_CORE_LIBS"
   CUBIT_OCC_LIB="-lcubit_OCC"
+  OCC_STEP_LIBS="-lTKSTEP -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKXSBase" 
 
   # Set OCC_INC_FLAG and OCC_LIB_FLAG based on --with-occ option
   if test "x$occ_DIR" = "x"; then
@@ -400,12 +446,61 @@ if test "x$occ_DIR" != "xno"; then
                                [AC_MSG_ERROR([OpenCascade config error: libTKernel not found ])],
                                [-ldl] )
                 ] )
-  AC_LANG_POP(C++)
+  
+  # Common setup for tests below
+  old_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS $OCC_INC_FLAG"
 
+  # Check if OpenCascade requires -lpthread
+  AC_MSG_CHECKING([if OpenCascade requires -lpthread])
+  LIBS="$OCC_LIBS $old_LIBS"
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "Standard_Mutex.hxx"], [Standard_Mutex mutex; mutex.TryLock();])],
+     [AC_MSG_RESULT([no])],
+     [# Try test again with pthreads library
+      LIBS="$LIBS -lpthread"
+      AC_LINK_IFELSE(
+        [AC_LANG_PROGRAM([#include "Standard_Mutex.hxx"], [Standard_Mutex mutex; mutex.TryLock();])],
+        [AC_MSG_RESULT([yes]); OCC_LIBS="$OCC_LIBS -lpthread"],
+        [AC_MSG_ERROR([Cannot link libTKKernel with Standard_Mutex])]
+      )])
+  
+
+  HAVE_OCC_DEF="-DHAVE_OCC"
+ 
+  # Check for IGES support
+  AC_CHECK_LIB( [TKIGES], [igesread], 
+                [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_IGES"
+                 OCC_LIBS="-lTKIGES -lTKXSBase $OCC_LIBS"], 
+                [], [-lTKXSBase $OCC_LIBS] )
+
+  # Check for STEP support
+  AC_MSG_CHECKING([for OpenCascade STEP support (libTKSTEP)])
+  LIBS="$OCC_STEP_LIBS $OCC_LIBS $old_LIBS"
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "STEPControl_Reader.hxx"], 
+                      [STEPControl_Reader reader;])],
+     [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STEP"
+      OCC_LIBS="$OCC_STEP_LIBS $OCC_LIBS"
+      AC_MSG_RESULT([yes])],
+     [AC_MSG_RESULT([no])])
+     
+  # Check for STL support
+  AC_MSG_CHECKING([for OpenCascade STL support (libTKSTL)])
+  LIBS="-lTKSTL $OCC_LIBS $old_LIBS"                         
+  AC_LINK_IFELSE(
+     [AC_LANG_PROGRAM([#include "StlAPI_Reader.hxx"], 
+                      [StlAPI_Reader reader;])],
+     [HAVE_OCC_DEF="$HAVE_OCC_DEF -DHAVE_OCC_STL"
+      OCC_LIBS="-lTKSTL $OCC_LIBS"
+      AC_MSG_RESULT([yes])],
+     [AC_MSG_RESULT([no])])
+     
   # Restore original values of variables
+  AC_LANG_POP(C++)
+  LIBS="$old_LIBS"                         
   CPPFLAGS="$old_CPPFLAGS"
   LDFLAGS="$old_LDFLAGS"
-  HAVE_OCC_DEF="-DHAVE_OCC"
   
   # Append to CGM global values
   CGM_EXT_LIBS="$CGM_EXT_LIBS $OCC_LIBS"
@@ -438,8 +533,10 @@ AM_CONDITIONAL( build_OCC, [test "x$occ_DIR" != "xno"] )
 #                           Output Files
 ################################################################################
 AC_SUBST(AM_CPPFLAGS)
+AC_SUBST(AM_LDFLAGS)
 AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
+AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
 AC_CONFIG_HEADERS(config.h)

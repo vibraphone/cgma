@@ -14,6 +14,31 @@ AC_DEFUN([ITAPS_LIBTOOL_VAR], [
   rm .tmp
 ])
 
+
+########## Helper function for FATHOM_CHECK_COMPILERS #############
+# args: compiler variable, compiler list, path
+AC_DEFUN([FATHOM_SET_MPI_COMPILER], [
+  if test "x" = "x${$1}"; then
+    if test "x" = "x$3"; then
+      AC_CHECK_PROGS([$1], [$2], [false])
+    else
+      $1=false
+      for prog in $2 ; do
+        if test -x "$3/$prog"; then
+          $1="$3/$prog"
+          AC_SUBST($1)
+          export $1
+          break
+        fi
+      done
+    fi
+    
+    if test "x${$1}" = "xfalse"; then
+      AC_MSG_ERROR([Cannot find MPI compiler.  Try specifying \$$1])
+    fi
+  fi
+])
+
 #######################################################################################
 # Implement checks for C and C++ compilers, with all corresponding options
 #
@@ -21,6 +46,7 @@ AC_DEFUN([ITAPS_LIBTOOL_VAR], [
 #  CPP      - The C preprocessor
 #  CC       - The C compiler
 #  CXX      - The C++ compiler
+#  FC       - The Fortran compiler
 #  CFLAGS   - C compiler flags
 #  CXXFLAGS - C++ compiler flags
 #  WITH_MPI - 'yes' if parallel support, 'no' otherwise
@@ -41,7 +67,6 @@ test "xno" = "x$CHECK_CC" || CHECK_CC=yes
 test "xno" = "x$CHECK_CXX" || CHECK_CXX=yes 
 test "xno" = "x$CHECK_FC" || CHECK_FC=yes 
 
-
   # Save these before calling AC_PROG_CC or AC_PROG_CXX
   # because those macros will modify them, and we want
   # the original user values, not the autoconf defaults.
@@ -52,75 +77,38 @@ USER_CFLAGS="$CFLAGS"
   # Need to check this early so we can look for the correct compiler
 AC_ARG_WITH( [mpi], AC_HELP_STRING([[--with-mpi(=DIR)]], [Enable parallel support]),
              [WITH_MPI=$withval],[WITH_MPI=no] )
-case "x$WITH_MPI" in
-  xno)
-    CC_LIST="cc gcc cl egcs pgcc"
-    CXX_LIST="CC aCC cxx xlC_r xlC c++ g++ pgCC gpp cc++ cl FCC KCC RCC"
-    FC_LIST="gfortran ifort pgf90"
-    F77_LIST="gfortran ifort pgf77"
-    ;;
-  xyes)
-    CC_LIST="mpicc mpcc"
-    CXX_LIST="mpiCC mpCC mpicxx"
-    FC_LIST="mpif90"
-    F77_LIST="mpif77"
-    ;;
-  x*)
-    if test "x" = "x$CC"; then
-      for prog in mpicc mpcc; do
-        if test -x ${WITH_MPI}/bin/$prog; then
-          CC="${WITH_MPI}/bin/$prog"
-          CC_LIST="$prog"
-        fi
-      done
-    else
-      CC_LIST="$CC"
-    fi
-    if test "x" = "x$CXX"; then
-      for prog in mpicxx mpiCC mpCC mpicxx; do
-        if test -x ${WITH_MPI}/bin/$prog; then
-          CXX="${WITH_MPI}/bin/$prog"
-          CXX_LIST="$prog"
-        fi
-      done
-    else
-      CXX_LIST="$CXX"
-    fi
-    if test "x" = "x$FC"; then
-      for prog in mpif90; do
-        if test -x ${WITH_MPI}/bin/$prog; then
-          FC="${WITH_MPI}/bin/$prog"
-          FC_LIST="$prog"
-        fi
-      done
-    else
-      FC_LIST="$FC"
-    fi
-    if test "x" = "x$F77";then
-      for prog in mpif77; do
-        if test -x ${WITH_MPI}/bin/$prog; then
-          F77="${WITH_MPI}/bin/$prog"
-          F77_LIST="$prog"
-        fi
-      done
-    else
-      F77_LIST="$F77"
-    fi
+if test "xno" != "x$WITH_MPI"; then
+
+  CC_LIST="mpicc mpcc"
+  CXX_LIST="mpiCC mpCC mpicxx"
+  FC_LIST="mpif90"
+  F77_LIST="mpif77"
+  
+  if test "xyes" == "x$WITH_MPI"; then
+    FATHOM_SET_MPI_COMPILER([CC],  [$CC_LIST])
+    FATHOM_SET_MPI_COMPILER([CXX],[$CXX_LIST])
+    FATHOM_SET_MPI_COMPILER([FC],  [$FC_LIST])
+    FATHOM_SET_MPI_COMPILER([F77],[$F77_LIST])
+  else
+    FATHOM_SET_MPI_COMPILER([CC],  [$CC_LIST],[${WITH_MPI}/bin])
+    FATHOM_SET_MPI_COMPILER([CXX],[$CXX_LIST],[${WITH_MPI}/bin])
+    FATHOM_SET_MPI_COMPILER([FC],  [$FC_LIST],[${WITH_MPI}/bin])
+    FATHOM_SET_MPI_COMPILER([F77],[$F77_LIST],[${WITH_MPI}/bin])
     WITH_MPI=yes
-    ;;
-esac
+  fi
+fi
 
 if test "xno" != "x$CHECK_CC"; then
-  AC_PROG_CC( [$CC_LIST] )
+  AC_PROG_CC
 fi
 AC_PROG_CPP
 if test "xno" != "x$CHECK_CXX"; then
-  AC_PROG_CXX( [$CXX_LIST] )
+  AC_PROG_CXX
   AC_PROG_CXXCPP
 fi
 if test "xno" != "x$CHECK_FC"; then
-  AC_PROG_FC( [$FC_LIST] )
-  AC_PROG_F77( [$F77_LIST] )
+  AC_PROG_FC
+  AC_PROG_F77
 fi
 
 ]) # FATHOM_CHECK_COMPILERS
@@ -296,7 +284,7 @@ else
       FATHOM_TRY_COMPILER_DEFINE([__IBMCPP__],[cxx_compiler=VisualAge])
       FATHOM_TRY_COMPILER_DEFINE([__DECCXX_VER],[cxx_compiler=Compaq])
       FATHOM_TRY_COMPILER_DEFINE([__SUNPRO_CC],[cxx_compiler=SunWorkshop])
-      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cxx_cmopiler=PortlandGroup])
+      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cxx_compiler=PortlandGroup])
       ;;
     hpux*)
       FATHOM_TRY_COMPILER_DEFINE([__HP_aCC],[cxx_compiler=HP])
@@ -310,7 +298,7 @@ else
       FATHOM_TRY_COMPILER_DEFINE([__MINGW32__],[cxx_compiler=MinGW])
       ;;
     *)
-      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
+      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cxx_compiler=PortlandGroup])
       ;;
   esac
 fi
@@ -428,7 +416,7 @@ else
       FATHOM_TRY_COMPILER_DEFINE([__IBMC__],[cc_compiler=VisualAge])
       FATHOM_TRY_COMPILER_DEFINE([__DECC_VER],[cc_compiler=Compaq])
       FATHOM_TRY_COMPILER_DEFINE([__SUNPRO_C],[cc_compiler=SunWorkshop])
-      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
+      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cc_compiler=PortlandGroup])
       ;;
     hpux*)
       FATHOM_TRY_COMPILER_DEFINE([__HP_cc],[cc_compiler=HP])
@@ -443,7 +431,7 @@ else
       FATHOM_TRY_COMPILER_DEFINE([__MINGW32__],[cc_compiler=MinGW])
       ;;
     *)
-      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cc_cmopiler=PortlandGroup])
+      FATHOM_TRY_COMPILER_DEFINE([__PGI],[cc_compiler=PortlandGroup])
       ;;
   esac
 fi

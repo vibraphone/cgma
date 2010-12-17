@@ -1,11 +1,4 @@
-AUTOMAKE_OPTIONS = foreign
 BUILT_SOURCES = iGeom_protos.h
-
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
-
-# because "ISO C++ does not support ‘long long"
-CXXFLAGS += -Wno-long-long
-#CXXFLAGS = -Wall -pipe -pedantic -g -DDEBUG -Wno-long-long -DUSE_MPI
 
 if USE_BABEL
   SIDL_DIR = SIDL
@@ -34,10 +27,16 @@ libiGeom_la_includedir = $(includedir)
 
 libiGeom_la_LIBADD = $(top_builddir)/libcgm.la
 
-INCLUDES = -I$(top_srcdir)/util \
-           -I$(top_srcdir)/geom \
-	   -I$(top_srcdir)/init \
-           -I.
+AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
+               $(HAVE_OCC_DEF) \
+               -DSRCDIR=$(srcdir) \
+               -I$(top_srcdir)/util \
+               -I$(top_srcdir)/geom \
+	       -I$(top_srcdir)/init
+
+if USE_MPI
+  AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
+endif
 
 libiGeom_la_SOURCES = \
         CGMAIterator.hpp \
@@ -57,27 +56,18 @@ libiGeom_la_include_HEADERS = \
 
 check_PROGRAMS = chaman $(TESTS)
 
+LDADD = libiGeom.la
+AM_LDFLAGS += $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_SOURCES = testgeom.cc
-testgeom_LDADD = libiGeom.la
-testgeom_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
-testgeom_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_occ_SOURCES = $(testgeom_SOURCES)
-testgeom_occ_LDADD = $(testgeom_LDADD)
-testgeom_occ_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
-testgeom_occ_LDFLAGS = $(testgeom_LDFLAGS)
+testgeom_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DFORCE_OCC
 
 chaman_SOURCES = chaman.cc
-chaman_LDADD = libiGeom.la
-chaman_CPPFLAGS = $(CPPFLAGS) -DSRCDIR=$(srcdir)
-chaman_LDFLAGS = $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 
 if USE_MPI
-check_PROGRAMS += partest
-partest_SOURCES = partest.cpp
-partest_LDADD = $(testgeom_LDADD)
-partest_CPPFLAGS = $(testgeom_CPPFLAGS) -DFORCE_OCC
-partest_LDFLAGS = $(testgeom_LDFLAGS)
-INCLUDES += -I$(top_srcdir)/geom/parallel
+  check_PROGRAMS += partest
+  partest_SOURCES = partest.cpp
+  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
 endif
 
 
@@ -95,9 +85,10 @@ cfg_DATA = iGeom-Defs.inc
 # directory until we're doing the install.
 CFG_FILE = $(DESTDIR)$(cfgdir)/iGeom-Defs.inc
 install-data-hook:
-	echo "IGEOM_CXX_LDFLAGS = -L${libdir}" >> $(CFG_FILE)
-	echo "IGEOM_CXX_LTFLAGS = -R${libdir}" >> $(CFG_FILE)
-	echo "IGEOM_INCLUDEDIR = ${includedir}" >> $(CFG_FILE)
+	$(AM_V_at)echo "IGEOM_CXX_LDFLAGS = -L${libdir}" >> $(CFG_FILE)
+	$(AM_V_at)echo "IGEOM_CXX_LTFLAGS = -R${libdir}" >> $(CFG_FILE)
+	$(AM_V_at)echo "IGEOM_INCLUDEDIR = ${includedir}" >> $(CFG_FILE)
+	$(AM_V_at)echo 'IGEOM_INCLUDES = -I$$(IGEOM_INCLUDEDIR)' >> $(CFG_FILE)
 
 EXTRA_DIST = testgeom.sat size.sat
 
@@ -107,17 +98,17 @@ DISTCLEANFILES = iGeom_FCDefs.h
 FPFX=iGeom
 SEDEXPR = 's/^[[:space:]]*void[[:space:]][[:space:]]*$(FPFX)_\([a-z][_a-zA-Z0-9]*\)[[:space:]]*(.*$$/$(FPFX)_\1/p'
 iGeom_protos.h: iGeom.h
-	echo '#include "iGeom_FCDefs.h"' > $@
-	echo '#ifdef IGEOM_FC_FUNC_' >> $@
-	echo >> $@
+	$(AM_V_GEN)echo '#include "iGeom_FCDefs.h"' > $@ && \
+	echo '#ifdef IGEOM_FC_FUNC_' >> $@ && \
+	echo >> $@ && \
 	for func in `$(SED) -n $(SEDEXPR) $<`; do \
 	  lower=`echo $$func | tr '[:upper:]' '[:lower:]'`; \
           upper=`echo $$func | tr '[:lower:]' '[:upper:]'`; \
 	  echo "#define $$func IGEOM_FC_FUNC_( $$lower, $$upper )" >> $@; \
-        done
-	echo >> $@
+        done && \
+	echo >> $@ && \
 	echo "#endif" >> $@
 
 iGeom_FCDefs.h: iBase_FCDefs.h
-	cd .. && ./config.status itaps/iGeom_FCDefs.h
+	$(AM_V_GEN)cd .. && ./config.status itaps/iGeom_FCDefs.h
 

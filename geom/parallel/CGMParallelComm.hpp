@@ -40,32 +40,12 @@ public:
     //! Get CGMParallelComm instance associated with partition handle
     //! Will create CGMParallelComm instance if a) one does not already
     //! exist and b) a valid value for MPI_Comm is passed.
-  static CGMParallelComm *get_pcomm(//CGMEntityHandle partitioning,
-                                    const MPI_Comm* comm = 0 );
+  static CGMParallelComm *get_pcomm(const MPI_Comm* comm = 0 );
 
   static CubitStatus get_all_pcomm(std::vector<CGMParallelComm*>& list );
   
   //! destructor
   ~CGMParallelComm();
-  
-  //static unsigned char PROC_SHARED, PROC_OWNER;
-  /*
-    //! assign a global id space, for largest-dimension or all entities (and
-    //! in either case for vertices too)
-  CGMErrorCode assign_global_ids(CGMEntityHandle this_set,
-                                const int dimension,
-                                const int start_id = 1,
-                                const bool largest_dim_only = true,
-                                const bool parallel = true);
-
-    //! check for global ids; based only on tag handle being there or not;
-    //! if it's not there, create them for the specified dimensions
-  CGMErrorCode check_global_ids(CGMEntityHandle this_set,
-                               const int dimension, 
-                               const int start_id = 1,
-                               const bool largest_dim_only = true,
-                               const bool parallel = true);
-  */
 	
   //! return partition ref entity list
   DLIList<RefEntity*> &partition_surf_list() {return partitioningSurfList;}
@@ -73,6 +53,10 @@ public:
   DLIList<RefEntity*> &partition_body_list() {return partitioningBodyList;}
   const DLIList<RefEntity*> &partition_body_list() const {return partitioningBodyList;}
 
+  void set_master(unsigned int proc);
+
+  bool is_master();
+  
   //! Get proc config for this communication object
   const CGMProcConfig &proc_config() const {return procConfig;}
   
@@ -84,15 +68,7 @@ public:
 
   CubitStatus scatter_entities(const unsigned int from_proc,
 			       DLIList<RefEntity*> &ref_entity_list);
-  /*
-  CubitStatus write_buffer(DLIList<RefEntity*> &ref_entity_list,
-			  //const unsigned char* p_buffer);
-			  //char* p_buffer);
-			  std::ofstream& os);
 
-  CubitStatus write_buffer(DLIList<RefEntity*> &ref_entity_list,
-			  std::ostringstream& os);
-  */
   CubitStatus write_buffer(DLIList<RefEntity*> &ref_entity_list,
 			  char* pBuffer,
 			  int& n_buffer_size,
@@ -106,7 +82,7 @@ public:
 
   CubitStatus append_to_buffer(DLIList<RefEntity*> &ref_entity_list,
 			       int add_size);
-  
+
 private:  
 
   static std::vector<CGMParallelComm*> instanceList;
@@ -134,11 +110,17 @@ private:
   
   int m_currentPosition;
   
-  //CGMEntityHandle partitioningSet; //!< entity set containing all parts
   DLIList<RefEntity*> partitioningSurfList; // ref entity list containing all parts
   DLIList<RefEntity*> partitioningBodyList; // ref entity list containing all parts
   
   int pcommID;
+
+  unsigned int m_master;
+
+  bool m_isMaster;
 };
 
+inline void CGMParallelComm::set_master(unsigned int proc) {
+  m_master = proc;
+}
 #endif

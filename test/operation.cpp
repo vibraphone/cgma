@@ -135,7 +135,7 @@ CubitStatus make_Point()
     Body *midplane_body;
     midplane_body = gti->make_Body(midplane_bodysm);
     double d = midplane_body->measure();
-    //d = 100
+    assert( d > 99.9999 && d < 100.00001);
   }
 
   v1.x(2);
@@ -149,7 +149,7 @@ CubitStatus make_Point()
     Body *midplane_body;
     midplane_body = gti->make_Body(midplane_bodysm);
     double d = midplane_body->measure();
-    //d = 70
+    assert( d > 69.9999 && d < 70.00001);
   }
 
   status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, CUBIT_TRUE);

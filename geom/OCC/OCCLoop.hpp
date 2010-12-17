@@ -12,7 +12,7 @@
 // Owner         : 
 //-------------------------------------------------------------------------
 
-#ifndef LOOP_OCC_HP
+#ifndef LOOP_OCC_HPP
 #define LOOP_OCC_HPP
 
 #include "CubitDefines.h"

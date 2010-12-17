@@ -3,7 +3,7 @@ IGEOM_FCFLAGS = @FCFLAGS@
 IGEOM_FCDEFS = @DEFS@
 
 # These should never be required for the iGeom interface
-IGEOM_INCLUDES = -I$(IGEOM_INCLUDEDIR)
+IGEOM_INCLUDES = -I@abs_srcdir@ -I@abs_builddir@
 IGEOM_DEFINES = @HAVE_ACIS_DEF@ @HAVE_OCC_DEF@
 IGEOM_CPPFLAGS = $(IGEOM_DEFINES) $(IGEOM_INCLUDES)
 

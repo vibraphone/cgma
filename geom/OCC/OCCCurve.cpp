@@ -33,6 +33,7 @@
 #include "OCCLoop.hpp"
 #include "OCCCoEdge.hpp"
 #include "OCCPoint.hpp"
+#include "OCCAttribSet.hpp"
 
 #include <BRepAdaptor_Curve.hxx>
 #include <TopExp.hxx>
@@ -96,6 +97,7 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 {
   myTopoDSEdge = theEdge;
   myMarked = CUBIT_FALSE;
+  assert (myTopoDSEdge->ShapeType() == TopAbs_EDGE);
 }
 
 //-------------------------------------------------------------------------

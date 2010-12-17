@@ -21,17 +21,15 @@
 #include "CubitDefines.h"
 #include "BodySM.hpp"
 #include "CubitTransformMatrix.hpp"
-#include "OCCAttribSet.hpp"
+#include "CubitSimpleAttrib.hpp"
 #include "CubitBox.hpp"
-
-#include <TopoDS_CompSolid.hxx>
+#include <TopAbs_ShapeEnum.hxx>
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class Body;
 class TopologyEntity;
 class CubitString;
-class OCCAttrib;
 class OCCLump;
 class OCCShell;
 class OCCSurface;
@@ -42,21 +40,25 @@ class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
+class TopoDS_Shape;
+class TopoDS_Compound;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCBody : public BodySM
 {
 public:
   
-  OCCBody(TopoDS_CompSolid *theShape, CubitBoolean isSheetBody = CUBIT_FALSE, 
-          OCCSurface* surface = NULL, OCCShell* shell = NULL);
+  // Currently, the compound should only consists solids.
+  OCCBody(TopoDS_Compound *theShape, 
+          OCCSurface* surface = NULL, OCCShell* shell = NULL, Lump* lump = NULL);
 
-  OCCBody(DLIList<Lump*>& my_lumps);
+  OCCBody(DLIList<Lump*>& my_lumps, DLIList<OCCShell*>& shells, DLIList<OCCSurface*>& surfaces);
   void lumps(DLIList<Lump*>& my_lumps); //add lump list to myLumps
   DLIList<Lump*> lumps(){return myLumps;} 
   
-  void shell(OCCShell* shell) {myShell = shell;}
-  OCCShell* shell() {return myShell;}
+  void shells(DLIList<OCCShell*> shells) {myShells = shells;}
+  void shells(OCCShell* shell) {myShells.append(shell);}
+  DLIList<OCCShell*> shells() {return myShells;}
 
   virtual ~OCCBody() ;
     //- The destructor.
@@ -68,8 +70,8 @@ public:
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-  TopoDS_CompSolid *get_TopoDS_Shape() {return myTopoDSShape; }
-  void set_TopoDS_Shape( TopoDS_CompSolid theshape);
+  TopoDS_Compound *get_TopoDS_Shape(); 
+  void set_TopoDS_Shape( TopoDS_Compound& theshape);
 
   virtual CubitStatus get_transforms( CubitTransformMatrix &tfm );
   //R CubitStatus
@@ -179,29 +181,32 @@ public:
                                        BRepBuilderAPI_MakeShape *op,
                                        LocOpe_SplitShape* sp = NULL );
 
-  OCCSurface* my_sheet_surface(){if(IsSheetBody) return mySheetSurface;
-				 return (OCCSurface*) NULL;} 
-  void set_sheet_surface(OCCSurface* surface); 
+  DLIList<OCCSurface*> my_sheet_surfaces() {return mySheetSurfaces;}
 
-  virtual CubitBoolean is_sheet_body(){return IsSheetBody;}
+  void set_sheet_surfaces(DLIList<OCCSurface*> surfaces); 
 
-  TopoDS_CompSolid* make_CompSolid(DLIList<Lump*>& my_lumps);
+  void set_sheet_surfaces(OCCSurface* surf) {mySheetSurfaces.append(surf);}
+  virtual CubitBoolean is_sheet_body();
+
+  static TopoDS_Compound* make_Compound(DLIList<Lump*>& my_lumps,
+                                        DLIList<OCCShell*>& shells,
+                                        DLIList<OCCSurface*>& surfaces);
+
+  CubitStatus transform(BRepBuilderAPI_Transform& aBRepTrsf); 
 protected: 
 private:
 
   DLIList<Lump*> myLumps;
     //List of the attached lumps for the traversal functions.
-  OCCAttribSet attribSet;
-    //List of OCCAttrib*'s instead of CubitSimpleAttribs 
-  TopoDS_CompSolid *myTopoDSShape;
+  DLIList<CubitSimpleAttrib*> csa_list;
+    //List of CubitSimpleAttribs 
+  TopoDS_Compound *myTopoDSShape;
 
   CubitBox boundingbox;
 
-  CubitBoolean IsSheetBody;
- 
-  OCCSurface* mySheetSurface; //one surface body
+  DLIList<OCCSurface*> mySheetSurfaces;
 
-  OCCShell*  myShell; //shell only body
+  DLIList<OCCShell*>  myShells; 
 };
 
 

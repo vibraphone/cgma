@@ -80,6 +80,7 @@ class OCCPoint;
 class BRepBuilderAPI_Transform;
 class TopTools_DataMapOfShapeInteger;
 class BRepAlgoAPI_BooleanOperation;
+class TopTools_IndexedMapOfShape;
 class TopoDS_Vertex;
 class TopoDS_Edge;
 class TopoDS_Shape;
@@ -87,7 +88,7 @@ class TopoDS_Wire;
 class TopoDS_Face;
 class TopoDS_Solid;
 class TopoDS_Shell;
-class TopoDS_CompSolid;
+class TopoDS_Compound;
 // ********** END FORWARD DECLARATIONS        **********
 
 // ********** BEGIN MACRO DEFINITIONS         **********
@@ -361,7 +362,7 @@ public:
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const ;
 
   DLIList<TopologyBridge*> populate_topology_bridge(TopoDS_Shape& aShape);
-  BodySM* populate_topology_bridge(const TopoDS_CompSolid& aShape);
+  BodySM* populate_topology_bridge(const TopoDS_Compound& aShape);
   Lump* populate_topology_bridge(const TopoDS_Solid& aShape, 
 				   CubitBoolean build_body = CUBIT_FALSE);
   Surface* populate_topology_bridge(const TopoDS_Face& aShape,
@@ -412,23 +413,21 @@ private:
   CubitBoolean Write(const TopoDS_Shape& Sh,
 		     char*& p_buffer,
 		     int& n_buffer_size,
-		     bool b_export_buffer);
+		     bool b_export_buffer,
+                     TDF_Label label);
   
-  CubitBoolean Read(TopoDS_Shape& Sh,
+  CubitBoolean Read(TopoDS_Shape& Shapes,
                     const Standard_CString File,
                     TDF_Label label,
                     bool print_results);
 
   CubitBoolean Read(TopoDS_Shape& Sh,
 		    const char* pBuffer,
-		    const int n_buffer_size);
+		    const int n_buffer_size,
+                    TDF_Label label);
 
   static OCCQueryEngine* instance_;
     //- static pointer to unique instance of this class
-
-  static const int OCCQE_MAJOR_VERSION;
-  static const int OCCQE_MINOR_VERSION;
-  static const int OCCQE_SUBMINOR_VERSION;
 };
 
 // ********** BEGIN INLINE FUNCTIONS          **********

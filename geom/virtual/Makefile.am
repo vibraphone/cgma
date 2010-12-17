@@ -1,12 +1,7 @@
-# Don't require GNU-standard files (Changelog, README, etc.)
-AUTOMAKE_OPTIONS = foreign
-
-# Override default defines with the ones we want from the configure script
-DEFS = $(TEMPLATE_DEFS_INCLUDED)
-INCLUDES = -I$(top_srcdir)/util \
-           -I$(top_srcdir)/geom \
-           -I$(top_srcdir)/geom/facet \
-           -I$(top_srcdir)/geom/Cholla
+AM_CPPFLAGS += -I$(top_srcdir)/util \
+               -I$(top_srcdir)/geom \
+               -I$(top_srcdir)/geom/facet \
+               -I$(top_srcdir)/geom/Cholla
 
 # The name of the library to build
 noinst_LTLIBRARIES = 

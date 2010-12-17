@@ -219,7 +219,7 @@ CubitStatus make_Point()
   test_box *= 1.02;
   assert( box1 <= test_box );
 
-  TopoDS_CompSolid* objOCC;
+  TopoDS_Compound* objOCC;
   Body* tmpBd = GeometryQueryTool::instance()->get_first_body();
   DLIList<RefVertex*> vertices;
   tmpBd->ref_vertices(vertices);
@@ -235,7 +235,7 @@ CubitStatus make_Point()
   }
   BodySM* tmpBdSM = tmpBd->get_body_sm_ptr();
   objOCC = ( (OCCBody*) tmpBdSM )->get_TopoDS_Shape(); //Opencascade Object
-  OCCDrawTool::instance()->draw_TopoDS_Shape(objOCC, 200);
+  //OCCDrawTool::instance()->draw_TopoDS_Shape(objOCC, 200);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -259,20 +259,9 @@ CubitStatus make_Point()
   const char *argv3 = "72_shaver6.brep";
   status = read_geometry(1, &argv3);
   if (status == CUBIT_FAILURE) exit(1);
-  
-  // test create a Compound body.
+   
   DLIList<Body*> test_bodies;
   gti->bodies(test_bodies);
- 
-  DLIList<RefVolume*> ref_volume_list;
-  for(int i = 0; i < test_bodies.size(); i++)
-    test_bodies.get_and_step()->ref_volumes(ref_volume_list);
-  
-  Body* CompBody = gmti->make_Body(ref_volume_list);
-
-  test_bodies.clean_out();
-  gti->bodies(test_bodies);
-
   CubitVector vi, vii;
   vi = test_bodies.get()->center_point(); 
 
@@ -344,6 +333,15 @@ CubitStatus make_Point()
   //first body and vertex2 's minimum distance(d) and locations for the minimum.
   assert(d <11.8607 && d > 11.8606);
 
+  // test create a Compound body.
+  test_bodies.clean_out();
+  gti->bodies(test_bodies);
+
+  bodies.clean_out();
+  gmti->unite(test_bodies, bodies );
+  assert(bodies.size() == 1);
+
+  Body* CompBody = bodies.get();
   BodySM* body = CompBody->get_body_sm_ptr();
   OCCBody* occ_body = CAST_TO(body, OCCBody);
   occ_body->mass_properties(vi, d);
@@ -361,13 +359,11 @@ CubitStatus make_Point()
   assert(vii == 2*vi);
   // After scale, center point moved by 2 times 
 
-  vi = bodies.get()->center_point();
-  gti->translate(bodies.get(),axis);
-  vii = bodies.get()->center_point();
+  vi = CompBody->center_point();
+  gti->translate(CompBody,axis);
+  vii =CompBody->center_point();
   assert(vii - vi == axis);
   // After parellel move, center point moved by x (10)
-
-  gti->delete_Body(bodies);
 
   vi = CompBody->center_point();
   gti->rotate(CompBody, axis, 3.14/6);
@@ -386,7 +382,7 @@ CubitStatus make_Point()
 
   //check for surface
   DLIList<OCCSurface*> surfaces;
-  CAST_TO(body, OCCBody)->get_all_surfaces(surfaces);
+  occ_body->get_all_surfaces(surfaces);
   OCCSurface* surface = surfaces.step_and_get();
   GeometryType type = surface->geometry_type();
   // CONE_SURFACE_TYPE
@@ -461,7 +457,7 @@ CubitStatus make_Point()
   CubitVector curvature2_ptr ; 
 
   ref_face->find_closest_point_trimmed(vii, closest_location);  
-  vi.set(0.256328, 7.249312, 47.388);
+  vi.set(-9.7436718, 7.249312, 47.388);
   assert(fabs(vi.distance_between(closest_location)) < 0.0001); 
   // Found surface projection location for vi.
 
@@ -477,7 +473,7 @@ CubitStatus make_Point()
   double u = 2.5;      
   double v = -20000;
   vi = ref_face->position_from_u_v(u,v);
-  vii.set(0.62546, 7.2082, 51.8845);
+  vii.set(-9.374537, 7.2082, 51.8845);
   assert(fabs(vi.distance_between(vii)) < 0.0001);
   // get location on surface for it's u,v
 
@@ -523,10 +519,10 @@ CubitStatus make_Point()
   int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
   DLIList<RefEdge*> *ref_edges1;
   ref_edges1 = ref_edge_loops.get();
-  RefEdge* edge1 = ref_edges1->get();
-  RefEdge* edge2 = ref_edges1->step_and_get();
-  double angle = edge1->angle_between(edge2, ref_face);
-  assert(fabs(angle - 1.57) < 0.001);
+  RefEdge* edge1 = ref_edges1->pop();
+  RefEdge* edge2 = ref_edges1->pop();
+  double angle = edge2->angle_between(edge1, ref_face);
+  assert(fabs(angle - 4.712) < 0.001);
 
   //test for curve
   CubitVector c_point, tangent, center;
@@ -553,7 +549,7 @@ CubitStatus make_Point()
   assert(fabs(d - 28.284) <0.001);
 
   new_edge_2->closest_point_trimmed(vi, c_point);
-  vii.set(3.91685, 3.91685, 10);
+  vii.set(-1.083148, -1.083148, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //arc curve
@@ -562,7 +558,7 @@ CubitStatus make_Point()
   d = new_edge_3->measure();
   assert(fabs(d - 31.4159) < 0.0001);
   new_edge_3->closest_point_trimmed(vi, c_point);
-  vii.set(2.07255, 6.09554, 10);
+  vii.set(0.62764, 3.486959, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //ellipse curve
@@ -571,7 +567,7 @@ CubitStatus make_Point()
   d = new_edge_4->measure();
   assert(fabs(d - 22.21) < 0.01); 
   new_edge_4->closest_point_trimmed(vi, c_point);
-  vii.set(2.07255, 6.09554, 10);
+  vii.set(11.211, -8.6204, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
@@ -579,7 +575,7 @@ CubitStatus make_Point()
   d = new_edge_5->measure();
   assert(fabs(d-66.643) < 0.001);
   new_edge_5->closest_point_trimmed(vi, c_point);
-  vii.set(1.22252, 14.08919, 10);
+  vii.set(-11.211, 8.6204, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //PARABOLA_CURVE_TYPE
@@ -588,7 +584,7 @@ CubitStatus make_Point()
   d = new_edge_6->measure();
   assert(fabs(d-29.56546) < 0.0001);
   new_edge_6->closest_point_trimmed(vi, c_point);
-  vii.set(2.63998, 5.13808, 10);
+  vii.set(0.58077, 2.41, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //HYPERBOLA_CURVE_TYPE
@@ -598,7 +594,7 @@ CubitStatus make_Point()
   assert(fabs(d-21.6815) < 0.0001);
 
   new_edge_7->closest_point_trimmed(vi, c_point);
-  vii.set( 7.16402, 4.60862, 10);
+  vii.set( 6.5835, 2.8855, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //delete all free vertices and edges
@@ -636,24 +632,24 @@ CubitStatus make_Point()
   // ARC_CURVE_TYPE
 
   box = curve-> bounding_box();
-  min.set(-2.667, 7.2333, 42.6377);
-  max.set(2.2471, 7.2927, 49.1317);
+  min.set(-12.667, 7.2333, 42.6377);
+  max.set(-7.7528, 7.2927, 49.1317);
   assert(min.distance_between(box.minimum()) < 0.001 &&
          max.distance_between(box.maximum()) < 0.001);
   // bounding box
 
   d = ref_edge->measure();
-  assert(fabs(d - 13.9987) < 0.001);
+  assert(fabs(d - 11.042) < 0.001);
 
   ref_edge->get_param_range(lower,upper);
-  assert(lower - 19988 <= 0 && fabs(upper-20001.998) < 0.001);
+  assert(lower - 2.6024 <= 0.0001 && fabs(upper-6.2832) < 0.001);
   // paremeter range.
 
   d = ref_edge->length_from_u(lower,upper);
-  assert(fabs(d - 13.9987) < 0.001);
+  assert(fabs(d - 11.042) < 0.001);
 
   d = ref_edge->length_from_u(lower/2+upper/2, upper);
-  assert(fabs(d-6.99939) < 0.0001);
+  assert(fabs(d-5.52106) < 0.0001);
   // half curve length.
 
   periodic = ref_edge->is_periodic(p);
@@ -664,12 +660,12 @@ CubitStatus make_Point()
   // middle point.
 
   u = ref_edge->u_from_position(vi); 
-  assert(fabs(u - 19994.999) < 0.001);
+  assert(fabs(u - 4.4428) < 0.001);
   // middle point's u value.
 
   double radius;
   ref_edge->closest_point(vi, c_point, &tangent, & curvature1_ptr);
-  vii.set(0, -0.00913, 0.9999);
+  vii.set(0.26630, -0.008803, 0.96384);
   assert(tangent.distance_between(vii) < 0.001);
   // Closed point on middle point.
 

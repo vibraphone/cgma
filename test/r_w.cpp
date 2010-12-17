@@ -290,12 +290,11 @@ CubitStatus make_Point()
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
-  assert (n == 6);
-  CubitVector test_v(7.5, 5,0.5);
+  assert (n == 12);
+  CubitVector test_v(5, 5,0.5);
   assert (v == test_v);
-  assert (50-d < 0.000000001);
-  // n = 6
-  //new bodies has 2 bodies, one has a volume = 10 and the other has a 
+  assert (60-d < 0.000000001);
+  //new body has 2 volumes, one has a volume = 10 and the other has a 
   //volume = 50; each of them has 6 ref_faces, of which 3 are new and 3 are
   //remaining (unchanged or modified).
 
@@ -305,7 +304,7 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
-  assert(num_ents_exported == 2);
+  assert(num_ents_exported == 1);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities

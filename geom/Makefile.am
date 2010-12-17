@@ -1,6 +1,3 @@
-# Don't require GNU-standard files (Changelog, README, etc.)
-AUTOMAKE_OPTIONS = foreign
-
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
@@ -16,9 +13,7 @@ if build_OCC
 endif
 SUBDIRS += testing
 
-# Override default defines with the ones we want from the configure script
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
-INCLUDES = -I$(top_srcdir)/util -I.
+AM_CPPFLAGS += -I$(top_srcdir)/util -I.
 
 # The name of the library to build
 noinst_LTLIBRARIES = 

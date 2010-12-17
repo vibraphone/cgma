@@ -1,7 +1,6 @@
-
-# Override default defines with the ones we want from the configure script
-DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN) $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM)
-INCLUDES = -I$(top_srcdir)/geom \
+AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
+           -DSRCDIR=@srcdir@ \
+           -I$(top_srcdir)/geom \
            -I$(top_srcdir)/util \
            -I$(top_srcdir)/init \
            -I$(top_srcdir)/geom/ACIS \
@@ -14,43 +13,49 @@ INCLUDES = -I$(top_srcdir)/geom \
 
 TESTS = init sheet
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis
 else
 if WITH_CUBIT
-  TESTS += webcut brick_acis
+  TESTS += webcut brick_acis merge_acis
 else
-  TESTS += brick_facet
+  TESTS += brick_facet merge_facet
 endif
 endif
 if build_OCC
-  TESTS += modify makept r_w test_occ operation brick_occ
+  TESTS += modify subtract makept r_w test_occ operation brick_occ merge_occ
 endif
 
-AM_CPPFLAGS =
-AM_CPPFLAGS += -DSRCDIR=@srcdir@ $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF)
 check_PROGRAMS = $(TESTS)
 
 LDADD = ../libcgm.la
-LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
+subtract_SOURCES = subtract.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
 operation_SOURCES = operation.cpp
 init_SOURCES = init.cpp
-init_LDFLAGS= $(LDFLAGS) $(LINK_FLAGS)
 
 brick_sources = brick.cpp
 brick_acis_SOURCES = $(brick_sources)
-brick_acis_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="ACIS"'
+brick_acis_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="ACIS"'
 brick_occ_SOURCES = $(brick_sources)
-brick_occ_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="OCC"'
+brick_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="OCC"'
 brick_facet_SOURCES = $(brick_sources)
-brick_facet_CPPFLAGS = $(CPPFLAGS) '-DTEST_ENGINE="FACET"'
+brick_facet_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="FACET"'
+
+merge_sources = merge_test.cpp
+merge_acis_SOURCES = $(merge_sources)
+merge_acis_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_ACIS
+merge_occ_SOURCES = $(merge_sources)
+merge_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
+merge_facet_SOURCES = $(merge_sources)
+merge_facet_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_FACET
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.

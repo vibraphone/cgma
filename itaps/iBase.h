@@ -1,9 +1,5 @@
-#ifndef __IBASE_H__
-#define __IBASE_H__
-
-#ifndef ITAPS
-#define ITAPS
-#endif
+#ifndef _ITAPS_iBase
+#define _ITAPS_iBase
 
 #ifdef __cplusplus
 
@@ -19,6 +15,8 @@ extern "C"
   typedef struct iBase_EntityHandle_Private* iBase_EntityHandle;
   typedef struct iBase_EntitySetHandle_Private* iBase_EntitySetHandle;
   typedef struct iBase_TagHandle_Private* iBase_TagHandle;
+  typedef void* iBase_EntityIterator;
+  typedef void* iBase_EntityArrIterator;
 
     /*==========================================================
      * ENTITYTYPE ENUMERATION
@@ -132,4 +130,4 @@ extern "C"
 }
 #endif
 
-#endif /* #ifndef __IBASE_H__ */
+#endif /* #ifndef _ITAPS_iBase */

@@ -23,7 +23,6 @@
 #include "gp_Pnt.hxx"
 #include "TopoDS_Vertex.hxx"
 #include "BRepBuilderAPI_MakeVertex.hxx"
-#include "OCCAttribSet.hpp"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
@@ -38,7 +37,6 @@ private:
 
   TopoDS_Vertex *myTopoDSVertex;
   CubitBoolean myMarked ; 
-  OCCAttribSet attribSet;
 
 public :
   
@@ -65,7 +63,7 @@ public :
 
   void set_myMarked(CubitBoolean marked) {myMarked = marked;}
 
-  TopoDS_Vertex *get_TopoDS_Vertex(){return myTopoDSVertex; }
+  TopoDS_Vertex *get_TopoDS_Vertex(){assert (myTopoDSVertex->ShapeType() == TopAbs_VERTEX); return myTopoDSVertex; }
   void set_TopoDS_Vertex(TopoDS_Vertex vertex);
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);

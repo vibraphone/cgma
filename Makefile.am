@@ -1,5 +1,4 @@
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = compat util geom init . itaps test cgm_apps
 # Don't loose the autoconf include path
 ACLOCAL_AMFLAGS = -I m4
 
@@ -11,6 +10,12 @@ cfgdir = $(libdir)
 cfg_DATA = cgm.make
 
 lib_LTLIBRARIES = libcgm.la
+
+if ENABLE_igeom
+  igeom_DIR = itaps
+else
+  igeom_DIR = 
+endif 
 
 if build_parallel
   CGM_ll_LIB = geom/parallel/libcubit_parallel.la
@@ -43,7 +48,7 @@ else
   CORE_CGM_LIBS = 
 endif
 
-
+SUBDIRS = compat util geom init . $(igeom_DIR) test cgm_apps
 
 libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
 
@@ -56,6 +61,6 @@ libcgm_la_SOURCES =
 # directory until we're doing the install.
 CFG_FILE = $(DESTDIR)$(cfgdir)/cgm.make
 install-data-hook:
-	echo "CGM_INT_INCLUDE = -I$(includedir)"  >> $(CFG_FILE)
-	echo "CGM_INT_LDFLAGS = -L$(libdir)"      >> $(CFG_FILE)
-	echo "CGM_INT_LTFLAGS = -R$(libdir)"      >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_INCLUDE = -I$(includedir)"  >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_LDFLAGS = -L$(libdir)"      >> $(CFG_FILE)
+	$(AM_V_at)echo "CGM_INT_LTFLAGS = -R$(libdir)"      >> $(CFG_FILE)
