@@ -140,17 +140,15 @@ OCCDrawTool::draw_surface( Surface *surface, int color, CubitBoolean tessellate 
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
   if( tessellate )
   {
-    int num_tris, num_pnts, num_facets;
     GMem g_mem ;
-    OQE->get_graphics( surface, num_tris, num_pnts, num_facets,
-      &g_mem );
+    OQE->get_graphics( surface, &g_mem);
 
     // Draw the triangles
     GPoint p[3];
     GPoint* plist = g_mem.point_list();
     int* facet_list = g_mem.facet_list();
     int i, c = 0;
-    for( i=0; i<num_tris; i++ )
+    for( i=0; i<g_mem.facet_list_size(); i++ )
     {
       p[0] = plist[facet_list[++c]];
       p[2] = plist[facet_list[++c]];
@@ -179,16 +177,15 @@ CubitStatus
 OCCDrawTool::draw_curve( Curve *curve, int color , CubitBoolean flush )
 {
   GMem g_mem;
-  int num_points;
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
   double tol = OQE->get_sme_resabs_tolerance();
   if (curve->get_arc_length() < tol)
     return CUBIT_SUCCESS;
   // get the graphics
   CubitStatus stat;
-  stat = OQE->get_graphics( curve, num_points, &g_mem );
+  stat = OQE->get_graphics( curve, &g_mem );
 
-  if (stat==CUBIT_FAILURE || num_points == 0)
+  if (stat==CUBIT_FAILURE )
   {
     PRINT_ERROR("Unable to tessellate a curve for display\n" );
     return CUBIT_FAILURE;

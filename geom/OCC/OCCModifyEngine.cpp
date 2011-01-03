@@ -2330,8 +2330,10 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  GProp_GProps myProps1;
 	  BRepGProp::LinearProperties(edge, myProps1);
 	  double d1 = myProps1.Mass();
+          Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+
 	  gp_Pnt pt = myProps1.CentreOfMass();
-	  CubitVector p(pt.X(), pt.Y(), pt.Z());
+	  CubitVector p = curve->center_point();
 
 	  CubitVector point_on_surf;
 	  occ_face->closest_point_trimmed(p, point_on_surf);
@@ -2363,40 +2365,26 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		    curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
 		  OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
    
-		  CubitPointContainment pc = CUBIT_PNT_OFF;
-		  if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE) 
-		    {
-		      pc = occ_curve->point_containment(p);
-
-		      if(pc == CUBIT_PNT_ON) //overlap
-			{
-			  //check if they are the same edge, so don't need to be split
-			  //the overlapped edges are considered the same if they have the
-			  //same length
-			  if((d2 - d1) > TOL)
-			    {
-			      added = CUBIT_TRUE;
-			      splitor.Add(edge, from_edge);
-			    }
-			  else
-			    skipped = CUBIT_TRUE;
-			  total_edges--;
-			  break;
-			}
-		    }
-		  else //non-straight curve, check only center points
+                  if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap
                   {
-                    //just saw a case that intersection in a circle but 
-                    //the intersector returns with 2 curves, one with paramenter
-                    // (0, PI/2), the other is (P2/2, 2*PI). 
-                    if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap
-		      skipped = CUBIT_TRUE;
-                  } 
+                    skipped = CUBIT_TRUE;
+                    total_edges--;
+                    break;
+                  }
+
+		  CubitPointContainment pc = CUBIT_PNT_OFF;
+                  pc = occ_curve->point_containment(p);
+                  if((d2 - d1) > TOL && pc == CUBIT_PNT_ON) 
+                  {
+                    added = CUBIT_TRUE;
+                    splitor.Add(edge, from_edge);
+                    total_edges--;
+                    break;
+                  }
 		} 
 	      if(list_of_edges.Extent() == 1 && !skipped) 
 		{
 		  added = CUBIT_TRUE;
-		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 		  curve_list.append(curve); 
 		}
 	    } 
@@ -2419,7 +2407,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
 	      CubitBox aBox_f(min, max);
               //hexlat3 has tolerance issue where aBox_e.x_min is within 
-              //tolerance and greater than aBox_f.x_min, coursing no edge
+              //tolerance and greater than aBox_f.x_min, causing no edge
               //imprint of the faces. change to add consideration of tolerance
 	      if (aBox_e.min_x() >= aBox_f.min_x() - TOL &&
                   aBox_e.min_y() >= aBox_f.min_y() - TOL &&
@@ -2428,9 +2416,13 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                   aBox_e.max_y() <= aBox_f.max_y() + TOL &&
                   aBox_e.max_z() <= aBox_f.max_z() + TOL)
 		{
-		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 		  curve_list.append(curve);
 		}
+              else
+              {
+                OCCQueryEngine::instance()->delete_solid_model_entities( curve );
+                total_edges--;
+              }
 	    }
 	}
 
@@ -2700,15 +2692,10 @@ TopoDS_Edge* OCCModifyEngine::find_imprinting_edge(TopoDS_Shape& from_shape,
   return edge;
 }
 
-int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
+int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
  				        TopoDS_Face from_face)const
 {
   int  count_intersection = 0;
-  //Consider if edge_list has only one edge, and it intersects the from_face
-  //at two different places.
-  CubitBoolean double_check = CUBIT_FALSE;
-  if (edge_list->size() == 1)
-    double_check = CUBIT_TRUE;
 
   gp_Pnt pt1(0,0,0), pt2(0,0,0); 
   gp_Pnt intsec_pnt[2] = {pt1, pt2} ;
@@ -2734,12 +2721,13 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
       if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
         newP[0] = distShapeShape.PointOnShape1(1);
-        if (double_check && distShapeShape.NbSolution() == 2)
+        if (distShapeShape.NbSolution() == 2)
           newP[1] = distShapeShape.PointOnShape1(2);
         double newVal[2];
         for(int j =0; j < distShapeShape.NbSolution(); j++)
         {
           Extrema_ExtPC ext(newP[j], acurve, Precision::Approximation());
+          // At this time, there must be a intersection point at least.
           if (ext.IsDone() && (ext.NbExt() > 0)) {
             for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
               if ( ext.IsMin(i) ) {
@@ -2753,15 +2741,20 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 	      }
 	    }
           }
+          else if(ext.IsDone() && (ext.NbExt() == 0))
+          {
+            qualified.append(CUBIT_TRUE);
+            break;
+          }
         }
         for(int j = 0; j < distShapeShape.NbSolution(); j++)
         {
 	  if (qualified.get())
 	  {
-	    qualified.change_to( CUBIT_FALSE );
 	    Extrema_ExtPC ext(newP[j], acurve2, Precision::Approximation());
 	    double newVal;
 	    if (ext.IsDone() && (ext.NbExt() > 0)) {
+              qualified.change_to( CUBIT_FALSE );
 	      for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
 	      	if ( ext.IsMin(i) ) {
 		  newVal = ext.Point(i).Parameter();
@@ -2779,9 +2772,27 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
         }
         for(int k = 0; count_intersection < 3 && k < distShapeShape.NbSolution(); k++)
         {
-          if (qualified.get_and_step())
+          int curve_intersect_num = 0;
+          for (int ki = 0; ki < qualified.size() && qualified.get_and_step(); ki ++)
+          {
+            curve_intersect_num ++;
             count_intersection++;
-          intsec_pnt[count_intersection-1] = newP[k];
+          }
+
+          if (curve_intersect_num == 1)
+            intsec_pnt[count_intersection-1] = newP[k];
+          else if(curve_intersect_num == 2)
+          {
+            intsec_pnt[0] = newP[0];
+            intsec_pnt[1] = newP[1];
+            count_intersection = 2;
+            if (edge_list->size() > 1)
+            {
+              edge_list->clean_out();
+              edge_list->append(edge);
+            }
+          }
+   
           if (count_intersection == 2)
           {
             //make sure the two intersect point are not the same one 
@@ -3027,8 +3038,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
      AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
   }
   
-  double volume;
-  CubitVector center;
+  //DLIList<ENTITY*> att_ENTITIES;
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* shape1 = shape_list[i];
@@ -3077,6 +3087,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
 CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            DLIList<Curve*> &ref_edge_list,
                                            DLIList<BodySM*>& new_body_list,
+                                           DLIList<TopologyBridge*> &temp_bridges,
                                            bool keep_old,
                                            bool show_messages) const
 {
@@ -3154,8 +3165,9 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 //===============================================================================
 CubitStatus OCCModifyEngine::imprint( DLIList<Surface*> &ref_face_list,
                                       DLIList<Curve*> &edge_list,
+                                      DLIList<TopologyBridge*> &temp_bridges,
                                       DLIList<BodySM*>& new_body_list,
-                                      bool keep_old ) const
+                                      bool keep_old) const
 {
   DLIList<TopoDS_Face*> face_list;
   DLIList<TopoDS_Shape*> shape_list;
@@ -3319,7 +3331,10 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
 CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
                                    DLIList<DLIList<Curve*>*>& curve_lists_list,
                                    BodySM*& new_body,
-                                   bool keep_old ) const
+                                   bool keep_old,
+                                   bool expand,
+                                   DLIList<TopologyBridge*> *new_tbs,
+                                   DLIList<TopologyBridge*> *att_tbs  ) const
 {
   DLIList<TopoDS_Face*> face_list;
   DLIList<TopoDS_Shape*> shape_list;
@@ -3556,7 +3571,8 @@ OCCModifyEngine::imprint_projected_edges( DLIList<Surface*> &ref_face_list,
     return stat;
 
   // imprint Surface with curves
-  stat = imprint(ref_face_list, projected_curves, new_body_list, keep_old_body );
+  DLIList<TopologyBridge*> temp_bridges;
+  stat = imprint(ref_face_list, projected_curves, temp_bridges, new_body_list, keep_old_body );
 
   if(keep_free_edges)
      return  stat;
@@ -3648,7 +3664,8 @@ OCCModifyEngine::imprint_projected_edges(DLIList<Surface*> &ref_face_list,
   return CUBIT_FAILURE;
 
   // imprint bodies with curves
-  stat = imprint(body_list,projected_curves, new_body_list, keep_old);
+  DLIList<TopologyBridge*> temp_bridges;
+  stat = imprint(body_list,projected_curves, new_body_list, temp_bridges, keep_old);
 
   if (keep_free_edges)
         return  stat;
@@ -3713,7 +3730,7 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
   for (int i = 0; i < shape_list.size(); i++)
   { 
     TopoDS_Shape* from_shape = shape_list.get_and_step();
-    BodySM* from_body = from_bodies.get_and_step();
+    //BodySM* from_body = from_bodies.get_and_step();
     BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
     TopTools_ListOfShape shapes;
     shapes.Assign(intersector.Modified(*tool_shape));
@@ -4843,8 +4860,10 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                               const CubitVector &v1,
                               const CubitVector &v2,
                               const CubitVector &v3,
+                              DLIList<BodySM*>& neighbor_imprint_list,
                               DLIList<BodySM*>& results_list,
-                              bool imprint ) const
+                              ImprintType imprint_type,
+                              bool preview ) const
 {
   CubitStatus stat;
   DLIList<BodySM*> new_BodySMs;
@@ -4862,7 +4881,7 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     return stat;
   }
 
-  if(imprint)
+  if(imprint_type > NO_IMPRINT)
   {
     BodySM* new_body1, *new_body2;
     for(int i = 0; i < new_BodySMs.size()-1; i ++)
@@ -4893,8 +4912,10 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
 //===============================================================================
 CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                                 BodySM const* tool_body,
+                                DLIList<BodySM*>& neighbor_imprint_list,
                                 DLIList<BodySM*>& results_list,
-                                bool imprint ) const
+                                ImprintType imprint_type,
+                                bool preview ) const
 {
   //do intersect and subtract separately and with imprint option and keep_old
   // is true.
@@ -4916,6 +4937,10 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   DLIList<BodySM*> tool_bodies;
   tool_bodies.append(body);
   
+  bool imprint = CUBIT_TRUE;
+  if(imprint_type == NO_IMPRINT)
+    imprint = CUBIT_FALSE;
+
   stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
                   CUBIT_TRUE);
 
@@ -4932,7 +4957,9 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
 CubitStatus    OCCModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*body_list*/,
                                                           Surface* /*plane_surf1*/,
                                                           Surface* /*plane_surf2*/,
+                                                          DLIList<BodySM*>& neighbor_imprint_list,
                                                           DLIList<BodySM*>& /*results_list*/,
+                                                          ImprintType imprint_type,
                                                           bool /*imprint*/ ) const
 {
   //from Acis : // Currently no command line to this
@@ -5367,16 +5394,34 @@ Curve* OCCModifyEngine::trim_curve( Curve* trim_curve,
 CubitStatus OCCModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> & ref_face_list,
                                           DLIList<BodySM*>& new_bodies,
                                           bool keep_old,
-                                          bool heal) const
+                                          bool heal,
+                                          bool sheet) const
 {
   //keep_old and heal are ignored, always delete old.
   //all surfaces should be stand along surface bodies or shell bodies' surface
-  Lump* lump = make_Lump(ref_face_list);
-  if (!lump)
-    return CUBIT_FAILURE;
+  CubitStatus stat = CUBIT_SUCCESS;
+  if(!sheet)
+  {
+    Lump* lump = make_Lump(ref_face_list);
+    if (!lump)
+      return CUBIT_FAILURE;
   
-  new_bodies.append(CAST_TO(lump, OCCLump)->get_body());
-  return CUBIT_SUCCESS;
+    new_bodies.append(CAST_TO(lump, OCCLump)->get_body());
+  }
+ 
+  else
+  {
+    DLIList<BodySM*> bodies;
+    for(int i = 0 ; i < ref_face_list.size(); i++)
+    {
+      OCCSurface* surf = CAST_TO(ref_face_list.get_and_step(), OCCSurface);
+      BodySM* body = surf->my_body();
+      if(body)
+        bodies.append_unique(body);
+    }
+    stat = unite(bodies, new_bodies, keep_old); 
+  }
+  return stat;
 }
 
 //===============================================================================
@@ -7213,7 +7258,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & surface_list,
       stat = subtract(result_bodies, from_bodies, new_bodysm_list, CUBIT_FALSE,
                       keep_old_body);
     }
-    if(stat = CUBIT_FAILURE)
+    if(stat == CUBIT_FAILURE)
       return CUBIT_FAILURE;
   } 
   if(preview)
@@ -7329,7 +7374,7 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
       stat = subtract(tool_bodies, bodies, new_bodysm_list, CUBIT_FALSE, 
                       keep_old_body);
     } 
-    if(stat = CUBIT_FAILURE)
+    if(stat == CUBIT_FAILURE)
       return CUBIT_FAILURE;    
   }
   if(preview)
@@ -7365,10 +7410,12 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
 // Date       : 
 //=============================================================================
 CubitStatus OCCModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*/, 
-                                             double /*offset_distance*/,
-                                             DLIList<BodySM*> & /*new_bodysm_list*/,
-                                             CubitBoolean /*keep_old_body*/,
-                                             CubitBoolean show_preview ) const
+                                           double /*offset_distance*/,
+                                           DLIList<Surface*> *add_surface_list_ptr,
+                                           DLIList<double>*,
+                                           DLIList<BodySM*> & /*new_bodysm_list*/,
+                                           CubitBoolean /*keep_old_body*/,
+                                           CubitBoolean show_preview ) const
 {
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
@@ -7384,6 +7431,8 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Surface*> & /*surface_list*/,
 //=============================================================================
 CubitStatus OCCModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,  
                                              double /*offset_distance*/,
+                                             DLIList<Curve*>*,
+                                             DLIList<double>*,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
@@ -7403,7 +7452,6 @@ CubitStatus OCCModifyEngine::tweak_offset( DLIList<Curve*> & /*curve_list*/,
 CubitStatus OCCModifyEngine::tweak_remove( DLIList<Surface*> & /*surface_list*/,
                                              DLIList<BodySM*> & /*new_bodysm_list*/,
                                              CubitBoolean /*extend_adjoining*/,
-                                             CubitBoolean /*keep_surface*/,
                                              CubitBoolean /*keep_old_body*/,
                                              CubitBoolean show_preview ) const
 {
@@ -7439,9 +7487,11 @@ CubitStatus OCCModifyEngine::tweak_remove( DLIList<Curve*> & /*curve_list*/,
 CubitStatus OCCModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*/,
                                            DLIList<Surface*> & ,
                                            DLIList<BodySM*> & /*new_bodysm_list*/,
-                                             CubitBoolean /*reverse_flg*/,
-                                             CubitBoolean /*keep_old_body*/,
-                                             CubitBoolean show_preview ) const
+                                           CubitBoolean extend_flg ,
+                                           CubitPlane *limit_plane ,
+                                           CubitBoolean /*reverse_flg*/,
+                                           CubitBoolean /*keep_old_body*/,
+                                           CubitBoolean show_preview ) const
 {
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
@@ -7458,9 +7508,12 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Surface*> & /*surface_list*/,
 CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            DLIList<Surface*> & /*target_surfs*/,
                                            DLIList<BodySM*> & /*new_bodysm_list*/, 
+                                           CubitBoolean extend_flg ,
+                                           CubitPlane *limit_plane ,
                                            CubitBoolean ,
                                            CubitBoolean /*keep_old_body*/,
-                                           CubitBoolean show_preview ) const
+                                           CubitBoolean show_preview,
+                                           double max_area_increase ) const
 {
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
@@ -7478,11 +7531,33 @@ CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
 CubitStatus OCCModifyEngine::tweak_target( DLIList<Curve*> & /*curve_list*/,
                                            DLIList<Curve*> & /*target_curve_ptr*/, 
                                            DLIList<BodySM*> & /*new_bodysm_list*/, 
+                                           CubitBoolean extend_flg,
+                                           CubitPlane *limit_plane ,
                                            CubitBoolean,
                                            CubitBoolean /*keep_old_body*/,
-                                           CubitBoolean show_preview ) const
+                                           CubitBoolean show_preview,
+                                           double max_area_increase ) const
 {
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus OCCModifyEngine::tweak_target( Point *point_ptr,
+                                    DLIList<Surface*> &modify_surface_list,
+                                    CubitVector &target_loc,
+                                    BodySM *&new_bodysm_ptr,
+                                    CubitBoolean keep_old_body ,
+                                    CubitBoolean preview  ) const
+{
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus  OCCModifyEngine::split_curve( Curve* curve_to_split,
+                                    const CubitVector& split_location,
+                                    DLIList<Curve*>& created_curves ) 
+{
+  PRINT_INFO("Need to be implemented.\n");
   return CUBIT_FAILURE;
 }
 
@@ -7608,7 +7683,8 @@ CubitStatus OCCModifyEngine::create_offset_body( BodySM* body_ptr,
 // Date       : 01/09
 //================================================================================
 CubitStatus OCCModifyEngine::create_skin_surface( DLIList<Curve*>& curves, 
-                                                  BodySM*& new_body ) const
+                                                  BodySM*& new_body,
+                                                  DLIList<Curve*>&) const
 {
    new_body = NULL;
    Surface* surf = make_Surface(BEST_FIT_SURFACE_TYPE, curves);

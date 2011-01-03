@@ -148,15 +148,12 @@ public:
   virtual CubitStatus restore_transform( BodySM* body );
 
   virtual CubitStatus get_graphics( Surface* surface_ptr,
-                                          int& number_triangles,
-                                          int& number_points,
-                                          int& number_facets,
-                                          GMem* gMem,
-                                          unsigned short normal_tolerance = 15,
-                                          double distance_tolerance = 0,
-                                          double longest_edge = 0) const;
+                                    GMem* gMem,
+                                    unsigned short normal_tolerance = 15,
+                                    double distance_tolerance = 0,
+                                    double longest_edge = 0) const;
+
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    int& num_points,
                                     GMem* gMem = NULL,
                                     double tolerance = 0.0 ) const;
     //R CubitStatus
@@ -303,13 +300,14 @@ public:
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 
   virtual CubitStatus delete_solid_model_entities( Point* point_ptr)const;
 
-  virtual CubitStatus fire_ray(BodySM *body,
-                               const CubitVector &ray_point,
-                               const CubitVector &unit,
-                               DLIList<double>& ray_params,
-                               DLIList<GeometryEntity*> *entity_list = NULL) const;
-    //- fire a ray at the specified body, returning the entities hit and
-    //- the parameters along the ray; return CUBIT_FAILURE if error
+  //brief Fire a ray at entities, passing back distances of hits and entities hit
+  virtual CubitStatus fire_ray( const CubitVector &origin,
+                        const CubitVector &direction,
+                        DLIList<TopologyBridge*> &at_entity_list,
+                        DLIList<double> &ray_params,
+                        int max_hits = 0,
+                        double ray_radius = 0.0,
+                        DLIList<TopologyBridge*> *hit_entity_list_ptr = 0 )const;
 
   virtual double get_sme_resabs_tolerance() const; // Gets solid modeler's resolution absolute tolerance
   virtual double set_sme_resabs_tolerance( double new_resabs );

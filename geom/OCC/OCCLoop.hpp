@@ -50,6 +50,8 @@ public :
   inline TopoDS_Wire* get_TopoDS_Wire() {return myTopoDSWire;}
   void set_TopoDS_Wire(TopoDS_Wire loop);
 
+  virtual LoopType loop_type(){return LOOP_TYPE_UNKNOWN;};
+
   virtual ~OCCLoop() ;
     //- The destructor
   
