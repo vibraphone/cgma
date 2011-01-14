@@ -26,6 +26,8 @@
 #include "Geom_Curve.hxx"
 #include "BRepBuilderAPI.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "BRepBuilderAPI_MakeSolid.hxx"
 #include "OCCShapeAttributeSet.hpp"
 //#include "OCCBinToolsShapeSet.hpp"
@@ -3151,7 +3153,7 @@ CubitStatus OCCQueryEngine::translate( GeometryEntity* entity,
 }
 
 CubitStatus OCCQueryEngine::update_entity_shape(GeometryEntity* entity_ptr,
-					BRepBuilderAPI_Transform* aBRepTrsf,
+					BRepBuilderAPI_ModifyShape* aBRepTrsf,
                                         BRepAlgoAPI_BooleanOperation *op)
 {
   if (OCCBody *body_ptr = CAST_TO( entity_ptr, OCCBody))
@@ -3225,10 +3227,26 @@ CubitStatus OCCQueryEngine::scale( GeometryEntity* entity, double f )
   return CUBIT_SUCCESS;
 }
 
-CubitStatus OCCQueryEngine::scale( GeometryEntity* , const CubitVector&  )
+CubitStatus OCCQueryEngine::scale( GeometryEntity* entity, 
+                                   const CubitVector& v )
 {
-  PRINT_ERROR("non-uniform scaling is not performed on OCC bodies");
-  return CUBIT_FAILURE;
+  TopoDS_Shape * shape;
+  if ((shape = get_TopoDS_Shape_of_entity(entity)) == NULL)
+    {
+      PRINT_ERROR( "problem occured getting OCC entity.\n"
+                   "       Aborting.\n" );
+      return CUBIT_FAILURE;
+    }
+
+  gp_GTrsf gTrsf;
+  gTrsf.SetValue(1,1, v.x());
+  gTrsf.SetValue(2,2, v.y());
+  gTrsf.SetValue(3,3, v.z());
+
+  BRepBuilderAPI_GTransform gBRepTrsf(gTrsf);
+  gBRepTrsf.Perform(*shape);
+  update_entity_shape(entity, &gBRepTrsf);
+  return CUBIT_SUCCESS;
 }
 
 // like ACIS, here v is the normal of symmetric plane.

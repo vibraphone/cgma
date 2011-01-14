@@ -2261,6 +2261,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       Itor.Initialize(list_of_edges);
       int total_edges = list_of_edges.Extent();
       DLIList<Curve*> curve_list;
+      DLIList<OCCCurve*> occ_curves;
       CubitBoolean topo_changed = CUBIT_FALSE;
       tool_faces_edges.reset();
 
@@ -2323,15 +2324,17 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
 	{
 	  TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+          CubitBoolean added = CUBIT_FALSE;
 	  //check to see if the intersection edge is on from_face
 	  TopExp_Explorer Ex;
-	  CubitBoolean added = CUBIT_FALSE;
 	  CubitBoolean skipped = CUBIT_FALSE;
 	  GProp_GProps myProps1;
 	  BRepGProp::LinearProperties(edge, myProps1);
 	  double d1 = myProps1.Mass();
+          Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
+
 	  gp_Pnt pt = myProps1.CentreOfMass();
-	  CubitVector p(pt.X(), pt.Y(), pt.Z());
+	  CubitVector p = curve->center_point();
 
 	  CubitVector point_on_surf;
 	  occ_face->closest_point_trimmed(p, point_on_surf);
@@ -2363,40 +2366,26 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		    curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
 		  OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
    
-		  CubitPointContainment pc = CUBIT_PNT_OFF;
-		  if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE) 
-		    {
-		      pc = occ_curve->point_containment(p);
-
-		      if(pc == CUBIT_PNT_ON) //overlap
-			{
-			  //check if they are the same edge, so don't need to be split
-			  //the overlapped edges are considered the same if they have the
-			  //same length
-			  if((d2 - d1) > TOL)
-			    {
-			      added = CUBIT_TRUE;
-			      splitor.Add(edge, from_edge);
-			    }
-			  else
-			    skipped = CUBIT_TRUE;
-			  total_edges--;
-			  break;
-			}
-		    }
-		  else //non-straight curve, check only center points
+                  if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap
                   {
-                    //just saw a case that intersection in a circle but 
-                    //the intersector returns with 2 curves, one with paramenter
-                    // (0, PI/2), the other is (P2/2, 2*PI). 
-                    if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap
-		      skipped = CUBIT_TRUE;
-                  } 
+                    skipped = CUBIT_TRUE;
+                    total_edges--;
+                    break;
+                  }
+
+		  CubitPointContainment pc = CUBIT_PNT_OFF;
+                  pc = occ_curve->point_containment(p);
+                  if((d2 - d1) > TOL && pc == CUBIT_PNT_ON) 
+                  {
+                    added = CUBIT_TRUE;
+                    splitor.Add(edge, from_edge);
+                    total_edges--;
+                    break;
+                  }
 		} 
 	      if(list_of_edges.Extent() == 1 && !skipped) 
 		{
 		  added = CUBIT_TRUE;
-		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 		  curve_list.append(curve); 
 		}
 	    } 
@@ -2419,7 +2408,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      aBox_face.Get( min[0], min[1], min[2], max[0], max[1], max[2]);
 	      CubitBox aBox_f(min, max);
               //hexlat3 has tolerance issue where aBox_e.x_min is within 
-              //tolerance and greater than aBox_f.x_min, coursing no edge
+              //tolerance and greater than aBox_f.x_min, causing no edge
               //imprint of the faces. change to add consideration of tolerance
 	      if (aBox_e.min_x() >= aBox_f.min_x() - TOL &&
                   aBox_e.min_y() >= aBox_f.min_y() - TOL &&
@@ -2428,14 +2417,18 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                   aBox_e.max_y() <= aBox_f.max_y() + TOL &&
                   aBox_e.max_z() <= aBox_f.max_z() + TOL)
 		{
-		  Curve* curve = OCCQueryEngine::instance()->populate_topology_bridge(edge);
 		  curve_list.append(curve);
 		}
+              else
+              {
+                OCCQueryEngine::instance()->delete_solid_model_entities( curve );
+                total_edges--;
+              }
 	    }
 	}
 
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
-      if (total_edges >= 1)
+      if ( total_edges >= 1)
 	{      
 	  CubitStatus stat = CUBIT_SUCCESS;
           if(curve_list.size() > 0)
@@ -2513,7 +2506,11 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  count_intersection = check_intersection(edge_list, from_face);
             
 		  if (count_intersection == 1 )
+                  {
 		    PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
+                    edge_list->clean_out();
+                    delete edge_list;
+                  }
 		} 
 	      if (stat || count_intersection == 2)
 		{
@@ -2528,16 +2525,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  topo_changed = CUBIT_TRUE; 
                   edge_list->clean_out();
                   delete edge_list;
-                  for(int i = 0; i <edge_lists.size(); i++)
-                  {
-                    edge_list = edge_lists.get_and_step();
-                    edge_list->clean_out();
-                    delete edge_list;
-                  }
-		  break;
 		}
-	      edge_list->clean_out();
-	      delete edge_list;
 	    }
 	} 
       if(topo_changed)
@@ -2729,23 +2717,23 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
       DLIList<CubitBoolean> qualified;
-      //CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
 
       if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
         newP[0] = distShapeShape.PointOnShape1(1);
         if (double_check && distShapeShape.NbSolution() == 2)
           newP[1] = distShapeShape.PointOnShape1(2);
-        double newVal[2];
+        double newVal;
         for(int j =0; j < distShapeShape.NbSolution(); j++)
         {
           Extrema_ExtPC ext(newP[j], acurve, Precision::Approximation());
+          // At this time, there must be a intersection point at least.
           if (ext.IsDone() && (ext.NbExt() > 0)) {
             for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
               if ( ext.IsMin(i) ) {
-        	newVal[j] = ext.Point(i).Parameter();
-		if ((newVal[j]-lower_bound) >= -TOL && 
-                    (upper_bound - newVal[j]) >= -TOL)
+        	newVal = ext.Point(i).Parameter();
+		if ((newVal-lower_bound) >= -TOL && 
+                    (upper_bound - newVal) >= -TOL)
 		{
 		  qualified.append(CUBIT_TRUE);
 		  break;
@@ -2753,15 +2741,20 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
 	      }
 	    }
           }
+          else if(ext.IsDone() && (ext.NbExt() == 0))
+          {
+            qualified.append(CUBIT_TRUE);
+            break;
+          }
         }
         for(int j = 0; j < distShapeShape.NbSolution(); j++)
         {
 	  if (qualified.get())
 	  {
-	    qualified.change_to( CUBIT_FALSE );
 	    Extrema_ExtPC ext(newP[j], acurve2, Precision::Approximation());
 	    double newVal;
 	    if (ext.IsDone() && (ext.NbExt() > 0)) {
+              qualified.change_to( CUBIT_FALSE );
 	      for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
 	      	if ( ext.IsMin(i) ) {
 		  newVal = ext.Point(i).Parameter();
@@ -2780,8 +2773,10 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>* edge_list,
         for(int k = 0; count_intersection < 3 && k < distShapeShape.NbSolution(); k++)
         {
           if (qualified.get_and_step())
-            count_intersection++;
+              count_intersection++;
+
           intsec_pnt[count_intersection-1] = newP[k];
+   
           if (count_intersection == 2)
           {
             //make sure the two intersect point are not the same one 

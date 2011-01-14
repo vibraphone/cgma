@@ -34,8 +34,8 @@ class OCCLoop;
 class OCCCoFace;
 class OCCCurve;
 class OCCPoint;
-class BRepBuilderAPI_Transform;
 class BRepAlgoAPI_BooleanOperation;
+class BRepBuilderAPI_ModifyShape;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
 // ********** END CUBIT INCLUDES           **********
@@ -119,7 +119,8 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+  //ModifyShape refers only to Transform and GTransform for now 1/10/11)
+  CubitStatus update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                  BRepAlgoAPI_BooleanOperation *op = NULL);
   double measure(); //area of the shell
   static CubitStatus update_OCC_entity(TopoDS_Shell& old_shell,

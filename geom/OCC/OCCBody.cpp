@@ -39,7 +39,9 @@
 
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "gp_Ax1.hxx"
@@ -327,20 +329,18 @@ CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
     OCCSurface* surface = mySheetSurfaces.get_and_step();
     TopoDS_Face * face = surface->get_TopoDS_Face();
     aBRepTrsf.Perform(*face);
-    OCCQueryEngine::instance()->update_entity_shape(surface, &aBRepTrsf);
   }
+
   for(int i = 0; i <myShells.size() ; i++)
   {
     OCCShell* occ_shell = myShells.get_and_step();
     TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
     aBRepTrsf.Perform(*shell);
-    update_OCC_entity(&aBRepTrsf);
   }
 
   if(myTopoDSShape != NULL)
   {
     aBRepTrsf.Perform(*myTopoDSShape);
-    update_OCC_entity(&aBRepTrsf);
   }
 
   else
@@ -350,9 +350,10 @@ CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
       OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
       TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
       aBRepTrsf.Perform(*solid);
-      update_OCC_entity(&aBRepTrsf); 
     }
   } 
+
+  update_OCC_entity(&aBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
   
@@ -372,26 +373,57 @@ CubitStatus OCCBody::scale(double scale_factor )
   aTrsf.SetScaleFactor(scale_factor);
 
   BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
-  return transform(aBRepTrsf);
+  CubitStatus stat = transform(aBRepTrsf);
+  return stat;
 }
 
 //----------------------------------------------------------------
 // Function: scale
-// Description: scale the body and its child entities, this is not working
-//              Opencascade doesn't support non-uniform scaling.
+// Description: deforming transformation of the body and its child entities
 // Author: Jane Hu 
 //----------------------------------------------------------------
 CubitStatus OCCBody::scale(double scale_factor_x,
                            double scale_factor_y,
                            double scale_factor_z )
 {
-/*
-  gp_Trsf aTrsf; 
-  aTrsf.SetValues(scale_factor_x,0,0,0,0,scale_factor_y,0,0,0,0,scale_factor_z,0,1,5) ;
-  BRepBuilderAPI_Transform aBRepTrsf(aTrsf);
-  return transform(aBRepTrsf);
-*/
-return CUBIT_FAILURE;
+  gp_GTrsf gTrsf; 
+  gTrsf.SetValue(1,1, scale_factor_x);
+  gTrsf.SetValue(2,2, scale_factor_y);
+  gTrsf.SetValue(3,3, scale_factor_z);
+
+  BRepBuilderAPI_GTransform gBRepTrsf(gTrsf);
+
+  for(int i = 0; i < mySheetSurfaces.size(); i++)
+  {
+    OCCSurface* surface = mySheetSurfaces.get_and_step();
+    TopoDS_Face * face = surface->get_TopoDS_Face();
+    gBRepTrsf.Perform(*face);
+  }
+
+  for(int i = 0; i <myShells.size() ; i++)
+  {
+    OCCShell* occ_shell = myShells.get_and_step();
+    TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
+    gBRepTrsf.Perform(*shell);
+  }
+
+  if(myTopoDSShape != NULL)
+    gBRepTrsf.Perform(*myTopoDSShape);
+
+  else
+  {
+    for(int i = 0; i < myLumps.size(); i++)
+    {
+      OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
+      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
+      gBRepTrsf.Perform(*solid);
+    }
+  }
+  update_OCC_entity(&gBRepTrsf);
+  // calculate for bounding box
+  update_bounding_box();
+
+  return CUBIT_SUCCESS;
 }
 
 //----------------------------------------------------------------
@@ -423,15 +455,16 @@ CubitStatus OCCBody::reflect( double reflect_axis_x,
 //           as the body's lumps number.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                        BRepAlgoAPI_BooleanOperation *op) 
 {
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Compound compsolid;
+  TopoDS_Shape shape;
   if(aBRepTrsf && myTopoDSShape)
   {
-    TopoDS_Shape shape = aBRepTrsf->ModifiedShape(*myTopoDSShape);
+    shape = aBRepTrsf->ModifiedShape(*myTopoDSShape);
     compsolid = TopoDS::Compound(shape);
   
     if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )

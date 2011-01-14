@@ -39,6 +39,8 @@
 #include "LoopSM.hpp"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "BRepTools_WireExplorer.hxx"
 #include "TopExp.hxx"
@@ -66,7 +68,7 @@
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepClass_FaceClassifier.hxx"
-#include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 // ********** END OpenCascade INCLUDES      **********
 
 
@@ -811,14 +813,15 @@ int OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 //           for any movement  or Boolean operation of the body.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                          BRepAlgoAPI_BooleanOperation *op)
 {
   assert(aBRepTrsf != NULL || op != NULL);
-
   TopoDS_Shape shape;
-  if (aBRepTrsf)
+
+  if(aBRepTrsf)
     shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Face());
+
   else
   {
     TopTools_ListOfShape shapes;

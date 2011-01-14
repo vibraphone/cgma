@@ -36,10 +36,12 @@
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "Bnd_Box.hxx"
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
@@ -350,7 +352,7 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
 //           for any movement of the lump.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                         BRepAlgoAPI_BooleanOperation *op)
 {
   if(mySheetSurface || myShell)
@@ -359,8 +361,9 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
  
   TopoDS_Shape shape;
-  if (aBRepTrsf)
+  if(aBRepTrsf)
     shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Solid());
+
   else
   {
     TopTools_ListOfShape shapes;

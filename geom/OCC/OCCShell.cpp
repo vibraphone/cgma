@@ -39,9 +39,11 @@
 #include "BRepGProp.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_ListOfShape.hxx"
-#include "BRepBuilderAPI_Transform.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 #include "BRepBuilderAPI_MakeShape.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
 #include "LocOpe_SplitShape.hxx"
 #include "TopoDS_Compound.hxx"
 // ********** END CUBIT INCLUDES           **********
@@ -191,37 +193,27 @@ void OCCShell::get_children_virt( DLIList<TopologyBridge*>& children )
 //           for any movement of the body.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                         BRepAlgoAPI_BooleanOperation *op)
 {
   if(mySheetSurface && op == NULL)
     return CUBIT_FAILURE;
-/*
-  else if(mySheetSurface && op)//stitch surface body into shell body
-  {
-    mySheetSurface->update_OCC_entity(aBRepTrsf, op); 
-    TopoDS_Shape shape = op->Shape();
-    TopExp_Explorer Ex;
-    TopoDS_Shell shell;
-    for (Ex.Init(shape, TopAbs_SHELL, TopAbs_SOLID); Ex.More(); Ex.Next())
-    {
-      shell = TopoDS::Shell(Ex.Current());
-      this->set_TopoDS_Shell(shell);
-      this->my_lump()->set_surface(NULL);
-      this->my_lump()->set_shell(this);
-      this->my_body()->shell(this);
-      this->my_body()->set_sheet_surface(NULL);
-      this->set_sheet_surface(NULL);
-      break;
-    }   
-    return CUBIT_SUCCESS;
-  }
-*/
+
   assert (aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
-  if (aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Shell());
+  BRepBuilderAPI_Transform* pTrsf = NULL;
+  BRepBuilderAPI_GTransform* gTrsf = NULL;
+  if(aBRepTrsf)
+  {
+    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
+    shape = pTrsf->ModifiedShape(*get_TopoDS_Shell());
+    if(shape.IsNull())
+    {
+      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
+      shape = gTrsf->ModifiedShape(*get_TopoDS_Shell());
+    }
+  }
   else if(!mySheetSurface)
   {
     TopTools_ListOfShape shapes;

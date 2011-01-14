@@ -35,8 +35,8 @@ class OCCLoop;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
-class BRepBuilderAPI_Transform;
 class BRepBuilderAPI_MakeShape;
+class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
 class LocOpe_SplitShape;
 // ********** END FORWARD DECLARATIONS     **********
@@ -148,7 +148,7 @@ public:
 
   CubitPointContainment point_containment( const CubitVector &point );
 
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+  CubitStatus update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                 BRepAlgoAPI_BooleanOperation *op = NULL);
   static CubitStatus update_OCC_entity(TopoDS_Solid& old_shape,
                                        TopoDS_Shape& new_shape,
