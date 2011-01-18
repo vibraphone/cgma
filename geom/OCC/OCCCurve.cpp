@@ -68,6 +68,8 @@
 #include "gp_Circ.hxx"
 #include "gp_Elips.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 //#include "TopOpeBRep_ShapeIntersector.hxx"
 //#include "TopOpeBRep_Point2d.hxx"
@@ -918,7 +920,7 @@ CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 //           for any movement of the body/surface/curve.
 // Author: Jane Hu
 //----------------------------------------------------------------
-void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                  BRepAlgoAPI_BooleanOperation *op)
 {
   if (myMarked == 1) 
@@ -927,8 +929,19 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
   
   TopoDS_Shape shape;
-  if (aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Edge());
+  BRepBuilderAPI_Transform* pTrsf = NULL;
+  BRepBuilderAPI_GTransform* gTrsf = NULL;
+  if(aBRepTrsf)
+  {
+    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
+    if(!pTrsf)
+    {
+      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
+      shape = gTrsf->ModifiedShape(*get_TopoDS_Edge());
+    }
+    else
+      shape = pTrsf->ModifiedShape(*get_TopoDS_Edge());
+  }
   else
   {
     TopTools_ListOfShape shapes;

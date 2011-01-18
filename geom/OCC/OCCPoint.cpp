@@ -29,7 +29,9 @@
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 // ********** END CUBIT INCLUDES           **********
 
@@ -260,7 +262,7 @@ void OCCPoint::get_children_virt( DLIList<TopologyBridge*>& )
 //           for any movement of the body/surface/curve/vertex.
 // Author: Jane Hu
 //----------------------------------------------------------------
-void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+void OCCPoint::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                   BRepAlgoAPI_BooleanOperation *op)
 {
   if (this->myMarked == CUBIT_TRUE)
@@ -269,8 +271,19 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
+  BRepBuilderAPI_Transform* pTrsf = NULL;
+  BRepBuilderAPI_GTransform* gTrsf = NULL;
   if(aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Vertex());
+  {
+    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
+    shape = pTrsf->ModifiedShape(*get_TopoDS_Vertex());
+    if(shape.IsNull())
+    {
+      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
+      shape = gTrsf->ModifiedShape(*get_TopoDS_Vertex());
+    }
+  }
+ 
   else
   {
     TopTools_ListOfShape shapes;

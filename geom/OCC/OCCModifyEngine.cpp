@@ -2261,6 +2261,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       Itor.Initialize(list_of_edges);
       int total_edges = list_of_edges.Extent();
       DLIList<Curve*> curve_list;
+      DLIList<OCCCurve*> occ_curves;
       CubitBoolean topo_changed = CUBIT_FALSE;
       tool_faces_edges.reset();
 
@@ -2323,9 +2324,9 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       for(Itor.Initialize(list_of_edges); Itor.More(); Itor.Next())
 	{
 	  TopoDS_Edge edge = TopoDS::Edge(Itor.Value());
+          CubitBoolean added = CUBIT_FALSE;
 	  //check to see if the intersection edge is on from_face
 	  TopExp_Explorer Ex;
-	  CubitBoolean added = CUBIT_FALSE;
 	  CubitBoolean skipped = CUBIT_FALSE;
 	  GProp_GProps myProps1;
 	  BRepGProp::LinearProperties(edge, myProps1);
@@ -2427,7 +2428,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	}
 
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
-      if (total_edges >= 1)
+      if ( total_edges >= 1)
 	{      
 	  CubitStatus stat = CUBIT_SUCCESS;
           if(curve_list.size() > 0)
@@ -2505,7 +2506,11 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  count_intersection = check_intersection(edge_list, from_face);
             
 		  if (count_intersection == 1 )
+                  {
 		    PRINT_WARNING("Cant make a scar on existing face without splitting it. \n");
+                    edge_list->clean_out();
+                    delete edge_list;
+                  }
 		} 
 	      if (stat || count_intersection == 2)
 		{
@@ -2520,16 +2525,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  topo_changed = CUBIT_TRUE; 
                   edge_list->clean_out();
                   delete edge_list;
-                  for(int i = 0; i <edge_lists.size(); i++)
-                  {
-                    edge_list = edge_lists.get_and_step();
-                    edge_list->clean_out();
-                    delete edge_list;
-                  }
-		  break;
 		}
-	      edge_list->clean_out();
-	      delete edge_list;
 	    }
 	} 
       if(topo_changed)
@@ -2716,14 +2712,13 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
       DLIList<CubitBoolean> qualified;
-      //CubitBoolean qualified[2] = {CUBIT_FALSE, CUBIT_FALSE};
 
       if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
         newP[0] = distShapeShape.PointOnShape1(1);
         if (distShapeShape.NbSolution() == 2)
           newP[1] = distShapeShape.PointOnShape1(2);
-        double newVal[2];
+        double newVal;
         for(int j =0; j < distShapeShape.NbSolution(); j++)
         {
           Extrema_ExtPC ext(newP[j], acurve, Precision::Approximation());
@@ -2731,9 +2726,9 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
           if (ext.IsDone() && (ext.NbExt() > 0)) {
             for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
               if ( ext.IsMin(i) ) {
-        	newVal[j] = ext.Point(i).Parameter();
-		if ((newVal[j]-lower_bound) >= -TOL && 
-                    (upper_bound - newVal[j]) >= -TOL)
+        	newVal = ext.Point(i).Parameter();
+		if ((newVal-lower_bound) >= -TOL && 
+                    (upper_bound - newVal) >= -TOL)
 		{
 		  qualified.append(CUBIT_TRUE);
 		  break;
@@ -2776,7 +2771,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
           for (int ki = 0; ki < qualified.size() && qualified.get_and_step(); ki ++)
           {
             curve_intersect_num ++;
-            count_intersection++;
+              count_intersection++;
+
           }
 
           if (curve_intersect_num == 1)
@@ -2792,6 +2788,7 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
               edge_list->append(edge);
             }
           }
+   
    
           if (count_intersection == 2)
           {

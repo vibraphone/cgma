@@ -65,3 +65,28 @@
    SetUnBuffered();
  
    // write end of pipe is unbuffered also 
+
+--- ./BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-01-14 08:51:02.000000000 -0600
++++ ./BRepBuilderAPI_Collect.cxx	2011-01-14 12:30:11.000000000 -0600
+@@ -201,9 +201,18 @@
+   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
+   BuildBack (myMod, ModBack);
+   
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
++  TopAbs_ShapeEnum type = SI.ShapeType();
++  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
++  if(type < TopAbs_SHELL)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
++  if(type < TopAbs_FACE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
++  if(type < TopAbs_WIRE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
++  if(type < TopAbs_EDGE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
++  if(type < TopAbs_VERTEX)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
+ 
+ #ifdef DEB
+   if (Affich) {

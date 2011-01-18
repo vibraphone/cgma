@@ -33,6 +33,8 @@
 #include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
+#include "BRepBuilderAPI_ModifyShape.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
 // ********** END CUBIT INCLUDES           **********
 
@@ -217,15 +219,25 @@ GeometryQueryEngine* OCCLoop::get_geometry_query_engine() const
 //           for any movement of the body/surface.
 // Author: Jane Hu
 //----------------------------------------------------------------
-CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                         BRepAlgoAPI_BooleanOperation *op)
 {
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
   CubitBoolean need_update = CUBIT_TRUE;
-  if (aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Wire());
+  BRepBuilderAPI_Transform* pTrsf = NULL;
+  BRepBuilderAPI_GTransform* gTrsf = NULL;
+  if(aBRepTrsf)
+  {
+    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
+    shape = pTrsf->ModifiedShape(*get_TopoDS_Wire());
+    if(shape.IsNull())
+    {
+      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
+      shape = gTrsf->ModifiedShape(*get_TopoDS_Wire());
+    }
+  }
   else
   {
     TopTools_ListOfShape shapes; 

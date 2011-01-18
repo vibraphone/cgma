@@ -34,7 +34,7 @@ class OCCShell;
 class OCCSurface;
 class OCCLoop;
 class OCCPoint;
-class BRepBuilderAPI_Transform; 
+class BRepBuilderAPI_ModifyShape; 
 class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -315,7 +315,8 @@ public :
     { assert (myTopoDSEdge->ShapeType() == TopAbs_EDGE); return myTopoDSEdge; } 
   void set_TopoDS_Edge(TopoDS_Edge edge);
 
-  void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+  //ModifyShape refers to Transform and GTransform for now. (1/10/11)
+  void update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                           BRepAlgoAPI_BooleanOperation *op = NULL );
  
   Curve* project_curve(Surface* face_ptr,

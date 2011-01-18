@@ -37,6 +37,7 @@ class OCCLoop;
 class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_Transform;
+class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
 class BRepBuilderAPI_MakeShape;
 class LocOpe_SplitShape;
@@ -172,8 +173,9 @@ public:
   
   virtual CubitPointContainment point_containment( const CubitVector& pos );
 
-  //update the underlining CompSolid
-  CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+  //update the underlining CompSolid, BRepBuilderAPI_ModifyShape now is 
+  //referring to only BRepBuilderAPI_Transform or BRepBuilderAPI_GTransform.
+  CubitStatus update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                  BRepAlgoAPI_BooleanOperation *op = NULL);
 
   static CubitStatus update_OCC_entity(TopoDS_Shape& old_shape,

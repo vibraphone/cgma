@@ -31,7 +31,7 @@ class OCCSurface;
 class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
-class BRepBuilderAPI_Transform;
+class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
 class OCCLoop : public LoopSM
 {
@@ -109,7 +109,8 @@ public :
     virtual void get_parents_virt(DLIList<TopologyBridge*>&);
     virtual void get_children_virt(DLIList<TopologyBridge*>&);
 
-    CubitStatus update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+    //ModifyShape now refers only to Transform and GTransform (1/10/11)
+    CubitStatus update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                    BRepAlgoAPI_BooleanOperation *op =NULL);
 protected: 
 

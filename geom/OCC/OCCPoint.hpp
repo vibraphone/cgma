@@ -27,7 +27,7 @@
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class CubitSimpleAttrib;
-class BRepBuilderAPI_Transform;
+class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -130,7 +130,7 @@ public :
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  void update_OCC_entity( BRepBuilderAPI_Transform *aBRepTrsf,
+  void update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                           BRepAlgoAPI_BooleanOperation *op = NULL);
 };
 

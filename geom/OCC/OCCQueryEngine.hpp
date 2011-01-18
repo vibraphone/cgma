@@ -77,10 +77,10 @@ class OCCCoEdge;
 class OCCCurve;
 class OCCPoint;
  
-class BRepBuilderAPI_Transform;
 class TopTools_DataMapOfShapeInteger;
 class BRepAlgoAPI_BooleanOperation;
 class TopTools_IndexedMapOfShape;
+class BRepBuilderAPI_ModifyShape;
 class TopoDS_Vertex;
 class TopoDS_Edge;
 class TopoDS_Shape;
@@ -324,8 +324,9 @@ public:
                                 DLIList<BodySM*>& body_list,
                                 CubitBox& super_box );
 
+  //ModifyShape refers to only Transform and GTransform for now (1/10/11)
   CubitStatus update_entity_shape(GeometryEntity* entity_ptr,
-                                  BRepBuilderAPI_Transform* aTranf,
+                                  BRepBuilderAPI_ModifyShape* aTranf,
                                   BRepAlgoAPI_BooleanOperation *op = NULL);
 
   void set_TopoDS_Shape(TopologyBridge* tb, TopoDS_Shape& new_shape);
