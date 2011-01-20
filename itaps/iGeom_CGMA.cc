@@ -6510,6 +6510,7 @@ iGeom_fire_ray( const CubitVector& point,
 {
   const double EPSILON = 0.0;
   CubitStatus s;
+  CubitVector nc_point(point), nc_direction(direction);
   
     // get all free entities in model
   DLIList<RefEntity*> target_entities;
@@ -6521,7 +6522,7 @@ iGeom_fire_ray( const CubitVector& point,
     
     // do ray fire at list of free entities
   return GeometryQueryTool::instance()->
-    fire_ray( point, direction, target_entities, ray_params, 0, EPSILON, &entities );
+    fire_ray( nc_point, nc_direction, target_entities, ray_params, 0, EPSILON, &entities );
 }
 
 static RefEntity* point_classification( const CubitVector& pt, RefVertex* vtx )

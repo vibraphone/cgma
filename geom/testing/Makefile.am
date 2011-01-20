@@ -31,8 +31,8 @@ AngleCalc_SOURCES = main.cpp AngleCalc.cpp
 AngleCalc_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=AngleCalc
 CreateGeometry_SOURCES = main.cpp CreateGeometry.cpp
 CreateGeometry_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=CreateGeometry
-ReadIgesFile_SOURCES = main.cpp ReadIgesFile.cpp
-ReadIgesFile_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=ReadIgesFile
+#ReadIgesFile_SOURCES = main.cpp ReadIgesFile.cpp
+#ReadIgesFile_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=ReadIgesFile
 GraphicsData_SOURCES = main.cpp GraphicsData.cpp
 GraphicsData_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=GraphicsData
 

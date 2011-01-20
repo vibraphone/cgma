@@ -643,8 +643,8 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
 //
 // Creation Date : 3/29/2007
 //-------------------------------------------------------------------------
-CubitStatus GeometryQueryTool::fire_ray( const CubitVector &origin,
-                                         const CubitVector &direction,
+CubitStatus GeometryQueryTool::fire_ray( CubitVector &origin,
+                                         CubitVector &direction,
                                          DLIList<RefEntity*> &at_entity_list,
                                          DLIList<double> &ray_params,
                                          int max_hits,
@@ -773,8 +773,8 @@ CubitStatus GeometryQueryTool::fire_ray( const CubitVector &origin,
 //
 // Creation Date : 5/19/2007
 //-------------------------------------------------------------------------
-CubitStatus GeometryQueryTool::fire_ray( const CubitVector &origin,
-                                         const CubitVector &direction,
+CubitStatus GeometryQueryTool::fire_ray( CubitVector &origin,
+                                         CubitVector &direction,
                                          DLIList<TopologyEntity*> &at_entity_list,
                                          DLIList<double> &ray_params,
                                          int max_hits,

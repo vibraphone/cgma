@@ -444,8 +444,8 @@ public :
     */
 
   //! \brief Fire a ray at entities, passing back distances of hits and entities hit
-  CubitStatus fire_ray( const CubitVector &origin,
-                        const CubitVector &direction,
+  CubitStatus fire_ray( CubitVector &origin,
+                        CubitVector &direction,
                         DLIList<RefEntity*> &at_entity_list,
                         DLIList<double> &ray_params,
                         int max_hits = 0,
@@ -476,8 +476,8 @@ public :
     *  THE SAME GEOMETRY ENGINE. 
     */
   //! \brief Fire a ray at entities, passing back distances of hits and entities hit
-  CubitStatus fire_ray( const CubitVector &origin,
-                        const CubitVector &direction,
+  CubitStatus fire_ray( CubitVector &origin,
+                        CubitVector &direction,
                         DLIList<TopologyEntity*> &at_entity_list,
                         DLIList<double> &ray_params,
                         int max_hits = 0,
