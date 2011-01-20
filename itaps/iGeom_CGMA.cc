@@ -426,8 +426,8 @@ void iGeom_load( iGeom_Instance instance,
 	       strstr(name, ".IGES") != NULL)
 	file_type = "IGES";
       
-      if (file_type.empty()) status = gqt->read_geometry_file(name);
-      else status = gqt->read_geometry_file(name, NULL, file_type.c_str());
+      if (file_type.empty()) status = gqt->import_solid_model(name, "ACIS_SAT");
+      else status = gqt->import_solid_model(name, file_type.c_str());
 
       if (CUBIT_SUCCESS != status) {
 	ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");

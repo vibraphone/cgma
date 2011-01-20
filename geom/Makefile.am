@@ -11,7 +11,6 @@ endif
 if build_OCC
   SUBDIRS += OCC
 endif
-SUBDIRS += testing
 
 AM_CPPFLAGS += -I$(top_srcdir)/util -I.
 

@@ -1,26 +1,41 @@
 BASE_TESTS = AngleCalc.engine \
-             GreateGeometry.engine \
-             ReadIgesFile.engine \
+             CreateGeometry.engine \
              GraphicsData.engine
+#             ReadIgesFile.engine 
 
 TESTS=
 if build_ACIS
   TESTS += $(BASE_TESTS:.engine=.acis)
+  AM_CPPFLAGS += -DCGM_ACIS -I$(srcdir)/../ACIS
 endif
 if build_OCC
   TESTS += $(BASE_TESTS:.engine=.occ)
+  AM_CPPFLAGS += -DCGM_OCC -I$(srcdir)/../OCC
 endif
 
-INCLUDES = -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
-LDADD = ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+AM_CPPFLAGS += -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
+LDADD = libcgm_test.la ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 SUFFIXES = .acis .occ
-check_PROGRAMS = $(TESTS) cgm_test
-cgm_test_SOURCES = cgm_test.cpp \
-                   cgm_test.hpp \
-                   TestUtilities.hpp \
-                   TestUtilities.cpp \
-                   TestConfig.h
+check_PROGRAMS = $(BASE_TESTS:.engine=)
+check_SCRIPT = $(TESTS)
+
+noinst_LTLIBRARIES = libcgm_test.la
+libcgm_test_la_SOURCES = TestConfig.h \
+                      cgm_test.cpp \
+                      cgm_test.hpp \
+                      TestUtilities.hpp \
+                      TestUtilities.cpp
+
+AngleCalc_SOURCES = main.cpp AngleCalc.cpp
+AngleCalc_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=AngleCalc
+CreateGeometry_SOURCES = main.cpp CreateGeometry.cpp
+CreateGeometry_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=CreateGeometry
+ReadIgesFile_SOURCES = main.cpp ReadIgesFile.cpp
+ReadIgesFile_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=ReadIgesFile
+GraphicsData_SOURCES = main.cpp GraphicsData.cpp
+GraphicsData_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=GraphicsData
 
 %.acis %.occ: cgm_test_script
-	cp -f cgm_test_script $@
+	cp -f $< $@ 
+	chmod a+x $@

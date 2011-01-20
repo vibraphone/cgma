@@ -1,6 +1,6 @@
-#!/bin.sh
+#!/bin/sh
 
 name="$0"
 test=`expr $name : '\(.*\)\.'`
-engine=`expr $name : '.*\.\(.*\)'
-cgm_test $test -E $engine
+engine=`expr $name : '.*\.\(.*\)'`
+$test -E $engine

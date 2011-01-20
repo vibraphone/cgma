@@ -420,33 +420,6 @@ public :
 				 const char* pBuffer,
 				 const int n_buffer_size);
 
-  CubitStatus read_geometry_file(char const* fileName,
-                                 char const* includePath = NULL,
-                                 char const* type = "ACIS_SAT");
-  /**<
-   * Read geometry from the specified file.
-    *  \arg filename
-    *  The name of the file to read.
-    *  \arg includePath
-    *  An optional path to be used to search for the file if the file
-    *  is not in the current directory.
-    *  \arg type
-    *  An optional type of file.
-    *   \return  CubitStatus - success/failure
-    *
-    *  Reads a geometry file (named fileName).  If the file cannot be found
-    *  in the current directory, and if includePath is not NULL, the include
-    *  path specified by includePath is added to the file name, and it is
-    *  searched in the given order. The file type specified in the "type"
-    *  argument determines what type of geometry file it is -- the default
-    *  is an ACIS SAT file.
-    *  Supported geometry file types are:
-    *     "ACIS_SAT"  --  ACIS SAT file format
-    *     "ACIS_SAB"  --  ACIS SAB file format (binary)
-    *  The function returns CUBIT_FAILURE if it cannot open the file, or
-    *  the "type" is not known. Otherwise it returns CUBIT_SUCCESS.
-    */
-
   /*!
    * Fire a ray at entities, passing back distances of hits and entities hit
     * \arg origin

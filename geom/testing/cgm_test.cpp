@@ -18,12 +18,16 @@
 #include "AcisModifyEngine.hpp"
 #endif
 
+#ifdef CGM_OCC
+#include "OCCQueryEngine.hpp"
+#include "OCCModifyEngine.hpp"
+#endif
 
 static std::string cgm_port;
 
 void start_cgm(int argc, char** argv)
 {
-  for(int i=0; i<argc; i++)
+  for(int i=1; i<argc; i++)
   {
     // get library name
     if(std::string(argv[i]) == "-E" && i+1 < argc)
@@ -61,6 +65,13 @@ void start_cgm(int argc, char** argv)
   {
     query_engine = SMLibQueryEngine::instance();
     modify_engine = SMLibModifyEngine::instance();
+  }
+#endif
+#ifdef CGM_OCC
+  else if(cgm_port == "occ")
+  {
+    query_engine = OCCQueryEngine::instance();
+    modify_engine = OCCModifyEngine::instance();
   }
 #endif
 
