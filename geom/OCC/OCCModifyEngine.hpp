@@ -478,6 +478,11 @@ public:
     DLIList<Curve*> &inter_graph,
     const double tol) const;
   
+  CubitStatus get_3_point_plane( const CubitVector & point_1,
+                                 const CubitVector & point_2,
+                                 const CubitVector & point_3,
+                                 TopoDS_Face*& face)const;
+
   virtual CubitStatus get_mid_plane( const CubitVector &point_1,
     const CubitVector &point_2,
     const CubitVector &point_3,

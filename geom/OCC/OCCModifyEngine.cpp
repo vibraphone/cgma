@@ -4864,6 +4864,20 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
 {
   CubitStatus stat;
   DLIList<BodySM*> new_BodySMs;
+
+  if(preview)
+  {
+    TopoDS_Face* p_face;
+    stat = get_3_point_plane(v1, v2, v3, p_face);
+    if(!stat)
+      return stat;
+    GfxPreview::clear();
+    OCCDrawTool::instance()->draw_TopoDS_Shape(p_face, CUBIT_BLUE, CUBIT_TRUE);
+    GfxPreview::flush();
+    delete p_face;
+    return CUBIT_SUCCESS;
+  }
+
   stat = OCCModifyEngine::instance()->section(webcut_body_list, v1, v2, v3, new_BodySMs, true, true,false);
   if(stat == CUBIT_FAILURE)
   {
@@ -4878,9 +4892,9 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     return stat;
   }
 
+  BodySM* new_body1, *new_body2;
   if(imprint_type > NO_IMPRINT)
   {
-    BodySM* new_body1, *new_body2;
     for(int i = 0; i < new_BodySMs.size()-1; i ++)
     {
       BodySM* body1 = new_BodySMs[i];
@@ -4897,6 +4911,51 @@ CubitStatus OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   }
 
   results_list = new_BodySMs;
+
+  //now imprint with the neighbors
+  if( imprint_type == INCLUDE_NEIGHBORS  )
+  {
+    // Loop over all the neighboring Bodies
+    DLIList<TopoDS_Shape*> shape_list1, shape_list2;
+    DLIList<CubitBoolean> is_volume;
+    stat = get_shape_list(neighbor_imprint_list,shape_list1,is_volume,false);
+    if (!stat)
+    {
+      	PRINT_WARNING("Can't imprint using neighouring bodies.\n");
+        return CUBIT_SUCCESS;
+    }    
+    is_volume.clean_out();
+
+    stat = get_shape_list(new_BodySMs,shape_list2,is_volume,false);
+    { 
+        PRINT_WARNING("Can't imprint using neighouring bodies.\n");
+        return CUBIT_SUCCESS;
+    }
+    // Loop over all the neighboring shapes
+    for (int i=shape_list1.size(); i--;)
+    {
+      TopoDS_Shape *neighbor_shape = shape_list1.get_and_step() ;
+      for(int j = 0; j < shape_list2.size(); j ++)
+      {
+        TopoDS_Shape* shape2 = shape_list2[j];
+        stat =  this->imprint_toposhapes( shape2, neighbor_shape);
+        if(stat)
+          shape_list2[j] = shape2;   
+      }
+    }
+
+    DLIList<TopologyBridge*> tbs;
+    results_list.clean_out();
+    for(int j = 0; j < shape_list2.size(); j ++)
+    {
+      TopoDS_Shape* shape2 = shape_list2[j];
+        
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape2);
+      BodySM* newBody1 = CAST_TO(tbs.get(),BodySM);
+      results_list.append(newBody1);    
+    }
+  }
+
   return CUBIT_SUCCESS;  
 }
 
@@ -4914,15 +4973,37 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                                 ImprintType imprint_type,
                                 bool preview ) const
 {
-  //do intersect and subtract separately and with imprint option and keep_old
-  // is true.
+  // tool_bldy and webct_body_list will be kept and webcut result is in 
+  //results_list.
   //tool_body is a const pointer points to varible BodySM object
   //here trying to create a non-const pointer points to the same BodySM object.
 
   BodySM *body;
   *body = *tool_body;
+  CubitStatus stat;
+  DLIList<BodySM*> tool_bodies;
+  tool_bodies.append(body);
 
-  CubitStatus stat = intersect(body, webcut_body_list, results_list,
+  // preview the tool
+  if (preview)
+  {
+    DLIList<TopoDS_Shape*> shape_list;
+    DLIList<CubitBoolean> is_volume;
+    stat = get_shape_list(tool_bodies,shape_list,is_volume,false);
+    if(!stat)
+    {
+        PRINT_WARNING("tool_body is not an OCC body.\n");
+        return CUBIT_FAILURE;
+    }
+    GfxPreview::clear();
+    OCCDrawTool::instance()->draw_TopoDS_Shape(shape_list.get(), 
+                             CUBIT_BLUE, CUBIT_TRUE);
+    GfxPreview::flush();
+
+    return CUBIT_SUCCESS;
+  }
+
+  stat = intersect(body, webcut_body_list, results_list,
                                CUBIT_TRUE);
  
   if(stat)
@@ -4931,9 +5012,6 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     return CUBIT_FAILURE;
   }
 
-  DLIList<BodySM*> tool_bodies;
-  tool_bodies.append(body);
-  
   bool imprint = CUBIT_TRUE;
   if(imprint_type == NO_IMPRINT)
     imprint = CUBIT_FALSE;
@@ -4941,6 +5019,68 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
                   CUBIT_TRUE);
 
+  //intersect doesn't have to imprint option, so first do this imprint.
+  BodySM* new_body1, *new_body2;
+  if(imprint_type > NO_IMPRINT)
+  {
+    for(int i = 0; i < results_list.size()-1; i ++)
+    {
+      BodySM* body1 = results_list[i];
+      for(int j = i+1; j < results_list.size(); j++)
+      {
+        BodySM* body2 = results_list[j];
+        stat =  this->imprint( body1, body2, new_body1, new_body2, false);
+        if(new_body1 && body1 != new_body1)
+          results_list[i] = new_body1;
+        if(new_body2 && body2 != new_body2)
+          results_list[j] = new_body2;
+      }
+    }
+  }
+
+  //now imprint with the neighbors
+  if( imprint_type == INCLUDE_NEIGHBORS  )
+  {
+    // Loop over all the neighboring Bodies
+    DLIList<TopoDS_Shape*> shape_list1, shape_list2;
+    DLIList<CubitBoolean> is_volume;
+    stat = get_shape_list(neighbor_imprint_list,shape_list1,is_volume,false);
+    if (!stat)
+    {
+        PRINT_WARNING("Can't imprint using neighouring bodies.\n");
+        return CUBIT_SUCCESS;
+    }
+    is_volume.clean_out();
+
+    stat = get_shape_list(results_list,shape_list2,is_volume,false);
+    {
+        PRINT_WARNING("Can't imprint using neighouring bodies.\n");
+        return CUBIT_SUCCESS;
+    }
+    // Loop over all the neighboring shapes
+    for (int i=shape_list1.size(); i--;)
+    {
+      TopoDS_Shape *neighbor_shape = shape_list1.get_and_step() ;
+      for(int j = 0; j < shape_list2.size(); j ++)
+      {
+        TopoDS_Shape* shape2 = shape_list2[j];
+        stat =  this->imprint_toposhapes( shape2, neighbor_shape);
+        if(stat)
+          shape_list2[j] = shape2;
+      }
+    }
+
+    DLIList<TopologyBridge*> tbs;
+    results_list.clean_out();
+    for(int j = 0; j < shape_list2.size(); j ++)
+    {
+      TopoDS_Shape* shape2 = shape_list2[j];
+
+      tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape2);
+      BodySM* newBody1 = CAST_TO(tbs.get(),BodySM);
+      results_list.append(newBody1);
+    }
+  } 
   return stat;
 }
 
