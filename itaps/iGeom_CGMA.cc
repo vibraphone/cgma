@@ -26,6 +26,7 @@
 #include <iostream>
 #include <math.h>
 #include "GeometryQueryTool.hpp"
+#include "CubitCompat.hpp"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -426,8 +427,8 @@ void iGeom_load( iGeom_Instance instance,
 	       strstr(name, ".IGES") != NULL)
 	file_type = "IGES";
       
-      if (file_type.empty()) status = gqt->import_solid_model(name, "ACIS_SAT");
-      else status = gqt->import_solid_model(name, file_type.c_str());
+      if (file_type.empty()) status = CubitCompat_import_solid_model(name, "ACIS_SAT");
+      else status = CubitCompat_import_solid_model(name, file_type.c_str());
 
       if (CUBIT_SUCCESS != status) {
 	ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
@@ -513,7 +514,7 @@ void iGeom_save (iGeom_Instance instance,
   DLIList<RefEntity*> bodies;
   int num_ents_exported;
   CubitString cubit_version(" (iGeom)");
-  CubitStatus status = gqt->export_solid_model(bodies, name, file_type.c_str(),
+  CubitStatus status = CubitCompat_export_solid_model(bodies, name, file_type.c_str(),
                                                num_ents_exported, cubit_version, logfile_name );
   if (CUBIT_SUCCESS != status) 
     ERROR(iBase_FAILURE, "Trouble saving geometry file.");
@@ -6281,8 +6282,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
     }
     fclose(tmp_file);
 
-    CubitStatus status = gqt->
-      import_solid_model(tmp_name, model_type_str[model_type[i]], 
+    CubitStatus status = 
+      CubitCompat_import_solid_model(tmp_name, model_type_str[model_type[i]], 
                          NULL, false);
   
     if (CUBIT_SUCCESS != status) {

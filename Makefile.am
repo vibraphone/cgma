@@ -45,7 +45,7 @@ if BUILD_CGM
                   geom/libcubit_geom.la \
                   util/libcubit_util.la
 else
-  CORE_CGM_LIBS = 
+  CORE_CGM_LIBS = geom/libcubit_geom.la
 endif
 
 SUBDIRS = compat util geom init . $(igeom_DIR) test cgm_apps geom/testing

@@ -28,6 +28,7 @@
 #include "OCCShell.hpp"
 #include "TopoDS_Shape.hxx"
 #include "InitCGMA.cpp"
+#include "CubitCompat.hpp"
 
 #ifndef SRCDIR
 # define SRCDIR .
@@ -83,7 +84,7 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
   for (i = 0; i < num_files; i++) {
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    status = gti->import_solid_model(filename.c_str(), "OCC");
+    status = CubitCompat_import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
@@ -123,7 +124,7 @@ CubitStatus make_Point()
     gti->delete_RefEntity(ref_entities.get_and_step());
 
   ref_entities.clean_out();
-  rsl = gti->export_solid_model(ref_entities, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entities, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
 

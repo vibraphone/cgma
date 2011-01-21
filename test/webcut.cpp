@@ -19,6 +19,7 @@
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
 #include "InitCGMA.hpp"
+#include "CubitCompat.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -91,7 +92,7 @@ void read_geometry(int num_files, const char **argv)
   
     // For each file, open and read the geometry
   for (i = 0; i < num_files; i++) {
-    status = gti->import_solid_model(argv[i], "ACIS_SAT");
+    status = CubitCompat_import_solid_model(argv[i], "ACIS_SAT");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", argv[i]);
       abort();
@@ -166,7 +167,7 @@ CubitStatus webcut_with_brick()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_brick.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -200,7 +201,7 @@ CubitStatus webcut_with_cylinder()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_cylinder.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -236,7 +237,7 @@ CubitStatus webcut_with_planar_sheet()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sheet.sat";
   const char * filetype = "ACIS_SAT";
-  rsl =  gti->export_solid_model(ref_entity_list, filename, filetype, 
+  rsl =  CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
   
   gti->delete_geometry();
@@ -287,7 +288,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_rotational.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -330,7 +331,7 @@ CubitStatus webcut_with_sweep_curves()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_curves.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -384,7 +385,7 @@ CubitStatus webcut_with_sweep_along_curve()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_along_curve.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -424,7 +425,7 @@ CubitStatus webcut_with_curve_loop()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_curve_loop.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -465,7 +466,7 @@ CubitStatus webcut_with_extended_surf()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_extended_surf.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -504,7 +505,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_rotated.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -537,7 +538,7 @@ CubitStatus webcut_with_sweep_surfaces()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -581,7 +582,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_along_curve.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -614,7 +615,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_perp.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();

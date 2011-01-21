@@ -28,6 +28,7 @@ using std::type_info;
 #include "GeometryQueryEngine.hpp"
 #include "IntermediateGeomEngine.hpp"
 #include "CGMHistory.hpp"
+#include "CubitCompat.hpp"
 
 class RefGroup;
 class Body;
@@ -365,7 +366,11 @@ public :
   //! that are of the same geometry engine. 
   CubitStatus export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                   const char* filename,
+#if !defined CUBIT_12 || CUBIT_12 != 2
                                   const char * filetype,
+#else // CUBIT_12 == 2
+                                  Model_File_Type filetype,
+#endif
                                   int &num_ents_exported,
                                   const CubitString &cubit_version,
                                   const char* logfile_name = NULL );
@@ -405,7 +410,12 @@ public :
     */
   //! \brief Import a geometry file. 
   CubitStatus import_solid_model(const char* file_name,
+#if !defined(CUBIT_12) || CUBIT_12 != 2
                                  const char* file_type,
+#else // CUBIT_12 == 2
+                                 Model_File_Type file_type,
+#endif
+#if !defined(CUBIT_12) || CUBIT_12 == 0
                                  const char* logfile_name = NULL,
                                  CubitBoolean heal_step = CUBIT_TRUE,
                                  CubitBoolean import_bodies = CUBIT_TRUE,
@@ -413,6 +423,9 @@ public :
                                  CubitBoolean import_curves = CUBIT_TRUE,
                                  CubitBoolean import_vertices = CUBIT_TRUE,
                                  CubitBoolean free_surfaces = CUBIT_TRUE,
+#else // CUBIT_12 == 1 || CUBIT_12 == 2
+                                 ModelImportOptions& import_options,
+#endif
 				 DLIList<RefEntity*> *imported_entities = NULL);
 
     // import entities in a solid model buffer

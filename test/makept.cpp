@@ -23,6 +23,7 @@
 #include "OCCSurface.hpp"
 #include "OCCCurve.hpp"
 #include "OCCDrawTool.hpp"
+#include "CubitCompat.hpp"
 
 #ifndef SRCDIR
 # define SRCDIR .
@@ -75,7 +76,7 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
   for (i = 0; i < num_files; i++) {
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    status = gti->import_solid_model(filename.c_str(), "OCC");
+    status = CubitCompat_import_solid_model(filename.c_str(), "OCC");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
     }
@@ -102,7 +103,7 @@ CubitStatus make_Point()
   const char * filename = "prism.occ";
   const char * filetype = "OCC";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   CubitBox box1 = prism1->bounding_box();  
@@ -152,7 +153,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "pyramid.occ";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   box1 = pyramid1->bounding_box();
@@ -288,7 +289,7 @@ CubitStatus make_Point()
   filename = "point.occ";
   filetype = "OCC";
   
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                 num_ents_exported, cubit_version);
  
   //check for vertex
@@ -401,7 +402,7 @@ CubitStatus make_Point()
 
   ref_entity_list.clean_out();
   ref_entity_list.append(new_face);
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   DLIList<DLIList<RefEdge*>*> ref_edge_loops;

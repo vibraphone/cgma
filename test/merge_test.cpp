@@ -5,6 +5,7 @@
 #include "Body.hpp"
 #include "CGMApp.hpp"
 #include "CubitAttribManager.hpp"
+#include "CubitCompat.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,25 +59,25 @@ int main()
   DLIList<RefEntity*> export_list;
   export_list.append( brick1 );
   export_list.append( brick2 );
-  s = GeometryQueryTool::instance()->export_solid_model( export_list,
-                                                         FILE_NAME,
-                                                         FORMAT,
-                                                         junk,
-                                                         CubitString(__FILE__) );
+  s = CubitCompat_export_solid_model( export_list,
+                                      FILE_NAME,
+                                      FORMAT,
+                                      junk,
+                                      CubitString(__FILE__) );
   ASSERT(s);
   
   
   DLIList<RefEntity*> import_list;
-  s = GeometryQueryTool::instance()->import_solid_model( FILE_NAME,
-                                                         FORMAT,
-                                                         NULL,
-                                                         CUBIT_FALSE,
-                                                         CUBIT_TRUE,
-                                                         CUBIT_TRUE,
-                                                         CUBIT_TRUE,
-                                                         CUBIT_TRUE,
-                                                         CUBIT_TRUE,
-                                                         &import_list );
+  s = CubitCompat_import_solid_model( FILE_NAME,
+                                      FORMAT,
+                                      NULL,
+                                      CUBIT_FALSE,
+                                      CUBIT_TRUE,
+                                      CUBIT_TRUE,
+                                      CUBIT_TRUE,
+                                      CUBIT_TRUE,
+                                      CUBIT_TRUE,
+                                      &import_list );
   ASSERT(s);
   remove( FILE_NAME );
   

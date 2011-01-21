@@ -20,6 +20,7 @@
 #include "RefVertex.hpp"
 #include "InitCGMA.hpp"
 #include "OCCModifyEngine.hpp"
+#include "CubitCompat.hpp"
 
 #include <algorithm>
 
@@ -95,7 +96,7 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
       type = "OCC";
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    status = gti->import_solid_model(filename.c_str(), type.c_str());
+    status = CubitCompat_import_solid_model(filename.c_str(), type.c_str());
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();

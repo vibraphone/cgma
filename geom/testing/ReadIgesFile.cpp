@@ -3,13 +3,14 @@
 #include "TestUtilities.hpp"
 
 #include "GeometryQueryTool.hpp"
+#include "CubitCompat.hpp"
 
 int ReadIgesFile(int argc, char* argv[])
 {
 
   std::string file = data_file("brick.iges");
 
-  CubitStatus stat = GeometryQueryTool::instance()->import_solid_model(file.c_str(), "IGES");
+  CubitStatus stat = CubitCompat_import_solid_model(file.c_str(), "IGES");
 
   if(stat != CUBIT_SUCCESS)
   {
