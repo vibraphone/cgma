@@ -3,7 +3,7 @@
 #include "GeometryQueryTool.hpp"
 #include <string.h>
 
-#if defined(CUBIT_12) && CUBIT_12 == 2
+#if CUBIT_12 == 2
 
   #define CUBIT_COMPAT_FT_ELIF(TYPE) \
     else if (!strcmp(file_type,#TYPE)) \
@@ -57,7 +57,7 @@ CubitCompat_import_solid_model( const char* file_name,
                                 CubitBoolean free_surfaces,
 				DLIList<RefEntity*> *imported_entities)
 {
-#if defined(CUBIT_12) && CUBIT_12 > 0
+#if CUBIT_12 > 0
   const bool print_results = false;
   const bool merge_globally = false;
   const bool no_assembly_level_features = false;
