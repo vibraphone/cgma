@@ -69,18 +69,6 @@ extern "C" {
      */
   typedef struct iGeom_Instance_Private* iGeom_Instance;
 
-    /**\brief  Type used to store an iterator returned by iGeom
-     *
-     * Type used to store an iterator returned by iGeom
-     */
-  typedef struct iGeom_EntityIterator_Private* iGeom_EntityIterator;
-
-    /**\brief  Type used to store an array iterator returned by iGeom
-     *
-     * Type used to store an array iterator returned by iGeom
-     */
-  typedef struct iGeom_EntityArrIterator_Private* iGeom_EntityArrIterator;
-
     /**\brief  Get a description of the error returned from the last iGeom call
      *
      * Get a description of the error returned from the last iGeom function
@@ -2332,7 +2320,7 @@ extern "C" {
   void iGeom_initEntIter( iGeom_Instance instance,
                           iBase_EntitySetHandle entity_set_handle,
                           int requested_entity_type,
-                          iGeom_EntityIterator* entity_iterator,
+                          iBase_EntityIterator* entity_iterator,
                           int* err );
 
     /**\brief  Initialize an array iterator over specified entity type and size
@@ -2354,7 +2342,7 @@ extern "C" {
                              iBase_EntitySetHandle entity_set_handle,
                              int requested_entity_type,
                              int requested_array_size,
-                             iGeom_EntityArrIterator* entArr_iterator,
+                             iBase_EntityArrIterator* entArr_iterator,
                              int* err );
 
     /**\brief  Get entity corresponding to an iterator and increment iterator
@@ -2373,7 +2361,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getNextEntIter( iGeom_Instance instance,
-                             iGeom_EntityIterator entity_iterator,
+                             iBase_EntityIterator entity_iterator,
                              iBase_EntityHandle* entity_handle,
                              int* has_data,
                              int* err );
@@ -2399,7 +2387,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getNextEntArrIter( iGeom_Instance instance,
-                                iGeom_EntityArrIterator entArr_iterator,
+                                iBase_EntityArrIterator entArr_iterator,
                                 iBase_EntityHandle** entity_handles,
                                 int* entity_handles_allocated,
                                 int* entity_handles_size,
@@ -2414,7 +2402,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_resetEntIter( iGeom_Instance instance,
-                           iGeom_EntityIterator entity_iterator,
+                           iBase_EntityIterator entity_iterator,
                            int* err );
 
     /**\brief  Reset the array iterator
@@ -2425,7 +2413,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_resetEntArrIter( iGeom_Instance instance,
-                              iGeom_EntityArrIterator entArr_iterator,
+                              iBase_EntityArrIterator entArr_iterator,
                               int* err );
 
     /**\brief  Destroy the specified iterator
@@ -2436,7 +2424,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_endEntIter( iGeom_Instance instance,
-                         iGeom_EntityIterator entity_iterator,
+                         iBase_EntityIterator entity_iterator,
                          int* err );
 
     /**\brief  Destroy the specified array iterator
@@ -2447,7 +2435,7 @@ extern "C" {
      * \param *err Pointer to error type returned from function
      */
   void iGeom_endEntArrIter( iGeom_Instance instance,
-                            iGeom_EntityArrIterator entArr_iterator,
+                            iBase_EntityArrIterator entArr_iterator,
                             int* err );
 
     /**\brief  Make a copy of the specified entity

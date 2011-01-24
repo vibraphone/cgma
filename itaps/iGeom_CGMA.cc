@@ -558,11 +558,11 @@ void iGeom_getBoundBox( iGeom_Instance,
 void iGeom_initEntIter ( iGeom_Instance instance,
                          iBase_EntitySetHandle entity_set_handle,
                          const int dimension,
-                         iGeom_EntityIterator *iterator,
+                         iBase_EntityIterator *iterator,
                          int* err)
 {
   iGeom_initEntArrIter( instance, entity_set_handle, dimension, 1, 
-                        reinterpret_cast<iGeom_EntityArrIterator*>(iterator), 
+                        reinterpret_cast<iBase_EntityArrIterator*>(iterator), 
                         err );
 }
 
@@ -571,7 +571,7 @@ iGeom_initEntArrIter (iGeom_Instance instance,
                       /*in*/ iBase_EntitySetHandle entity_set_handle,
                       /*in*/ int type,
                       /*in*/ int requested_array_size,
-                      /*out*/ iGeom_EntityArrIterator* entArr_iterator,
+                      /*out*/ iBase_EntityArrIterator* entArr_iterator,
                       int* err)
 {
   DLIList<RefEntity*> entities;
@@ -586,7 +586,7 @@ iGeom_initEntArrIter (iGeom_Instance instance,
   
   if (*err == iBase_SUCCESS) {
     CGMAIterator* iter = new CGMAIterator(entities, requested_array_size);
-    *entArr_iterator = reinterpret_cast<iGeom_EntityArrIterator>(iter);
+    *entArr_iterator = reinterpret_cast<iBase_EntityArrIterator>(iter);
   }
 }
 
@@ -601,7 +601,7 @@ iGeom_initEntArrIter (iGeom_Instance instance,
  */
 void
 iGeom_getNextEntIter (iGeom_Instance instance,
-                      /*in*/ iGeom_EntityIterator gentity_iterator,
+                      /*in*/ iBase_EntityIterator gentity_iterator,
                       /*out*/ iBase_EntityHandle *gentity_handle,
                       int* has_data,
                       int* err
@@ -620,7 +620,7 @@ iGeom_getNextEntIter (iGeom_Instance instance,
 
 void
 iGeom_getNextEntArrIter(iGeom_Instance instance,
-                        /*in*/ iGeom_EntityArrIterator entArr_iterator,
+                        /*in*/ iBase_EntityArrIterator entArr_iterator,
                         /*inout*/ iBase_EntityHandle **entity_handles,
                         int *entity_handles_allocated,
                         int *entity_handles_size,
@@ -644,7 +644,7 @@ iGeom_getNextEntArrIter(iGeom_Instance instance,
  */
 void
 iGeom_resetEntIter(iGeom_Instance instance,
-                   /*in*/ iGeom_EntityIterator gentity_iterator,
+                   /*in*/ iBase_EntityIterator gentity_iterator,
                    int* err
                    )
 {
@@ -655,7 +655,7 @@ iGeom_resetEntIter(iGeom_Instance instance,
 
 void
 iGeom_resetEntArrIter(iGeom_Instance instance,
-                      /*in*/ iGeom_EntityArrIterator gentity_iterator,
+                      /*in*/ iBase_EntityArrIterator gentity_iterator,
                       int* err
                       )
 {
@@ -670,7 +670,7 @@ iGeom_resetEntArrIter(iGeom_Instance instance,
  */
 void
 iGeom_endEntIter (iGeom_Instance instance,
-                  /*in*/ iGeom_EntityIterator gentity_iterator,
+                  /*in*/ iBase_EntityIterator gentity_iterator,
                   int* err)
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
@@ -680,7 +680,7 @@ iGeom_endEntIter (iGeom_Instance instance,
 
 void
 iGeom_endEntArrIter (iGeom_Instance instance,
-                     /*in*/ iGeom_EntityArrIterator gentity_iterator,
+                     /*in*/ iBase_EntityArrIterator gentity_iterator,
                      int* err)
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);

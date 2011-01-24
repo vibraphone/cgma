@@ -10,8 +10,6 @@ ID   Severity  Summary/Details
 
 176 minor     CGM memory leak
 
-177 minor     3-D scale with different scale factors doesn't work.
-
 178 major     Unite function doesn't unite smoothly connected surfaces.
 
 179 major     mcnp2cad test suite lat1-7 not working, needs debugging.
@@ -25,3 +23,5 @@ ID   Severity  Summary/Details
 183 minor     Don't have proper tool to visualize the TopoDS_Shapes, debugging
            process is long preparing for graphics to understand the issue 
 
+185 major     mcnp2cad/tests/INP-torus test case fails on imprinting 2 spline 
+              surfaces.
