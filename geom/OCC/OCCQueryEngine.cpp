@@ -1968,7 +1968,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   double area = myProps.Mass();
   double tol = get_sme_resabs_tolerance();
   if(area < tol * tol)
-    PRINT_WARING("Generated a sliver surface. \n");
+    PRINT_WARNING("Generated a sliver surface. \n");
 
   if (!OCCMap->IsBound(aShape))
   {
