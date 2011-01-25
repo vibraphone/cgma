@@ -1968,7 +1968,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   double area = myProps.Mass();
   double tol = get_sme_resabs_tolerance();
   if(area < tol * tol)
-    return CUBIT_FAILURE;
+    return NULL;
 
   if (!OCCMap->IsBound(aShape))
   {
@@ -2169,7 +2169,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
   BRepGProp::LinearProperties(aShape, myProps);
   double length =  myProps.Mass();
   if(length < get_sme_resabs_tolerance())
-    return CUBIT_FAILURE;
+    return NULL;
 
   if (!OCCMap->IsBound(aShape)) 
     {
