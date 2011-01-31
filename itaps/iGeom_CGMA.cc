@@ -3404,6 +3404,7 @@ iGeom_getEgFcSense (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGtangentSense must be a face.");
   }
   *rel_sense = iGeom_get_nonmanifold_sense( edge_ent, face_ent, err );
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -3486,6 +3487,7 @@ iGeom_getEgVtxSense (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_TYPE, "Bad entity argument to getGvertexTangentSense.");
   }
   *rel_sense = iGeom_edge_vertex_sense( this_edge, vertex1, vertex2, err );
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -6648,8 +6650,11 @@ static int iGeom_get_nonmanifold_sense( const BasicTopologyEntity* child,
   se_list.reset();
   CubitSense sense = se_list.get_and_step()->get_sense();
   for (int i = se_list.size() - 1; i > 0; --i)
-    if (se_list.get_and_step()->get_sense() != sense)
+    if (se_list.get_and_step()->get_sense() != sense) {
+      *err = iBase_SUCCESS;
       return 0;
+    }
+  *err = iBase_SUCCESS;
   return sense == CUBIT_FORWARD ? 1 : -1;
 }
 
