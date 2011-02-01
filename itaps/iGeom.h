@@ -2819,11 +2819,11 @@ extern "C" {
      * Get the number of entity sets contained in a set or interface.  If
      * a set is input which is not the root set, num_hops indicates the 
      * maximum number of contained sets from entity_set_handle to one of the
-     * contained sets, inclusive of the contained set.
+     * contained sets, not inclusive of the contained set.
      * \param instance iGeom instance handle
      * \param entity_set_handle Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to contained set,
-     *        inclusive of the contained set
+     *        not inclusive of the contained set
      * \param num_sets Pointer to the number of sets returned from function
      * \param *err Pointer to error type returned from function
      */
@@ -2838,11 +2838,11 @@ extern "C" {
      * Get the entity sets contained in a set or interface.  If
      * a set is input which is not the root set, num_hops indicates the 
      * maximum number of contained sets from entity_set_handle to one of the
-     * contained sets, inclusive of the contained set.
+     * contained sets, not inclusive of the contained set.
      * \param instance iGeom instance handle
      * \param entity_set_handle Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to contained set,
-     *        inclusive of the contained set
+     *        not inclusive of the contained set
      * \param *contained_set_handles Pointer to array of set handles returned
      *        from function
      * \param contained_set_handles_allocated Pointer to allocated length of
@@ -3041,12 +3041,12 @@ extern "C" {
     /**\brief  Get the number of child sets linked from a specified set
      *
      * Get the number of child sets linked from a specified set.  If num_hops
-     * is non-zero, this represents the maximum hops from entity_set to any
+     * is not -1, this represents the maximum hops from entity_set to any
      * child in the count.
      * \param instance iGeom instance handle
      * \param entity_set Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to child set,
-     *        inclusive of the child set
+     *        not inclusive of the child set
      * \param num_child Pointer to number of children returned from function
      * \param *err Pointer to error type returned from function
      */
@@ -3059,12 +3059,12 @@ extern "C" {
     /**\brief  Get the number of parent sets linked from a specified set
      *
      * Get the number of parent sets linked from a specified set.  If num_hops
-     * is non-zero, this represents the maximum hops from entity_set to any
+     * is not -1, this represents the maximum hops from entity_set to any
      * parent in the count.
      * \param instance iGeom instance handle
      * \param entity_set Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to parent set,
-     *        inclusive of the parent set
+     *        not inclusive of the parent set
      * \param num_parent Pointer to number of parents returned from function
      * \param *err Pointer to error type returned from function
      */
@@ -3077,12 +3077,12 @@ extern "C" {
     /**\brief  Get the child sets linked from a specified set
      *
      * Get the child sets linked from a specified set.  If num_hops
-     * is non-zero, this represents the maximum hops from entity_set to any
+     * is not -1, this represents the maximum hops from entity_set to any
      * child.
      * \param instance iGeom instance handle
      * \param from_entity_set Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to child set,
-     *        inclusive of the child set
+     *        not inclusive of the child set
      * \param *entity_set_handles Pointer to array of child sets
      *        returned from function
      * \param *entity_set_handles_allocated Pointer to allocated size of 
@@ -3102,12 +3102,12 @@ extern "C" {
     /**\brief  Get the parent sets linked from a specified set
      *
      * Get the parent sets linked from a specified set.  If num_hops
-     * is non-zero, this represents the maximum hops from entity_set to any
+     * is not -1, this represents the maximum hops from entity_set to any
      * parent.
      * \param instance iGeom instance handle
      * \param from_entity_set Entity set being queried
      * \param num_hops Maximum hops from entity_set_handle to parent set,
-     *        inclusive of the parent set
+     *        not inclusive of the parent set
      * \param *entity_set_handles Pointer to array of parent sets
      *        returned from function
      * \param *entity_set_handles_allocated Pointer to allocated size of 

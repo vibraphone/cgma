@@ -779,7 +779,7 @@ iGeom_getNumChld (iGeom_Instance instance,
                   int* err)
 {
     // HJK: num_hops has to be handled
-  if (1 < num_hops) {
+  if (0 < num_hops) {
     ERROR(iBase_NOT_SUPPORTED, "Num_hops argument not yet supported.");
   }
 
@@ -800,7 +800,7 @@ iGeom_getNumPrnt (iGeom_Instance instance,
                   int* err)
 {
     // HJK: num_hops has to be handled
-  if (1 < num_hops) {
+  if (0 < num_hops) {
     ERROR(iBase_NOT_SUPPORTED, "Num_hops argument not yet supported.");
   }
 
@@ -3567,7 +3567,7 @@ iGeom_getNumEntSets (iGeom_Instance instance,
                      int* err)
 {
     // HJK: num_hops has to be handled
-  if (1 < num_hops) {
+  if (0 < num_hops) {
     ERROR(iBase_NOT_SUPPORTED, "Num_hops argument not yet supported.");
   }
   
@@ -3601,7 +3601,7 @@ iGeom_getEntSets (iGeom_Instance instance,
                   int *contained_entity_set_handles_size,
                   int *err)
 {
-  if (1 < num_hops) {
+  if (0 < num_hops) {
     ERROR(iBase_NOT_SUPPORTED, "Num_hops argument not yet supported.");
   }
 
