@@ -709,7 +709,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
 
     // get the number of parent gentitysets
   num_gents = -1;
-  iGeom_getNumPrnt( geom, parent_child, 1, &num_gents, &err );
+  iGeom_getNumPrnt( geom, parent_child, 0, &num_gents, &err );
   CHECK( "Problem getting number of parents in gentityset_test." );
 
   if (num_gents != 2) {
@@ -720,7 +720,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
 
     // get the number of child gentitysets
   num_gents = -1;
-  iGeom_getNumChld( geom, parent_child, 1, &num_gents, &err );
+  iGeom_getNumChld( geom, parent_child, 0, &num_gents, &err );
   CHECK( "Problem getting number of children in gentityset_test." );
 
   if (num_gents != 2) {
@@ -730,7 +730,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   }
 
   SimpleArray<iBase_EntitySetHandle> children;
-  iGeom_getChldn( geom, parent_child, 1, ARRAY_INOUT(children), &err );
+  iGeom_getChldn( geom, parent_child, 0, ARRAY_INOUT(children), &err );
   CHECK( "Problem getting children in gentityset_test." );
 
   if (children.size() != 2) {
@@ -744,7 +744,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   CHECK( "Problem removing parent child in gentityset_test." );
 
     // get the number of child gentitysets
-  iGeom_getNumChld( geom, parent_child, 1, &num_gents, &err );
+  iGeom_getNumChld( geom, parent_child, 0, &num_gents, &err );
   CHECK( "Problem getting number of children in gentityset_test." );
 
   if (num_gents != 1) {
@@ -775,7 +775,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   
     // check the number of gentity sets in whole mesh
   SimpleArray<iBase_EntitySetHandle> gentity_sets;
-  iGeom_getEntSets( geom, root_set, 1, ARRAY_INOUT( gentity_sets ), &err );
+  iGeom_getEntSets( geom, root_set, 0, ARRAY_INOUT( gentity_sets ), &err );
   CHECK( "Problem to get all gentity sets in mesh." );
   
   if (gentity_sets.size() != all_sets + 8) {
@@ -786,12 +786,12 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
 
     // get all gentity sets in super set
   SimpleArray<iBase_EntitySetHandle> ges_array1;
-  iGeom_getEntSets( geom, super_set, 1, ARRAY_INOUT( ges_array1 ), &err );
+  iGeom_getEntSets( geom, super_set, 0, ARRAY_INOUT( ges_array1 ), &err );
   CHECK( "Problem to get gentity sets in super set." );
 
     // get the number of gentity sets in super set
   int num_super;
-  iGeom_getNumEntSets( geom, super_set, 1, &num_super, &err );
+  iGeom_getNumEntSets( geom, super_set, 0, &num_super, &err );
   CHECK( "Problem to get the number of all gentity sets in super set." );
   
     // the number of gentity sets in super set should be same
@@ -802,7 +802,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
 
     // get all entities in super set
   SimpleArray<iBase_EntitySetHandle> all_gentities;
-  iGeom_getEntSets( geom, super_set, 1, ARRAY_INOUT( all_gentities ), &err );
+  iGeom_getEntSets( geom, super_set, 0, ARRAY_INOUT( all_gentities ), &err );
   CHECK( "Problem to get all gentities in super set." );
   
     // compare the number of all gentities in super set
@@ -1406,7 +1406,7 @@ bool save_entset_test(iGeom_Instance geom)
   iBase_EntitySetHandle root;
   iGeom_getRootSet( geom, &root, &err ); 
   CHECK("Failed to get root set.");
-  iGeom_getNumEntSets(geom, root, 1, &num_sets_bef, &err);
+  iGeom_getNumEntSets(geom, root, 0, &num_sets_bef, &err);
   CHECK("Failed to get number of ent sets.");
   iGeom_getNumOfType(geom, root, iBase_REGION, &num_ents_bef, &err);
   CHECK("Failed to get number of entities.");
@@ -1439,7 +1439,7 @@ bool save_entset_test(iGeom_Instance geom)
 
     // check number of sets and entities
   int num_ents_aft, num_sets_aft;
-  iGeom_getNumEntSets(geom, root, 1, &num_sets_aft, &err);
+  iGeom_getNumEntSets(geom, root, 0, &num_sets_aft, &err);
   CHECK("Failed to get number of ent sets.");
   iGeom_getNumOfType(geom, root, iBase_REGION, &num_ents_aft, &err);
   CHECK("Failed to get number of entities.");
