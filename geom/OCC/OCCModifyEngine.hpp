@@ -204,13 +204,6 @@ public:
     //- Imprints a list of bodies with a list of vectors.  Useful for
     //- splitting curves and creating hardpoints on surfaces.
 
-  virtual CubitStatus imprint( DLIList<BodySM*> &body_list,
-    DLIList<CubitVector*> &vector_list,
-    DLIList<BodySM*>& new_body_list,
-    bool keep_old_body,
-    DLIList<TopologyBridge*> *new_tbs = NULL,
-    DLIList<TopologyBridge*> *att_tbs = NULL ) const;
-  
   virtual CubitStatus imprint_projected_edges( DLIList<Surface*> &ref_face_list,
     DLIList<Curve*> &ref_edge_list,
     DLIList<BodySM*>& new_body_list,

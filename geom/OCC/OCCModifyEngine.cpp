@@ -38,11 +38,14 @@
 #include "TopAbs_Orientation.hxx"
 #include "TopOpeBRep_Point2d.hxx"
 #include "TColgp_Array1OfPnt.hxx"
+#include "TColStd_Array1OfReal.hxx"
+#include "TColStd_Array1OfInteger.hxx"
 #include "GC_MakeArcOfCircle.hxx"
 #include "GC_MakeCircle.hxx"
 #include "Geom_Circle.hxx"
 #include "Geom_SurfaceOfLinearExtrusion.hxx"
 #include "Geom_RectangularTrimmedSurface.hxx"
+#include "Geom_BSplineCurve.hxx"
 #include "Handle_Geom_RectangularTrimmedSurface.hxx"
 #include "GC_MakeArcOfHyperbola.hxx"
 #include "GC_MakeArcOfParabola.hxx"
@@ -261,6 +264,109 @@ Curve* OCCModifyEngine::make_Curve( Point const* point1_ptr,
 
   delete curve;
   return new_curve;
+}
+
+//===============================================================================
+// Function   : make_Curve
+// Member Type: PUBLIC
+// Description: make a  spline curve by using the points and tangents.
+//              size of point list and tangents must be the same.
+//              values in the tangent list may be null.
+// Author     : Jane Hu
+// Date       : 01/11
+//===============================================================================
+Curve* OCCModifyEngine::make_Curve( DLIList<CubitVector*>& point_list,
+                             DLIList<CubitVector*>& point_tangents) const
+{
+    if (point_list.size() != point_tangents.size())
+    {
+        PRINT_ERROR("    point list and tangent list must have same size\n");
+        return (Curve *)NULL;
+    }
+
+    DLIList<Curve*> new_curves;
+   
+    CubitVector* start_vector = NULL;
+    CubitVector* end_vector = NULL;
+    CubitVector* tangent_vector;
+    gp_Pnt start_pt1, pt1, pt2;
+    int i = 1;
+    int size = 2;
+    TColStd_Array1OfReal knots(1, 2);
+    knots.SetValue(1, 0.);
+    knots.SetValue(2, 1.);
+    TColStd_Array1OfInteger multiplicities(1, 2);
+    multiplicities.SetValue(1,2);
+    multiplicities.SetValue(2,2);
+    int degree = 1;
+    gp_Vec tangent;
+    tangent_vector = point_tangents.get();
+    BRepBuilderAPI_MakeWire aWire;
+    for (i ; i < point_list.size(); i++)
+    {
+
+        //use every two points to make a spline, so it passes the points.
+        start_vector = point_list.get_and_step();
+        end_vector =  point_list.get() ;
+        TColgp_Array1OfPnt points(1, size); 
+        pt1.SetCoord(start_vector->x(), start_vector->y(), start_vector->z()); 
+        if( i == 1)
+          start_pt1 = pt1;
+        points.SetValue(1, pt1);
+        pt2.SetCoord(end_vector->x(), end_vector->y(), end_vector->z());
+        points.SetValue(2, pt2);
+        Geom_BSplineCurve bcurve(points, knots, multiplicities, degree);
+        Geom_BSplineCurve* pcurve = new Geom_BSplineCurve(bcurve);
+ 
+        if(!pcurve )
+        {
+           PRINT_ERROR ("Can't make a Spline curve from the given points.\n");
+           return (Curve*) NULL;
+        }
+
+        //move tangent to the start and end points as given
+        int ierror;
+        if (tangent_vector != NULL)
+        {
+          tangent.SetCoord(tangent_vector->x(), tangent_vector->y(), 
+                           tangent_vector->z()); 
+          pcurve->MovePointAndTangent(0, pt1, tangent, TOL, 0, 0, ierror);
+          if (ierror != 0)
+            PRINT_ERROR("Can't keep tangent on the %dth point. \n", i); 
+        }
+
+        tangent_vector = point_tangents.step_and_get();
+        if (tangent_vector != NULL)
+        {
+          tangent.SetCoord(tangent_vector->x(), tangent_vector->y(), 
+                           tangent_vector->z());
+          pcurve->MovePointAndTangent(1, pt2, tangent, TOL, 0, 0, ierror);
+          if (ierror != 0)
+            PRINT_ERROR("Can't keep tangent on the %dth point. \n", i); 
+        }
+
+        else if(tangent_vector == NULL  || ierror != 0) 
+        {
+          pcurve->D1(1, pt2, tangent);
+          tangent_vector->set(tangent.X(), tangent.Y(), tangent.Z());
+        }
+        Handle(Geom_BoundedCurve) curve_ptr(pcurve); 
+        TopoDS_Vertex vt1 = BRepBuilderAPI_MakeVertex(pt1);
+        TopoDS_Vertex vt2 = BRepBuilderAPI_MakeVertex(pt2);
+        TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, vt1, vt2);
+        aWire.Add(new_edge);
+    }
+
+    // combine new topo_edges into single curve
+    BRepAdaptor_CompCurve comp_curve(aWire);
+    if(start_pt1.IsEqual(pt2, TOL))
+      comp_curve.SetPeriodic(Standard_True);
+    Handle_Geom_BSplineCurve spline = comp_curve.BSpline();
+    TopoDS_Edge topo_edge = BRepBuilderAPI_MakeEdge(spline, start_pt1, pt2);
+    TopoDS_Edge *topo_edge_ptr = new TopoDS_Edge(topo_edge);
+    OCCCurve* occ_c = new OCCCurve(topo_edge_ptr);
+     
+    return occ_c;
 }
 
 //===============================================================================
@@ -3427,9 +3533,12 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            DLIList<CubitVector*> &vector_list,
                                            DLIList<BodySM*>& new_body_list,
                                            bool keep_old,
-                                           DLIList<TopologyBridge*>*,
-                                           DLIList<TopologyBridge*>* ) const
+                                           DLIList<TopologyBridge*>* new_tbs,
+                                           DLIList<TopologyBridge*>* att_tbs,
+                                           double *tol_in ,
+                                           bool clean_up_slivers ) const
 {
+  //There's no clean_up_slivers issue for OCC Engine, ignore it.
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_vo;
   CubitStatus stat = get_shape_list(body_list, shape_list, is_vo, keep_old);
@@ -3545,6 +3654,7 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
   
   return stat;
 }
+
 
 //===============================================================================
 // Function   : imprint_projected_edges
