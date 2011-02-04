@@ -1876,6 +1876,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
           if(!face)
             continue;
           occ_surface = CAST_TO(face, OCCSurface);
+          shell->set_sheet_surface(occ_surface);
        }
     }
     CubitBoolean exist = CUBIT_FALSE;
