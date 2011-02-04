@@ -6639,7 +6639,11 @@ static int iGeom_get_nonmanifold_sense( const BasicTopologyEntity* child,
   CubitSense sense = se_list.get_and_step()->get_sense();
   for (int i = se_list.size() - 1; i > 0; --i)
     if (se_list.get_and_step()->get_sense() != sense)
+    {
+      *err = iBase_SUCCESS;
       return 0;
+    }
+  *err = iBase_SUCCESS;
   return sense == CUBIT_FORWARD ? 1 : -1;
 }
 
