@@ -3405,6 +3405,7 @@ iGeom_getEgFcSense (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_TYPE, "2nd argument to getGtangentSense must be a face.");
   }
   *rel_sense = iGeom_get_nonmanifold_sense( edge_ent, face_ent, err );
+  RETURN(iBase_SUCCESS);
 }
 
 void
@@ -3487,6 +3488,7 @@ iGeom_getEgVtxSense (iGeom_Instance instance,
     ERROR(iBase_INVALID_ENTITY_TYPE, "Bad entity argument to getGvertexTangentSense.");
   }
   *rel_sense = iGeom_edge_vertex_sense( this_edge, vertex1, vertex2, err );
+  RETURN(iBase_SUCCESS);
 }
 
 void
