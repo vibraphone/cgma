@@ -24,6 +24,7 @@ class ShellSM;
 class OCCBody;
 class OCCSurface;
 class OCCCurve;
+class OCCPoint;
 class TopoDS_Shape;
 class TopoDS_Edge;
 class TopoDS_Wire;
@@ -888,6 +889,20 @@ private:
                          DLIList<BodySM*> &new_bodies,
                          bool keep_old,
                          bool imprint = CUBIT_FALSE) const;
+
+ void get_new_tbs(DLIList<OCCSurface*> &surfaces,
+                  DLIList<OCCCurve*> &curves,
+                  DLIList<OCCPoint*> &points,
+                  DLIList<OCCSurface*> &new_surfaces,
+                  DLIList<OCCCurve*> &new_curves,
+                  DLIList<OCCPoint*> &new_points,
+                  DLIList<TopologyBridge*> *new_tbs)const; 
+
+ void get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
+                  DLIList<OCCCurve*> &new_curves,
+                  DLIList<OCCPoint*> &new_points,
+                  const CubitString& name,
+                  DLIList<TopologyBridge*> *att_tbs)const;
 
 } ;
 

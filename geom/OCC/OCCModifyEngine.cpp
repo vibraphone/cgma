@@ -130,6 +130,7 @@
 #include "OCCBody.hpp"
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
+#include "OCCAttribSet.hpp"
 #include "CubitFileIOWrapper.hpp"
 #include "Body.hpp"
 #include "GfxDebug.hpp"
@@ -3125,6 +3126,13 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
   CubitStatus success = CUBIT_SUCCESS;
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_vo;
+
+  //keep record of all vertices and edges and faces in the from_body_list,
+  //for comparison to generated new_tbs and att_tbs.
+  DLIList<OCCSurface*> surfaces;
+  DLIList<OCCCurve*> curves;
+  DLIList<OCCPoint*> points;
+
   CubitStatus stat = get_shape_list(from_body_list, shape_list, is_vo,keep_old);
 
   if(!stat)
@@ -3141,11 +3149,22 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
      AppUtil::instance()->progress_tool()->start(0, total_imprints, message);
   }
   
-  //DLIList<ENTITY*> att_ENTITIES;
   for(int i = 0; i < size; i++)
   {
     TopoDS_Shape* shape1 = shape_list[i];
     CubitBoolean modified = CUBIT_FALSE;
+
+    if(new_tbs || att_tbs)
+    {
+      OCCBody* from_body = CAST_TO(from_body_list.get_and_step(), OCCBody);
+      surfaces.clean_out();
+      curves.clean_out();
+      points.clean_out();
+      from_body->get_all_surfaces(surfaces);
+      from_body->get_all_curves(curves);
+      from_body->get_all_points(points);
+    }
+
     for(int j = i+1; j < size+i; j ++)
     {
        if (CubitMessage::instance()->Interrupt())
@@ -3165,6 +3184,22 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
       DLIList<TopologyBridge*> tbs;
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape1);
       new_from_body_list.append(CAST_TO(tbs.get(),BodySM));
+      DLIList<OCCSurface*> new_surfaces;
+      DLIList<OCCCurve*> new_curves;
+      DLIList<OCCPoint*> new_points;
+      if(new_tbs || att_tbs)
+      {
+        OCCBody* new_body = CAST_TO(tbs.get(), OCCBody);
+        new_body->get_all_surfaces(new_surfaces);
+        new_body->get_all_curves(new_curves);
+        new_body->get_all_points(new_points);
+      }
+      if (new_tbs)
+        get_new_tbs(surfaces, curves, points, new_surfaces, new_curves, 
+                    new_points, new_tbs);
+      if(att_tbs)
+        get_att_tbs(new_surfaces, new_curves, new_points, "COMPOSITE_GEOM", 
+                    att_tbs);
     }
     shape_list.reset();
     if( size > 2 )
@@ -5214,6 +5249,65 @@ CubitStatus    OCCModifyEngine::webcut_across_translate( DLIList<BodySM*>& /*bod
   return CUBIT_FAILURE;
 }
 
+//===============================================================================
+// Function   : separate_surfaces
+// Member Type: PUBLIC
+// Description: separate surfaces in shells or compounds into independent ones,
+//              still keep the original shell.
+// Author     : Jane Hu
+// Date       : 02/11
+//===============================================================================
+CubitStatus OCCModifyEngine::separate_surfaces( DLIList<Surface*> &surf_list,
+                                         DLIList<BodySM*> &new_bodies )
+{
+  DLIList<OCCSurface*> surf_need_work;
+  //find out the complexity that the surf_list involves.
+  for (int i = 0; i < surf_list.size(); i++)
+  {
+    Surface* surf = surf_list.get_and_step();
+    OCCSurface *surface = CAST_TO(surf, OCCSurface);
+    OCCBody* body = surface->my_body();
+    if(body != NULL) //either a single surface body or a compound body
+    {
+      DLIList<Lump*> lumps;
+      body->lumps(lumps);
+      if (lumps.size() > 0) //compound body
+      {
+        surf_need_work.append(surface);
+        continue;
+      }
+      DLIList< OCCShell*> shells;
+      body->shells(shells);
+      if(shells.size() > 0) //compound body
+        surf_need_work.append(surface);
+      continue;
+    }
+
+    OCCShell* shell;
+    surface->my_shell();
+    if(shell != NULL && shell->my_surface() == NULL) //sheet body
+    {
+      surf_need_work.append(surface);
+      continue;
+    }
+  }
+  
+  //create sheet body for surf_need_work list.
+  for(int i = 0; i < surf_need_work.size(); i++)
+  {
+    Surface* copy_surf = make_Surface(surf_need_work.get_and_step());
+    if (copy_surf == NULL)
+    {
+       PRINT_ERROR("Cannot create an OCC sheet bodySM from the given bodySM.\n");
+       return CUBIT_FAILURE;
+    }
+
+    OCCSurface* occ_surf = CAST_TO(copy_surf, OCCSurface);
+    if(occ_surf != NULL)
+     new_bodies.append( occ_surf->my_body() );
+  }
+  return CUBIT_SUCCESS;
+}
 //===============================================================================
 // Function   : section
 // Member Type: PUBLIC
@@ -8095,4 +8189,171 @@ CubitStatus OCCModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
   return CUBIT_FAILURE;
 }
 
+//===============================================================================
+// Function   : get_new_tbs
+// Member Type: PUBLIC
+// Description: given old list of surfaces, curves and points, and new list
+//              of surfaces, curves and points, using physical comparison to
+//              find out what entities are newly generated by imprinting.
+//              And add imprint feature on the new entities.
+// Author     : Jane HU
+// Date       : 02/11
+//===============================================================================
+void OCCModifyEngine::get_new_tbs(DLIList<OCCSurface*> &surfaces, 
+                                  DLIList<OCCCurve*> &curves, 
+                                  DLIList<OCCPoint*> &points, 
+                                  DLIList<OCCSurface*> &new_surfaces,
+                                  DLIList<OCCCurve*> &new_curves, 
+                                  DLIList<OCCPoint*> &new_points, 
+                                  DLIList<TopologyBridge*> *new_tbs)const
+{
+  CubitSimpleAttrib *tmp_attrib = new CubitSimpleAttrib( "SOURCE_FEATURE", "IMPRINT" );
+
+  if(surfaces.size() < new_surfaces.size()) 
+  {
+    int num_new_surfaces = new_surfaces.size() - surfaces.size() ;
+    int new_surf_count = 0 ;
+    CubitBoolean found = false;
+    for (int i = 0; i < new_surfaces.size() && new_surf_count < num_new_surfaces; i++)
+    {
+      OCCSurface* new_surf = new_surfaces.get_and_step(); 
+      double new_d = new_surf->measure();
+      CubitVector new_center = new_surf->center_point();
+      for(int j = 0; j < surfaces.size(); j++)
+      {
+        OCCSurface* surf = surfaces.get();
+        double d = surf->measure();
+        CubitVector center = surf->center_point();
+        if(center.about_equal(new_center) && fabs(d- new_d) <= TOL) 
+        {
+          found = true;
+          surfaces.remove();
+          break;
+        }
+        surfaces.step();
+      }
+      if(!found)
+      {
+        new_tbs->append(new_surf); 
+        new_surf_count ++;
+        //Add an imprint feature to the topo.
+        TopoDS_Face* new_shape = new_surf->get_TopoDS_Face(); 
+        OCCAttribSet::append_attribute(tmp_attrib, *new_shape); 
+      }
+      found = false;
+    }
+  }
+
+  if(curves.size() < new_curves.size())
+  {
+    int num_new_curves = new_curves.size() - curves.size();
+    int new_curve_count = 0;
+    CubitBoolean found = false;
+    for (int i = 0; i < new_curves.size() && new_curve_count < num_new_curves; i++)
+    {
+      OCCCurve* new_curve = new_curves.get_and_step();
+      double new_d = new_curve->measure();
+      CubitVector new_center;
+      new_curve->position_from_u(0.5, new_center);
+      for(int j = 0; j < surfaces.size(); j++)
+      { 
+        OCCCurve* curve = curves.get();
+        double d = curve->measure();
+        CubitVector center;
+        curve->position_from_u(0.5, center);
+        if(center.about_equal(new_center) && fabs(d- new_d) <= TOL)
+        {
+          found = true;
+          curves.remove();
+          break;
+        }
+        curves.step();
+      }
+      if(!found)
+      {
+        new_tbs->append(new_curve);
+        new_curve_count ++;
+        //Add an imprint feature to the topo.
+        TopoDS_Edge* new_shape = new_curve->get_TopoDS_Edge();
+        OCCAttribSet::append_attribute(tmp_attrib, *new_shape);
+      }
+      found = false;
+    }
+  }
+
+  int num_new_points = new_points.size() -points.size(); 
+  if(num_new_points > 0)
+  {
+    int  new_vertices_count = 0;
+    CubitBoolean found = false; 
+    for( int i = 0; i < new_points.size() && new_vertices_count < num_new_points; i++)
+    {
+      OCCPoint* new_point = new_points.get_and_step();
+      for(int j = 0; j < points.size(); j ++)
+      {
+        OCCPoint* point = points.get(); 
+        if(point->is_equal(*new_point, TOL))
+        {
+          found = true;
+          points.remove();
+          break;
+        }
+        points.step();
+      }
+      if(!found)
+      {
+        new_tbs->append(new_point);
+        new_vertices_count ++;
+        //Add an imprint feature to the topo.
+        TopoDS_Vertex* new_shape = new_point->get_TopoDS_Vertex();
+        OCCAttribSet::append_attribute(tmp_attrib, *new_shape);
+      }
+      found = false;
+    }
+  }
+  delete tmp_attrib;
+}
+
+//===============================================================================
+// Function   : get_att_tbs
+// Member Type: PUBLIC
+// Description: given new list of surfaces, curves and points for modified
+//              bodies, find out what entities are "name" entities
+// Author     : Jane HU
+// Date       : 02/11
+//===============================================================================
+void OCCModifyEngine::get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
+                                  DLIList<OCCCurve*> &new_curves,
+                                  DLIList<OCCPoint*> &new_points,
+                                  const CubitString& name,
+                                  DLIList<TopologyBridge*> *att_tbs)const
+{
+  DLIList<CubitSimpleAttrib*> csa_list;
+  for (int i = 0 ; i < new_surfaces.size(); i++)
+  {
+    OCCSurface* occ_surf = new_surfaces.get_and_step();
+    csa_list.clean_out();
+    occ_surf->get_simple_attribute(name, csa_list);
+    if(csa_list.size() > 0)
+      att_tbs->append(occ_surf);    
+  }
+
+  for (int i = 0 ; i < new_curves.size(); i++)
+  {
+    OCCCurve* occ_curve = new_curves.get_and_step();
+    csa_list.clean_out();
+    occ_curve->get_simple_attribute(name, csa_list);
+    if(csa_list.size() > 0)
+      att_tbs->append(occ_curve);
+  }
+ 
+  for (int i = 0 ; i < new_points.size(); i++)
+  {
+    OCCPoint* occ_point = new_points.get_and_step();
+    csa_list.clean_out(); 
+    occ_point->get_simple_attribute(name, csa_list);
+    if(csa_list.size() > 0)
+      att_tbs->append(occ_point);
+  }
+}
 // EOF
