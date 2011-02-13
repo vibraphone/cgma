@@ -112,7 +112,7 @@ const double DEG_TO_RAD = 1.0 / RAD_TO_DEG;
 #define gmt GeometryModifyTool::instance()
 
 const char *iGeom_entity_type_names[] = {"vertex", "curve", "surface", "body"};
-
+const char *cgm_type_names[] = {"vertex", "curve", "surface", "volume", "body"};
 
 // Implement RAII pattern for allocated arrays
 class iGeomArrayManager
@@ -187,7 +187,7 @@ static void
 iGeom_load_cub_geometry(const char *name, int* err) ;
 
 static iBase_ErrorType 
-process_attribs(iGeom_Instance instance) ;
+process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list) ;
 
 static void
 iGeom_get_adjacent_entities( const RefEntity *from, 
@@ -368,6 +368,12 @@ void iGeom_load( iGeom_Instance instance,
                  int name_len,
                  int options_size )
 {
+    // pre-get all entities, so we can filter them out later; use cubit list
+    // 'cuz we need to get both volumes and bodies
+  DLIList<RefEntity*> ref_list;
+  for (int dim = 0; dim < 5; dim++)
+    gqt->ref_entity_list(cgm_type_names[dim], ref_list, false);
+
    // make sure we have a null-terminated string for file name
   std::string file_name( name, name_len );
   name = file_name.c_str();
@@ -435,9 +441,14 @@ void iGeom_load( iGeom_Instance instance,
     }
   }
 
+  DLIList<RefEntity*> ref_list_2;
+  for (int dim = 0; dim < 5; dim++)
+    gqt->ref_entity_list(cgm_type_names[dim], ref_list_2, false);
+
+  ref_list_2 -= ref_list;
+  
     // now process uncaught/unregistered attributes
-  iBase_ErrorType result;
-  result = process_attribs(instance);
+  iBase_ErrorType result = process_attribs(instance, ref_list_2);
 
   RETURN(result);
 }
@@ -6755,46 +6766,38 @@ iGeom_is_face_degenerate( RefFace* face )
 }
 
 static iBase_ErrorType 
-process_attribs(iGeom_Instance instance) 
+process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list) 
 {
     // go through all entities, checking for remaining simple attribs
-  DLIList<RefEntity*> ref_list;
   DLIList<CubitSimpleAttrib*> csa_list;
-  const char *type_names[] = {"vertex", "curve", "surface", "volume", "body"};
   iBase_ErrorType result = iBase_SUCCESS;
 
-  for (int dim = 0; dim < 5; dim++) {
-    ref_list.clean_out();
-    CubitStatus status = gqt->ref_entity_list(type_names[dim], ref_list, false);
-    if (CUBIT_SUCCESS != status) return iBase_FAILURE;
-    
-    for (int i = ref_list.size(); i > 0; i--) {
-      csa_list.clean_out();
+  for (int i = ref_list.size(); i > 0; i--) {
+    csa_list.clean_out();
 
-        // get all the csa's still on this entity
-      RefEntity *this_ent = ref_list.get_and_step();
-      TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
-      topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
+      // get all the csa's still on this entity
+    RefEntity *this_ent = ref_list.get_and_step();
+    TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
+    topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
 
-      for (int csa = csa_list.size(); csa > 0; csa--) {
+    for (int csa = csa_list.size(); csa > 0; csa--) {
         // see if there's a tag for this csa already
-        CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
-        const char *tag_name = csa_ptr->character_type().c_str();
-        long tag = TM->getTagHandle(tag_name);
-        if (tag < 0) continue;
-        else if (0 == tag) {
-            // don't have a tag handle for this yet - make one
-          result = TM->create_csa_tag(tag_name, &tag);
-          if (iBase_SUCCESS != result || 0 == tag) return iBase_FAILURE;
-        }
-        
-          // now set the tag
-        iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, csa_ptr);
-        if (iBase_SUCCESS != tmp_result) result = tmp_result;
-    
-          // now destroy this csa
-        delete csa_ptr;
+      CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
+      const char *tag_name = csa_ptr->character_type().c_str();
+      long tag = TM->getTagHandle(tag_name);
+      if (tag < 0) continue;
+      else if (0 == tag) {
+          // don't have a tag handle for this yet - make one
+        result = TM->create_csa_tag(tag_name, &tag);
+        if (iBase_SUCCESS != result || 0 == tag) return iBase_FAILURE;
       }
+        
+        // now set the tag
+      iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, csa_ptr);
+      if (iBase_SUCCESS != tmp_result) result = tmp_result;
+    
+        // now destroy this csa
+      delete csa_ptr;
     }
   }
 
