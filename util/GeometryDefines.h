@@ -83,6 +83,14 @@ enum GeometryType
   
     /* Lump types */
   UNDEFINED_LUMP_TYPE
+
+   /* OCC types */
+  BSPLINE_CURVE_TYPE,       //OCC curve types
+  BSPLINE_SURFACE_TYPE,     //OCC surface type
+  REVOLUTION_SURFACE_TYPE,  //OCC surface type
+  EXTRUSION_SURFACE_TYPE,   //OCC surface type
+  OFFSET_SURFACE_TYPE,      //OCC surface type
+
 };
 
 #endif
