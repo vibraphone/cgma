@@ -610,7 +610,7 @@ GeometryType OCCCurve::geometry_type()
   if (acurve.GetType() == GeomAbs_BezierCurve)
      return SPLINE_CURVE_TYPE;
   if (acurve.GetType() == GeomAbs_BSplineCurve)
-     return BSPLINE_CURVE_TYPE;
+     return SPLINE_CURVE_TYPE;
   if (acurve.GetType() == GeomAbs_Line)
      return STRAIGHT_CURVE_TYPE;
   if (acurve.GetType() == GeomAbs_Parabola)

@@ -202,7 +202,7 @@ GeometryType OCCSurface::geometry_type()
   if (asurface.GetType() == GeomAbs_BezierSurface)
      return SPLINE_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_BSplineSurface)
-     return BSPLINE_SURFACE_TYPE;
+     return SPLINE_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_Plane)      
      return PLANE_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_Cylinder ||
@@ -213,11 +213,11 @@ GeometryType OCCSurface::geometry_type()
   if (asurface.GetType() == GeomAbs_Torus)
       return TORUS_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_SurfaceOfRevolution)
-     return REVOLUTION_SURFACE_TYPE;
+     return UNDEFINED_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_SurfaceOfExtrusion)
-     return EXTRUSION_SURFACE_TYPE;
+     return UNDEFINED_SURFACE_TYPE;
   if (asurface.GetType() == GeomAbs_OffsetSurface)
-     return OFFSET_SURFACE_TYPE;
+     return UNDEFINED_SURFACE_TYPE;
   return UNDEFINED_SURFACE_TYPE;  
 }
 //-------------------------------------------------------------------------
