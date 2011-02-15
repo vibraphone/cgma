@@ -904,6 +904,10 @@ private:
                   const CubitString& name,
                   DLIList<TopologyBridge*> *att_tbs)const;
 
+ CubitStatus split_shape_by_location(TopoDS_Shape *&from_shape,
+                                     Curve* curve_to_split,
+                                     const CubitVector& split_location,
+                                     DLIList<Curve*>& created_curves )const;
 } ;
 
 #endif

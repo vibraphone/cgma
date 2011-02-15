@@ -33,6 +33,7 @@ class OCCCurve;
 class OCCPoint;
 class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
+class LocOpe_SplitShape;
 class OCCLoop : public LoopSM
 {
 public :
@@ -112,6 +113,8 @@ public :
     //ModifyShape now refers only to Transform and GTransform (1/10/11)
     CubitStatus update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
                                    BRepAlgoAPI_BooleanOperation *op =NULL);
+    static CubitStatus update_OCC_entity(TopoDS_Wire & old_loop,
+                                  LocOpe_SplitShape* sp);
 protected: 
 
 private:

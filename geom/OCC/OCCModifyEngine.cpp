@@ -291,7 +291,6 @@ Curve* OCCModifyEngine::make_Curve( DLIList<CubitVector*>& point_list,
     CubitVector* end_vector = NULL;
     CubitVector* tangent_vector;
     gp_Pnt start_pt1, pt1, pt2;
-    int i = 1;
     int size = 2;
     TColStd_Array1OfReal knots(1, 2);
     knots.SetValue(1, 0.);
@@ -303,7 +302,7 @@ Curve* OCCModifyEngine::make_Curve( DLIList<CubitVector*>& point_list,
     gp_Vec tangent;
     tangent_vector = point_tangents.get();
     BRepBuilderAPI_MakeWire aWire;
-    for (i ; i < point_list.size(); i++)
+    for (int i = 1 ; i < point_list.size(); i++)
     {
 
         //use every two points to make a spline, so it passes the points.
@@ -3549,7 +3548,9 @@ void OCCModifyEngine::shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
     else
     {
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*shape);
-      new_body_list.append_unique(CAST_TO(tbs.get(),BodySM));
+      BodySM* body = CAST_TO(tbs.get(),BodySM);
+      if(body != NULL)
+        new_body_list.append_unique(body);
     }
   }
 }
@@ -3573,9 +3574,11 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
                                            double *tol_in ,
                                            bool clean_up_slivers ) const
 {
-  //There's no clean_up_slivers issue for OCC Engine, ignore it.
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_vo;
+  double tol;
+  if(tol_in)
+    tol = *tol_in;
   CubitStatus stat = get_shape_list(body_list, shape_list, is_vo, keep_old);
   if(!stat)
     return stat;
@@ -3611,55 +3614,27 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 
          else if( pc == CUBIT_PNT_INSIDE)
          {
-           LocOpe_SplitShape splitor(*from_shape); 
            on_curve = CUBIT_TRUE;
-           TopoDS_Edge edge = *curve->get_TopoDS_Edge();
-           gp_Pnt pt = gp_Pnt(v->x(), v->y(), v->z());
-           TopoDS_Vertex vertex = BRepBuilderAPI_MakeVertex(pt);
-           double param = curve->u_from_position(*v);
-           splitor.Add(vertex, param, edge);
-           
-           //update the curve_list
-           TopTools_ListOfShape edge_shapes;
-           edge_shapes.Assign(splitor.DescendantShapes(edge));
-           while(edge_shapes.Extent())
+           //first make sure it won't generate a sliver curve
+           //with respect to tol.
+           if(clean_up_slivers)
            {
-             TopoDS_Shape edge_shape = edge_shapes.First();
-             TopoDS_Edge occ_edge = TopoDS::Edge(edge_shape);
-             OCCCurve* test_curve; 
-             test_curve = CAST_TO(OCCQueryEngine::instance()->populate_topology_bridge(occ_edge), OCCCurve);
-             if(test_curve)
-               curves.append(test_curve);
-             edge_shapes.RemoveFirst();
+             double u = curve->u_from_position(*v);
+             double u_min, u_max;
+             curve->get_param_range(u_min, u_max);
+             double l1 = curve->length_from_u(u_min, u);
+             double l2 = curve->measure() - l1;
+             if(l1 <= tol || l2 <= tol)
+               break;
            }
+
+           const CubitVector location = *v;
+           DLIList<Curve*> created_curves;
+           stat = split_shape_by_location(from_shape, (Curve*)curve, location, 
+                                          created_curves);
            curves.remove(curve);
-           
-           TopTools_ListOfShape shapes;
-           shapes.Assign(splitor.DescendantShapes(*from_shape));
-           if(from_shape->TShape()->ShapeType() ==TopAbs_COMPOUND)
-             OCCBody::update_OCC_entity(*from_shape, shapes.First(), 
-                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
-           else if(shapes.First().TShape()->ShapeType() == TopAbs_SOLID)
-             OCCLump::update_OCC_entity(TopoDS::Solid(*from_shape), 
-                    shapes.First(), 
-                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
-     
-           else if(shapes.First().TShape()->ShapeType() == TopAbs_SHELL)
-             OCCShell::update_OCC_entity(TopoDS::Shell(*from_shape),
-                    shapes.First(), 
-                    (BRepBuilderAPI_MakeShape*) NULL, &splitor);
-
-           else if(shapes.First().TShape()->ShapeType() == TopAbs_FACE)
-             OCCSurface::update_OCC_entity(TopoDS::Face(*from_shape), 
-                    shapes.First(), 
-                    (BRepBuilderAPI_MakeShape*) NULL, NULL, &splitor);
-
-           if(!from_shape->IsNull())
-           {
-             from_shape->Nullify();
-             delete from_shape;
-           }
-           from_shape = new TopoDS_Shape(shapes.First());
+           for(int ic = 0; ic < created_curves.size(); ic++)
+             curves.append(CAST_TO(created_curves.get_and_step(), OCCCurve));
            break;
          }  
        } 
@@ -7894,12 +7869,154 @@ CubitStatus OCCModifyEngine::tweak_target( Point *point_ptr,
   return CUBIT_FAILURE;
 }
 
+//================================================================================
+// Description: split curve at split_location, upper level geometry gets 
+//              updated as well.
+// Author     : Jane Hu
+// Date       : 02/11
+//================================================================================
 CubitStatus  OCCModifyEngine::split_curve( Curve* curve_to_split,
                                     const CubitVector& split_location,
                                     DLIList<Curve*>& created_curves ) 
 {
-  PRINT_INFO("Need to be implemented.\n");
-  return CUBIT_FAILURE;
+  //find if the curve is stand-along or in a body.
+  OCCQueryEngine* oqe = OCCQueryEngine::instance();
+  DLIList <OCCBody* > *bodies = oqe->BodyList;
+  DLIList<OCCSurface*> *surfaces = oqe->SurfaceList;
+  DLIList<OCCLoop*> *loops = oqe->WireList;
+  OCCCurve* occ_curve = CAST_TO(curve_to_split, OCCCurve);
+  TopoDS_Edge* edge = occ_curve->get_TopoDS_Edge();
+ 
+  LocOpe_SplitShape splitor;
+  TopoDS_Shape from_shape;
+  CubitBoolean found = false;
+  //bodies consists compounds or solids.
+  for(int i = 0; i < bodies->size(); i ++)
+  {
+    OCCBody* body = bodies->get_and_step();
+    TopoDS_Compound* topo_comp = body->get_TopoDS_Shape();
+    TopoDS_Solid* topo_solid;
+    if(topo_comp == NULL)
+    {
+      DLIList<Lump*> lumps = body->lumps();
+      topo_solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
+      assert (topo_solid != NULL);
+    }
+    TopTools_IndexedDataMapOfShapeListOfShape M;
+    if(topo_comp)
+      from_shape = *topo_comp;
+    else
+      from_shape = *topo_solid;
+
+    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_SOLID, M);
+    
+    if(M.Contains(*edge) )   
+    {
+      found = true;
+      break;
+    }
+  }
+  
+  for(int i = 0 ; found == false && i < surfaces->size(); i++)
+  {
+    OCCSurface* surf = surfaces->get_and_step();
+    TopoDS_Face* topo_face = surf->get_TopoDS_Face();
+    TopTools_IndexedDataMapOfShapeListOfShape M;
+    from_shape = *topo_face;
+    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_FACE, M); 
+    if(M.Contains(*edge))
+    { 
+      found = true;
+      break;
+    }
+  }
+
+  for(int i = 0 ; found == false && i < loops->size(); i++)
+  {
+    OCCLoop* loop = loops->get_and_step();
+    TopoDS_Wire* topo_loop = loop->get_TopoDS_Wire();
+    from_shape = *topo_loop;
+    TopTools_IndexedDataMapOfShapeListOfShape M;
+    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_WIRE, M);  
+    if(M.Contains(*edge))
+    {
+      found = true;
+      break;
+    }
+  }
+  
+  if(!found)
+    from_shape = *edge;
+  
+  TopoDS_Shape* p_shape = &from_shape;
+  CubitStatus status = split_shape_by_location(p_shape, curve_to_split, 
+                                   split_location, created_curves);
+
+  DLIList<TopoDS_Shape*> shape_list;
+  DLIList<BodySM*> new_body_list;
+  shape_list.append(p_shape);
+  shape_to_bodySM(shape_list, new_body_list);
+  return status;
+}
+
+//================================================================================
+// Function   : split_shape_by_location
+// Description: split curve at split_location, upper level geometry (from_shape)
+//              gets updated as well.
+// Author     : Jane Hu
+// Date       : 02/11
+//================================================================================
+CubitStatus OCCModifyEngine::split_shape_by_location(TopoDS_Shape *&from_shape,
+                                           Curve* curve_to_split,
+                                           const CubitVector& split_location,
+                                           DLIList<Curve*>& created_curves)const
+{
+  LocOpe_SplitShape splitor(*from_shape);
+  TopoDS_Edge edge = *CAST_TO(curve_to_split, OCCCurve)->get_TopoDS_Edge();
+  gp_Pnt pt = gp_Pnt(split_location.x(), split_location.y(), split_location.z());
+  TopoDS_Vertex vertex = BRepBuilderAPI_MakeVertex(pt);
+  double param = curve_to_split->u_from_position(split_location);
+  splitor.Add(vertex, param, edge);
+  
+  //update the curve_list
+  TopTools_ListOfShape edge_shapes;
+  edge_shapes.Assign(splitor.DescendantShapes(edge));
+  while(edge_shapes.Extent())
+  {
+     TopoDS_Shape edge_shape = edge_shapes.First();
+     TopoDS_Edge occ_edge = TopoDS::Edge(edge_shape);
+     OCCCurve* test_curve;
+     test_curve = CAST_TO(OCCQueryEngine::instance()->populate_topology_bridge(occ_edge), OCCCurve);
+     if(test_curve)
+       created_curves.append(test_curve);
+     edge_shapes.RemoveFirst();
+  }
+
+  TopTools_ListOfShape shapes;
+  shapes.Assign(splitor.DescendantShapes(*from_shape));
+  if(from_shape->ShapeType() ==TopAbs_COMPOUND)
+    OCCBody::update_OCC_entity(*from_shape, shapes.First(),
+                   (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+
+  else if(shapes.First().TShape()->ShapeType() == TopAbs_SOLID)
+    OCCLump::update_OCC_entity(TopoDS::Solid(*from_shape),
+                   shapes.First(), (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+
+  else if(shapes.First().TShape()->ShapeType() == TopAbs_SHELL)
+    OCCShell::update_OCC_entity(TopoDS::Shell(*from_shape),
+                   shapes.First(), (BRepBuilderAPI_MakeShape*) NULL, &splitor);
+
+  else if(shapes.First().TShape()->ShapeType() == TopAbs_FACE)
+    OCCSurface::update_OCC_entity(TopoDS::Face(*from_shape),
+              shapes.First(), (BRepBuilderAPI_MakeShape*) NULL, NULL, &splitor);
+
+  else if(shapes.First().TShape()->ShapeType() == TopAbs_WIRE)
+    OCCLoop::update_OCC_entity(TopoDS::Wire(*from_shape), &splitor);
+ 
+  TopTools_ListOfShape new_shapes;
+  new_shapes.Assign(splitor.DescendantShapes(*from_shape));
+  from_shape = new TopoDS_Shape(new_shapes.First());
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus OCCModifyEngine::remove_curve_slivers( BodySM* body,
