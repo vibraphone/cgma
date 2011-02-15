@@ -1375,17 +1375,21 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
   long size=infile.tellg();
   infile.seekg(0);
 
-  if(n_buffer_size < size)
-  {
-    PRINT_ERROR("Buffer size is not enough, increase buffer size.\n");
-    infile.close();
-    remove(file_name);
-    return CUBIT_FAILURE;
+  if (b_write_buffer) {
+    if(n_buffer_size < size)
+      {
+	PRINT_ERROR("Buffer size is not enough, increase buffer size.\n");
+	infile.close();
+	remove(file_name);
+	return CUBIT_FAILURE;
+      }
+    infile.read(pBuffer,size);
   }
+  else n_buffer_size = size;
 
-  infile.read(pBuffer,size);
   infile.close();
   remove(file_name);
+  
   return CUBIT_TRUE;
 }
                                    

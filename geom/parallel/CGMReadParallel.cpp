@@ -4,6 +4,7 @@
 #include "CubitMessage.hpp"
 #include "DLList.hpp"
 #include "RefEntity.hpp"
+//#include "RefVolume.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
@@ -331,7 +332,6 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     case PA_SCATTER:
       // do the actual scatter
       if (m_proc_size > 1) {
-	//if (body_partition) {
 	  if (debug) {
 	    PRINT_INFO("Scattering body entities.\n");
 	    tStart = MPI_Wtime();
@@ -426,12 +426,26 @@ CubitStatus CGMReadParallel::balance()
 	  i_entity_proc++;
 	}
       }
+
+      // assign to bodies
       entity = body_entity_list.get_and_step();
       DLIList<int> shared_procs;
       shared_procs.append(proc);
       TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
       if (td_par == NULL) td_par = new TDParallel(entity, NULL, &shared_procs);
-      loads[proc] += entity->measure();
+      //loads[proc] += entity->measure();
+
+      // assign to volumes
+      DLIList<RefVolume*> volumes;
+      (dynamic_cast<TopologyEntity*> (entity))->ref_volumes(volumes);
+      int n_vol = volumes.size();
+      volumes.reset();
+      for (j = 0; j < n_vol; j++) {
+	RefEntity *vol = volumes.get_and_step();
+	td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
+	if (td_par == NULL) td_par = new TDParallel(vol, NULL, &shared_procs);
+	loads[proc] += vol->measure();
+      }
     }
 
     // Get all child entities
@@ -443,20 +457,26 @@ CubitStatus CGMReadParallel::balance()
     for (i = 0; i < n_child; i++) {
       entity = child_list.get_and_step();
       CubitAttrib* att = entity->get_cubit_attrib(CA_MERGE_PARTNER,
-						      CUBIT_FALSE);
+						  CUBIT_FALSE);
       
       if (att != NULL) { // if it is shared entity
 	DLIList<Body*> parent_bodies;
+	//DLIList<RefVolume*> parent_volumes;
 	DLIList<int> shared_procs;
 	(dynamic_cast<TopologyEntity*> (entity))->bodies(parent_bodies);
+	//(dynamic_cast<TopologyEntity*> (entity))->ref_volumes(parent_volumes);
 	int n_parent = parent_bodies.size();
+	//int n_parent = parent_volumes.size();
 	
 	for (j = 0; j < n_parent; j++) {
 	  RefEntity *parent_body = parent_bodies.get_and_step();
+	  //RefVolume *parent_vol = parent_volumes.get_and_step();
+	  //RefEntity *parent_vol = CAST_TO(parent_volumes.get_and_step(), RefEntity);
 	  TDParallel *parent_td = (TDParallel *) parent_body->get_TD(&TDParallel::is_parallel);
+	  //TDParallel *parent_td = (TDParallel *) parent_vol->get_TD(&TDParallel::is_parallel);
 	  
 	  if (parent_td == NULL) {
-	    PRINT_ERROR("parent body has to be partitioned.");
+	    PRINT_ERROR("parent Volume has to be partitioned.");
 	    return CUBIT_FAILURE;
 	  }
 	  shared_procs.append_unique(parent_td->get_charge_proc());
@@ -496,22 +516,41 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
 						      std::string &ptag_name,
 						      std::vector<int> &ptag_vals)
 {
-  // find bodies deleted
+  // find volumes deleted
   int i;
   CubitStatus result;
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
+  //DLIList<RefEntity*>& vol_entity_list = m_pcomm->partition_vol_list();
   DLIList<RefEntity*> partition_list, delete_body_list;
   int nEntity = body_entity_list.size();
   body_entity_list.reset();
+  //int nEntity = vol_entity_list.size();
+  //vol_entity_list.reset();
   for (i = 0; i < nEntity; i++) {
     RefEntity* entity = body_entity_list.get_and_step();
     TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-    
+
     if (td_par == NULL) {
-      PRINT_ERROR("Partitioned entities should have TDParallel data.");
-      return CUBIT_FAILURE;
+      //RefEntity* entity = vol_entity_list.get_and_step();
+      DLIList<RefEntity*> volumes;
+      entity->get_child_ref_entities(volumes);
+      
+      // check if the first Volume is partitioned here
+      volumes.reset();
+      RefEntity *vol = volumes.get();
+      if (vol == NULL || vol->entity_type_info() != typeid(RefVolume)) {
+	PRINT_ERROR("Partitioned Body should have at least one Volume.");
+	return CUBIT_FAILURE;
+      }
+      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
+      
+      if (td_par == NULL) {
+	PRINT_ERROR("Partitioned Volume should have TDParallel data.");
+	return CUBIT_FAILURE;
+      }
     }
-    
+
+    //if (td_par->get_charge_proc() != m_rank) delete_body_list.append(entity);
     if (td_par->get_charge_proc() != m_rank) delete_body_list.append(entity);
     else partition_list.append(entity);
   }
@@ -519,14 +558,18 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   // delete bodies
   if (m_rank != reader) {
     nEntity = delete_body_list.size();
+    //nEntity = delete_vol_list.size();
     for (i = 0; i < nEntity; i++) {
       GeometryQueryTool::instance()->delete_RefEntity(delete_body_list[i]);
+      //GeometryQueryTool::instance()->delete_RefEntity(delete_vol_list[i]);
     }
   }
 
-  // update body list in ParallelComm
+  // update volume list in ParallelComm
   body_entity_list.clean_out();
   body_entity_list += partition_list;
+  //vol_entity_list.clean_out();
+  //vol_entity_list += partition_list;
   
   // print info
   char pre_body[100];
@@ -534,7 +577,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   if (debug) {
     if (m_rank != reader) {
       CAST_LIST_TO_PARENT(delete_body_list, tmp_body_list);
-      sprintf(pre_body, "Deleted %d bodies: ", tmp_body_list.size());
+      sprintf(pre_body, "Deleted %d Bodies: ", tmp_body_list.size());
       CubitUtil::list_entity_ids(pre_body, tmp_body_list );
     }
     std::cerr << "Partitioned Body list size after delete: "

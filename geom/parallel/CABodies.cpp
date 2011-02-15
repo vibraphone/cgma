@@ -43,8 +43,9 @@ CABodies::CABodies(RefEntity* new_attrib_owner,
   // first, the ints
   i_list->reset();
   
-  // is interface
-  m_interface = *(i_list->get_and_step());
+  m_interface = *(i_list->get_and_step()); // is interface
+
+  m_uniqueID = *(i_list->get_and_step()); // unique ID
 
   // shared bodies
   int num_list = *(i_list->get_and_step());
@@ -120,11 +121,17 @@ CubitStatus CABodies::actuate()
 	return CUBIT_FAILURE;
       }
     }
+
+    if (par->get_unique_id() != m_uniqueID) {
+      PRINT_ERROR("Different unique ID found for %s %d.\n",
+		  attrib_owner()->class_name(), attrib_owner()->id());
+      return CUBIT_FAILURE;
+    }
   }
   else {
     // else make a new one
     par = new TDParallel(attrib_owner(), &m_sharedBodies, &m_sharedProcs,
-			 -1, m_interface);
+			 m_uniqueID, m_interface);
   }
 
   delete_attrib(CUBIT_TRUE);
@@ -154,6 +161,7 @@ CubitStatus CABodies::update()
   }
   else {
     m_interface = td_par->is_interface();
+    m_uniqueID = td_par->get_unique_id();
     int size = td_par->get_shared_body_list()->size();
     td_par->get_shared_body_list()->reset();
     m_sharedBodies.clean_out();
@@ -186,6 +194,9 @@ CubitSimpleAttrib* CABodies::cubit_simple_attrib()
 
   // is interface
   i_list.append(m_interface);
+
+  // unique ID
+  i_list.append(m_uniqueID);
 
   // shared bodies
   m_sharedBodies.reset();
