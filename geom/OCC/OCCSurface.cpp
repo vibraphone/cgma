@@ -808,6 +808,17 @@ int OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
   return result_list.size();
 }
 
+int OCCSurface::get_points(DLIList<OCCPoint*>& points)
+{
+  DLIList<OCCCurve*> curves;
+  for(int i = 0; i < curves.size(); i++)
+  {
+    OCCCurve* curve = curves.get_and_step();
+    curve->get_points(points);
+  }
+  return points.size();
+}
+
 //----------------------------------------------------------------
 // Function: to update the core Surface
 //           for any movement  or Boolean operation of the body.

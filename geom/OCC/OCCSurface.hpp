@@ -316,6 +316,8 @@ public :
 
   int get_curves(DLIList<OCCCurve*>&); 
 
+  int get_points(DLIList<OCCPoint*>&);
+
   void set_shell(OCCShell* shell)
   { myShell = shell;}
 
