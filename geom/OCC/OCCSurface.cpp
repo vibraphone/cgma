@@ -816,6 +816,7 @@ int OCCSurface::get_points(DLIList<OCCPoint*>& points)
     OCCCurve* curve = curves.get_and_step();
     curve->get_points(points);
   }
+  points += get_hardpoints();
   return points.size();
 }
 

@@ -75,6 +75,7 @@ public :
 
   void add_hardpoint(OCCPoint* HardPoint){myHardPoints.append(HardPoint);}
   void remove_hardpoint(OCCPoint* HardPoint){myHardPoints.remove(HardPoint);}
+  DLIList<OCCPoint*> get_hardpoints() {return myHardPoints;};
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
