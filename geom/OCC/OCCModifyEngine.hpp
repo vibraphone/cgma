@@ -717,7 +717,7 @@ public:
   virtual CubitStatus create_surface( DLIList<CubitVector*>& vec_list,
                                       BodySM *&new_body,
                                       Surface *ref_face_ptr, 
-			                             CubitBoolean project_points ) const;
+		                      CubitBoolean project_points ) const;
 
   virtual CubitStatus create_surface( DLIList<Point*> &points,
                                       BodySM *&new_body ) const;

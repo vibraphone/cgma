@@ -903,5 +903,13 @@ void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
        if (occ_point)
          points.append_unique(occ_point);
   }
+
+  DLIList<OCCSurface*> surfaces;
+  this->get_all_surfaces(surfaces);
+  for(int i = 0; i < surfaces.size(); i++)
+  {
+    OCCSurface* occ_surf = surfaces.get_and_step();
+    points += occ_surf->get_hardpoints();
+  }
 }
 

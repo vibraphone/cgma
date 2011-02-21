@@ -75,6 +75,7 @@ public :
 
   void add_hardpoint(OCCPoint* HardPoint){myHardPoints.append(HardPoint);}
   void remove_hardpoint(OCCPoint* HardPoint){myHardPoints.remove(HardPoint);}
+  DLIList<OCCPoint*> get_hardpoints() {return myHardPoints;}
 
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
@@ -315,6 +316,8 @@ public :
   int get_coedges(DLIList<OCCCoEdge*>&);
 
   int get_curves(DLIList<OCCCurve*>&); 
+
+  int get_points(DLIList<OCCPoint*>& points);
 
   void set_shell(OCCShell* shell)
   { myShell = shell;}

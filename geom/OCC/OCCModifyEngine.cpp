@@ -3476,12 +3476,26 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
   DLIList<TopoDS_Face*> face_list;
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<TopoDS_Shape*> shape_list_all;
-  
+  DLIList<OCCSurface*> surfaces;
+  DLIList<OCCCurve*> curves;
+  DLIList<OCCPoint*> points;
+ 
   assert (surface_list.size() == curve_lists_list.size());
 
+  DLIList<OCCBody*> bodies;
   for(int j = 0; j < surface_list.size(); j++)
   {
     Surface* surface = surface_list.get_and_step();
+    
+    //keep record of old bodies, surfaces, curves and points
+    OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
+    occ_surface->get_bodies(bodies);
+    if(j == 0)
+    {
+      bodies.get()->get_all_surfaces(surfaces);
+      bodies.get()->get_all_curves(curves);
+      bodies.get()->get_all_points(points);
+    }
     DLIList<Surface*> ref_face_list;
     ref_face_list.append(surface);
     DLIList<Curve*> *edge_list = curve_lists_list.get_and_step();
@@ -3507,12 +3521,32 @@ CubitStatus OCCModifyEngine::imprint( DLIList<Surface*>& surface_list,
     face_list.clean_out();
   }
 
+  assert (bodies.size() == 1);
+
   DLIList<BodySM*> new_body_list;
   shape_to_bodySM(shape_list, new_body_list);
   
   if (new_body_list.size() == 1)
   {
     new_body = new_body_list.get();
+    //find new_tbs and att_tbs;
+    DLIList<OCCSurface*> new_surfs;
+    DLIList<OCCCurve*> new_curves;
+    DLIList<OCCPoint*> new_points;
+    if(new_tbs || att_tbs) 
+    {
+      OCCBody* occ_body = CAST_TO(new_body, OCCBody);
+      occ_body->get_all_surfaces(new_surfs);
+      occ_body->get_all_curves(new_curves);
+      occ_body->get_all_points(new_points);
+    } 
+    if(new_tbs)
+      get_new_tbs(surfaces, curves, points, new_surfs, new_curves,
+                  new_points, new_tbs);
+    if(att_tbs)
+      get_att_tbs(new_surfs, new_curves, new_points, "COMPOSITE_GEOM",
+                  att_tbs);
+
     return CUBIT_SUCCESS;
   }
   return CUBIT_FAILURE;
@@ -3566,13 +3600,13 @@ void OCCModifyEngine::shape_to_bodySM( DLIList<TopoDS_Shape*> shape_list,
 // Date       : 06/08
 //===============================================================================
 CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
-                                           DLIList<CubitVector*> &vector_list,
-                                           DLIList<BodySM*>& new_body_list,
-                                           bool keep_old,
-                                           DLIList<TopologyBridge*>* new_tbs,
-                                           DLIList<TopologyBridge*>* att_tbs,
-                                           double *tol_in ,
-                                           bool clean_up_slivers ) const
+                                          DLIList<CubitVector*> &vector_list,
+                                          DLIList<BodySM*>& new_body_list,
+                                          bool keep_old,
+                                          DLIList<TopologyBridge*>* new_tbs,
+                                          DLIList<TopologyBridge*>* att_tbs,
+                                          double *tol_in ,
+                                          bool clean_up_slivers ) const
 {
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_vo;
@@ -3632,6 +3666,10 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
            DLIList<Curve*> created_curves;
            stat = split_shape_by_location(from_shape, (Curve*)curve, location, 
                                           created_curves);
+           if(new_tbs)
+             for(int ic=0; ic < created_curves.size(); ic++)
+               new_tbs->append(created_curves.get_and_step());
+
            curves.remove(curve);
            for(int ic = 0; ic < created_curves.size(); ic++)
              curves.append(CAST_TO(created_curves.get_and_step(), OCCCurve));
@@ -3653,7 +3691,11 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
           {
              Point* p = make_Point(*v);
              if(p)
+             {
                surface->add_hardpoint(CAST_TO(p, OCCPoint));
+               if(new_tbs)
+                 new_tbs->append(p);
+             }
              break;
           }
        }
@@ -3662,6 +3704,19 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
 
   shape_to_bodySM(shape_list, new_body_list);
   
+  DLIList<OCCSurface*> surfaces;
+  DLIList<OCCCurve*>   curves;
+  DLIList<OCCPoint*>   points;
+  for (int i = 0; i < new_body_list.size(); i++)
+  {
+    OCCBody * body = CAST_TO(new_body_list.get_and_step(), OCCBody);
+    body->get_all_surfaces(surfaces);
+    body->get_all_curves(curves);
+    body->get_all_points(points);
+  }
+
+  get_att_tbs(surfaces, curves, points, "COMPOSITE_GEOM", att_tbs);
+
   return stat;
 }
 
@@ -8262,19 +8317,139 @@ CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
 }  
 
 //================================================================================
-// Description: Creates a surface using a list of points, project to surface if
-//              given.
+// Description: Creates a surface using a list of vectors, project to surface if
+//              given. Those points are connected into a closed wire and then
+//              a surface is created on it.
 // Author     : Jane Hu
-// Date       : 03/02/09
+// Date       : 02/11
 //================================================================================
 CubitStatus OCCModifyEngine::create_surface( DLIList<CubitVector*>& vec_list, 
                                              BodySM *& new_body, 
-                                             Surface * ref_face_ptr,
-                                             CubitBoolean ) const
+                                             Surface * surface_ptr,
+                                             CubitBoolean project_points) const
 {
-   
-   return CUBIT_FAILURE;
+  int i;
+  CubitStatus stat;
+  DLIList<Point*> new_points; 
+  DLIList<CubitVector*> new_vec_list;
+  if (surface_ptr)
+  {
+    // Check the project_points option and do the necessary checks or projections.
+    if (project_points)
+    {
+      // Create a new list of points that are projected to the surface
+      vec_list.reset();
+      CubitVector *vec_ptr, new_vec;
+      for( i=0; i<vec_list.size(); i++ )
+      {
+        vec_ptr = vec_list.get_and_step();
+        stat = surface_ptr->closest_point( *vec_ptr, &new_vec );
+        if(stat)
+          new_vec_list.append(new CubitVector(new_vec) );
+        else
+        {
+          PRINT_ERROR("Can't project the %dth point onto surface \n"); 
+          for (int j = 0; j < new_vec_list.size(); j++)
+            delete new_vec_list.get_and_step();
+          return CUBIT_FAILURE;
+        }         
+      }
+    } 
+
+    else
+    {
+      // Make sure the points lie on the surface
+      vec_list.reset();
+      CubitVector loc_on_surf;
+      CubitVector *vec_ptr;
+      for( i=0; i<vec_list.size(); i++ )
+      {
+        vec_ptr = vec_list.get_and_step();
+        surface_ptr->closest_point( *vec_ptr, &loc_on_surf );
+
+        if (!vec_ptr->within_tolerance(loc_on_surf, GEOMETRY_RESABS))
+        {
+          PRINT_ERROR("all locations must lie on Surface\n" );
+          return CUBIT_FAILURE;
+        }
+      }
+      new_vec_list = vec_list;
+    }
+  }
+
+  // Make the surface in the solid modeller
+  else
+    new_vec_list = vec_list;
+
+  for( i=0; i<new_vec_list.size(); i++ )
+  {
+     CubitVector* vec_ptr = new_vec_list.get_and_step();
+     OCCPoint* point = new OCCPoint(*vec_ptr);
+     new_points.append( (Point*)point );
+  }
+
+  stat =  create_surface( new_points, new_body  );
+
+  if(project_points && surface_ptr)
+  {
+    for( i=0; i<new_vec_list.size(); i++ )
+    {
+      CubitVector *vec_ptr = new_vec_list.get_and_step();
+      delete vec_ptr;
+    }
+  }
+  return stat;
 }
+
+//================================================================================
+// Description: Creates a surface using a list of points.
+//              Those points are connected into a closed wire and then
+//              a surface is created on it.
+// Author     : Jane Hu
+// Date       : 02/11
+//================================================================================
+CubitStatus
+OCCModifyEngine::create_surface( DLIList<Point*>& points,
+                               BodySM *&new_body )const
+{
+  Point *start_point = points.get_and_step();
+  DLIList<Curve*> curve_list;
+  for(int i = 0; i < points.size(); i++)
+  {
+    CubitVector coord1 = start_point->coordinates();
+    Point *end_point = points.get_and_step();
+    CubitVector coord2 = end_point->coordinates();
+    if(coord1.within_tolerance( coord2, GEOMETRY_RESABS ) )
+    {
+       PRINT_ERROR( "Attempt to create a line between coincident points at (%f, %f, %f)\n",
+          coord1.x(), coord1.y(), coord1.z() );
+       for(int  j=0; j<curve_list.size(); j++ )
+       {
+         Curve* curve_ptr = curve_list.get_and_step();
+         OCCQueryEngine::instance()->delete_solid_model_entities( curve_ptr );
+       }
+       return CUBIT_FAILURE;
+    }
+
+    Curve* curve = make_Curve(start_point, end_point);
+    curve_list.append(curve);
+    start_point = end_point;
+  }
+
+  //make surface out of curves.
+  Surface* surf = make_Surface(BEST_FIT_SURFACE_TYPE, curve_list); 
+  OCCSurface* occ_surf;
+  if(surf)
+    occ_surf = CAST_TO(surf, OCCSurface);
+  else
+  {
+    PRINT_ERROR("Failed to create a surface from given points. \n");
+    return CUBIT_FAILURE;
+  }
+  new_body = occ_surf->my_body(); 
+  return CUBIT_SUCCESS; 
+}
+
 
 //================================================================================
 // Description: Creates a weld surface.
