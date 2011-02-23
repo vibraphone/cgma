@@ -10,7 +10,7 @@ if build_ACIS
 endif
 if build_OCC
   TESTS += $(BASE_TESTS:.engine=.occ)
-  AM_CPPFLAGS += -DCGM_OCC -I$(srcdir)/../OCC
+  AM_CPPFLAGS += -DCGM_OCC -I$(srcdir)/../OCC $(OCC_INC_FLAG)
 endif
 
 AM_CPPFLAGS += -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
