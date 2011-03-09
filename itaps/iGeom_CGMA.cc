@@ -1244,6 +1244,7 @@ iGeom_createTag (iGeom_Instance instance,
       this_size *= sizeof(double);
       break;
     case iBase_ENTITY_HANDLE:
+    case iBase_ENTITY_SET_HANDLE:
       this_size *= sizeof(iBase_EntityHandle);
       break;
     case iBase_BYTES:
@@ -1321,6 +1322,7 @@ iGeom_getTagSizeValues (iGeom_Instance instance,
       *tag_size /= sizeof(double);
       break;
     case iBase_ENTITY_HANDLE:
+    case iBase_ENTITY_SET_HANDLE:
       *tag_size /= sizeof(iBase_EntityHandle);
       break;
     case iBase_BYTES:
