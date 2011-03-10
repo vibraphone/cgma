@@ -1587,6 +1587,21 @@ iGeom_setEHArrData (iGeom_Instance instance,
                    err);
 }
 
+void
+iGeom_setESHArrData (iGeom_Instance instance,
+                     const iBase_EntityHandle *entity_handles,
+                     int entity_handles_size,
+                     iBase_TagHandle tag_handle,
+                     iBase_EntitySetHandle const *tag_values,
+                     int tag_values_size,
+                     int* err)
+{
+  iGeom_setArrData(instance, entity_handles, 
+                   entity_handles_size, tag_handle, 
+                   tag_values, sizeof(iBase_EntitySetHandle)*tag_values_size,
+                   err);
+}
+
 /**
  *   Allows the user to retrieve an array of tag values associated with
  *   a tag handle from an input array of gentity handles
