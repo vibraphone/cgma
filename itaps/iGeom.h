@@ -3236,9 +3236,13 @@ extern "C" {
 
     /**\brief  Set a tag value of arbitrary type on an entity set
      *
-     * Set a tag value of arbitrary type on an entity set.  Tag data is 
-     * passed as char* type,
-     * but really represents pointer to arbitrary data.
+     * Set a tag value of arbitrary type on an entity set. The tag data
+     * is passed as void*. tag_value_size specifies the size of the memory
+     * pointed to by tag_value in terms of bytes. Applications are free to
+     * use this function to set data of any type, not just iBase_BYTES.
+     * However, in all cases, the size specified by tag_value_size is
+     * always in terms of bytes.
+     *
      * \param instance iGeom instance handle
      * \param entity_set_handle Entity set on which tag is being set
      * \param tag_handle Tag being set on an entity set
@@ -3248,9 +3252,9 @@ extern "C" {
      */
   void iGeom_setEntSetData( iGeom_Instance instance,
                             iBase_EntitySetHandle entity_set_handle,
-                            iBase_TagHandle tag_handle,
-                            const char* tag_value,
-                            int tag_value_size, 
+                            const iBase_TagHandle tag_handle,
+                            const void* tag_value,
+                            const int tag_value_size,
                             int *err );
 
     /**\brief  Set a tag value of integer type on an entity set
@@ -3298,22 +3302,44 @@ extern "C" {
                               iBase_EntityHandle tag_value, 
                               int *err );
 
+    /**\brief  Set a tag value of entity set handle type on an entity set
+     *
+     * Set a tag value of entity set handle type on an entity set.
+     * \param instance iGeom instance handle
+     * \param entity_set Entity set on which tag is being set
+     * \param tag_handle Tag being set on an entity set
+     * \param tag_value Tag value being set on entity set
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_setEntSetESHData( iGeom_Instance instance,
+                               iBase_EntitySetHandle entity_set,
+                               iBase_TagHandle tag_handle,
+                               iBase_EntitySetHandle tag_value, 
+                               int *err );
+
     /**\brief  Get the value of a tag of arbitrary type on an entity set
      *
      * Get the value of a tag of arbitrary type on an entity set.  Tag data 
-     * is passed back as char* type, but really represents arbitrary data.
+     * is returned back as void*. tag_value_size specifies the size of the
+     * memory pointed to by tag_value in terms of bytes. Applications may
+     * use this function to get data of any type, not just iBase_BYTES.
+     * However because this function supports data of arbitrary type,
+     * in all cases the size specified by tag_value_size is always in terms
+     * of bytes.
+     *
      * \param instance iGeom instance handle
      * \param entity_set_handle Entity set on which tag is being set
      * \param tag_handle Tag being set on an entity set
      * \param *tag_value Pointer to tag data array being queried
      * \param *tag_value_allocated Pointer to tag data array allocated size
-     * \param *tag_value_size Pointer to tag data array occupied size
+     * \param *tag_value_size Pointer to occupied size in bytes of tag data
+     *        array
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getEntSetData( iGeom_Instance instance,
                             iBase_EntitySetHandle entity_set_handle,
                             iBase_TagHandle tag_handle,
-                            char** tag_value,
+                            void** tag_value,
                             int* tag_value_allocated,
                             int* tag_value_size, 
                             int *err );
@@ -3363,6 +3389,21 @@ extern "C" {
                               iBase_EntityHandle *out_data, 
                               int *err );
 
+    /**\brief  Get the value of a tag of entity set handle type on an entity set
+     *
+     * Get the value of a tag of entity set handle type on an entity set.
+     * \param instance iGeom instance handle
+     * \param entity_set Entity set on which tag is being set
+     * \param tag_handle Tag being set on an entity set
+     * \param *out_data Pointer to tag value returned from function
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_getEntSetESHData( iGeom_Instance instance,
+                              iBase_EntitySetHandle entity_set,
+                              iBase_TagHandle tag_handle,
+                              iBase_EntitySetHandle *out_data, 
+                              int *err );
+
     /**\brief  Get all the tags associated with a specified entity set
      *
      * Get all the tags associated with a specified entity set
@@ -3398,22 +3439,30 @@ extern "C" {
     /**\brief  Get tag values of arbitrary type for an array of entities
      *
      * Get tag values of arbitrary type for an array of entities.  Tag data 
-     * is returned as char* type, but really represents arbitrary data.
+     * is returned as void*. tag_values_size specifies the size of the
+     * memory pointed to by tag_values in terms of bytes. Applications may
+     * use this function to get data of any type, not just iBase_BYTES.
+     * However, because this function supports data of arbitrary type, in
+     * all cases the size specified by tag_values_size always in terms of
+     * bytes.
+     *
      * \param instance iGeom instance handle
      * \param entity_handles Entity array on which tag is being set
      * \param entity_handles_size Number of entities in array
      * \param tag_handle Tag being set on an entity
      * \param *tag_values Pointer to tag data array being returned from 
-     *        function
+     *        function. Note that the implicit INTERLEAVED storage
+     *        order rule applies (see section ITAPS Storage Orders)
      * \param tag_values_allocated Pointer to allocated size of tag data array
-     * \param tag_values_size Pointer to occupied size of tag data array
+     * \param tag_values_size Pointer to occupied size in bytes of tag data
+     *        array
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getArrData( iGeom_Instance instance,
                          const iBase_EntityHandle* entity_handles,
                          int entity_handles_size,
                          iBase_TagHandle tag_handle,
-                         char** tag_values,
+                         void** tag_values,
                          int* tag_values_allocated,
                          int* tag_values_size, 
                          int *err );
@@ -3484,23 +3533,54 @@ extern "C" {
                            int* tag_value_size, 
                            int *err );
 
-    /**\brief  Set tag values of arbitrary type on an array of entities
+    /**\brief  Get tag values of entity set handle type for an array of entities
      *
-     * Set tag values of arbitrary type on an array of entities.  Tag data is 
-     * passed as char* type, but really represents pointer to arbitrary data.
+     * Get tag values of entity set handle type for an array of entities.
      * \param instance iGeom instance handle
      * \param entity_handles Entity array on which tag is being set
      * \param entity_handles_size Number of entities in array
      * \param tag_handle Tag being set on an entity
-     * \param tag_values Pointer to tag data being set on entity
-     * \param tag_values_size Size in total bytes of tag data
+     * \param *tag_value Pointer to tag data array being returned from 
+     *        function
+     * \param tag_value_allocated Pointer to allocated size of tag data array
+     * \param tag_value_size Pointer to occupied size of tag data array
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_getESHArrData( iGeom_Instance instance,
+                            const iBase_EntityHandle* entity_handles,
+                            int entity_handles_size,
+                            iBase_TagHandle tag_handle,
+                            iBase_EntitySetHandle** tag_value,
+                            int* tag_value_allocated,
+                            int* tag_value_size, 
+                            int *err );
+
+
+    /**\brief  Set tag values of arbitrary type on an array of entities
+     *
+     * Set tag values of arbitrary type on an array of entities.  Tag data
+     * is passed as void*. tag_values_size specifies the size of the
+     * memory pointed to by tag_values in terms of bytes. Applications may
+     * use this function to set data of any type, not just iBase_BYTES.
+     * However, because this function supports data of arbitrary type, in all
+     * cases the size specified by tag_values_size is always in terms of
+     * bytes.
+     *
+     * \param instance iGeom instance handle
+     * \param entity_handles Entity array on which tag is being set
+     * \param entity_handles_size Number of entities in array
+     * \param tag_handle Tag being set on an entity
+     * \param tag_values Pointer to tag data being set on entity. Note that
+     *        the implicit INTERLEAVED storage order rule applies (see section
+     *        ITAPS Storage Orders)
+     * \param tag_values_size Size in bytes of tag data
      * \param *err Pointer to error type returned from function
      */
   void iGeom_setArrData( iGeom_Instance instance,
                          const iBase_EntityHandle* entity_handles,
                          int entity_handles_size,
                          iBase_TagHandle tag_handle,
-                         const char* tag_values,
+                         const void* tag_values,
                          int tag_values_size, 
                          int *err );
 
@@ -3562,6 +3642,26 @@ extern "C" {
                            int tag_values_size, 
                            int *err );
 
+    /**\brief  Set tag values of entity set handle type on an array of entities
+     *
+     * Set tag values of entity set handle type on an array of entities.
+     * \param instance iGeom instance handle
+     * \param entity_handles Entity array on which tag is being set
+     * \param entity_handles_size Number of entities in array
+     * \param tag_handle Tag being set on an entity
+     * \param tag_values Pointer to tag data being set on entities
+     * \param tag_values_size Size in total number of entity handles of tag 
+     *        data
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_setESHArrData( iGeom_Instance instance,
+                            const iBase_EntityHandle* entity_handles,
+                            int entity_handles_size,
+                            iBase_TagHandle tag_handle,
+                            const iBase_EntitySetHandle* tag_values,
+                            int tag_values_size, 
+                            int *err );
+
     /**\brief  Remove a tag value from an array of entities
      *
      * Remove a tag value from an array of entities
@@ -3580,19 +3680,26 @@ extern "C" {
     /**\brief  Get the value of a tag of arbitrary type on an entity
      *
      * Get the value of a tag of arbitrary type on an entity.  Tag data 
-     * is passed back as char* type, but really represents arbitrary data.
+     * is passed back as void*. tag_value_size specifies the size of the
+     * memory pointed to by tag_value in terms of bytes. Applications may
+     * use this function to get data of any type, not just iBase_BYTES.
+     * However, because this function supports arbitrary type, in all
+     * cases the size specified by tag_value_size is always in terms of
+     * bytes.
+     *
      * \param instance iGeom instance handle
      * \param entity_handle Entity on which tag is being set
      * \param tag_handle Tag being set on an entity
      * \param *tag_value Pointer to tag data array being queried
      * \param *tag_value_allocated Pointer to tag data array allocated size
-     * \param *tag_value_size Pointer to tag data array occupied size
+     * \param *tag_value_size Pointer to occupied size in bytes of tag data
+     *        array
      * \param *err Pointer to error type returned from function
      */
   void iGeom_getData( iGeom_Instance instance,
                       iBase_EntityHandle entity_handle,
                       iBase_TagHandle tag_handle,
-                      char** tag_value,
+                      void** tag_value,
                       int *tag_value_allocated,
                       int *tag_value_size, 
                       int *err );
@@ -3642,10 +3749,31 @@ extern "C" {
                         iBase_EntityHandle *out_data, 
                         int *err );
 
+    /**\brief  Get the value of a tag of entity set handle type on an entity
+     *
+     * Get the value of a tag of entity set handle type on an entity.
+     * \param instance iGeom instance handle
+     * \param entity_handle Entity on which tag is being set
+     * \param tag_handle Tag being set on an entity
+     * \param *out_data Pointer to tag value returned from function
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_getESHData( iGeom_Instance instance,
+                         iBase_EntityHandle entity_handle,
+                         iBase_TagHandle tag_handle,
+                         iBase_EntitySetHandle *out_data, 
+                         int *err );
+
     /**\brief  Set a tag value of arbitrary type on an entity
      *
-     * Set a tag value of arbitrary type on an entity.  Tag data is 
-     * passed as char* type, but really represents pointer to arbitrary data.
+     * Set a tag value of arbitrary type on an entity.  Tag data
+     * is passed as void*. tag_value_size specifies the size of the
+     * memory pointed to by tag_value in terms of bytes. Applications may
+     * use this function to set data of any type, not just iBase_BYTES.
+     * However, because this function supports data of arbitrary type, in
+     * all cases the size specified by tag_value_size is always in terms
+     * of bytes.
+     *
      * \param instance iGeom instance handle
      * \param entity_handle Entity on which tag is being set
      * \param tag_handle Tag being set on an entity
@@ -3656,7 +3784,7 @@ extern "C" {
   void iGeom_setData( iGeom_Instance instance,
                       iBase_EntityHandle entity_handle,
                       iBase_TagHandle tag_handle,
-                      const char* tag_value,
+                      const void* tag_value,
                       int tag_value_size, 
                       int *err );
 
@@ -3704,6 +3832,21 @@ extern "C" {
                         iBase_TagHandle tag_handle,
                         iBase_EntityHandle tag_value, 
                         int *err );
+
+    /**\brief  Set a tag value of entity set handle type on an entity
+     *
+     * Set a tag value of entity set handle type on an entity.
+     * \param instance iGeom instance handle
+     * \param entity_handle Entity on which tag is being set
+     * \param tag_handle Tag being set on an entity
+     * \param tag_value Tag value being set on entity
+     * \param *err Pointer to error type returned from function
+     */
+  void iGeom_setESHData( iGeom_Instance instance,
+                         iBase_EntityHandle entity_handle,
+                         iBase_TagHandle tag_handle,
+                         iBase_EntitySetHandle tag_value, 
+                         int *err );
 
     /**\brief  Get all the tags associated with a specified entity handle
      *

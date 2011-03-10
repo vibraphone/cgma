@@ -450,7 +450,7 @@ bool tag_get_set_test(iGeom_Instance geom)
     
     iGeom_setArrData( geom, ARRAY_IN( gentity_handles ),
                       this_tag, 
-                      (char*)&tag_vals[0], tag_vals.size()*sizeof(int),
+                      &tag_vals[0], tag_vals.size()*sizeof(int),
                       &err );
     CHECK( "ERROR : can't set tag on entities" );
   }
@@ -462,14 +462,16 @@ bool tag_get_set_test(iGeom_Instance geom)
     iGeom_getEntities( geom, root_set, dim, ARRAY_INOUT( gentity_handles ), &err );
     int num_ents = gentity_handles.size();
     
-    SimpleArray<char> tag_vals;
+    std::vector<int> tag_vals( num_ents );
+    void* vals_ptr = &tag_vals[0];
+    int vals_size = tag_vals.size(), vals_alloc = tag_vals.size()*sizeof(int);
+
     iGeom_getArrData( geom, ARRAY_IN( gentity_handles ), this_tag, 
-                      ARRAY_INOUT( tag_vals ), &err );
+                      &vals_ptr, &vals_alloc, &vals_size, &err );
     CHECK( "ERROR : can't get tag on entities" );
     
-    int* tag_ptr = (int*)(&tag_vals[0]);
     for (int i = 0; i < num_ents; ++i)
-      get_sum += tag_ptr[i];
+      get_sum += tag_vals[i];
   }
   
   if (get_sum != sum) {
@@ -1222,7 +1224,7 @@ static int check_firmness( iGeom_Instance geom,
   const int firmness_size = 4;
   std::vector<char> firmness(firmness_size * entities.size());
 
-  char* byte_ptr = &firmness[0];
+  void* byte_ptr = &firmness[0];
   int err, junk1 = firmness.size(), junk2 = entities.size()*firmness_size;
   iGeom_getArrData( geom, &entities[0], entities.size(), firmness_tag, &byte_ptr, &junk1, &junk2, &err ); 
   if (iBase_SUCCESS != err)
@@ -1258,7 +1260,7 @@ static int count_num_with_tag( iGeom_Instance geom,
   
   int success_count = 0;
   for (size_t i = 0; i < ents.size(); ++i) {
-    char* ptr = &data[0];
+    void* ptr = &data[0];
     int junk1 = bytes, junk2;
     iGeom_getData( geom, ents[i], tag, &ptr, &junk1, &junk2, &err );
     if (iBase_TAG_NOT_FOUND == err)
