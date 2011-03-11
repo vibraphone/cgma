@@ -1236,6 +1236,9 @@ iGeom_createTag (iGeom_Instance instance,
     case iBase_ENTITY_HANDLE:
       this_size *= sizeof(iBase_EntityHandle);
       break;
+    case iBase_ENTITY_SET_HANDLE:
+      this_size *= sizeof(iBase_EntitySetHandle);
+      break;
     case iBase_BYTES:
       break;
   }
@@ -1311,6 +1314,7 @@ iGeom_getTagSizeValues (iGeom_Instance instance,
       *tag_size /= sizeof(double);
       break;
     case iBase_ENTITY_HANDLE:
+    case iBase_ENTITY_SET_HANDLE:
       *tag_size /= sizeof(iBase_EntityHandle);
       break;
     case iBase_BYTES:
@@ -1410,11 +1414,12 @@ iGeom_getArrData (iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle const *entity_handles,
                   int entity_handles_size,
                   /*in*/ iBase_TagHandle tag_handle,
-                  /*inout*/ char **tag_value,
+                  /*inout*/ void **tag_value_tmp,
                   int *tag_value_allocated,
                   int *tag_value_size,
                   int* err)
 {
+  char **tag_value = reinterpret_cast<char**>(tag_value_tmp);
   iBase_ErrorType retval = TM->getArrData(reinterpret_cast<RefEntity*const*>(entity_handles),
                                           entity_handles_size,
                                           TAG_HANDLE(tag_handle), 
@@ -1437,7 +1442,7 @@ iGeom_getIntArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(int);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<char**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1460,7 +1465,7 @@ iGeom_getDblArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(double);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<char**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1482,7 +1487,7 @@ iGeom_getEHArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntityHandle);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<char**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1491,14 +1496,37 @@ iGeom_getEHArrData (iGeom_Instance instance,
 }
 
 void
+iGeom_getESHArrData (iGeom_Instance instance,
+                     /*in*/ iBase_EntityHandle const *entity_handles,
+                     int entity_handles_size,
+                     /*in*/ iBase_TagHandle tag_handle,
+                     /*inout*/ iBase_EntitySetHandle **tag_value,
+                     int *tag_value_allocated,
+                     int *tag_value_size,
+                     int* err)
+{
+  int tag_value_allocated_tmp = *tag_value_allocated * sizeof(iBase_EntitySetHandle);
+  int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntitySetHandle);
+  iGeom_getArrData(instance, entity_handles,
+                   entity_handles_size, tag_handle,
+                   reinterpret_cast<void**>(tag_value),
+                   &tag_value_allocated_tmp,
+                   &tag_value_size_tmp,
+                   err);
+  *tag_value_allocated = tag_value_allocated_tmp / sizeof(iBase_EntitySetHandle);
+  *tag_value_size = tag_value_size_tmp / sizeof(iBase_EntitySetHandle);
+}
+
+void
 iGeom_setArrData (iGeom_Instance instance,
                   const iBase_EntityHandle *entity_handles,
                   int entity_handles_size,
                   /*in*/ iBase_TagHandle tag_handle,
-                  /*in*/ const char *tag_value,
+                  /*in*/ const void *tag_value_tmp,
                   const int tag_value_size,
                   int* err)
 {
+  const char *tag_value = reinterpret_cast<const char*>(tag_value_tmp);
   iBase_ErrorType retval = TM->setArrData(ENTITY_HANDLE_CONST_ARRAY(entity_handles),
                                           entity_handles_size,
                                           TAG_HANDLE(tag_handle), 
@@ -1517,9 +1545,7 @@ iGeom_setIntArrData (iGeom_Instance instance,
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
-                   reinterpret_cast<const char*>(tag_value), 
-                   sizeof(int)*tag_value_size,
-                   err);
+                   tag_value, sizeof(int)*tag_value_size, err);
 }
 
 void
@@ -1533,9 +1559,7 @@ iGeom_setDblArrData (iGeom_Instance instance,
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
-                   reinterpret_cast<const char*>(tag_value), 
-                   sizeof(double)*tag_value_size,
-                   err);
+                   tag_value, sizeof(double)*tag_value_size, err);
 }
 
 void
@@ -1549,8 +1573,22 @@ iGeom_setEHArrData (iGeom_Instance instance,
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
-                   reinterpret_cast<const char*>(tag_values), 
-                   sizeof(iBase_EntityHandle)*tag_values_size,
+                   tag_values, sizeof(iBase_EntityHandle)*tag_values_size,
+                   err);
+}
+
+void
+iGeom_setESHArrData (iGeom_Instance instance,
+                     const iBase_EntityHandle *entity_handles,
+                     int entity_handles_size,
+                     iBase_TagHandle tag_handle,
+                     iBase_EntitySetHandle const *tag_values,
+                     int tag_values_size,
+                     int* err)
+{
+  iGeom_setArrData(instance, entity_handles,
+                   entity_handles_size, tag_handle,
+                   tag_values, sizeof(iBase_EntitySetHandle)*tag_values_size,
                    err);
 }
 
@@ -1562,11 +1600,12 @@ void
 iGeom_getData (iGeom_Instance instance,
                /*in*/ iBase_EntityHandle entity_handle,
                /*in*/ iBase_TagHandle tag_handle,
-               /*inout*/ char **tag_value,
+               /*inout*/ void **tag_value_tmp,
                int *tag_value_allocated,
                int *tag_value_size,
                int* err)
 {
+  char **tag_value = reinterpret_cast<char **>(tag_value_tmp);
   RefEntity *tmp_entity = ENTITY_HANDLE(entity_handle);
   iBase_ErrorType retval = TM->getArrData(&tmp_entity, 1, TAG_HANDLE(tag_handle), 
                                           ARRAY_INOUT(tag_value));
@@ -1580,7 +1619,7 @@ iGeom_getIntData (iGeom_Instance instance,
                   int* data_out,
                   int* err ) 
 {
-  char *val_ptr = reinterpret_cast<char*>(data_out);
+  void *val_ptr = data_out;
   int val_size = sizeof(int);
   iGeom_getArrData(instance, &entity_handle, 1, 
                    tag_handle, &val_ptr, &val_size, &val_size, err);
@@ -1593,7 +1632,7 @@ iGeom_getDblData (iGeom_Instance instance,
                   double* data_out,
                   int* err ) 
 {
-  char *val_ptr = reinterpret_cast<char*>(data_out);
+  void *val_ptr = data_out;
   int val_size = sizeof(double);
   iGeom_getArrData(instance, &entity_handle, 1, 
                    tag_handle, &val_ptr, &val_size, &val_size, err);
@@ -1606,9 +1645,22 @@ iGeom_getEHData (iGeom_Instance instance,
                  iBase_EntityHandle* data_out,
                  int* err ) 
 {
-  char *val_ptr = reinterpret_cast<char*>(data_out);
+  void *val_ptr = data_out;
   int val_size = sizeof(iBase_EntityHandle);
   iGeom_getArrData(instance, &entity_handle, 1, 
+                   tag_handle, &val_ptr, &val_size, &val_size, err);
+}
+
+void
+iGeom_getESHData (iGeom_Instance instance,
+                  iBase_EntityHandle entity_handle,
+                  iBase_TagHandle tag_handle,
+                  iBase_EntitySetHandle* data_out,
+                  int* err )
+{
+  void *val_ptr = data_out;
+  int val_size = sizeof(iBase_EntitySetHandle);
+  iGeom_getArrData(instance, &entity_handle, 1,
                    tag_handle, &val_ptr, &val_size, &val_size, err);
 }
 
@@ -1620,10 +1672,11 @@ void
 iGeom_setData (iGeom_Instance instance,
                /*in*/ iBase_EntityHandle entity_handle,
                /*in*/ iBase_TagHandle tag_handle,
-               /*in*/ const char *tag_value,
+               /*in*/ const void *tag_value_tmp,
                int tag_value_size,
                int* err)
 {
+  const char *tag_value = reinterpret_cast<const char *>(tag_value_tmp);
   RefEntity *tmp_entity = ENTITY_HANDLE(entity_handle);
   iBase_ErrorType retval = TM->setArrData(&tmp_entity, 1, 
                                           TAG_HANDLE(tag_handle), 
@@ -1639,10 +1692,7 @@ iGeom_setIntData (iGeom_Instance instance,
                   int* err ) 
 {
   iGeom_setArrData(instance, &entity_handle, 1, 
-                   tag_handle, 
-                   reinterpret_cast<const char*>(&tag_value), 
-                   sizeof(int),
-                   err);
+                   tag_handle, &tag_value, sizeof(int), err);
 }
 
 void
@@ -1653,10 +1703,7 @@ iGeom_setDblData (iGeom_Instance instance,
                   int* err ) 
 {
   iGeom_setArrData(instance, &entity_handle, 1, 
-                   tag_handle, 
-                   reinterpret_cast<const char*>(&tag_value), 
-                   sizeof(double),
-                   err);
+                   tag_handle, &tag_value, sizeof(double), err);
 }
 
 void
@@ -1667,8 +1714,18 @@ iGeom_setEHData (iGeom_Instance instance,
                  int* err ) 
 {
   iGeom_setArrData(instance, &entity_handle, 1, 
-                   tag_handle, reinterpret_cast<const char*>(&tag_value), 
-                   sizeof(iBase_EntityHandle), err);
+                   tag_handle, &tag_value, sizeof(iBase_EntityHandle), err);
+}
+
+void
+iGeom_setESHData (iGeom_Instance instance,
+                  /*in*/ iBase_EntityHandle entity_handle,
+                  /*in*/ iBase_TagHandle tag_handle,
+                  /*in*/ iBase_EntitySetHandle tag_value,
+                  int* err )
+{
+  iGeom_setArrData(instance, &entity_handle, 1,
+                   tag_handle, &tag_value, sizeof(iBase_EntitySetHandle), err);
 }
 
 /**
@@ -1715,11 +1772,12 @@ void
 iGeom_getEntSetData (iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
                      /*in*/ iBase_TagHandle tag_handle,
-                     /*inout*/ char **tag_value,
+                     /*inout*/ void **tag_value_tmp,
                      int *tag_value_allocated,
                      int *tag_value_size,
                      int* err)
 {
+  char **tag_value = reinterpret_cast<char **>(tag_value_tmp);
     // have to go through RefEntity* so that RefEntity** gets set right
   RefEntity *tmp_entity = SET_HANDLE(entity_set);
   iBase_ErrorType retval = TM->getArrData(&tmp_entity, 1, TAG_HANDLE(tag_handle), 
@@ -1735,7 +1793,7 @@ iGeom_getEntSetIntData (iGeom_Instance instance,
                         int* err ) 
 {
   int tag_size = sizeof(int);
-  char* data_ptr = reinterpret_cast<char*>(tag_ptr);
+  void* data_ptr = tag_ptr;
   iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr, 
                       &tag_size, &tag_size, err);
 }
@@ -1748,7 +1806,7 @@ iGeom_getEntSetDblData (iGeom_Instance instance,
                         int* err ) 
 {
   int tag_size = sizeof(double);
-  char* data_ptr = reinterpret_cast<char*>(tag_ptr);
+  void* data_ptr = tag_ptr;
   iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr, 
                       &tag_size, &tag_size, err);
 }
@@ -1760,8 +1818,21 @@ iGeom_getEntSetEHData (iGeom_Instance instance,
                        int* err ) 
 {
   int tag_size = sizeof(iBase_EntityHandle);
-  char* data_ptr = reinterpret_cast<char*>(tag_ptr);
+  void* data_ptr = tag_ptr;
   iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr, 
+                      &tag_size, &tag_size, err);
+}
+
+void
+iGeom_getEntSetESHData (iGeom_Instance instance,
+                        /*in*/ iBase_EntitySetHandle entity_set,
+                        /*in*/ iBase_TagHandle tag_handle,
+                        iBase_EntitySetHandle* tag_ptr,
+                        int* err )
+{
+  int tag_size = sizeof(iBase_EntitySetHandle);
+  void* data_ptr = tag_ptr;
+  iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr,
                       &tag_size, &tag_size, err);
 }
 
@@ -1773,10 +1844,11 @@ void
 iGeom_setEntSetData (iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
                      /*in*/ iBase_TagHandle tag_handle,
-                     /*in*/ const char *tag_value,
+                     /*in*/ const void *tag_value_tmp,
                      int tag_value_size,
                      int* err)
 {
+  const char *tag_value = reinterpret_cast<const char *>(tag_value_tmp);
     // have to go through RefEntity* so that RefEntity** gets set right
   RefEntity *tmp_entity = SET_HANDLE(entity_set);
   iBase_ErrorType retval = TM->setArrData(&tmp_entity, 1, TAG_HANDLE(tag_handle), 
@@ -1792,9 +1864,7 @@ iGeom_setEntSetIntData (iGeom_Instance instance,
                         int* err ) 
 {
   iGeom_setEntSetData(instance, entity_set, tag_handle, 
-                      reinterpret_cast<const char*>(&tag_value), 
-                      sizeof(int),
-                      err);
+                      &tag_value, sizeof(int), err);
 }
 
 void
@@ -1805,8 +1875,7 @@ iGeom_setEntSetDblData (iGeom_Instance instance,
                         int* err ) 
 {
   iGeom_setEntSetData(instance, entity_set, tag_handle, 
-                      reinterpret_cast<const char*>(&tag_value),
-                      sizeof(double), err);
+                      &tag_value, sizeof(double), err);
 }
 
 void
@@ -1817,8 +1886,19 @@ iGeom_setEntSetEHData (iGeom_Instance instance,
                        int* err ) 
 {
   iGeom_setEntSetData(instance, entity_set, tag_handle, 
-                      reinterpret_cast<const char*>(&tag_value), 
+                      &tag_value,
                       sizeof(iBase_EntityHandle), err);
+}
+
+void
+iGeom_setEntSetESHData (iGeom_Instance instance,
+                        /*in*/ iBase_EntitySetHandle entity_set,
+                        /*in*/ iBase_TagHandle tag_handle,
+                        /*in*/ iBase_EntitySetHandle tag_value,
+                        int* err )
+{
+  iGeom_setEntSetData(instance, entity_set, tag_handle,
+                      &tag_value, sizeof(iBase_EntitySetHandle), err);
 }
 
 void
