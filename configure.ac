@@ -22,6 +22,8 @@ AC_PROG_SED
 AC_C_BIGENDIAN( [], [AM_CPPFLAGS="$AM_CPPFLAGS -DLITTLE_ENDIAN=BYTE_ORDER"] )
 FATHOM_COMPILER_FLAGS
 
+FATHOM_CHECK_CXX_WORKS([], [AC_MSG_ERROR([Cannot build without C++ compiler])])
+
 ################################################################################
 #                Fortran Stuff for ITAPS C bindings
 ################################################################################
