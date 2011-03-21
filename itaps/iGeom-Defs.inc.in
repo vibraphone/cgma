@@ -8,9 +8,9 @@ IGEOM_DEFINES = @HAVE_ACIS_DEF@ @HAVE_OCC_DEF@
 IGEOM_CPPFLAGS = $(IGEOM_DEFINES) $(IGEOM_INCLUDES)
 
 # The useful flags we are providing
-IGEOM_LDFLAGS = $(IGEOM_CXX_LDFLAGS) @CGM_EXT_LDFLAGS@ @CGM_CXX_LINKFLAGS@
+IGEOM_LDFLAGS = $(IGEOM_CXX_LDFLAGS) @CGM_EXT_LDFLAGS@
 IGEOM_LTFLAGS = $(IGEOM_CXX_LTFLAGS) @CGM_EXT_LTFLAGS@ 
-IGEOM_LIBS    = $(IGEOM_LDFLAGS) -liGeom -lcgm @CGM_EXT_LIBS@ @CGM_CXX_LIBS@
+IGEOM_LIBS    = $(IGEOM_LDFLAGS) -liGeom -lcgm @CGM_EXT_LIBS@
 
 # These are overridden after this file in installed
 IGEOM_CXX_LDFLAGS = -L@abs_top_builddir@/.libs -L@abs_builddir@/.libs
