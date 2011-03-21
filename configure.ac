@@ -10,8 +10,12 @@ m4_ifdef([AM_SILENT_RULES],
  [AM_INIT_AUTOMAKE([foreign -Wall])])
 AC_DISABLE_SHARED
 
+AC_ARG_ENABLE([fortran],[AC_HELP_STRING([--disable-fortran],
+  [No Fortran name mangling in ITAPS C headers])],
+  [ENABLE_FORTRAN=$enableval],[ENABLE_FORTRAN=yes])
+
 EXTRA_GNU_FLAGS="-Wall -pipe -pedantic"
-FATHOM_CHECK_COMPILERS
+FATHOM_CHECK_COMPILERS([yes],[yes],[$ENABLE_FORTRAN])
 AC_PROG_LIBTOOL
 LIBS="-lm"
 AC_PROG_SED
@@ -21,14 +25,14 @@ FATHOM_COMPILER_FLAGS
 ################################################################################
 #                Fortran Stuff for ITAPS C bindings
 ################################################################################
-if test "x" != "x$FC"; then
+if test "xyes" = "x$ENABLE_FORTRAN" && test "x" != "x$FC"; then
   AC_FC_WRAPPERS
 fi
 
 ################################################################################
 #                Create libtool script
 ################################################################################
-# We need the libtool script both for the calls to the ITAPS_LIBTOOL_VAR
+# We need the libtool script both for the calls to the FATHOM_LIBTOOL_VAR
 # macro and for us in testing for ACIS libraries.  If we're using a newer
 # version of libtool, the script normally isn't generated until AC_OUTPUT
 # at the end of the configure script.  Ask that it be created now instead.
@@ -38,8 +42,8 @@ m4_ifdef([LT_OUTPUT],[LT_OUTPUT])
 ################################################################################
 #                              Extract libtool config
 ################################################################################
-ITAPS_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
-ITAPS_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
+FATHOM_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
+FATHOM_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
 AC_SUBST(CGM_CXX_LINKFLAGS)
 AC_SUBST(CGM_CXX_LIBS)
 
