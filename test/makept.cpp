@@ -10,6 +10,7 @@
 #undef NDEBUG
 #include <cassert>
 
+#include "GeometryModifyEngine.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "CubitMessage.hpp"
@@ -422,7 +423,7 @@ CubitStatus make_Point()
   }
 
   RefFace* new_face2 = gmti->make_RefFace(PLANE_SURFACE_TYPE, 
-                         *ref_edge_list, ref_face, CUBIT_TRUE);
+                         *ref_edge_list, CUBIT_TRUE, new_face, CUBIT_TRUE);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -542,6 +543,18 @@ CubitStatus make_Point()
                                           vertex2, list);
   d = new_edge_1->measure();
   assert(fabs(d - 28.5)<0.01);
+
+  //Spline with points and tangents
+  list.insert_first(&vertex1->coordinates());
+  list.append(&vertex2->coordinates());
+
+  DLIList<CubitVector*> tangents;
+  for (int i = 0; i< 6; i++)
+    tangents.append(NULL);
+
+  GeometryModifyEngine* gme = gmti->get_engine(new_edge_1);
+  Curve* new_curve = gme->make_Curve(list, tangents);
+  RefEdge * new_edge_11 = gti->make_free_RefEdge(new_curve);
 
   //straight line
   RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,

@@ -295,6 +295,15 @@ void OCCLump::get_parents_virt(DLIList<TopologyBridge*> &bodies)
     bodies.append(myBodyPtr);
 }
 
+BodySM* OCCLump::get_body() const
+{
+  if(mySheetSurface)
+    return mySheetSurface->my_body();
+  if(myShell)
+    return myShell->my_body();
+  return myBodyPtr;
+}
+
 void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)
 {
   if (mySheetSurface)

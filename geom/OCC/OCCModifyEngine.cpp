@@ -131,6 +131,7 @@
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
 #include "OCCAttribSet.hpp"
+#include "OCCHistory.hpp"
 #include "CubitFileIOWrapper.hpp"
 #include "Body.hpp"
 #include "GfxDebug.hpp"
@@ -1737,6 +1738,17 @@ BodySM* OCCModifyEngine::planar_sheet ( const CubitVector& p1,
 //===============================================================================
 BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 {
+  OCCHistory history_object;
+  if( GeometryQueryTool::instance()->history().is_tracking() )
+  {
+    history_object.highLevelCopying = true;
+    DLIList<TopologyBridge*> my_bridges(1);
+    TopologyBridge *tb = CAST_TO( bodyPtr, TopologyBridge );
+    my_bridges.append( tb );
+    OCCModifyEngine::instance()->start_tracking_history( my_bridges, history_object );
+  }
+
+  BodySM* new_body = NULL;
   OCCBody* occ_body = CAST_TO(bodyPtr, OCCBody);
   if (!occ_body)
   {
@@ -1757,13 +1769,13 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
       BRepBuilderAPI_Copy api_copy(*shell);
       TopoDS_Shape newShape = api_copy.ModifiedShape(*shell);
       TopoDS_Shell newShell = TopoDS::Shell(newShape);
-      return OCCQueryEngine::instance()->populate_topology_bridge(newShell, CUBIT_TRUE)->my_body();
+      new_body = OCCQueryEngine::instance()->populate_topology_bridge(newShell, CUBIT_TRUE)->my_body();
     }
  
     DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
     assert(surfaces.size() < 2);
     
-    for(int i = 0 ; i < surfaces.size(); i++)
+    for(int i = 0 ; !new_body && i < surfaces.size(); i++)
     {
       Surface* surface = make_Surface(surfaces.get_and_step());
       if (surface == NULL)
@@ -1773,22 +1785,25 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
       }
 
       OCCSurface* occ_surf = CAST_TO(surface, OCCSurface);
-      return occ_surf->my_body();
+      new_body = occ_surf->my_body();
     }
 
     //single lump body
-    Lump *lump = occ_body->lumps().get();
-    TopoDS_Solid solid = *(CAST_TO(lump, OCCLump)->get_TopoDS_Solid());
-    BRepBuilderAPI_Copy api_copy(solid);
-    TopoDS_Shape newShape = api_copy.ModifiedShape(solid);
-    TopoDS_Solid newSolid = TopoDS::Solid(newShape);
-    lump = OCCQueryEngine::instance()->populate_topology_bridge(newSolid,
+    if (!new_body)
+    {
+      Lump *lump = occ_body->lumps().get();
+      TopoDS_Solid solid = *(CAST_TO(lump, OCCLump)->get_TopoDS_Solid());
+      BRepBuilderAPI_Copy api_copy(solid);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(solid);
+      TopoDS_Solid newSolid = TopoDS::Solid(newShape);
+      lump = OCCQueryEngine::instance()->populate_topology_bridge(newSolid,
                                                         CUBIT_TRUE);
 
-    return CAST_TO(lump, OCCLump)->get_body();
+      new_body = CAST_TO(lump, OCCLump)->get_body();
+    }
   }
 
-  if(OCCQueryEngine::instance()->OCCMap->IsBound(*theCS))
+  if(!new_body && OCCQueryEngine::instance()->OCCMap->IsBound(*theCS))
   {
     BRepBuilderAPI_Copy api_copy(*theCS);
 
@@ -1796,19 +1811,17 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 
     TopoDS_Compound newCS = TopoDS::Compound(newShape);
 
-    return OCCQueryEngine::instance()->populate_topology_bridge(newCS);
+    new_body = OCCQueryEngine::instance()->populate_topology_bridge(newCS);
+  }
+  
+  if( GeometryQueryTool::instance()->history().is_tracking() )
+  {
+    DLIList<BodySM*> new_bodies(1);
+    new_bodies.append( new_body );
+    OCCModifyEngine::instance()->stop_tracking_history( new_bodies, history_object );
   }
 
-  //single lump body
-  Lump *lump = occ_body->lumps().get();
-  TopoDS_Solid solid = *(CAST_TO(lump, OCCLump)->get_TopoDS_Solid());
-  BRepBuilderAPI_Copy api_copy(solid);
-  TopoDS_Shape newShape = api_copy.ModifiedShape(solid);
-  TopoDS_Solid newSolid = TopoDS::Solid(newShape);
-  lump = OCCQueryEngine::instance()->populate_topology_bridge(newSolid,
-							CUBIT_TRUE);
-  
-  return CAST_TO(lump, OCCLump)->get_body();
+  return new_body;
 }
 
 //===============================================================================
@@ -3666,6 +3679,8 @@ CubitStatus     OCCModifyEngine::imprint( DLIList<BodySM*> &body_list,
            DLIList<Curve*> created_curves;
            stat = split_shape_by_location(from_shape, (Curve*)curve, location, 
                                           created_curves);
+           shape_list.clean_out();
+           shape_list.append(from_shape);
            if(new_tbs)
              for(int ic=0; ic < created_curves.size(); ic++)
                new_tbs->append(created_curves.get_and_step());
@@ -6378,6 +6393,38 @@ CubitStatus OCCModifyEngine::surface_intersection( Surface * surface1,
 }
 
 //===============================================================================
+// Function   : get_3_point_plane
+// Member Type: PUBLIC
+// Description:
+// Author     : Jane Hu
+// Date       : 01/11
+//===============================================================================
+CubitStatus OCCModifyEngine::get_3_point_plane( const CubitVector & point_1,
+                                            const CubitVector & point_2,
+                                            const CubitVector & point_3,
+                                            TopoDS_Face*& p_face)const
+{
+  //Calculate normal of the plane
+  CubitVector v1, v2, normal;
+  v1 = point_2 - point_1;
+  v2 = point_3 - point_1;
+  normal = ~(v1 * v2);
+  if(fabs(normal.length() - 1) > TOL)
+  {
+     PRINT_ERROR("The three points are co-linear, and can't be used as a cutting plane.\n");
+     return CUBIT_FAILURE;
+  }
+
+  gp_Pnt pt = gp_Pnt( point_1.x(), point_1.y(), point_1.z());
+  gp_Dir normal_dir(normal.x(), normal.y(), normal.z());
+  gp_Pln plane(pt, normal_dir);
+
+  TopoDS_Face face = BRepBuilderAPI_MakeFace(plane);
+  p_face = new TopoDS_Face(face);
+  return CUBIT_SUCCESS;
+}
+
+//===============================================================================
 // Function   : get_mid_plane
 // Member Type: PUBLIC
 // Description: 
@@ -8068,9 +8115,7 @@ CubitStatus OCCModifyEngine::split_shape_by_location(TopoDS_Shape *&from_shape,
   else if(shapes.First().TShape()->ShapeType() == TopAbs_WIRE)
     OCCLoop::update_OCC_entity(TopoDS::Wire(*from_shape), &splitor);
  
-  TopTools_ListOfShape new_shapes;
-  new_shapes.Assign(splitor.DescendantShapes(*from_shape));
-  from_shape = new TopoDS_Shape(new_shapes.First());
+  from_shape = new TopoDS_Shape(shapes.First());
   return CUBIT_SUCCESS;
 }
 
@@ -8348,7 +8393,7 @@ CubitStatus OCCModifyEngine::create_surface( DLIList<CubitVector*>& vec_list,
           new_vec_list.append(new CubitVector(new_vec) );
         else
         {
-          PRINT_ERROR("Can't project the %dth point onto surface \n"); 
+          PRINT_ERROR("Can't project the %dth point onto surface \n", i+1); 
           for (int j = 0; j < new_vec_list.size(); j++)
             delete new_vec_list.get_and_step();
           return CUBIT_FAILURE;
@@ -8472,10 +8517,115 @@ CubitStatus OCCModifyEngine::scale( BodySM *&body, const CubitVector& factors )
   return OCCQueryEngine::instance()->scale( body, factors );
 }
 
+//================================================================================
+// Description: According to what I read in AcisModifyEngine, 
+//              bridges_in are already the invalid_tbs, and we want to 
+//              get all vertices, edges and surfaces below bridges_in into
+//              bridges_out.
+// Author     : Jane Hu 
+// Date       : 02/11
+//================================================================================
+void OCCModifyEngine::get_possible_invalid_tbs(
+                             DLIList<TopologyBridge*> &bridges_in,
+                             DLIList<TopologyBridge*> &bridges_out)
+{
+  DLIList<OCCSurface*> surfaces;
+  DLIList<OCCCurve*> curves;
+  DLIList<OCCPoint*> points;
+
+  for (int i = 0; i < bridges_in.size(); i++)
+  {
+     TopologyBridge* tb_in = bridges_in.get_and_step();
+     if(! tb_in)
+       continue;
+
+     OCCBody *occ_body = NULL;
+     if(OCCLump * lump_ptr = CAST_TO( tb_in,OCCLump))
+     {
+       BodySM* body = lump_ptr->get_body();
+       assert (body);
+       occ_body = CAST_TO(body, OCCBody);
+     }
+ 
+     else if( occ_body || (occ_body = CAST_TO( tb_in, OCCBody)))
+     {
+       occ_body->get_all_surfaces(surfaces);
+       occ_body->get_all_curves(curves);
+       occ_body->get_all_points(points);
+     }
+
+     else if(OCCSurface *surface_ptr = CAST_TO( tb_in, OCCSurface))
+     {
+       surface_ptr->get_curves(curves);
+       surface_ptr->get_points(points);
+       surfaces.append(surface_ptr);
+     }
+     else if( OCCCurve *curve_ptr = CAST_TO( tb_in, OCCCurve))
+     {
+       curves.append(curve_ptr);
+       curve_ptr->get_points(points);
+     }
+     else if( OCCPoint *point_ptr = CAST_TO( tb_in, OCCPoint))
+     {
+       points.append(point_ptr);
+     }
+  }
+  for (int i = 0; i < surfaces.size(); i++)
+    bridges_out.append((TopologyBridge*)surfaces.get_and_step());
+  for (int i = 0; i < curves.size(); i++)
+    bridges_out.append((TopologyBridge*)curves.get_and_step());
+  for (int i = 0; i < points.size(); i++)
+    bridges_out.append((TopologyBridge*)points.get_and_step());
+}
+CubitStatus OCCModifyEngine::curve_surface_intersection( Surface *surface,
+                                            Curve* curve,
+                                            DLIList<Curve*> &new_curves ) const
+{
+  return CUBIT_FAILURE;
+}
+
+BodySM* OCCModifyEngine::make_extended_sheet( DLIList<Surface*> &surface_list,
+                                              CubitBox *clip_box_ptr,
+                                              bool preview ) const
+{
+  PRINT_ERROR("This feature is not implemented.\n");
+  return (BodySM*) NULL;
+}
+
+CubitStatus OCCModifyEngine::remove_topology(DLIList<Curve*> &curves_to_remove,
+                                       DLIList<Surface*> &surfs_to_remove,
+                                       double backoff_distance,
+                                       double small_edge_size,
+                                       DLIList<BodySM*> &new_bodysm_list,
+                                       CubitBoolean preview) const
+{
+  PRINT_ERROR("This feature is not implemented.\n");
+  return CUBIT_FAILURE;;
+}
+
 CubitStatus OCCModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                                DLIList<BodySM*> &new_bodies,
                                                DLIList<TopologyBridge*>*,
                                                DLIList<TopologyBridge*>* )  const
+{
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus OCCModifyEngine::tolerant_imprint(DLIList<Surface*> &surfs_in,
+                             DLIList<BodySM*> &new_bodysm_list) const
+{
+  PRINT_ERROR("Option not supported for OCC based geometry.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus OCCModifyEngine::tolerant_imprint_surface_with_curves(
+                                  Surface *surface_to_imprint,
+                                  DLIList<Curve*> &curves,
+                                  DLIList<TopologyBridge*> &temporary_bridges,
+                                  BodySM *&new_body,
+                                  DLIList<TopologyBridge*> *new_tbs,
+                                  DLIList<TopologyBridge*> *att_tbs) const
 {
   PRINT_ERROR("Option not supported for OCC based geometry.\n");
   return CUBIT_FAILURE;
@@ -8514,6 +8664,11 @@ void OCCModifyEngine::get_new_tbs(DLIList<OCCSurface*> &surfaces,
       for(int j = 0; j < surfaces.size(); j++)
       {
         OCCSurface* surf = surfaces.get();
+        if(!surf->get_TopoDS_Face() || surf->get_TopoDS_Face()->IsNull())
+        {
+          surfaces.remove();
+          continue;
+        }
         double d = surf->measure();
         CubitVector center = surf->center_point();
         if(center.about_equal(new_center) && fabs(d- new_d) <= TOL) 
@@ -8647,5 +8802,20 @@ void OCCModifyEngine::get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
     if(csa_list.size() > 0)
       att_tbs->append(occ_point);
   }
+}
+
+void OCCModifyEngine::start_tracking_history( DLIList<TopologyBridge*> &bridges,
+                                              OCCHistory &history_object,
+                                              bool ignore_parents )
+{
+}
+
+void OCCModifyEngine::stop_tracking_history( DLIList<BodySM*> &new_bodies,
+                                             OCCHistory &history_object )
+{
+  DLIList<TopologyBridge*> tbs;
+  CAST_LIST( new_bodies, tbs, TopologyBridge );
+
+  //stop_tracking_history( tbs, history_object );
 }
 // EOF

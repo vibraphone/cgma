@@ -16,6 +16,7 @@
 
 #include "GeometryModifyEngine.hpp"
 #include <vector>
+#include "DLIList.hpp"
 
 class Point;
 class TopologyBridge;
@@ -32,6 +33,7 @@ class TopoDS_Face;
 class CubitBox;
 class BRepAlgoAPI_BooleanOperation;
 class BRepOffsetAPI_ThruSections;
+class OCCHistory;
 
 class OCCModifyEngine : public GeometryModifyEngine
 {
@@ -361,8 +363,6 @@ public:
       //- Separates surfaces from sheet bodies into separate bodies.  Connected
       //- surfaces will remain connected but be placed in a new body.
 
-  CubitStatus test_regularize_entity( GeometryEntity *old_refentity_ptr);
-
   virtual CubitStatus section( DLIList<BodySM*> &section_body_list,
     const CubitVector &point_1,
     const CubitVector &point_2,
@@ -410,10 +410,10 @@ public:
   //- Will have been taken care of in the calling function.  GT?
  
   CubitStatus tweak_bend( DLIList<BodySM*> &bend_bodies,
-                              DLIList<BodySM*> &new_bodysm_list,
-                              CubitVector& neutral_root,
-                              CubitVector& bend_axis,
-                              CubitVector& bend_direction,
+                          DLIList<BodySM*> &new_bodysm_list,
+                          CubitVector& neutral_root,
+                          CubitVector& bend_axis,
+                          CubitVector& bend_direction,
                           double radius,
                           double angle,
                           DLIList<CubitVector*> bend_regions,
@@ -421,9 +421,10 @@ public:
                           CubitBoolean center_bend = CUBIT_FALSE,
                           int num_points = 0,
                           CubitBoolean keep_old_body = CUBIT_FALSE,
-                          CubitBoolean preview = CUBIT_FALSE ) const;
+                          CubitBoolean preview = CUBIT_FALSE ) const
   /**<  Bend solid bodies based on a bend radius and angle.
     */
+  { return CUBIT_FAILURE;}
 
   virtual Curve* create_arc_three( Point* ref_vertex1, 
                                    Point* ref_vertex2,
@@ -685,13 +686,6 @@ public:
 
   virtual CubitStatus create_offset_surface( Surface* ref_face_ptr, BodySM*& new_body, double offset_distance ) const;
 
-  virtual CubitStatus create_offset_sheet( DLIList<Surface*> &surface_list,
-                                           double offset_distance,
-                                           DLIList<Surface*> *add_surface_list_ptr,
-                                           DLIList<double> *add_offset_list_ptr,
-                                           DLIList<BodySM*> &new_body_list,
-                                           CubitBoolean preview = CUBIT_FALSE ) const;
-
   virtual CubitStatus create_offset_body( BodySM* body_ptr, BodySM*& new_body, double offset_distance ) const;
 
   virtual CubitStatus create_skin_surface( DLIList<Curve*>& curves, BodySM*& new_body, DLIList<Curve*>& ) const;
@@ -722,7 +716,6 @@ public:
   virtual CubitStatus create_surface( DLIList<Point*> &points,
                                       BodySM *&new_body ) const;
 
-  virtual CubitBoolean bodies_interfering( BodySM *body1,  BodySM *body2 ) const;
 
   virtual CubitStatus create_weld_surface( CubitVector &root,
                                            Surface *ref_face1, double leg1, Surface *ref_face2, double leg2,
@@ -778,13 +771,9 @@ protected:
  CubitStatus sort_curves(DLIList<Curve*> curve_list,
                          DLIList<DLIList<TopoDS_Edge*>*>& topo_edges_loops)const;
 
- CubitStatus stitch_surfs(DLIList<BodySM*>& surf_bodies,
-                          TopoDS_Shape& stitched_shape) const;
+CubitStatus stitch_surfs(DLIList<BodySM*>& surf_bodies,
+                         TopoDS_Shape& stitched_shape) const;
 
- virtual CubitStatus stitch( DLIList<BodySM*> &bodies_to_stitch,
-                      DLIList<BodySM*> &new_bodies,
-                      bool tighten_gaps,
-                      double tolerance )const ;
 private:
  virtual bool supports_interoperability() { return true; }
     //- Returns whether intermixing of real and virtual geometry operations
@@ -908,6 +897,43 @@ private:
                                      Curve* curve_to_split,
                                      const CubitVector& split_location,
                                      DLIList<Curve*>& created_curves )const;
+
+ void start_tracking_history( DLIList<TopologyBridge*> &bridges,
+                              OCCHistory &history_object,
+                              bool ignore_parents = false );
+
+ void stop_tracking_history( DLIList<BodySM*> &new_bodies,
+                             OCCHistory &history_object );
+
+  //- Removes all all unnessesary faces, curves, vertices and associated
+ //- data from a refentity.
+ virtual CubitStatus test_regularize_entity( GeometryEntity *old_entity_ptr)
+ {return CUBIT_FAILURE; } 
+
+ virtual CubitStatus create_offset_sheet( DLIList<Surface*> &surface_list,
+                                    double offset_distance,
+                                    DLIList<Surface*> *add_surface_list_ptr,
+                                    DLIList<double> *add_offset_list_ptr,
+                                    DLIList<BodySM*> &new_body_list,
+                                    CubitBoolean preview = CUBIT_FALSE ) const
+  /**< Create a sheet body (or bodies) by offsetting the given faces. The
+    *  optional additional face list and double list (must be same length)
+    *  allow different offset distances for different faces. Adjoining faces
+    *  are extended or trimmed to remain joined in the new sheet body.  Radial
+    *  faces that cannot be so offset are removed and the resulting wound
+    *  healed by the surrounding faces.
+    */
+  { return CUBIT_FAILURE; }
+
+  virtual CubitBoolean bodies_interfering( BodySM *body1,  BodySM *body2 ) const
+  {return CUBIT_FAILURE; }
+
+  virtual CubitStatus stitch( DLIList<BodySM*> &bodies_to_stitch,
+                      DLIList<BodySM*> &new_bodies,
+                      bool tighten_gaps,
+                      double tolerance )const
+  {return CUBIT_FAILURE; }
+
 } ;
 
 #endif

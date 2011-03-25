@@ -153,7 +153,8 @@ CubitStatus make_Point()
     assert( d > 69.9999 && d < 70.00001);
   }
 
-  status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, CUBIT_TRUE);
+  DLIList<Body*> neighbor_list;
+  status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, neighbor_list, ONLY_INVOLVED_BODIES);
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();

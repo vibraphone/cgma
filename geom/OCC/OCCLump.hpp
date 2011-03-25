@@ -140,7 +140,7 @@ public:
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
-  inline BodySM* get_body() const { return myBodyPtr; }
+  BodySM* get_body() const; 
     
   inline void remove_body() {myBodyPtr = 0;}
  
