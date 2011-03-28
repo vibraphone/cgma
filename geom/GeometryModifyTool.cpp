@@ -6370,7 +6370,7 @@ CubitStatus GeometryModifyTool::subtract( DLIList<Body*>  &tool_body_list,
    if( CubitUndo::get_undo_enabled() && result == CUBIT_FAILURE )
      CubitUndo::remove_last_undo();
 
-   result = finish_sm_op(tem_bodies, new_sms, new_bodies);
+   CubitStatus result2 = finish_sm_op(tem_bodies, new_sms, new_bodies);
 
    if( CubitUndo::get_undo_enabled() )
    {
@@ -6380,7 +6380,7 @@ CubitStatus GeometryModifyTool::subtract( DLIList<Body*>  &tool_body_list,
        CubitUndo::remove_last_undo();
    }
 
-   if ( result == CUBIT_FAILURE )
+   if ( result == CUBIT_FAILURE || result2 == CUBIT_FAILURE)
    {
      PRINT_ERROR("Subtract FAILED\n" );
      return CUBIT_FAILURE;
