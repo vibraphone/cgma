@@ -6556,7 +6556,7 @@ CubitStatus GeometryModifyTool::intersect( Body *tool_body_ptr,
   DLIList<BodySM*> new_sms;
   CubitStatus result =
       engine->intersect(tool_sm, from_sm_list, new_sms, keep_old );
-  result = finish_sm_op(tem_bodies, new_sms, new_bodies);
+  CubitStatus result2 = finish_sm_op(tem_bodies, new_sms, new_bodies);
 
   if( CubitUndo::get_undo_enabled() )
   {
@@ -6566,7 +6566,7 @@ CubitStatus GeometryModifyTool::intersect( Body *tool_body_ptr,
       CubitUndo::remove_last_undo();
   }
 
-  if ( result == CUBIT_FAILURE )
+  if ( result == CUBIT_FAILURE || result2 == CUBIT_FAILURE)
   {
     PRINT_ERROR("Intersect FAILED\n" );
     return CUBIT_FAILURE;
@@ -7219,7 +7219,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
   while(temporary_bridges.size())
     delete temporary_bridges.pop();
 
-   status = finish_sm_op(body_list, new_sm_list, new_body_list);
+  CubitStatus status2 = finish_sm_op(body_list, new_sm_list, new_body_list);
 
   if(process_composites)
     do_attribute_cleanup();
@@ -7231,8 +7231,13 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
      else
        CubitUndo::remove_last_undo();
    }
+ 
+   if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
+     return status;
+ 
+   else
+     return CUBIT_FAILURE; 
 
-   return status;
 }
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
@@ -7400,7 +7405,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
     remove_pushed_attributes(body_sm_list, old_body_list);
   }
 
-  status = finish_sm_op(old_body_list, new_sm_list, new_body_list);
+  CubitStatus status2 = finish_sm_op(old_body_list, new_sm_list, new_body_list);
 
   if(process_composites)
     do_attribute_cleanup();
@@ -7413,7 +7418,11 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
       CubitUndo::remove_last_undo();
   }
 
-  return status;
+  if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
+     return status;
+ 
+   else
+     return CUBIT_FAILURE; 
 }
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
@@ -7503,7 +7512,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     remove_pushed_attributes(new_sm_list, body_list);
   }
 
-  status = finish_sm_op(body_list, new_sm_list, new_body_list);
+  CubitStatus  status2 = finish_sm_op(body_list, new_sm_list, new_body_list);
 
   if(process_composites)
     do_attribute_cleanup();
@@ -7538,7 +7547,11 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
        CubitUndo::remove_last_undo();
    }
 
-   return status;
+   if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
+     return status;
+ 
+   else
+     return CUBIT_FAILURE; 
 }
 CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
                                                DLIList<RefEdge*> &ref_edge_list_in,
