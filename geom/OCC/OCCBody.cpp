@@ -182,7 +182,10 @@ TopoDS_Compound* OCCBody::make_Compound(DLIList<Lump*>& my_lumps,
 OCCBody::~OCCBody() 
 {
   if (myTopoDSShape)
+  {
     delete (TopoDS_Compound*)myTopoDSShape;
+    myTopoDSShape = NULL;
+  }
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const

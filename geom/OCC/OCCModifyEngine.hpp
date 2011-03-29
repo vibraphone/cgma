@@ -16,6 +16,7 @@
 
 #include "GeometryModifyEngine.hpp"
 #include <vector>
+#include <map>
 #include "DLIList.hpp"
 
 class Point;
@@ -879,13 +880,14 @@ private:
                          bool keep_old,
                          bool imprint = CUBIT_FALSE) const;
 
- void get_new_tbs(DLIList<OCCSurface*> &surfaces,
-                  DLIList<OCCCurve*> &curves,
-                  DLIList<OCCPoint*> &points,
-                  DLIList<OCCSurface*> &new_surfaces,
-                  DLIList<OCCCurve*> &new_curves,
-                  DLIList<OCCPoint*> &new_points,
-                  DLIList<TopologyBridge*> *new_tbs)const; 
+ void get_new_tbs(
+         std::map<OCCSurface*, std::pair<CubitVector, int> >& surf_property_map,
+         std::map<OCCCurve*, std::pair<CubitVector, int> >& curve_property_map,
+         DLIList<OCCPoint*> &points,
+         DLIList<OCCSurface*> &new_surfaces,
+         DLIList<OCCCurve*> &new_curves,
+         DLIList<OCCPoint*> &new_points,
+         DLIList<TopologyBridge*> *new_tbs)const; 
 
  void get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
                   DLIList<OCCCurve*> &new_curves,

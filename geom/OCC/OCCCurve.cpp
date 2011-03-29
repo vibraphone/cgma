@@ -114,7 +114,10 @@ OCCCurve::OCCCurve( TopoDS_Edge *theEdge )
 OCCCurve::~OCCCurve() 
 {
   if (myTopoDSEdge)
+  {
     delete (TopoDS_Edge *)myTopoDSEdge;
+    myTopoDSEdge = NULL;
+  }
 }
 
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)

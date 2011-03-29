@@ -83,7 +83,10 @@ OCCPoint::OCCPoint( gp_Pnt& thePoint )
 OCCPoint::~OCCPoint() 
 {
   if (myTopoDSVertex)
+  {
     delete (TopoDS_Vertex*)myTopoDSVertex;
+    myTopoDSVertex = NULL;
+  }
 }
 
 void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)

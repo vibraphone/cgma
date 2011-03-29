@@ -98,7 +98,10 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 OCCSurface::~OCCSurface() 
 {
   if(myTopoDSFace)
+  {
     delete (TopoDS_Face*)myTopoDSFace;
+    myTopoDSFace = NULL;
+  }
 }
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
