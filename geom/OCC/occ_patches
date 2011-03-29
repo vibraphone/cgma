@@ -1,19 +1,45 @@
---- ros/src/Extrema/Extrema_ExtPElS.cxx	2002-04-23 11:10:21.000000000 -0500
-+++ /home/jhu/occ6.3/OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPElS.cxx	2008-10-08 12:56:22.000000000 -0500
-@@ -311,6 +311,7 @@
+--- ros/src/Extrema/Extrema_ExtPElS.cxx 2011-03-29 11:35:08.000000000 -0500
++++ /mnt/disk2b/jhu/tempdir/OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPElS.cxx        2002-04-23 11:10:21.000000000 -0500
+@@ -56,7 +56,6 @@
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
+   Standard_Real U2 = U1 + PI;
+-  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+
+   gp_Pnt Ps;
+@@ -158,9 +157,7 @@
+   B = MP.Angle(DirZ);
+   if (!Same) { U1 += PI; }
+   U2 = U1 + PI;
+-  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+-  if (U2 - 2.*PI < Tol && U2 > 2.*PI) {U2 = 2. * PI; }
+   if (U2 > 2.*PI) { U2 -= 2. * PI; }
+   B = MP.Angle(DirZ);
+   A = Abs(A);
+@@ -250,7 +247,6 @@
+     gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+     U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+     U2 = U1 + PI;
+-    if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+     if (U1 < 0.) { U1 += 2. * PI; }
+     V = OP.Angle(OPp);
+     if (Zp < 0.) { V = -V; }
+@@ -315,7 +311,6 @@
    gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
    Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
    Standard_Real U2 = U1 + PI;
-+  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+-  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
    if (U1 < 0.) { U1 += 2. * PI; }
    gp_Vec OO1 = OPp.Divided(R).Multiplied(S.MajorRadius());
    gp_Vec OO2 = OO1.Multiplied(-1.);
-@@ -322,6 +323,8 @@
- 
+@@ -327,8 +322,6 @@
+
    Standard_Real V1 = OO1.AngleWithRef(gp_Vec(O1,P),OO1.Crossed(OZ));
    Standard_Real V2 = OO2.AngleWithRef(gp_Vec(P,O2),OO2.Crossed(OZ));
-+  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
-+  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
+-  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
+-  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
    if (V1 < 0.) { V1 += 2. * PI; }
    if (V2 < 0.) { V2 += 2. * PI; }
  
