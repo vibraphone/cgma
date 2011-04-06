@@ -594,7 +594,7 @@ Co
 *
 *
 *
-CGM_ATTRIB ENTITY_NAME* volumeB* * *
+CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeB 0 0
 *
 *
 *
@@ -628,7 +628,6 @@ CGM_ATTRIB ENTITY_NAME* volumeB* * *
 *
 *
 *
-*
-CGM_ATTRIB ENTITY_NAME* volumeA* * *
+CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeA 0 0
 *
 *
