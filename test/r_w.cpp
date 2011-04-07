@@ -333,6 +333,9 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
+  //name attributes in unite2.occ is 
+  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume B 8 volume_B 0 0
+  //so it changed to volume_B, and code needs use the second name attrib.
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -363,6 +366,7 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
+  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume A 8 volume_A 0 0 in unite3.occ
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -391,6 +395,8 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
+  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeA 0 0 in unite5.occ
+ 
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -421,6 +427,8 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
  
+  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeB 0 0 in unite6.occ
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
