@@ -48,10 +48,15 @@ static int test_oriented_brick()
     printf("failed to make brick\n");
     return 1;
   }
-  if(!cubit_box_identical(brick->bounding_box(), 
-        CubitBox(CubitVector(-4.035534, -0.5, 0.5),
-          CubitVector(1.621320, 5.156854, 7.5)), 
-        GEOMETRY_RESABS*2.0, true))
+  CubitBox comp_box(CubitVector(-4.035534, -0.5, 0.5),
+          CubitVector(1.621320, 5.156854, 7.5));
+  CubitBox bnd_box = brick->bounding_box();
+
+  bool identical =  cubit_box_identical(bnd_box, comp_box, GEOMETRY_RESABS*2.0, true);
+  if (identical)
+    return 0;
+
+  if( bnd_box < comp_box || bnd_box > comp_box*1.09) 
   {
     printf("boxes not identical\n");
     return 1;
@@ -67,9 +72,14 @@ static int test_sphere()
     printf("failed to make sphere\n");
     return 1;
   }
-  if(!cubit_box_identical(sphere->bounding_box(), 
-        CubitBox(CubitVector(-1,-1,-1), CubitVector(1,1,1)), 
-        GEOMETRY_RESABS*2.0, true))
+  CubitBox comp_box( CubitVector(-1,-1,-1), CubitVector(1,1,1));
+  CubitBox bnd_box = sphere->bounding_box();
+  
+  bool identical =  cubit_box_identical(bnd_box, comp_box, GEOMETRY_RESABS*2.0, true);
+  if (identical)
+    return 0;
+
+  if( bnd_box < comp_box || bnd_box > comp_box*1.09)
   {
     printf("boxes not identical\n");
     return 1;
@@ -86,9 +96,14 @@ static int test_torus()
     printf("failed to make torus\n");
     return 1;
   }
-  if(!cubit_box_identical(torus->bounding_box(), 
-        CubitBox(CubitVector(-1.2,-1.2,-0.2), CubitVector(1.2,1.2,0.2)), 
-        GEOMETRY_RESABS*2.0, true))
+  CubitBox comp_box(CubitVector(-1.2,-1.2,-0.2), CubitVector(1.2,1.2,0.2));
+  CubitBox bnd_box = torus->bounding_box();
+
+  bool identical =  cubit_box_identical(bnd_box, comp_box, GEOMETRY_RESABS*2.0, true);
+  if (identical)
+    return 0;
+
+  if( bnd_box < comp_box || bnd_box > comp_box*1.09)
   {
     printf("boxes not identical\n");
     return 1;
@@ -111,10 +126,16 @@ static int test_planar_sheet()
     printf("failed to make planar sheet\n");
     return 1;
   }
-  if(!cubit_box_identical(body->bounding_box(), 
-        CubitBox(CubitVector(-0.165647,-0.490826,1.0), 
-        CubitVector(2.165647,2.490826,1.0)), 
-        GEOMETRY_RESABS*2.0, true))
+
+  CubitBox comp_box(CubitVector(-0.165647,-0.490826,1.0),
+        CubitVector(2.165647,2.490826,1.0));
+  CubitBox bnd_box = body->bounding_box();
+
+  bool identical =  cubit_box_identical(bnd_box, comp_box, GEOMETRY_RESABS*2.0, true);
+  if (identical)
+    return 0;
+
+  if( bnd_box < comp_box || bnd_box > comp_box*1.09)
   {
     printf("boxes not identical\n");
     return 1;
@@ -162,12 +183,18 @@ static int test_arc()
     printf("failed to make arc\n");
     return 1;
   }
-  if(!cubit_box_identical(arc->bounding_box(), 
-        CubitBox(CubitVector(0, 0, 0), CubitVector(2, 1, 0)), 
-        GEOMETRY_RESABS*2.0, true))
+
+  CubitBox comp_box(CubitVector(0, 0, 0), CubitVector(2, 1, 0));
+  CubitBox bnd_box = arc->bounding_box();
+ 
+  bool identical =  cubit_box_identical(bnd_box, comp_box, GEOMETRY_RESABS*2.0, true);
+  if (!identical)
   {
-    printf("boxes not identical\n");
-    return 1;
+    if( bnd_box < comp_box || bnd_box > comp_box*1.09)
+    {
+      printf("boxes not identical\n");
+      return 1;
+    }
   }
 
   // previously free curves at end points must be consumed
@@ -184,9 +211,14 @@ static int test_arc()
   RefVertex* pt4 = GeometryModifyTool::instance()->make_RefVertex(CubitVector(1,-1,0));
   RefEdge* arc2 = GeometryModifyTool::instance()->create_arc_three(pt1, pt4, pt3, true);
   
-  if(!cubit_box_identical(arc2->bounding_box(), 
-        CubitBox(CubitVector(0, -1, 0), CubitVector(2, 1, 0)), 
-        GEOMETRY_RESABS*2.0, true))
+  CubitBox comp_box2(CubitVector(0, -1, 0), CubitVector(2, 1, 0));
+  bnd_box = arc2->bounding_box();
+ 
+  identical =  cubit_box_identical(bnd_box, comp_box2, GEOMETRY_RESABS*2.0, true);
+  if (identical)
+    return 0;
+
+  if( bnd_box < comp_box2 || bnd_box > comp_box2*1.09)
   {
     printf("boxes not identical\n");
     return 1;
