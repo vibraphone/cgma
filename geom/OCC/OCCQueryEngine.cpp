@@ -107,7 +107,6 @@
 #include <BndLib_AddSurface.hxx>
 #include <Precision.hxx>
 #include <BRepAdaptor_Surface.hxx>
-#include <TDataStd_Shape.hxx>
 #include <TDF_ChildIterator.hxx>
 #include <BinTools_ShapeSet.hxx>
 #include "Standard_Boolean.hxx"

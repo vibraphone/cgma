@@ -1,51 +1,6 @@
---- ros/src/Extrema/Extrema_ExtPElS.cxx 2011-03-29 11:35:08.000000000 -0500
-+++ /mnt/disk2b/jhu/tempdir/OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPElS.cxx        2002-04-23 11:10:21.000000000 -0500
-@@ -56,7 +56,6 @@
-   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
-   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
-   Standard_Real U2 = U1 + PI;
--  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
-   if (U1 < 0.) { U1 += 2. * PI; }
-
-   gp_Pnt Ps;
-@@ -158,9 +157,7 @@
-   B = MP.Angle(DirZ);
-   if (!Same) { U1 += PI; }
-   U2 = U1 + PI;
--  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
-   if (U1 < 0.) { U1 += 2. * PI; }
--  if (U2 - 2.*PI < Tol && U2 > 2.*PI) {U2 = 2. * PI; }
-   if (U2 > 2.*PI) { U2 -= 2. * PI; }
-   B = MP.Angle(DirZ);
-   A = Abs(A);
-@@ -250,7 +247,6 @@
-     gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
-     U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
-     U2 = U1 + PI;
--    if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
-     if (U1 < 0.) { U1 += 2. * PI; }
-     V = OP.Angle(OPp);
-     if (Zp < 0.) { V = -V; }
-@@ -315,7 +311,6 @@
-   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
-   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
-   Standard_Real U2 = U1 + PI;
--  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
-   if (U1 < 0.) { U1 += 2. * PI; }
-   gp_Vec OO1 = OPp.Divided(R).Multiplied(S.MajorRadius());
-   gp_Vec OO2 = OO1.Multiplied(-1.);
-@@ -327,8 +322,6 @@
-
-   Standard_Real V1 = OO1.AngleWithRef(gp_Vec(O1,P),OO1.Crossed(OZ));
-   Standard_Real V2 = OO2.AngleWithRef(gp_Vec(P,O2),OO2.Crossed(OZ));
--  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
--  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
-   if (V1 < 0.) { V1 += 2. * PI; }
-   if (V2 < 0.) { V2 += 2. * PI; }
- 
---- ros/src/Extrema/Extrema_ExtPS.cxx	2007-08-28 13:06:46.000000000 -0500
-+++ /home/jhu/occ6.3/OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPS.cxx	2008-10-09 14:13:13.000000000 -0500
-@@ -88,10 +88,18 @@
+--- ros/src/Extrema/Extrema_ExtPS.cxx	2011-04-11 13:06:46.000000000 -0500
++++ /home/jhu/OpenCASCADE6.5.0/ros/src/Extrema/Extrema_ExtPS.cxx	2011-04-09 14:13:13.000000000 -0500
+@@ -94,10 +94,18 @@
    Standard_Real U, V;
    PS.Parameter(U, V);
    if (myS->IsUPeriodic()) {
@@ -67,52 +22,48 @@
    if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
        (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
 
---- ros/src/BRepClass/BRepClass_FaceClassifier.cxx	2007-08-28 13:06:44.000000000 -0500
-+++ src/BRepClass/BRepClass_FaceClassifier.cxx	2008-01-16 10:25:36.000000000 -0600
-@@ -55,6 +55,7 @@
-   Extrema_ExtPS myExtrem;
-   //-- myExtrem.Initialize(HS, U1, U2, V1, V2, Tol, Tol);
-   myExtrem.Initialize(Surf, U1, U2, V1, V2, Tol, Tol);
-+  myExtrem.Perform(P);
-   //----------------------------------------------------------
-   //-- On cherche le point le plus proche , PUIS 
-   //-- On le classifie. 
+--- /src/Extrema/Extrema_ExtPElS.cxx     2011-04-11 12:00:57.000000000 -0500
++++ /home/jhu/OpenCASCADE6.5.0/ros/src/Extrema/Extrema_ExtPElS.cxx 2011-04-11 12:03:19.000000000 -0500
+@@ -56,6 +56,7 @@
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
 
---- ros/src/WOKUnix/WOKUnix_FDescr.cxx	2008-05-08 08:11:16.000000000 -0500
-+++ /home/sharp/3rdparty/OCC/OpenCASCADE6.3.0/src/ros/src/WOKUnix/WOKUnix_FDescr.cxx	2010-09-21 15:04:40.431682809 -0500
-@@ -202,7 +202,9 @@
-   if(mknod(apath.ToCString(), 0700 |  S_IFIFO, 0)) 
-     { perror(apath.ToCString());}
- 
--  myFileChannel = open(apath.ToCString(),  O_RDONLY | O_NDELAY | O_CREAT);
-+  myFileChannel = open(apath.ToCString(),  
-+                       O_RDONLY | O_NDELAY | O_CREAT,
-+                       S_IRWXU | S_IRWXG | S_IRWXO);
-   SetUnBuffered();
- 
-   // write end of pipe is unbuffered also 
+   gp_Pnt Ps;
+@@ -157,7 +158,9 @@
+   B = MP.Angle(DirZ);
+   if (!Same) { U1 += PI; }
+   U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
++  if (U2 - 2.*PI < Tol && U2 > 2.*PI) {U2 = 2. * PI; }
+   if (U2 > 2.*PI) { U2 -= 2. * PI; }
+   B = MP.Angle(DirZ);
+   A = Abs(A);
+@@ -248,6 +251,7 @@
+     gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+     U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+     U2 = U1 + PI;
++    if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+     if (U1 < 0.) { U1 += 2. * PI; }
+     V = OP.Angle(OPp);
+     if (Zp < 0.) { V = -V; }
+@@ -312,6 +316,7 @@
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+   Standard_Real R = sqrt(R2);
+   gp_Vec OO1 = OPp.Divided(R).Multiplied(S.MajorRadius());
+@@ -324,6 +329,8 @@
 
---- ./BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-01-14 08:51:02.000000000 -0600
-+++ ./BRepBuilderAPI_Collect.cxx	2011-01-14 12:30:11.000000000 -0600
-@@ -201,9 +201,18 @@
-   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
-   BuildBack (myMod, ModBack);
-   
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
-+  TopAbs_ShapeEnum type = SI.ShapeType();
-+  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
-+  if(type < TopAbs_SHELL)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
-+  if(type < TopAbs_FACE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
-+  if(type < TopAbs_WIRE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
-+  if(type < TopAbs_EDGE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
-+  if(type < TopAbs_VERTEX)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
- 
- #ifdef DEB
-   if (Affich) {
+   Standard_Real V1 = OO1.AngleWithRef(gp_Vec(O1,P),OO1.Crossed(OZ));
+   Standard_Real V2 = OO2.AngleWithRef(gp_Vec(P,O2),OO2.Crossed(OZ));
++  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
++  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
+   if (V1 < 0.) { V1 += 2. * PI; }
+   if (V2 < 0.) { V2 += 2. * PI; }
+

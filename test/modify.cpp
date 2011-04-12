@@ -913,7 +913,7 @@ CubitStatus make_Point()
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
   d = new_bodies.get()->measure(); //d = 2
   n = new_bodies.get()->num_ref_faces(); //n = 10  
-  assert(d-2<0.0001 && d>2 && n == 10); 
+  assert(fabs(d-2)<0.0001 && n == 10); 
 
   filename = "glue.occ";
   filetype = "OCC";
@@ -944,7 +944,7 @@ CubitStatus make_Point()
   stat = gmti->unite(from_bodies, new_bodies, CUBIT_FALSE);
   d = new_bodies.get()->measure(); //d = 64.5
   n = new_bodies.get()->num_ref_faces(); 
-  assert(d-64.5<0.00001 && d > 64.5 && n == 13);
+  assert(fabs(d-64.5)<0.00001 && n == 13);
   //n = 13. because fusion keeps the imprintings.
 
   bodies.clean_out();
@@ -1278,5 +1278,6 @@ CubitStatus make_Point()
   assert(num_ents_exported == 2);
   assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_faces() == 7);
   assert (CAST_TO(ref_entity_list.get_and_step(), Body)->num_ref_edges() == 11);
+  assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_volumes() == 1);
   return CUBIT_SUCCESS;
 }

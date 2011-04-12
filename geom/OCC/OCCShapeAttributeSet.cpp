@@ -22,7 +22,6 @@
 #include <Handle_BRep_GCurve.hxx>
 #include <BRep_Tool.hxx>
 #include <TDF_ChildIterator.hxx>
-#include <Handle_TDataStd_Shape.hxx>
 #include <TopTools_LocationSet.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS_Iterator.hxx>
@@ -42,7 +41,7 @@
 #include <BRep_PointOnSurface.hxx>
 //#include <BRep_ListIteratorOfListOfPointRepresentation.hxx>
 #include <TDF_Label.hxx>
-#include <TDataStd_Shape.hxx>
+#include <TDataXtd_Shape.hxx>
 #include <Handle_TDataStd_Name.hxx>
 #include <TDataStd_Name.hxx>
 #include <Handle_TDataStd_ExtStringArray.hxx>
@@ -500,9 +499,9 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
     //find the same shape attribute first
     myLabel = it1.Value();
 
-    Handle_TDataStd_Shape attr_shape;
+    Handle_TDataXtd_Shape attr_shape;
     TopoDS_Shape exsiting_shape;
-    if(TDataStd_Shape::Find(myLabel, attr_shape))
+    if(TDataXtd_Shape::Find(myLabel, attr_shape))
       exsiting_shape = attr_shape->Get(myLabel);
 
     if(!exsiting_shape.IsNull())

@@ -518,7 +518,15 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
   }
 
   if (curve_type == STRAIGHT_CURVE_TYPE)
+  {
+     //make sure the two points are not coincident
+     if(v1.about_equal(v2))
+     {
+        PRINT_ERROR("Can't create a line from two identical points.\n");
+        return (Curve *)NULL;
+     }
      curve_ptr = GC_MakeSegment(pt1,pt2);
+  }
 
   else if (curve_type == ARC_CURVE_TYPE)
   {
