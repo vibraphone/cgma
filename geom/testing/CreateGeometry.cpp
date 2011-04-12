@@ -36,9 +36,9 @@ static int test_oriented_brick()
 {
   CubitVector center(1, 2, 4);
   CubitVector axes[3] = {
-    CubitVector(1, 0, .2),
-    CubitVector(0, 1, .4),
-    CubitVector(0.1, 0, 1)
+    CubitVector(0.707, 0.707, 0),
+    CubitVector(-0.707, 0.707, 0),
+    CubitVector(0, 0, 1)
   };
   CubitVector extension(3, 5, 7);
 
@@ -49,8 +49,8 @@ static int test_oriented_brick()
     return 1;
   }
   if(!cubit_box_identical(brick->bounding_box(), 
-        CubitBox(CubitVector(-3.577819, -5.210785, -4.768732),
-          CubitVector(5.577819, 9.210785, 12.768732)), 
+        CubitBox(CubitVector(-4.035534, -0.5, 0.5),
+          CubitVector(1.621320, 5.156854, 7.5)), 
         GEOMETRY_RESABS*2.0, true))
   {
     printf("boxes not identical\n");
