@@ -56,7 +56,9 @@ static int test_oriented_brick()
   if (identical)
     return 0;
 
-  if( bnd_box < comp_box || bnd_box > comp_box*1.09) 
+  //because this box is given from OCC engine, acis engine should give smaller
+  //box.
+  if( bnd_box > comp_box || bnd_box < comp_box/1.09) 
   {
     printf("boxes not identical\n");
     return 1;
