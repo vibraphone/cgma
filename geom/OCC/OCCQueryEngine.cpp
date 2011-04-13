@@ -1506,6 +1506,12 @@ CubitStatus OCCQueryEngine::import_solid_model(
     
   //All read in shapes are wrapped inside a compound shape. Ignore this one
   TopoDS_Iterator it(*aShape);
+  if(aShape->ShapeType() != TopAbs_COMPOUND)
+  {
+    imported_entities += populate_topology_bridge(*aShape);
+    return CUBIT_SUCCESS;
+  }
+
   for(;it.More();it.Next())
   {
     TopoDS_Shape shape = it.Value();
@@ -1525,6 +1531,12 @@ CubitStatus OCCQueryEngine::import_solid_model(DLIList<TopologyBridge*> &importe
   
   //All read in shapes are wrapped inside a compound shape. Ignore this one
   TopoDS_Iterator it(*aShape);
+  if(aShape->ShapeType() != TopAbs_COMPOUND)
+  {
+    imported_entities += populate_topology_bridge(*aShape);
+    return CUBIT_SUCCESS;
+  }
+
   for(;it.More();it.Next())
   {
     TopoDS_Shape shape = it.Value();

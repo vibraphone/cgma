@@ -48,6 +48,8 @@ int main( int argc, char** argv ) {
   gti->ref_edges(my_curvs);
   gti->ref_faces(my_surfs);
 
+  CubitStatus rsl = CUBIT_SUCCESS;
+  DLIList<RefEntity*> ref_entity_list;
   // ***** Discretize the curves ***** //
 
   map< RefEdge*, list<double> > discrete_curves;
@@ -75,7 +77,8 @@ int main( int argc, char** argv ) {
     DLIList<RefEdge*> surf_curves;
     this_surf->ref_vertices(surf_points);
     this_surf->ref_edges(surf_curves);
-    
+    ref_entity_list.append(this_surf);
+ 
     CubitVector coord0, coord1;
     double u, v;
 
@@ -108,7 +111,7 @@ int main( int argc, char** argv ) {
     for(int i = 0; i < surf_curves.size(); ++i) {
       
       RefEdge* this_curv = surf_curves.get_and_step(); 
-     
+ 
       assert(discrete_curves.count(this_curv) == 1);
       list<double> curve_params = discrete_curves.find(this_curv)->second;
       list<double>::iterator it = curve_params.begin(), it_end = curve_params.end(); 
@@ -133,6 +136,13 @@ int main( int argc, char** argv ) {
 
   }    
     
+  int num_ents_exported=0;
+  const CubitString cubit_version="10.2";
+  const char * filename1 = "bug.brep";
+  const char * filetype = "OCC";
+
+  rsl = gti->export_solid_model(ref_entity_list, filename1, filetype,
+                                 num_ents_exported, cubit_version);
   printf("done...\n");
 
   return(0);

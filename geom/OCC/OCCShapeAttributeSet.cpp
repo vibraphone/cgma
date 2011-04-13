@@ -420,62 +420,55 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
   DLIList<CubitString*> strings;
   DLIList<double> doubles;
   DLIList<int> ints;
+  int c_num, length;
+  char s;
   do {
-    IS >> buffer; 
-    std::string::size_type i = buffer.find_first_of("*");
-    type = buffer.substr( 0, i );
+    IS >> c_num; //length of name string
+    IS.get(); //' '
+    type.clear();
+    for(int j = 0; j < c_num; j ++)
+    {
+      IS.get(s);
+      type.push_back(s);
+    }
 
     CubitString* string_prt = new CubitString(type.c_str());
     strings.clean_out();
     strings.append(string_prt);
 
-    char s = ' ';
-    do {
-      IS >> buffer;
-      i = buffer.find_first_of("*");
-      if(i > 0 && i < buffer.size())
-      {
-        stringdata = buffer.substr( 0, i );
-        CubitString* string_prt2 = new CubitString(stringdata.c_str());
-        strings.append(string_prt2);
-      }
-
-      //check if next data is still string
+    IS >> length; //number of strings
+    for(int i =0; i < length; i++)
+    { 
+      IS >> c_num ; //length of each string
       IS.get(); //' '
-      IS.get(s); //either '*' or 'number' or a char
-      IS.unget();
-    } while(s!= '*' && !(s >= '0' && s <= '9'));
-    
+      stringdata.clear();
+      for(int j = 0; j < c_num; j ++)
+      {
+        IS.get(s);
+        stringdata.push_back(s);
+      }
+      CubitString* string_prt2 = new CubitString(stringdata.c_str());
+      strings.append(string_prt2);
+    }
+
     int tmp_int;
     double  tmp_dbl; 
-    doubles.clean_out();
+    IS >> length; //number of ints
     ints.clean_out();
-    IS.get(s); //either '*' or 'number'
-    while (s != '\n')
+    for (int i = 0; i < length ; i++)
     {
-      while(s != '*') // integer attributes
-      {
-        IS.unget(); 
-        IS >> tmp_int;
-        ints.append( tmp_int );
-        IS.get(); //' '
-        IS.get(s); //either '*' or 'number'
-      }
-
-      IS.get(); //' '
-      IS.get(s); //either '*' or 'number'
-      while(s != '*') // double attributes
-      {
-        IS.unget();
-        IS >> tmp_dbl;
-        doubles.append( tmp_dbl );
-        IS.get(); //' '
-        IS.get(s); //either '*' or 'number' 
-      }
-
-      IS.get(s); //'\n' 
+      IS >> tmp_int;
+      ints.append( tmp_int );
     }
-    
+
+    IS >> length; //number of doubles
+    doubles.clean_out();
+    for (int i = 0; i < length ; i++)
+    {
+      IS >> tmp_dbl;
+      doubles.append( tmp_dbl );
+    }
+
     CubitSimpleAttrib *tmp_attrib = new CubitSimpleAttrib(&strings, &doubles, &ints);
 
     for(int i = 0; i < strings.size(); i++)
@@ -483,7 +476,7 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
 
     OCCAttribSet::append_attribute(tmp_attrib, S);
     delete tmp_attrib;
-
+  
     IS >> buffer;
   }while(buffer[0] != '*');
 }
@@ -544,8 +537,10 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
       OS << "\n";
       OS << "CGM_ATTRIB ";
       name_string = attr_name->Get(); 
+      int length = name_string.Length();
+      OS << length << ' ';
       name_string.Print(OS);
-      OS << "* " ;
+      OS << ' ' ;
     }
     else
       continue;
@@ -556,34 +551,43 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
       Standard_Integer i = attr_strings->Lower();
       TCollection_ExtendedString string;
       int size = attr_strings->Upper();
+      OS << size -i + 1 << " ";
       for(; i <= size; i++)
       {
          string = attr_strings->Value(i);     
+         int length = string.Length();
+         OS << length << ' ';
          string.Print(OS);
-         if(i < size ) 
-           OS << " ";
+         OS << ' ';
       }
     }
-    OS << "* " ;
+    else
+      OS << "0 " ;
 
     Handle_TDataStd_IntegerArray attr_ints;
     
     if(child.FindAttribute(TDataStd_IntegerArray::GetID(), attr_ints))
     {
-      for(Standard_Integer i = attr_ints->Lower(); i <= attr_ints->Upper(); i++)
-        OS << attr_ints->Value(i) << " ";
+      Standard_Integer i = attr_ints->Lower();
+      int size = attr_ints->Upper();
+      OS << size -i + 1 << " ";
+      for(; i <= size; i++)
+        OS << attr_ints->Value(i) << ' ';
     }
-    
-    OS << '*' << ' ' ;
+    else
+      OS << "0 " ;    
 
     Handle_TDataStd_RealArray attr_doubles;
     if(child.FindAttribute(TDataStd_RealArray::GetID(), attr_doubles))
     {
       Standard_Integer i = attr_doubles->Lower();
-      for(;i <= attr_doubles->Upper(); i++)
-        OS << attr_doubles->Value(i) << " ";
+      Standard_Integer size = attr_doubles->Upper();
+      OS << size -i + 1 << " ";
+      for(;i <= size; i++)
+        OS << attr_doubles->Value(i) << ' ';
     }
-    OS << '*' ; 
+    else
+      OS << "0 " ;
   }
   OS << "\n*";
 }

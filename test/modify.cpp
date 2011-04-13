@@ -1213,5 +1213,28 @@ CubitStatus make_Point()
     gti->delete_RefEntity(free_entities.get_and_step());
 
   //So far created volume 80.
+
+  // Read in the geometry from files specified on the command line
+  argv = "Cylinder_1.brep";
+  status = read_geometry(1, &argv, true);
+  argv = "Cylinder_2.brep";
+  status = read_geometry(1, &argv, true);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  from_bodies.clean_out();
+  new_bodies.clean_out();
+  gti->bodies(from_bodies);
+  stat = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
+
+  num_ents_exported=0;
+  filename = "imprint.brep";
+  ref_entity_list.clean_out();
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  assert(num_ents_exported == 2);
+  assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_faces() == 7);
+  assert (CAST_TO(ref_entity_list.get_and_step(), Body)->num_ref_edges() == 11);
+  assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_volumes() == 1);
   return CUBIT_SUCCESS;
 }
