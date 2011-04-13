@@ -46,9 +46,11 @@
 #include "Standard_Version.hxx"
 #endif
 #if OCC_VERSION_MINOR < 5
-#include <TDataStd_Shape.hxx>
+  #include <TDataStd_Shape.hxx>
+  typedef TDataStd_Shape TDataXtd_Shape;
+  typedef Handle_TDataStd_Shape Handle_TDataXtd_Shape;
 #else
-#include <TDataXtd_Shape.hxx>
+  #include <TDataXtd_Shape.hxx>
 #endif
 
 #include <Handle_TDataStd_Name.hxx>
@@ -508,19 +510,11 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
     //find the same shape attribute first
     myLabel = it1.Value();
 
-#if (OCC_VERSION_MINOR == 3)
-    Handle_TDataStd_Shape attr_shape;
-#else
     Handle_TDataXtd_Shape attr_shape;
-#endif
 
     TopoDS_Shape exsiting_shape;
 
-#if (OCC_VERSION_MINOR == 3)
-    if(TDataStd_Shape::Find(myLabel, attr_shape))
-#else
     if(TDataXtd_Shape::Find(myLabel, attr_shape))
-#endif
       exsiting_shape = attr_shape->Get(myLabel);
 
     if(!exsiting_shape.IsNull())
