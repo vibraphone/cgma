@@ -1456,6 +1456,7 @@ BodySM* OCCModifyEngine::brick( double wid, double dep, double hi ) const
 // Function   : brick
 // Member Type: PUBLIC
 // Description: create an OCC brick given center axes and extension
+//              extension is equvlent to (wid/2, dep/2, hi/2)
 // Author     : Jane Hu
 // Date       : 03/08
 //===============================================================================
@@ -1468,8 +1469,8 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
   gp_Dir main_dir(axes[2].x(), axes[2].y(), axes[2].z());
   gp_Dir x_dir(axes[0].x(), axes[0].y(), axes[0].z());
   gp_Ax2 Axis(left_point, main_dir, x_dir);
-  TopoDS_Solid S = BRepPrimAPI_MakeBox( Axis, extension.x(), extension.y(),
-					extension.z());
+  TopoDS_Solid S = BRepPrimAPI_MakeBox( Axis, extension.x()*2, extension.y()*2,
+					extension.z()*2);
 
   Lump* lump =  OCCQueryEngine::instance()->populate_topology_bridge(S,
 								CUBIT_TRUE);
