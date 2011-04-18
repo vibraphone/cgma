@@ -1464,7 +1464,7 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
                                 const CubitVector axes[3],
                                 const CubitVector &extension) const
 {
-  CubitVector left_corner =  center - 0.5 * extension;
+  CubitVector left_corner =  center - extension;
   gp_Pnt left_point(left_corner.x(), left_corner.y(), left_corner.z());
   gp_Dir main_dir(axes[2].x(), axes[2].y(), axes[2].z());
   gp_Dir x_dir(axes[0].x(), axes[0].y(), axes[0].z());

@@ -3851,15 +3851,6 @@ CubitStatus GeometryModifyTool::sweep_rotational(
       CubitUndo::note_result_bodies( output_body_list );
   }
 
-  body_list.clean_out();
-  for(int i = 0; i < result_list.size(); i++)
-  {
-    Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body );
-    if(body)
-      body_list.append(body);
-  }
-  CAST_LIST( body_list, ref_ent_list, RefEntity);
-
   return status;
 }
 
@@ -3917,14 +3908,6 @@ CubitStatus GeometryModifyTool::sweep_translational(
       CubitUndo::note_result_bodies( output_body_list );
   }
 
-  body_list.clean_out();
-  for(int i = 0; i < result_list.size(); i++)
-  {
-    Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body );
-    if(body)
-      body_list.append(body);
-  }
-  CAST_LIST( body_list, ref_ent_list, RefEntity);
   return status;
 }
 
@@ -4810,14 +4793,6 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
       CubitUndo::note_result_bodies( output_body_list );
   }
 
-  body_list.clean_out();
-  for(int i = 0; i < result_list.size(); i++)
-  {
-    Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body );
-    if(body)
-      body_list.append(body);
-  }
-  CAST_LIST( body_list, ref_ent_list, RefEntity);
   return status;
 }
 CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_list,
@@ -4879,14 +4854,6 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
       CubitUndo::note_result_bodies( output_body_list );
   }
 
-  body_list.clean_out();
-   for(int i = 0; i < result_list.size(); i++)
-   {
-     Body* body = CAST_TO(result_list.get_and_step()->topology_entity(),Body );
-     if(body)
-       body_list.append(body);
-   }
-   CAST_LIST( body_list, ref_ent_list, RefEntity);
   return status;
 }
 
