@@ -815,6 +815,8 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     // test add, remove and get all entitiy sets using super set
     // check GetAllGentitysets works recursively and dosen't return
     // multi sets
+/* Since it commented the super set part, there's no sense to do following
+   tests. Hence commented out.
   for (int k = 0; k < num_super; k++) {
       // add gentity sets of super set to each gentity set of super set
       // make multiple child super sets
@@ -846,7 +848,7 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
     CHECK( "Problem to add temp set to gentitysets." );
       //}
   }
-
+*/
   return true;
 }
   
