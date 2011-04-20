@@ -812,43 +812,6 @@ bool gentityset_test(iGeom_Instance geom, bool /*multiset*/, bool /*ordered*/)
   //success = false;
   //}
 
-    // test add, remove and get all entitiy sets using super set
-    // check GetAllGentitysets works recursively and dosen't return
-    // multi sets
-/* Since it commented the super set part, there's no sense to do following
-   tests. Hence commented out.
-  for (int k = 0; k < num_super; k++) {
-      // add gentity sets of super set to each gentity set of super set
-      // make multiple child super sets
-    iBase_EntitySetHandle ges_k = ges_array1[k];
-
-    for (int a = 0; a < ges_array1.size(); a++) {
-      iGeom_addEntSet( geom, ges_array1[a], ges_k, &err );
-      CHECK( "Problem to add entity set." );
-    }
-    
-      // add super set to each entity set
-    //    sidl::array<GentitysetHandle> superset_array
-    //= sidl::array<GentitysetHandle>::create1d(1);
-    //superset_array.set(0, super_set);
-    //int num_superset_array;
-    
-    iGeom_addEntSet( geom, super_set, ges_k, &err );
-    CHECK( "Problem to add super set to gentitysets." );
-
-      // add one gentity sets multiple times
-    // HJK: ??? how to deal this case?
-    //sidl::array<GentitysetHandle> temp_array1
-    //= sidl::array<GentitysetHandle>::create1d(1);
-    //int num_temp_array1;
-    //temp_array1.set(0, temp_ges1);
-
-    //for (int l = 0; l < 3; l++) {
-    iGeom_addEntSet( geom, temp_ges1, ges_k, &err );
-    CHECK( "Problem to add temp set to gentitysets." );
-      //}
-  }
-*/
   return true;
 }
   
