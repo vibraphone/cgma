@@ -2170,8 +2170,25 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
   GProp_GProps myProps;
   BRepGProp::LinearProperties(aShape, myProps);
   double length =  myProps.Mass();
+  TopExp_Explorer Ex;
   if(length < get_sme_resabs_tolerance())
-    PRINT_WARNING("Generated a sliver curve. \n");
+  {
+    //check if the two vertices are acctually the same point.
+    CubitVector v[2];
+    int i = 0;
+    for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
+    {
+      TopoDS_Vertex vt = TopoDS::Vertex(Ex.Current());
+      gp_Pnt pt = BRep_Tool::Pnt(vt);
+      v[i] = CubitVector(pt.X(), pt.Y(), pt.Z());
+      i++;
+    }  
+      
+    if(v[0] == v[1])
+      return (Curve*) NULL;
+    else  
+      PRINT_WARNING("Generated a sliver curve. \n");
+  }
 
   if (!OCCMap->IsBound(aShape)) 
     {
@@ -2192,7 +2209,6 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
       CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(aShape);
     }
 
-  TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
     populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
 

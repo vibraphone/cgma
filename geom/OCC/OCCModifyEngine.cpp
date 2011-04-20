@@ -1457,6 +1457,7 @@ BodySM* OCCModifyEngine::brick( double wid, double dep, double hi ) const
 // Member Type: PUBLIC
 // Description: create an OCC brick given center axes and extension
 //              extension is equvlent to (wid/2, dep/2, hi/2)
+//              center should be given the coordinates in global system
 // Author     : Jane Hu
 // Date       : 03/08
 //===============================================================================
@@ -1464,8 +1465,7 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
                                 const CubitVector axes[3],
                                 const CubitVector &extension) const
 {
-  CubitVector left_corner =  center - extension;
-  gp_Pnt left_point(left_corner.x(), left_corner.y(), left_corner.z());
+  gp_Pnt left_point(0,0,0);
   gp_Dir main_dir(axes[2].x(), axes[2].y(), axes[2].z());
   gp_Dir x_dir(axes[0].x(), axes[0].y(), axes[0].z());
   gp_Ax2 Axis(left_point, main_dir, x_dir);
@@ -1477,7 +1477,17 @@ BodySM* OCCModifyEngine::brick( const CubitVector& center,
   if (lump == NULL)
     return (BodySM*)NULL;
 
-  return CAST_TO(lump, OCCLump)->get_body(); 
+  BodySM* body = CAST_TO(lump, OCCLump)->get_body();
+  if(body)
+  {
+    CubitVector center_point;
+    double volume;
+    OCCBody* occ_body = CAST_TO(body,OCCBody);
+    occ_body->mass_properties(center_point, volume); 
+    CubitVector move_vec = center - center_point;
+    occ_body->move(move_vec.x(), move_vec.y(), move_vec.z());
+    return body;
+  }
 }
 
 //===============================================================================

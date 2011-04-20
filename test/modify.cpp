@@ -236,7 +236,7 @@ CubitStatus make_Point()
   ref_edges.clean_out();
   new_bodies.get()->ref_edges(ref_edges);
   isize=ref_edges.size();
-  assert(isize == 22);
+  assert(isize == 21);
 
   ref_edges.clean_out();
   new_bodies.clean_out(); 
