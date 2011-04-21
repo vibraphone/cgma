@@ -38,7 +38,6 @@ void iGeom_setLastError( int error_type, const char* description )
   switch (error_type) {
     ERROR_DESC( SUCCESS                 , iBase_SUCCESS_DESC );
     ERROR_DESC( MESH_ALREADY_LOADED     , "Mesh already loaded" );
-    ERROR_DESC( NO_MESH_DATA            , "No data" );
     ERROR_DESC( FILE_NOT_FOUND          , "Could not read file" );
     ERROR_DESC( FILE_WRITE_ERROR        , "File write failed" );
     ERROR_DESC( NIL_ARRAY               , "NULL or empty array" );
