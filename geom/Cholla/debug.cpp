@@ -5,6 +5,7 @@
 #include "CubitFacetEdge.hpp"
 #include "GfxDebug.hpp"
 #include "CubitBox.hpp"
+#include "ChollaSurface.hpp"
 
 #include "debug.hpp"
 static int fg_color = CUBIT_MAGENTA;
@@ -61,6 +62,15 @@ void dzoom(CubitBox &box)
 {
   GfxDebug::zoom(box);
 }
+
+
+void dsurfdraw( ChollaSurface *surf)
+{
+  DLIList<FacetEntity*> surface_facets;
+  surf->get_facets(surface_facets);
+  dldraw(surface_facets);
+}
+
 
 void dldraw( DLIList<FacetEntity *> &facet_list )
 {

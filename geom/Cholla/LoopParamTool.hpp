@@ -30,8 +30,8 @@ public:
   ~LoopParamTool();
 	
   virtual CubitStatus set_up_space();
-  virtual CubitStatus transform_to_uv(CubitVector &, CubitVector &);
-  virtual CubitStatus transform_to_xyz(CubitVector &, CubitVector &);
+  virtual CubitStatus transform_to_uv(const CubitVector &, CubitVector &);
+  virtual CubitStatus transform_to_xyz(CubitVector &, const CubitVector &);
     //These functions are required because this is a child of ParamTool.
     //They do nothing.
 

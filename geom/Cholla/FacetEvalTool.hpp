@@ -79,8 +79,6 @@ private:
                                     DLIList<CubitFacetEdge*> &edge_list );
     //- populates the edge_list with edges contained by the given facets
 
-  CubitStatus get_loops_from_facets(DLIList<CubitFacetEdge*> &all_edge_list,
-                                    DLIList<DLIList<CubitFacetEdge*>*> &loop_list );
     //- populates the loop_list with edges contained by the given edge list
   void destroy_facets();
     //- Destroys the facets, and points.
@@ -152,7 +150,7 @@ private:
                                 CubitVector Nijk[10] );
   static CubitStatus project_to_patch( CubitFacet *facet,                                                
                                 CubitVector &ac,
-                                CubitVector &pt,
+                                const CubitVector &pt,
                                 CubitVector &eval_pt,
                                 CubitVector *eval_norm,
                                 CubitBoolean &outside,
@@ -169,7 +167,7 @@ private:
     //- determine the area coordinate of the facet at the edge
 
   static CubitBoolean is_at_vertex( CubitFacet *facet,
-                                    CubitVector &pt,
+                                    const CubitVector &pt,
                                     CubitVector &ac,
                                     double compare_tol,
                                     CubitVector &eval_pt,
@@ -270,7 +268,7 @@ public:
     //- the facet area coordinates
 
   static CubitStatus project_to_facet( CubitFacet *facet, 
-                                       CubitVector &pt,
+                                       const CubitVector &pt,
                                        CubitVector &areacoord,
                                        CubitVector &close_point,
                                        CubitBoolean &outside,
@@ -282,7 +280,7 @@ public:
                                  CubitFacet *&last_facet,
                                  int interp_order,
                                  double compare_tol,
-                                 CubitVector &this_point,
+                                 const CubitVector &this_point,
                                  CubitBoolean trim,
                                  CubitBoolean *outside,
                                  CubitVector *closest_point_ptr,
@@ -296,7 +294,7 @@ public:
                          CubitVector &close_point);
   static CubitStatus project_to_facetedge( CubitFacet *facet, 
                          int vert0, int vert1,
-                         CubitVector &the_point,
+                         const CubitVector &the_point,
                          CubitVector &pt_on_plane, 
                          CubitVector &close_point,
                          CubitBoolean &outside_facet, 
@@ -315,13 +313,13 @@ public:
     //- evaluate the normal on a facet (use the interpOrder)
 
   static void project_to_facet_plane( CubitFacet *facet,
-                               CubitVector &pt,
+                               const CubitVector &pt,
                                CubitVector &point_on_plane,
                                double &dist );
     //- project a point to the plane of a facet
 
   static void facet_area_coordinate( CubitFacet *facet,
-                                     CubitVector &pt_on_plane,
+                                     const CubitVector &pt_on_plane,
                                      CubitVector &areacoord );
     //- define the area coordinates of a point on a plane of the facet
 
@@ -405,6 +403,39 @@ public:
   static CubitFacetEdge *next_boundary_edge( CubitFacetEdge *this_edge, CubitPoint *p0 );
     //- return the next edge on the boundary
 
+  CubitStatus get_intersections(CubitVector point1,
+                                CubitVector point2,
+                                DLIList<CubitVector*>& intersection_list,
+                                bool bounded = CUBIT_FALSE);
+
+
+  // The following copyright applies to the following two functions...
+  //
+  // Copyright 2001, softSurfer (www.softsurfer.com)
+  //
+  // This code may be freely used and modified for any purpose
+  // providing that this copyright notice is included with it.
+  // SoftSurfer makes no warranty for this code, and cannot be held
+  // liable for any real or imagined damage resulting from its use.
+  // Users of this code must verify correctness for their application.
+
+  static int intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance );
+    //- Find intersection point of a ray and a facet
+    //    Return: -1 = triangle is degenerate (a segment or point)
+    //             0 = disjoint (no intersect)
+    //             1 = intersect at unique point
+    //             2 = are in the same plane
+
+  static int intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacetEdge* facet, CubitVector* point, double &distance );
+    //- Find intersection point of a ray and a facet edge
+    //    Return: -1 = edge is degenerate (a point)
+    //             0 = disjoint (no intersect)
+    //             1 = intersect at unique point
+    //             2 = are the same line (infinite points)
+
+  
+  CubitStatus get_loops_from_facets(DLIList<CubitFacetEdge*> &all_edge_list,
+                                    DLIList<DLIList<CubitFacetEdge*>*> &loop_list );
 };
 
 #endif // SMOOTH_FACET_EVAL_TOOL_HPP

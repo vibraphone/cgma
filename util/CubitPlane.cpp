@@ -4,8 +4,8 @@
 //- Checked by:
 
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <math.h>
 #include "CubitPlane.hpp"
 #include "CubitVector.hpp"
@@ -128,11 +128,11 @@ int CubitPlane::mk_plane_with_points( const CubitVector& V0,
 
 CubitVector CubitPlane::point_on_plane() const
 {
-  if (normal_.x() != 0)
+  if ( fabs( normal_.x() ) > CUBIT_RESABS )
     return CubitVector(-d_ / normal_.x(), 0, 0);
-  else if (normal_.y() != 0)
+  else if ( fabs( normal_.y() ) > CUBIT_RESABS )
     return CubitVector(0, -d_ / normal_.y(), 0);
-  else if (normal_.z() != 0)
+  else if ( fabs( normal_.z() ) > CUBIT_RESABS )
     return CubitVector(0, 0, -d_ / normal_.z());
     // If A B and C are all zero, the plane is invalid,
     // Just return <0,0,0>

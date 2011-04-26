@@ -86,23 +86,19 @@ TDUniqueId::~TDUniqueId()
 	//- it is a match, erase it by iterator.  This will leave the other entry with
 	//- the similar key in the list, which is necessary for save/restore, and remove the 
 	//- deactivated geometry due to the merge.
-	int map_count = unique_id_list().count(uniqueId);
-	if( map_count == 1 )
-		unique_id_list().erase(uniqueId);
-	else if( map_count > 1 )
-	{
-		std::pair<TDUIDList::iterator, TDUIDList::iterator> 
-			bounds_pair = unique_id_list().equal_range(uniqueId);
 
-    TDUIDList::iterator
-			it = bounds_pair.first, upper = bounds_pair.second;
-		
-		while( (*it).second != this && it != upper ) 
-			it++;
-		
-		if( it != upper )
-			unique_id_list().erase( it );
-	}
+  std::pair<TDUIDList::iterator, TDUIDList::iterator>
+    bounds_pair = unique_id_list().equal_range(uniqueId);
+
+  TDUIDList::iterator it;
+  for(it = bounds_pair.first; it != bounds_pair.second; ++it)
+  {
+    if(it->second == this)
+    {
+      unique_id_list().erase( it );
+      break;
+    }
+  }
 }
     
 int TDUniqueId::get_unique_id(ToolDataUser *owner,
@@ -133,7 +129,6 @@ int TDUniqueId::find_td_unique_id(const int temp_id,
     return 0;
 
   if ((*it).first == temp_id) {
-
       // the lower bound key is equal to temp_id, so this id is in the list
 
       // look for duplicate id's, return one that's directly related
@@ -191,15 +186,28 @@ int TDUniqueId::get_unique_id_for_copy( int original_id )
 void TDUniqueId::clear_copy_map()
 {
   //remove TDs off of entities
-  
   COPYUIDMap::iterator iter = mapForCopying.begin();
   for(; iter != mapForCopying.end(); iter++ )
   {
-    ToolDataUser *td_user = find_td_unique_id( (*iter).second );
+    DLIList<ToolDataUser*> tool_data_users;
+    int num_tool_datas = find_td_unique_id( (*iter).second, tool_data_users );
+    
+    for( ; num_tool_datas--; ) 
+    {
+      ToolDataUser *td_user = tool_data_users.get_and_step();
+
       //make sure the pointer isn't null
-    if(td_user)
-      td_user->remove_TD(TDUniqueId::is_unique_id);
-  }
+      ToolData *tool_data = NULL;
+      if(td_user)
+        tool_data = td_user->remove_TD(TDUniqueId::is_unique_id);
+      
+      //delete the TDUniqueId as well
+      if( tool_data )
+        delete tool_data;
+
+      td_user = find_td_unique_id( (*iter).second );
+    } 
+  } 
 
   //clear out the map 
   if (mapForCopying.empty()) return;

@@ -26,6 +26,7 @@
 #include <iostream>
 #include <math.h>
 #include "GeometryQueryTool.hpp"
+#include "CubitCompat.hpp"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -432,8 +433,8 @@ void iGeom_load( iGeom_Instance instance,
 	       strstr(name, ".IGES") != NULL)
 	file_type = "IGES";
       
-      if (file_type.empty()) status = gqt->read_geometry_file(name);
-      else status = gqt->read_geometry_file(name, NULL, file_type.c_str());
+      if (file_type.empty()) status = CubitCompat_import_solid_model(name, "ACIS_SAT");
+      else status = CubitCompat_import_solid_model(name, file_type.c_str());
 
       if (CUBIT_SUCCESS != status) {
 	ERROR(iBase_FILE_NOT_FOUND, "Trouble loading geometry file.");
@@ -524,7 +525,7 @@ void iGeom_save (iGeom_Instance instance,
   DLIList<RefEntity*> bodies;
   int num_ents_exported;
   CubitString cubit_version(" (iGeom)");
-  CubitStatus status = gqt->export_solid_model(bodies, name, file_type.c_str(),
+  CubitStatus status = CubitCompat_export_solid_model(bodies, name, file_type.c_str(),
                                                num_ents_exported, cubit_version, logfile_name );
   if (CUBIT_SUCCESS != status) 
     ERROR(iBase_FAILURE, "Trouble saving geometry file.");
@@ -1452,7 +1453,7 @@ iGeom_getIntArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(int);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<void**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1475,7 +1476,7 @@ iGeom_getDblArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(double);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<void**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1497,7 +1498,7 @@ iGeom_getEHArrData (iGeom_Instance instance,
   int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntityHandle);
   iGeom_getArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<void**>(tag_value), 
+                   reinterpret_cast<void**>(tag_value),
                    &tag_value_allocated_tmp, 
                    &tag_value_size_tmp,
                    err);
@@ -1517,10 +1518,10 @@ iGeom_getESHArrData (iGeom_Instance instance,
 {
   int tag_value_allocated_tmp = *tag_value_allocated * sizeof(iBase_EntitySetHandle);
   int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntitySetHandle);
-  iGeom_getArrData(instance, entity_handles, 
+  iGeom_getArrData(instance, entity_handles,
                    entity_handles_size, tag_handle,
-                   reinterpret_cast<void**>(tag_value), 
-                   &tag_value_allocated_tmp, 
+                   reinterpret_cast<void**>(tag_value),
+                   &tag_value_allocated_tmp,
                    &tag_value_size_tmp,
                    err);
   *tag_value_allocated = tag_value_allocated_tmp / sizeof(iBase_EntitySetHandle);
@@ -1596,8 +1597,8 @@ iGeom_setESHArrData (iGeom_Instance instance,
                      int tag_values_size,
                      int* err)
 {
-  iGeom_setArrData(instance, entity_handles, 
-                   entity_handles_size, tag_handle, 
+  iGeom_setArrData(instance, entity_handles,
+                   entity_handles_size, tag_handle,
                    tag_values, sizeof(iBase_EntitySetHandle)*tag_values_size,
                    err);
 }
@@ -1666,11 +1667,11 @@ iGeom_getESHData (iGeom_Instance instance,
                   iBase_EntityHandle entity_handle,
                   iBase_TagHandle tag_handle,
                   iBase_EntitySetHandle* data_out,
-                  int* err ) 
+                  int* err )
 {
   void *val_ptr = data_out;
   int val_size = sizeof(iBase_EntitySetHandle);
-  iGeom_getArrData(instance, &entity_handle, 1, 
+  iGeom_getArrData(instance, &entity_handle, 1,
                    tag_handle, &val_ptr, &val_size, &val_size, err);
 }
 
@@ -1732,9 +1733,9 @@ iGeom_setESHData (iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle entity_handle,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ iBase_EntitySetHandle tag_value,
-                  int* err ) 
+                  int* err )
 {
-  iGeom_setArrData(instance, &entity_handle, 1, 
+  iGeom_setArrData(instance, &entity_handle, 1,
                    tag_handle, &tag_value, sizeof(iBase_EntitySetHandle), err);
 }
 
@@ -1839,11 +1840,11 @@ iGeom_getEntSetESHData (iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         iBase_EntitySetHandle* tag_ptr,
-                        int* err ) 
+                        int* err )
 {
   int tag_size = sizeof(iBase_EntitySetHandle);
   void* data_ptr = tag_ptr;
-  iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr, 
+  iGeom_getEntSetData(instance, entity_set, tag_handle, &data_ptr,
                       &tag_size, &tag_size, err);
 }
 
@@ -1897,7 +1898,8 @@ iGeom_setEntSetEHData (iGeom_Instance instance,
                        int* err )
 {
   iGeom_setEntSetData(instance, entity_set, tag_handle, 
-                      &tag_value, sizeof(iBase_EntityHandle), err);
+                      &tag_value,
+                      sizeof(iBase_EntityHandle), err);
 }
 
 void
@@ -1907,7 +1909,7 @@ iGeom_setEntSetESHData (iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle tag_value,
                         int* err )
 {
-  iGeom_setEntSetData(instance, entity_set, tag_handle, 
+  iGeom_setEntSetData(instance, entity_set, tag_handle,
                       &tag_value, sizeof(iBase_EntitySetHandle), err);
 }
 
@@ -6374,8 +6376,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
     }
     fclose(tmp_file);
 
-    CubitStatus status = gqt->
-      import_solid_model(tmp_name, model_type_str[model_type[i]], 
+    CubitStatus status = 
+      CubitCompat_import_solid_model(tmp_name, model_type_str[model_type[i]], 
                          NULL, false);
   
     if (CUBIT_SUCCESS != status) {
@@ -6601,34 +6603,21 @@ iGeom_fire_ray( const CubitVector& point,
                 DLIList<RefEntity*>& entities,
                 DLIList<double>& ray_params )
 {
-  DLIList<Body*> bodies;
-  DLIList<RefEntity*> tmp_entities;
-  DLIList<double> tmp_params;
-  double length = direction.length();
-  CubitVector unit_dir(direction);
-  unit_dir /= length;
+  const double EPSILON = 0.0;
+  CubitStatus s;
+  CubitVector nc_point(point), nc_direction(direction);
   
-  RefEntityFactory::instance()->bodies( bodies );
-  bodies.reset();
-  for (int i = bodies.size(); i > 0; --i)
-  {
-    Body* bod = bodies.get_and_step();
-    if (!iBase_intersect_ray_box(bod->bounding_box(), point, unit_dir))
-      continue;
+    // get all free entities in model
+  DLIList<RefEntity*> target_entities;
+  s = GeometryQueryTool::instance()->get_free_ref_entities( target_entities );
+  if (CUBIT_SUCCESS != s) return s;
+  DLIList<Body*> bodies;
+  GeometryQueryTool::instance()->bodies( bodies );
+  CAST_LIST_TO_PARENT( bodies, target_entities );
     
-    tmp_entities.clean_out();
-    tmp_params.clean_out();
-    int rval = GeometryQueryTool::instance()
-      ->fire_ray( bod, point, unit_dir, tmp_params, &tmp_entities );
-    if (rval == CUBIT_FAILURE)
-      return CUBIT_FAILURE;
-    
-    entities += tmp_entities;
-    tmp_params.reset();
-    for (int j = tmp_params.size(); j > 0; j--)
-      ray_params.append( tmp_params.get_and_step() / length );
-  }
-  return CUBIT_SUCCESS;
+    // do ray fire at list of free entities
+  return GeometryQueryTool::instance()->
+    fire_ray( nc_point, nc_direction, target_entities, ray_params, 0, EPSILON, &entities );
 }
 
 static RefEntity* point_classification( const CubitVector& pt, RefVertex* vtx )

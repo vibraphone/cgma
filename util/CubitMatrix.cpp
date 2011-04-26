@@ -3,7 +3,7 @@
 //- Owner: Dan Goodrich
 //- Checked by:
 
-#include <assert.h>
+#include <cassert>
 
 #include "CubitMatrix.hpp"
 #include "CubitMessage.hpp"
@@ -394,7 +394,6 @@ CubitMatrix CubitMatrix::inverse()
       assert( fabs(det) > CUBIT_DBL_MIN );
     
       matrix_inverse.set(0,0, matrixPtr[0][0]);
-      matrix_inverse *= det_inv;
     }
 
     if ( numRows == 2 ) {
@@ -402,7 +401,6 @@ CubitMatrix CubitMatrix::inverse()
       matrix_inverse.set(1,0,-matrixPtr[1][0]);
       matrix_inverse.set(0,1,-matrixPtr[0][1]);
       matrix_inverse.set(1,1, matrixPtr[0][0]);
-      matrix_inverse *= det_inv;
     }
 
     if ( numRows == 3 ) {

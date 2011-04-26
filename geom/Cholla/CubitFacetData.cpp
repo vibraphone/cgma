@@ -135,19 +135,21 @@ CubitFacetData::CubitFacetData( CubitPoint *p1, CubitPoint *p2,
 //Description:  destructor 
 //=========================================================================== 
 CubitFacetData::~CubitFacetData() 
-{ 
-  int ii = 3;
- 
+{
+  destruct_facet_internals();
+}
+
+void CubitFacetData::destruct_facet_internals()
+{
+  int ii = 3; 
   for (ii = 2; ii>=0; ii--){
     //remove this triangle-point association at the points. 
     CubitPoint *current_point = point(ii);
     if (current_point)
-      current_point->remove_facet(this);
+      current_point->remove_facet(this);     
+
+    pointArray[ii] = NULL;
     
-    DLIList <CubitFacet *> facet_list;
-    current_point->facets(facet_list);
-     
-     
      //remove edge-point association at the edges
      
      CubitFacetEdge *current_edge = edgeArray[ii];
@@ -155,9 +157,10 @@ CubitFacetData::~CubitFacetData()
      CubitStatus status;
      if (current_edge)
        status = current_edge->remove_facet(this);
-     
+     edgeArray[ii] = NULL;
   }
 }
+
 
 //=========================================================================== 
 //Function Name: closest_point 
@@ -229,13 +232,33 @@ CubitPoint* CubitFacetData::split_edge( CubitPoint* edge1_pt,
     if ( edge->point(0) == edge1_pt ) {
       edge_d->set_point(new_pt, 1);
       if ( !new_edge )
+      {
         new_edge = new CubitFacetEdgeData( new_pt, edge2_pt );
+        DLIList<ToolData*> tds;
+        edge->get_all_TDs(&tds);
+        for (int i=0; i<tds.size(); i++)
+        {
+          ToolData* new_td = tds.get_and_step()->propogate(new_edge);
+          if (new_td)
+            new_edge->add_TD(new_td);
+        }
+      }
       else if( new_edge->point(0) != new_pt )
         new_edge->flip();
     } else {
       edge_d->set_point(new_pt, 0);
       if ( !new_edge )
+      {
         new_edge = new CubitFacetEdgeData( edge2_pt, new_pt );
+        DLIList<ToolData*> tds;
+        edge->get_all_TDs(&tds);
+        for (int i=0; i<tds.size(); i++)
+        {
+          ToolData* new_td = tds.get_and_step()->propogate(new_edge);
+          if (new_td)
+            new_edge->add_TD(new_td);
+        }
+      }
       else if( new_edge->point(1) != new_pt )
         new_edge->flip();
     }
@@ -274,6 +297,17 @@ CubitPoint* CubitFacetData::split_edge( CubitPoint* edge1_pt,
       new_facet = new CubitFacetData( other_pt, edge2_pt, new_pt );
     else
       new_facet = new CubitFacetData( other_pt, new_pt, edge2_pt );
+
+    DLIList<ToolData*> td_list;
+    facet->get_all_TDs(&td_list);
+    for (int i=0; i< td_list.size(); i++)
+    {
+      ToolData* new_td = td_list.get_and_step()->propogate(new_facet);
+      if (new_td)
+      {
+        new_facet->add_TD(new_td);
+      }
+    }
    
     if ( new_edge ) {
       assert(!new_facet->edge(0));
@@ -546,8 +580,23 @@ CubitStatus CubitFacetData::flip_edge( int this_edge_index )
     return CUBIT_FAILURE;
   
     // get other facet
-  CubitFacetData* other_facet = dynamic_cast<CubitFacetData*>(pt_facets.next());
-  assert(!!other_facet);
+  CubitFacetData* other_facet = NULL;
+  if( pt_facets.get() == this )
+  {
+    other_facet = dynamic_cast<CubitFacetData*>(pt_facets.next());
+  }
+  else
+    if( pt_facets.next() == this )
+    {
+      other_facet = dynamic_cast<CubitFacetData*>( pt_facets.get() );
+    }
+    else
+    {
+      assert(0);
+      return CUBIT_FAILURE;
+    }
+
+  assert(other_facet);
   
     // get indices on other facet
   int other_pt1_index = other_facet->point_index(point1);
@@ -572,9 +621,20 @@ CubitStatus CubitFacetData::flip_edge( int this_edge_index )
     // get the opposite points on facets
   CubitPoint* this_other_pt = this->point(this_edge_index);
   CubitPoint* other_other_pt = other_facet->point(other_edge_index);
+  if(this_other_pt == other_other_pt){
+    PRINT_WARNING("Unable to perform flip.\n");
+    return CUBIT_FAILURE;
+  }
+  
   
     // get the edge that is to be moved from this to the other facet
   CubitFacetEdge* this_trade_edge = this->edge(this_pt2_index);
+    // get the edge thatis to be moved from the other facet to this
+  CubitFacetEdge* other_trade_edge = other_facet->edge(other_pt1_index);
+  if(this_trade_edge == other_trade_edge){
+    PRINT_WARNING("Unable to perform flip (2).\n");
+    return CUBIT_FAILURE;
+  }
   int this_trade_use = this->edge_use(this_pt2_index);
   if ( this_trade_edge )
   {
@@ -582,8 +642,6 @@ CubitStatus CubitFacetData::flip_edge( int this_edge_index )
     this_trade_edge->add_facet(other_facet);
   }
   
-    // get the edge thatis to be moved from the other facet to this
-  CubitFacetEdge* other_trade_edge = other_facet->edge(other_pt1_index);
   int other_trade_use = other_facet->edge_use(other_pt1_index);
   if ( other_trade_edge )
   {

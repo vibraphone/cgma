@@ -34,7 +34,7 @@ fi
 ################################################################################
 #                Create libtool script
 ################################################################################
-# We need the libtool script both for the calls to the FATHOM_LIBTOOL_VAR
+# We need the libtool script both for the calls to the ITAPS_LIBTOOL_VAR
 # macro and for us in testing for ACIS libraries.  If we're using a newer
 # version of libtool, the script normally isn't generated until AC_OUTPUT
 # at the end of the configure script.  Ask that it be created now instead.
@@ -151,6 +151,65 @@ elif test "x$CUBIT_DIR" != "xno"; then
        break],
       [AC_MSG_RESULT(no)])
   done
+
+  if test "x$CUBIT_LIBS" = "xno"; then
+    AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
+  fi
+  
+  # Test for CAT-proprietary code that must be initialized in Cubit12
+  AC_MSG_CHECKING([For AcisTweekToolCAT])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM(
+    [class AcisTweakToolCAT{ public: static AcisTweakToolCAT* instance(); };],
+    [AcisTweakToolCAT::instance();])],
+    [CUBIT_CAT_DEFINES=-DACIS_TWEAK_TOOL_CAT; AC_MSG_RESULT([yes])],
+    [CUBIT_CAT_DEFINES=; AC_MSG_RESULT([no])])
+
+  # Test for Cubit 12.1 and later import_solid_model
+  AC_MSG_CHECKING([For Cubit 12 minor revision API])
+  # Set to 1 if it looks like Cubit 12.1, set to 2 if it looks like cubit 12.2,
+  # otherwise set to zero
+  CUBIT_MINOR_API=0
+  if test $CUBIT_MINOR_API = 0; then
+    AC_LINK_IFELSE([AC_LANG_PROGRAM(
+      [enum Model_File_Type { MFT_NOT_DEFINED = 0 };
+       struct ModelImportOptions;
+       class RefEntity;
+       class CubitString;
+       template <typename T> class DLIList;
+       class GeometryQueryTool { public: 
+         void import_solid_model( const char*, Model_File_Type,
+                ModelImportOptions&, DLIList<RefEntity*>* );
+         void export_solid_model( DLIList<RefEntity*>&, const char*,
+                Model_File_Type, int&, CubitString const&, const char* );
+        };],
+      [GeometryQueryTool* ptr = 0;
+       ModelImportOptions* opt = 0;
+       DLIList<RefEntity*>* list = 0;
+       CubitString* str = 0;
+       int i;
+       ptr->import_solid_model( 0, MFT_NOT_DEFINED, *opt, 0 );
+       ptr->export_solid_model( *list, 0, MFT_NOT_DEFINED, i, *str, 0 );])],
+      [CUBIT_MINOR_API=2])
+  fi
+  if test $CUBIT_MINOR_API = 0; then
+    AC_LINK_IFELSE([AC_LANG_PROGRAM(
+      [struct ModelImportOptions;
+       class RefEntity;
+       class CubitString;
+       template <typename T> class DLIList;
+       class GeometryQueryTool { public: 
+         void import_solid_model( const char*, const char*,
+                ModelImportOptions&, DLIList<RefEntity*>* );
+        };],
+      [GeometryQueryTool* ptr = 0;
+       ModelImportOptions* opt = 0;
+       CubitString* str = 0;
+       ptr->import_solid_model( 0, 0, *opt, 0 );])],
+      [CUBIT_MINOR_API=1])
+  fi
+  AC_MSG_RESULT([$CUBIT_MINOR_API])
+
+  AC_DEFINE_UNQUOTED([CUBIT_12],[$CUBIT_MINOR_API],[Cubit 12 GeometryQueryTool interface])
   LIBS="$old_LIBS"
   LDFLAGS="$old_LDFLAGS"
   LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
@@ -161,13 +220,10 @@ elif test "x$CUBIT_DIR" != "xno"; then
   export PATH
   AC_LANG_POP([C++])
   
-  if test "x$CUBIT_LIBS" = "xno"; then
-    AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
-  fi
   CGM_EXT_LIBS="$CGM_EXT_LIBS $CUBIT_LIBS"
   CGM_EXT_LDFLAGS="$CGM_EXT_LDFLAGS $CUBIT_LDFLAGS"
   CGM_EXT_LTFLAGS="$CGM_EXT_LTFLAGS $CUBIT_LTFLAGS"
-  CUBIT_CGM="-DCUBIT_CGM"
+  CUBIT_CGM="-DCUBIT_CGM $CUBIT_CAT_DEFINES"
 dnl  AC_DEFINE( HAVE_ACIS, "Have CGM ACIS Implementation" )
   HAVE_ACIS_DEF=-DHAVE_ACIS
 fi
@@ -354,7 +410,7 @@ HAVE_OCC_DEF=
 if test "x$occ_DIR" != "xno"; then
   OCC_CORE_LIBS="-lTKMesh -lTKTopAlgo -lTKGeomAlgo -lTKBRep -lTKGeomBase -lTKG3d -lTKG2d -lTKMath -lTKernel"
   OCC_GEOM_LIBS="-lTKHLR -lTKOffset -lTKShHealing -lTKFillet -lTKFeat -lTKBool -lTKBO -lTKPrim"
-  OCC_LCAF_LIBS="-lTKBinL -lTKLCAF -lTKCDF"
+  OCC_LCAF_LIBS="-lTKBinL -lTKLCAF -lTKCDF -lTKCAF"
   OCC_LIBS="$OCC_LCAF_LIBS $OCC_GEOM_LIBS $OCC_CORE_LIBS"
   CUBIT_OCC_LIB="-lcubit_OCC"
   OCC_STEP_LIBS="-lTKSTEP -lTKSTEP209 -lTKSTEPAttr -lTKSTEPBase -lTKXSBase" 
@@ -535,8 +591,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
-AC_CONFIG_HEADERS(config.h)
-AC_CONFIG_HEADERS([geom/parallel/CGMmpi_config.h])
+AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h geom/CubitCompat.h)
 AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
@@ -547,6 +602,8 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/OCC/Makefile
            geom/parallel/Makefile
+           geom/testing/Makefile
+           geom/testing/TestConfig.h
            geom/virtual/Makefile 
            init/Makefile
            compat/Makefile

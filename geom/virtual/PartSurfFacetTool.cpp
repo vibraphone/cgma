@@ -569,10 +569,21 @@ CubitStatus PartSurfFacetTool::init_facet_data(
 
     // Get real points on surface boundary
   mySurface->get_points(geom_points);
-  geom_points.last();
-  for (i = geom_points.size(); i--; )
-    if (!geom_points.step_and_get()->real_point())
-      geom_points.change_to(0);
+  for (i = 0; i < geom_points.size(); i++ )
+  {
+    if (!geom_points[i]->real_point())
+      geom_points[i] = 0;
+    // also process for hardpoints
+    if (geom_points[i]) 
+    {
+      PartitionCurve* curve = geom_points[i]->next_curve();
+      if ( curve->measure() < GEOMETRY_RESABS &&
+           curve->start_point() == curve->end_point() )
+      {
+        geom_points[i] = 0;
+      }
+    }
+  }
   geom_points.remove_all_with_value(0);
   
     // Group geometric points into boundary and interior sets
@@ -648,6 +659,13 @@ CubitStatus PartSurfFacetTool::init_facet_data(
       PartitionPoint* start_point = coedge->start_point();
       PartitionPoint* end_point = coedge->end_point();
 
+      // Hardpoints (meeting all cases below) are a special
+      // case loop that should not be handled in the partitioning.
+      if (loop->num_coedges() == 1 && 
+          first_curve->measure() < GEOMETRY_RESABS &&
+          start_point == end_point)
+        break;
+
         // Get list of curves until next real vertex
       curve_set.clean_out();
       curve_set.append(first_curve);
@@ -665,9 +683,8 @@ CubitStatus PartSurfFacetTool::init_facet_data(
         for (i = curve_set.size(); i--; )
         {
           GMem gmem;
-          int junk;
           PartitionCurve* c = curve_set.get_and_step();
-          c->get_geometry_query_engine()->get_graphics( c, junk, &gmem );
+          c->get_geometry_query_engine()->get_graphics( c, &gmem );
           GfxDebug::draw_polyline(gmem.point_list(), gmem.pointListCount, CUBIT_RED );
         }
         GfxDebug::flush();
@@ -1482,7 +1499,6 @@ CubitStatus PartSurfFacetTool::seam_curve( DLIList<CubitFacetEdgeData*>& edge_li
         {
           if (!collapse_edge(new_point, prev_point, &old_facets))
           {
-            assert(0);
             return CUBIT_FAILURE;
           }
           std::swap(prev_point, new_point);
@@ -1576,7 +1592,6 @@ CubitStatus PartSurfFacetTool::seam_curve( DLIList<CubitFacetEdgeData*>& edge_li
         {
           if (!collapse_edge(curve_point, prev_point, &old_facets))
           {
-            assert(0);
             return CUBIT_FAILURE;
           }
           std::swap(curve_point, prev_point);

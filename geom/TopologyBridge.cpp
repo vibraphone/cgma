@@ -291,6 +291,91 @@ void TopologyBridge::coedgesms( DLIList<CoEdgeSM*>& coedges, bool unique )
   }
 }  
 
+void TopologyBridge::curves_ignore_virtual( DLIList<Curve*>& curves, bool unique )
+{
+  int i;
+  if(dynamic_cast<BodySM*>(this))
+  {
+    DLIList<TopologyBridge*> lumps;
+    this->get_children_virt(lumps);
+    for(i=lumps.size(); i>0; i--)
+      lumps.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<Lump*>(this))
+  {
+    DLIList<TopologyBridge*> shells;
+    this->get_children_virt(shells);
+    for(i=shells.size(); i>0; i--)
+      shells.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<ShellSM*>(this))
+  {
+    DLIList<TopologyBridge*> surfs;
+    this->get_children_virt(surfs);
+    for(i=surfs.size(); i>0; i--)
+      surfs.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<Surface*>(this))
+  {
+    DLIList<TopologyBridge*> loops;
+    this->get_children_virt(loops);
+    for(i=loops.size(); i>0; i--)
+      loops.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<LoopSM*>(this))
+  {
+    DLIList<TopologyBridge*> coedges;
+    this->get_children_virt(coedges);
+    for(i=coedges.size(); i>0; i--)
+      coedges.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<CoEdgeSM*>(this))
+  {
+    DLIList<TopologyBridge*> tmp_curves;
+    this->get_children_virt(tmp_curves);
+    for(i=tmp_curves.size(); i>0; i--)
+      tmp_curves.get_and_step()->curves_ignore_virtual(curves, unique);
+  }
+  else if(dynamic_cast<Curve*>(this))
+  {
+    curves.append(dynamic_cast<Curve*>(this));
+  }
+  if(unique)
+    curves.uniquify_ordered();
+}
+
+void TopologyBridge::surfaces_ignore_virtual( DLIList<Surface*>& surfaces, bool unique )
+{
+  int i;
+  if(dynamic_cast<BodySM*>(this))
+  {
+    DLIList<TopologyBridge*> lumps;
+    this->get_children_virt(lumps);
+    for(i=lumps.size(); i>0; i--)
+      lumps.get_and_step()->surfaces_ignore_virtual(surfaces, unique);
+  }
+  else if(dynamic_cast<Lump*>(this))
+  {
+    DLIList<TopologyBridge*> shells;
+    this->get_children_virt(shells);
+    for(i=shells.size(); i>0; i--)
+      shells.get_and_step()->surfaces_ignore_virtual(surfaces, unique);
+  }
+  else if(dynamic_cast<ShellSM*>(this))
+  {
+    DLIList<TopologyBridge*> surfs;
+    this->get_children_virt(surfs);
+    for(i=surfs.size(); i>0; i--)
+      surfs.get_and_step()->surfaces_ignore_virtual(surfaces, unique);
+  }
+  else if(dynamic_cast<Surface*>(this))
+  {
+    surfaces.append(dynamic_cast<Surface*>(this));
+  }
+  if(unique)
+    surfaces.uniquify_ordered();
+}
+
 void TopologyBridge::curves( DLIList<Curve*>& curves, bool unique )
 {
   DLIList<TopologyBridge*> related;

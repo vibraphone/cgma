@@ -19,6 +19,8 @@
 #include "GeometryQueryTool.hpp"
 #include "GSaveOpen.hpp"
 #include "CADeferredAttrib.hpp"
+#include "BasicTopologyEntity.hpp"
+#include "GeometryEntity.hpp"
 
 CubitAttrib* CAEntityId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
 {
@@ -130,6 +132,14 @@ CubitStatus CAEntityId::actuate()
   RefEntity *other_entity = 
     GeometryQueryTool::instance()->get_ref_entity(attribOwnerEntity->class_name(), 
                                                   entityId+id_inc);
+
+  // Check to make sure the other entity has a valid topology bridge.  If 
+  // it doesn't it may be a ref entity hanging around that still needs
+  // to be cleaned up so don't consider it in the checks below.
+  TopologyEntity *te = dynamic_cast<TopologyEntity*>(other_entity);
+  if(te && !te->bridge_manager()->topology_bridge())
+    other_entity = NULL;
+
     // 2) already an entity with the new id;
   if (other_entity) {
       // 2a) if other entity has a CAMP attribute, this owner has one too,
@@ -225,7 +235,8 @@ CubitStatus CAEntityId::actuate()
     other_entity->find_cubit_attrib_type(CA_ENTITY_ID, att_list);
     CAEntityId *other_caeid = (att_list.size() ?  CAST_TO(att_list.get(), CAEntityId)
                                : NULL);
-    if ( other_caeid && other_caeid->id()+id_inc != entityId+id_inc) {
+    if (other_caeid && other_caeid->id()+id_inc != entityId+id_inc)
+    {
         // need to reset owner entity id first, so that we don't have
         // two identical ids active at the same time (messes up the
         // graphics)
@@ -276,6 +287,9 @@ CubitStatus CAEntityId::actuate()
     // ok, now set the id and return
   attribOwnerEntity->set_id (entityId+id_inc, CUBIT_FALSE);
   attribOwnerEntity->color(CUBIT_DEFAULT_COLOR);
+  BasicTopologyEntity *bte = CAST_TO( attribOwnerEntity, BasicTopologyEntity );
+  if( bte )
+    bte->get_geometry_entity_ptr()->set_saved_id(entityId+id_inc);
 
   hasActuated = CUBIT_TRUE;
 

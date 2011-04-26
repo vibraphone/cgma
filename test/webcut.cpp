@@ -19,6 +19,7 @@
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
 #include "InitCGMA.hpp"
+#include "CubitCompat.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -91,7 +92,7 @@ void read_geometry(int num_files, const char **argv)
   
     // For each file, open and read the geometry
   for (i = 0; i < num_files; i++) {
-    status = gti->import_solid_model(argv[i], "ACIS_SAT");
+    status = CubitCompat_import_solid_model(argv[i], "ACIS_SAT");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", argv[i]);
       abort();
@@ -147,7 +148,7 @@ CubitStatus webcut_with_brick()
   read_geometry(1, &argv);
   
   //int num_bodies = gti->num_bodies();
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies,junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
   //old_bodies.remove();
@@ -157,7 +158,7 @@ CubitStatus webcut_with_brick()
   axes[1].set(0.,1.,0.);
   axes[2].set(0.,0.,1.);
   CubitVector extension(0.5,0.5,0.5);
-  CubitStatus rsl= gmti->webcut_with_brick(old_bodies,center,axes,extension,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_brick(old_bodies,center,axes,extension,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -166,7 +167,7 @@ CubitStatus webcut_with_brick()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_brick.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype, 
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -184,14 +185,14 @@ CubitStatus webcut_with_cylinder()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
   //old_bodies.remove();
   CubitVector center(4.,4.,4.);
   CubitVector axis(1.,0.,0.);
   double radius = 1.0;
-  CubitStatus rsl= gmti->webcut_with_cylinder(old_bodies,radius,axis, center,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_cylinder(old_bodies,radius,axis, center,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -200,7 +201,7 @@ CubitStatus webcut_with_cylinder()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_cylinder.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -218,7 +219,7 @@ CubitStatus webcut_with_planar_sheet()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   old_bodies.reset();
 
@@ -227,7 +228,7 @@ CubitStatus webcut_with_planar_sheet()
   axes[0].set(1.,1.,0.);
   axes[1].set(0.,1.,1.);  
   
-  CubitStatus rsl= gmti->webcut_with_planar_sheet(old_bodies,center,axes,40.,40.,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_planar_sheet(old_bodies,center,axes,40.,40.,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -236,7 +237,7 @@ CubitStatus webcut_with_planar_sheet()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sheet.sat";
   const char * filetype = "ACIS_SAT";
-  rsl =  gti->export_solid_model(ref_entity_list, filename, filetype, 
+  rsl =  CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                  num_ents_exported, cubit_version);
   
   gti->delete_geometry();
@@ -255,7 +256,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -275,7 +276,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   axis.set(0.,-1.,0.);
 
   CpuTimer webcut_BODYs_timer;
-  CubitStatus rsl= gmti->webcut_with_sweep_curves_rotated(old_bodies,curves,center,axis,1.58,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_curves_rotated(old_bodies,curves,center,axis,1.58,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -287,7 +288,7 @@ CubitStatus webcut_with_sweep_curves_rotated()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_rotational.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -304,7 +305,7 @@ CubitStatus webcut_with_sweep_curves()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -321,7 +322,7 @@ CubitStatus webcut_with_sweep_curves()
   CubitVector axis;
   axis.set(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -330,7 +331,7 @@ CubitStatus webcut_with_sweep_curves()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_curves.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -347,7 +348,7 @@ CubitStatus webcut_with_sweep_along_curve()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -375,7 +376,7 @@ CubitStatus webcut_with_sweep_along_curve()
   axis.set(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,
-                                                  edge_to_sweep_along,new_bodies);
+                                                  edge_to_sweep_along,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -384,7 +385,7 @@ CubitStatus webcut_with_sweep_along_curve()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_along_curve.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -401,7 +402,7 @@ CubitStatus webcut_with_curve_loop()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
   DLIList<RefEntity*> free_entities;
   gti->get_free_ref_entities(free_entities);
@@ -415,7 +416,7 @@ CubitStatus webcut_with_curve_loop()
 
   old_bodies.reset();
 
-  CubitStatus rsl= gmti->webcut_with_curve_loop(old_bodies,curves,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_curve_loop(old_bodies,curves,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -424,7 +425,7 @@ CubitStatus webcut_with_curve_loop()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_curve_loop.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -441,7 +442,7 @@ CubitStatus webcut_with_extended_surf()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
 
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -450,17 +451,22 @@ CubitStatus webcut_with_extended_surf()
   DLIList<RefFace*> ref_faces;
   old_bodies.remove()->ref_faces(ref_faces);
   RefFace *refface = ref_faces.get();
+  ref_faces.clean_out();
+  ref_faces.append(refface);
   int num_cut = 0;
-  CubitStatus rsl= gmti->webcut_with_extended_surf(old_bodies,refface,new_bodies, num_cut);
-  if (rsl== CUBIT_FAILURE)
+  PRINT_INFO("Webcut body %d with surface extended from %d\n", old_bodies.get()->id(), refface->id() );
+  CubitStatus rsl= gmti->webcut_with_extended_sheet(old_bodies,ref_faces,new_bodies, junk, num_cut);
+  if (rsl== CUBIT_FAILURE) {
+     gti->delete_geometry();
      return rsl;
+  }
 
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_extended_surf.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -477,7 +483,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   PRINT_SEPARATOR;
   read_geometry(1, &argv);
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   gti->bodies(old_bodies);
 
   old_bodies.reset();
@@ -490,7 +496,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   CubitVector axis(0.,-1.,0.);
 
   // set 7th parameter to be false to indicate of to_next_surf = false
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces_rotated(old_bodies,faces,center,axis,1.6,NULL,true,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces_rotated(old_bodies,faces,center,axis,1.6,NULL,true,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -499,7 +505,7 @@ CubitStatus webcut_with_sweep_surfaces_rotated()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_rotated.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -516,14 +522,14 @@ CubitStatus webcut_with_sweep_surfaces()
   Body *vol, *sheet;
   read_model6( vol, sheet );
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   old_bodies.append( vol );
   DLIList<RefFace*> faces;
   sheet->ref_faces( faces );
 
   CubitVector axis(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false,true,false, false,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false,true,false, false,NULL,NULL,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -532,7 +538,7 @@ CubitStatus webcut_with_sweep_surfaces()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -549,7 +555,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   Body *vol, *sheet;
   read_model6( vol, sheet );
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   old_bodies.append( vol );
   DLIList<RefFace*> faces;
   sheet->ref_faces( faces );
@@ -567,7 +573,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   CubitVector axis(1.,0.,0.);
 
   CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,false, true,false,false,NULL,
-                                                  edge_to_sweep_along,new_bodies);
+                                                  edge_to_sweep_along,new_bodies, junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -576,7 +582,7 @@ CubitStatus webcut_with_sweep_surfaces_along_curve()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_along_curve.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();
@@ -593,14 +599,14 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   Body *vol, *sheet;
   read_model6( vol, sheet );
   
-  DLIList<Body*> old_bodies, new_bodies;
+  DLIList<Body*> old_bodies, new_bodies, junk;
   old_bodies.append( vol );
   DLIList<RefFace*> faces;
   sheet->ref_faces( faces );
 
   CubitVector axis(1.,0.,0.);
 
-  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,false, false,NULL,NULL,new_bodies);
+  CubitStatus rsl= gmti->webcut_with_sweep_surfaces(old_bodies,faces,axis,true,true,false, false,NULL,NULL,new_bodies,junk);
   if (rsl== CUBIT_FAILURE)
      return rsl;
 
@@ -609,7 +615,7 @@ CubitStatus webcut_with_sweep_surfaces_perp()
   const CubitString cubit_version="10.2";
   const char * filename = "webcut_with_sweep_surfaces_perp.sat";
   const char * filetype = "ACIS_SAT";
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   gti->delete_geometry();

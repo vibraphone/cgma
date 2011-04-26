@@ -182,7 +182,10 @@ TopoDS_Compound* OCCBody::make_Compound(DLIList<Lump*>& my_lumps,
 OCCBody::~OCCBody() 
 {
   if (myTopoDSShape)
+  {
     delete (TopoDS_Compound*)myTopoDSShape;
+    myTopoDSShape = NULL;
+  }
 }
 
 GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
@@ -902,6 +905,14 @@ void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
        OCCPoint* occ_point = CAST_TO(vertex, OCCPoint);
        if (occ_point)
          points.append_unique(occ_point);
+  }
+
+  DLIList<OCCSurface*> surfaces;
+  this->get_all_surfaces(surfaces);
+  for(int i = 0; i < surfaces.size(); i++)
+  {
+    OCCSurface* occ_surf = surfaces.get_and_step();
+    points += occ_surf->get_hardpoints();
   }
 }
 

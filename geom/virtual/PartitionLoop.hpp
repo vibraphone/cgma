@@ -27,6 +27,14 @@ public:
   PartitionSurface* get_surface() const;
   //void surface( PartitionSurface* );
   
+  virtual CubitBoolean is_external() ;
+    //R CubitBoolean
+    //R- CUBIT_TRUE/CUBIT_FALSE
+    //- Returns CUBIT_TRUE if the Loop is an external Loop and CUBIT_FALSE
+    //- otherwise.
+  
+  virtual LoopType loop_type() ;
+
   PartitionCoEdge* first_coedge( );
   PartitionCoEdge* next_coedge( PartitionCoEdge* after_this );
   PartitionCoEdge* prev_coedge( PartitionCoEdge* before_this );

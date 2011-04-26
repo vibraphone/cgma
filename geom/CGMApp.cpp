@@ -17,6 +17,7 @@
 
 #include "GeometryQueryTool.hpp"
 #include "GeometryModifyTool.hpp"
+#include "GeometryFeatureTool.hpp"
 #include "GeometryHealerTool.hpp"
 #include "BoundingBoxTool.hpp"
 #include "RefEntityName.hpp"
@@ -25,6 +26,7 @@
 #include "TDUniqueId.hpp"
 #include "MergeTool.hpp"
 #include "OldUnmergeCode.hpp"
+#include "ModelQueryEngine.hpp"
 
 // TODO - I'm not sure this is the place to include all the attributes
 #include "CADefines.hpp"
@@ -37,6 +39,9 @@
 #include "CAEntityColor.hpp"
 #include "CAMergeStatus.hpp"
 #include "CASourceFeature.hpp"
+#ifdef CAT
+#include "cat\CAProWeld.hpp"
+#endif
 
 CGMApp* CGMApp::instance_ = NULL;
 
@@ -92,9 +97,14 @@ void CGMApp::startup(int argc, char **argv)
 
 void CGMApp::shutdown()
 {
-   delete GeometryHealerTool::instance();
-   delete GeometryModifyTool::instance();
-   delete GeometryQueryTool::instance();
+   GeometryHealerTool::delete_instance();
+   GeometryModifyTool::delete_instance();
+   GeometryQueryTool::delete_instance();
+   GeometryFeatureTool::delete_instance();
+   AnalyticGeometryTool::delete_instance();
+   RefEntityName::delete_instance();
+   MergeTool::delete_instance();
+   ModelQueryEngine::delete_instance();
 
    CGMApp::delete_instance();
 
@@ -172,6 +182,14 @@ void CGMApp::register_attributes()
                                                CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
                                                CUBIT_TRUE, CUBIT_FALSE);
   assert (CUBIT_SUCCESS == result);
+#ifdef CAT
+  result = CGMApp::instance()->attrib_manager()->register_attrib_type(
+                                               CA_PRO_WELD, "pro weld", "PRO_WELD",
+                                               CAProWeld_creator, CUBIT_TRUE,
+                                               CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
+                                               CUBIT_TRUE, CUBIT_FALSE);
+  assert (CUBIT_SUCCESS == result);
+#endif
 }
 
 CubitAttribManager* CGMApp::attrib_manager()

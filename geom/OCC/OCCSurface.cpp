@@ -98,7 +98,10 @@ OCCSurface::OCCSurface(TopoDS_Face *theFace)
 OCCSurface::~OCCSurface() 
 {
   if(myTopoDSFace)
+  {
     delete (TopoDS_Face*)myTopoDSFace;
+    myTopoDSFace = NULL;
+  }
 }
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
@@ -276,12 +279,12 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
   Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
 	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
-		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
+	    if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
 			  minDist = p.Distance(ext.Point(i).Value());
 			  newP = ext.Point(i).Value();
 			  ext.Point(i).Parameter(u, v);
 			  SLP.SetParameters(u, v);
-		  }
+            }
 	  }
   
 	if (closest_location != NULL)
@@ -307,8 +310,9 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
            if (curvature_2 != NULL)
               *curvature_2 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
         }
-  }
   return CUBIT_SUCCESS;
+  }
+  return CUBIT_FAILURE;
 }
 
 //-------------------------------------------------------------------------
@@ -327,7 +331,7 @@ void OCCSurface::closest_point_trimmed( CubitVector from_point,
   Extrema_ExtPS ext(p, asurface, Precision::Approximation(), Precision::Approximation());
   if (ext.IsDone() && (ext.NbExt() > 0)) {
 	  for ( i = 1 ; i <= ext.NbExt() ; i++ ) {
-		  if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
+		 if ( (i==1) || (p.Distance(ext.Point(i).Value()) < minDist) ) {
 			  minDist = p.Distance(ext.Point(i).Value());
 			  newP = ext.Point(i).Value();
 		  }

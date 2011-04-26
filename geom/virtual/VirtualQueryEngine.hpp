@@ -71,6 +71,8 @@ class VirtualQueryEngine : public GeometryQueryEngine
   
 public:
   
+  virtual int curve_is_on_ignored_surface(Curve *curve,
+                    Surface *surf);
   void remove_virtual_geometry( RefEntity* entity_ptr,
                                 CubitBoolean all_children );
   void remove_virtual_geometry( Body* body, bool all_children );
@@ -115,6 +117,8 @@ public:
     //- Access to VirtualQueryEngine must be through this function.
     //- This forces single instance of the class. (constructor is protected)
   
+  static void delete_instance();
+
   void register_attributes();
    //-  VGE registers attributes required for virtual geometry
    // -- only call this once per session
@@ -139,9 +143,6 @@ const char * modeler_type()
   virtual bool is_intermediate_engine() {return TRUE;}
   
   virtual CubitStatus get_graphics( Surface* surface_ptr,
-                                           int& number_of_triangles,
-                                           int& number_of_points,
-                                           int& number_of_facets,
                                            GMem* gMem,
                                            unsigned short normal_tolerance,
                                            double distance_tolerance,
@@ -163,7 +164,6 @@ const char * modeler_type()
     //- all goes well, CUBIT_Success is retuned.
   
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    int& num_points,
                                     GMem* gMem = NULL,
                                     double tolerance = 0.0 ) const;
     //R CubitStatus
@@ -243,7 +243,10 @@ const char * modeler_type()
     //I- Return only entities visible in the model.
     //- Get any virtual geometry of the passed entity or its children.
   
-
+  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point);
+   //R TopologyBridge*
+   //I hidden_tb, point
+   //I- Returns the lowest level visible entity that contains 'point.' (used for fire_ray())
 
   CubitBoolean virtuals_created() const;
     //- returns CUBIT_TRUE if there are virtual entities in the model
@@ -264,6 +267,11 @@ const char * modeler_type()
                           const CubitBoolean children_too = CUBIT_FALSE);
     //- returns CUBIT_TRUE if the entities passed in are virtual or
     //- contain any virtual entities
+
+  CubitBoolean is_partition( RefEntity *ref_entity );
+
+  CubitStatus get_sister_partitions( RefEntity *ref_entity,
+                                     DLIList<RefEntity*> &sisters);
   
   CubitStatus sort_edges( DLIList<RefEdge*>& edge_list ) const;
     //R CubitStatus
@@ -292,6 +300,8 @@ const char * modeler_type()
                              DLIList<TopologyBridge*>& curve_list);
   virtual CubitStatus get_underlying_surfaces(Surface * surf_ptr,
                                  DLIList<TopologyBridge*>& surf_list)  ;
+  virtual CubitStatus get_underlying_bridges(TopologyBridge* bridge_ptr,
+                                        DLIList<TopologyBridge*>& bridge_list);
 
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1, BodySM *body_ptr_2 ) const;
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const;
@@ -306,25 +316,17 @@ protected:
 //**** Display related methods
   
   CubitStatus get_composite_curve_facetting( CompositeCurve* ccurve_ptr,
-                                             int& num_points,
                                              GMem* gMem ) const;
   CubitStatus get_partition_curve_facetting( PartitionCurve* pcurve_ptr,
-                                             int& num_points,
                                              GMem* gMem ) const;
   
   CubitStatus get_composite_surface_facetting( CompositeSurface* surf_ptr,
-                                               int& number_triangles,
-                                               int& number_points,
-                                               int& number_facets,
                                                GMem* gMem,
                                                unsigned short normal_tol,
                                                double absolute_tol,
                                                double longest_edge ) const;
 
   CubitStatus get_partition_surface_facetting( PartitionSurface* surf_ptr,
-                                               int& number_triangles,
-                                               int& number_points,
-                                               int& number_facets,
                                                GMem* gMem,
                                                unsigned short normal_tol,
                                                double absolute_tol,
@@ -396,11 +398,22 @@ protected:
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const;
   virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const;
 
-  virtual CubitStatus fire_ray(BodySM *body,
-                               const CubitVector &ray_point,
-                               const CubitVector &unit,
-                               DLIList<double> &ray_params,
-                               DLIList<GeometryEntity*> *entity_list = 0) const;
+  virtual CubitStatus fire_ray( const CubitVector &origin,
+                                const CubitVector &direction,
+                                DLIList<TopologyBridge*> &at_entity_list,
+                                DLIList<double> &ray_params,
+                                int max_hits,
+                                double ray_radius,
+                                DLIList<TopologyBridge*> *hit_entity_list=0 ) const;
+    //- Fire a ray at specified entities, returning the parameters (distances)
+    //- along the ray and optionally the entities hit.  Returned lists are
+    //- appended to.  Input entities can be any of bodies, volumes, faces,
+    //- edges or vertices.  Optionally you can specify the maximum number of
+    //- hits to return (default = 0 = unlimited), and the ray radius to use for
+    //- intersecting the entities (default = 0.0 = use modeller default).
+    //- NOTE: returned entities hit might be "hidden" beneath virtual entities.
+    //-       To resolve to visible entities, use "get_visible_ents_for_hits"
+    //-       in GeometryQueryTool.
 
   virtual double get_sme_resabs_tolerance() const;
   virtual double set_sme_resabs_tolerance( double new_resabs );

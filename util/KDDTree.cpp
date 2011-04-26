@@ -23,8 +23,8 @@
 // Include Files
 //---------------------------------
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <time.h>
 
 #include "KDDTree.hpp"

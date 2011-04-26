@@ -877,3 +877,17 @@ SSSide::syncronize_lists( SSSide *other_side, double param_tol )
 
   return CUBIT_SUCCESS;
 }
+
+//================================================================================
+// Description: This class holds data on vertices for split across extend
+// Author     : Steve Storm
+// Date       : 10/7/2007
+//================================================================================
+TDSplitSurfaceExtend::TDSplitSurfaceExtend()
+{
+  successFlg = CUBIT_FALSE;
+}
+
+TDSplitSurfaceExtend::~TDSplitSurfaceExtend()
+{
+}

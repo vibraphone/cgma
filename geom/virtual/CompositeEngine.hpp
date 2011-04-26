@@ -39,17 +39,23 @@ class CubitTransformMatrix;
 class CompositeEngine : public IntermediateGeomEngine
 {
 	public:
+    void get_all_curves_and_points(DLIList<TopologyBridge*> &tb_list,
+                                   DLIList<Curve*> &curves,
+                                   DLIList<Point*> &points);
     bool is_composite(TBOwner *bridge_owner);
+    bool is_composite(TopologyBridge *bridge);
     bool is_partition(TBOwner *bridge_owner);
 
     virtual void remove_imprint_attributes_after_modify
                                 ( DLIList<BodySM*> &old_sms,
                                 DLIList<BodySM*> &new_sms );
+    virtual void push_named_attributes_to_curves_and_points
+                     ( DLIList<TopologyBridge*> &tb_list, const char *name_in);
     virtual void push_imprint_attributes_before_modify
                      ( DLIList<BodySM*> &body_sms );
     virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
                                                     DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<BodySM*> &new_sms,
+                                                    DLIList<TopologyBridge*> &tb_list,
                                                         DLIList<Body*> &old_bodies);
 
     // This is a copy of the function in MergeTool with the difference that it
@@ -64,7 +70,8 @@ class CompositeEngine : public IntermediateGeomEngine
     virtual ~CompositeEngine();
 	
     static CompositeEngine& instance();
-    
+    static void delete_instance();
+
     int level() const { return COMPOSITE_LAYER; }
 		
     CubitStatus import_geometry( DLIList<TopologyBridge*>& imported_geometry );
@@ -202,7 +209,12 @@ class CompositeEngine : public IntermediateGeomEngine
 
     void remove_attributes( DLIList<TopologyBridge*> &bridge_list );
       //remove Composite attributes off of topology bridges
-    void remove_modified(DLIList<TopologyBridge*>& geometry_list);
+    virtual void remove_modified(DLIList<Surface*> &all_surfs,
+      DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts);
+
+    void get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
+                                               DLIList<TopologyBridge*> &tbs );
+    
     
   protected:
 	

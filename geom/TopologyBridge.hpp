@@ -194,8 +194,10 @@ public:
   void lumps(DLIList<Lump*> &lumps,bool unique = true);
   void shellsms(DLIList<ShellSM*> &shellsms,bool unique = true);
   void surfaces(DLIList<Surface*> &surfaces,bool unique = true);
+  void surfaces_ignore_virtual(DLIList<Surface*> &surfaces,bool unique = true);
   void loopsms(DLIList<LoopSM*> &loopsms,bool unique = true);
-  void curves(DLIList<Curve*> &curves,bool unique = true);
+  void curves(DLIList<Curve*> &curves, bool unique = true);
+  void curves_ignore_virtual(DLIList<Curve*> &curves, bool unique = true);
   void coedgesms(DLIList<CoEdgeSM*> &coedgesms,bool unique = true);
   void points(DLIList<Point*> &points,bool unique = true);
     //- topology traversal of TB's; implemented based on native traversal

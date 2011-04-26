@@ -128,6 +128,16 @@ public:
   double distance_between_squared(const CubitVector& test_vector) const;
     //- Calculate the distance squared from the head of one vector
     //  to the head of the test_vector.
+
+  double distance_from_infinite_line(const CubitVector& point_on_line,
+                                     const CubitVector& line_direction) const;
+    //- Calculate the minimum distance between the head of this vector and a 
+    // line of infinite length.
+  
+  double distance_from_infinite_line_squared(const CubitVector& point_on_line,
+                                     const CubitVector& line_direction) const;
+    //- Calculate the square of the minimum distance between the head of this 
+    //  vector and a line of infinite length.
   
   double length_squared() const;
     //- Calculate the squared length of the vector.

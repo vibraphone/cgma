@@ -21,6 +21,9 @@
 #include "AppUtil.hpp"
 #include <ctype.h>
 #include <time.h>
+#include <fstream>
+using std::ifstream;
+
 
 #ifdef NT
 #include "Windows.h"
@@ -537,7 +540,8 @@ CubitString CubitUtil::get_temporary_filename()
 
   CubitString tmpdir = get_temp_directory();
   const char* filepattern = "CBT.XXXXXX";
-  char *temp_file_name = new char[tmpdir.length() + strlen(filepattern) + 1];
+    //needs to be two longer because of the "/"?
+  char *temp_file_name = new char[tmpdir.length() + strlen(filepattern) + 2];
   sprintf(temp_file_name, "%s/%s", tmpdir.c_str(), filepattern);
 
   // make an empty file and return the name for it
@@ -670,4 +674,140 @@ void CubitUtil::cubit_sleep(int duration_in_seconds)
 #else
   sleep(duration_in_seconds);
 #endif
+}
+
+int CubitUtil::find_available_file_name(char* buffer)
+{
+  int num_files;
+      
+    // If a bell character was encountered in the string, we need to 
+    // expand it to the next available number.
+
+  char* ten_ptr = 0;  //Pointer to the tens-digit in the string
+  char* one_ptr = 0;  //Pointer to the ones-digit in the string
+  CubitBoolean file_already_exists = CUBIT_FALSE;
+    
+  char* ptr;
+  
+    // Find the tens- and ones-digit in the string.
+    // We marked them with bell characters before, so
+    // that strftime() would ignore them.
+  for( ptr = buffer; *ptr; ptr++ )
+  {
+    if( (*ptr == '\007') && (*(ptr+1) == '\007') )
+    {
+      ten_ptr = ptr;
+      one_ptr = ptr + 1;
+      *ten_ptr = '0';
+      *one_ptr = '0';
+      break;
+    }
+  }
+  assert(ten_ptr != 0);
+  
+    //Search for next available number with two digits.
+
+  for(int i=0; i<10; ++i) 
+  {
+    *ten_ptr = (char)(i + '0');
+    for(int j=0; j<10; ++j) 
+    {
+      file_already_exists = CUBIT_FALSE;
+        
+      if (i==0 && j==0)
+	        continue; // Don't want cubit00.jou
+	    
+      *one_ptr = (char)(j + '0');
+      ifstream test_stream(buffer);
+        
+      if(!test_stream)
+      {
+          // File does not exist, use it
+        num_files = i*10 + j;
+         // Break out of both loops.
+        i = 10;
+        j = 10;
+                
+        file_already_exists = CUBIT_FALSE;
+      }
+      else
+          file_already_exists = CUBIT_TRUE;
+        
+      test_stream.close();  // File exists, close it and try next.
+    }
+  }
+
+    //Search for next available file with three digits
+  if(file_already_exists)
+  {
+  
+      // Find the tens- and ones-digit in the string.
+      //We should only be in here if they are both 9
+    char* ptr;
+    char* hun_ptr = 0;  //Pointer to the hundreds-digit in the string
+    char* temp_ptr = 0;
+  
+    for( ptr = buffer; *ptr; ptr++ )
+    {
+      if( (*ptr == '9') && (*(ptr+1) == '9') )
+      {
+        hun_ptr = ptr;
+        ten_ptr = ptr + 1;
+        one_ptr = ptr + 2;
+        temp_ptr = one_ptr;
+      
+        do
+        {
+          temp_ptr++;
+        }
+        while(*temp_ptr !='\0');
+
+        one_ptr = temp_ptr;
+        temp_ptr ++;
+      
+        do{
+          *temp_ptr = *one_ptr;
+          one_ptr--;
+          temp_ptr--;
+        }
+        while(one_ptr != ten_ptr);
+        one_ptr++;
+      
+        *hun_ptr = '1';
+        *ten_ptr = '0';
+        *one_ptr = '0';
+        break;
+      }
+    }
+    assert(ten_ptr != 0);
+  
+      //Search for next available number.
+    
+    for(int k = 1; k<10 ; ++k)
+    {
+      *hun_ptr = (char)(k+'0');
+    
+      for(int i=0; i<10  ; ++i) 
+      {
+        *ten_ptr = (char)(i + '0');
+        for(int j=0; j<10  ; ++j) 
+        {
+          *one_ptr = (char)(j + '0');
+          ifstream test_stream(buffer);
+          num_files = k*100 + i * 10 + j;
+          if(!test_stream)
+          {
+              // File does not exist, use it
+              //Break out of loop
+            k = 10;
+            i = 10;
+            j = 10;
+            
+          }
+          test_stream.close();  // File exists, close it and try next.
+        }
+      }
+    }
+  }
+  return num_files;
 }

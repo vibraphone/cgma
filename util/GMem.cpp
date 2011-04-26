@@ -1,5 +1,5 @@
 #include "GMem.hpp"
-#include <string.h> // To define NULL
+#include <cstring> // To define NULL
 #include "CubitVector.hpp"
 #include "DLIList.hpp"
 #include "OctTree.hpp"

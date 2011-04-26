@@ -19,6 +19,7 @@ libcubit_OCC_la_SOURCES = \
     OCCCoEdge.cpp \
     OCCCoFace.cpp \
     OCCCurve.cpp \
+    OCCHistory.cpp \
     OCCLoop.cpp \
     OCCLump.cpp \
     OCCModifyEngine.cpp \
@@ -38,6 +39,7 @@ libcubit_OCC_la_include_HEADERS = \
     OCCCoFace.hpp \
     OCCCurve.hpp \
     OCCGeometryCreator.hpp \
+    OCCHistory.hpp \
     OCCLoop.hpp \
     OCCLump.hpp \
     OCCModifyEngine.hpp \

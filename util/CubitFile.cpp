@@ -30,7 +30,7 @@
 #include "CubitFileIOWrapper.hpp"
 #include "CubitFileMetaData.hpp"
 #include "CubitFileFEModel.hpp"
-#include <string.h>
+#include <cstring>
 
 using namespace NCubitFile;
 
@@ -40,7 +40,7 @@ using namespace NCubitFile;
 
 /* Note: some platforms define both BIG_ENDIAN and LITTLE_ENDIAN
    so don't do if defined(LITTLE_ENDIAN) here.  Compare to BYTE_ORDER instead. */
-#if defined(NT) || defined(DA) || defined(CUBIT_LINUX) || (defined(LITTLE_ENDIAN) && (BYTE_ORDER==LITTLE_ENDIAN)) /* should be little endian platforms */
+#if defined(NT) || defined(__LITTLE_ENDIAN__) || defined(CUBIT_LINUX) || (defined(LITTLE_ENDIAN) && (BYTE_ORDER==LITTLE_ENDIAN)) /* should be little endian platforms */
     const UnsignedInt32 CCubitFile::mintNativeEndian = 0;
 #else // big endian platforms
     const UnsignedInt32 CCubitFile::mintNativeEndian = 0xFFFFFFFF;
@@ -975,6 +975,7 @@ UnsignedInt32 CCubitFile::WriteGroup(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::WriteBlock(UnsignedInt32 xintIndex,
                                      UnsignedInt32 xintBlockID,
+                                     int unique_id,
                                      UnsignedInt32 xintBlockType,
                                      UnsignedInt32 xintBlockColor,
                                      UnsignedInt32 xintMixedElemType,
@@ -991,7 +992,7 @@ UnsignedInt32 CCubitFile::WriteBlock(UnsignedInt32 xintIndex,
     try {
         if(!mpWriteFEModel)
             throw eOrderError;
-        mpWriteFEModel->WriteBlock(xintIndex, xintBlockID, xintBlockType,
+        mpWriteFEModel->WriteBlock(xintIndex, xintBlockID, unique_id, xintBlockType,
             xintBlockColor, xintMixedElemType, xintDefPyramidType,
             xintMaterialID, xintBlockDimension, xintNumTypes, xpaBlockData,
             xintAttributeOrder, xpadblAttributes);
@@ -1003,18 +1004,20 @@ UnsignedInt32 CCubitFile::WriteBlock(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::WriteNodeSet(UnsignedInt32 xintIndex,
                                        UnsignedInt32 xintNodeSetID,
+                                       int unique_id,
                                        UnsignedInt32 xintColor,
                                        UnsignedInt32 xintPointSymbol,
                                        UnsignedInt32 xintNumTypes,
-                                       SNodeSetData* xpaNodeSetData)
+                                       SNodeSetData* xpaNodeSetData,
+                                       const std::vector<char>& bcdata)
 // Try to write the membership of the passed group index to the writable file.
 // RETURNS: 0 on success, other values indicate error code.
 {
     try {
         if(!mpWriteFEModel)
             throw eOrderError;
-        mpWriteFEModel->WriteNodeSet(xintIndex, xintNodeSetID, xintColor,
-            xintPointSymbol, xintNumTypes, xpaNodeSetData);
+        mpWriteFEModel->WriteNodeSet(xintIndex, xintNodeSetID, unique_id, xintColor,
+            xintPointSymbol, xintNumTypes, xpaNodeSetData, bcdata);
         return eSuccess;
     }
     catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
@@ -1023,21 +1026,23 @@ UnsignedInt32 CCubitFile::WriteNodeSet(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::WriteSideSet_11(UnsignedInt32 xintIndex,
                                        UnsignedInt32 xintSideSetID,
+                                       int unique_id,
                                        UnsignedInt32 xintColor,
                                        UnsignedInt32 xintUseShells,
                                        UnsignedInt32 xintNumTypes,
                                        SSideSetData_11* xpaSideSetData,
                                        UnsignedInt32 xintNumDistFact,
-                                       double* xpadblDistribution)
+                                       double* xpadblDistribution,
+                                       const std::vector<char>& bcdata)
 // Try to write the membership of the passed group index to the writable file.
 // RETURNS: 0 on success, other values indicate error code.
 {
     try {
         if(!mpWriteFEModel)
             throw eOrderError;
-        mpWriteFEModel->WriteSideSet_11(xintIndex, xintSideSetID, xintColor,
+        mpWriteFEModel->WriteSideSet_11(xintIndex, xintSideSetID, unique_id, xintColor,
             xintUseShells, xintNumTypes, xpaSideSetData, xintNumDistFact,
-            xpadblDistribution);
+            xpadblDistribution, bcdata);
         return eSuccess;
     }
     catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
@@ -1216,6 +1221,7 @@ UnsignedInt32 CCubitFile::ReadGroupMembers(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::ReadBlock(UnsignedInt32 xintIndex,
                                     UnsignedInt32& xintBlockID,
+                                    int& unique_id,
                                     UnsignedInt32& xintBlockType,
                                     UnsignedInt32& xintBlockColor,
                                     UnsignedInt32& xintMixedElemType,
@@ -1234,7 +1240,7 @@ UnsignedInt32 CCubitFile::ReadBlock(UnsignedInt32 xintIndex,
     try {
         if(!mpReadFEModel)
             throw eOrderError;
-        mpReadFEModel->ReadBlock(xintIndex, xintBlockID,
+        mpReadFEModel->ReadBlock(xintIndex, xintBlockID, unique_id,
             xintBlockType, xintBlockColor, xintMixedElemType,
             xintDefPyramidType, xintMaterialID, xintBlockDimension,
             xintNumTypes, xpaBlockData, xintAttributeOrder, xpadblAttributes);
@@ -1256,10 +1262,12 @@ UnsignedInt32 CCubitFile::ReadBlock(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::ReadNodeSet(UnsignedInt32 xintIndex,
                                       UnsignedInt32& xintNodeSetID,
+                                      int& unique_id,
                                       UnsignedInt32& xintColor,
                                       UnsignedInt32& xintPointSymbol,
                                       UnsignedInt32& xintNumTypes,
-                                      SNodeSetData*& xpaNodeSetData)
+                                      SNodeSetData*& xpaNodeSetData,
+                                      std::vector<char>& bcdata)
 // Try to read the membership of the passed node set index from the read-only file.
 // Note: The 
 // RETURNS: 0 on success, other values indicate error code.
@@ -1268,8 +1276,8 @@ UnsignedInt32 CCubitFile::ReadNodeSet(UnsignedInt32 xintIndex,
     try {
         if(!mpReadFEModel)
             throw eOrderError;
-        mpReadFEModel->ReadNodeSet(xintIndex, xintNodeSetID,
-            xintColor, xintPointSymbol, xintNumTypes, xpaNodeSetData);
+        mpReadFEModel->ReadNodeSet(xintIndex, xintNodeSetID, unique_id,
+            xintColor, xintPointSymbol, xintNumTypes, xpaNodeSetData, bcdata);
         return eSuccess;
     }
     catch(EErrorCode xeErrorCode) {
@@ -1318,12 +1326,14 @@ UnsignedInt32 CCubitFile::ReadSideSet_10(UnsignedInt32 xintIndex,
 
 UnsignedInt32 CCubitFile::ReadSideSet_11(UnsignedInt32 xintIndex,
                                       UnsignedInt32& xintSideSetID,
+                                      int& unique_id,
                                       UnsignedInt32& xintColor,
                                       UnsignedInt32& xintUseShells,
                                       UnsignedInt32& xintNumTypes,
                                       SSideSetData_11*& xpaSideSetData,
                                       UnsignedInt32& xintNumDistFact,
-                                      double*& xpadblDistribution)
+                                      double*& xpadblDistribution,
+                                      std::vector<char>& bcdata)
 // Try to read the membership of the passed side set index from the read-only file.
 // Note: The 
 // RETURNS: 0 on success, other values indicate error code.
@@ -1332,9 +1342,9 @@ UnsignedInt32 CCubitFile::ReadSideSet_11(UnsignedInt32 xintIndex,
     try {
         if(!mpReadFEModel)
             throw eOrderError;
-        mpReadFEModel->ReadSideSet_11(xintIndex, xintSideSetID,
+        mpReadFEModel->ReadSideSet_11(xintIndex, xintSideSetID, unique_id,
             xintColor, xintUseShells, xintNumTypes, xpaSideSetData,
-            xintNumDistFact, xpadblDistribution);
+            xintNumDistFact, xpadblDistribution, bcdata);
         return eSuccess;
     }
     catch(EErrorCode xeErrorCode) {

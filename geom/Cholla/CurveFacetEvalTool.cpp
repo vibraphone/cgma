@@ -255,7 +255,7 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
 {
   CubitStatus stat = CUBIT_SUCCESS;
   int ii, jj;
-  int mydebug = 0;  
+  int mydebug = DEBUG_FLAG(181);  
   CubitBoolean done = CUBIT_FALSE;
   DLIList<CubitFacetEdge*> *facet_loop;
   CubitFacetEdge *edge, *startedge = NULL;
@@ -375,6 +375,10 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
   {
     stat = CUBIT_FAILURE;
     PRINT_WARNING("Can't define curve representation in mesh-based geometry\n");
+    PRINT_INFO("  Hint: Try importing as a free mesh and examining nodes and attached\n");
+    PRINT_INFO("        elements near the following locations:\n");
+    PRINT_INFO("        Start curve = %f %f %f\n", start_pt->x(), start_pt->y(), start_pt->z());
+    PRINT_INFO("        End curve = %f %f %f\n", end_pt->x(), end_pt->y(), end_pt->z());
     if (mydebug)
     {
       surfFacetEvalTool->debug_draw_facets( CUBIT_YELLOW );
@@ -1934,7 +1938,7 @@ void CurveFacetEvalTool::fix_point_edge_order()
 {
   CubitFacetEdge* this_edge;
   CubitFacetEdge* next_edge;
-  CubitPoint *this_pt0, *this_pt1;
+  CubitPoint *this_pt1;
   CubitPoint *next_pt0, *next_pt1;
   
   this_edge = myEdgeList.get_and_step();
@@ -1995,4 +1999,51 @@ void CurveFacetEvalTool::fix_point_edge_order()
 void CurveFacetEvalTool::debug_draw_facet_edges( int color )
 {
   draw_edges(color);
+}
+
+CubitBoolean CurveFacetEvalTool::replace_point( CubitPoint *del_pnt, CubitPoint *keep_pnt )
+{
+  CubitPoint *point_ptr;
+  int npoints = myPointList.size();
+  myPointList.reset();
+  CubitBoolean istat = CUBIT_FALSE;
+  int i;
+  for ( i = 0; i < npoints; i++ )
+  {
+    point_ptr = myPointList.get();
+    
+    if( point_ptr == del_pnt )
+    {
+      myPointList.remove();
+      myPointList.insert( keep_pnt );
+      istat = CUBIT_TRUE;
+    }
+    myPointList.step();
+  }
+  
+  return istat;
+}
+
+
+CubitBoolean CurveFacetEvalTool::replace_facets( DLIList< CubitFacetEdge *> &curv_edges )
+{
+
+  // replace edges 
+  this->myEdgeList = curv_edges;
+
+  // replace points
+  DLIList<CubitPoint *> point_list;
+  int i;
+  // insert start point of every facet_edge
+  curv_edges.reset();
+  for( i = 0; i < curv_edges.size(); i++ )
+  {
+    point_list.append( CAST_TO( curv_edges.get_and_step(), CubitFacetEdge )->point(0) );
+  }
+  // insert end point of last facet_edge
+  curv_edges.step( curv_edges.size() - 1 );
+  point_list.append( CAST_TO( curv_edges.get(), CubitFacetEdge )->point(1) );
+  this->myPointList = point_list;
+
+  return CUBIT_TRUE;
 }

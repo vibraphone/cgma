@@ -1755,7 +1755,7 @@ void importResults(const char *fileName, int *numEdge, int *numTri,
 static void time_stamp( FILE *fp )
 {
   struct tm *newtime;
-  char am_pm[] = "AM";
+  char* am_pm = "AM";
   time_t long_time;
 
   time( &long_time );                /* Get time as long integer. */

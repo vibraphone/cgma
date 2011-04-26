@@ -32,6 +32,11 @@ public:
 
   double facet_to_facet_distance( CurveOverlapFacet *other_facet );
 
+  void draw( int color ); 
+
+  CubitVector start_point();
+  CubitVector end_point();
+
 protected:
    
 private:

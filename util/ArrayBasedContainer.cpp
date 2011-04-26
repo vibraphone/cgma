@@ -5,8 +5,8 @@
 
 #include "ArrayBasedContainer.hpp"
 #include "CubitDefines.h"
-#include <string.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 
 unsigned int ArrayBasedContainer::currentAllocatedMemory = 0;
 unsigned int ArrayBasedContainer::maxAllocatedMemory = 0;

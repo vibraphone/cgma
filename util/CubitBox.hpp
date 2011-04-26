@@ -80,6 +80,10 @@ public:
     //- Check if boxes are within passed tolerance of each other.
     //- If tolerance is 0, use && or || operator.
   
+  bool intersect(const CubitVector* ray_origin, const CubitVector* ray_direction,
+      CubitVector* intersection_pt = NULL);
+    //- Check if ray intersects box
+
     //- Heading: Operators
 
     // Operators that modify {this}
@@ -133,14 +137,14 @@ public:
 
     // Operators that return a modification of {this}.
     // {this} itself is not modified.
-  friend CubitBox operator|(const CubitBox& lhs, const CubitBox& rhs);
-  friend CubitBox operator|(const CubitBox& lhs, const CubitVector& rhs);
-  friend CubitBox operator&(const CubitBox& lhs, const CubitBox& rhs);
-  friend CubitBox operator*(const CubitBox& lhs, double rhs);
-  friend CubitBox operator*(double rhs, const CubitBox& lhs);
-  friend CubitBox operator/(const CubitBox& lhs, double rhs);
-  friend CubitBox operator+(const CubitBox& lhs, const CubitVector& rhs);
-  friend CubitBox operator-(const CubitBox& lhs, const CubitVector& rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator|(const CubitBox& lhs, const CubitBox& rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator|(const CubitBox& lhs, const CubitVector& rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator&(const CubitBox& lhs, const CubitBox& rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator*(const CubitBox& lhs, double rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator*(double rhs, const CubitBox& lhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator/(const CubitBox& lhs, double rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator+(const CubitBox& lhs, const CubitVector& rhs);
+  friend CUBIT_UTIL_EXPORT CubitBox operator-(const CubitBox& lhs, const CubitVector& rhs);
   
 #ifdef BOYD15
   double distance( const CubitVector& position ) const;

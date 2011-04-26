@@ -173,6 +173,26 @@ CubitStatus RefVolume::mass_properties( CubitVector &centroid, double &volume )
   }
 }
 
+CubitStatus RefVolume::mass_properties( CubitVector  principal_axes[3], 
+                                        CubitVector &principal_moments, 
+                                        CubitVector &centroid, 
+                                        double &volume )
+{
+  DLIList<Body*> bodies;
+  this->bodies( bodies );
+  if( bodies.get()->is_sheet_body() )
+  {
+    centroid.set(0,0,0);
+    volume = 0;
+    return CUBIT_SUCCESS;
+  }
+  else
+  {
+    Lump *lump = get_lump_ptr();
+    return lump->mass_properties( principal_axes, principal_moments, centroid, volume );
+  }
+}
+
 CubitString RefVolume::measure_label()
 {
   return "volume";

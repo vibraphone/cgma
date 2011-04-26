@@ -69,10 +69,16 @@ RefEntity::RefEntity()
   markedFlag           = CUBIT_FALSE;
   listFlag             = CUBIT_FALSE;
   mColor = CUBIT_DEFAULT_COLOR;
+
+  CGMHistory::Event evt(CGMHistory::ENTITY_CREATED, this);
+  GeometryQueryTool::instance()->history().add_event(evt);
 }
 
 RefEntity::~RefEntity()
 {
+  CGMHistory::Event evt(CGMHistory::ENTITY_DELETED, this);
+  GeometryQueryTool::instance()->history().add_event(evt);
+
   // Remove the name of this entity from the entity name map
   RefEntityName::instance()->remove_refentity_name(this, CUBIT_FALSE);
   
@@ -627,8 +633,8 @@ RefEntity *RefEntity::meet( DLIList<RefEntity*> &ref_entities,
   }
   if ( all_same )
   {
-    ref_entities.get()->get_child_ref_entities(join_set);
-    return join_set.get();
+    join_set.append(ref_entities.get());
+    return ref_entities.get();
   }  
 
     // they aren't all the same; get all the children, intersect the lists,
@@ -932,13 +938,22 @@ int RefEntity::validate()
   
     // Check that measure is positive
   int error = 0;
-  double this_measure = measure();
-  if (this_measure <= 0.0) {
-    PRINT_WARNING("\tWARNING: non-positive %s (%f) for %s, (%s %d)\n",
-                  measure_label().c_str(), this_measure,
-                  entity_name().c_str(), class_name(), id());
-    error++;
-  }    
+
+  Body *tmp_body = CAST_TO( this, Body);
+  bool is_sheet_body = false;
+  if( tmp_body )
+    is_sheet_body = tmp_body->is_sheet_body();
+  
+  if( false == is_sheet_body )
+  {
+    double this_measure = measure();
+    if (this_measure <= 0.0) {
+      PRINT_WARNING("\tWARNING: non-positive %s (%f) for %s, (%s %d)\n",
+                    measure_label().c_str(), this_measure,
+                    entity_name().c_str(), class_name(), id());
+      error++;
+    }  
+  }
   return error;
 }
 

@@ -77,7 +77,10 @@ OCCShell::OCCShell(TopoDS_Shell *theShell, OCCSurface* surface)
 OCCShell::~OCCShell()
 {
   if(myTopoDSShell)
+  {
     delete (TopoDS_Shell*)myTopoDSShell;
+    myTopoDSShell = NULL;
+  }
 }
 
 OCCCoFace* OCCShell::remove_coface(OCCCoFace *coface)

@@ -35,7 +35,6 @@ class CubitVector;
 template <class X> class DLIList;
 class ShellSM;
 
-
 class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
 {
    public :
@@ -68,7 +67,10 @@ class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
       //- Only valid for planar surfaces
       //- Finds the underlying plane's origin and normal (unit) vector
       //- Returns CubitFailure if not a plane.
-      
+
+      virtual void param_dir(CubitVector &unit_dir_in_world_space,
+        CubitVector &pos_on_surf, double &du, double &dv){}
+
       virtual CubitStatus closest_point_uv_guess(  
           CubitVector const& location,
           double& u_guess, double& v_guess,
@@ -323,6 +325,11 @@ BWC*/
       {return UNDEFINED_SURFACE_TYPE;};
       //R GeometryType (enum)
       //R- The enumerated type of the geometric representation
+
+      virtual GeometryType is_cylindrical()
+      {return UNDEFINED_SURFACE_TYPE;};
+      //R GeometryType (enum) 
+      //R- CYLINDRICAL_SURFACE_TYPE if true UNDEFINED_SURFACE_TYPE if false
 
       // Now handled at RefFace level.  -- j.k. Oct, 2003
       //virtual void reverse_sense() = 0;

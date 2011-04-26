@@ -185,6 +185,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     static void draw_point(float x, float y, float z, int color);
     static void draw_point(const CubitVector& vector, int color);
     static void draw_point(CubitVector* vector, int color);
+    static void draw_points( DLIList<CubitVector> &points, int color );
 
     // draw line of points {x,y,z}, {x,y,z} of color
     static void draw_line(float x1, float y1, float z1, 

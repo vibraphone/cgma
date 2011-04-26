@@ -127,6 +127,9 @@ CubitStatus CubitAttribUser::put_simple_attrib
     GeometryEntity* GE_ptr =
       BTE_ptr->get_geometry_entity_ptr();
     
+    if( NULL == GE_ptr )
+      return CUBIT_FAILURE;
+
       // check for duplicates
     if (DEBUG_FLAG(94))
     {
@@ -171,6 +174,41 @@ CubitStatus CubitAttribUser::put_simple_attrib
   return CUBIT_SUCCESS;
 }
 
+CubitStatus CubitAttribUser::clear_simple_attribs_set_to_actuate()
+{
+  CubitAttrib *cubit_attrib_ptr = NULL;
+  CubitAttrib *next_attrib_ptr = NULL;
+  for(cubit_attrib_ptr = headAttrib;
+      cubit_attrib_ptr != NULL;)
+  {
+    //ignore Assembly and Name attributes
+    next_attrib_ptr = cubit_attrib_ptr->next_attrib();
+    if( cubit_attrib_ptr->int_attrib_type() != CA_ENTITY_NAME && 
+        cubit_attrib_ptr->int_attrib_type() != CA_ASSEMBLY_DATA &&
+        CGMApp::instance()->attrib_manager()->auto_actuate_flag(
+          cubit_attrib_ptr->int_attrib_type()))
+    {
+      remove_cubit_attrib( cubit_attrib_ptr );
+      delete cubit_attrib_ptr;
+    }
+    cubit_attrib_ptr = next_attrib_ptr;
+  }
+ 
+  if (DEBUG_FLAG(94))
+  {
+    PRINT_DEBUG_94("CubitAttribUser::clear_simple_attribs()\n");
+  }
+  TopologyEntity* te_ptr = dynamic_cast<TopologyEntity*>(this);
+  if( !te_ptr )
+    return CUBIT_FAILURE;
+  
+  remove_all_simple_attribute(te_ptr->bridge_manager()->topology_bridge());
+  write_cubit_attrib_by_type(CA_ASSEMBLY_DATA);
+  write_cubit_attrib_by_type( CA_ENTITY_NAME );
+  set_written_flag(CUBIT_FALSE);
+  return CUBIT_SUCCESS; 
+}
+
 CubitStatus CubitAttribUser::clear_simple_attribs()
 {
 
@@ -182,7 +220,7 @@ CubitStatus CubitAttribUser::clear_simple_attribs()
     //ignore Assembly and Name attributes
     next_attrib_ptr = cubit_attrib_ptr->next_attrib();
     if( cubit_attrib_ptr->int_attrib_type() != CA_ENTITY_NAME && 
-        cubit_attrib_ptr->int_attrib_type() != CA_ASSEMBLY_DATA )
+        cubit_attrib_ptr->int_attrib_type() != CA_ASSEMBLY_DATA)
     {
       remove_cubit_attrib( cubit_attrib_ptr );
       delete cubit_attrib_ptr;
@@ -538,14 +576,14 @@ CubitStatus CubitAttribUser::auto_actuate_cubit_attrib (CubitBoolean from_constr
                      attrib->att_internal_name(), attrib->attrib_owner()->class_name(),
                      attrib->attrib_owner()->id());
       
-      if (attrib->actuate() == CUBIT_FAILURE)
+      if(attrib->actuate() == CUBIT_FAILURE)
       {
         actuate_status = CUBIT_FAILURE;
       }
 
         // need to check again for delete flag, since it might have been set
         // in actuate function
-      if (attrib->delete_attrib() == CUBIT_TRUE)
+      if( attrib->delete_attrib() == CUBIT_TRUE)
       {
         remove_cubit_attrib(attrib);
         delete attrib;
@@ -605,6 +643,7 @@ CubitStatus CubitAttribUser::update_cubit_attrib (int attrib_type)
 
 CubitStatus CubitAttribUser::auto_update_cubit_attrib ()
 {
+
     // for this cau, automatically create and update ca's
 
     // first, create ca's for any attribute type which has its auto
@@ -731,6 +770,14 @@ CubitStatus CubitAttribUser::clear_all_simple_attrib( DLIList<RefEntity*>& entit
   return result;
 }
 
+CubitStatus CubitAttribUser::clear_all_simple_attrib_set_to_actuate( DLIList<RefEntity*>& entity_list )
+{
+  CubitStatus result = CUBIT_SUCCESS;
+  for( int i = entity_list.size(); i--; )
+    if( entity_list.get_and_step()->clear_simple_attribs_set_to_actuate() != CUBIT_SUCCESS )
+      result = CUBIT_FAILURE;
+  return result;
+}
 
 void CubitAttribUser::find_cubit_attrib_type (int type,
                                               DLIList<CubitAttrib*>& attrib_list) const

@@ -110,7 +110,7 @@ public:
   static bool ray_intersects_boundingbox(CubitVector& point, CubitVector& ray, const CubitBox& bbox);
 
   // write a facet list to a facet file
-  static CubitStatus write_facets( char *file_name,
+  static CubitStatus write_facets( const char *file_name,
                                    DLIList<CubitFacet *> &facet_list);
 
   // group facets into continuous lists
@@ -128,6 +128,8 @@ public:
   static void delete_facets(DLIList<DLIList<CubitFacet*>*> &shell_list);
   static void delete_facets(DLIList<CubitFacet*> &facet_list);
   static void delete_facet(CubitFacet *facet_ptr);
+  static void destruct_facet_no_delete(CubitFacet *facet_ptr);
+  
 
   // determine intersection of a segment with a facet
   // returns CUBIT_PNT_UNKNOWN: if segment is in plane of facet
@@ -135,9 +137,10 @@ public:
   //         CUBIT_PNT_INSIDE: if segment intersects inside facet
   //         CUBIT_PNT_BOUNDARY: if segment intersects a vertex or edge
   static CubitPointContainment intersect_facet(CubitVector &start, CubitVector &end,
-                                                CubitFacet *facet_ptr,
-                                                CubitVector &qq,
-                                                CubitVector &ac);
+                                               CubitFacet *facet_ptr,
+                                               CubitVector &qq,
+                                               CubitVector &ac,
+                                               CubitBoolean bound = CUBIT_TRUE);
 
    //  get axis-aligned bounding box of list of points
   static CubitStatus get_bbox_of_points(DLIList<CubitPoint*>& point_list, CubitBox& bbox);
@@ -148,6 +151,18 @@ public:
                                                   CubitVector &p0, 
                                                   CubitVector &p1,
                                                   double &distance2);
+
+  //  Get the intersection of the line defined by point1 and point2 with
+  //  bbox.  Returns 0,1 or 2 for the number of intersections.  A line
+  //  in one of the planes of the box will return 0.
+  static int get_bbox_intersections(CubitVector& point1,
+                                    CubitVector& point2,
+                                    const CubitBox& bbox,
+                                    CubitVector& intersection_1,
+                                    CubitVector& intersection_2);
+  
+  // mark facets and their children
+  static void mark_facets( DLIList<FacetEntity *> &facet_list, int mark_value );
   
 private:
 

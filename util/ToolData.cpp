@@ -10,4 +10,12 @@ ToolData::~ToolData() {}
 // functions aren't inlined in a lot of cases where their address is
 // taken.
 
+ToolData* ToolData::propogate(ToolDataUser* new_td_user)
+{
+  return NULL;
+}
 
+ToolData* ToolData::merge(ToolDataUser* other_td_user)
+{
+  return NULL;
+}

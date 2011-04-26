@@ -1,11 +1,15 @@
 #include "CubitDefines.h"
 #include "GeometryDefines.h"
-#include "CubitBox.hpp"
 #include "CubitVector.hpp"
-#include "BodySM.hpp"
-#include "Surface.hpp"
 
 #include "GeometryModifyEngine.hpp"
-#include "GeometryQueryEngine.hpp"
-#include "GeometryQueryTool.hpp"
+
+
+
+CubitStatus GeometryModifyEngine::split_free_curve( Curve *curve, 
+                                                    CubitVector &split_location,
+                                                    DLIList<Curve*> &new_curves )
+{
+  return CUBIT_FAILURE;
+}
 

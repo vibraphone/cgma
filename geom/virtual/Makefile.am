@@ -58,6 +58,7 @@ libcubit_virtual_la_SOURCES = \
     PartSurfFacetTool.cpp \
     PST_Data.cpp \
     SegmentedCurve.cpp \
+    SplitCompositeSurfaceTool.cpp \
     SubCurve.cpp \
     SubEntitySet.cpp \
     SubSurface.cpp \
@@ -113,6 +114,7 @@ libcubit_virtual_la_include_HEADERS = \
     PartitionSurface.hpp \
     PartitionTool.hpp \
     SegmentedCurve.hpp \
+    SplitCompositeSurfaceTool.hpp \
     SplitSurfaceVirtual.hpp \
     SubCurve.hpp \
     SubEntitySet.hpp \

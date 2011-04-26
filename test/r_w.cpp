@@ -19,6 +19,7 @@
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
 #include "InitCGMA.hpp"
+#include "CubitCompat.hpp"
 
 #include <algorithm>
 
@@ -95,7 +96,7 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
     std::string filename( local ? "./" : SRCPATH );
     char const* local_name = argv[i];
     filename += local_name;  
-    status = gti->import_solid_model(filename.c_str(), type.c_str());
+    status = CubitCompat_import_solid_model(filename.c_str(), type.c_str());
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
@@ -127,7 +128,7 @@ CubitStatus make_Point()
   const char * filename = "ex3.occ";
   const char * filetype = "OCC";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3.occ
@@ -136,7 +137,7 @@ CubitStatus make_Point()
   filetype = "IGES";
   filename = "ex3export.iges";
   num_ents_exported=0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3export.iges
@@ -145,7 +146,7 @@ CubitStatus make_Point()
   filetype = "STEP";
   filename = "ex3export.step";
   num_ents_exported=0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  18 OCC Curves to ex3export.step
   assert(num_ents_exported == 18);
@@ -173,7 +174,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "diffuser.occ";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:   7 OCC Bodies to diffuser.occ
@@ -202,7 +203,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "proe.occ";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proe.occ
   assert(num_ents_exported == 12);
@@ -210,7 +211,7 @@ CubitStatus make_Point()
   filetype = "IGES";
   filename = "proeexport.iges";
   num_ents_exported=0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.iges
   assert(num_ents_exported == 12);
@@ -218,7 +219,7 @@ CubitStatus make_Point()
   filetype = "STEP";
   filename = "proeexport.step";
   num_ents_exported=0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.step
   assert(num_ents_exported == 12);
@@ -246,7 +247,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "beforesub.occ";
 
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
@@ -273,7 +274,7 @@ CubitStatus make_Point()
   filename = "beforesub2.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
@@ -301,7 +302,7 @@ CubitStatus make_Point()
   filename = "aftersub.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
@@ -328,10 +329,13 @@ CubitStatus make_Point()
   filename = "unite2.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
+  //name attributes in unite2.occ is 
+  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume B 8 volume_B 0 0
+  //so it changed to volume_B, and code needs use the second name attrib.
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -359,9 +363,10 @@ CubitStatus make_Point()
   filename = "unite3.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
+  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume A 8 volume_A 0 0 in unite3.occ
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -386,10 +391,12 @@ CubitStatus make_Point()
   filename = "unite5.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
+  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeA 0 0 in unite5.occ
+ 
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -416,10 +423,12 @@ CubitStatus make_Point()
   filename = "unite6.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
  
+  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeB 0 0 in unite6.occ
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities

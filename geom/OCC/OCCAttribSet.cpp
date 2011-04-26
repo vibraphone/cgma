@@ -15,7 +15,19 @@
 #include "OCCQueryEngine.hpp"
 #include "CubitSimpleAttrib.hpp"
 #include "CubitFileIOWrapper.hpp"
-#include "Handle_TDataStd_Shape.hxx"
+
+#ifndef OCC_VERSION_MINOR
+#include "Standard_Version.hxx"
+#endif
+
+#if OCC_VERSION_MINOR < 5
+  #include "TDataStd_Shape.hxx"
+  typedef TDataStd_Shape TDataXtd_Shape;
+  typedef Handle_TDataStd_Shape Handle_TDataXtd_Shape;
+#else
+  #include "TDataXtd_Shape.hxx"
+#endif
+
 #include "TCollection_ExtendedString.hxx"
 #include "Handle_TDataStd_Name.hxx"
 #include "Handle_TDataStd_ExtStringArray.hxx"
@@ -25,7 +37,6 @@
 #include "TDataStd_ExtStringArray.hxx"
 #include "TDataStd_RealArray.hxx"
 #include "TDataStd_IntegerArray.hxx"
-#include "TDataStd_Shape.hxx"
 #include "TopoDS_Shape.hxx"
 #include "TDF_ChildIterator.hxx"
 #include <vector>
@@ -40,9 +51,9 @@ void OCCAttribSet::FindShape(TopoDS_Shape& shape,
     //find the same shape attribute first
     aLabel = it1.Value();
 
-    Handle_TDataStd_Shape attr_shape;
+    Handle_TDataXtd_Shape attr_shape;
     TopoDS_Shape old_shape;
-    if(aLabel.FindAttribute(TDataStd_Shape::GetID(), attr_shape))
+    if(aLabel.FindAttribute(TDataXtd_Shape::GetID(), attr_shape))
       old_shape = attr_shape->Get(aLabel);
     if(old_shape.IsPartner(shape))
     {
@@ -64,10 +75,10 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   if(!found)
   { 
     aLabel = OCCQueryEngine::instance()->mainLabel.NewChild();
-    Handle_TDataStd_Shape attr_shape = TDataStd_Shape::Set(aLabel, shape);
+    Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, shape);
     //myLabel.AddAttribute(attr_shape);
     //test if the attribute has been attached
-    assert(aLabel.IsAttribute(TDataStd_Shape::GetID()));
+    assert(aLabel.IsAttribute(TDataXtd_Shape::GetID()));
   }
 
   //2. add type attribute , below attributes are added on child lable of myLabel

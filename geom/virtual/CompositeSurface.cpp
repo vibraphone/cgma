@@ -320,6 +320,21 @@ CubitStatus CompositeSurface::combine( CompositeSurface* dead_surf )
   return CUBIT_SUCCESS;
 }
 
+void CompositeSurface::get_ignored_surfs(DLIList<Surface*> &surfs)
+{
+  int i;
+
+  if(surfacesToIgnore.size() > 0)
+  {
+    for(i=0; i<num_surfs(); i++)
+    {
+      Surface *srf = get_surface(i);
+      if(surfacesToIgnore.is_in_list(srf))
+        surfs.append(srf);
+    }
+  }
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Return the bounding box
 //
@@ -629,11 +644,10 @@ void CompositeSurface::update_facets_to_ignore()
          facetTool->set_ignore_flag(i, 0);
 
          Surface *cur_surf = get_surface(i);
-         int id = cur_surf->get_saved_id();
          surfacesToIgnore.reset();
          for(int j=surfacesToIgnore.size(); j--;)
          {
-            if(id == surfacesToIgnore.get_and_step())
+            if(cur_surf == surfacesToIgnore.get_and_step())
             {
                facetTool->set_ignore_flag(i, 1);
                j=0;
@@ -658,13 +672,30 @@ void CompositeSurface::ignore_surface(int surface_id)
          Surface *cur_surf = get_surface(i);
          if(cur_surf->get_saved_id() == surface_id)
          {
-            break;
+            surfacesToIgnore.append_unique(cur_surf);
+            i = num_surfs_in_composite;
+            update_facets_to_ignore();
          }
       }
-      if(i < num_surfs_in_composite)
+   }
+}
+
+void CompositeSurface::ignore_surface(Surface *surf)
+{
+   update_facet_tool();
+   if(facetTool)
+   {
+      int i;
+      int num_surfs_in_composite = num_surfs();
+      for (i=0; i<num_surfs_in_composite; i++)
       {
-         surfacesToIgnore.append_unique(surface_id);
-         update_facets_to_ignore();
+         Surface *cur_surf = get_surface(i);
+         if(cur_surf == surf)
+         {
+            surfacesToIgnore.append_unique(cur_surf);
+            i = num_surfs_in_composite;
+            update_facets_to_ignore();
+         }
       }
    }
 }
@@ -683,13 +714,10 @@ void CompositeSurface::unignore_surface(int surface_id)
          Surface *cur_surf = get_surface(i);
          if(cur_surf->get_saved_id() == surface_id)
          {
-            break;
+            surfacesToIgnore.remove(cur_surf);
+            update_facets_to_ignore();
+            i = num_surfs_in_composite;
          }
-      }
-      if(i < num_surfs_in_composite)
-      {
-         surfacesToIgnore.remove(surface_id);
-         update_facets_to_ignore();
       }
    }
 }
@@ -847,6 +875,7 @@ CubitStatus CompositeSurface::closest_point( CubitVector const& location,
                                           curvature1, curvature2 );
   
   update_facet_tool();
+  
   if ( facetTool )
   {
     CubitStatus result;
@@ -861,30 +890,39 @@ CubitStatus CompositeSurface::closest_point( CubitVector const& location,
 
       CubitVector normal(0.0, 0.0, 0.0);
       int i;
-      for (i = 0; i < num_found; i++) {
+      for (i = 0; i < num_found; i++) 
+      {
         int index = index_list[i];
-        Surface* surf = get_surface(index);
-        
-        result = surf->closest_point( facet_closest, closest_location,
-                                      &normal, curvature1, curvature2 );
-        
-        if (get_sense(index) == CUBIT_REVERSED)
-          *unit_normal += (-normal);
-        else
-          *unit_normal += normal;
+        if(index > -1)
+        {
+          Surface* surf = get_surface(index);
+          
+          result = surf->closest_point( facet_closest, closest_location,
+                                        &normal, curvature1, curvature2 );
+          
+          if (get_sense(index) == CUBIT_REVERSED)
+            *unit_normal += (-normal);
+          else
+            *unit_normal += normal;
+        }
       }
       unit_normal->normalize();
     }
     else
     {  
       int index = facetTool->closest_index( location, &facet_closest );
-      Surface* surf = get_surface(index);
+      if(index > -1)
+      {
+        Surface* surf = get_surface(index);
+      
+        result = surf->closest_point( facet_closest, closest_location,
+                                      unit_normal, curvature1, curvature2 );
     
-      result = surf->closest_point( facet_closest, closest_location,
-                                    unit_normal, curvature1, curvature2 );
-    
-//       if (unit_normal && get_sense(index) == CUBIT_REVERSED)
-//         *unit_normal = -*unit_normal;
+  //       if (unit_normal && get_sense(index) == CUBIT_REVERSED)
+  //         *unit_normal = -*unit_normal;
+      }
+      else
+        result = CUBIT_FAILURE;
     }
     
     return result;
@@ -1550,7 +1588,7 @@ void CompositeSurface::print_debug_info( const char* line_prefix,
       for(int k=surfacesToIgnore.size(); k--;)
       {
          PRINT_INFO("%sSurface: %d\n", 
-                    new_prefix, surfacesToIgnore.get_and_step());
+                    new_prefix, surfacesToIgnore.get_and_step()->get_saved_id());
       }
   }
   if( hiddenSet ) hiddenSet->print_debug_info( new_prefix );
@@ -1886,7 +1924,7 @@ CubitStatus CompositeSurface::get_graphics( GMem& gmem )
   if (!facetTool)
     return CUBIT_FAILURE;
   
-  facetTool->graphics( GEOMETRY_RESABS*10, gmem);
+  facetTool->graphics( GEOMETRY_RESABS, gmem);
   return CUBIT_SUCCESS;
 }
 

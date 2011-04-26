@@ -396,3 +396,78 @@ CubitTransformMatrix CubitTransformMatrix::construct_matrix(const CubitVector& o
   return mat;
 }
 
+void CubitTransformMatrix::get_rotation_axis_and_angle(CubitVector &rotation_axis, double &angle)
+{
+    double cos_theta = (this->get(0,0) + this->get(1,1) + this->get(2,2) - 1) / 2;
+
+    double x = 0;
+    double y = 0;
+    double z = 0; 
+    
+    if (fabs(cos_theta - 1) < .0001)
+    {
+        // theta is 1 or almost 1
+        angle = 0;
+        x = 0;
+        y = 0;
+        z = 1;
+    }
+    else if (fabs(cos_theta + 1) > .0001)
+    {
+        // theta is NOT -1 or almost -1
+        angle = acos(cos_theta);
+        angle =  (angle * 180.0) / CUBIT_PI; // convert to degrees
+        double sin_theta = sqrt(1 - cos_theta * cos_theta);
+        x = ( (this->get(2,1) - this->get(1,2)) / 2 ) / sin_theta;
+        y = ( (this->get(0,2) - this->get(2,0)) / 2 ) / sin_theta;
+        z = ( (this->get(1,0) - this->get(0,1)) / 2 ) / sin_theta;
+    }
+    else
+    {
+        angle = 180;
+        if (this->get(0,0) >= this->get(1,1))
+        {
+
+            if (this->get(0,0) >= this->get(2,2)) 
+            {
+                // 0,0 is maximal diagonal term
+                x = sqrt(this->get(0,0) - this->get(1,1) - this->get(2,2) + 1) / 2;
+                double half_inverse = 1 / (2 * x);
+                y = half_inverse * this->get(0,1);
+                z = half_inverse * this->get(0,2);
+            } 
+            else
+            {
+                // 2,2 is maximal diagonal term
+                z = sqrt(this->get(2,2) - this->get(0,0) - this->get(1,1) + 1) / 2;
+                double half_inverse = 1 / (2 * z);
+                x = half_inverse * this->get(0,2);
+                y = half_inverse * this->get(1,2);
+            }
+        }
+        else
+        {
+            if (this->get(1,1) >= this->get(2,2))
+            {
+                // 1,1 is maximal diagonal term
+                y = sqrt(this->get(1,1) - this->get(0,0) - this->get(2,2) + 1) / 2;
+                double half_inverse = 1 / (2 * y);
+                x = half_inverse * this->get(0,1);
+                z = half_inverse * this->get(1,2);
+            } 
+            else
+            {
+                // 2,2 is maximal diagonal term
+                z = sqrt(this->get(2,2) - this->get(0,0) - this->get(1,1) + 1) / 2;
+                double half_inverse = 1 / (2 * z);
+                x = half_inverse * this->get(0,2);
+                y = half_inverse * this->get(1,2);
+            }
+        }
+
+    }
+
+    rotation_axis.x(x);
+    rotation_axis.y(y);
+    rotation_axis.z(z);
+}

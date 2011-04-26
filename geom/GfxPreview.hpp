@@ -33,6 +33,9 @@ class RefVolume;
 class Body;
 class CubitTransformMatrix;
 class CubitBox;
+class Curve;
+class Surface;
+class Point;
 
 #include "CubitColorConstants.hpp"
 #include "CubitGeomConfigure.h"
@@ -69,7 +72,13 @@ class CUBIT_GEOM_EXPORT GfxPreview
     static void draw_ref_face(RefFace* entity, int color = CUBIT_DEFAULT_COLOR);
     static void draw_ref_face_edges(RefFace* entity, int color = CUBIT_DEFAULT_COLOR);
     static void draw_ref_volume(RefVolume* entity, int color = CUBIT_DEFAULT_COLOR);
+    static void draw_ref_volume_edges(RefVolume* entity, int color = CUBIT_DEFAULT_COLOR);
     static void draw_ref_body(Body* entity, int color = CUBIT_DEFAULT_COLOR);
+
+    static void draw_point(Point *pt, int color);
+    static void draw_curve(Curve *curve, int color);
+    static void draw_surface(Surface *surf, int color);
+    static void draw_surface_facets_shaded(Surface *surf, int color);
 
   // Generic Primitive Drawing Functions
     
@@ -97,6 +106,14 @@ class CUBIT_GEOM_EXPORT GfxPreview
     static void draw_polygons(int num_points, const float* xyzs, int num_face_points, 
                               const int* face_list, int color);
 
+    //! \brief draw a cylinder for previewing
+    //! \param axis - orientation of the length of the cylinder
+    //! \param origin - the center of the cylinder in x, y, and z
+    //! \param bounding_box - the bounding box of the cylinder
+    //! \param radius - radius of the cylinder
+    //! \param color - color of the cylinder
+    static void  draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
+                               CubitBox& bounding_box, float radius, int color);
     // draw a quad of a color
     static void draw_quad(const GPoint* points, int color);
 
@@ -124,6 +141,7 @@ class CUBIT_GEOM_EXPORT GfxPreview
     virtual void p_draw_ref_face(RefFace* entity, int color) = 0;
     virtual void p_draw_ref_face_edges(RefFace* entity, int color) = 0;
     virtual void p_draw_ref_volume(RefVolume* entity, int color) = 0;
+    virtual void p_draw_ref_volume_edges(RefVolume* entity, int color) = 0;
     virtual void p_draw_ref_body(Body* entity, int color) = 0;
     virtual void p_draw_box(CubitBox& box, int color) = 0;
     virtual void p_draw_point(float, float, float, int) = 0;
@@ -134,6 +152,8 @@ class CUBIT_GEOM_EXPORT GfxPreview
     virtual void p_draw_polygon(const GPoint* points, int num_points, int color, int border_color, bool filled) = 0;
     virtual void p_draw_polygons(int num_points, const float* xyzs, int num_face_points, 
                                  const int* face_list, int color) = 0;
+    virtual void p_draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
+                               CubitBox& bounding_box, float radius, int color) = 0;
     virtual void p_draw_quad(const GPoint*, int) = 0;
     virtual void p_draw_tri(const GPoint*, int) = 0;
     virtual void p_draw_vector(const CubitVector&, const CubitVector&, int) = 0;

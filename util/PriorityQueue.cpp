@@ -1,4 +1,4 @@
-#include "assert.h"
+#include "cassert"
 #include "PriorityQueue.hpp"
 #include "CubitMessage.hpp"
 

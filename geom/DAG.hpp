@@ -71,6 +71,8 @@ public:
 
   ~DAG() ;
     //- Destructor
+    
+  static void delete_instance() { if(instance_) delete instance_; };
 
   void add_deactivated_DAG_node(ModelEntity* deactivatedDAGNodePtr) ;
     //R void

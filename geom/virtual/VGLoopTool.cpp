@@ -681,10 +681,9 @@ get_loop_polyline( COEDGE* first_coedge, std::vector<CubitVector>& list )
   list.resize(0);
   
   do {
-    int num_pts;
     coedge->get_curve()->get_geometry_query_engine()->
-      get_graphics( coedge->get_curve(), num_pts, &gmem );
-    assert( num_pts == gmem.pointListCount );
+      get_graphics( coedge->get_curve(), &gmem );
+    int num_pts = gmem.pointListCount;
     if ( num_pts > 1 ) {
     
       int start = list.size();

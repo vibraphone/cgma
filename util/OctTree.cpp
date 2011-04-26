@@ -110,9 +110,9 @@ OctTree<X,E>::~OctTree()
     // other nodes were allocated from our internal memory bool by
     // the allocate_8() method.  We just release the whole pool.
   delete root_;
-  delete node_memory_;
+  delete [] node_memory_;
   while( mem_pages_.size() )
-    delete mem_pages_.pop();
+    delete [] mem_pages_.pop();
     
     // Reinitialize to catch stale pointer to this object.
   

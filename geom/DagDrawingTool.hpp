@@ -58,10 +58,10 @@ class CUBIT_GEOM_EXPORT DagNodeTable
 
 class CUBIT_GEOM_EXPORT DagDrawingTool
 {
-	public:
+  public:
 	
-		static DagDrawingTool* instance();
-		~DagDrawingTool();
+  static DagDrawingTool* instance();
+  ~DagDrawingTool();
 /*		
 		void draw_DAG( DLIList<Body*>&      body_list,           int down );
 		void draw_DAG( DLIList<RefVolume*>& volume_list, int up, int down );
@@ -135,11 +135,18 @@ class CUBIT_GEOM_EXPORT DagDrawingTool
 		
 		int window_id() const;
 		//The last window drawn in my DagDrawingTool
-*/		
+*/	
+  
+  //! Print the DAG of the specified surfaces.
   void printDag(DLIList<RefFace*> &face_list, int depth);
+
+  //! Print the DAG of the specified body.
   void printDag(DLIList<Body*> &body_list, int depth);
+
+  //! Print the DAG of the entities. 
   void printDag(DLIList<ModelEntity*> &entity_list, int depth);
   
+  //! Print the DAG of the entity. 
   void printDag( ModelEntity* ME_ptr, int depth );
 
 	protected:

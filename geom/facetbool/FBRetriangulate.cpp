@@ -306,7 +306,6 @@ CubitStatus FBRetriangulate::add_bdry_edges()
   vy2 = verts[my_tri->v2]->coord[1];
   vz2 = verts[my_tri->v2]->coord[2];
 
-  dpe_orig = my_tri->edge_list.end();
   dpe = my_tri->edge_list.begin();
   while ( dpe != my_tri->edge_list.end() ) {
     edge = *dpe;
@@ -350,12 +349,13 @@ CubitStatus FBRetriangulate::add_bdry_edges()
 //  in what follows.  Erasing elements from a vector is inefficient, but
 //  this shouldn't happen often.
   dpe = my_tri->edge_list.begin();
+  dpe_orig = my_tri->edge_list.end();
 
   while ( dpe != dpe_orig ) {
     edge = *dpe;
     if ( edge->edge_type == BDRY_EDGE ) {
-      my_tri->edge_list.erase(dpe);
-      dpe_orig -= 1;
+      dpe = my_tri->edge_list.erase(dpe);
+      dpe_orig = my_tri->edge_list.end();
     } else {
       dpe++;
     }

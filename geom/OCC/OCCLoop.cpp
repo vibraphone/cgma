@@ -36,6 +36,8 @@
 #include "BRepBuilderAPI_GTransform.hxx"
 #include "BRepBuilderAPI_ModifyShape.hxx"
 #include "BRepAlgoAPI_BooleanOperation.hxx"
+#include "LocOpe_SplitShape.hxx"
+#include "BRepTools_WireExplorer.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 // ********** BEGIN STATIC DECLARATIONS    **********
@@ -64,7 +66,10 @@ OCCLoop::~OCCLoop()
 {
   disconnect_all_curves();
   if (myTopoDSWire)
+  {
     delete (TopoDS_Wire*)myTopoDSWire;
+    myTopoDSWire = NULL;
+  }
 }
 
 void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
@@ -267,3 +272,40 @@ CubitStatus OCCLoop::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   return CUBIT_SUCCESS;
 }
 
+//----------------------------------------------------------------
+// Function: TopoDS_Shape level function to update the core Loop
+//           for split Boolean operation of the body.
+// Author: Jane Hu
+//----------------------------------------------------------------
+CubitStatus OCCLoop::update_OCC_entity(TopoDS_Wire & old_loop,
+                                       LocOpe_SplitShape* sp)
+{
+  TopTools_ListOfShape shapes;
+  shapes.Assign(sp->DescendantShapes(old_loop));
+  assert(shapes.Extent() == 1);
+  TopoDS_Shape new_loop = shapes.First();
+  TopoDS_Shape shape_edge;
+
+  //set curves
+  BRepTools_WireExplorer Ex;
+  for(Ex.Init(old_loop); Ex.More();Ex.Next())   
+  {
+    TopoDS_Edge edge = Ex.Current();
+    shapes.Assign(sp->DescendantShapes(edge));
+    if(shapes.Extent() > 1)
+    {
+      //update all attributes first.
+      TopTools_ListIteratorOfListOfShape it;
+      it.Initialize(shapes);
+      for(; it.More(); it.Next())
+      {
+        shape_edge = it.Value();
+        OCCQueryEngine::instance()->copy_attributes(edge, shape_edge);
+      }
+      OCCQueryEngine::instance()->update_OCC_map(edge, shape_edge);
+    } 
+  }
+  
+  OCCQueryEngine::instance()->update_OCC_map(old_loop , new_loop );
+  return CUBIT_SUCCESS; 
+}

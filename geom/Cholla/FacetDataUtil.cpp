@@ -1251,8 +1251,7 @@ CubitVector bbox_min, bbox_max;
 //  Date:     11/28/2002
 //  Author:   sjowen
 //===========================================================================
-CubitStatus FacetDataUtil::write_facets( char *file_name,
-                                         DLIList<CubitFacet *> &facet_list)
+CubitStatus FacetDataUtil::write_facets( const char *file_name, DLIList<CubitFacet *> &facet_list)
 {
   FILE *fp = fopen(file_name, "w");
   if (!fp)
@@ -1301,6 +1300,8 @@ CubitStatus FacetDataUtil::split_into_shells(
   CubitBoolean &is_water_tight)
 {
   CubitStatus stat = CUBIT_SUCCESS;
+    //need to init this variable otherwise the caller must have.
+  is_water_tight = CUBIT_TRUE;
 
   // combine the quads and tri lists
 
@@ -1745,6 +1746,9 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
         shell_list.back();
         shell_list.change_to(NULL);
 
+        if(!delete_shell_ptr)
+          return CUBIT_FAILURE;
+
         // mark all the points on the delete_shell as now being part of
         // the other shell.
 
@@ -1766,6 +1770,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
         for (ll=0; ll<pt_shell_id; ll++)
           shell_ptr = shell_list.get_and_step();
         *shell_ptr += (*delete_shell_ptr);
+        delete delete_shell_ptr;
       }
 
       // set the marked flag to negative to indicate that it has been
@@ -1774,7 +1779,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
       del_points.append(new_pt);
       new_pt->marked( -new_pt->marked() );
       pt->marked( -pt->marked() );
-    }
+    } // close_edges
 
     if (!was_merged)
     {
@@ -1801,7 +1806,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
         pt = pt;
       }
     }
-  }
+  } // merge_point_list
 
   // compress the shell list
 
@@ -1838,6 +1843,7 @@ CubitStatus FacetDataUtil::merge_points(
 
   // merge the points
   pt0->merge_points( pt1, CUBIT_TRUE );
+  //pt0->set_as_feature();
 
   if (mydebug)
   {
@@ -1880,6 +1886,7 @@ CubitStatus FacetDataUtil::merge_points(
           {   
             nemerge++;
             edge_merged = true;
+            dedge->set_as_feature();
           }
         }
       }
@@ -2061,6 +2068,8 @@ CubitStatus FacetDataUtil::merge_coincident_vertices(
         }
         if (on_boundary)
         {
+            //PRINT_INFO("Merging 'boundary' points.\n");
+            //if (pt->marked() > 0) pt->marked( -pt->marked() );
           unmerged_points.append(pt);
         }
         else
@@ -2199,6 +2208,42 @@ void FacetDataUtil::delete_facet(CubitFacet *facet_ptr)
 
 }
 
+
+void FacetDataUtil::destruct_facet_no_delete(CubitFacet *facet_ptr)
+{
+  CubitFacetData* facet_d_ptr = dynamic_cast<CubitFacetData*>(facet_ptr);
+  if(!facet_d_ptr){
+    PRINT_ERROR("Can't work with Facet pointer that isn't a facet data object.\n");
+    return;
+  }
+  
+  DLIList<CubitPoint *>point_list;
+  DLIList<CubitFacetEdge *>edge_list;
+  facet_ptr->points(point_list);
+  facet_ptr->edges(edge_list);
+  
+  facet_d_ptr->destruct_facet_internals();
+
+  CubitFacetEdge *edge_ptr;
+  CubitPoint *point_ptr;
+  int ii;
+
+  for (ii=0; ii<edge_list.size(); ii++)
+  {
+    edge_ptr = edge_list.get_and_step();
+    if (edge_ptr->num_adj_facets() == 0)
+      delete edge_ptr;
+  }
+
+  for (ii=0; ii<3; ii++)
+  {
+    point_ptr = point_list.get_and_step();
+    if (point_ptr->num_adj_facets() == 0)
+      delete point_ptr;
+  }
+
+}
+
 //=============================================================================
 //Function:  intersect_facet (PUBLIC)
 //Description: determine intersection of a segment with a facet
@@ -2213,7 +2258,8 @@ CubitPointContainment FacetDataUtil::intersect_facet(
   CubitVector &start, CubitVector &end, // start and end points of vector
   CubitFacet *facet_ptr,      // the facet to intersect
   CubitVector &qq,            // return the intersection point
-  CubitVector &ac)    // area coordinates of qq if is in or on facet
+  CubitVector &ac,    // area coordinates of qq if is in or on facet
+  CubitBoolean bound) // if true, only check for intersections between the end points.
 {
 
   CubitPlane fplane = facet_ptr->plane();
@@ -2240,13 +2286,12 @@ CubitPointContainment FacetDataUtil::intersect_facet(
   }
 
   // points are both on the same side of the plane
-
-  else if(dstart*dend > 0.0)
+  else if(dstart*dend > 0.0 &&
+          (bound || fabs(dstart-dend) < CUBIT_RESABS) )
   {
     return CUBIT_PNT_OUTSIDE;
   }
-
-  // points ae on opposite sides of plane - compute intersection with plane
+  // points are on opposite sides of plane: if bound == false then compute intersection with plane
 
   else
   {
@@ -2256,13 +2301,25 @@ CubitPointContainment FacetDataUtil::intersect_facet(
   }
 
   FacetEvalTool::facet_area_coordinate( facet_ptr, qq, ac );
-
-  if (fabs(ac.x()) < GEOMETRY_RESABS ||
-      fabs(ac.y()) < GEOMETRY_RESABS ||
-      fabs(ac.z()) < GEOMETRY_RESABS)
-  {
+   
+//mod mbrewer ... the original code would call a point
+    // on the boundary if any area coordinate was near
+    // zero, regardless of whether another area coordinate
+    // was negative... making it outside.
+//   if (fabs(ac.x()) < GEOMETRY_RESABS ||
+//       fabs(ac.y()) < GEOMETRY_RESABS ||
+//       fabs(ac.z()) < GEOMETRY_RESABS)
+//   {
+//     return CUBIT_PNT_BOUNDARY;
+//   }
+  if ( (fabs(ac.x()) < GEOMETRY_RESABS && (ac.y() > -GEOMETRY_RESABS &&
+                                           ac.z() > -GEOMETRY_RESABS) )||
+       (fabs(ac.y()) < GEOMETRY_RESABS && (ac.x() > -GEOMETRY_RESABS &&
+                                           ac.z() > -GEOMETRY_RESABS) )||
+       (fabs(ac.z()) < GEOMETRY_RESABS && (ac.x() > -GEOMETRY_RESABS &&
+                                           ac.y() > -GEOMETRY_RESABS) ) ){
     return CUBIT_PNT_BOUNDARY;
-  }
+  }   
   else if (ac.x() < 0.0 || ac.y() < 0.0 || ac.z() < 0.0)
   {
     return CUBIT_PNT_OUTSIDE;
@@ -2340,6 +2397,199 @@ double t;
   return p0 + (t/DdD)*(p1 - p0);
 }
 
+//=============================================================================
+//Function:  get_bbox_intersections (PUBLIC)
+//Description: Get the intersection of the line defined by point1 and point2 with
+//bbox.  Returns 0,1 or 2 for the number of intersections.  A line
+//in one of the planes of the box will return 0.  Returns -1 for failure.
+//Author mborden
+//Date: 04/05/07
+//=============================================================================
+int FacetDataUtil::get_bbox_intersections(CubitVector& point1,
+                                          CubitVector& point2,
+                                          const CubitBox& bbox,
+                                          CubitVector& intersection_1,
+                                          CubitVector& intersection_2)
+{
+  int debug = 0;
+  if( debug )
+  {
+    GfxDebug::draw_point( point1, CUBIT_RED );
+    GfxDebug::draw_point( point2, CUBIT_BLUE );
+    GfxDebug::flush();
+  }
+  
+  double coords[6];
+  coords[0] = bbox.min_x();
+  coords[1] = bbox.max_x();
+  coords[2] = bbox.min_y();
+  coords[3] = bbox.max_y();
+  coords[4] = bbox.min_z();
+  coords[5] = bbox.max_z();
+
+  DLIList<CubitVector*> intersections;
+  
+  int ii;
+  for( ii = 0; ii < 3; ii++ )
+  {
+      //Define four points for each plane.
+    double box_points[4][3];
+
+      //ii = 0 -> x-planes
+      //ii = 1 -> y_planes
+      //ii = 2 -> z_planes
+
+      //Only the coordinates for the plane we are in
+      //change.  The other two are constant for the
+      //jj loops below.
+    box_points[0][(ii + 1) % 3] = coords[((ii*2)+2) % 6];
+    box_points[1][(ii + 1) % 3] = coords[((ii*2)+3) % 6];
+    box_points[2][(ii + 1) % 3] = coords[((ii*2)+3) % 6];
+    box_points[3][(ii + 1) % 3] = coords[((ii*2)+2) % 6];
+
+    box_points[0][(ii + 2) % 3] = coords[((ii*2)+4) % 6];
+    box_points[1][(ii + 2) % 3] = coords[((ii*2)+4) % 6];
+    box_points[2][(ii + 2) % 3] = coords[((ii*2)+5) % 6];
+    box_points[3][(ii + 2) % 3] = coords[((ii*2)+5) % 6];
+      
+    int jj;
+    for( jj = 0; jj < 2; jj++ )
+    {
+      CubitPoint* points[4];
+      int kk;
+      for( kk = 0; kk < 4; kk++ )
+      {
+        box_points[kk][ii] = coords[(ii*2)+jj];
+        points[kk] = new CubitPointData( box_points[kk][0], box_points[kk][1], box_points[kk][2] );
+      }
+      
+        //Create two facets for this plane to check for intersections.
+      CubitFacet* facets[2];
+      facets[0] = new CubitFacetData( points[0], points[1], points[3] );
+      facets[1] = new CubitFacetData( points[1], points[2], points[3] );
+
+      for( kk = 0; kk < 2; kk++ )
+      {
+        CubitVector intersection;
+        CubitVector area_coord;
+
+          //Make sure the points are not parrellel with the facet.
+        CubitVector dir = point2 - point1;
+        CubitVector normal = facets[kk]->normal();
+        if( fabs(dir % normal) < CUBIT_RESABS )
+            continue;
+        
+        CubitPointContainment contain = intersect_facet( point1, point2, facets[kk],
+                                                         intersection, area_coord, CUBIT_FALSE );
+        if( CUBIT_PNT_UNKNOWN == contain )
+        {
+            //The points are in a plane.  Return 0.
+          delete facets[0];
+          delete facets[1];
+          int ll;
+          for( ll = 0; ll < 4; ll++ )
+              delete points[ll];
+          for( ll = intersections.size(); ll > 0; ll-- )
+              delete intersections.get_and_step();
+
+          return 0;
+        }
+        if( CUBIT_PNT_BOUNDARY == contain ||
+            CUBIT_PNT_INSIDE == contain )
+        {
+            //The point intersects the facet so it's inside the box's surface.
+          CubitVector* new_intersection = new CubitVector;
+          *new_intersection = intersection;
+          intersections.append( new_intersection );
+
+          if( debug )
+          {
+            GfxDebug::draw_point( *new_intersection, CUBIT_CYAN );
+            GfxDebug::flush();
+          }
+          
+          break;          
+        }
+      }
+      
+      delete facets[0];
+      delete facets[1];
+      for( kk = 0; kk < 4; kk++ )
+          delete points[kk];      
+    }
+  }
+
+    //Check for duplicate intersections.
+  intersections.reset();
+  for( ii = 0; ii < intersections.size(); ii++ )
+  {
+    CubitVector* base_vec = intersections.next(ii);
+    if( NULL == base_vec )
+        continue;
+    
+    int jj;
+    for( jj = ii+1; jj < intersections.size(); jj++ )
+    {
+      CubitVector* compare_vec = intersections.next(jj);
+      if( NULL != compare_vec )
+      {
+        if( base_vec->distance_between_squared( *compare_vec ) < GEOMETRY_RESABS * GEOMETRY_RESABS )
+        {
+          intersections.step(jj);
+          delete intersections.get();
+          intersections.change_to( NULL );
+          intersections.reset();
+        }
+      }
+    }
+  }
+  intersections.remove_all_with_value( NULL );
+
+  
+  if( intersections.size() > 2 )
+  {
+    assert( intersections.size() <= 2 );
+    return -1;
+  }
+  else if( intersections.size() > 0 )
+  {
+    intersection_1 = *intersections.get();
+    if( intersections.size() > 1 )
+        intersection_2 = *intersections.next();
+  }
+  
+    //Delete memory.
+  for( ii = intersections.size(); ii > 0; ii-- )
+      delete intersections.get_and_step();
+  
+  return intersections.size();
+}
+
+
+//=============================================================================
+//Function:  mark_facets (PUBLIC)
+//Description: mark facets and their children.  assumes facets have points and edges
+//Author sjowen
+//Date: 09/18/09
+//=============================================================================
+void FacetDataUtil::mark_facets( DLIList<FacetEntity *> &facet_list, int mark_value )
+{
+  int ifacet;
+  FacetEntity *facet_ptr;
+  CubitFacet *cfacet_ptr;
+  for (ifacet = 0; ifacet<facet_list.size(); ifacet++)
+  {
+    facet_ptr = facet_list.get_and_step();
+    cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
+    cfacet_ptr->marked(mark_value);
+    for (int ii=0; ii<3; ii++)
+    {
+      cfacet_ptr->point(ii)->marked(mark_value);
+      cfacet_ptr->edge(ii)->marked(mark_value);
+    }
+  }
+  
+}
 
 //EOF
 

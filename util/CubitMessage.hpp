@@ -14,7 +14,7 @@
 
 #include <fstream>
 
-#include <stdarg.h>
+#include <cstdarg>
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
 
@@ -214,7 +214,40 @@
 #define PRINT_DEBUG_175 PRINT_DEBUG(175)
 #define PRINT_DEBUG_176 PRINT_DEBUG(176)
 #define PRINT_DEBUG_177 PRINT_DEBUG(177)
-#define NUM_DEBUG_FLAGS 177
+#define PRINT_DEBUG_178 PRINT_DEBUG(178)
+#define PRINT_DEBUG_179 PRINT_DEBUG(179)
+#define PRINT_DEBUG_180 PRINT_DEBUG(180)
+#define PRINT_DEBUG_181 PRINT_DEBUG(181)
+#define PRINT_DEBUG_182 PRINT_DEBUG(182)
+#define PRINT_DEBUG_183 PRINT_DEBUG(183)
+#define PRINT_DEBUG_184 PRINT_DEBUG(184)
+#define PRINT_DEBUG_185 PRINT_DEBUG(185)
+#define PRINT_DEBUG_186 PRINT_DEBUG(186)
+#define PRINT_DEBUG_187 PRINT_DEBUG(187)
+#define PRINT_DEBUG_188 PRINT_DEBUG(188)
+#define PRINT_DEBUG_189 PRINT_DEBUG(189)
+#define PRINT_DEBUG_190 PRINT_DEBUG(190)
+#define PRINT_DEBUG_191 PRINT_DEBUG(191)
+#define PRINT_DEBUG_192 PRINT_DEBUG(192)
+#define PRINT_DEBUG_193 PRINT_DEBUG(193)
+#define PRINT_DEBUG_194 PRINT_DEBUG(194)
+#define PRINT_DEBUG_195 PRINT_DEBUG(195)
+#define PRINT_DEBUG_196 PRINT_DEBUG(196)
+#define PRINT_DEBUG_197 PRINT_DEBUG(197)
+#define PRINT_DEBUG_198 PRINT_DEBUG(198)
+#define PRINT_DEBUG_199 PRINT_DEBUG(199)
+#define PRINT_DEBUG_200 PRINT_DEBUG(200)
+#define PRINT_DEBUG_201 PRINT_DEBUG(201)
+#define PRINT_DEBUG_202 PRINT_DEBUG(202)
+#define PRINT_DEBUG_203 PRINT_DEBUG(203)
+#define PRINT_DEBUG_204 PRINT_DEBUG(204)
+#define PRINT_DEBUG_205 PRINT_DEBUG(205)
+#define PRINT_DEBUG_206 PRINT_DEBUG(206)
+#define PRINT_DEBUG_207 PRINT_DEBUG(207)
+#define PRINT_DEBUG_208 PRINT_DEBUG(208)
+#define PRINT_DEBUG_209 PRINT_DEBUG(209)
+#define PRINT_DEBUG_210 PRINT_DEBUG(210)
+#define NUM_DEBUG_FLAGS 210
 
 #define PRINT_ERROR CubitMessage::instance()->print_error
 #define PRINT_WARNING CubitMessage::instance()->print_warning
@@ -226,6 +259,8 @@
 #define SET_INFO_FLAG CubitMessage::instance()->set_info_flag
 #define SET_WARNING_FLAG CubitMessage::instance()->set_warning_flag
 #define GET_WARNING_FLAG CubitMessage::instance()->get_warning_flag
+#define SET_ERROR_FLAG CubitMessage::instance()->set_error_flag
+#define GET_ERROR_FLAG CubitMessage::instance()->get_error_flag
 #define DEBUG_FLAG_SET CubitMessage::instance()->is_debug_flag_set
 #define PRINT_DEBUG(x) if(!DEBUG_FLAG_SET(x));else CubitMessage::instance()->print_debug
 
@@ -284,6 +319,9 @@ protected:
   static int warningFlag;
   //- warning flag, used with internal_error
 
+  static int errorFlag;
+  //- error flag, used with internal_error
+
   static int diagnosticFlag;
   //- diagnostic flag, used with internal_error
 
@@ -335,6 +373,7 @@ public:
   virtual ~CubitMessage();
   //- Class Destructor.
 
+  static void delete_instance();
 
   void set_logging_file_setting(const CubitString &filename, CubitBoolean resume_flag = CUBIT_FALSE);
   void set_debug_file_setting(const int index, const CubitString &filename);
@@ -356,6 +395,12 @@ public:
   int  number_of_debug_flags();
   //- debug flag, used with internal_error
 
+  virtual void set_debug_flag_gui(bool flag){};
+  virtual int is_debug_flag_gui_set(){return 0;};
+  virtual int print_debug_gui( const char *format, ... ){return 0;};
+  //- write out a debug message (from GUI only)
+  //- used for GUI Debugging (CAT-only)
+
   static bool get_info_flag();
   static void set_info_flag(bool flag);
   //- info flag, used with internal_error
@@ -363,6 +408,10 @@ public:
   static bool get_warning_flag();
   static void set_warning_flag(bool flag);
   //- warning flag, used with internal_error
+
+  static bool get_error_flag();
+  static void set_error_flag(bool flag);
+  //- error flag, used with internal_error
 
   static bool get_diagnostic_flag();
   static void set_diagnostic_flag(bool flag);
@@ -416,13 +465,17 @@ public:
   void output_logging_information();
 
   static char* get_logging_file_setting();
-  static void set_logging_file_setting(char* file);
-  static void set_error_logging_file_setting(char* file);
+  static void set_logging_file_setting(const char* file);
+  static void set_error_logging_file_setting(const char* file, CubitBoolean resume_flag = CUBIT_FALSE);
 
   static void initialize_settings();
 
   virtual CubitBoolean Interrupt();
     //- passes back value of interrupt flag (see CubitDefines.h for how
+    //- this flag is stored)
+
+  virtual void clear_Interrupt();
+    //- clears the value of interrupt flag (see CubitDefines.h for how
     //- this flag is stored)
 
   static void set_message_handler(CubitMessageHandler *handler);
@@ -453,6 +506,14 @@ CubitMessage::get_warning_flag()
 inline void
 CubitMessage::set_warning_flag(bool flag)
 {warningFlag = flag;}
+
+inline bool
+CubitMessage::get_error_flag()
+{return !!errorFlag;}
+
+inline void
+CubitMessage::set_error_flag(bool flag)
+{errorFlag = flag;}
 
 inline bool
 CubitMessage::get_diagnostic_flag()

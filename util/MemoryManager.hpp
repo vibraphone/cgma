@@ -20,8 +20,8 @@ const  int DEFAULT_MEMORY_ALLOC_SIZE = 1024;
 const  int STATIC_MEMORY_MANAGER = 1;
 //- Static Memory Manager definition argument
 
-#include <stdlib.h>
-#include <assert.h>
+#include <cstdlib>
+#include <cassert>
 #include "CubitUtilConfigure.h"
 
 class MemoryBlock;

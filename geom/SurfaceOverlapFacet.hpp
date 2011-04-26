@@ -35,8 +35,10 @@ public:
   ~SurfaceOverlapFacet();
   
   double distance( SurfaceOverlapFacet &other_facet );
+  CubitBoolean facing( SurfaceOverlapFacet &other_facet );
   double angle( SurfaceOverlapFacet &other_facet );
-  double projected_overlap( SurfaceOverlapFacet &other_facet );
+  double projected_overlap( SurfaceOverlapFacet &other_facet, 
+                            CubitBoolean draw_overlap = CUBIT_FALSE );
 
   bool bbox_overlap( double tol, SurfaceOverlapFacet &other_facet ) 
   { return boundingBox.overlap( tol, other_facet.boundingBox ); }

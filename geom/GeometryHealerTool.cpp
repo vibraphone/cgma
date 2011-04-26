@@ -298,7 +298,7 @@ CubitStatus GeometryHealerTool::auto_heal_bodies( DLIList<Body*> &body_list,
       CubitStatus healer_status = GHEPtr->auto_heal_bodies(body_list, new_body_list, bad_geometry,
                                       rebuild, keep_old, make_tolerant, logfile_ptr);
 
-      if( healer_status == CUBIT_SUCCESS )
+     // if( healer_status == CUBIT_SUCCESS )
         CubitObserver::notify_static_observers(NULL, HEALER_COMPLETED);
 
       return healer_status;

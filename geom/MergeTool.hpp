@@ -71,284 +71,350 @@ class CUBIT_GEOM_EXPORT MergeTool
    
    ~MergeTool();
      //- Destructor.
-     
-   CubitBoolean contains_merged_entities( DLIList<Body*> &bodies );
-     //- Tests the entities in the list of bodies to see if they 
-     //- have been merged with other entities and result in
-     //- of multiple volumes.  This returns CUBIT_TRUE at the first
-     //- lower entity that shares two volumes.
    
+    static void delete_instance() {if(instance_) delete instance_; }
+     
+    void imprint_merge_solutions_for_overlapping_surfaces(
+                                          RefFace *face1,
+                                          RefFace *face2,
+                                          bool execute,
+                                          DLIList<CubitString*> &display_strings,
+                                          DLIList<CubitString*> &command_strings,
+                                          DLIList<CubitString*> &preview_strings );
+
+   void merge_with_auto_imprint(RefFace *surf1, RefFace *surf2);
+
+  //! Tests the entities in the list of bodies to see if they 
+  //! have been merged with other entities and result in
+  //! of multiple volumes.  This returns CUBIT_TRUE at the first
+  //! lower entity that shares two volumes.
+  CubitBoolean contains_merged_entities( DLIList<Body*> &bodies );
+  
+  //! Determines if the specified body conatins child entities that are merged.
   CubitBoolean contains_merged_children( Body *body,
                                          DLIList<RefEntity*> &merged_children );
 
-
-  CubitBoolean contains_merged_entities( DLIList<RefEntity*> &ref_entities);
-     //- Tests the entities in the list to see if they or their descendents
-     //- have been merged with other entities
+  //! Tests the entities in the list to see if they or their descendents
+  //! have been merged with other entities
+  //! If merged_ref_ents is not NULL, fill it will all the merged ref entities. 
+  CubitBoolean contains_merged_entities( DLIList<RefEntity*> &ref_entities, 
+                                         DLIList<RefEntity*> *merged_ref_ents = NULL );
   
+  //! Tests the entities in the list to see if their ANY children of ancestors 
+  //! have been merged with other entities
   CubitBoolean parents_contain_merged_entities( DLIList<RefEntity*> &ref_entities);
-     //- Tests the entities in the list to see if their ANY children of ancestors 
-     //- have been merged with other entities
    
-   CubitBoolean entity_merged( TopologyEntity *entity );
-     //- Takes a RefEntity, makes sure it is not a volume, and
-     //- checks to see if it has more than one volume.
+  //! Takes a RefEntity, makes sure it is not a volume, and
+  //! checks to see if it has more than one volume.
+  CubitBoolean entity_merged( TopologyEntity *entity );
    
-   CubitStatus merge_all_bodies();
-     //- Compare all RefFaces, RefEdges, and RefVertices in the
-     //- model and merge the matches
+  //! Compare all RefFaces, RefEdges, and RefVertices in the
+  //! model and merge the matches
+  CubitStatus merge_all_bodies();
    
-   CubitStatus merge_bodies( DLIList<Body*>& refbody_list );
-     //- Compare all RefFaces, RefEdges, and RefVertices in 
-     //- refbody_list and merge the matches
+  //! Compare all RefFaces, RefEdges, and RefVertices in 
+  //! refbody_list and merge the matches
+  CubitStatus merge_bodies( DLIList<Body*>& refbody_list );
    
-   CubitStatus merge_volumes( DLIList<RefVolume*>& vol_list,
-                              CubitBoolean print_info = CUBIT_TRUE );
-     //- Compare all RefFaces, RefEdges, and RefVertices in 
-     //- vol_list and merge the matches
+  //! Compare all RefFaces, RefEdges, and RefVertices in 
+  //! vol_list and merge the matches
+  CubitStatus merge_volumes( DLIList<RefVolume*>& vol_list,
+                             CubitBoolean print_info = CUBIT_TRUE );
    
-   CubitStatus merge_all_reffaces    ();
-     //- Compare all RefFaces in the model and merge the matches
+  //! Compare all RefFaces in the model and merge the matches.
+  CubitStatus merge_all_reffaces();
    
-   CubitStatus merge_reffaces_old( DLIList<RefFace*>& refface_list,
+  //! Compare all input RefFaces and merge the matches.
+  CubitStatus merge_reffaces_old( DLIList<RefFace*>& refface_list,
                                CubitBoolean print_info = CUBIT_TRUE);
-     //- Compare all input RefFaces and merge the matches
    
-   CubitStatus merge_reffaces( DLIList<RefFace*>& refface_list,
+  //! Compare all input RefFaces and merge the matches.
+  //! Uses AbstractTree rather than O(nlogn) comparisons.
+  CubitStatus merge_reffaces( DLIList<RefFace*>& refface_list,
                                CubitBoolean print_info = CUBIT_TRUE);
-     //- Compare all input RefFaces and merge the matches
-     //- Uses AbstractTree rather than O(nlogn) comparisons.
 
-   CubitStatus merge_all_refedges();
-     //- Compare all RefEdges in the model and merge the matches
-   
-   CubitStatus old_merge_refedges( DLIList<RefEdge*>& refedge_list,
+  //! Compare all RefEdges in the model and merge the matches.
+  CubitStatus merge_all_refedges();
+  
+  //! Merges specified curves.  List should contains max 20 curves.
+  CubitStatus old_merge_refedges( DLIList<RefEdge*>& refedge_list,
                                CubitBoolean should_clean_out = CUBIT_TRUE,
                                CubitBoolean print_info = CUBIT_TRUE);
-   CubitStatus merge_refedges( DLIList<RefEdge*>& refedge_list,
+
+  //! Compare all input RefEdges and merge the matches
+  //! BE CAREFUL with the should_clean_out flag.  If you set
+  //! it to false, then YOU (the caller) are responsible for
+  //! cleaning out the deactivated geometry.
+  //! Merges specified curves.  If list contains < 20 curves, use old_merge_ref_edges.
+  CubitStatus merge_refedges( DLIList<RefEdge*>& refedge_list,
                                CubitBoolean should_clean_out = CUBIT_TRUE,
                                CubitBoolean print_info = CUBIT_TRUE);
-     //- Compare all input RefEdges and merge the matches
-     //- BE CAREFUL with the should_clean_out flag.  If you set
-     //- it to false, then YOU (the caller) are responsible for
-     //- cleaning out the deactivated geometry.
    
-   CubitStatus merge_all_refvertices();
-     //- Compare all RefVertices in the model and merge the matches
+  //! Compare all RefVertices in the model and merge the matches
+  CubitStatus merge_all_refvertices();
+  
+  //! Compare all input RefVertices and merge the matches. For lists < 20
+  CubitStatus old_merge_refvertices( DLIList<RefVertex*>& refvertex_list,
+                                     CubitBoolean print_info = CUBIT_TRUE );
+
+  //! Compare all input RefVertices and merge the matches.
+  CubitStatus merge_refvertices( DLIList<RefVertex*>& refvertex_list,
+                                 CubitBoolean print_info = CUBIT_TRUE );
    
-   CubitStatus old_merge_refvertices( DLIList<RefVertex*>& refvertex_list,
-                                  CubitBoolean print_info = CUBIT_TRUE );
-   CubitStatus merge_refvertices( DLIList<RefVertex*>& refvertex_list,
-                                  CubitBoolean print_info = CUBIT_TRUE );
-     //- Compare all input RefVertices and merge the matches
-   
-   CubitStatus merge_entities( DLIList<RefEntity*>& entity_list,
+  //! merge the entities in list; asserts if they're not all the same type
+  CubitStatus merge_entities( DLIList<RefEntity*>& entity_list,
                                CubitBoolean should_clean_out = CUBIT_TRUE,
                                CubitBoolean print_info = CUBIT_TRUE);
-     //- merge the entities in list; asserts if they're not all the same type
    
-   CubitStatus unmerge_all();
-     //- Unmerge everything.
+  //! Unmerge everything.
+  CubitStatus unmerge_all();
    
-   CubitStatus 
-   unmerge( DLIList<RefEntity*>& entity_list, CubitBoolean descend = CUBIT_TRUE );
-     //- Unmerge entities in list.
-     //- If decend is true, will decend topology graph, unmerging child topology
-     //- of the passed topology.  If decend is false, a.) passing bodies or volumes
-     //- in entity list will have no effect and b.) when a surface is unmerged
-     //- its child curves will not be unmerged, and the child vertices will not be 
-     //- unmerged when an edge is unmerged.
+  //! Unmerge entities in list.
+  //! If decend is true, will decend topology graph, unmerging child topology
+  //! of the passed topology.  If decend is false, a.) passing bodies or volumes
+  //! in entity list will have no effect and b.) when a surface is unmerged
+  //! its child curves will not be unmerged, and the child vertices will not be 
+  //! unmerged when an edge is unmerged.
+  CubitStatus unmerge( DLIList<RefEntity*>& entity_list, CubitBoolean descend = CUBIT_TRUE );
+   
+  //@{
+  //! Unmerge the passed entity.  All parents must already be
+  //! unmerged.  
+  //! If decend is true, will decend topology graph, unmerging child topology
+  //! of the passed topology.  If decend is false, a.) passing bodies or volumes
+  //! in entity list will have no effect and b.) when a surface is unmerged
+  //! its child curves will not be unmerged, and the child vertices will not be 
+  //! unmerged when an edge is unmerged.
+  CubitStatus unmerge( RefEntity* entity_ptr, CubitBoolean descend = CUBIT_TRUE );
+  CubitStatus unmerge( RefFace*   face_ptr,   CubitBoolean descend = CUBIT_TRUE );
+  CubitStatus unmerge( RefEdge*   edge_ptr,   CubitBoolean descend = CUBIT_TRUE );
+  CubitStatus unmerge( Body*      body_ptr   );
+  CubitStatus unmerge( RefVolume* vol_ptr    );
+  CubitStatus unmerge( RefVertex* vertex_ptr );
+  //@}
      
-   CubitStatus unmerge( RefEntity* entity_ptr, CubitBoolean descend = CUBIT_TRUE );
-   CubitStatus unmerge( RefFace*   face_ptr,   CubitBoolean descend = CUBIT_TRUE );
-   CubitStatus unmerge( RefEdge*   edge_ptr,   CubitBoolean descend = CUBIT_TRUE );
-   CubitStatus unmerge( Body*      body_ptr   );
-   CubitStatus unmerge( RefVolume* vol_ptr    );
-   CubitStatus unmerge( RefVertex* vertex_ptr );
-     //- Unmerge the passed entity.  All parents must already be
-     //- unmerged.  
-     //- If decend is true, will decend topology graph, unmerging child topology
-     //- of the passed topology.  If decend is false, a.) passing bodies or volumes
-     //- in entity list will have no effect and b.) when a surface is unmerged
-     //- its child curves will not be unmerged, and the child vertices will not be 
-     //- unmerged when an edge is unmerged.
+  //! Return number of entities unmerged in last call to one
+  //! of the unmerge methods.  If an entity list is passed,
+  //! it will be populated with unmerged entities.
+  int unmerged_entities( DLIList<RefEntity*>* entities = NULL ) const;
      
-   int unmerged_entities( DLIList<RefEntity*>* entities = NULL ) const;
-     //- Return number of entities unmerged in last call to one
-     //- of the unmerge methods.  If an entity list is passed,
-     //- it will be populated with unmerged entities.
-     
-    CubitStatus separate_bodies( DLIList<Body*>& separate_list,
+  //! Unmerge such that the group of entities in
+  //! separate_list share no topology with the entities
+  //! in from_list, or if from_list is is null, any other
+  //! entities.
+  CubitStatus separate_bodies( DLIList<Body*>& separate_list,
                                  DLIList<Body*>* from_list = NULL );
-      //- Unmerge such that the group of entities in
-      //- separate_list share no topology with the entities
-      //- in from_list, or if from_list is is null, any other
-      //- entities.
-   
-    CubitStatus separate_volumes( DLIList<RefVolume*>& separate_list,
-                                  DLIList<RefVolume*>* from_list = NULL );
-      //- Unmerge such that the group of entities in
-      //- separate_list share no topology with the entities
-      //- in from_list, or if from_list is is null, any other
-      //- entities.
-   
-    CubitStatus separate_faces( DLIList<RefFace*>& separate_list,
-                                DLIList<RefFace*>* from_list = NULL );
-      //- Unmerge such that the group of entities in
-      //- separate_list share no topology with the entities
-      //- in from_list, or if from_list is is null, any other
-      //- entities.
   
-    CubitStatus separate_edges( DLIList<RefEdge*>& separate_list,
-                                DLIList<RefEdge*>* from_list = NULL );
-      //- Unmerge such that the group of entities in
-      //- separate_list share no topology with the entities
-      //- in from_list, or if from_list is is null, any other
-      //- entities.
-   
-   RefFace* force_merge( RefFace* face1, RefFace* face2 );
-   RefEdge* force_merge( RefEdge* edge1, RefEdge* edge2 );
-   RefVertex* force_merge( RefVertex* vtx1, RefVertex* vtx2 );
-   RefEntity* force_merge( RefEntity* ent1, RefEntity* ent2 );
-   RefEntity* force_merge( const DLIList<RefEntity*>& list );
-   
-   static CubitBoolean merge_has_occured();
-   static void set_merge_occurance( CubitBoolean t_or_f );
-     //- Sets/Gets the mergeCalled flag.  This signifies
-     //- that currently a merge operation has been called for 
-     //- the model.
+  //@{
+  //! Unmerge such that the group of entities in
+  //! separate_list share no topology with the entities
+  //! in from_list, or if from_list is is null, any other
+  //! entities.
+  CubitStatus separate_volumes( DLIList<RefVolume*>& separate_list,
+                                DLIList<RefVolume*>* from_list = NULL );
+  //@}
+  
+  //@{
+  //! Unmerge such that the group of entities in
+  //! separate_list share no topology with the entities
+  //! in from_list, or if from_list is is null, any other
+  //! entities.
+  CubitStatus separate_faces( DLIList<RefFace*>& separate_list,
+                              DLIList<RefFace*>* from_list = NULL );
+  //@}
+ 
+  //@{
+  //! Unmerge such that the group of entities in
+  //! separate_list share no topology with the entities
+  //! in from_list, or if from_list is is null, any other
+  //! entities.
+  CubitStatus separate_edges( DLIList<RefEdge*>& separate_list,
+                              DLIList<RefEdge*>* from_list = NULL );
+  //@}
+  
+  //@{
+  //! Force the merging of entities.  
+  //! Entities must have like topology though, i.e, 
+  //! two surfaces must have the same number of vertices and curves.
+  RefFace* force_merge( RefFace* face1, RefFace* face2 );
+  RefEdge* force_merge( RefEdge* edge1, RefEdge* edge2 );
+  RefVertex* force_merge( RefVertex* vtx1, RefVertex* vtx2 );
+  RefEntity* force_merge( RefEntity* ent1, RefEntity* ent2 );
+  RefEntity* force_merge( const DLIList<RefEntity*>& list );
+  
+  //@{
+  //! Sets/Gets the mergeCalled flag.  This signifies
+  //! that currently a merge operation has been called for 
+  //! the model.
+  static CubitBoolean merge_has_occured();
+  static void set_merge_occurance( CubitBoolean t_or_f );
+  //@}
 
-   static void group_results( CubitBoolean t_or_f );
-    //- tells us to group the results or not.
-    
-   static void set_new_ids_on_unmerge( CubitBoolean value );
-   static CubitBoolean get_new_ids_on_unmerge();
-   
-   static void initialize_settings();
+  //! Tells us to group the results or not.
+  static void group_results( CubitBoolean t_or_f );
   
+  //@{
+  //! Get/Sets flag for producing new ids when unmerging.
+  static void set_new_ids_on_unmerge( CubitBoolean value );
+  static CubitBoolean get_new_ids_on_unmerge();
+  //@}
+
+  //! Resets all member variables in this calls to defaults.
+  static void initialize_settings();
+  
+  //! Notifies MergeTool about comparisons found and put on ref entities
   void compare_notify(RefEntity *entity, CubitEventType event);
-    //- notifies MergeTool about comparisons found and put on ref entities
   
+  //! Remove TDCompares from RefEntities.
   void remove_compare_data();
-    //- Remove TDCompares from RefEntities.
     
-    void add_merge_tool_assistant( MergeToolAssistant* mta_ptr );
-    void remove_merge_tool_assistant( MergeToolAssistant* mta_ptr );
-    MergeToolAssistant* find_merge_tool_assistant( const type_info& type );
+  void add_merge_tool_assistant( MergeToolAssistant* mta_ptr );
+  void remove_merge_tool_assistant( MergeToolAssistant* mta_ptr );
+  MergeToolAssistant* find_merge_tool_assistant( const type_info& type );
   
   static void destroy_dead_geometry( CubitBoolean yes_no )
     { destroyDeadGeometry = yes_no; }
 
+  //! This function is to be used only right
+  //! after merging is called.  It is a way to
+  //! access the groups that are created during the
+  //! merge.  Note the groups can be destroyed
+  //! and these pointers can be stale if the
+  //! function is not called immediatly following merging...
   RefGroup* get_group_last_merged_surfs()
-    {
-        //clear this out once this function has been called.
-      RefGroup *temp = lastSurfsMerged;
-      lastSurfsMerged = NULL;
-      return temp;
-    }
-    ///
-    /// This function is to be used only right
-    /// after merging is called.  It is a way to
-    /// access the groups that are created during the
-    /// merge.  Note the groups can be destroyed
-    /// and these pointers can be stale if the
-    /// function is not called immediatly following merging...
-    ///
-  RefGroup* get_group_last_merged_curvs()
-    {
-        //clear this out once this function has been called.
-      RefGroup *temp = lastCurvsMerged;
-      lastCurvsMerged = NULL;
-      return temp;
-    }
-    ///
-    /// This function is to be used only right
-    /// after merging is called.  It is a way to
-    /// access the groups that are created during the
-    /// merge.  Note the groups can be destroyed
-    /// and these pointers can be stale if the
-    /// function is not called immediatly following merging...
-    ///
-  RefGroup* get_group_last_merged_verts()
-    {
-        //clear this out once this function has been called.
-      RefGroup *temp = lastVertsMerged;
-      lastVertsMerged = NULL;
-      return temp;
-    }
-    ///
-    /// This function is to be used only right
-    /// after merging is called.  It is a way to
-    /// access the groups that are created during the
-    /// merge.  Note the groups can be destroyed
-    /// and these pointers can be stale if the
-    /// function is not called immediatly following merging...
-    ///
+  {
+      //clear this out once this function has been called.
+    RefGroup *temp = lastSurfsMerged;
+    lastSurfsMerged = NULL;
+    return temp;
+  }
 
-  //Note:  The caller of the following 4 functions is responsible to 
-  //delete the DLIList*s that are returned.
-   CubitStatus find_mergeable_refentities( DLIList<RefEntity*> &entities,
+
+  //! This function is to be used only right
+  //! after merging is called.  It is a way to
+  //! access the groups that are created during the
+  //! merge.  Note the groups can be destroyed
+  //! and these pointers can be stale if the
+  //! function is not called immediatly following merging...
+  RefGroup* get_group_last_merged_curvs()
+  {
+    //clear this out once this function has been called.
+    RefGroup *temp = lastCurvsMerged;
+    lastCurvsMerged = NULL;
+    return temp;
+  }
+
+  //! This function is to be used only right
+  //! after merging is called.  It is a way to
+  //! access the groups that are created during the
+  //! merge.  Note the groups can be destroyed
+  //! and these pointers can be stale if the
+  //! function is not called immediatly following merging...
+  RefGroup* get_group_last_merged_verts()
+  {
+      //clear this out once this function has been called.
+    RefGroup *temp = lastVertsMerged;
+    lastVertsMerged = NULL;
+    return temp;
+  }
+
+
+  //! From the specified list of entities, find mergeable surfaces, curves,
+  //! and vertices.  If two surfaces are found to be mergeable, their mergeable 
+  //! children, i.e, curves and vertices, are not included reported. 
+  //! Note:  The caller of the following 4 functions is responsible to 
+  //! delete the DLIList*s that are returned.
+  CubitStatus find_mergeable_refentities( DLIList<RefEntity*> &entities,
               DLIList< DLIList<RefFace*>*> &lists_of_mergeable_ref_faces,
               DLIList< DLIList<RefEdge*>*> &lists_of_mergeable_ref_edges,
               DLIList< DLIList<RefVertex*>*> &lists_of_mergeable_ref_vertices);
-   CubitStatus find_mergeable_reffaces( DLIList<RefEntity*> &entities,
+
+  //! From the specified list of entities, find mergeable surfaces.
+  //! Note:  The caller of this function responsible for  
+  //! deleting the DLIList*s that are returned.
+  CubitStatus find_mergeable_reffaces( DLIList<RefEntity*> &entities,
               DLIList< DLIList<RefFace*>*> &lists_of_mergeable_ref_faces,
               bool clean_up_compare_data = true );
-   CubitStatus find_mergeable_refedges( DLIList<RefEntity*> &entities,
+
+  //! From the specified list of entities, find mergeable curves.
+  //! Note:  The caller of this function responsible for  
+  //! deleting the DLIList*s that are returned.
+  CubitStatus find_mergeable_refedges( DLIList<RefEntity*> &entities,
               DLIList< DLIList<RefEdge*>*> &lists_of_mergeable_ref_edges,
               bool clean_up_compare_data = true );
-   CubitStatus find_mergeable_refvertices( DLIList<RefEntity*> &entities,
+
+  //! From the specified list of entities, find mergeable vertices.
+  //! Note:  The caller of this function responsible for  
+  //! deleting the DLIList*s that are returned.
+  CubitStatus find_mergeable_refvertices( DLIList<RefEntity*> &entities,
               DLIList< DLIList<RefVertex*>*> &lists_of_mergeable_ref_vertices,
               bool clean_up_compare_data = true );
 
-   //Faster comparison that only check for mergeable refedges between volumes.
-   //It reports all edges, even when the owning face is mergeable
-   CubitStatus find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
-                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
-
-   CubitStatus find_only_mergeable_surfaces( DLIList<BodySM*> &body_list, 
-                  DLIList< DLIList<Surface*>*> &lists_of_mergeable_surfaces);
-
+ 
+  //@{
+  //! Faster comparison that only checks for mergeable RefEdge 
+  //! or curves between bodies, surfaces, or curves.  
+  //! It reports all edges, even if the owning faces are mergeable
+  CubitStatus find_only_mergeable_curves( DLIList<Surface*> &surf_list, 
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
+  CubitStatus find_only_mergeable_curves( DLIList<Curve*> &all_curves, 
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
+  CubitStatus find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
    CubitStatus find_only_mergeable_refedges( DLIList<Body*> &body_list, 
                   DLIList< DLIList<RefEdge*>*> &lists_of_mergeable_ref_edges );
-                                             
-   CubitBoolean about_spatially_equal( Surface *surf_1, Surface *surf_2,
-                                       double tolerance_factor );
-   CubitBoolean about_spatially_equal( LoopSM *loop_1, LoopSM *loop_2, 
-                                       CubitSense relative_sense, double tolerance_factor );
-   CubitBoolean about_spatially_equal( CoEdgeSM *coedge_1, CoEdgeSM *coedge_2, 
-                                       CubitSense relative_sense, double tolerance_factor );
-   CubitBoolean about_spatially_equal( Curve *curve_1, Curve *curve_2, 
-                                       CubitSense &relative_sense, double tolerance_factor );
-   CubitBoolean about_spatially_equal( Point *point_1, Point *point_2, 
-                                               double tolerance_factor );
+  //@}
+
+  //! Faster comparison that only checks for mergeable surfaces. 
+  CubitStatus find_only_mergeable_surfaces( DLIList<BodySM*> &body_list, 
+                 DLIList< DLIList<Surface*>*> &lists_of_mergeable_surfaces);
+
+  //! Check for mergeability of two surfaces. 
+  CubitBoolean about_spatially_equal( Surface *surf_1, Surface *surf_2,
+                                      double tolerance_factor );
+
+  //! Check for mergeability of two loops. 
+  CubitBoolean about_spatially_equal( LoopSM *loop_1, LoopSM *loop_2, 
+                                      CubitSense relative_sense, double tolerance_factor );
+
+  //! Check for mergeability of two coedges. 
+  CubitBoolean about_spatially_equal( CoEdgeSM *coedge_1, CoEdgeSM *coedge_2, 
+                                      CubitSense relative_sense, double tolerance_factor );
+
+  //! Check for mergeability of two curves. 
+  CubitBoolean about_spatially_equal( Curve *curve_1, Curve *curve_2, 
+                                      CubitSense &relative_sense, double tolerance_factor );
+
+  //! Check for mergeability of two points. 
+  CubitBoolean about_spatially_equal( Point *point_1, Point *point_2, 
+                                      double tolerance_factor );
   
-   protected :
+  protected :
    
-   CubitStatus separate_entities( DLIList<TopologyEntity*>& separate_list,
-                                  DLIList<TopologyEntity*>* from_list = NULL );
-    //- Common implementation for public separate() functions.
-    //- All passed entities must be of the same type.
-    //- Unmerge such that the group of entities in
-    //- separate_list share no topology with the entities
-    //- in from_list, or if from_list is is null, any other
-    //- entities.
-   
-   BasicTopologyEntity* can_separate( DLIList<TopologyBridge*>& bridge_list,
-                                      bool check_parents );
-    //- Check if the passed list of bridges can be unmerged and if
-    //- so, return their owning BTE.  If check_parents is false, skip
-    //- check for merged parents.
+  //! Common implementation for public separate() functions.
+  //! All passed entities must be of the same type.
+  //! Unmerge such that the group of entities in
+  //! separate_list share no topology with the entities
+  //! in from_list, or if from_list is is null, any other
+  //! entities.
+  CubitStatus separate_entities( DLIList<TopologyEntity*>& separate_list,
+                                 DLIList<TopologyEntity*>* from_list = NULL );
+ 
+  //! Check if the passed list of bridges can be unmerged and if
+  //! so, return their owning BTE.  If check_parents is false, skip
+  //! check for merged parents.
+  BasicTopologyEntity* can_separate( DLIList<TopologyBridge*>& bridge_list,
+                                     bool check_parents );
   
-   RefFace* separate_face( DLIList<Surface*>& bridges, bool descend );
-    //- Split a merged entity into two such that the returned, new
-    //- entity contains the passed list of bridges.  If descend
-    //- is false, skip attempt to unmerge child entities.
+  //! Split a merged entity into two such that the returned, new
+  //! entity contains the passed list of bridges.  If descend
+  //! is false, skip attempt to unmerge child entities.
+  RefFace* separate_face( DLIList<Surface*>& bridges, bool descend );
   
-   RefEdge* separate_edge( DLIList<Curve*>& bridges, bool descend );
-    //- Split a merged entity into two such that the returned, new
-    //- entity contains the passed list of bridges.  If descend
-    //- is false, skip attempt to unmerge child entities.
+  //! Split a merged entity into two such that the returned, new
+  //! entity contains the passed list of bridges.  If descend
+  //! is false, skip attempt to unmerge child entities.
+  RefEdge* separate_edge( DLIList<Curve*>& bridges, bool descend );
    
    RefVertex* separate_vertex( DLIList<Point*>& bridges );
     //- Split a merged entity into two such that the returned, new

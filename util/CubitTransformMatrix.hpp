@@ -31,6 +31,8 @@ public:
   CubitTransformMatrix& rotate(double degrees, char axis);
   CubitTransformMatrix& rotate(double degrees, const CubitVector& axis_from,
                         const CubitVector& axis_to);
+
+  void get_rotation_axis_and_angle(CubitVector &rotation_axis, double &angle);
   
   CubitTransformMatrix& reflect(const CubitVector& vector);
 

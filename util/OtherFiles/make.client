@@ -68,7 +68,7 @@
 
 SHELL = /bin/sh
 
-CUBIT_VERSION = 10.3b
+CUBIT_VERSION = 12.0b
 
 include ${CUBIT_BASE_DIR}/util/OtherFiles/cubiti.version
 

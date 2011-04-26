@@ -47,6 +47,7 @@
    { \
       (classOneList).reset(); \
       (classTwoList).clean_out(); \
+      (classTwoList).reserve((classOneList).size()); \
       for (int CAST_LIST_IT = (classOneList).size(); CAST_LIST_IT > 0; CAST_LIST_IT--) \
         (classTwoList).append((classOneList).get_and_step()); \
    }

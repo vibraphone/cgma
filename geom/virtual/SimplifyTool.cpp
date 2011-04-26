@@ -43,6 +43,7 @@ CubitStatus SimplifyTool::simplify_volumes(DLIList<RefVolume*> ref_volume_list,
                                            DLIList<RefEdge*> respect_edge_list,
                                            CubitBoolean respect_rounds,
                                            CubitBoolean respect_imprints,
+                                           CubitBoolean local_normals,
                                            CubitBoolean preview)
 {
     ref_volume_list.uniquify_unordered();
@@ -54,6 +55,7 @@ CubitStatus SimplifyTool::simplify_volumes(DLIList<RefVolume*> ref_volume_list,
         respect_edge_list,
         respect_rounds,
         respect_imprints,
+        local_normals,
         preview);
 
     if(preview)
@@ -68,6 +70,7 @@ CubitStatus SimplifyTool::simplify_surfaces(DLIList<RefFace*> ref_face_list,
                                             DLIList<RefEdge*> respect_edge_list,
                                             CubitBoolean respect_rounds,
                                             CubitBoolean respect_imprints,
+                                            CubitBoolean local_normals,
                                             CubitBoolean preview)
 {
     CubitStatus status = CUBIT_FAILURE;
@@ -95,9 +98,54 @@ CubitStatus SimplifyTool::simplify_surfaces(DLIList<RefFace*> ref_face_list,
                 respect_edge_list,
                 respect_rounds,
                 respect_imprints,
+                local_normals,
                 preview);
         }
         ref_face_list -= ref_faces_in_volume;
+    }
+
+    if(preview)
+        GfxDebug::flush();
+
+    return CUBIT_SUCCESS;
+}
+
+CubitStatus SimplifyTool::simplify_curves(DLIList<RefEdge*> ref_edge_list, 
+                                            double angle_in,
+                                            DLIList<RefEdge*> respect_edge_list,
+                                            DLIList<RefVertex*> respect_vertex_list,
+                                            CubitBoolean respect_imprints,
+                                          CubitBoolean local_normals,
+                                            CubitBoolean preview)
+{
+    CubitStatus status = CUBIT_FAILURE;
+    ref_edge_list.uniquify_unordered();
+    while(ref_edge_list.size())
+    {
+        DLIList<RefEdge*> ref_edges_in_volume;
+        ref_edge_list.reset();
+        RefEdge* cur_edge = ref_edge_list.get_and_step();
+        RefVolume* cur_vol = cur_edge->ref_volume();
+        ref_edges_in_volume.append(cur_edge);
+        for(int i =1;i<ref_edge_list.size();i++)
+        {
+            RefEdge* edge = ref_edge_list.get_and_step();
+            if(edge->ref_volume() == cur_vol)
+                ref_edges_in_volume.append(edge);
+        }
+
+        if(ref_edges_in_volume.size()>1)
+        {
+            status = simplify_curves_in_volume(
+                ref_edges_in_volume,
+                angle_in,
+                respect_edge_list,
+                respect_vertex_list,
+                respect_imprints,
+                local_normals,
+                preview);
+        }
+        ref_edge_list -= ref_edges_in_volume;
     }
 
     if(preview)
@@ -112,6 +160,7 @@ CubitStatus SimplifyTool::simplify_volume(RefVolume* ref_volume,
                                           DLIList<RefEdge*> respect_edge_list,
                                           CubitBoolean respect_rounds,
                                           CubitBoolean respect_imprints,
+                                          CubitBoolean local_normals,
                                           CubitBoolean preview)
 {
     DLIList<RefFace*> ref_face_list;
@@ -123,6 +172,7 @@ CubitStatus SimplifyTool::simplify_volume(RefVolume* ref_volume,
         respect_edge_list,
         respect_rounds,
         respect_imprints,
+        local_normals,
         preview);
 }
 
@@ -135,6 +185,7 @@ CubitStatus SimplifyTool::simplify_surfaces_in_volume(
     DLIList<RefEdge*> respect_edge_list,
     CubitBoolean respect_rounds,
     CubitBoolean respect_imprints,
+    CubitBoolean local_normals,
     CubitBoolean preview)
 {
     if(ref_face_list.size()==0)
@@ -238,12 +289,22 @@ CubitStatus SimplifyTool::simplify_surfaces_in_volume(
                     if( !ref_volumes.size() || ref_volumes.size()==1 )
                     {
                         // Only add the ref_face if it meets the feature angle criteria
-                        if(composite_surfaces(seed_ref_face,ref_face_ptr,angle_in))
+                      if(local_normals){
+                        if(composite_surfaces_test_at_curves(seed_ref_face,ref_face_ptr,angle_in))
                         {
                             ref_face_ptr->marked( CUBIT_TRUE );
                             seed_faces.append(ref_face_ptr);
                             composite_faces.append(ref_face_ptr);
                         }
+                      }
+                      else{
+                        if(composite_surfaces(seed_ref_face,ref_face_ptr,angle_in))
+                        {
+                          ref_face_ptr->marked( CUBIT_TRUE );
+                          seed_faces.append(ref_face_ptr);
+                          composite_faces.append(ref_face_ptr);
+                        }
+                      }
                     }
                 }
             }
@@ -256,7 +317,7 @@ CubitStatus SimplifyTool::simplify_surfaces_in_volume(
         {
             DLIList<RefEdge*> result_edges;
             DLIList<RefFace*> result_faces;
-            CubitStatus new_face = CompositeTool::instance()->composite(
+            CompositeTool::instance()->composite(
                 composite_faces,
                 result_faces,
                 result_edges);
@@ -313,7 +374,209 @@ CubitStatus SimplifyTool::simplify_surfaces_in_volume(
         PRINT_INFO("Simplified %d surfaces into %d surfaces\n",
             combined_face_count,
             new_face_count);
+	}
+
+	// make sure to set all of the surface markers to false
+	DLIList<RefFace*> marked_face_list;
+	ref_volume->ref_faces(marked_face_list);
+	for(int i =0;i<marked_face_list.size();i++)
+		marked_face_list[i]->marked(CUBIT_FALSE);
+
+    return CUBIT_SUCCESS;
+}
+
+CubitStatus SimplifyTool::simplify_curves_in_volume(
+    DLIList<RefEdge*> ref_edge_list, 
+    double angle_in,
+    DLIList<RefEdge*> respect_edge_list,
+    DLIList<RefVertex*> respect_vertex_list,
+    CubitBoolean respect_imprints,
+    CubitBoolean local_normals,
+    CubitBoolean preview)
+{
+  if(local_normals){
+    PRINT_WARNING("When simplifying curves, 'local_normals' is currently ignored.\n");
+  }
+  
+    if(ref_edge_list.size()==0)
+    {
+        PRINT_ERROR("No curves specified for simplification\n");
+        return CUBIT_FAILURE;
     }
+    else if(ref_edge_list.size() == 1)
+    {
+        PRINT_ERROR("Only one curve specified for simplification\n");
+        return CUBIT_FAILURE;
+    }
+
+    RefVolume* ref_volume = ref_edge_list.get()->ref_volume();
+    if (NULL == ref_volume)
+    {
+      PRINT_WARNING("Simplifying free curves is not supported.\n"); 
+      return CUBIT_FAILURE;
+    }
+
+    DLIList<RefEdge*> seed_edges;
+    DLIList<RefVertex*> preview_vertices;
+    DLIList<RefVertex*> preview_removed;
+
+    if(preview)
+        ref_volume->ref_vertices(preview_vertices);
+
+    int j,k;
+
+    int new_edge_count = 0;
+    int combined_edge_count = 0;
+    ProgressTool *prog_ptr = 0;
+    if(ref_edge_list.size() > 100 )
+    {
+        char title[200];
+        if(preview)
+            sprintf(title, "Previewing Volume %d",ref_volume->id());
+        else
+            sprintf(title, "Simplifying Curves in Volume %d",ref_volume->id());
+
+        prog_ptr = AppUtil::instance()->progress_tool();
+        assert(prog_ptr != NULL);
+        prog_ptr->start(0,100, title);
+    }
+    int start_edge_count = ref_edge_list.size();
+    while(ref_edge_list.size())
+    {
+        DLIList<RefEdge*> composite_edges;
+        seed_edges.append_unique(ref_edge_list.pop());
+
+        for ( j = ref_edge_list.size(); j--; )
+            ref_edge_list.get_and_step()->marked( CUBIT_FALSE );
+
+        while(seed_edges.size())
+        {
+            RefEdge *seed_ref_edge = seed_edges.pop();
+            seed_ref_edge->marked(CUBIT_TRUE);
+
+            composite_edges.append(seed_ref_edge);
+
+            // Get the vertices
+            DLIList<RefVertex*> ref_vertex_list;
+            seed_ref_edge->ref_vertices( ref_vertex_list );
+            RefVertex *ref_vertex_ptr;
+            RefEdge *ref_edge_ptr;
+            for( k = ref_vertex_list.size(); k--; )
+            {
+                ref_vertex_ptr = ref_vertex_list.get_and_step();
+
+                // Don't go propagate across surface splits if the user asks for it
+                GeometryFeatureTool* gft = GeometryFeatureTool::instance();
+                if( respect_imprints &&
+                    gft->feature_type(ref_vertex_ptr) == GeometryFeatureEngine::FEATURE_IMPRINT)
+                    continue;
+
+                // Don't cross a curve if we want it respected
+                if(respect_vertex_list.is_in_list(ref_vertex_ptr))
+                    continue;
+
+                DLIList<RefEdge*> attached_ref_edges;
+                ref_vertex_ptr->ref_edges( attached_ref_edges );
+
+                attached_ref_edges.remove(seed_ref_edge);
+                ref_edge_ptr = attached_ref_edges.size()!=0?attached_ref_edges.get():0;
+
+                // keep the face if we want it respected
+                if(attached_ref_edges.size() == 1 &&
+                    respect_edge_list.is_in_list(attached_ref_edges.get()))
+                    continue;
+
+                // Don't consider ref_faces that are already in the list
+                if( attached_ref_edges.size() == 1 &&
+                    !ref_edge_ptr->marked())
+                {
+                    DLIList<RefVolume*> ref_volumes;
+                    ref_edge_ptr->ref_volumes( ref_volumes );
+                    if( !ref_volumes.size() || ref_volumes.size()==1 )
+                    {
+                        // Only add the ref_face if it meets the feature angle criteria
+                        if(composite_curves(seed_ref_edge,ref_edge_ptr,angle_in))
+                        {
+                          ref_edge_ptr->marked( CUBIT_TRUE );
+                          seed_edges.append(ref_edge_ptr);
+                          composite_edges.append(ref_edge_ptr);
+                        }
+                    }
+                }
+            }
+        }
+        composite_edges.uniquify_unordered();
+        ref_edge_list -= composite_edges;
+
+        if(!preview &&
+            composite_edges.size()>1)
+        {
+            DLIList<RefVertex*> result_vertices;
+            DLIList<RefEdge*> result_edges;
+            CompositeTool::instance()->composite(
+                composite_edges,
+                result_edges,
+                &result_vertices);
+
+            combined_edge_count +=composite_edges.size();
+            for(int m = result_edges.size();m--;)
+                result_edges.get_and_step()->marked(CUBIT_TRUE);
+
+            new_edge_count+=result_edges.size();
+        }
+        else if(preview)
+        {
+            int edge_count = composite_edges.size();
+            for(int i =0;i<edge_count;i++)
+            {
+                RefEdge* cur_comp_edge = composite_edges[i];
+                DLIList<RefVertex*> refvertices; 
+                for(int j =0;j<edge_count;j++)
+                {
+                    if(i==j) continue;
+                    composite_edges[j]->ref_vertices(refvertices);
+                }
+
+                refvertices.uniquify_unordered();
+
+                DLIList<RefVertex*> temp_refvertices; 
+                cur_comp_edge->ref_vertices(temp_refvertices);
+                refvertices.intersect_unordered(temp_refvertices);
+                preview_removed+=refvertices;
+            }
+        }
+
+        if(prog_ptr)
+        {
+            double frac = 1.0-(double)ref_edge_list.size()/(double)start_edge_count;
+            prog_ptr->percent(frac);
+        }
+    }
+
+    if(prog_ptr)
+    {
+        prog_ptr->end();
+        prog_ptr = 0;
+    }
+
+    if(preview)
+    {
+        preview_vertices -=preview_removed;
+        for(int c = preview_vertices.size();c--;)
+            GfxDebug::draw_ref_vertex(preview_vertices.get_and_step(),7);
+    }
+    else if(combined_edge_count>new_edge_count)
+    {
+        PRINT_INFO("Simplified %d curves into %d curves\n",
+            combined_edge_count,
+            new_edge_count);
+	}
+
+	// make sure to set all of the surface markers to false
+	DLIList<RefEdge*> marked_edge_list;
+	ref_volume->ref_edges(marked_edge_list);
+	for(int i =0;i<marked_edge_list.size();i++)
+		marked_edge_list[i]->marked(CUBIT_FALSE);
 
     return CUBIT_SUCCESS;
 }
@@ -332,6 +595,37 @@ CubitBoolean SimplifyTool::composite_surfaces(
     weighted_average_normal(ref_face_ptr,norm2,weight);
 
     angle = norm1.interior_angle( norm2 );
+
+    if( angle < angle_in)
+        return CUBIT_TRUE;
+
+    return CUBIT_FALSE;
+}
+
+CubitBoolean SimplifyTool::composite_curves(
+    RefEdge* seed_ref_edge,
+    RefEdge* ref_edge_ptr,
+    double angle_in)
+{
+    double angle;
+    CubitVector pos, norm1, norm2;
+
+    // Only add the ref_face if it meets the feature angle criteria
+    RefVertex* shared_vert = seed_ref_edge->common_ref_vertex( ref_edge_ptr );
+
+    CubitVector seed_tangent;
+    seed_ref_edge->tangent( shared_vert->coordinates(), seed_tangent );
+    // make this vector point away from the vertex along the edge
+    if( shared_vert == seed_ref_edge->end_vertex() )
+      seed_tangent *= -1;
+
+    CubitVector edge2_tangent;
+    ref_edge_ptr->tangent( shared_vert->coordinates(), edge2_tangent );
+    // make this vector point into the vertex along the edge
+    if( shared_vert == ref_edge_ptr->start_vertex() )
+      edge2_tangent *= -1;
+
+    angle = seed_tangent.interior_angle( edge2_tangent );
 
     if( angle < angle_in)
         return CUBIT_TRUE;
@@ -396,26 +690,22 @@ SimplifyTool::weighted_average_normal(RefFace* ref_face,
                                       CubitVector &normal, 
                                       double &weight )
 {
-    int i;
-    int num_tris, num_pnts, num_facets;
     GMem g_mem;
     unsigned short norm_tol = 30;
     double dist_tol = -1.0;
 
     ref_face->get_geometry_query_engine()->
-        get_graphics(ref_face->get_surface_ptr(),num_tris, num_pnts, num_facets,
-        &g_mem, norm_tol, dist_tol );
+        get_graphics(ref_face->get_surface_ptr(), &g_mem, norm_tol, dist_tol );
 
-    if(num_tris < 1)
+    if(g_mem.fListCount < 1)
     {
         // Decrease tolerance and try again (we can get this for small features)
         norm_tol /= 2;
         ref_face->get_geometry_query_engine()->
-            get_graphics(ref_face->get_surface_ptr(),num_tris, num_pnts, num_facets,
-            &g_mem, norm_tol, dist_tol );
+            get_graphics(ref_face->get_surface_ptr(), &g_mem, norm_tol, dist_tol );
     }
 
-    if(num_tris < 1)
+    if(g_mem.fListCount < 1)
     {
         // Lets give up 
         PRINT_ERROR( "Unable to find average normal of a surface\n" );
@@ -432,7 +722,7 @@ SimplifyTool::weighted_average_normal(RefFace* ref_face,
     GPoint* plist = g_mem.point_list();
     int* facet_list = g_mem.facet_list();
     int c = 0;
-    for( i=0; i<num_tris; i++ )
+    for( ;c<g_mem.fListCount; )
     {
         p[0] = plist[facet_list[++c]];
         p[2] = plist[facet_list[++c]];
@@ -472,3 +762,91 @@ SimplifyTool::weighted_average_normal(RefFace* ref_face,
 
     return CUBIT_SUCCESS;
 }
+
+
+
+CubitBoolean SimplifyTool::composite_surfaces_test_at_curves(
+    RefFace* seed_ref_face,
+    RefFace* ref_face_ptr,
+    double angle_in)
+{
+  double angle;
+
+  if(!maximum_angle_deviation(seed_ref_face, ref_face_ptr, angle_in,  angle))
+    return CUBIT_FALSE;
+
+  if( angle < angle_in)
+    return CUBIT_TRUE;
+
+  return CUBIT_FALSE;
+}
+
+
+CubitBoolean SimplifyTool::maximum_angle_deviation(
+    RefFace* seed_ref_face,
+    RefFace* ref_face_ptr,
+    double angle_in,
+    double &angle_out)
+{
+  double max_angle = -360;
+  RefEdge* ref_edge = NULL;
+
+  double tol = angle_in / 2.0;
+    
+    
+  DLIList<RefEdge*> common_edges;
+  int num_edges = seed_ref_face->common_ref_edges(ref_face_ptr, common_edges);
+  if(num_edges != common_edges.size()){
+    PRINT_ERROR("Unexpected results.  List size incorrect.\n");
+    return CUBIT_FALSE;
+  }
+
+  int i, j;
+  for(i=0; i<num_edges; i++){
+      
+    GMem g_mem;
+    ref_edge = common_edges.get_and_step();
+      
+    ref_edge->get_geometry_query_engine()->
+        get_graphics(ref_edge->get_curve_ptr(), &g_mem, tol);
+
+    if(g_mem.pointListCount < 2)
+    {
+        // Decrease tolerance and try again (we can get this for small features)
+      tol /= 2.;
+        
+      ref_edge->get_geometry_query_engine()->
+          get_graphics(ref_edge->get_curve_ptr(), &g_mem, tol); 
+    }
+
+    if(g_mem.pointListCount < 2)
+    {
+        // Lets give up 
+      PRINT_ERROR( "Unable to find average normal of a curve\n" );
+      return CUBIT_FAILURE;
+    }
+
+    GPoint* plist = g_mem.point_list();
+      
+    for( j=0; j<g_mem.pointListCount; j++ )
+    {
+      CubitVector p1(plist[j].x, plist[j].y, plist[j].z);
+        
+
+      CubitVector norm1(ref_face_ptr->normal_at(p1));
+      CubitVector norm2(seed_ref_face->normal_at(p1));
+        
+      double angle = norm1.interior_angle( norm2 );
+      if(angle > max_angle)
+        max_angle=angle;
+    }
+  }
+  if(max_angle < -.000001){
+    return CUBIT_FAILURE;
+  }
+  angle_out = max_angle;
+    
+  return CUBIT_SUCCESS;
+}
+
+

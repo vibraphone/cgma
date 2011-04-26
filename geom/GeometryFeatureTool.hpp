@@ -30,6 +30,8 @@ public:
     //! destructor
     ~GeometryFeatureTool();
 
+   static void delete_instance() { if(instance_) delete instance_;};  
+
     //! add a feature engine to the list
     void add_gfe( GeometryFeatureEngine *gfe_ptr );
 

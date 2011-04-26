@@ -65,14 +65,17 @@ class PartitionEngine : public IntermediateGeomEngine
 public:
   bool is_partition(TBOwner *bridge_owner);
   bool is_composite(TBOwner *bridge_owner);
+  bool is_composite(TopologyBridge *bridge);
   virtual void remove_imprint_attributes_after_modify
                                 ( DLIList<BodySM*> &old_sms,
                                 DLIList<BodySM*> &new_sms ){};
   virtual void push_imprint_attributes_before_modify
                      ( DLIList<BodySM*> &body_sms ){};
-    virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
+  virtual void push_named_attributes_to_curves_and_points
+                     ( DLIList<TopologyBridge*> &tb_list, const char *name_in ){};
+  virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
                                                     DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<BodySM*> &new_sms,
+                                                    DLIList<TopologyBridge*> &tb_list,
                                                     DLIList<Body*> &old_bodies){};
   virtual void remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges){};
 
@@ -82,6 +85,7 @@ public:
 
   /** Get singleton instance */
   static PartitionEngine& instance();
+  static void delete_instance();
 
   int level() const { return SUBCOMP_PARTITION_LAYER; }
 
@@ -290,8 +294,11 @@ public:
    
   void remove_attributes( DLIList<TopologyBridge*> &bridge_list );
     //remove Composite attributes off of topology bridges
-  void remove_modified(DLIList<TopologyBridge*>& geometry_list);
+  virtual void remove_modified(DLIList<Surface*> &all_surfs,
+    DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts);
     
+  void get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
+                                               DLIList<TopologyBridge*> &tbs );
 private:
 
   CubitStatus notify_transform_internal( TopologyBridge* bridge,
@@ -600,6 +607,8 @@ private:
   /** Restore lump partitions from attributes */
   CubitStatus restore_from_attrib( Lump* partitioned_lump );
   
+  static PartitionEngine* instance_;
+
   /** Map for getting a SubEntitySet given its unique ID */  
   std::map<int,SubEntitySet*> uniqueIdMap;
 

@@ -4,6 +4,7 @@ PROJECT(cubit_util)
 INCLUDE(${cubit_util_SOURCE_DIR}/UseUtil.cmake)
 
 SET(UTIL_SRCS
+    AllocMemManagersList.cpp
     AppUtil.cpp
     ArrayBasedContainer.cpp
     CpuTimer.cpp
@@ -27,6 +28,7 @@ SET(UTIL_SRCS
     CubitStack.cpp
     CubitString.cpp
     CubitTransformMatrix.cpp
+    CubitUndo.cpp
     CubitUtil.cpp
     CubitVector.cpp
     DIntArray.cpp
@@ -34,6 +36,7 @@ SET(UTIL_SRCS
     DynamicArray.cpp
     GetLongOpt.cpp
     GfxDebug.cpp
+    GlobalCommandFeedback.cpp
     GMem.cpp
     IntersectionTool.cpp
     MemoryBlock.cpp
@@ -52,12 +55,68 @@ SET(UTIL_SRCS
     ToolDataUser.cpp
     Tree.cpp
     TtyProgressTool.cpp
-    CubitEventDefines.h
     )
 
-SET(EXTRA_UTIL_SRCS
-    AllocMemManagersList.cpp
-    )
+SET(UTIL_HDRS
+    AppUtil.hpp
+    ArrayBasedContainer.hpp
+    CpuTimer.hpp
+    CommandFeedback.hpp
+    Cubit2DPoint.hpp
+    CubitBox.hpp
+    CubitCollection.hpp
+    CubitContainer.hpp
+    CubitCoordinateSystem.hpp
+    CubitDefines.h
+    CubitDynamicLoader.hpp
+    CubitEntity.hpp
+    CubitEquation.hpp
+    CubitFile.hpp
+    CubitFileFEModel.hpp
+    CubitFileIOWrapper.hpp
+    CubitFileMetaData.hpp
+    CubitFileUtil.hpp
+    CubitMatrix.hpp
+    CubitMessage.hpp
+    CubitObservable.hpp
+    CubitObserver.hpp
+    CubitPlane.hpp
+    CubitStack.hpp
+    CubitString.hpp
+    CubitTransformMatrix.hpp
+    CubitUndo.hpp
+    CubitUtil.hpp
+    CubitVector.hpp
+    DIntArray.hpp
+    DLIList.hpp
+    DLList.hpp
+    DynamicArray.hpp
+    GetLongOpt.hpp
+    GfxDebug.hpp
+    GlobalCommandFeedback.hpp
+    GMem.hpp
+    IntersectionTool.hpp
+    MemoryBlock.hpp
+    MemoryManager.hpp
+    OrderedSet.hpp
+    OrderedMap.hpp
+    ParamCubitPlane.hpp
+    PlanarParamTool.hpp
+    Queue.hpp
+    RandomMersenne.hpp
+    SDLList.hpp
+    SettingHandler.hpp
+    SettingHolder.hpp
+    StubProgressTool.hpp
+    TDUPtr.hpp
+    TextProgressTool.hpp
+    ToolData.hpp
+    ToolDataUser.hpp
+    Tree.hpp
+    TtyProgressTool.hpp
+    CubitEventDefines.h
+    ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
+  )
 
 IF(TEMPLATE_DEFS_INCLUDED)
 SET(TEMPLATE_SRCS
@@ -74,16 +133,7 @@ SET(TEMPLATE_SRCS
     )
 ENDIF(TEMPLATE_DEFS_INCLUDED)
 
-IF(WIN32)
-  FOREACH(var ${UTIL_SRCS})
-    STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
-    SET(UTIL_HEADERS ${UTIL_HEADERS} ${header})
-  ENDFOREACH(var ${UTIL_SRCS})
-  SET(UTIL_HEADERS ${UTIL_HEADERS} CubitEquation.hpp)
-ENDIF(WIN32)
-
 ADD_DEFINITIONS(${CUBIT_UTIL_DEFINES})
-
 
 INCLUDE_DIRECTORIES(${cubit_util_BINARY_DIR})
 
@@ -92,37 +142,52 @@ IF(BUILD_SHARED_LIBS)
   SET(CUBIT_UTIL_BUILD_SHARED_LIBS ON CACHE BOOL "Build Cubit_Util as shared library" FORCE)
 ENDIF(BUILD_SHARED_LIBS)
 
-IF(CUBIT_UTIL_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(cubit_util SHARED ${UTIL_SRCS} ${UTIL_HEADERS} ${TEMPLATE_SRCS} ${EXTRA_UTIL_SRCS})
-
-  IF(CUBIT_COPY_DIR)
-    # The cubit copy dir should only be set on windows.
-    STRING(REGEX REPLACE "/" "\\\\" winbin "${CUBIT_COPY_DIR}")
-    IF(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-      ADD_CUSTOM_COMMAND(TARGET cubit_util POST_BUILD
-                         COMMAND ${CMAKE_COMMAND}
-                         ARGS -E copy
-                           $\(TargetPath\) ${winbin}\\$\(TargetName\).dll)
-    ELSE(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-      STRING(REGEX REPLACE "/" "\\\\" winsrc "${LIBRARY_OUTPUT_PATH}")
-      ADD_CUSTOM_COMMAND(TARGET cubit_util POST_BUILD
-                         COMMAND ${CMAKE_COMMAND}
-                         ARGS -E copy
-                           ${winsrc}\\cubit_util.dll
-                           ${winlib}\\cubit_util.dll)
-    ENDIF(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-  ENDIF(CUBIT_COPY_DIR)
-ELSE(CUBIT_UTIL_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(cubit_util ${UTIL_SRCS} ${UTIL_HEADERS} ${TEMPLATE_SRCS} ${EXTRA_UTIL_SRCS})
-ENDIF(CUBIT_UTIL_BUILD_SHARED_LIBS)
-
 CONFIGURE_FILE(${cubit_util_SOURCE_DIR}/CubitUtilConfigure.h.in
                ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
                @ONLY)
 
+IF(NOT CUBIT_UTIL_NAME)
+  SET(CUBIT_UTIL_NAME cubit_util)
+ENDIF(NOT CUBIT_UTIL_NAME)
 
-SET(CMAKE_INSTALL_BINARY_DIR "bin" CACHE PATH "Install directory for binaries")
 IF(CUBIT_UTIL_BUILD_SHARED_LIBS)
-  INSTALL_TARGETS(/${CMAKE_INSTALL_BINARY_DIR} cubit_util)
+  ADD_LIBRARY(${CUBIT_UTIL_NAME} SHARED ${UTIL_SRCS} ${UTIL_HDRS} ${TEMPLATE_SRCS})
+ELSE(CUBIT_UTIL_BUILD_SHARED_LIBS)
+  ADD_LIBRARY(${CUBIT_UTIL_NAME} ${UTIL_SRCS} ${UTIL_HDRS} ${TEMPLATE_SRCS})
 ENDIF(CUBIT_UTIL_BUILD_SHARED_LIBS)
+
+TARGET_LINK_LIBRARIES(${CUBIT_UTIL_NAME} ${CMAKE_DL_LIBS})
+
+IF(CUBIT_LIBRARY_PROPERTIES)
+  SET_TARGET_PROPERTIES(${CUBIT_UTIL_NAME}
+                        PROPERTIES ${CUBIT_LIBRARY_PROPERTIES})
+ENDIF(CUBIT_LIBRARY_PROPERTIES)
+
+
+IF(NOT CMAKE_INSTALL_BINARY_DIR)
+  SET(CMAKE_INSTALL_BINARY_DIR bin)
+ENDIF(NOT CMAKE_INSTALL_BINARY_DIR)
+
+IF(NOT CMAKE_INSTALL_INCLUDE_DIR)
+  SET(CMAKE_INSTALL_INCLUDE_DIR include)
+ENDIF(NOT CMAKE_INSTALL_INCLUDE_DIR)
+
+IF(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
+  IF(CUBIT_UTIL_BUILD_SHARED_LIBS)
+    INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+            LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime)
+  ENDIF(CUBIT_UTIL_BUILD_SHARED_LIBS)
+ELSE(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
+INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Development)
+
+IF(NOT CUBIT_UTIL_INSTALL_NO_DEVELOPMENT_HEADERS)
+INSTALL(FILES ${UTIL_HDRS}
+        DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR} COMPONENT Development)
+ENDIF(NOT CUBIT_UTIL_INSTALL_NO_DEVELOPMENT_HEADERS)
+
+ENDIF(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
 

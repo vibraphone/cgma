@@ -28,6 +28,7 @@ class Body;
 class GMem;
 
 class TopologyBridge;
+class TopologyEntity;
 class GeometryEntity;
 class BodySM;
 class Lump; 
@@ -40,9 +41,34 @@ class CUBIT_GEOM_EXPORT GeometryQueryEngine
 
 public:
 
+    //!- virtual destructor
   virtual ~GeometryQueryEngine() {}
-    //- virtual destructor
 
+     //!R CubitStatus
+     //!R- CUBIT_SUCCESS/CUBIT_FAILURE
+     //!I ref_entity_list
+     //!I- A list of RefEntities to be exported or saved to a file.
+     //!I file_name
+     //!I- The name of the file to write to.
+     //!I file_type
+     //!I- An optional type of file.
+     //!- Export the current CUBIT geometry (everything in the Model) to a
+     //!- solid model format. Valid file types are:
+     //!-    "ACIS_SAT"    --  ACIS ASCII (SAT) file format
+     //!-    "ACIS_SAB"    --  ACIS BINARY (SAB) file format
+     //!-    "ACIS_DEBUG"  --  ACIS ASCII debug format
+     //!-    "IGES"        --  IGES file
+     //!-    "STEP"        --  STEP file
+     //!I logfile_name
+     //!I- Optional - name of logfile.
+     //!- No logfile gets created for SAB/SAT files, but for IGES and
+     //!- STEP file a logfile always gets created.  Default filenames
+     //!- are assigned if one is not given (iges_export.log, step_export.log).
+     //!-
+     //!- The function returns CUBIT_FAILURE if anything goes wrong with
+     //!- export - improper file type, inaccessible file, mismatch between
+     //!- the underlying representation and file type. It returns
+     //!- CUBIT_SUCCESS if everything goes well.
       virtual CubitStatus export_solid_model(
                                    DLIList<TopologyBridge*>& bridge_list,
                                    const char* file_name,
@@ -56,32 +82,9 @@ public:
 				   int& n_buffer_size,
 				   bool b_export_buffer) = 0;
 
-     //R CubitStatus
-     //R- CUBIT_SUCCESS/CUBIT_FAILURE
-     //I ref_entity_list
-     //I- A list of RefEntities to be exported or saved to a file.
-     //I file_name
-     //I- The name of the file to write to.
-     //I file_type
-     //I- An optional type of file.
-     //- Export the current CUBIT geometry (everything in the Model) to a
-     //- solid model format. Valid file types are:
-     //-    "ACIS_SAT"    --  ACIS ASCII (SAT) file format
-     //-    "ACIS_SAB"    --  ACIS BINARY (SAB) file format
-     //-    "ACIS_DEBUG"  --  ACIS ASCII debug format
-     //-    "IGES"        --  IGES file
-     //-    "STEP"        --  STEP file
-     //I logfile_name
-     //I- Optional - name of logfile.
-     //- No logfile gets created for SAB/SAT files, but for IGES and
-     //- STEP file a logfile always gets created.  Default filenames
-     //- are assigned if one is not given (iges_export.log, step_export.log).
-     //-
-     //- The function returns CUBIT_FAILURE if anything goes wrong with
-     //- export - improper file type, inaccessible file, mismatch between
-     //- the underlying representation and file type. It returns
-     //- CUBIT_SUCCESS if everything goes well.
-
+    
+     //! Saves out a temporary geometry file.  Entities in list must all be 
+     //! of same modeling engine.
      virtual CubitStatus save_temp_geom_file(
                                  DLIList<TopologyBridge*> &ref_entity_list,
                                  const char *filename,
@@ -89,12 +92,40 @@ public:
                                  CubitString &created_file,
                                  CubitString &created_file_type ) = 0;
 
+     //! Imports entities into CGM from file that was embedded in a cub file.  
+     //! This file is could an ACIS, granite, catia, or another supported
+     //! solid modeling engine file.
      virtual CubitStatus import_temp_geom_file(
                                  FILE* file_ptr,
                                  const char* file_name,
                                  const char* file_type,
                                  DLIList<TopologyBridge*> &bridge_list  ) = 0;
 
+     //!R CubitStatus
+     //!R- CUBIT_SUCCESS/CUBIT_FAILURE
+     //!I file_ptr
+     //!I- A pointer to the file to read (can be NULL for IGES and STEP files).
+     //!I file_type
+     //!I- Type of file.
+     //!- Reads in geometry and creates the necessary Reference entities
+     //!- associated with the input geometry.
+     //!- Valid file types are:
+     //!-    "ACIS_SAT"    --  ACIS ASCII (SAT) file format
+     //!-    "ACIS_SAB"    --  ACIS BINARY (SAB) file format
+     //!-    "IGES"        --  IGES file
+     //!-    "STEP"        --  STEP file
+     //!I heal_step - auto-healing of step bodies on import.  This is recommended
+     //!              because they always need it.
+     //!I import_bodies (etc...)
+     //!I- Should bodies be import.
+     //!- Function can selectively import solid bodies, free surfaces, free
+     //!- curves, or free vertices.  For example, the user may not want
+     //!- to import any free entities.
+     //!-
+     //!- The function returns CUBIT_FAILURE if anything goes wrong with
+     //!- import - improper file type, inaccessible file, mismatch between
+     //!- the underlying representation and file type. It returns
+     //!- CUBIT_SUCCESS if everything goes well.
      virtual CubitStatus import_solid_model(
                                 const char* file_name,
                                 const char* file_type,
@@ -113,35 +144,10 @@ public:
 					    const char* pBuffer,
 					    const int n_buffer_size) = 0;
        
-     //R CubitStatus
-     //R- CUBIT_SUCCESS/CUBIT_FAILURE
-     //I file_ptr
-     //I- A pointer to the file to read (can be NULL for IGES and STEP files).
-     //I file_type
-     //I- Type of file.
-     //- Reads in geometry and creates the necessary Reference entities
-     //- associated with the input geometry.
-     //- Valid file types are:
-     //-    "ACIS_SAT"    --  ACIS ASCII (SAT) file format
-     //-    "ACIS_SAB"    --  ACIS BINARY (SAB) file format
-     //-    "IGES"        --  IGES file
-     //-    "STEP"        --  STEP file
      //O imported_entities
      //O- List of top-level entities read from file
      //I print_results
      //I- If false, fail silently (don't write error messages to stdout or stderr)
-     //I heal_step - auto-healing of step bodies on import.  This is recommended
-     //              because they always need it.
-     //I import_bodies (etc...)
-     //I- Should bodies be import.
-     //- Function can selectively import solid bodies, free surfaces, free
-     //- curves, or free vertices.  For example, the user may not want
-     //- to import any free entities.
-     //-
-     //- The function returns CUBIT_FAILURE if anything goes wrong with
-     //- import - improper file type, inaccessible file, mismatch between
-     //- the underlying representation and file type. It returns
-     //- CUBIT_SUCCESS if everything goes well.
 
       virtual CubitStatus get_underlying_curves(Curve * curve_ptr,
                                  DLIList<TopologyBridge*>& curve_list)  ;
@@ -149,6 +155,8 @@ public:
       // - curves from virtual curves.
       virtual CubitStatus get_underlying_surfaces(Surface * surf_ptr,
                                  DLIList<TopologyBridge*>& surf_list)  ;
+      virtual CubitStatus get_underlying_bridges(TopologyBridge* bridge_ptr,
+                                 DLIList<TopologyBridge*>& bridge_list);
 
       virtual CubitStatus get_intersections(
                                     Curve* ref_edge1, CubitVector& point1,
@@ -202,24 +210,29 @@ public:
       //- on those entities. Supports vertices, curves, surfaces, volumes and bodies.
 
       virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const = 0;
-  virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const = 0;
-  virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const = 0;
-  virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const = 0;
-  virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const = 0;
+      virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const = 0;
+      virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const = 0;
+      virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const = 0;
+      virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const = 0;
       //- Deletes the solid model entities associcated with the input
       //- free-floating RefEntity. If the input RefEntity is not free-floating,
       //- then its underlying ACIS ENTITYs are not deleted and CUBIT_FAILURE
       //- is returned.
       //- Returns CUBIT_SUCCESS if all went well, otherwise, CUBIT_FAILURE.
 
-      virtual CubitStatus fire_ray(BodySM *body,
-                                   const CubitVector &ray_start_point,
-                                   const CubitVector &unit_direction,
-                                   DLIList<double> &ray_params,
-                                   DLIList<GeometryEntity*> *entity_list = NULL
-                                   ) const = 0;
-      //- fire a ray at the specified body, returning the entities hit and
-      //- the parameters along the ray; return CUBIT_FAILURE if error
+  virtual CubitStatus fire_ray( const CubitVector &origin,
+                                const CubitVector &direction,
+                                DLIList<TopologyBridge*> &at_entity_list,
+                                DLIList<double> &ray_params,
+                                int max_hits = 0,
+                                double ray_radius = 0.0,
+                                DLIList<TopologyBridge*> *hit_entity_list=0 ) const = 0;
+    //- Fire a ray at specified entities, returning the parameters (distances)
+    //- along the ray and optionally the entities hit.  Returned lists are
+    //- appended to.  Input entities can be any of bodies, volumes, faces,
+    //- edges or vertices.  Optionally you can specify the maximum number of
+    //- hits to return (default = 0 = unlimited), and the ray radius to use for
+    //- intersecting the entities (default = 0.0 = use modeller default).
 
   virtual CubitStatus get_isoparametric_points(Surface* ref_face_ptr,
                                                int &nu, int &nv,
@@ -242,6 +255,9 @@ public:
     //I position_vector on body, body that was transformed
     //O vector showning transform.
     //O-Computes the transform from the transformed body.
+
+  virtual int curve_is_on_ignored_surface(Curve *curve,
+                    Surface *surf) { return 0; }
 
   virtual const char* modeler_type() = 0;
   virtual int get_major_version() = 0;
@@ -268,9 +284,6 @@ public:
    //- Set solid modeler options
 
   virtual CubitStatus get_graphics( Surface* surface_ptr,
-                                    int& number_of_triangles,
-                                    int& number_of_points,
-                                    int& number_of_facets,
                                     GMem* gMem,
                                     unsigned short normal_tolerance=15,
                                     double distance_tolerance=0,
@@ -280,19 +293,13 @@ public:
     //I ref_face_ptr
     //I- The RefFAce for which hoops facetting information will be
     //I- gathered.
-    //O- The number of polygons (triangles) needed for facetting.
-    //O number_points
-    //O- The number of points needed for facetting
-    //O number_Facets
-    //O- The number of facets needed for facetting.
     //O gMem
     //O- The sturage place for facets (and points).
-    //= This function gathersw and outputs ACIS facet (and point)
+    //= This function gathers and outputs ACIS facet (and point)
     //- information for hoops involved in facetting an RefFace.  If
     //- all goes well, CUBIT_Success is retuned.
 
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    int& num_points,
                                     GMem* gMem = NULL,
                                     double tolerance = 0.0 ) const = 0;
     //R CubitStatus
@@ -328,6 +335,8 @@ public:
                                        BodySM *body_ptr_2 ) const = 0;
 
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const = 0; 
+
+  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point){return NULL;};
 
    protected:
 

@@ -89,6 +89,17 @@ Loop::Loop(LoopSM* OSMEPtr)
    set_topology_bridge(OSMEPtr) ;
 }
 
+LoopType Loop::loop_type() const
+{
+    LoopSM* loop_sm = get_loop_sm_ptr();
+    if (loop_sm)
+    {
+        return loop_sm->loop_type();
+    }
+    assert(0);
+    return LOOP_TYPE_UNKNOWN;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Gets the angle metric for this Loop.
 //                 

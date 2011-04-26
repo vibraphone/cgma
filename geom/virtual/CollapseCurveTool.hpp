@@ -20,8 +20,13 @@ class CollapseCurveTool
 
     CubitStatus collapse_curve(DLIList <RefEdge*> ref_edge_list, 
                 DLIList<RefVertex*> ref_vertex_list,
-                int ignore_surfaces); 
+                int ignore_surfaces,
+                double *small_curve_size = NULL); 
 
+    CubitStatus collapse_curve_only_virtual(DLIList <RefEdge*> ref_edge_list, 
+                                        DLIList<RefVertex*> ref_vertex_list,
+                                        int ignore_surfaces,
+                                        double *small_curve_size = NULL);
   private:
     CollapseCurveTool();
     // Constructor

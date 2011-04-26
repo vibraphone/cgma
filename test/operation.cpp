@@ -20,6 +20,7 @@
 #include "RefVertex.hpp"
 #include "InitCGMA.hpp"
 #include "OCCModifyEngine.hpp"
+#include "CubitCompat.hpp"
 
 #include <algorithm>
 
@@ -95,7 +96,7 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
       type = "OCC";
     std::string filename( local ? "./" : SRCPATH );
     filename += argv[i];
-    status = gti->import_solid_model(filename.c_str(), type.c_str());
+    status = CubitCompat_import_solid_model(filename.c_str(), type.c_str());
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
@@ -152,12 +153,13 @@ CubitStatus make_Point()
     assert( d > 69.9999 && d < 70.00001);
   }
 
-  status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, CUBIT_TRUE);
+  DLIList<Body*> neighbor_list;
+  status = gmti->webcut_with_plane(from_bodies, v1, v2, v3, new_bodies, neighbor_list, ONLY_INVOLVED_BODIES);
   double d = new_bodies.step_and_get()->measure();
   CubitVector v = new_bodies.get()->center_point();
   int n = new_bodies.get()->num_ref_faces();
   assert(n==8);
-  assert(d == 710);
+  assert(d <= 710 && d > 709.999999);
   // n = 8
   //new bodies has 2 bodies, one has a volume = 170 and the other has a 
   //volume = 710; each of them has 8 ref_faces. 

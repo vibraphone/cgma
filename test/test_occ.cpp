@@ -16,6 +16,7 @@
 #include "RefFace.hpp"
 #include "RefVolume.hpp"
 #include "InitCGMA.hpp"
+#include "CubitCompat.hpp"
 
 #define STRINGIFY(S) XSTRINGIFY(S)
 #define XSTRINGIFY(S) #S
@@ -37,7 +38,7 @@ int main( int argc, char** argv ) {
    
   // Read in the geometry from files specified on the command line
   const char* filename = STRINGIFY(SRCDIR) "/LeverArm.brep";
-  status = gti->import_solid_model(filename, "OCC");
+  status = CubitCompat_import_solid_model(filename, "OCC");
   if (status != CUBIT_SUCCESS) {
     PRINT_ERROR("Problems reading geometry file %s.\n", filename);
     return 1;

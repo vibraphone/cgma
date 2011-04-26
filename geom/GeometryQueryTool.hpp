@@ -27,6 +27,8 @@ using std::type_info;
 #include "DLIList.hpp"
 #include "GeometryQueryEngine.hpp"
 #include "IntermediateGeomEngine.hpp"
+#include "CGMHistory.hpp"
+#include "CubitCompat.h"
 
 class RefGroup;
 class Body;
@@ -44,6 +46,7 @@ class CoEdgeSM;
 
 class GeometryEntity;
 
+class RefGroup;
 
 class TopologyEntity;
 class TopologyBridge;
@@ -73,6 +76,12 @@ class CubitVector;
 class CubitTransformMatrix;
 class TBOwner;
 
+#ifdef PROE
+class RefPart;
+class RefAssembly;
+#endif
+
+//! Interface class for querying geometry. 
 class CUBIT_GEOM_EXPORT GeometryQueryTool
 {
 public :
@@ -80,10 +89,13 @@ public :
   friend class GeometryModifyTool;
    
   bool ige_is_composite(TBOwner *bridge_owner);
+  bool ige_is_composite(TopologyBridge *bridge);
   bool ige_is_partition(TBOwner *bridge_owner);
 
 
-  void ige_remove_modified(DLIList<TopologyBridge*>& geometry_list);
+  void ige_remove_modified(DLIList<Surface*> &all_surfs,
+                                            DLIList<Curve*> &all_curves,
+                                            DLIList<Point*> &all_points);
 
   static GeometryQueryTool* instance( GeometryQueryEngine* gqePtr = NULL);
   /**<
@@ -104,99 +116,205 @@ public :
   ~GeometryQueryTool();
   ///<  Destructor.
 
+  static void delete_instance();
+  
+  //!
+  //! \brief Estimates a good merge tolerance for the volumes passed in.
+  //!
+  double estimate_merge_tolerance(DLIList<RefVolume*> &vol_list,
+                                                    bool accurate_in = false,
+                                                    bool report_in = false,
+                                                    double lo_val_in = -1.0, 
+                                                    double hi_val_in = -1.0,
+                                                    int num_calculations_in = 10,
+                                                    bool return_calculations_in = false,
+                                                    DLIList<double> *merge_tols = NULL,
+                                                    DLIList<int> *num_proximities = NULL);
+
+  //!
+  //! \brief Find all of the volumes that do not contain any merged entities.
+  //!
+  void find_floating_volumes(DLIList<RefVolume*> &vol_list,
+                             DLIList<RefVolume*> &floating_list);
+
+  //!
+  //! \brief Find the nonmanifold curves in the passed-in volumes based on what is merged.
+  //!
+  void find_nonmanifold_curves(DLIList<RefVolume*> &vol_list, DLIList<RefEdge*> &curve_list);
+
+  //!
+  //! \brief Find the nonmanifold vertices in the passed-in volumes based on what is merged.
+  //!
+  void find_nonmanifold_vertices(DLIList<RefVolume*> &vol_list, DLIList<RefVertex*> &vertex_list);
 
   CubitStatus register_intermediate_engine( IntermediateGeomEngine* engine );
+  void unregister_intermediate_engine( IntermediateGeomEngine* engine );
 
   void ige_remove_imprint_attributes_after_modify(DLIList<BodySM*> &old_sms,
                                               DLIList<BodySM*> &new_sms);
   void ige_push_imprint_attributes_before_modify
                                 ( DLIList<BodySM*> &geom_list );
+  void ige_push_named_attributes_to_curves_and_points
+                                ( DLIList<TopologyBridge*> &tb_list, const char *name_in );
   void ige_export_geom( DLIList<TopologyBridge*> &geom_list );
   void ige_import_geom( DLIList<TopologyBridge*> &geom_list );
   void ige_remove_attributes( DLIList<TopologyBridge*> &geom_list );
   void ige_attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
                                                     DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<BodySM*> &new_sms,
+                                                    DLIList<TopologyBridge*> &tb_list,
                                                         DLIList<Body*> &old_bodies);
   void ige_remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges);
+  
+  //Using the source_bridge, finds all bridges that actually have a BridgeManager the owner.
+  //This is for obtaining the real TopologyBridge when all you have is a  TopologyBridge 
+  //that is Partition Entity.
+  void get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
+                                             DLIList<TopologyBridge*> &tbs );
 
   /*! <HR><H1> global-list-functions Global entity list functions </H1>*/
 
-  CubitStatus cubit_entity_list( const char* keyword,
-                                 DLIList<CubitEntity*> &entity_list,
-                                 const CubitBoolean print_errors = CUBIT_TRUE);
-  /**<  return ref entities in a generic cubit entity list (overwrites list).
-    *  returns CUBIT_FAILURE if keyword is not a ref entity name, and
-    *  optionally prints error message
-    */
+  //
+  // Returns ref entities in a generic cubit entity list (overwrites list).
+  // returns CUBIT_FAILURE if keyword is not a ref entity name, and
+  // optionally prints error message
+  //
+  //CubitStatus cubit_entity_list( const char* keyword,
+  //                               DLIList<CubitEntity*> &entity_list,
+  //                               const CubitBoolean print_errors = CUBIT_TRUE);
+
+  //!
+  //! \brief Return ref entities in entity_list (overwrites list).
+  //! returns CUBIT_FAILURE if keyword is not a ref entity name,
+  //! and optionally prints error message
+  //!  
 
   CubitStatus ref_entity_list( char const* keyword,
                                DLIList<RefEntity*> &entity_list,
                                const CubitBoolean print_errors = CUBIT_TRUE);
-  /**<  return ref entities in entity_list (overwrites list).
-    *  returns CUBIT_FAILURE if keyword is not a ref entity name,
-    *  and optionally prints error message
-    */
 
+  //! \brief Returns the bounding box of the model.  Include free entities.
   CubitBox model_bounding_box();
+
+  /*! Returns the bounding box of all bodies in the model. Excludes
+  free entities.*/
+  //! \brief Returns the bounding box of all bodies in the model. 
+  CubitBox bounding_box_of_bodies();
+
+
+  //! \brief Returns all the bodies in the current session. 
   void bodies (DLIList<Body*> &bodies);
+
+  //! \brief Returns all volumes in the current session. 
   void ref_volumes (DLIList<RefVolume*> &ref_volumes);
+
+  //! \brief Returns all groups in the current session. 
   void ref_groups (DLIList<RefGroup*> &ref_groups);
+
+  //! \brief Returns all surfaces in the current session. 
   void ref_faces (DLIList<RefFace*> &ref_faces);
+
+  //! \brief Returns all curves in the current session. 
   void ref_edges (DLIList<RefEdge*> &ref_edges);
+
+  //! \brief Returns all the vertices in the current session. 
   void ref_vertices (DLIList<RefVertex*> &ref_vertices);
+
+#ifdef PROE
+  void ref_parts (DLIList<RefPart*> &ref_parts);
+  void ref_assemblies (DLIList<RefAssembly*> &ref_assemblies);
+#endif //PROE
   ///< Append global lists to arguments
 
+  //! \brief Number of bodies in current session.
   int num_bodies() const;
+
+  //! \brief Number of volumes in current session.
   int num_ref_volumes() const;
+
+  //! \brief Number of groups in current session.
   int num_ref_groups() const;
+
+  //! \brief Number of surfaces in current session.
   int num_ref_faces() const;
+
+  //! \brief Number of curves in current session.
   int num_ref_edges() const;
+
+  //! \brief Number of vertices in current session.
   int num_ref_vertices() const;
-  ///< Return number of entities of the specified type
 
+  //! \brief Get RefEntity by type name and id.
   RefEntity *get_ref_entity (const char *type, int id);
+
+  //! \brief Get a RefEntity of the specified type and id.
   RefEntity *get_ref_entity (const type_info& type, int id);
-  ///< Get a ref entity of the specified type and id
 
+  //! \brief Get entity by id.
   Body *get_body ( int id );
+
+  //! \brief Get entity by id.
   RefVolume *get_ref_volume ( int id );
+
+  //! \brief Get entity by id.
   RefGroup *get_ref_group ( int id );
+
+  //! \brief Get entity by id.
   RefFace *get_ref_face ( int id );
+
+  //! \brief Get entity by id.
   RefEdge *get_ref_edge ( int id );
+
+  //! \brief Get entity by id.
   RefVertex *get_ref_vertex ( int id );
-  ///< Get an entity of the specified type and id
+  
 
+  //! \brief Get the first entity in the global list of the specified type
   Body *get_first_body ();
+  //! \brief Get the first entity in the global list of the specified type
   RefVolume *get_first_ref_volume ();
+  //! \brief Get the first entity in the global list of the specified type
   RefGroup *get_first_ref_group ();
+  //! \brief Get the first entity in the global list of the specified type
   RefFace *get_first_ref_face ();
+  //! \brief Get the first entity in the global list of the specified type
   RefEdge *get_first_ref_edge ();
+  //! \brief Get the first entity in the global list of the specified type
   RefVertex *get_first_ref_vertex ();
-  ///< Get the first entity in the global list of the specified type
 
+  //! \brief Get the next entity in the global list of the specified type
   Body *get_next_body ();
+  //! \brief Get the next entity in the global list of the specified type
   RefVolume *get_next_ref_volume ();
+  //! \brief Get the next entity in the global list of the specified type
   RefGroup *get_next_ref_group ();
+  //! \brief Get the next entity in the global list of the specified type
   RefFace *get_next_ref_face ();
+  //! \brief Get the next entity in the global list of the specified type
   RefEdge *get_next_ref_edge ();
+  //! \brief Get the next entity in the global list of the specified type
   RefVertex *get_next_ref_vertex ();
-  ///< Get the next entity in the global list of the specified type
 
+  ///! \brief Get the last entity in the global list of the specified type
   Body *get_last_body ();
+  ///! \brief Get the last entity in the global list of the specified type
   RefVolume *get_last_ref_volume ();
+  ///! \brief Get the last entity in the global list of the specified type
   RefGroup *get_last_ref_group ();
+  ///! \brief Get the last entity in the global list of the specified type
   RefFace *get_last_ref_face ();
+  ///! \brief Get the last entity in the global list of the specified type
   RefEdge *get_last_ref_edge ();
+  ///! \brief Get the last entity in the global list of the specified type
   RefVertex *get_last_ref_vertex ();
-  /**< Get the last entity in the global list of the specified type
-
-    <HR><H3>File operations (import, export)</H3>
-  */
-
+  
+  
+  //! \brief Get all free surfaces, curves, and vertices 
   CubitStatus get_free_ref_entities(DLIList<RefEntity*> &free_entities);
-    //- returns the list of free entities in the model
 
+  //! \brief Get the free entities connected to, but not necessarily
+  //! vertically related to, the entity.  - If merge_option, then take
+  //! into account the fact that the model may be merged (it's slower
+  //! that way).
   void get_connected_free_ref_entities(
     RefEntity *entity,
     const int merge_option,
@@ -204,72 +322,63 @@ public :
     DLIList<RefFace*> &ref_face_list,
     DLIList<RefEdge*> &ref_edge_list,
     DLIList<RefVertex*> &ref_vertex_list );
-    //- get the free entities connected to, but not necessarily
-    //- vertically related to, the entity.  - If merge_option, then take
-    //- into account the fact that the model may be merged (it's slower
-    //- that way).
 
+  //! \brief Saves out a temporary geometry file containing specified entities
+  //! that are of the same geometry engine. 
   CubitStatus save_temp_geom_files( DLIList<RefEntity*>& ref_entity_list,
                                   const char* filename,
                                   const CubitString &cubit_version,
                                   std::list<CubitString> &files_written,
                                   std::list<CubitString> &types_written);
 
+
+  //!
+  //! * Export entities to a solid model file.
+  //!  *  \arg ref_entity_list
+  //!  *  A list of RefEntities to be exported or saved to a file.
+  //!  *  \arg file_name
+  //!  *  The name of the file to write to.
+  //!  *  \arg file_type
+  //!  *  An optional type of file.
+  //!  *  \arg logfile_name
+  //!  *  Optional - name of logfile.
+  //!  *   \return  CubitStatus - success/failure
+  //!  *
+  //!  *  Export the current CUBIT geometry (everything in the Model) to a
+  //!  *  solid model format. Valid file types are:
+  //!  *     "ACIS_SAT"    --  ACIS ASCII (SAT) file format
+  //!  *     "ACIS_SAB"    --  ACIS BINARY (SAB) file format
+  //!  *     "ACIS_DEBUG"  --  ACIS ASCII debug format
+  //!  *     "IGES"        --  IGES file
+  //!  *     "STEP"        --  STEP file
+  //!  No logfile gets created for SAB/SAT files, but for IGES and
+  //!  STEP file a logfile always gets created.  Default filenames
+  //!  are assigned if one is not given (iges_export.log, step_export.log).
+  //!  
+  //!  The function returns CUBIT_FAILURE if anything goes wrong with
+  //!  export - improper file type, inaccessible file, mismatch between
+  //!  the underlying representation and file type. It returns
+  //!  CUBIT_SUCCESS if everything goes well.
+  //!  
+  //!  NOTE: if the ref_entity_list is empty, GeometryQueryTool gets the list of
+  //!  all entities in the current model, including free ref entities
+  //! \brief Save a geometry file containing specified entities
+  //! that are of the same geometry engine. 
   CubitStatus export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                   const char* filename,
+#if CUBIT_12 != 2
                                   const char * filetype,
+#else // CUBIT_12 == 2
+                                  Model_File_Type filetype,
+#endif
                                   int &num_ents_exported,
                                   const CubitString &cubit_version,
                                   const char* logfile_name = NULL );
-  /**<
-   * Export entities to a solid model file.
-    *  \arg ref_entity_list
-    *  A list of RefEntities to be exported or saved to a file.
-    *  \arg file_name
-    *  The name of the file to write to.
-    *  \arg file_type
-    *  An optional type of file.
-    *  \arg logfile_name
-    *  Optional - name of logfile.
-    *   \return  CubitStatus - success/failure
-    *
-    *  Export the current CUBIT geometry (everything in the Model) to a
-    *  solid model format. Valid file types are:
-    *     "ACIS_SAT"    --  ACIS ASCII (SAT) file format
-    *     "ACIS_SAB"    --  ACIS BINARY (SAB) file format
-    *     "ACIS_DEBUG"  --  ACIS ASCII debug format
-    *     "IGES"        --  IGES file
-    *     "STEP"        --  STEP file
-    *  No logfile gets created for SAB/SAT files, but for IGES and
-    *  STEP file a logfile always gets created.  Default filenames
-    *  are assigned if one is not given (iges_export.log, step_export.log).
-    *
-    *  The function returns CUBIT_FAILURE if anything goes wrong with
-    *  export - improper file type, inaccessible file, mismatch between
-    *  the underlying representation and file type. It returns
-    *  CUBIT_SUCCESS if everything goes well.
-    *
-    *  NOTE: if the ref_entity_list is empty, GeometryQueryTool gets the list of
-    *  all entities in the current model, including free ref entities
-    *
-    */
 
   CubitStatus export_solid_model(DLIList<RefEntity*>& ref_entity_list,
 				 char*& p_buffer,
 				 int& n_buffer_size,
 				 bool b_export_buffer);
-  
-  CubitStatus import_solid_model(const char* file_name,
-                                 const char* file_type,
-                                 const char* logfile_name = NULL,
-                                 CubitBoolean heal_step = CUBIT_TRUE,
-                                 CubitBoolean import_bodies = CUBIT_TRUE,
-                                 CubitBoolean import_surfaces = CUBIT_TRUE,
-                                 CubitBoolean import_curves = CUBIT_TRUE,
-                                 CubitBoolean import_vertices = CUBIT_TRUE,
-                                 CubitBoolean free_surfaces = CUBIT_TRUE,
-				 DLIList<RefEntity*> *imported_entities = NULL);
-
   /**<
    * Import all or specified entities in a solid model file.
     *  \arg file_ptr
@@ -299,116 +408,133 @@ public :
     *  the underlying representation and file type. It returns
     *  CUBIT_SUCCESS if everything goes well.
     */
+  //! \brief Import a geometry file. 
+  CubitStatus import_solid_model(const char* file_name,
+#if CUBIT_12 != 2
+                                 const char* file_type,
+#else // CUBIT_12 == 2
+                                 Model_File_Type file_type,
+#endif
+#if CUBIT_12 == 0
+                                 const char* logfile_name = NULL,
+                                 CubitBoolean heal_step = CUBIT_TRUE,
+                                 CubitBoolean import_bodies = CUBIT_TRUE,
+                                 CubitBoolean import_surfaces = CUBIT_TRUE,
+                                 CubitBoolean import_curves = CUBIT_TRUE,
+                                 CubitBoolean import_vertices = CUBIT_TRUE,
+                                 CubitBoolean free_surfaces = CUBIT_TRUE,
+#else // CUBIT_12 == 1 || CUBIT_12 == 2
+                                 ModelImportOptions& import_options,
+#endif
+				 DLIList<RefEntity*> *imported_entities = NULL);
 
-  // import entities in a solid model buffer
+    // import entities in a solid model buffer
   CubitStatus import_solid_model(DLIList<RefEntity*> *imported_entities,
 				 const char* pBuffer,
 				 const int n_buffer_size);
 
-  CubitStatus construct_refentities(DLIList<TopologyBridge*> &topology_bridges,
-                                    DLIList<RefEntity*> *imported_entities = NULL);
-    //- given a list of TB's, construct ref entities for them; if the 2nd list pointer is
-    //- non-NULL, pass back the list of ref entities in that list
-
-  CubitStatus read_geometry_file(char const* fileName,
-                                 char const* includePath = NULL,
-                                 char const* type = "ACIS_SAT");
-  /**<
-   * Read geometry from the specified file.
-    *  \arg filename
-    *  The name of the file to read.
-    *  \arg includePath
-    *  An optional path to be used to search for the file if the file
-    *  is not in the current directory.
-    *  \arg type
-    *  An optional type of file.
-    *   \return  CubitStatus - success/failure
+  /*!
+   * Fire a ray at entities, passing back distances of hits and entities hit
+    * \arg origin
+    * origin of ray
+    * \arg direction
+    * direction of ray
+    * \arg at_entity_list
+    * entities to fire ray at
+    * \arg ray_params
+    * returned array of parameters (distances) along ray at which entities were hit
+    * \arg max_hits
+    * maximum number of hits to return, 0 = unlimited (default)
+    * \arg ray_radius
+    * radius of ray to use for intersecting entities, 0 = use engine default
+    * \arg hit_entity_list (pointer)
+    * entities hit by ray (list length same as ray_params), default NULL
+    * \return - error flag
     *
-    *  Reads a geometry file (named fileName).  If the file cannot be found
-    *  in the current directory, and if includePath is not NULL, the include
-    *  path specified by includePath is added to the file name, and it is
-    *  searched in the given order. The file type specified in the "type"
-    *  argument determines what type of geometry file it is -- the default
-    *  is an ACIS SAT file.
-    *  Supported geometry file types are:
-    *     "ACIS_SAT"  --  ACIS SAT file format
-    *     "ACIS_SAB"  --  ACIS SAB file format (binary)
-    *  The function returns CUBIT_FAILURE if it cannot open the file, or
-    *  the "type" is not known. Otherwise it returns CUBIT_SUCCESS.
+    *  Fire a ray at specified entities, returning the parameters (distances)
+    *  along the ray and optionally the entities hit; return CUBIT_FAILURE if
+    *  error.  Returned lists are appended to.
     */
 
-  int fire_ray(Body* body,
-               const CubitVector ray_point,
-               const CubitVector unit,
-               DLIList<double>& ray_params,
-               DLIList<RefEntity*> *entity_list);
-  /**<
-   * Fire a ray at a body, passing back number and distances of hits.
-    *  \arg body
-    *  Body at which you are firing rays
-    *  \arg ray_point
-    *  beginning point of ray
-    *  \arg unit
-    *  direction of ray (unit vector)
-    * num_hit
-    *-number of bodies hit
-    * ray_params
-    * array of parameters along ray at which bodies were hit
-    * entity_list
-    * entities hit by ray
-    *  \return - error flag
-    *
-    *  fire a ray at the specified body, returning the entities
-    *  hit and the parameters along the ray; return CUBIT_FAILURE
-    *  if error
-    */
+  //! \brief Fire a ray at entities, passing back distances of hits and entities hit
+  CubitStatus fire_ray( CubitVector &origin,
+                        CubitVector &direction,
+                        DLIList<RefEntity*> &at_entity_list,
+                        DLIList<double> &ray_params,
+                        int max_hits = 0,
+                        double ray_radius = 0.0,
+                        DLIList<RefEntity*> *hit_entity_list_ptr = 0 );
 
-  int fire_ray(RefFace *face,
-               const CubitVector ray_point,
-               const CubitVector unit,
-               DLIList<double>& ray_params);
+  /*!
+   * Fire a ray at entities, passing back distances of hits and entities hit
+    * \arg origin
+    * origin of ray
+    * \arg direction
+    * direction of ray
+    * \arg at_entity_list
+    * entities to fire ray at
+    * \arg ray_params
+    * returned array of parameters (distances) along ray at which entities were hit
+    * \arg max_hits
+    * maximum number of hits to return, 0 = unlimited (default)
+    * \arg ray_radius
+    * radius of ray to use for intersecting entities, 0 = use engine default
+    * \arg hit_entity_list (pointer)
+    * entities hit by ray (list length same as ray_params), default NULL
+    * \return - error flag
+    *
+    *  Fire a ray at specified entities, returning the parameters (distances)
+    *  along the ray and optionally the entities hit; return CUBIT_FAILURE if
+    *  error.  Returned lists are appended to.  NOTE: ALL ENTITIES MUST BE FROM
+    *  THE SAME GEOMETRY ENGINE. 
+    */
+  //! \brief Fire a ray at entities, passing back distances of hits and entities hit
+  CubitStatus fire_ray( CubitVector &origin,
+                        CubitVector &direction,
+                        DLIList<TopologyEntity*> &at_entity_list,
+                        DLIList<double> &ray_params,
+                        int max_hits = 0,
+                        double ray_radius = 0.0,
+                        DLIList<TopologyEntity*> *hit_entity_list_ptr = 0 );
   
+  //! \brief Debugging function.
   static void geom_debug( DLIList<TopologyEntity*> );
-  /**<  Temporary debug tool -- Steve Jankovich
-    */
+
+  //! \brief Set facet box flag
   static void set_facet_bbox( CubitBoolean pass_flag )
       {useFacetBBox = pass_flag;}
+
+  //! \brief Get facet box flag
   static CubitBoolean get_facet_bbox()
       {return useFacetBBox;}
-  /**< get and set the useFacetBBox flag. (compute our own bbox
-    * instead of relying on bad ACIS geometry)
-    */
 
-
+  //! \brief Calls engine version of the active geometry engine.
   CubitString get_engine_version_string();
-  /**<  Calls get_engine_version_string() function of underlying ModelingEngine.
-    */
 
+  //! \brief Set the major/minor version of the active geometry engine.
   CubitStatus set_export_allint_version(int version);
-  /**<  set the major/minor version of the geometry engine
-    */
 
+  //! \brief Get the major/minor version of the active geometry engine.
   int get_allint_version();
-  /**<  get the major/minor version of the geometry engine
-    */
 
+  //! \brief Returns a string with the versions of the active geometry engine.
   CubitStatus list_engine_versions(CubitString &versions);
-  /**<  returns a string with the engine version choices
-    */
 
+  //! \brief Gets solid modeler's resolution absolute tolerance
   double get_sme_resabs_tolerance();
-  double set_sme_resabs_tolerance( double new_resabs );
-  /**<  Gets/Sets solid modeler's resolution absolute tolerance
-    */
 
+  //! \brief Sets solid modeler's resolution absolute tolerance
+  double set_sme_resabs_tolerance( double new_resabs );
+
+  //! \brief Set solid modeler integer option.
   CubitStatus set_sme_int_option( const char* opt_name, int val );
+  //! \brief Set solid modeler double option.
   CubitStatus set_sme_dbl_option( const char* opt_name, double val );
+  //! \brief Set solid modeler string option.
   CubitStatus set_sme_str_option( const char* opt_name, const char* val );
-  /**<  Set solid modeler options
-    */
+
 
   ///< <HR><H3>Topology/geometry creation functions</H3>
-
   Body* make_Body(BodySM *bodysm_ptr) const;
   RefFace* make_RefFace(Surface* surface_ptr ) const;
   RefEdge* make_RefEdge(Curve* curve_ptr) const;
@@ -416,7 +542,7 @@ public :
 
   static CubitSense relative_sense( Surface* surface1, Surface* surface2 );
 
-  RefFace* make_free_RefFace(Surface *surface_ptr ) const;
+  RefFace* make_free_RefFace(Surface *surface_ptr, bool is_free_surface) const;
   RefEdge* make_free_RefEdge(Curve *curve_ptr ) const;
   RefVertex* make_free_RefVertex(Point *point_ptr) const;
   /**<  These functions can be used to create free ref-entities
@@ -428,13 +554,12 @@ public :
 
   ///<HR><H3>Topology and geometry deletion</H3>
 
-  void delete_Body( DLIList<Body*>& body_list );
-  /**<  Deletes all Bodies in the input list from the model. Their
-    *  associated Solid Model entities are deleted as well, if they exist,
-    *  and if remove_solid_model_entities is CUBIT_TRUE.
+  /*! \brief  Deletes all Bodies in the input list from the model. Their
+    associated Solid Model entities are deleted as well, if they exist,
+    and if remove_solid_model_entities is CUBIT_TRUE.
     */
+  void delete_Body( DLIList<Body*>& body_list );
 
-  CubitStatus delete_Body( Body* body_ptr );
   /**<  Deletes the input Body from the model.
     *  Its associated Solid Model entities are deleted as well, if
     *  they exist, and if remove_solid_model_entities is CUBIT_TRUE.
@@ -442,96 +567,106 @@ public :
     *  as the Body itself has been deleted.
     *  Returns CUBIT_SUCCESS if all went well, otherwise, CUBIT_FAILURE.
     */
+  //! \brief Deletes a body.
+  CubitStatus delete_Body( Body* body_ptr );
 
-  CubitStatus delete_single_Body( Body* body_ptr );
-  /**< Behaves exactly as delete_Body, but in addition checks to see if
+  /*! Behaves exactly as delete_Body, but in addition checks to see if
     *  children of Body are merged.  In some cases, 2 entities can be
     *  forced-merged, where they are not spatially equal.  This regenerates
     *  the graphics on merged entities so they look correct after a partner
     *  has been deleted.
     */
+  //! \brief Deletes a body.
+  CubitStatus delete_single_Body( Body* body_ptr );
 
+  //! \brief Deletes free RefEnties
   CubitStatus delete_RefEntity( RefEntity* ref_entity_ptr );
+  
+  //! \brief Deletes the RefFace if it is free
   CubitStatus delete_RefFace( RefFace* ref_face_ptr );
+
+  //! \brief Deletes the RefEdge if it is free
   CubitStatus delete_RefEdge( RefEdge* ref_edge_ptr );
+
+  //! \brief Deletes the RefVertex if it is free
   CubitStatus delete_RefVertex( RefVertex* ref_vertex_ptr );
-  /**<  This function is used to delete free-floating RefFaces, RefEdges
-    *  or RefVertex'es.  All underlying VGI and solid model entities (if
-    *  any) are also deleted. The entities will *not* be deleted is
-    *  the input RefEntity has an owner (e.g., if the input RefEdge
-    *  is owned by a RefFace).
-    */
 
   void cleanout_deactivated_geometry();
   void cleanout_temporary_geometry ();
-
+  
+  //! \brief Deletes all geometry.
   void delete_geometry();
 
-  ///< <HR><H3>Miscellaneous geometry evaluation functions</H3>
-
+  
+  /*! \brief  Creates a list of vectors the length of the number_points that
+      interpolate between vector_1 and vector_2.  All of the points
+      will lie on the underlying equation of the refface.
+  */
   CubitStatus interpolate_along_surface( CubitVector *vector_1,
                                          CubitVector *vector_2,
                                          DLIList<CubitVector*> &vector_list,
                                          RefFace* ref_face_ptr,
                                          int number_points ) const;
-  /**<  Creates a list of vectors the length of the number_points that
-    *  interpolate between vector_1 and vector_2.  All of the points
-    *  will lie on the underlying equation of the refface.
+  /*!  \return  CubitBoolean
+    \return - CUBIT_TRUE/CUBIT_FALSE
+    \arg Vec1
+    A reference to the first vector.
+    \arg Vec2
+    A reference to the second vector.
+    \arg tolerance_factor
+    Factor by which the absolute internal tolerance shall be
+    multiplied.
+    *  Returns CUBIT_TRUE if the input Vec1 and Vec2 are spatially
+    equivalent within a tolerance.  The internal spatial tolerance
+    value is multiplied by tolerance_factor before the (spatial)
+    test is done. Else, returns CUBIT_FALSE.
     */
-
+  //! \brief Compares two positions for coincidence.
   CubitBoolean about_spatially_equal (const CubitVector& Vec1,
                                       const CubitVector& Vec2,
                                       double tolerance_factor = 1.0);
-  /**<  \return  CubitBoolean
-    *  \return - CUBIT_TRUE/CUBIT_FALSE
-    *  \arg Vec1
-    *  A reference to the first vector.
-    *  \arg Vec2
-    *  A reference to the second vector.
-    *  \arg tolerance_factor
-    *  Factor by which the absolute internal tolerance shall be
-    *  multiplied.
-    *
-    *  Returns CUBIT_TRUE if the input Vec1 and Vec2 are spatially
-    *  equivalent within a tolerance.  The internal spatial tolerance
-    *  value is multiplied by tolerance_factor before the (spatial)
-    *  test is done. Else, returns CUBIT_FALSE.
-    */
 
+  //! \brief Compares two vertices for coincidence.
   CubitBoolean about_spatially_equal (RefVertex* refVertex1,
                                       RefVertex* refVertex2,
                                       double tolerance_factor = 1.0);
 
+  /*! \brief Calculates internal surface angles given 2 refedges on the
+   * surface.  CoEdge version correctly handles curves in a surface
+   * twice. */
   double geometric_angle(RefEdge* ref_edge_1,
                          RefEdge* ref_edge_2,
                          RefFace* ref_face );
+
+  /*! \brief Calculates internal surface angles given 2 refedges on the
+   surface.  This version correctly handles curves in a surface twice. */
   double geometric_angle(CoEdge* co_edge_1,
                          CoEdge* co_edge_2 );
-  /**< calculates internal surface angles given 2 refedges on the
-   * surface.  CoEdge version correctly handles curves in a surface
-   * twice.
-   */
 
+  /*! \brief Calculate dihedral angle at curve between two surfaces of the
+    volume. */
   double surface_angle( RefFace *ref_face_1, RefFace *ref_face_2,
                         RefEdge *ref_edge = NULL,
                         RefVolume *ref_volume = NULL,
                         double frac = 0.5);
-    /**< Calculate dihedral angle at ref_edge between two faces of the
-     *   volume.
-     */
 
+  /*!  Finds the intersections between a curve and a line  If the bounded flag 
+    *  is true, it finds only those intersections within the parameter range
+    *  of the curve; otherwise it uses the extensions of the curve.  The
+    *  closest option is currently valid only if the curve is straight,
+    *  in which case it will return the 2 closest intersection locations,
+    *  if the straight lines don't actually intersect. The function allocates 
+    *  allocates the CubitVectors in the returned list, so be sure to free them.
+    */
+  //! \brief Finds the intersections of a straight line and a curve.  
   CubitStatus get_intersections( RefEdge* ref_edge1,
                                  CubitVector& point1,
                                  CubitVector& point2,
                                  DLIList<CubitVector*>& intersection_list,
                                  CubitBoolean bounded = CUBIT_FALSE,
                                  CubitBoolean closest = CUBIT_FALSE);
-
-  CubitStatus get_intersections( RefEdge* ref_edge1, RefEdge* ref_edge2,
-                                 DLIList<CubitVector*>& intersection_list,
-                                 CubitBoolean bounded = CUBIT_FALSE,
-                                 CubitBoolean closest = CUBIT_FALSE );
-  /**<  Finds the intersections of the two curves.  If the bounded flag is
+ 
+  /*!  Finds the intersections of the two curves.  If the bounded flag is
     *  true, it finds only those intersections within the parameter range
     *  of both curves; otherwise it uses the extensions of the curves.  The
     *  closest option is currently valid only if both curves are straight,
@@ -541,56 +676,83 @@ public :
     *  curves, unless both curves are linear.  The function allocates the
     *  CubitVectors in the returned list, so be sure to free them.
     */
+  //! \brief Finds the intersections of two curves.  
+  CubitStatus get_intersections( RefEdge* ref_edge1, RefEdge* ref_edge2,
+                                 DLIList<CubitVector*>& intersection_list,
+                                 CubitBoolean bounded = CUBIT_FALSE,
+                                 CubitBoolean closest = CUBIT_FALSE );
 
+  /*! Finds the intersections of the curve and surface.  The curve is extended
+    * if the bounded flag is not false.  The function allocates the CubitVectors
+    * in the returned list, so be sure to free them.
+  */
+  //! \brief Finds the intersections of the curve and surface.  
   CubitStatus get_intersections( RefEdge* ref_edge, RefFace* ref_face,
                                  DLIList<CubitVector*>& intersection_list,
                                  CubitBoolean bounded = CUBIT_FALSE );
-  /**< Finds the intersections of the curve and surface.  The curve is extended
-    * if the bounded flag is not false.  The function allocates the CubitVectors
-    * in the returned list, so be sure to free them.
-    */
 
+  /*! Gets the extrema position along the first given direction. If there
+    * is more than one extrema position, the other directions will be used
+    * to determine a unique position.  Directions 2 and 3 can be NULL.
+    * Entities supported include bodies, volumes, surfaces, curves and
+    * vertices.  
+    */
+  //! \brief Gets extrema position on an entity.
   CubitStatus entity_extrema( RefEntity *ref_entity_ptr,
                               const CubitVector *dir1,
                               const CubitVector *dir2,
                               const CubitVector *dir3,
                               CubitVector &extrema,
                               RefEntity *&extrema_entity_ptr );
+
+  /*! Gets the extrema position along the first given direction. If there
+    * is more than one extrema position, the other directions will be used
+    * to determine a unique position.  Directions 2 and 3 can be NULL.
+    * Entities supported include bodies, volumes, surfaces, curves and
+    * vertices.  The entity the extrema is found on is also returned.
+    */
+  //! \brief Gets extrema position on a list of entities.
   CubitStatus entity_extrema( DLIList<RefEntity*> &ref_entity_list,
                               const CubitVector *dir1,
                               const CubitVector *dir2,
                               const CubitVector *dir3,
                               CubitVector &extrema,
                               RefEntity *&extrema_entity_ptr );
-  /** Gets the extrema position along the first given direction. If there
-    * is more than one extrema position, the other directions will be used
-    * to determine a unique position.  Directions 2 and 3 can be NULL.
-    * Entities supported include bodies, volumes, surfaces, curves and
-    * vertices.  The entity the extrema is found on is also returned.
-    */
 
+  /*! Gets the minimum distance between two entities and the closest positions
+    * on those entities. Supports vertices, curves, surfaces, volumes and bodies.
+  */
+  //! \brief Get the minimum distance between two entities.
   CubitStatus entity_entity_distance( GeometryEntity *ge1,
-                                           GeometryEntity *ge2,
-                                           CubitVector &pos1, CubitVector &pos2,
-                                           double &distance );
+                                      GeometryEntity *ge2,
+                                      CubitVector &pos1, CubitVector &pos2,
+                                      double &distance );
+
+  /*! Gets the minimum distance between two entities and the closest positions
+    on those entities. Supports vertices, curves, surfaces, volumes and bodies.
+  */
+  //! \brief Get the minimum distance between two entities. (CGM internal use)
   CubitStatus entity_entity_distance( RefEntity *ref_entity_ptr1,
                                       RefEntity *ref_entity_ptr2,
                                       CubitVector &pos1, CubitVector &pos2,
                                       double &distance );
-  /** Gets the minimum distance between two entities and the closest positions
-    * on those entities. Supports vertices, curves, surfaces, volumes and bodies.
-    */
 
-  CubitBox bounding_box_of_bodies();
-  /**<  returns the bounding box of all bodies in the model
-    */
 
-  ///< <HR><H3>Merging functions.</H3>
-
+  //! \brief Resets geometry factor back to 500.0
+  static void reset_geometry_factor();
+  
+  //! \brief Sets geometry factor. 
   static void set_geometry_factor( double fac );
+
+  //! \brief Gets geometry factor. 
   static double get_geometry_factor();
+
+  //! \brief Sets bboxMergeTest variable.
   static void set_merge_test_bbox(CubitBoolean tof);
+
+  //! \brief Gets bboxMergeTest variable.
   static CubitBoolean get_merge_test_bbox();
+
   static void set_merge_test_internal(int tof);
   static int get_merge_test_internal();
   static void set_sliver_curve_cleanup_tolerance( double tol );
@@ -598,22 +760,17 @@ public :
   static double get_sliver_curve_cleanup_tolerance(); 
   static double get_sliver_surface_cleanup_tolerance(); 
 
-  //Initializes all settings of this class
+  //! \brief Initializes all settings of this class
   static void initialize_settings();
 
+  //! \brief Causes attributes hanging on entities to be applied.
   static CubitStatus import_actuate( DLIList<RefEntity*> &entity_list );
 
+  /*! \brief Returns CUBIT_TRUE if all the entities have the same geometric query engine and
+    if that is the same one as the default. */
   CubitBoolean same_query_engine(DLIList<TopologyEntity*> &topo_list) const;
-  /**<  Returns CUBIT_TRUE if all the entities have the same geometric query engine and
-    *  if that is the same one as the default.
-    */
 
-  GeometryQueryEngine* common_query_engine(
-    DLIList<TopologyEntity*>& topology_list,
-    DLIList<TopologyBridge*>& engine_bridges,
-    CubitBoolean allow_default_engine
-    = CUBIT_FALSE ) const;
-  /**<  \return GeometryQueryEngine*
+  /*!  \return GeometryQueryEngine*
     *   A GeometryQueryEngine common at least one
     *   TopologyBridge of each of the passed TopologyEntities, or
     *   NULL if no common geometry engine is found.
@@ -636,99 +793,173 @@ public :
     *   if possible, otherwise with the first topology bridge attached
     *   to each of the passed TopologyEntities.
     */
+  //! \brief Gets geometry beloning to a common modeling engine. 
+  GeometryQueryEngine* common_query_engine(
+    DLIList<TopologyEntity*>& topology_list,
+    DLIList<TopologyBridge*>& engine_bridges,
+    CubitBoolean allow_default_engine
+    = CUBIT_FALSE ) const;
 
+  //! \brief Determine if any of the input entities contain the given query engine
   CubitBoolean does_geom_contain_query_engine(DLIList<TopologyEntity*> &topo_list,
                                               GeometryQueryEngine *engine) const;
-  /**<  \return CubitBoolean
-    *   Determine if any of the input entities contain the given query engine
-    */
 
+  //! \brief Determine if any of the input entities contain the given query engine
   CubitBoolean does_geom_contain_query_engine(DLIList<RefEntity*> &ref_entity_list,
                                               GeometryQueryEngine *engine,
                                               CubitBoolean children_too = CUBIT_FALSE) const;
-  /**<  \return CubitBoolean
-    *   Determine if any of the input entities contain the given query engine
-    */
 
+  //! \brief Retrieves the TopologyEntity from the underlying TopologyBridge
   TopologyEntity* entity_from_bridge( TopologyBridge* bridge_ptr ) const;
 
+  //! \brief Adds a geometry query engine to the list
   void add_gqe(GeometryQueryEngine *gqe_ptr);
-    /**< add a geometry query engine to the list
-     */
 
+  /*! \brief Removes a geometry query engine from the list. Returns CUBIT_FAILURE
+     if it wasn't in the list */
   CubitStatus remove_gqe(GeometryQueryEngine *gqe_ptr);
-    /**< remove a geometry query engine from the list; returns CUBIT_FAILURE
-     *   if it wasn't on the list
-     */
 
+  //! \brief Return the list of GeometryQureyEngines.
   void get_gqe_list(DLIList<GeometryQueryEngine*> &gqe_list);
-    /**< return the list of gqe's
-     */
 
+  //! \brief Returns the first gqe on the list.
   GeometryQueryEngine *get_gqe();
-    /**< return the first gqe on the list
-     */
 
+  //! \brief Set the default GeometryQueryEngine.
   CubitStatus set_default_gqe(GeometryQueryEngine* gqe);
-  /**< set the default GeometryQueryEngine
-   */
 
   bool contains_intermediate_geometry(RefEntity*) const;
   bool contains_intermediate_geometry(DLIList<RefEntity*>& ref_entitylist) const;
   bool is_intermediate_geometry(RefEntity*) const;
   bool is_intermediate_geometry(TopologyBridge*) const;
 
-//  GeometryQueryEngine *get_gqe(const EntityType gqe_type);
-    /**< return the gqe of the specified type
-     */
-
+  /*!- Remove this entity and any dead children where
+  a dead child a) has no parent entities and b) has no topology_bridges. */
   CubitStatus destroy_dead_entity( TopologyEntity* topo_ent, bool top = true ) const;
-    //- Remove this entity and any dead children where
-    //- a dead child a) has no parent entities and b)
-    //- has no topology_bridges.
 
-  //Translate
-  CubitStatus translate( Body* entity, const CubitVector& delta,
-                         bool check_to_transform = true);
-  CubitStatus translate( BasicTopologyEntity* entity, const CubitVector& delta,
-                         bool check_to_transform = true);
+  //! \brief Translate a Body some delta.
+  CubitStatus translate( Body* entity, const CubitVector& delta, bool check_to_transform = true,
+                         bool preview = false );
 
-  //Rotate
-  CubitStatus rotate   ( Body* entity, const CubitVector& axis, double degrees,
-                         bool check_to_transform = true);
-  CubitStatus rotate   ( Body* entity,
-                         const CubitVector& point,
-                         const CubitVector& direction,
-                         double degrees,
-                         bool check_to_transform = true);
-  CubitStatus rotate   ( BasicTopologyEntity* entity, const CubitVector& axis, double degrees,
-                         bool check_to_transform = true);
+  //! \brief Translate a BasicTopologyEntity some delta.
+  CubitStatus translate( BasicTopologyEntity* entity, const CubitVector& delta, bool check_to_transform = true,
+                         bool preview = false );
 
-  //Scale
-  CubitStatus scale    ( Body* entity, double factor, bool check_to_transform = true);
-  CubitStatus scale    ( Body* entity, const CubitVector& factors, bool check_to_transform = true);
-  CubitStatus scale    ( BasicTopologyEntity* entity, double factor, bool check_to_transform = true);
-  CubitStatus scale    ( BasicTopologyEntity* entity, const CubitVector& factors,
-                         bool check_to_transform = true);
+  void translate( DLIList<RefEntity*> &entities_to_transform,
+          double x, double y, double z, bool check_before_transforming,
+          DLIList<RefEntity*> &entities_transformed,
+          bool preview = false );
 
-  //Reflect
-  CubitStatus reflect  ( DLIList<Body*> bodies, const CubitVector& axis );
-  CubitStatus reflect  ( BasicTopologyEntity* entity, const CubitVector& axis,
-                         bool check_to_transform = true);
+
+  //! \brief Rotate a Body an angle about an axis. 
+  CubitStatus rotate( Body* entity, const CubitVector& axis, double degrees, bool check_to_transform = true,
+                      bool preview = false );
+
+  //! \brief Rotate a Body an angle about an axis, defined by a point and a 
+  //! direction.
+  CubitStatus rotate( Body* entity,
+                      const CubitVector& point,
+                      const CubitVector& direction,
+                      double degrees,
+                      bool check_to_transform = true,
+                      bool preview = false);
+
+  CubitStatus rotate( DLIList<RefEntity*> &entities_to_transform,  
+                      const CubitVector& point,
+                      const CubitVector& direction,
+                      double degrees,
+                      bool check_to_transform, 
+                      DLIList<RefEntity*> &entities_transformed,
+                      bool preview = false);
+
+  //! \brief Rotate a BacisTopologyEntity an angle about an axis.
+  CubitStatus rotate( BasicTopologyEntity* entity, 
+                      const CubitVector& axis, 
+                      double degrees,
+                      bool check_to_transform = true,
+                      bool preview = false);
+
+  //! \brief Scale a Body.
+  CubitStatus scale( Body* entity, double factor, bool check_to_transform = true, bool preview = false);
+
+  //! \brief Scale a Body different factors in x, y, and z.
+  CubitStatus scale( Body* entity, const CubitVector& factors, bool check_to_transform = true, bool preview = false);
+
+  //! \brief Scale a BasicTopologyEntity. 
+  CubitStatus scale( BasicTopologyEntity* entity, double factor, bool check_to_transform = true, bool preview = false);
+
+  //! \brief Scale a BasicTopologyEntity different factors in x, y, and z.
+  CubitStatus scale( BasicTopologyEntity* entity, const CubitVector& factors,bool check_to_transform = true,
+                     bool preview = false);
+
+  void scale( DLIList<RefEntity*> &entities_to_transform, 
+              double scale_x, double scale_y, double scale_z, 
+              bool check_to_transform, 
+              DLIList<RefEntity*> &entities_scaled,
+              bool preview = false);
+
+  //! \brief Reflect a list of bodies about a plane defined by an axis.
+  CubitStatus reflect( DLIList<Body*> bodies, const CubitVector& axis, bool preview = false );
+
+  //! \brief Reflect a BasicTopologyEntity about a plane defined by an axis.
+  CubitStatus reflect( BasicTopologyEntity* entity, 
+                       const CubitVector& axis,
+                       bool check_to_transform = true,
+                       bool preview = false);
+
+  void reflect( DLIList<RefEntity*> &entities_to_transform,
+                            double x, double y, double z, 
+                            bool check_before_transforming,
+                            DLIList<RefEntity*> &entities_transformed,
+                            bool preview = false);
+
+  //! \brief Need to deprecate.
   CubitStatus restore_transform( Body* body );
 
+  /*! Query to determine if volumes intersect, share common volume.
+  Returns CUBIT_TRUE if the two volumes overlap, CUBIT_FALSE if they don't
+  overlap.  If the volumes are touching the function should return CUBIT_FALSE.
+  volume_1, 
+  volume_2
+  The two volume pointers that are being tested for overlap.
+  The function uses the intersect call to test if the volumes 
+  are overlaping.  The full intersect Boolean is needed to see if
+  the volumes actually overlap and don't just touch. */
+  //! \brief Query to determine if volumes intersect, share common volume.
   CubitBoolean volumes_overlap( RefVolume *volume_1, RefVolume *volume_2);
+
+  /*! Query to determine if bodies intersect, share common volume.
+  Returns CUBIT_TRUE if the two bodies overlap, CUBIT_FALSE if they don't
+  overlap.  If the bodies are touching the function should return CUBIT_FALSE.
+  body_ptr_1, body_ptr_2
+  The two body pointers that are being tested for overlap.
+  The function uses the intersect call to test if the bodies
+  are overlaping.  The full intersect Boolean is needed to see if
+  the bodies actually overlap and don't just touch. */
+  //! \brief Query to determine if bodies intersect, share common volume.
   CubitBoolean bodies_overlap( Body *body_ptr_1, Body *body_ptr_2 );
 
-    //R CubitBoolean
-    //R- CUBIT_TRUE if the two bodies overlap, CUBIT_FALSE if they don't
-    //R- overlap.  If the bodies are touching the function
-    //R- should return CUBIT_FALSE.
-    //I body_ptr_1, body_ptr_2
-    //I- The two body pointers that are being tested for overlap.
-    //-  The function uses the intersect call to test if the bodies
-    //-  are overlaping.  The full intersect Boolean is needed to see if
-    //-  the bodies actually overlap and don't just touch.
+  //! Given a list of TB's, construct ref entities for them; if the 2nd list pointer is
+  //! non-NULL, pass back the list of ref entities in that list
+  CubitStatus construct_refentities(DLIList<TopologyBridge*> &topology_bridges,
+                                    DLIList<RefEntity*> *imported_entities = NULL);
+
+  /*! When importing a cub file, embedded in the cub file is how many 
+      geometry entities it is supposed to restore.  If geometry that 
+      you are improrting is merged with geometry already in the session, 
+      you need to keep track of how many geometry entieies get 'merged-away' 
+      like this so that import does not fail.  Taking into account 
+      the 'merged-away' geometry allows CUBIT to successfully import 
+      when you have geometry that will merge-away. */
+  /*! \brief Variable needed when importing geometry that will be 
+    merged-away with already existing geometry in the session */
+  static CubitBoolean trackMergedAwayEnts;
+
+
+  static DLIList<int> uidsOfImportingEnts;
+  static int entitiesMergedAway; 
+
+  CGMHistory& history();
 
 protected :
 
@@ -763,6 +994,11 @@ private :
     // check for mergeable sense entity, which is a child of the entity pointed
     // to by a merge attribute on bridge, which corresponds to re_ptr
 
+  
+  void get_merged_away_free_entities( DLIList<RefEntity*> &ref_ents,
+                                      DLIList<TopologyBridge*> &free_ents );
+
+
   CubitStatus straightline_intersections( RefEdge* ref_edge1,
                                  CubitVector & origin2,
                                  CubitVector & dir2,
@@ -770,18 +1006,15 @@ private :
                                  CubitBoolean bounded = CUBIT_FALSE,
                                  CubitBoolean closest = CUBIT_FALSE);
 
+  //! static pointer to the unique instance of this class.
   static GeometryQueryTool* instance_;
-  /**<  static pointer to the unique instance of this class.
-    */
 
+  //! For use in calculating a bounding box, you can do it based on
+  //! a set of facets, rather than what default modeling engine  uses.
   static CubitBoolean useFacetBBox;
-  /**< For use in calculating a bounding box, you can do it based on
-    *  a set of facets, rather than what default modeling engine  uses.
-    */
 
+  //! The list of geometry query engines
   DLIList<GeometryQueryEngine*> gqeList;
-  /**<  The list of geometry query engines
-    */
 
   struct IGEComp : public std::binary_function<IntermediateGeomEngine*,
                                               IntermediateGeomEngine*,
@@ -793,28 +1026,28 @@ private :
   typedef std::set<IntermediateGeomEngine*,IGEComp> IGESet;
   IGESet igeSet;
 
+  //! \brief The default geometry query engine
   GeometryQueryEngine *default_gqe;
-  /**<  The default geometry query engine
-    */
 
+  //! After imprinting, an attempt at removing sliver curves is made.
+  //! Curves less than this tolerance will be removed.
   static double curveSliverCleanUpTolerance;
-  // After imprinting, an attempt at removing sliver curves is made.
-  // Curves less than this tolerance will be removed.
 
+  //! After imprinting, an attempt at removing sliver surfaces is made.
+  //! Removes sliver surfaces whose maximum gap distance among the long 
+  //! edges is smaller than the tolerance and who have at most three long edges. 
   static double surfaceSliverCleanUpTolerance;
-  // After imprinting, an attempt at removing sliver surfaces is made.
-  // Removes sliver surfaces whose maximum gap distance among the long 
-  // edges is smaller than the tolerance and who have at most three long edges. 
 
+  //!  This factor is the the multiplier for the ACIS resabs
+  //!  when comparingcurves.  ALWAYS when using a multiplier
+  //!  use this factor for consistancy.
   static double geometryToleranceFactor;
-  /**<  This factor is the the multiplier for the ACIS resabs
-    *  when comparingcurves.  ALWAYS when using a multiplier
-    *  use this factor for consistancy.
-    */
 
   static CubitBoolean bboxMergeTest;
-  static int internalSurfaceMergeTest; //0=off, 1=all, 2=splines only
-  ///<  Options for refface merging.
+
+  //! Options for refface merging.
+  //! 0=off, 1=all, 2=splines only
+  static int internalSurfaceMergeTest; 
 
   int maxPersistentBodyId;
   int maxPersistentRefVolumeId;
@@ -825,8 +1058,14 @@ private :
 
   static const int CGM_MAJOR_VERSION;
   static const int CGM_MINOR_VERSION;
+
+  CGMHistory mHistory;
 };
 
+inline void GeometryQueryTool::reset_geometry_factor()
+{
+  geometryToleranceFactor = DEFAULT_GEOM_FACTOR;
+}
 
 inline void GeometryQueryTool::set_geometry_factor( double factor )
 {

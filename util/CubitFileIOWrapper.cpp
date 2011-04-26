@@ -27,7 +27,7 @@
 *******************************************************************************/
 
 #include "CubitFileIOWrapper.hpp"
-#include <string.h>
+#include <cstring>
 
 using namespace NCubitFile;
 
@@ -239,5 +239,10 @@ char* CIOWrapper::Read()
 void CIOWrapper::EndReadBlock()
 {
     mintBlockStart = mintBlockEnd = 0;
+}
+    
+long CIOWrapper::GetLocation()
+{
+  return ftell(mpFile);
 }
 

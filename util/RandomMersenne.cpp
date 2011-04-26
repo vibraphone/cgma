@@ -133,7 +133,7 @@ unsigned long RandomMersenne::genrand_int32()
 
 #ifdef TEST_RANDOM
 
-#include <stdio.h>
+#include <cstdio>
 
 int main(void)
 {

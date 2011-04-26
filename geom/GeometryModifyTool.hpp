@@ -36,7 +36,6 @@ class RefEdge;
 class RefFace;
 class RefVolume;
 class RefVertex;
-class RefEdge;
 class RefVolume;
 template <class X> class DLIList;
 class Loop;
@@ -59,12 +58,14 @@ class Point;
 class GeometryEntity;
 
 
+//! Interface class for modifying geometry. 
 class CUBIT_GEOM_EXPORT GeometryModifyTool
 {
+
+  friend class MergeTool;
 public :
 
-  static GeometryModifyTool* instance( GeometryModifyEngine* GMEPtr = NULL);
-  /**<
+  /*!
     *  \return GeometryModifyTool* - Pointer to the singleton GeometryModifyTool object
     *  \arg SMEPtr
     *   Pointer to a SolidModelingEngine object. The default value
@@ -78,92 +79,102 @@ public :
     *  Hence, this instance function should specifically be called at
     *  startup with a valid non-NULL input SMEPtr.
     */
+  static GeometryModifyTool* instance( GeometryModifyEngine* GMEPtr = NULL);
 
+  static void delete_instance();
+
+  //! \brief Destructor.
   ~GeometryModifyTool();
-  ///<  Destructor.
 
-  /**
-   <HR><H3>Geometric primitive creation functions</H3>
-  */
-  Body* sphere( double radius );
-  /**<  Creates an ACIS sphere and assigns it to a Body $
+  /*! Creates an ACIS sphere and assigns it to a Body $
     *  {radius} input radius
     *  Returns the new Body or NULL
     */
-
-  Body* brick( double wid, double dep, double hi );
-  /**<  Creates an ACIS cuboid and assigns it to a Body $
+  //! \brief Creates a sphere.
+  Body* sphere( double radius,
+                int x_shift = 0,
+                int y_shift = 0,
+                int z_shift = 0,
+                double inner_radius = 0,
+                bool delete_side = false );
+  
+  /*!  Creates an ACIS cuboid and assigns it to a Body $
     *  {wid, dep, hi} input width, depth, height
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a brick (cube).
+  Body* brick( double wid, double dep, double hi );
 
-  Body* brick( const CubitVector &center,
-               const CubitVector axes[3],
-               const CubitVector &extension );
-  /**<  Creates an ACIS cuboid and assigns it to a Body $
+  /*!  Creates an ACIS cuboid and assigns it to a Body $
     *  {center, axes, extension} input center, xyz axes, extension
     *     (extension vector is 1/2 width, height, depth)
     *  If one of dimensions is zero a planar sheet should be created.
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a brick (cube).
+  Body* brick( const CubitVector &center,
+               const CubitVector axes[3],
+               const CubitVector &extension );
 
-  Body* prism( double height, int sides, double major, double minor );
-  /**<  Creates an ACIS prism and assigns it to a Body $
+  /*!  Creates an ACIS prism and assigns it to a Body $
     *  {height, major, minor} input height, major and minor radii. $
     *  {sides} input number of sides. Must be >= 3.
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a brick (cube).
+  Body* prism( double height, int sides, double major, double minor );
 
-  Body* pyramid( double height, int sides, double major, double minor,
-                 double top=0.0 );
-  /**<  Creates an ACIS pyramid and assigns it to a Body $
+  /*!  Creates an ACIS pyramid and assigns it to a Body $
     *  {height, major, minor} input height, major and minor radii. $
     *  {sides} input number of sides. Must be >= 3.
     *  {top} radius at top of pyramid.
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a pyramid. 
+  Body* pyramid( double height, int sides, double major, double minor,
+                 double top=0.0 );
 
-  Body* cylinder( double hi, double r1, double r2, double r3 );
-  /**<  Creates an ACIS frustum and assigns it to a Body $
+  /*!  Creates an ACIS frustum and assigns it to a Body $
     *  {hi} input height $
     *  {r1} input radius in x-direction at base $
     *  {r2} input radius in y-direction at base $
     *  {r3} input radius in x-direction at top
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a clyinder. 
+  Body* cylinder( double hi, double r1, double r2, double r3 );
 
-  Body* torus( double r1, double r2 );
-  /**<  Creates an ACIS torus and assigns it to a Body $
+  /*!  Creates an ACIS torus and assigns it to a Body $
     *  {r1} input major_radius $
     *  {r2} input minor_radius
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a torus. 
+  Body* torus( double r1, double r2 );
 
+  /*! Creates a Body consisting of a planar sheet (no volume)
+    * p1 - 1st corner of the sheet
+    * p2 - 2nd corner of the sheet
+    * p3 - 3rd corner of the sheet
+    * p4 - 4th corner of the sheet
+    */
+  //! \brief Creates a planar surface from using four vertices.
   Body* planar_sheet( const CubitVector& p1,
                       const CubitVector& p2,
                       const CubitVector& p3,
                       const CubitVector& p4 );
-  /**< Creates a solid body consisting of a planar sheet (no volume)
-    * {p1} - 1st corner of the sheet
-    * {p2} - 2nd corner of the sheet
-    * {p3} - 3rd corner of the sheet
-    * {p4} - 4th corner of the sheet
-    */
 
-  Body* planar_sheet( const CubitVector &center,
-                      const CubitVector axes[2],
-                      double width, double height );
-  /**<  Creates an ACIS body consisting of a planar sheet (no volume)
+  /*!  Creates an body consisting of a planar sheet (no volume)
     *  {center, axes, width, height} - input location, orientation and
     *                                  size of sheet
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a surface from using four vertices.
+  Body* planar_sheet( const CubitVector &center,
+                      const CubitVector axes[2],
+                      double width, double height );
 
-  Body* planar_sheet( const CubitPlane& plane,
-                      const CubitBox& bounding_box,
-                      int extension_type = 0,
-                      double extension = 0.0 );
-  /**<  Creates an ACIS body consisting of a planar sheet (no volume)
+  /*!  Creates an ACIS body consisting of a planar sheet (no volume)
     *  {plane} - plane it will lie in
     *  {bounding_box} - 3D bounding box it must expand.  Plane will
     *                   have minimal area required to just cut the box.
@@ -171,13 +182,20 @@ public :
     *  {extension} - distance sheet is to extend outside of bounding box
     *  Returns the new Body or NULL
     */
+  //! \brief Creates a surface from a plane and bounding box. 
+  Body* planar_sheet( const CubitPlane& plane,
+                      const CubitBox& bounding_box,
+                      int extension_type = 0,
+                      double extension = 0.0 );
 
-  /// <HR><H3>Geometry transformation (move, scale, etc.)</H3>
+  
+  //! \brief Scale a body non-uniformly. (x,y,z directions) 
+  CubitStatus scale ( Body *&entity, 
+                      const CubitVector& factors, 
+                      bool check_to_transform = true,
+                      bool preview = false);
 
-  CubitStatus scale ( Body *&entity, const CubitVector& factors, bool check_to_transform = true  );
-
-  Body* copy_body ( Body* body_ptr );
-  /**<  \return  Body*
+  /*!  \return  Body*
     *  \return - A pointer to a newly created body.
     *  \arg body_ptr
     *  A pointer to a Body which is to used to make copy.
@@ -187,15 +205,25 @@ public :
     *  created Body are geometrically identical. If the copying
     *  operation fails for some reason, the function returns NULL.
     */
+  //! \brief Copy a Body.
+  Body* copy_body ( Body* body_ptr );
 
-  RefEntity* copy_refentity( RefEntity *old_entity );
-  /**<  Takes a RefEntity (RefVertex, RefEdge, or RefFace) and creates a
+  /*!  Takes a RefEntity (RefVertex, RefEdge, or RefFace) and creates a
     *  copy of it using the make_RefXxxxx commands.
     */
+  //! \brief Copy a RefEntity. 
+  RefEntity* copy_refentity( RefEntity *old_entity );
 
-  CubitStatus reverse( Body* body_ptr );
-  /* Turn body inside-out */
+  //! \brief Turn bodies inside-out 
+  CubitStatus reverse( DLIList<Body*> &body_list );
 
+  //! \brief Reverse the given faces using the solid modeller (flip normals) 
+  CubitStatus reverse( DLIList<RefFace*> &ref_face_list );
+
+  /*!  Aligns the body that contains my_face to match my_face
+    *  with the target face..
+    */
+  //! \brief Align the body, which contains my_face, with the target_face.
   CubitStatus align_body( Body *body_ptr,
                           RefFace *my_face,
                           RefFace *target_face,
@@ -203,9 +231,8 @@ public :
                           CubitVector &axis,
                           CubitVector &target_center,
                           double &angle );
-  /**<  aligns the body that contains my_face to match my_face
-    *  with the target face..
-    */
+
+  //! \brief Aligns a surface or vertex of the body with a plane defined an axis defined by 2 points.
   CubitStatus align_body( Body *body_ptr,
                           DLIList<RefEntity*>& ref_ent_list,
                           CubitVector first_vector,
@@ -215,8 +242,14 @@ public :
                           CubitVector &axis_of_rot,
                           double &angle,
                           double &angle_2 );
-  ///< <HR><H3>Geometry modification (booleans, decomposition, etc.)</H3>
 
+  
+  /*!  This function accepts two bodies in the first list.  The second body
+       in the list is subtracted from and the first and the result is put
+       into the outsideBodies list.  intersectBodies list is the result of 
+       intersecting the original two bodies in the first list. 
+  */ 
+  //! \brief Intersects and subtracts the two bodies in the list. 
   CubitStatus chop( DLIList<Body*> &bodies,
                     DLIList<Body*> &intersectBodies,
                     DLIList<Body*> &outsideBodies,
@@ -229,38 +262,60 @@ public :
                       DLIList<Body*>& new_bodies,
                       double depth);
 
+  //! \brief Thickens a sheet body (surface) into a solid body.  Can do both directions.                       
   CubitStatus thicken( DLIList<Body*>& bodies,
                        DLIList<Body*>& new_bodies,
                        double depth,
                        bool both = false );
-
+  //! \brief Boolean unite.
   CubitStatus unite( DLIList<Body*> &bodies,
                      DLIList<Body*> &newBodies,
                      bool keep_old = false );
 
+  //! \brief Boolean unite.
   CubitStatus unite( DLIList<BodySM*> &body_sm_list,
                      DLIList<BodySM*> &new_body_sm_list,
-                     bool keep_old = false );
+                     bool keep_old = false);
 
-  CubitStatus subtract( DLIList<Body*> &tool_body_list, DLIList<Body*> &from_bodies,
+  //! \brief Boolean subtract.   
+  CubitStatus subtract( DLIList<Body*> &tool_body_list, 
+                        DLIList<Body*> &from_bodies,
                         DLIList<Body*> &new_bodies,
                         bool imprint = false,
                         bool keep_old = false );
 
-  CubitStatus subtract( Body* tool_body, DLIList<Body*> &from_bodies,
+  //! \brief Boolean subtract.  Subtracts the tool from all the blanks.
+  CubitStatus subtract( Body* tool_body, 
+                        DLIList<Body*> &from_bodies,
                         DLIList<Body*> &new_bodies,
                         bool imprint = false,
                         bool keep_old = false );
 
-
+  /*! \brief Checks for consistent normals across body. Uses surf_ref
+    as a reference surface.  All other surfaces in volume should have 
+    normal point in likewise direction (in or out of volume).
+    */
+  //! \brief Checks for consistent normals across body.  
   CubitStatus validate_normals( DLIList<Body*>& bodies,
                                 RefFace *surf_ref,
                                 bool reverse );
-
-  CubitStatus intersect( Body *tool_body_ptr, DLIList<Body*> &from_bodies,
+  
+  //! \brief Boolean intersect.
+  CubitStatus intersect( Body *tool_body_ptr, 
+                         DLIList<Body*> &from_bodies,
                          DLIList<Body*> &new_bodies,
                          bool keep_old = false );
 
+  //! \brief Boolean intersect.
+  CubitStatus intersect( DLIList<Body*> &from_bodies,
+                         DLIList<Body*> &new_bodies,
+                         bool keep_old = false );
+
+  /*!  Cuts the given bodies with the points defining a plane.
+    *  This is mainly used for vis purposes to section a body with
+    *  a plane and only retain half of it.
+    */
+  //! \brief Cuts body with plane, throwing away one side.
   CubitStatus section( DLIList<Body*> &section_body_list,
                        const CubitVector &point_1,
                        const CubitVector &point_2,
@@ -268,42 +323,102 @@ public :
                        DLIList<Body*> &new_body_list,
                        CubitBoolean keep_normal_side,
                        CubitBoolean keep_old = CUBIT_FALSE );
-  /**<  Cuts the given bodies with the points defining a plane.
-    *  This is mainly used for vis purposes to section a body with
-    *  a plane and only retain half of it.
-    */
 
+  //! \brief Splits periodic curves and surfaces.
   CubitStatus split_periodic( Body *body_ptr,
                               Body *&new_body_ptr );
-  /**<  calls solid modeling engine to split the periodic body.
-    */
+  
+  //! \brief Stitches sheet bodies at common edges to form larger sheet body or solid. 
+  CubitStatus stitch( DLIList<Body*> &bodies_to_stitch,
+                      DLIList<Body*> &result_list,
+                      bool tighten_gaps,
+                      double tolerance = -1.0 );
 
-  CubitStatus split_surface( RefFace *ref_face_ptr,
-                             DLIList<CubitVector*> &locations,
-                             DLIList<DLIList<CubitVector*>*> &vec_lists,
-                             CubitBoolean preview_flg = CUBIT_FALSE,
-                             CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
-  /**< Split function for simple surface splitting.  Temporary Curves are
+  //! \brief Beta function.
+  CubitStatus discover_topology(RefFace *ref_face_ptr,
+                                CubitVector &pos,
+                                double &step_size,
+                                int num_subdivisions);
+
+  //! \brief Beta function.
+  void march_path(CubitVector &start_pos,
+                  RefFace *start_face,
+                  CubitVector &march_dir,
+                  double &step_size);
+
+  //! \brief Beta function.
+  void subdivide_pie(CubitVector &dir1, CubitVector &dir2, int num_subdivisions,
+                                       DLIList<CubitVector> &all_directions);
+  
+  /*! Split function for simple surface splitting.  Temporary Curves are
     * created on the RefFace and used to split the RefFace.  The curves are
     * created from the input vec_lists (straight lines, arcs or splines).
     * The input locations are the original input locations from the user,
     * which are displayed for user reference.  If the preview_flg is CUBIT_TRUE,
     * the curves are displayed but no splitting occurs.  If the preview_flg is
     * CUBIT_TRUE and the create_ref_edges_flg is CUBIT_TRUE, then RefEdges are
-    * created (but no splitting occurs).
+    * created (but no splitting occurs).  The clear_previous_previews flag
+    * controls whether previous previews are cleared from the graphics window
+    * (only applicable if preview_flg is CUBIT_TRUE).
     */
+  //! \brief Splits a surface with a curve defined by positions.
+  CubitStatus split_surface( RefFace *ref_face_ptr,
+                             DLIList<CubitVector*> &locations,
+                             DLIList<DLIList<CubitVector*>*> &vec_lists,
+                             CubitBoolean preview_flg = CUBIT_FALSE,
+                             CubitBoolean create_ref_edges_flg = CUBIT_FALSE,
+                             CubitBoolean clear_previous_previews = CUBIT_TRUE );
 
-  CubitStatus split_surfaces( DLIList<RefFace*> &ref_face_list,
-                              int num_segs,
-                              double fraction,
-                              double distance,
-                              RefEdge *from_curve_ptr,
-                              DLIList<RefVertex*> &corner_vertex_list,
-                              DLIList<RefVertex*> &through_vertex_list,
-                              RefEdge *curve_dir_ptr = NULL,
-                              CubitBoolean preview_flg = CUBIT_FALSE,
-                              CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
-  /**<  Splits a surface or connected set of surfaces in one direction.
+
+  /*! Same behavior as other split_surface function only it handles multiple surface
+      and multiple lists of curves.
+    */
+  //! \brief Splits MULTIPLE surfaces with a curves defined by positions.
+  CubitStatus split_surface( DLIList<RefFace*> &ref_face_list,
+                             DLIList<CubitVector*> &locations,
+                             DLIList<DLIList<DLIList<CubitVector*>*>*> &list_of_vec_lists,
+                             CubitBoolean preview_flg = CUBIT_FALSE,
+                             CubitBoolean create_ref_edges_flg = CUBIT_FALSE,
+                             CubitBoolean clear_previous_previews = CUBIT_TRUE );
+
+  /*!  Splits surfaces by extending curves at the end of hardlines across the
+    *   surface.  Only works on planar surfaces and by extending linear curves.
+    *   If specified vertex list is provided, only try to extend curves
+    *   attached to those vertices, and error out if unable to perform the
+    *   operation using any vertex.  If no vertex list is provided, find
+    *   appropriate vertices automatically, and limit the split to gaps less
+    *   than or equal to the specified "split surface extend gap threshold".
+    *   {ref_face_list} - list of connected surfaces to split
+    *   {ref_vertex_list} - (OPTIONAL) - vertices to extend from. Function will
+    *                       error out if unable to extend from any vertex. If
+    *                       not supplied, function will automatically find
+    *                       valid vertices to extend from on the surfaces (AUTO
+    *                       mode), and will limit the split to gaps less than
+    *                       or equal to the specified extend gap threshold (see
+    *                       setting below).
+    *   {preview_flg} - routine only displays graphics preview of splits
+    *   {create_ref_edges_flg} - valid only if preview_flg=CUBIT_TRUE.  If
+    *                            CUBIT_TRUE, create RefEdges *instead* of
+    *                            splitting.
+    * Note: this function uses SplitSurfaceTool.  Three other settings can be
+    *       specified that control this function.  They are (static):
+    *         SplitSurfaceTool::set_extend_gap_threshold - for AUTO mode,
+    *          only split the surface if distance is less than or equal to
+    *          this value.
+    *         SplitSurfaceTool::set_extend_tolerance - snaps to vertices along
+    *           curves within this tolerance so as to avoid creating short
+    *           curves when splitting surfaces.
+    *         SplitSurfaceTool:set_extend_normal - if TRUE, if a projection
+    *          normal to the curve is less distance than a projection in the
+    *          direction of the curve, use the normal projection instead.
+    */
+  //! \brief  Splits surfaces by extending curves at the end of hardlines across the surface.
+  CubitStatus split_surfaces_extend( DLIList<RefFace*> &ref_face_list,
+                                     DLIList<RefVertex*> &ref_vertex_list,
+                                     CubitBoolean preview_flg = CUBIT_FALSE,
+                                     CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
+
+  /*!  Splits a surface or connected set of surfaces in one direction.
     *   Particularly useful for splitting fillets to prepare the model
     *   for sweeping.
     *   {ref_face_list} - list of connected surfaces to split
@@ -358,7 +473,35 @@ public :
     *           below this becomes the triangle point (if sideAngleThreshold
     *           criteria is also met)
     */
+  //! \brief Splits a surface or connected set of surfaces in one direction.
+  CubitStatus split_surfaces( DLIList<RefFace*> &ref_face_list,
+                              int num_segs,
+                              double fraction,
+                              double distance,
+                              RefEdge *from_curve_ptr,
+                              DLIList<RefVertex*> &corner_vertex_list,
+                              DLIList<RefVertex*> &through_vertex_list,
+                              RefEdge *curve_dir_ptr = NULL,
+                              CubitBoolean preview_flg = CUBIT_FALSE,
+                              CubitBoolean create_ref_edges_flg = CUBIT_FALSE );
 
+  /*! Splits surfaces a specified distance from curves.
+  *   {ref_face_list} - list of surfaces to split
+  *   {edge_list} - list of curves to offset from
+  *   {num_segs} - number of segments to create (i.e, 2 segments
+  *                means to split using two offset curves).
+  *   {distance} - distance to offset
+  *   {partition_flg} - (OPTIONAL) creates partitions of the offset curves. This typically provides
+  *                         surfaces easily map meshed
+  *   {blunt_flg} - (OPTIONAL) if true the endings of the input curve graph are right angles
+  *                     instead of arcs
+  *   {preview_flg} - (OPTIONAL) user specifies forced vertices for
+  *                        the split to run through (on curves).  Not valid
+  *                        with more than 2 segments.
+  *   {create_ref_edges_flg} - (OPTIONAL) Create curves instead of splitting surfaces
+  *                                 Requires the preview flag
+  */
+  //! \brief Splits surfaces a specified distance from curves.
   CubitStatus split_surfaces_offset(
       DLIList<RefFace*> &ref_face_list,
       DLIList<RefEdge*> &edge_list,
@@ -368,56 +511,63 @@ public :
       CubitBoolean blunt_flg = CUBIT_FALSE,
       CubitBoolean preview_flg = CUBIT_FALSE,
       CubitBoolean create_ref_edges_flg = CUBIT_FALSE);
-  /**< Splits a surface a specified distance from a curve.
-  *   {ref_face_list} - list of surfaces to split
-  *   {edge_list} - list of curves to offset from
-  *   {num_segs} - number of segments to create (i.e, 2 segments
-  *                means to split using two offset curves).
-  *   {distance} - distance to offset
-  *   {partition_flg} - (OPTIONAL) creates partitions of the offset curves. This typically provides
-  *                         \surfaces easily map meshed
-  *   {blunt_flg} - (OPTIONAL) if true the endings of the input curve graph are right angles
-  *                     instead of arcs
-  *   {preview_flg} - (OPTIONAL) user specifies forced vertices for
-  *                        the split to run through (on curves).  Not valid
-  *                        with more than 2 segments.
-  *   {create_ref_edges_flg} - (OPTIONAL) Create curves instead of splitting surfaces
-  *                                 Requires the preview flag
-  */
 
-  CubitStatus webcut_with_cylinder( DLIList<Body*>& webcut_body_list,
-      double radius,
-      const CubitVector &axis,
-      const CubitVector& center,
-                                    DLIList<Body*> &results_list,
-                                    CubitBoolean imprint = CUBIT_FALSE,
-                                    CubitBoolean merge = CUBIT_FALSE );
-  /**<  Webcuts the bodies in the list with a cutting cylinder.
+  /*! Automatically create a midsurface from a volume.
+  *   {body_list_in} - list of bodies to midsurface
+  *   {body_list_out} - resulting midsurfaces
+  *   {lower_tol} - lower tolerance for finding surface pairs
+  *   {upper_tol} - upper tolerance for finding surface pairs
+  *   {preview} - preview midsurfaces
+  */
+  //! \brief Create a midsurface from a volume.
+  CubitStatus auto_mid_surface(
+	  DLIList<Body*> &body_list_in,
+	  DLIList<Body*> &body_list_out,
+      DLIList<Body*> &old_bodies_midsurfaced,
+      DLIList<double> &thickness_list,
+      double lower_tol,
+      double upper_tol,
+      CubitBoolean delete_midsurfaced,
+      CubitBoolean preview);
+	/** Automatically create a midsurface from a volume.
+	*   {body_list_in} - list of bodies to midsurface
+	*   {body_list_out} - resulting midsurfaces
+    *   {thickness_list} - list of matching thickness values for the body out list
+	*   {lower_tol} - lower tolerance for finding surface pairs
+	*   {upper_tol} - upper tolerance for finding surface pairs
+	*   {preview} - preview midsurfaces
+	*/
+
+  /*!  Webcuts the bodies in the list with a cutting cylinder.
     *  The cylinder is created by the given parameters.  This
     *  is done in the solid modeling engine to reduce the impact
     *  on body ids.
     */
+  //! \brief Webcuts bodies with a cylinder.
+  CubitStatus webcut_with_cylinder( DLIList<Body*>& webcut_body_list,
+                                    double radius,
+                                    const CubitVector &axis,
+                                    const CubitVector& center,
+                                    DLIList<Body*> &results_list,
+                                    DLIList<Body*> &neighboring_bodies,
+                                    ImprintType imprint_type = NO_IMPRINT,
+                                    CubitBoolean merge = CUBIT_FALSE ,
+                                    CubitBoolean preview = CUBIT_FALSE);
 
 #ifdef CAT
   CubitStatus webcut_across_translate( DLIList<Body*>& body_list,
                                        RefFace* plane_surf1,
                                        RefFace* plane_surf2,
                                        DLIList<Body*>& results_list,
-                                       CubitBoolean imprint = CUBIT_FALSE,
-                                       CubitBoolean merge = CUBIT_FALSE);
+                                       ImprintType imprint_type = NO_IMPRINT,
+                                       CubitBoolean merge = CUBIT_FALSE,
+                                       CubitBoolean preview = CUBIT_FALSE);
   /**<  Webcuts with a flat plate to make a body suitable for single-single
     *   sweeping.  Only experimental at this point.
     */
 #endif
 
-  CubitStatus webcut_with_brick( DLIList<Body*>& webcut_body_list,
-                                 const CubitVector &center,
-                                 const CubitVector axes[3],
-                                 const CubitVector &extension,
-                                 DLIList<Body*> &results_list,
-                                 CubitBoolean imprint = CUBIT_FALSE,
-                                 CubitBoolean merge = CUBIT_FALSE );
-  /**<  Webcuts the bodies in the list with a cutting brick.
+  /*!  Webcuts the bodies in the list with a cutting brick.
     *  The brick is created by the given parameters - center of
     *  brick, xyz axes, and extension.  Extension is 1/2 width,
     *  height and depth. If one of the brick dimensions is zero
@@ -425,29 +575,37 @@ public :
     *  planar_sheet is called).  Brick creation is done in the
     *  solid modeling engine to reduce the impact on body ids.
     */
+  //! \brief Webcuts bodies with a brick (cube).
+  CubitStatus webcut_with_brick( DLIList<Body*>& webcut_body_list,
+                                 const CubitVector &center,
+                                 const CubitVector axes[3],
+                                 const CubitVector &extension,
+                                 DLIList<Body*> &results_list,
+                                 DLIList<Body*> &neighbor_list,
+                                 ImprintType imprint_type = NO_IMPRINT,
+                                 CubitBoolean merge = CUBIT_FALSE,
+                                 CubitBoolean preview = CUBIT_FALSE);
 
+
+  /*!  Webcuts the bodies in the list with a cutting planar sheet.
+    *  The sheet is created by the given parameters - center of
+    *  sheet, xy axes, and width and height. Sheet creation is done
+    *  in the solid modeling engine to reduce the impact on body ids.
+    */
+  //! \brief Webcuts bodies with a planar sheet.
   CubitStatus webcut_with_planar_sheet( DLIList<Body*>& webcut_body_list,
                                         const CubitVector &center,
                                         const CubitVector axes[2],
                                         double width,
                                         double height,
                                         DLIList<Body*> &results_list,
-                                        CubitBoolean imprint = CUBIT_FALSE,
-                                        CubitBoolean merge = CUBIT_FALSE );
-  /**<  Webcuts the bodies in the list with a cutting planar sheet.
-    *  The sheet is created by the given parameters - center of
-    *  sheet, xy axes, and width and height. Sheet creation is done
-    *  in the solid modeling engine to reduce the impact on body ids.
-    */
+                                        DLIList<Body*> &neighbor_list,
+                                        ImprintType imprint_type = NO_IMPRINT,
+                                        CubitBoolean merge = CUBIT_FALSE,
+                                        CubitBoolean preview = CUBIT_FALSE);
 
-  CubitStatus webcut_with_plane( DLIList<Body*>& webcut_body_list,
-                                 const CubitVector &vector1,
-                                 const CubitVector &vector2,
-                                 const CubitVector &vector3,
-                                 DLIList<Body*> &results_list,
-                                 CubitBoolean imprint = CUBIT_FALSE,
-                                 CubitBoolean merge = CUBIT_FALSE ) ;
-  /**<  \return  int
+
+  /*!  \return  int
     *  \return - Number of bodies that were webcut ( >= 0 )
     *  \arg webcut_body_list
     *  The list of bodies to be webcut
@@ -464,13 +622,18 @@ public :
     *  The newly created bodies are merged and imprinted depeding on
     *  the respective flags.
     */
+  //! \brief Webcuts bodies with a plane.
+  CubitStatus webcut_with_plane( DLIList<Body*>& webcut_body_list,
+                                 const CubitVector &vector1,
+                                 const CubitVector &vector2,
+                                 const CubitVector &vector3,
+                                 DLIList<Body*> &results_list,
+                                 DLIList<Body*> &neighbor_list,
+                                 ImprintType imprint_type = NO_IMPRINT,
+                                 CubitBoolean merge = CUBIT_FALSE,
+                                 CubitBoolean preview = CUBIT_FALSE) ;
 
-  CubitStatus webcut_with_surface( DLIList<Body*>& webcut_body_list,
-                                   RefFace* refFace,
-                                   DLIList<Body*>& results_list,
-                                   CubitBoolean imprint = CUBIT_FALSE,
-                                   CubitBoolean merge = CUBIT_FALSE );
-  /**<  \return  int
+  /*!  \return  int
     *  \return - Number of bodies that were webcut ( >= 0 )
     *  \arg webcut_body_list
     *  The list of bodies to be webcut
@@ -489,12 +652,16 @@ public :
     *  merged and imprinted depeding on the respective flags.
     *  It returns the number of bodies that were webcut.
     */
+  //! \brief Webcuts bodies with a surface -- must be planar.
+  CubitStatus webcut_with_surface( DLIList<Body*>& webcut_body_list,
+                                   RefFace* refFace,
+                                   DLIList<Body*>& results_list,
+                                   DLIList<Body*> &neighbor_list,
+                                   ImprintType imprint_type = NO_IMPRINT,
+                                   CubitBoolean merge = CUBIT_FALSE,
+                                   CubitBoolean preview = CUBIT_FALSE);
 
-  CubitStatus webcut_with_curve_loop( DLIList<Body*>& webcut_body_list,
-                              DLIList<RefEdge*>& refedge_list,
-                              DLIList<Body*>& results_list,
-                              CubitBoolean imprint = CUBIT_FALSE );
-   /**<  \return  int
+   /*!  \return  int
     *  \return - Number of bodies that were webcut ( >= 0 )
     *  \arg webcut_body_list
     *  The list of bodies to be webcut
@@ -513,23 +680,30 @@ public :
     *  are merged and imprinted depending on the respective flags.
     *  It returns the number of bodies that were webcut.
     */
+  //! \brief Webcuts bodies with a surface defined by a curve loop.
+  CubitStatus webcut_with_curve_loop( DLIList<Body*>& webcut_body_list,
+                              DLIList<RefEdge*>& refedge_list,
+                              DLIList<Body*>& results_list,
+                              DLIList<Body*> &neighbor_list,
+                              ImprintType imprint_type = NO_IMPRINT,
+                              CubitBoolean merge = CUBIT_FALSE,
+                              CubitBoolean preview = CUBIT_FALSE);
 
-  CubitStatus webcut_with_sheet( DLIList<Body*>& webcut_body_list,
-                                 Body *sheet_body,
-                                 DLIList<Body*> &new_bodies,
-                                 CubitBoolean imprint = CUBIT_FALSE);
-  /**<  calls geometric modeling engine to webcut the body using
+  /*!  Webcut the bodies using
     *  the surface as the cutting tool.
     *  This is the real webcut with surface.  The others are
     *  just for planes...  The sheet body is a body with 0 volume.
     */
+  //! \brief Webcut bodies using a surface, need to be planar. 
+  CubitStatus webcut_with_sheet( DLIList<Body*>& webcut_body_list,
+                                 Body *sheet_body,
+                                 DLIList<Body*> &new_bodies,
+                                 DLIList<Body*> &neighbor_list,
+                                 ImprintType imprint_type = NO_IMPRINT,
+                                 CubitBoolean merge = CUBIT_FALSE,
+                                 CubitBoolean preview = CUBIT_FALSE);
 
-  CubitStatus webcut_with_body( DLIList<Body*>& webcut_body_list,
-		                    Body* body,
-		                    DLIList<Body*>& results_list,
-		                    CubitBoolean imprint = CUBIT_FALSE,
-		                    CubitBoolean merge = CUBIT_FALSE );
-  /**<  \return  int
+  /*!  \return  int
     *  \return - Number of bodies that were webcut ( >= 0 )
     *  \arg webcut_body_list
     *  The list of bodies to be webcut
@@ -546,17 +720,29 @@ public :
     *  The newly created bodies are merged and imprinted depeding on
     *  the respective flags.
     */
+  //! \brief Webcuts bodies with a tool body.
+  CubitStatus webcut_with_body( DLIList<Body*>& webcut_body_list,
+		                Body* body,
+		                DLIList<Body*>& results_list,
+                                DLIList<Body*> &neighbor_list,
+                                ImprintType imprint_type = NO_IMPRINT,
+		                CubitBoolean merge = CUBIT_FALSE,
+                                CubitBoolean preview = CUBIT_FALSE);
 
-  CubitStatus webcut_with_extended_surf( DLIList<Body*> &webcut_body_list,
-                                         RefFace *face_to_extend,
-                                         DLIList<Body*> &new_bodies,
-                                         int &num_cut,
-                                         CubitBoolean imprint = CUBIT_FALSE);
-  /**<  calls geometric modeling engine to create a face extended
-    *  from the given refFace and then webcut the body using the
-    *  sheet generated.
+  /*!  Create a sheet extended from the tool surfaces
+    *  and then uses it to webcut the bodies.
     */
-
+  //! \brief Webcuts bodies by with an extended surface(s). 
+  CubitStatus webcut_with_extended_sheet( DLIList<Body*> &webcut_body_list,
+                                          DLIList<RefFace*> &ref_face_list,
+                                          DLIList<Body*> &new_bodies,
+                                          DLIList<Body*> &neighbor_list,
+                                          int &num_cut,
+                                          ImprintType imprint_type = NO_IMPRINT,
+                                          CubitBoolean merge = CUBIT_FALSE,
+                                          CubitBoolean preview = CUBIT_FALSE);
+  
+  //! \brief Webcuts bodies with a tool solid created by rotating surfaces about an axis.
   CubitStatus webcut_with_sweep_surfaces_rotated(
                             DLIList<Body*> &webcut_body_list,
                             DLIList<RefFace*> &tool_faces,
@@ -566,9 +752,12 @@ public :
                             RefFace* stop_surf,
                             bool up_to_next,
                             DLIList<Body*> &new_bodies,
-                            CubitBoolean imprint = false,
-                            CubitBoolean merge = false );
+                            DLIList<Body*> &neighbor_list,
+                            ImprintType imprint_type = NO_IMPRINT,
+                            CubitBoolean merge = false,
+                            CubitBoolean preview = false);
 
+  //! \brief Webcuts bodies with a tool surface created by rotating curves about an axis.
   CubitStatus webcut_with_sweep_curves_rotated(
                             DLIList<Body*> &webcut_body_list,
                             DLIList<RefEdge*> &tool_curves,
@@ -577,9 +766,12 @@ public :
                             double angle,
                             RefFace* stop_surf,
                             DLIList<Body*> &new_bodies,
-                            CubitBoolean imprint = false,
-                            CubitBoolean merge = false );
+                            DLIList<Body*> &neighbor_list,
+                            ImprintType imprint_type = NO_IMPRINT,
+                            CubitBoolean merge = false,
+                            CubitBoolean preview = false);
 
+  //! \brief Webcuts bodies with a tool solid created by sweeping surfaces along a vector.
   CubitStatus webcut_with_sweep_surfaces(
                             DLIList<Body*> &webcut_body_list,
                             DLIList<RefFace*> &tool_faces,
@@ -591,9 +783,12 @@ public :
                             RefFace *stop_surf,
                             RefEdge* edge_to_sweep_along,
                             DLIList<Body*> &new_bodies,
-                            CubitBoolean imprint = false,
-                            CubitBoolean merge = false );
+                            DLIList<Body*> &neighbor_list,
+                            ImprintType imprint_type = NO_IMPRINT,
+                            CubitBoolean merge = false,
+                            CubitBoolean preview = false);
 
+  //! \brief Webcuts bodies with a tool surface created by sweeping curves along a vector.
   CubitStatus webcut_with_sweep_curves(
                             DLIList<Body*> &webcut_body_list,
                             DLIList<RefEdge*> &tool_curves,
@@ -602,49 +797,57 @@ public :
                             RefFace *stop_surf,
                             RefEdge* edge_to_sweep_along,
                             DLIList<Body*> &new_bodies,
-                            CubitBoolean imprint = false,
-                            CubitBoolean merge = false );
+                            DLIList<Body*> &neighbor_list,
+                            ImprintType imprint_type = NO_IMPRINT,
+                            CubitBoolean merge = false,
+                            CubitBoolean preview = false);
+  
+  //! \brief Removes small topology; i.e, curves and surfaces.
+  CubitStatus remove_topology( DLIList<RefEdge*> &ref_edge_list,
+        DLIList<RefFace*> &ref_face_list, double backoff_distance,
+        double small_curve_size, DLIList<Body*> &new_body_list,
+        CubitBoolean propagate,
+        CubitBoolean preview);
 
-  CubitStatus offset_curves( DLIList<RefEdge*>& ref_edge_list,
-                             double offset_distance,
-                             const CubitVector& offset_direction,
-                             int gap_type = 1 );
-  /**<  Creates curves offset from a chain of curves.  The offset direction is
+  /*!  Creates curves offset from a chain of curves.  The offset direction is
     *  only used if there is one linear curve.  Otherwise, the offset direction
     *  is calculated by ACIS (the cross product of the wires tangent and the
     *  planar normal).  The gap type is 0 - rounded, 1 - extended, 2 - natural.
     */
+  //! \brief Creates curves offset from a chain of curves.  The offset direction is
+  CubitStatus offset_curves( DLIList<RefEdge*>& ref_edge_list,
+                             double offset_distance,
+                             const CubitVector& offset_direction,
+                             int gap_type = 1 );
 
-  CubitStatus trim_curve( RefEdge* trim_curve,
-                          const CubitVector& trim_vector,
-                          const CubitVector& keep_vector );
-  /**<  Trims or extends a curve, up to the trim_vector.  If trimming, the
+  /*!  Trims or extends a curve, up to the trim_vector.  If trimming, the
     *  keep_vector determines which side of the curve to keep.  If the curve
     *  is not free, the curve is automatically copied before trimming (so
     *  a new curve results).
     */
+  //! \brief Trims or extends a curve, up to the trim_vector.  If trimming, the
+  CubitStatus trim_curve( RefEdge* trim_curve,
+                          const CubitVector& trim_vector,
+                          const CubitVector& keep_vector );
 
-  ///< <HR><H3>Topology modification (imprint, regularize, etc.)</H3>
-
+  //! \brief Imprints a group of bodies with one another.
   CubitStatus imprint( DLIList<Body*> &from_body_list,
                        DLIList<Body*> &new_body_list,
                        CubitBoolean keep_old = CUBIT_FALSE );
+
+  /*!  Imprints a list of Bodies with a list of RefEdges.  Useful for
+    *  splitting surfaces.  If edge pierces a surface a hardpoint will
+    *  result at the pierce location.  Interface is free of ACIS but
+    *  currently only works if all entities are ACIS entities.
+    */
+  //! \brief Imprints a list of Bodies with a list of RefEdges.  Useful for
   CubitStatus imprint( DLIList<Body*> &body_list,
                        DLIList<RefEdge*> &ref_edge_list,
                        DLIList<Body*>& new_body_list,
                        CubitBoolean keep_old_body = CUBIT_FALSE,
                        CubitBoolean show_messages = CUBIT_TRUE );
-  /**<  Imprints a list of Bodies with a list of RefEdges.  Useful for
-    *  splitting surfaces.  If edge pierces a surface a hardpoint will
-    *  result at the pierce location.  Interface is free of ACIS but
-    *  currently only works if all entities are ACIS entities.
-    */
 
-  CubitStatus imprint( DLIList<RefFace*> &ref_face_list,
-                       DLIList<RefEdge*> &ref_edge_list,
-                       DLIList<Body*>& new_body_list,
-                       CubitBoolean keep_old_body = CUBIT_FALSE );
-  /**<  Imprints a list of RefFaces with a list of RefEdges.  This is
+  /*!  Imprints a list of RefFaces with a list of RefEdges.  This is
     *  useful if the user has a curve which spans several surfaces on
     *  a body and only wants to imprint to selected surfaces.  Algorithm
     *  does not support imprinting to free surfaces.  This method
@@ -652,11 +855,12 @@ public :
     *  body. Interface is free of ACIS but currently only works if all
     *  entities are ACIS entities.
     */
-
-  CubitStatus imprint( DLIList<Surface*> &surface_list,
-                       DLIList<DLIList<Curve*>*> &curve_lists_list,
-                       Body*& new_body,
+  //! Imprints a list of RefFaces with a list of RefEdges.  This is
+  CubitStatus imprint( DLIList<RefFace*> &ref_face_list,
+                       DLIList<RefEdge*> &ref_edge_list,
+                       DLIList<Body*>& new_body_list,
                        CubitBoolean keep_old_body = CUBIT_FALSE );
+
   /**<  Imprints a list of Surfaces with list of Curves, sorted per
     *  Surface (ie., curve_lists_list is same length as surface_list).
     *  This version is more efficient than the general-purpose one
@@ -664,15 +868,23 @@ public :
     *  Also, the Curves need not be RefEntities.
     *  All input surfaces must be from the same body however.
     */
+  //! \brief Imprints a list of Surfaces with list of Curves, sorted per
+  CubitStatus imprint( DLIList<Surface*> &surface_list,
+                       DLIList<DLIList<Curve*>*> &curve_lists_list,
+                       Body*& new_body,
+                       CubitBoolean keep_old_body = CUBIT_FALSE,
+                       CubitBoolean expand = CUBIT_TRUE);
 
-  CubitStatus imprint( DLIList<Body*> &body_list,
-                       DLIList<CubitVector*> &vector_list,
-                       DLIList<Body*>& new_body_list,
-                       CubitBoolean keep_old_body = CUBIT_FALSE );
-  /**<  Imprints a list of bodies to a list of locations.  Useful for
+  /*!  Imprints a list of bodies to a list of locations.  Useful for
     *  splitting curves and creating hardpoints on surfaces.  Interface
     *  is free of ACIS but currently only works if bodies are ACIS bodies.
     */
+  //! \brief Imprints a list of bodies to a list of locations.  
+  CubitStatus imprint( DLIList<Body*> &body_list,
+                       DLIList<CubitVector*> &vector_list,
+                       DLIList<Body*>& new_body_list,
+                       CubitBoolean keep_old_body = CUBIT_FALSE,
+                       CubitBoolean merge = CUBIT_FALSE );
 
   //HEADER- Sweep-related functions. All of these are implemented
   //HEADER- only for RefEntities whose underlying geometry is
@@ -680,95 +892,153 @@ public :
   //HEADER- itself is free of ACIS.
 
 
+   //! \brief Imprints a list of RefFaces with a list of projected RefEdges.
    CubitStatus imprint_projected_edges( DLIList<RefFace*> &ref_face_list,
                                         DLIList<RefEdge*> &ref_edge_list,
                                         DLIList<Body*>& new_body_list,
                                         CubitBoolean keep_old_body,
                                         CubitBoolean keep_free_edges );
-   //- Imprints a list of RefFaces with a list of projected RefEdges.
 
+   //! \brief Imprints a list of Bodies with a list of RefEdges which are projected
+   //! to a list of RefFaces
    CubitStatus imprint_projected_edges( DLIList<RefFace*> &ref_face_list,
                                         DLIList<Body*> &body_list,
                                         DLIList<RefEdge*> &ref_edge_list,
                                         DLIList<Body*>& new_body_list,
                                         CubitBoolean keep_old_body,
                                         CubitBoolean keep_free_edges );
-   //- Imprints a list of Bodies with a list of RefEdges which are projected
-   //- to a list of RefFaces
 
+  //! \brief Tolerantly imprintings a list of curves on a list of surfaces.
+  //! Should be used when you have sloppy/out-of-tolerance geometry.
+  CubitStatus tolerant_imprint( DLIList<RefFace*> &ref_faces,
+                                DLIList<RefEdge*> &ref_edge_list,
+                                DLIList<Body*> &new_bodies,
+                                bool merge = false );
+
+  //! \brief Tolerantly imprintings a list of curves onto a single surface.
+  //!  Should be used when you have sloppy/out-of-tolerance geometry.
+  CubitStatus tolerant_imprint( RefFace *ref_face,
+                                DLIList<RefEdge*> &ref_edge_list,
+                                Body *&new_body, bool merge = false );
+
+  //! \brief Imprints bodies onto one another.  Should be used when you have sloppy/out-
+  //! of-tolerance geometry.
   CubitStatus tolerant_imprint( DLIList<Body*> &bodies, DLIList<Body*> &new_bodies,
                                 bool merge = false );
-  //imprints bodies onto one another.  Should be used when you have sloppy/out-
-  //of-tolerance geometry.
 
+  //! \brief Projects list RefEdges onto a list of RefFaces.
   CubitStatus project_edges( DLIList<RefFace*> &ref_face_list,
                               DLIList<RefEdge*> &ref_edge_list_in,
-                              DLIList<RefEdge*> &ref_edge_list_new );
-    //- Projects list RefEdges to a list of RefFaces
+                             DLIList<RefEdge*> &ref_edge_list_new,
+                             CubitBoolean trim_projected = CUBIT_FALSE);
 
+  //! \brief Removes all unnessesary faces, curves, vertices from a body. 
   CubitStatus regularize_body( Body *body_ptr, Body *&new_body );
-  /**<  Removes all unnessesary faces, curves, vertices and associated
-    *  data from a body.
-    */
 
+  //! \brief Removes all unnessesary faces, curves, vertices and associated
+  //! data from a refentity.
   CubitStatus regularize_refentity( RefEntity *old_entity_ptr,
                                     Body *&new_body_ptr);
-	//- Removes all unnessesary faces, curves, vertices and associated
-    // data from a refentity.
+  
+  //! \brief Tests if a RefEntity can have any unncessary child entities removed,
+  //! or simplified away. 
+  CubitStatus test_regularize_refentity( RefEntity *old_entity_ptr);
 
+  CubitStatus split_free_curve( RefEdge *ref_edge,
+                                CubitVector &split_location );
+
+  //! \brief Separates multi-volume bodies into single-volume bodies.
   CubitStatus split_body( Body *body_ptr,
                           DLIList<Body*> &new_bodies ) const;
-  /**<  calls solid modeling engine to split the body.
+    
+  /*!  Separates surfaces from sheet bodies into separate bodies.  Connected
+    *   surfaces will remain connected but be placed in a new body.
     */
+  //! \brief Separates surfaces from sheet bodies into separate bodies.  Connected
+  CubitStatus separate_surfaces( DLIList<RefFace*> &ref_face_list,
+                                 DLIList<Body*> &new_bodies );
+
 
   ///< <HR><H3>GeometryModifyTool options and settings</H3>
-
+  
+  //! \brief Sets group imprint flag.
   static void set_group_imprint(CubitBoolean flag) {groupImprint = flag;}
+  //! \brief Gets group imprint flag.
   static CubitBoolean get_group_imprint() {return groupImprint;}
-  ///<  get/set minIds flag
 
+  //! \brief Sets all edges imprint flag.
   static void set_all_edges_imprint( CubitBoolean flag );
+  //! \brief Gets all edges imprint flag.
   static CubitBoolean get_all_edges_imprint();
-  /**<  sets/gets the allEdgesImprint flag.
-    */
 
+  //! \brief Gets boolean regularize flag.
   static void boolean_regularize( CubitBoolean flag );
+  //! \brief Sets boolean regularize flag.
   static CubitBoolean boolean_regularize();
-  /**<  sets/gets the booleanRegularize flag.
-    */
 
+  //! \brief Gets unite mixed models flag.
+  static CubitBoolean unite_mixed_models();
+  //! \brief Sets unite mixed models flag.
+  static void unite_mixed_models( CubitBoolean flag );
 
-  static void set_new_ids(CubitBoolean flag) {newIds = flag;}
+  //! \brief Gets new ids flag.
   static CubitBoolean get_new_ids() {return newIds;}
-  ///  get/set minIds flag
+  //! \brief Sets new ids flag.
+  static void set_new_ids(CubitBoolean flag) {newIds = flag;}
 
-  static void set_old_names(CubitBoolean flag)
-    { oldNames = flag; }
-  static CubitBoolean get_old_names()
-    { return oldNames; }
+  //! \brief Gets old names flag.
+  static CubitBoolean get_old_names() { return oldNames; }
+  //! \brief Sets old names flag.
+  static void set_old_names(CubitBoolean flag) { oldNames = flag; }
 
+  //! \brief Gets mesh autodelete flag. 
+  static CubitBoolean get_mesh_autodelete() {return meshAutodelete;}
+  //! \brief Sets mesh autodelete flag. 
+  static void set_mesh_autodelete(CubitBoolean flag) {meshAutodelete = flag;}
+
+  //! \brief Gets mesh autodelete-remesh flag. 
+  static CubitBoolean is_mesh_autodelete_remesh() {return meshAutodeleteRemesh;}
+  //! \brief Sets mesh autodelete-remesh flag. 
+  static void set_mesh_autodelete_remesh(CubitBoolean flag) {meshAutodeleteRemesh = flag;}
+
+  //! \brief Initializes all the settings in GeometryModifyTool to defaults
   static void initialize_settings();
 
 
-  static CubitStatus prepare_for_copy( RefEntity *ref_ents,
-                                       TopologyBridge *&top_bridge );
+  #ifdef PROE
+  CubitStatus prepare_for_topology_update( BodySM* old_bodysm );
 
-  static CubitStatus finish_copy( TopologyBridge *&new_bridge,
-                                  TopologyBridge *old_bridge );
+  CubitStatus finish_topology_update( BodySM* new_bodysm,
+                                      Body* old_body );
+  #endif
 
-  static CubitStatus clean_up_from_copy_failure( TopologyBridge *old_bridge );
-
+  //! \brief Gets the entity being copied, if any. 
   static RefEntity* get_copy_entity() { return copyingEntity; }
+
+  //! \brief Sets the entity being copied.
   static void set_copy_entity( RefEntity *ent) { copyingEntity = ent; }
-   
-  void determine_solutions_for_eliminating_small_surface(RefFace *face,
-                                     DLIList<CubitString> &display_strings,
-                                     DLIList<CubitString> &command_strings);
+  
+  double get_resultant_angle_score(RefFace *narrow_face,
+                                   RefFace *other_face,
+                                   RefEdge *common_edge);
+
+  double get_neighbor_type_score(RefEdge *common_edge,
+                                 RefFace *other_face,
+                                 double small_curve_size,
+                                 int &neighbor_is_narrow_or_small);
+
+  double get_dihedral_angle_score(RefFace *f1, RefFace *f2,
+                                  RefEdge *common_edge);
+
+  double get_edge_type_score(RefEdge *common_edge, double small_curve_size);
+  double get_diff_from_multiple_of_90(double angle);
+  void split_surface_with_narrow_region(RefFace *face,
+                                        DLIList<CubitVector> &split_pos1_list,
+                                        DLIList<CubitVector> &split_pos2_list);
 
   ///< <HR><H3>Topology/geometry creation functions</H3>
 
-  RefVertex* make_RefVertex(CubitVector const& point, int color = -1) const ;
-  /**<  \return  RefVertex*
+  /*!  \return  RefVertex*
     *  \return - A pointer to a newly created RefVertex
     *  \arg ref_vertex_type
     *  The type of the RefVertex
@@ -781,15 +1051,14 @@ public :
     *  Allows the color to define during creation
     *  defaults to -1 or CUBIT_DEFAULT_COLOR
     */
+  //! \brief Creates a point from an x,y,z location
+  RefVertex* make_RefVertex(CubitVector const& point, int color = -1) const;
+  RefVertex* make_RefVertex( RefVertex *vertex ) const;
 
+  //! \brief Creates a sheet body from a surface.
   Body *make_Body(Surface *surface) const;
 
-  RefEdge* make_RefEdge( GeometryType ref_edge_type,
-                         RefVertex *ref_vertex_1,
-                         RefVertex *ref_vertex_2,
-                         DLIList<CubitVector*>& vector_list,
-                         RefFace* reffaca_ptr = NULL ) const ;
-  /**<  \return  RefEdge*
+  /*!  \return  RefEdge*
     *  \return - A pointer to a newly created RefEdge
     *  \arg ref_edge_type
     *  The type of the RefEdge
@@ -808,12 +1077,14 @@ public :
     *  is created. If the input refface_ptr is not NULL, the points are
     *  first moved to the surface before interpolation.
     */
+  //! \brief Creates a curve from two or more points.
+  RefEdge* make_RefEdge( GeometryType ref_edge_type,
+                         RefVertex *ref_vertex_1,
+                         RefVertex *ref_vertex_2,
+                         DLIList<CubitVector*>& vector_list,
+                         RefFace* reffaca_ptr = NULL ) const ;
 
-  RefEdge* make_RefEdge(  RefVertex *ref_vertex_1,
-                          RefVertex *ref_vertex_2,
-                          RefFace* ref_face_ptr,
-                          RefVertex const* ref_vertex_3 = NULL ) const ;
-  /**<  \return  RefEdge*
+  /*!  \return  RefEdge*
     *  \return - A pointer to a newly created RefEdge
     *  \arg ref_edge_type
     *  The type of the RefEdge
@@ -827,21 +1098,22 @@ public :
     *  line along the surface.  In periodic surfaces, a third point may
     *  be used to create the give the correct direction.
     */
-
-  RefEdge* make_RefEdge(RefEdge *ref_edge, bool copy_attribs = true) const;
-  /**<  Give a certain ref edge, create a new one.
+  //! \brief Creates a curve from two or more points, on a surface.
+  RefEdge* make_RefEdge(  RefVertex *ref_vertex_1,
+                          RefVertex *ref_vertex_2,
+                          RefFace* ref_face_ptr,
+                          RefVertex const* ref_vertex_3 = NULL ) const ;
+  
+  /*!  Give a certain ref edge, create a new one.
     *  This is useful when you are creating surfaces from curves already
     *  in the model.  If you use curves existing in the model (attached
     *  to other surfaces) then acis will mess up.  So we basically
     *  need a copy.  This will also create new vertices...
     */
-
-  RefEdge* make_RefEdge(GeometryType ref_edge_type,
-                        RefVertex *ref_vertex_1,
-                        RefVertex *ref_vertex_2,
-                        CubitVector const* intermediate_point = NULL,
-                        CubitSense sense = CUBIT_FORWARD) const ;
-  /**<  \return  RefEdge*
+  //! \brief Create a curve from an existing curve.
+  RefEdge* make_RefEdge(RefEdge *ref_edge, bool copy_attribs = true) const;
+  
+  /*!  \return  RefEdge*
     *  \return - A pointer to a newly created RefEdge
     *  \arg ref_edge_type
     *  The type of the RefEdge
@@ -886,17 +1158,36 @@ public :
     *  3 points must form an isosceles triangle. This definition
     *  limits the user to generation of the tip of parabolic shapes only.
     */
+  //! \brief Create a curve, i.e. ellipse, parabola, straight, or arc curves.  
+  RefEdge* make_RefEdge(GeometryType ref_edge_type,
+                        RefVertex *ref_vertex_1,
+                        RefVertex *ref_vertex_2,
+                        CubitVector const* intermediate_point = NULL,
+                        CubitSense sense = CUBIT_FORWARD) const ;
 
+  //! \brief Create a surface from an existing one. 
   RefFace* make_RefFace(RefFace *from_ref_face,
                         CubitBoolean extended_from = CUBIT_FALSE) const;
-  /**<  create a refface from an existing one, creates underlying entities.
-    */
 
-  RefFace* make_RefFace(GeometryType ref_face_type,
-                        DLIList<RefEdge*>& ref_edge_list,
-                        RefFace *ref_face_ptr = NULL,
-                        bool check_edges = true ) const ;
-  /**<  \return  RefFace*
+  /*!  \return Body*
+    *  \return - Pointer to a newly created Body object.
+    *  \arg ref_face_list
+    *  The RefFace list from which we want to create an extended sheet.
+    *  \arg clip_box
+    *  An optional bounding box to clip the resultant sheet body by.
+    *  \arg preview
+    *  If true just draw the extended sheet instead of creating it
+    *
+    * This function creates a sheet body by extending the input surfaces.
+    * The result can be optionally clipped to fit inside of the given
+    * bounding box.
+    */
+  //! \brief This function creates a sheet body by extending the input surfaces.
+  Body* make_extended_sheet( DLIList<RefFace*> &ref_face_list,
+                             CubitBox *clip_box_ptr = NULL,
+                             bool preview = false) const;
+
+  /*!  \return  RefFace*
     *  \return - A pointer to a newly created RefFace
     *  \arg ref_face_type
     *  The type of the RefFace
@@ -919,6 +1210,12 @@ public :
     *  value can be a NULL pointer, if the RefFace cannot be succesfully
     *  made for some reason.
     */
+  //! \brief Creates a surface from bounding curves.
+  RefFace* make_RefFace(GeometryType ref_face_type,
+                        DLIList<RefEdge*>& ref_edge_list,
+                        bool is_free_face,
+                        RefFace *ref_face_ptr = NULL,
+                        bool check_edges = true ) const ;
 
   RefVolume* make_RefVolume(DLIList<RefFace*>& ref_face_list) const ;
   /**<  \return  RefVlume*
@@ -937,33 +1234,17 @@ public :
     *  made for some reason.
     */
 
+  //! \brief Creates a body from a list of volumes. 
   Body* make_Body(DLIList<RefVolume*>& ref_volume_list) const ;
-  /**<  \return  Body*
-    *  \return - A pointer to a newly created Body
-    *  \arg ref_volume_list
-    *  The RefVolumes to use to create the Body
-    *
-    *  This function takes a list of RefVolumes to create a Body. The
-    *  underlying representation of the Body is determined by the
-    *  GeometryQueryEngine of the RefVolumes. All the RefVolumes
-    *  in the list must be associated with the same
-    *  GeometryQueryEngine. The return value can be a NULL
-    *  pointer, if the RefFace cannot be succesfully made for some
-    *  reason.
-    */
 
-  Body* make_Body(RefFace *from_ref_face,
-                  CubitBoolean extended_from = CUBIT_FALSE) const;
-  /**<  Creates a body from a ref_face.  This will always be a
+  /*!  Creates a body from a ref_face.  This will always be a
     *  sheet body, with no volume, consisting of a single face.
     */
+  //! \brief Creates a body from a surface.
+  Body* make_Body(RefFace *from_ref_face,
+                  CubitBoolean extended_from = CUBIT_FALSE) const;
 
-  Body* make_Body(GeometryType ref_face_type,
-                  DLIList<RefEdge*>& ref_edge_list,
-                  RefFace *ref_face_ptr = NULL) const ;
-    // Each RefEdge in ref_edge_list MUST be a free edge, i.e., not
-    // attached to a RefFace, for this function to succeed!
-  /**<  \return  Body*
+  /*!  \return  Body*
     *  \return - A pointer to a newly created Body that has just one RefFace
     *  \arg ref_face_type
     *  The type of the RefFace
@@ -980,8 +1261,16 @@ public :
     *  GeometryQueryEngine. The return value can be a NULL
     *  pointer, if the Body cannot be succesfully made for some
     *  reason.
+    *
+    *  Each RefEdge in ref_edge_list MUST be a free edge, i.e., not
+    *  attached to a RefFace, for this function to succeed!
     */
+  //! \brief Creates a body from a surface created from a list of curves.
+  Body* make_Body(GeometryType ref_face_type,
+                  DLIList<RefEdge*>& ref_edge_list,
+                  RefFace *ref_face_ptr = NULL) const ;
 
+  //! \brief Create bodies by sweeping curves or surfaces along a vector.
   CubitStatus sweep_translational(DLIList<RefEntity*>& ref_ent_list,
                                   const CubitVector& sweep_vector,
                                   double draft_angle,
@@ -989,8 +1278,22 @@ public :
                                   CubitBoolean switchside,
                                   CubitBoolean rigid);
 
-   CubitStatus sweep_target(CubitPlane ref_plane,
+   CubitStatus sweep_curve_target(CubitPlane ref_plane,
 						 DLIList<RefEntity*>& ref_ent_list);
+
+   CubitStatus sweep_curve_target(DLIList<RefEdge*>& curve_list,
+                            Body *target_body,
+                            DLIList<Body*> &out_bodies,
+                            CubitVector direction,
+                            CubitPlane stop_plane,
+                            bool unite);
+
+   CubitStatus sweep_surface_target(RefFace *face,
+                                    Body *target_body,
+                                    CubitVector distance,
+                                    CubitPlane stop_plane,
+                                    double magnitude = 0.0);
+
    CubitStatus sweep_surface_target(CubitPlane ref_plane,
 						DLIList<RefEntity*>& ref_ent_list);
 
@@ -1001,6 +1304,7 @@ public :
                                   CubitBoolean switchside,
                                   CubitBoolean rigid);
 
+  //! \brief Creates bodies by sweeping surfaces or curves about an axis. 
   CubitStatus sweep_rotational(DLIList<RefEntity*>& ref_ent_list,
                                const CubitVector& point,
                                const CubitVector& direction,
@@ -1012,24 +1316,47 @@ public :
                                CubitBoolean make_solid = CUBIT_FALSE,
                                CubitBoolean rigid = CUBIT_FALSE);
 
+  //! \brief Creates bodies by sweeping surfaces or curves along a curve. 
   CubitStatus sweep_along_curve(DLIList<RefEntity*>& ref_ent_list,
                                 DLIList<RefEdge*>& ref_edge_list,
                                 double draft_angle = 0.0,
                                 int draft_type = 0,
                                 CubitBoolean rigid = CUBIT_FALSE);
 
+  //! \brief Currently unsupported.
+  CubitStatus tweak_bend( DLIList<Body*> &bend_bodies,
+	                  DLIList<Body*> &new_body_list,
+	                  CubitVector& neutral_root,
+	                  CubitVector& bend_axis,
+	                  CubitVector& bend_direction,
+	                  double radius,
+	                  double angle,
+                      DLIList<CubitVector*> bend_regions,
+                      double width = -1,
+                      CubitBoolean center_bend = CUBIT_FALSE,
+                      int num_points = 0,
+                      CubitBoolean keep_old_body = CUBIT_FALSE,
+                      CubitBoolean preview = CUBIT_FALSE );
+
+  /*! Chamfer curves on solid and sheet bodies.  The left and right offsets
+    * are with respect to the curve direction.  If the given right offset is
+    * negative, the left offset is used.  Users can preview to clarify the
+    * meaning of left and right.
+    */
+  //! \brief Chamfer curves on solid and sheet bodies. 
   CubitStatus tweak_chamfer( DLIList<RefEdge*> &ref_edge_list,
                              double left_offset,
                              DLIList<Body*> &new_body_list,
                              double right_offset = -1.0,
                              CubitBoolean keep_old_body = CUBIT_FALSE,
                              CubitBoolean preview = CUBIT_FALSE );
-  /**<  Chamfer curves on solid bodies.  The left and right offsets are with
-    *   respect to the curve direction.  If the given right offset is negative,
-    *   the left offset is used.  Users can preview to clarify the meaning of
-    *   left and right.
-    */
 
+  /*! Chamfer vertices on solid or sheet bodies.  On a solid body there can
+    * be up to 3 offsets; on a sheet body up to 2 offsets.  The offsets are
+    * in the direction of the supplied edges.  If multiple vertices are
+    * supplied, only one offset value is allowed and the edges are not used.
+    */
+  //! \brief Chamfer vertices on solid or sheet bodies.
   CubitStatus tweak_chamfer( DLIList<RefVertex*> &ref_vertex_list,
                              double offset1,
                              DLIList<Body*> &new_body_list,
@@ -1040,170 +1367,255 @@ public :
                              RefEdge *edge3 = NULL,
                              CubitBoolean keep_old_body = CUBIT_FALSE,
                              CubitBoolean preview = CUBIT_FALSE );
-  /**<  Chamfer vertices on solid or sheet bodies.  On a solid body there can
-    *   be up to 3 offsets; on a sheet body up to 2 offsets.  The offsets are
-    *   in the direction of the supplied edges.  If multiple vertices are
-    *   supplied, only one offset value is allowed and the edges are not used.
-    */
 
+  //! \brief Creates a round fillet (or blend) at the given curves on solid or
+  //!  sheet bodies.
   CubitStatus tweak_fillet( DLIList<RefEdge*> &ref_edge_list,
                             double radius,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Create a round fillet (or blend) at the given curves on solid bodies.
-    */
 
+  /*! Creates a round fillet (or blend) at the given curve on a solid or sheet
+    * body.  The fillet has a variable radius from the start to the end of
+    * the curve.
+    */
+  //! \brief Creates a round fillet (or blend) at the given curve. 
   CubitStatus tweak_fillet( RefEdge *ref_edge_ptr,
                             double start_radius,
                             double end_radius,
                             Body *&new_body_ptr,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Create a round fillet (or blend) at the given curve on a solid body.
-    *   The fillet has a variable radius from the start to the end of the curve.
-    */
 
+  //! \brief Create a round fillet (or blend) at the given vertices on sheet bodies.
   CubitStatus tweak_fillet( DLIList<RefVertex*> &ref_vertex_list,
                             double radius,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Create a round fillet (or blend) at the given vertices on sheet bodies.
-    */
 
+  //! \brief Tweak specified faces of a volume or volumes along a vector.
   CubitStatus tweak_move( DLIList<RefFace*> &ref_face_list,
                           const CubitVector &delta,
                           DLIList<Body*> &new_body_list,
                           CubitBoolean keep_old_body = CUBIT_FALSE,
                           CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified faces of a volume or volumes along a vector.
-    */
 
+  //! \brief Tweak specified curves of a sheet body along a vector.
   CubitStatus tweak_move( DLIList<RefEdge*> &ref_edge_list,
                           const CubitVector &delta,
                           DLIList<Body*> &new_body_list,
                           CubitBoolean keep_old_body = CUBIT_FALSE,
                           CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified curves of a sheet body along a vector.
-    */
 
+  /*! Tweak specified faces of a volume or volumes by offsetting those faces
+    * by the offset distance. Optionally supply additional faces with
+    * different offset distances.
+    */
+  //! \brief Offsets a surface(s) on a volume(s).
   CubitStatus tweak_offset( DLIList<RefFace*> &ref_face_list,
                             double offset_distance,
+                            DLIList<RefFace*> *add_ref_face_list_ptr,
+                            DLIList<double> *add_offset_list_ptr,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified faces of a volume or volumes by offsetting those faces
-    *   by the offset distance.
-    */
 
+  /*! Tweak specified curves of a sheet body or bodies by offsetting those
+    * curves by the offset distance.  Optionally supply additional curves with
+    * different offset distances.
+    */
+  //! \brief Offset curves on sheet bodies.
   CubitStatus tweak_offset( DLIList<RefEdge*> &ref_edge_list,
                             double offset_distance,
+                            DLIList<RefEdge*> *add_ref_face_list_ptr,
+                            DLIList<double> *add_offset_list_ptr,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified curves of a sheet body or bodies by offsetting those
-    *   curves by the offset distance.
-    */
 
-  CubitStatus tweak_remove( DLIList<RefFace*> &ref_face_list,
-                            DLIList<Body*> &new_body_list,
-                            CubitBoolean extend_adjoining = CUBIT_TRUE,
-                            CubitBoolean keep_surface = CUBIT_FALSE,
-                            CubitBoolean keep_old_body = CUBIT_FALSE,
-                            CubitBoolean individual = CUBIT_FALSE,
-                            CubitBoolean preview = CUBIT_FALSE);
-  /**<  Remove surfaces from a body or bodies and then extend the adjoining
-    *   surfaces to fill the gap or remove the hole.
-    */
+  //! \brief Performs tweak_remove operation on surfaces individually. 
+  CubitStatus tweak_remove_individually( DLIList<RefFace*> &ref_face_list,
+                                         DLIList<Body*> &new_body_list,
+                                         CubitBoolean keep_surface = CUBIT_FALSE,
+                                         CubitBoolean keep_old_body = CUBIT_FALSE,
+                                         CubitBoolean preview = CUBIT_FALSE );
 
+  //! \brief Performs tweak_remove operation on surfaces collectively. 
+  CubitStatus tweak_remove_together( DLIList<RefFace*> &ref_face_list,
+                                     DLIList<Body*> &new_body_list,
+                                     CubitBoolean extend_adjoining = CUBIT_TRUE,
+                                     CubitBoolean keep_surface = CUBIT_FALSE,
+                                     CubitBoolean keep_old_body = CUBIT_FALSE,
+                                     CubitBoolean preview = CUBIT_FALSE);
+
+  /*! Remove curves from a sheet body or bodies and then extend the remaining
+    * curves to fill the gap.  If an internal loop of curves is removed the
+    * hole is removed.
+  */
+  //! \brief Removes a surface from a volume, extending neighboring surfaces.
   CubitStatus tweak_remove( DLIList<RefEdge*> &ref_edge_list,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Remove curves from a sheet body or bodies and then extend the remaining
-    *   curves to fill the gap.  If an internal loop of curves is removed the
-    *   hole is removed.
-    */
 
+  /*!  Tweak specified faces of a volume or volumes up to target surface.
+    *  If extend flag is true, extend out the targets before
+    *   tweaking to them (only used for multiple targets; single targets are
+    *   always extended).  The optional limit plane is only valid if extend_flg
+    *   is TRUE; it will limit the tweak to not go past this plane in the case
+    *   where the tweaked body would only partially intersect the extended
+    *   targets.The reverse flag should never be needed - if it is there may be
+    *   a bug or a bad normal on a body (i.e., negative volume body), and is
+    *   only retained for debugging.
+    */
+  //! \brief Extends (tweaks) surfaces up to a target surface.
   CubitStatus tweak_target( DLIList<RefFace*> &ref_face_list,
                             DLIList<RefFace*> &target_face_list,
                             DLIList<Body*> &new_body_list,
+                            CubitBoolean extend_flg = CUBIT_TRUE,
+                            CubitPlane *limit_plane = NULL,
                             CubitBoolean reverse_flg = CUBIT_FALSE,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
+
+  /*!  Tweak specified faces of a volume or volumes up to target plane. 
+    *   If extend flag is true, extend out the targets before
+    *   tweaking to them (only used for multiple targets; single targets are
+    *   always extended).  The optional limit plane is only valid if extend_flg
+    *   is TRUE; it will limit the tweak to not go past this plane in the case
+    *   where the tweaked body would only partially intersect the extended
+    *   targets.The reverse flag should never be needed - if it is there may be
+    *   a bug or a bad normal on a body (i.e., negative volume body), and is
+    *   only retained for debugging.
+    */
+
+  //! \brief Extends (tweaks) surfaces up to a target plane.
   CubitStatus tweak_target( DLIList<RefFace*> &ref_face_list,
                             CubitPlane &plane,
                             DLIList<Body*> &new_body_list,
                             CubitBoolean reverse_flg = CUBIT_FALSE,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
                             CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified faces of a volume or volumes up to target surface
-    *   or plane.
-    */
 
-  CubitStatus tweak_target( DLIList<RefEdge*> &ref_edge_list,
-                            DLIList<RefFace*> &target_face_list,
-                            DLIList<Body*> &new_body_list,
-                            CubitBoolean reverse_flg = CUBIT_FALSE,
-                            CubitBoolean keep_old_body = CUBIT_FALSE,
-                            CubitBoolean preview = CUBIT_FALSE );
-  CubitStatus tweak_target( DLIList<RefEdge*> &ref_edge_list,
-                            CubitPlane &plane,
-                            DLIList<Body*> &new_body_list,
-                            CubitBoolean reverse_flg = CUBIT_FALSE,
-                            CubitBoolean keep_old_body = CUBIT_FALSE,
-                            CubitBoolean preview = CUBIT_FALSE );
-  /**<  Tweak specified edges of a surface or set of surfaces (in sheet
+  /*!   Tweak specified edges of a surface or set of surfaces (in sheet
     *   bodies) up to target surfaces or plane.  This essentially extends
-    *   or trims the attached surfaces of the sheet body.
+    *   or trims the attached surfaces of the sheet body.  If extend flag is
+    *   true, extend out the targets before tweaking to them (only used for
+    *   multiple targets; single targets are always extended).  The optional
+    *   limit plane is only valid if extend_flg is TRUE; it will limit the
+    *   tweak to not go past this plane in the case where the tweaked body
+    *   would only partially intersect the extended targets.The reverse flag
+    *   should never be needed - if it is there may be a bug or a bad normal
+    *   on a body (i.e., negative volume body), and is only retained for
+    *   debugging.
     */
+  //! \brief Extends (tweaks) curves up to a target surface.
+  CubitStatus tweak_target( DLIList<RefEdge*> &ref_edge_list,
+                            DLIList<RefFace*> &target_face_list,
+                            DLIList<Body*> &new_body_list,
+                            CubitBoolean extend_flg = CUBIT_TRUE,
+                            CubitPlane *limit_plane = NULL,
+                            CubitBoolean reverse_flg = CUBIT_FALSE,
+                            CubitBoolean keep_old_body = CUBIT_FALSE,
+                            CubitBoolean preview = CUBIT_FALSE,
+                            double max_area_increase = 0 );
+  CubitStatus tweak_target( DLIList<RefEdge*> &ref_edge_list,
+                            CubitPlane &plane,
+                            DLIList<Body*> &new_body_list,
+                            CubitBoolean reverse_flg = CUBIT_FALSE,
+                            CubitBoolean keep_old_body = CUBIT_FALSE,
+                            CubitBoolean preview = CUBIT_FALSE );
 
+  /*!   Tweak specified edges of a surface or set of surfaces (in sheet
+    *   bodies) up to target plane.  This essentially extends
+    *   or trims the attached surfaces of the sheet body.  If extend flag is
+    *   true, extend out the targets before tweaking to them (only used for
+    *   multiple targets; single targets are always extended).  The optional
+    *   limit plane is only valid if extend_flg is TRUE; it will limit the
+    *   tweak to not go past this plane in the case where the tweaked body
+    *   would only partially intersect the extended targets.The reverse flag
+    *   should never be needed - if it is there may be a bug or a bad normal
+    *   on a body (i.e., negative volume body), and is only retained for
+    *   debugging.
+    */
+  //! \brief Extends (tweaks) curves up to a target plane.
   CubitStatus tweak_target( DLIList<RefEdge*> &ref_edge_list,
                             DLIList<RefEdge*> &target_edge_list,
                             DLIList<Body*> &new_body_list,
+                            CubitBoolean extend_flg = CUBIT_TRUE,
+                            CubitPlane *limit_plane = NULL,
                             CubitBoolean reverse_flg = CUBIT_FALSE,
                             CubitBoolean keep_old_body = CUBIT_FALSE,
-                            CubitBoolean preview = CUBIT_FALSE );
+                            CubitBoolean preview = CUBIT_FALSE,
+                            double max_area_increase = 0 );
   /**<  Tweak specified edges of a sheet body or bodies up to target curves
     *   that are part of a sheet body.  The target is a surface or surfaces
     *   created by thickening the owning surface of the target curve(s).
+    *   If extend flag is true, extend out the targets before tweaking to them
+    *   (only used for multiple targets; single targets are always extended).
+    *   The optional limit plane is only valid if extend_flg is TRUE; it will
+    *   limit the tweak to not go past this plane in the case where the tweaked
+    *   body would only partially intersect the extended targets. The reverse
+    *   flag should never be needed - if it is there may be a bug or a bad normal
+    *   on a body (i.e., negative volume body), and is only retained for
+    *   debugging.
     */
+  //! \brief Tweak specified vertex of a sheet body to a given location.
+  CubitStatus tweak_target( RefVertex *ref_vertex_ptr,
+                            DLIList<RefFace*> &modify_ref_face_list,
+                            CubitVector &target_loc,
+                            Body *&new_Body_ptr,
+                            CubitBoolean keep_old_body = CUBIT_FALSE,
+                            CubitBoolean preview = CUBIT_FALSE );
 
-
+  //! \brief Converts edges smaller than 'lengthlimit' into tolerant (or fat) vertices.
+  //! ACIS only.
   CubitStatus remove_curve_slivers( DLIList<Body*> &bodies, double lengthlimit );
-  //ACIS-specific function only.  Converts edges smaller than 'lengthlimit' into
-  //tolerant (or fat) vertices.
 
+  //! \brief Create a surface using arrays of points in u and v directions. 
   CubitStatus create_net_surface( DLIList<Surface*>& ref_face_list, BodySM *& new_body,
                                   DLIList<DLIList<CubitVector*>*> &vec_lists_u,
                                   DLIList<DLIList<CubitVector*>*> &vec_lists_v,
                                   double net_tol = 1e-3,
                                   CubitBoolean heal = CUBIT_TRUE );
 
-  CubitStatus create_net_surface( DLIList<RefEdge*>& u_curves, DLIList<RefEdge*>& v_curves,
+  //! \brief Create a surface using curves in u and v directions. 
+  CubitStatus create_net_surface( DLIList<RefEdge*>& u_curves, 
+                                  DLIList<RefEdge*>& v_curves,
                                   double net_tol = 1e-3,
                                   CubitBoolean heal = CUBIT_TRUE );
 
+  //! \brief Creates an offset surface some distance from a surface.
   CubitStatus create_offset_surface( RefFace* ref_face_ptr,
                                      double offset_distance );
 
+  /*! Create a sheet body (or bodies) by offsetting the given faces. The
+    *  optional additional face list and double list (must be same length)
+    *  allow different offset distances for different faces. Adjoining faces
+    *  are extended or trimmed to remain joined in the new sheet body.  Radial
+    *  faces that cannot be so offset are removed and the resulting wound
+    *  healed by the surrounding faces.
+    */
+  //! \brief Create a body(s) by offsetting the given surfaces. 
+  CubitStatus create_offset_sheet( DLIList<RefFace*> &ref_face_list,
+                                   double offset_distance,
+                                   DLIList<RefFace*> *add_ref_face_list_ptr,
+                                   DLIList<double> *add_offset_list_ptr,
+                                   DLIList<Body*> &new_body_list,
+                                   CubitBoolean preview = CUBIT_FALSE );
+
+  //! \brief Create a body by offsetting all the surface of the body. 
   CubitStatus create_offset_body( Body *body_ptr, Body *&new_body,
                                   double offset_distance );
 
-  CubitStatus create_skin_surface( DLIList<RefEdge*>& ref_edges, Body*& new_body );
-
-#ifdef BOYD14
-  CubitStatus loft_surfaces( RefFace *face1, const double &takeoff1,
-                             RefFace *face2, const double &takeoff2,
-                             Body*& new_body,
-                             CubitBoolean arc_length_option = CUBIT_FALSE,
-                             CubitBoolean twist_option = CUBIT_FALSE,
-                             CubitBoolean align_direction = CUBIT_TRUE,
-                             CubitBoolean perpendicular = CUBIT_TRUE,
-                             CubitBoolean simplify_option = CUBIT_FALSE);
-#endif
-
+  //! \brief Create a sheet body skinning (lofting) a series of curves.
+  CubitStatus create_skin_surface( DLIList<RefEdge*>& ref_edges, 
+                                   Body*& new_body,
+                                   DLIList<RefEdge*>& guides);
+  
+  //! \brief Create a solid body by lofting between two surfaces.
   CubitStatus loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
 				     RefFace *face2, const double &takeoff2,
                                      Body*& new_body,
@@ -1213,11 +1625,50 @@ public :
                                      CubitBoolean perpendicular,
                                      CubitBoolean simplify_option);
 
+  CubitStatus create_surface_curve(DLIList<RefEntity*> curve_entity,
+									DLIList<RefEntity*> target_entity,
+									CubitVector sweep_direction = CubitVector (0,0,0),
+									CubitBoolean distance_flag = CUBIT_FALSE);
+
+  CubitStatus idealize_hole_slot_geometry(DLIList<RefEntity*> idealize_entity,
+                                     DLIList<RefEntity*> exclude_entity,
+                                     double arc_radius,
+                                     double slot_arc_radius,
+                                     double slot_length,
+                                     CubitBoolean preview = CUBIT_FALSE);
+
+  CubitStatus idealize_fillet_geometry(DLIList<RefEntity*> idealize_entity,
+                                       DLIList<RefEntity*> exclude_entity,
+                                       double fillet_rad,
+                                       CubitBoolean internal_flg,
+                                       CubitBoolean external_flg,
+						               CubitBoolean preview = CUBIT_FALSE);
+
+  CubitStatus create_surface_doubler(DLIList<RefEntity*> doubler_entity,
+                                    DLIList<RefEntity*> target_entity,
+                                    DLIList<Body*> &body_list_out,
+                                    CubitBoolean internal_flg = CUBIT_FALSE,
+                                    CubitBoolean extend_flg = CUBIT_TRUE,
+                                    CubitPlane *limit_plane = NULL,
+                                    CubitVector sweep_direction = CubitVector(0,0,0),
+                                    CubitBoolean preview = CUBIT_FALSE);
+  
+  /*! Fits an analytic spline surface through positions.  If a surface is specified, 
+      positions are forced to lie on the surface and restrains the resultant surface
+      geometry to match the surface's geometry.  The project parameter will project 
+      the nodes or vertices to the specified surface. 
+  */
+  //! \brief  Fits an analytic spline surface through positions. 
   CubitStatus create_surface( DLIList<CubitVector*>& vec_list,
                               Body *&new_body,
                               RefFace *ref_face_ptr,
 			      CubitBoolean project_points );
 
+  CubitStatus create_surface( DLIList<RefVertex*> &vert_list, 
+                              Body *&new_body );
+
+
+  //! \brief Creates a simple triangular weld surface.
   CubitStatus create_weld_surface( CubitVector &root,
                                    RefFace *ref_face1,
                                    double leg1,
@@ -1225,139 +1676,103 @@ public :
                                    double leg2,
                                    Body *&new_body );
 
+  /*!  Creates a body out of the surfaces in the ref_face_list.  The surfaces
+    *  can be either free surfaces or sheet bodies or both.
+    *  The body should be healed.  The bounding curves and vertices between
+    *  the surfaces must be within tolerance.
+    */
+  //! \brief Creates a body out of the specified surfaces. 
   CubitStatus create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_list,
                                       DLIList<Body*> &new_bodies,
                                       CubitBoolean keep_old = CUBIT_FALSE,
-                                      CubitBoolean heal = CUBIT_TRUE ) const;
-  /**<  Creates a body out of the surfaces in the ref_face_list.  The surfaces
-    *  can be either free surfaces or sheet bodies or both.
-    *  The body should be healed.
-    */
+                                      CubitBoolean heal = CUBIT_TRUE,
+                                      CubitBoolean sheet = CUBIT_FALSE ) const;
 
+  //! \brief Create curves from the intersection of two surfaces.
   CubitStatus surface_intersection( RefFace *ref_face1,
                                     RefFace *ref_face2,
                                     DLIList<RefEdge*> &ref_edge_list );
-  /**< Create curves from the intersection of two surfaces */
 
+  //! \brief Create an arc curve from three points.
   RefEdge* create_arc_three( RefVertex* ref_vertex1,
                              RefVertex* ref_vertex2,
                              RefVertex* ref_vertex3,
                              CubitBoolean full = CUBIT_FALSE );
+
+  //! \brief Create an arc curve tangent to three curves.
   RefEdge* create_arc_three( RefEdge* ref_edge1,
                              RefEdge* ref_edge2,
                              RefEdge* ref_edge3,
                              CubitBoolean full = CUBIT_FALSE );
+  
+  /*! \brief Create an arc curve from two points and a center point. 
+      If full option is specified, a full circle is created.*/
+  //! \brief Create an arc curve from two points and a center point. 
   RefEdge* create_arc_center_edge( RefVertex* ref_vertex1,
                                    RefVertex* ref_vertex2,
                                    RefVertex* ref_vertex3,
                                    const CubitVector &normal,
                                    double radius = CUBIT_DBL_MAX,
                                    CubitBoolean full = CUBIT_FALSE );
-  /**<  Methods to create arcs.  First uses 3 points on arc, next creates arc
-    *  tangent to 3 curves, last creates arc using center and two points on arc.
-    *  If full option is specified, a full circle is created.
-    */
 
+  //! \brief  Create a curve that is a combination of the specified curves.
   CubitStatus create_curve_combine( DLIList<RefEdge*>& ref_edge_list,
                                     RefEdge *&new_ref_edge_ptr );
-  /*<  Uses the solid modeller to create a new RefEdge that is a combination
-   *  of the input chain of edges.
-   */
 
 
-  static void set_sep_after_webcut_setting(CubitBoolean val)
-    {sepAfterWebcut = val;}
-  static CubitBoolean get_sep_after_webcut_setting()
-    {return sepAfterWebcut;}
-  /**< Gets/Sets the separate after webcut static flag.
-    */
+  //! \brief Sets sepAfterWebcut variable.
+  static void set_sep_after_webcut_setting(CubitBoolean val) {sepAfterWebcut = val;}
 
+  //! \brief Gets sepAfterWebcut variable.
+  static CubitBoolean get_sep_after_webcut_setting() {return sepAfterWebcut;}
+
+  /*!  Returns CUBIT_TRUE if all the entities have the same geometric query engine and
+    *  if that is the same one as the default. */
+  //! \brief Check to determine if all entities are of the same geometry engine.
   CubitBoolean same_modify_engine(DLIList<TopologyEntity*> &topo_list) const;
-  /**<  Returns CUBIT_TRUE if all the entities have the same geometric query engine and
-    *  if that is the same one as the default.
-    */
 
-  CubitBoolean same_modify_engine(DLIList<RefEntity*> &ref_entity_list,
-				  CubitBoolean check_children = CUBIT_FALSE) const;
-  /**<  Returns CUBIT_TRUE if all the entities have the same geometric query engine and
+  /*!  Returns CUBIT_TRUE if all the entities have the same geometric query engine and
     *  if that is the same one as the default.  If the check_children parameter is
     *  CUBIT_TRUE, all the child entities will also be checked.
     */
+  //! \brief Check to determine if all entities are of the same geometry engine as 
+  //! active geometry engine.
+  CubitBoolean same_modify_engine(DLIList<RefEntity*> &ref_entity_list,
+				  CubitBoolean check_children = CUBIT_FALSE) const;
 
-  GeometryModifyEngine* common_modify_engine( DLIList<Body*>& bodies,
-                                              DLIList<BodySM*>& bodysms ) const;
+  
+  //! \brief Determines if specified RefFaces and RefEdges are of the same geometry engine.
+  //! Returns common engine, if any, and underlying surfaces and curves. 
   GeometryModifyEngine* common_modify_engine( DLIList<RefFace*>& faces,
                                               DLIList<RefEdge*>& edges,
                                               DLIList<Surface*>& surfaces,
-                                              DLIList<Curve*>& curves ) const;
-  GeometryModifyEngine* common_modify_engine( DLIList<RefFace*>& faces,
-                                              DLIList<Surface*>& surfaces ) const;
-  GeometryModifyEngine* common_modify_engine( DLIList<RefEdge*>& edges,
-                                              DLIList<Curve*>& curves ) const;
-  GeometryModifyEngine* common_modify_engine( DLIList<RefVertex*>& vertices,
-                                              DLIList<Point*>& points ) const;
+                                              DLIList<Curve*>& curves,
+                                              CubitBoolean allow_composites = CUBIT_FALSE) const;
 
-  GeometryModifyEngine* common_modify_engine( DLIList<TopologyEntity*>& topology_list,
-                                              DLIList<TopologyBridge*>& engine_bridges,
-                                              CubitBoolean allow_virtual_engine
-                                              = CUBIT_FALSE ) const;
-  /**<  \return GeometryModifyEngine*
-    *   A GeometryModifyEngine common at least one
-    *   TopologyBridge of each of the passed TopologyEntities, or
-    *   NULL if no common geometry engine is found.
-    *   \arg topology_list
-    *   The input list of TopologyEntities
-    *   \arg engine_bridges
-    *   Pass back the list of TopolgyBridges associated with each
-    *   of the passed TopologyEntities (topology_list) and owned
-    *   by the returned geometry engine.
-    *   \arg allow_virtual_engine
-    *   Return VirtualGeometryEngine::instance() if no common
-    *   geometry enginge can be found.
-    *
-    *   Look for a common geometry engine other than the
-    *   VirtualGeometryEngine.  If no common geometry engine other
-    *   than VGE can be found and allow_virtual_engine is FALSE,
-    *   NULL is returned.  If allow_virtual_engine is TRUE, and no
-    *   common geometry engine is found, VGE will be returned, and
-    *   engine_bridges will be populated with any virtual geometry
-    *   if possible, otherwise with the first topology bridge attached
-    *   to each of the passed TopologyEntities.
-    */
 
+
+  //! \brief Add a geometry modify engine to the list.
   void add_gme(GeometryModifyEngine *gme_ptr);
-    /**< add a geometry modify engine to the list
-     */
 
+  //! \brief < remove a geometry modify engine from the list; returns CUBIT_FAILURE
+  //!  if it wasn't in the list.
   CubitStatus remove_gme(GeometryModifyEngine *gme_ptr);
-    /**< remove a geometry modify engine from the list; returns CUBIT_FAILURE
-     *   if it wasn't on the list
-     */
 
+  //! \brief Returns a list of GeometryModifyEngines.
   void get_gme_list(DLIList<GeometryModifyEngine*> &gme_list);
-    /**< return the list of gme's
-     */
 
+  //! \brief Gets the current active GeometryModifyEngine.
   GeometryModifyEngine *get_gme() const;
-    /**< return the first gme on the list
-     */
 
-//  GeometryModifyEngine *get_gme(const EntityType gme_type);
-    /**< return the gme of the specified type
-     */
 
+  //! \brief Gets the GeometryModifyEngine of this entity.
   GeometryModifyEngine *get_engine(TopologyBridge *tb_ptr) const;
-    /**< get the geometry modify engine associated with this entity
-     */
 
+  //! \brief Gets the GeometryModifyEngine of this entity.
   GeometryModifyEngine *get_engine(TopologyEntity *te_ptr,
                                    TopologyBridge** bridge = 0) const;
-    /**< get the geometry modify engine associated with this entity
-     */
-  CubitStatus get_offset_intersections( RefEdge* ref_edge1, RefEdge* ref_edge2,
-                                        DLIList<CubitVector*>& intersection_list,
-                                        double offset, CubitBoolean ext_first = CUBIT_TRUE );
-  /***< Finds the intersections of a certain distance (offset) between two
+
+  /*! Finds the intersections of a certain distance (offset) between two
     * curves.  The two curves must lie in a plane.  The first curve is offset
     * the offset distance in both directions, and the bounded intersections with
     * the second curve are found.  The first curve can optionally be extended
@@ -1367,36 +1782,49 @@ public :
     * diameter on an arc in an engineering drawing.  The function allocates the
     * CubitVectors in the returned list, so be sure to free them.
     */
+  //! \brief Finds the intersections of a certain distance (offset) between two curves.
+  CubitStatus get_offset_intersections( RefEdge* ref_edge1, RefEdge* ref_edge2,
+                                        DLIList<CubitVector*>& intersection_list,
+                                        double offset, CubitBoolean ext_first = CUBIT_TRUE );
 
-  CubitStatus get_offset_intersections( RefEdge* ref_edge_ptr, RefFace* ref_face_ptr,
-                                        DLIList<CubitVector*> &intersection_list,
-                                        double offset = 0.0,
-                                        CubitBoolean ext_surf = CUBIT_TRUE );
-  /**< Finds intersections (points) of the curve and surface.  The surface can
+  /*! Finds intersections (points) of the curve and surface.  The surface can
     * be offset - it is offset to each side and intersections are found.  By
     * default the surface is extended to infinity (if possible) and the
     * intersections are found.  The function allocates the CubitVectors in
     * the returned list, so be sure to free them.
     */
+  //! \brief Finds intersections (points) of the curve and surface.  
+  CubitStatus get_offset_intersections( RefEdge* ref_edge_ptr, RefFace* ref_face_ptr,
+                                        DLIList<CubitVector*> &intersection_list,
+                                        double offset = 0.0,
+                                        CubitBoolean ext_surf = CUBIT_TRUE );
 
+  //! \brief From two surface, create a midplane, then trim it with a body.
   CubitStatus get_mid_plane( RefFace *ref_face_1,
                              RefFace *ref_face_2,
                              Body *body_to_trim_to,
                              DLIList<RefFace*> &mid_plane_surfs ) const;
-  /**< Given 2 surfaces, this function returns trimmed surfaces of
-    *  the mid plane.
-    */
 
+  //! \brief Given 2 surfaces, this returns trimmed surfaces of
+  //!  the midsurface (this is an ALPHA feature).
   CubitStatus get_mid_surface( RefFace *ref_face_1,
                              RefFace *ref_face_2,
                              Body *body_to_trim_to,
                              DLIList<RefFace*> &mid_plane_surfs ) const;
-  /**< Given 2 surfaces, this function returns trimmed surfaces of
-    *  the midsurface (this is an ALPHA feature).
-    */
 
-CubitStatus set_default_gme(GeometryModifyEngine* GMEPtr);
+  //! \brief Sets the active geometry engine.
+  CubitStatus set_default_gme(GeometryModifyEngine* GMEPtr);
 
+  //! Get a subset of bodies from 'remaining_bodies' that share
+  //! a common GeometryModifyEngine.  Remove them from
+  //! 'remaining_bodies', put the Bodies and corresponding BodySMs in
+  //! 'engine_bodies' and 'engine_body_sms', and return the engine.
+  //! Returns NULL if all bodies remaining in the list have no
+  //! modify engine.
+  //! \brief Groups Bodies with the same underlying geometry engine into a list.
+  GeometryModifyEngine* group_bodies_by_engine( DLIList<Body*>& remaining_bodies,
+                                                DLIList<Body*>& engine_bodies,
+                                                DLIList<BodySM*>& engine_body_sms ) const;
 protected :
 
   GeometryModifyTool(GeometryModifyEngine* GMEPtr);
@@ -1422,32 +1850,50 @@ protected :
 
   CubitStatus okay_to_modify( DLIList<Body*>& bodies, const char* op ) const;
 
-public:  /* needed by OffsetSplitTool*/
-  CubitStatus finish_webcut( DLIList<Body*>& input_bodies,
-                             DLIList<BodySM*>& webcut_results,
-                             CubitBoolean merge,
-                             CubitStatus webcut_status,
-                             DLIList<Body*>& new_bodies,
-                             CubitBoolean print_info = CUBIT_TRUE ) const;
-    //- Helper function for all webcut functions.
-    //- Finish up DAG update, merging, etc. after GME does webcut.
-    //I input_bodies
-    //I- The list of bodies that were webcut
-    //I webcut_results
-    //I- The new bodies returned by the GME webcut.
-    //I merge
-    //I- Merge after webcut
-    //I webcut_status
-    //I- The return value from the GME webcut function
-    //O new_bodies
-    //O- The new Bodies constructed from the passed BodySMs.
-    //R CubitStatus
-    //R- CUBIT_FAILURE on error, webcut_status on success.
-    //- Does separate_body_after_webcut for all bodies if
-    //- webcut_status == CUBIT_SUCCESS
-    //- Merges bodies if webcut_status == CUBIT_SUCCESS AND merge == CUBIT_TRUE
+  GeometryModifyEngine* common_modify_engine( DLIList<Body*>& bodies,
+                                              DLIList<BodySM*>& bodysms ) const;
 
-  /* needed by AcisEdgeTool */
+  GeometryModifyEngine* common_modify_engine( DLIList<RefFace*>& faces,
+                                              DLIList<Surface*>& surfaces,
+                                              CubitBoolean allow_composites = CUBIT_FALSE ) const;
+  GeometryModifyEngine* common_modify_engine( DLIList<RefEdge*>& edges,
+                                              DLIList<Curve*>& curves,
+                                              CubitBoolean allow_composites = CUBIT_FALSE ) const;
+  GeometryModifyEngine* common_modify_engine( DLIList<RefVertex*>& vertices,
+                                              DLIList<Point*>& points,
+                                              CubitBoolean allow_composites = CUBIT_FALSE ) const;
+
+  GeometryModifyEngine* common_modify_engine( DLIList<TopologyEntity*>& topology_list,
+                                              DLIList<TopologyBridge*>& engine_bridges,
+                                              CubitBoolean allow_composites
+                                              = CUBIT_FALSE ) const;
+  /**<  \return GeometryModifyEngine*
+    *   A GeometryModifyEngine common at least one
+    *   TopologyBridge of each of the passed TopologyEntities, or
+    *   NULL if no common geometry engine is found.
+    *   \arg topology_list
+    *   The input list of TopologyEntities
+    *   \arg engine_bridges
+    *   Pass back the list of TopolgyBridges associated with each
+    *   of the passed TopologyEntities (topology_list) and owned
+    *   by the returned geometry engine.
+    *   \arg allow_virtual_engine
+    *   Return VirtualGeometryEngine::instance() if no common
+    *   geometry enginge can be found.
+    *
+    *   Look for a common geometry engine other than the
+    *   VirtualGeometryEngine.  If no common geometry engine other
+    *   than VGE can be found and allow_virtual_engine is FALSE,
+    *   NULL is returned.  If allow_virtual_engine is TRUE, and no
+    *   common geometry engine is found, VGE will be returned, and
+    *   engine_bridges will be populated with any virtual geometry
+    *   if possible, otherwise with the first topology bridge attached
+    *   to each of the passed TopologyEntities.
+    */
+
+public:  
+
+  //! \brief Internal use only. 
   CubitStatus finish_sm_op( DLIList<Body*>& input_bodies,
                             DLIList<BodySM*>& new_bodies,
                             DLIList<Body*>& result_bodies,
@@ -1474,7 +1920,8 @@ protected:
   GeometryModifyEngine* tweak_setup( DLIList<RefFace*>& input_faces,
                                      const char* tweak_function_name,
                                      DLIList<Body*>& old_bodies_out,
-                                     DLIList<Surface*>& surfaces_out );
+                                     DLIList<Surface*>& surfaces_out,
+                                     CubitBoolean allow_composites = CUBIT_FALSE);
 
   GeometryModifyEngine* tweak_setup( DLIList<RefEdge*>& input_edges,
                                      const char* tweak_function_name,
@@ -1513,23 +1960,9 @@ protected:
     //O curve_list
     //O- Curves corresponding to edges in edge_list.
 
-  CubitStatus sweep_finish( const char* const sweep_function_name,
-                            DLIList<Body*>& input_body_list,
-                            DLIList<BodySM*>& new_body_list,
-                            CubitBoolean restore_newids );
-    //- Common cleanup code for sweep functions
-    //I sweep_function_name
-    //I- Name to use in error messages.
-    //I input_body_list
-    //I- Bodies that may need to be updated.
-    //I new_body_list
-    //I- bodies returned by GeometryModifyEngine
-    //I restore_newids
-    //I- Passed back from sweep_setup -- restore setting state.
-
-  CubitStatus imprint_singly( DLIList<Body*>& body_list,
-                              DLIList<Body*>& new_bodies,
-                              CubitBoolean keep_old );
+//  CubitStatus imprint_singly( DLIList<Body*>& body_list,
+//                              DLIList<Body*>& new_bodies,
+//                              CubitBoolean keep_old );
     //- Implementation of imprint(..) when group_imprint is false.
 
   void remove_dead_entity_names( RefEntity* entity ) const;
@@ -1539,57 +1972,61 @@ protected:
   Body* update_body( Body* body ) const;
     //- Destroy or update modified body, as appropriate.
 
+  void body_premodify(Body* body) const;
+    //- traverse the body object and calls premodify function on each structure
+
+
 private :
 
+  //! \brief Static pointer to the unique instance of this class.
   static GeometryModifyTool* instance_;
-  /**<  static pointer to the unique instance of this class.
-    */
 
+  //! \brief Use group imprinting, which is much faster. Default: true.
   static CubitBoolean groupImprint;
-  /**<  if true, the new group imprint function is called, which is much faster;
-    */
 
+  //! \brief An object will be unmeshed if modified or deleted. Default: true.
+  static CubitBoolean meshAutodelete;
+
+  //! \brief  An object will be cached if the mesh is autodeleted
+  //!  and can be remeshed later.  Default: false.
+  static CubitBoolean meshAutodeleteRemesh;
+
+  //! \brief Causes code to reuse old ids, which are more persistent.  Default: false.
   static CubitBoolean newIds;
-  /**<  if true, causes code to reuse old ids, which are more persistent
-    */
 
+  //! \brief Attempt entity naming backwards compatible with v8/pre-bool-on-merged.  Default:
+  //! false.
   static CubitBoolean oldNames;
-  /**< Attempt entity naming backwards compatible with v8/pre-bool-on-merged
-    */
 
+  //! \brief Separate the result bodies of webcutting into single-body volumes. 
+  //!  Default: true.
   static CubitBoolean sepAfterWebcut;
-  /**< Will separate after webcutting the bodies into multiple bodies that
-    *  only contain 1 volume each.
-    */
 
-  static CubitBoolean allEdgesImprint;
-  /**<  Option for acis to know if we should imprint all of the edges
+  /*!  Option for acis to know if we should imprint all of the edges
     *  or only relevant ones.  For now, default is false, but check
     *  the .cc file.  The user can control this by a "set" nonregimprint
-    *  command.
+    *  command.  Default: true.
     */
+  static CubitBoolean allEdgesImprint;
 
+  //! \brief Regularized booleans are performed.  Default: true.
   static CubitBoolean booleanRegularize;
-    /**< If true, regularized booleans are performed;
-     *  Otherwise, nonregularized booleans are performed.
-     */
 
+  //! \brief Unite operations can mix sheet bodies with solid bodies.  Default: true.
+  static CubitBoolean uniteMixedModels;
+
+  /*! Pointer to the entity being copied.  When copying an entity, used to 
+      prevent to copying of unique id and saved-merged-ids attributes. 
+  */
+  //! \brief This pointer points to the entity that is being copied.  
   static RefEntity *copyingEntity;
-    //- This pointer points to the entity that is being copied.
 
+  //! \brief The list of geometry modify engines.
   DLIList<GeometryModifyEngine*> gmeList;
-  /**<  The list of geometry modify engines
-    */
 
-  GeometryModifyEngine* group_bodies_by_engine( DLIList<Body*>& remaining_bodies,
-                                                DLIList<Body*>& engine_bodies,
-                                                DLIList<BodySM*>& engine_body_sms ) const;
-    //- Get a subset of bodies from 'remaining_bodies' that share
-    //- a common GeometryModifyEngine.  Remove them from
-    //- 'remaining_bodies', put the Bodies and corresponding BodySMs in
-    //- 'engine_bodies' and 'engine_body_sms', and return the engine.
-    //- Returns NULL if all bodies remaining in the list have no
-    //- modify engine.
+  void get_merged_curve_and_surface_ids( DLIList<Body*> &bodies,
+                                         DLIList<int> &merged_surface_ids,
+                                         DLIList<int> &merged_curve_ids ) const;
 
   CubitStatus separate_body_after_webcut (DLIList<Body*> &input_list,
                                           DLIList<Body*> &output_list) const;
@@ -1598,13 +2035,17 @@ private :
     *   only be called after webcutting. (Checks sepAfterWebcut flag.)
     */
 
+  void fixup_merged_entities( DLIList<int> &merged_surface_ids,
+                              DLIList<int> &merged_curve_ids ) const;
+
   CubitStatus webcut_w_cylinder(
                                 DLIList<BodySM*> &webcut_body_list,
                                 double radius,
                                 const CubitVector &axis,
                                 const CubitVector &center,
+                                DLIList<BodySM*>& neighbor_imprint_list,
                                 DLIList<BodySM*>& results_list,
-                                bool imprint = false) ;
+                                ImprintType imprint_type = NO_IMPRINT) ;
   //- webcuts a body using a cylinder given the input parameters.
 
   CubitStatus prepare_surface_sweep(
@@ -1636,15 +2077,136 @@ private :
     * are virtual.
     */
 #endif
-  
+
   void do_attribute_setup(void);
   void do_attribute_cleanup(void);
   void push_vg_attributes_before_modify(DLIList<BodySM*> &old_sms);
   CubitStatus restore_vg_after_modify(DLIList<BodySM*> &new_sms,
+                                      DLIList<Body*> &old_bodies,
+                                      GeometryModifyEngine *gme);
+  void remove_pushed_attributes(DLIList<BodySM*> &new_sms,
                                       DLIList<Body*> &old_bodies);
   void push_imprint_attributes_before_modify(DLIList<BodySM*> &old_sms);
+  void push_named_attributes_to_curves_and_points(DLIList<TopologyBridge*> &tb_list, const char *name_in);
   void remove_imprint_attributes_after_modify(DLIList<BodySM*> &body_sms,
                                               DLIList<BodySM*> &new_sms);
+
+  //! draw a preview of a plane for webcut previews
+  static void plane_preview(DLIList<Body*> &body_list,
+                            const CubitVector &pt1,
+                            const CubitVector &pt2,
+                            const CubitVector &pt3);
+
+  void propagate_from_small_edge( RefEdge *edge,
+                                  DLIList<RefEdge*> &small_edges,
+                                  DLIList<RefFace*> &narrow_faces,
+                                  DLIList<RefFace*> &processed_faces,
+                                  double small_edge_length);
+  void propagate_over_narrow_face( RefFace *narrow_face,
+                                   RefEdge *edge,
+                                   DLIList<RefFace*> &processed_faces,
+                                   DLIList<RefEdge*> &small_edges,
+                                   DLIList<RefFace*> &narrow_faces,
+                                   double small_edge_length);
+
+  static CubitStatus prepare_for_copy( RefEntity *ref_ents,
+                                       TopologyBridge *&top_bridge );
+
+  static CubitStatus finish_copy( TopologyBridge *&new_bridge,
+                                  TopologyBridge *old_bridge );
+
+  CubitStatus sweep_finish( const char* const sweep_function_name,
+                            DLIList<Body*>& input_body_list,
+                            DLIList<BodySM*>& new_body_list,
+                            DLIList<Body*>& output_body_list,
+                            CubitBoolean restore_newids );
+    //- Common cleanup code for sweep functions
+    //I sweep_function_name
+    //I- Name to use in error messages.
+    //I input_body_list
+    //I- Bodies that may need to be updated.
+    //I new_body_list
+    //I- SMbodies returned by GeometryModifyEngine
+    //I output_body_list
+    //I- ref_bodies returned by GeometryModifyEngine
+    //I restore_newids
+    //I- Passed back from sweep_setup -- restore setting state.
+
+  CubitStatus finish_webcut( DLIList<Body*>& input_bodies,
+                             DLIList<BodySM*>& webcut_results,
+                             CubitBoolean merge,
+                             CubitStatus webcut_status,
+                             DLIList<Body*>& new_bodies,
+                             DLIList<int> *merged_surface_ids = NULL,
+                             DLIList<int> *merged_curve_ids = NULL,
+                             CubitBoolean print_info = CUBIT_TRUE ) const;
+    //- Helper function for all webcut functions.
+    //- Finish up DAG update, merging, etc. after GME does webcut.
+    //I input_bodies
+    //I- The list of bodies that were webcut
+    //I webcut_results
+    //I- The new bodies returned by the GME webcut.
+    //I merge
+    //I- Merge after webcut
+    //I webcut_status
+    //I- The return value from the GME webcut function
+    //O new_bodies
+    //O- The new Bodies constructed from the passed BodySMs.
+    //R CubitStatus
+    //R- CUBIT_FAILURE on error, webcut_status on success.
+    //- Does separate_body_after_webcut for all bodies if
+    //- webcut_status == CUBIT_SUCCESS
+    //- Merges bodies if webcut_status == CUBIT_SUCCESS AND merge == CUBIT_TRUE
+
+  CubitStatus tweak_remove( DLIList<RefFace*> &ref_face_list,
+                            DLIList<Body*> &new_body_list,
+                            CubitBoolean extend_adjoining = CUBIT_TRUE,
+                            CubitBoolean keep_surface = CUBIT_FALSE,
+                            CubitBoolean keep_old_body = CUBIT_FALSE,
+                            CubitBoolean preview = CUBIT_FALSE);
+  /**<  Remove surfaces from a body or bodies and then extend the adjoining
+    *   surfaces to fill the gap or remove the hole.  Only called by
+    *   tweak_remove_individually, tweak_remove_together.
+    */
+
+  void get_neighboring_bodies( DLIList<Body*> &input_bodies,
+                               DLIList<Body*> &neighboring_bodies );
+
+
+  CubitStatus unite_separately( GeometryModifyEngine *gme_ptr,
+                                DLIList<Body*> &body_list,
+                                DLIList<Body*> &new_body_list,
+                                bool keep_old );
+  CubitStatus unite_all( GeometryModifyEngine *gme_ptr,
+                         DLIList<Body*> &body_list,
+                         DLIList<Body*> &new_body_list,
+                         bool keep_old );
+  /**<  Private functions called to unite bodies.  First form separates the
+    *   body list into sheets & solids and unites each group together 
+    *   separately.  Second one unites all bodies together (including sheets
+    *   & solids.
+    */
+
+  CubitStatus unite_private( GeometryModifyEngine *gme_ptr,
+                             DLIList<Body*> &body_list,
+                             DLIList<Body*> &new_body_list,
+                             bool keep_old );
+  /**<  Private lower level function called to unite bodies
+    */
+
+
+  static CubitStatus clean_up_from_copy_failure( TopologyBridge *old_bridge );
+
+  GeometryModifyEngine * pull_common_surfs( DLIList<RefFace*> &ref_face_list,
+                                            DLIList<RefFace*> &common_face_list,
+                                            DLIList<Surface*> &common_surf_list );
+    /**< Pull RefFaces with a common GeometryModifyEngine out of the input
+      *  ref_face_list.  Place their surfaces in the output RefFace and Surface
+      *  lists, and return the common modify engine.  Note the function returns
+      *  a NULL pointer if a RefFace without a modify engine is found in the
+      *  input list.
+      */
+
 };
 
 inline void GeometryModifyTool::set_all_edges_imprint( CubitBoolean flag )
@@ -1652,13 +2214,15 @@ inline void GeometryModifyTool::set_all_edges_imprint( CubitBoolean flag )
 inline CubitBoolean GeometryModifyTool::get_all_edges_imprint()
 {return allEdgesImprint;}
 
-// added by Lingyun Pan, Cat
 inline CubitBoolean GeometryModifyTool::boolean_regularize()
 {return booleanRegularize;}
-
 inline void GeometryModifyTool::boolean_regularize(CubitBoolean flag)
-{booleanRegularize= flag;}
+{booleanRegularize = flag;}
 
+inline CubitBoolean GeometryModifyTool::unite_mixed_models()
+{return uniteMixedModels;}
+inline void GeometryModifyTool::unite_mixed_models(CubitBoolean flag)
+{uniteMixedModels = flag;}
 
 inline void GeometryModifyTool::add_gme(GeometryModifyEngine *gme_ptr)
 {

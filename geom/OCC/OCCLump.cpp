@@ -80,7 +80,10 @@ OCCLump::OCCLump(TopoDS_Solid *theSolid, OCCSurface* surface, OCCShell* shell)
 OCCLump::~OCCLump()
 { 
   if (myTopoDSSolid)
+  {
     delete (TopoDS_Solid*)myTopoDSSolid;
+    myTopoDSSolid = NULL;
+  }
 }
 
 void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
@@ -293,6 +296,15 @@ void OCCLump::get_parents_virt(DLIList<TopologyBridge*> &bodies)
     bodies.append(myShell->my_body());
   else
     bodies.append(myBodyPtr);
+}
+
+BodySM* OCCLump::get_body() const
+{
+  if(mySheetSurface)
+    return mySheetSurface->my_body();
+  if(myShell)
+    return myShell->my_body();
+  return myBodyPtr;
 }
 
 void OCCLump::get_children_virt(DLIList<TopologyBridge*> &shellsms)

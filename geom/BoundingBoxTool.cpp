@@ -219,9 +219,9 @@ BoundingBoxTool::append_surface_points( DLIList<RefFace*> &ref_face_list,
          num_tri = num_facet / 4;
 
          GPoint* point_list = g_mem->point_list();
-         int num_pnts = g_mem->point_list_size();
+         //int num_pnts = g_mem->point_list_size();
          int y;
-         for( y=0; y<num_pnts; y++ )
+         for( y=0; y<num_pnt; y++ )
          {
             CubitVector* cubit_vector_ptr = new CubitVector(
                point_list[y].x, point_list[y].y, point_list[y].z );

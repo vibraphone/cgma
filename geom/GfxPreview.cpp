@@ -3,6 +3,10 @@
 #include "GfxPreview.hpp"
 #include "GMem.hpp"
 #include "CubitVector.hpp"
+#include "Curve.hpp"
+#include "Surface.hpp"
+#include "GeometryQueryEngine.hpp"
+#include "Point.hpp"
 #include <assert.h>
 
 GfxPreview* GfxPreview::mInstance = 0;
@@ -74,6 +78,12 @@ void GfxPreview::draw_ref_volume(RefVolume* entity, int color)
 {
   if(!mInstance) return;
   mInstance->p_draw_ref_volume(entity, color);
+}
+
+void GfxPreview::draw_ref_volume_edges(RefVolume* entity, int color)
+{
+  if(!mInstance) return;
+  mInstance->p_draw_ref_volume_edges(entity, color);
 }
 
 void GfxPreview::draw_ref_body(Body* entity, int color)
@@ -187,4 +197,97 @@ void GfxPreview::draw_label(int label, float x, float y, float z, int color)
   mInstance->p_draw_label(label, x, y, z, color);
 }
 
+void GfxPreview:: draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
+                                 CubitBox& bounding_box, float radius, int color)
+{
+  if(!mInstance) return;
+  mInstance->p_draw_cylinder(axis, origin, bounding_box, radius, color);
+}
+
+void GfxPreview::draw_point(Point *pt, int color)
+{
+  CubitVector v = pt->coordinates();
+  draw_point(v, color);
+  flush();
+}
+
+void GfxPreview::draw_curve(Curve *curve, int color)
+{
+  int num_divs = 20;
+  double lo, hi;
+  curve->get_param_range(lo, hi);
+  double dv = (hi-lo)/(double)num_divs;
+  int i;
+  double param = lo;
+  for(i=0; i<num_divs; i++)
+  {
+    CubitVector p1, p2;
+    curve->position_from_u(param, p1);
+    param += dv;
+    curve->position_from_u(param, p2);
+    draw_line(p1.x(), p1.y(), p1.z(), p2.x(), p2.y(), p2.z(), color);
+  }
+  flush();
+  DLIList<Point*> pts;
+  curve->points(pts);
+  for(i=pts.size(); i>0; i--)
+  {
+    Point *cur_pt = pts.get_and_step();
+    draw_point(cur_pt, color);
+  }
+}
+
+void GfxPreview::draw_surface(Surface *surf, int color)
+{
+  int num_divs = 20;
+  double ulo, uhi, vlo, vhi;
+  surf->get_param_range_U(ulo, uhi);
+  surf->get_param_range_V(vlo, vhi);
+  double du = (uhi-ulo)/(double)num_divs;
+  double dv = (vhi-vlo)/(double)num_divs;
+  int i, j;
+  double uparam, vparam;
+  uparam = ulo;
+  for(i=0; i<num_divs; i++)
+  {
+    vparam = vlo;
+    for(j=0; j<num_divs; j++)
+    {
+      CubitVector p1, p2;
+      p1 = surf->position_from_u_v(uparam, vparam);
+      vparam += dv;
+      p2 = surf->position_from_u_v(uparam, vparam);
+      draw_line(p1.x(), p1.y(), p1.z(), p2.x(), p2.y(), p2.z(), color);
+    }
+    uparam += du;
+  }
+  vparam = vlo;
+  for(i=0; i<num_divs; i++)
+  {
+    uparam = ulo;
+    for(j=0; j<num_divs; j++)
+    {
+      CubitVector p1, p2;
+      p1 = surf->position_from_u_v(uparam, vparam);
+      uparam += du;
+      p2 = surf->position_from_u_v(uparam, vparam);
+      draw_line(p1.x(), p1.y(), p1.z(), p2.x(), p2.y(), p2.z(), color);
+    }
+    vparam += dv;
+  }
+  flush();
+}
+
+void GfxPreview::draw_surface_facets_shaded(Surface *surf, int color)
+{
+  GMem g_mem;
+
+  surf->get_geometry_query_engine()->get_graphics(surf, &g_mem);
+
+  const float* xyzs = reinterpret_cast<const float*>(g_mem.point_list());
+  GfxPreview::draw_polygons(g_mem.pointListCount, xyzs, 
+                            g_mem.fListCount, g_mem.facet_list(),
+                            color);
+  flush();
+}
 

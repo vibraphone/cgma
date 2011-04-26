@@ -1,0 +1,6 @@
+#!/bin/sh
+
+name="$0"
+test=`expr $name : '\(.*\)\.'`
+engine=`expr $name : '.*\.\(.*\)'`
+$test -E $engine

@@ -85,9 +85,13 @@ public:
  
   virtual ~CubitFacet(); 
  
-  CubitVector normal(); 
+  CubitVector normal();  
     //- Returns the normal to this facet. 
- 
+
+  CubitVector update_normal( void );
+  //- update the plane and return the new normal
+
+
   const CubitBox& bounding_box() {return bBox;}; 
   void bounding_box( CubitBox &box ) 
   { bBox = box; } 
@@ -234,7 +238,13 @@ public:
     //- Get the edge on the triangle opposite of the passed point. 
     //- p1 and p2 will be passed back as NULL if point is not a 
     //- point on this triangle. 
+
+  
+  CubitPoint *opposite_point( CubitFacetEdge *edge );
+  //- returns the opposite point of input edge.  Input edge should be incident on facet. 
+  //- If input edge is not incident on facet then any of the one point can be returned
  
+  
   void points( CubitPoint *&p0, CubitPoint *&p1, CubitPoint *&p2 ) 
     { p0 = point(0); p1 = point(1); p2 = point(2); } 
   void tri_nodes( CubitPoint *&p0, CubitPoint *&p1, CubitPoint *&p2 )  

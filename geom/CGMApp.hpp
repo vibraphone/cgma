@@ -40,6 +40,7 @@
 #include "CubitDefines.h"
 #include "CubitAttribManager.hpp"
 #include "CubitGeomConfigure.h"
+#include "DAG.hpp"
 
 class CUBIT_GEOM_EXPORT CGMApp
 {

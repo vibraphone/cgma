@@ -32,7 +32,7 @@ public:
    static AppUtil* instance();
      //- Access to the application object
 
-  static void delete_instance() {if (instance_) delete instance_;};
+   static void delete_instance();
         
    void report_resource_usage() const;
      //- Prints out information about the session

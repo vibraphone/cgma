@@ -59,7 +59,8 @@ private:
     CubitSense owrts );
     // generate a list of edges and points from the loop list
     // for this curve
-/*
+  
+  /*
   CubitStatus project_to_facet_edge(CubitVector &this_point,
                                     CubitVector &closest_point,
                                     CubitVector *tangent_ptr,
@@ -151,6 +152,11 @@ public:
     //- lies outside this set, the closest point will be on the plane
     //- of the closest facet.  The closest_point is set to be that point.
 
+  // replace del_pnt with keep_pnt in point list
+  CubitBoolean replace_point( CubitPoint *del_pnt, CubitPoint *keep_pnt );
+
+  CubitBoolean replace_facets( DLIList< CubitFacetEdge *> &curv_edges );
+
   CubitStatus position_from_fraction( double fraction, // between 0 and 1
                                       CubitVector &location_on_curve );
     //- computes the location on the curve based on a fraction of the
@@ -183,6 +189,8 @@ public:
   CubitBoolean has_good_curve_data(){return goodCurveData;}
   
   void debug_draw_facet_edges(int color = -1 );
+
+   
 };
 
 #endif // CURVE_FACET_EVAL_TOOL_HPP

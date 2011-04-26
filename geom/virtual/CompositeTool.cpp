@@ -128,7 +128,7 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
     PRINT_ERROR("Cannot create any composites from passed curves.\n");
     return 0;
   }
-  
+ 
   vertex_list.reset();
   RefEdge* result = 0;
   DLIList<RefEdge*> vtx_edges;
@@ -163,6 +163,7 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
   modified_edges.remove_all_with_value(0);
   
   result = modified_edges.size() ? modified_edges.get() : 0;
+
   DLIList<Surface*> update_surfaces, curve_surfaces;
   DLIList<TopologyBridge*> curve_bridges;
   for ( i = modified_edges.size(); i--; )
@@ -205,9 +206,6 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
                                        bool update_dag ,       /* = true  */
                                        RefEdge* keep_edge      /* = NULL */ )
 {
-#ifdef BOYD17
-  DLIList<RefEdge*> free_edges, vertex_edges;
-#endif
   DLIList<RefEdge*> vertex_edges;
   int i;
   
@@ -277,7 +275,11 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     } // end if (curves.size() == 1)
     
 
-    assert(curves.size() == 2);
+   // assert(curves.size() == 2);
+    if(curves.size() != 2)
+    {
+      break;
+    }
     
     TopologyEntity* topo = curves.get()->topology_entity();
     refedge1 = CAST_TO(topo, RefEdge);
@@ -339,13 +341,18 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
       end_result = result_curve;
   }
   
-  RefEdge* result = dynamic_cast<RefEdge*>(end_result->topology_entity());
-  
-  
+  RefEdge* result = NULL;
+  if(end_result)
+    result = dynamic_cast<RefEdge*>(end_result->topology_entity());
+    
+  RefEdge* dead = NULL;
+  if(result)
+  {
     // notify observers that one edge is being composited into another
     // TODO - make a simple function for this notification since it is  times????
-  RefEdge* dead = result != refedge1 ? refedge1 : result != refedge2 ? refedge2 : 0;
-  update_combined_edges( result, dead );
+    dead = result != refedge1 ? refedge1 : result != refedge2 ? refedge2 : 0;
+    update_combined_edges( result, dead );
+  }
 
   if ( result && update_dag )
   {
@@ -451,7 +458,11 @@ RefFace* CompositeTool::composite( DLIList<RefFace*>& face_list,
     {
       RefFace* face1 = coedges.get()->get_ref_face();
       RefFace* face2 = coedges.next()->get_ref_face();
-      if (face_list.is_in_list(face1) && face_list.is_in_list(face2))
+      // Check to make sure both faces are in the faces we are compositing
+      // and also make sure the faces are not the same otherwise we
+      // will composite out hardlines in one of the faces.
+      if (face1 != face2 &&
+        face_list.is_in_list(face1) && face_list.is_in_list(face2))
         continue;
     }
     
@@ -464,7 +475,7 @@ RefFace* CompositeTool::composite( DLIList<RefFace*>& face_list,
     PRINT_ERROR("Cannot create composites from the specified surfaces.\n");
     return 0;
   }
-  
+
   edge_list.reset();
   for( i = edge_list.size(); i--; )
   {
@@ -1525,9 +1536,8 @@ CubitStatus CompositeTool::uncomposite( RefFace* composite_face,
     if(DEBUG_FLAG(87))
     {
       GMem gmem;
-      int count;
-      curve->get_geometry_query_engine()->get_graphics(curve,count,&gmem);
-      GfxDebug::draw_polyline(gmem.point_list(),count,CUBIT_RED);
+      curve->get_geometry_query_engine()->get_graphics(curve,&gmem);
+      GfxDebug::draw_polyline(gmem.point_list(),gmem.pointListCount,CUBIT_RED);
       GfxDebug::flush();
     }
 
@@ -2163,7 +2173,7 @@ CubitStatus CompositeTool::composite( DLIList<RefFace*>& faces_to_composite,
     for ( i = s_itor->size(); i--; )
       s_itor->get_and_step()->marked(0);
   }
-  
+
     // composite faces
   for ( s_itor = face_sets.begin(); s_itor != face_sets.end(); ++s_itor )
   {
@@ -2176,7 +2186,7 @@ CubitStatus CompositeTool::composite( DLIList<RefFace*>& faces_to_composite,
     else
       result = CUBIT_FAILURE;
   }
-  
+
   return result;
 }
 

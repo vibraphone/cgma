@@ -20,6 +20,7 @@
 
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
+#include "GeometryDefines.h"
 #include "CubitBox.hpp"
 #include "GroupingEntity.hpp"
 // ********** END CUBIT INCLUDES           **********
@@ -45,11 +46,9 @@ public :
 
   DagType dag_type() const { return DagType::loop_type(); }
   
-  CubitBoolean is_external() ;
-    //R CubitBoolean
-    //R- CUBIT_TRUE/CUBIT_FALSE
-    //- Returns CUBIT_TRUE if the Loop is an external Loop and CUBIT_FALSE
-    //- otherwise.
+  LoopType loop_type() const;
+    //R LoopType
+    //- Gets the type of this loop.  See LoopType enum for more details.
   
   CubitStatus get_angle_metric(double& angle_metric);
     //R CubitStatus

@@ -24,10 +24,10 @@ public:
 
   static void delete_instance(); //deletes instance if it exists 
 
-  void add_setting(char* name, void (*setFn) (int), int (*getFn)());
-  void add_setting(char* name, void (*setFn) (double), double (*getFn)());
-  void add_setting(char* name, void (*setFn) (CubitBoolean), CubitBoolean (*getFn)());
-  void add_setting(char* name, void (*setFn) (CubitString), CubitString (*getFn)());
+  void add_setting(const char* name, void (*setFn) (int), int (*getFn)());
+  void add_setting(const char* name, void (*setFn) (double), double (*getFn)());
+  void add_setting(const char* name, void (*setFn) (CubitBoolean), CubitBoolean (*getFn)());
+  void add_setting(const char* name, void (*setFn) (CubitString), CubitString (*getFn)());
 
 #ifdef BOYD15
   int num_settings();

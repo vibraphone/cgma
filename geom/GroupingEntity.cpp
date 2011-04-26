@@ -196,7 +196,7 @@ CubitStatus GroupingEntity::set_sense_entity_list(
          sense_entity->get_grouping_entity_ptr() != this )
       return CUBIT_FAILURE;
   }
-  
+
     // Special case for first entity in list.
   list.reset();
   SenseEntity* new_first = list.get_and_step();

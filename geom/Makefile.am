@@ -14,19 +14,20 @@ endif
 
 AM_CPPFLAGS += -I$(top_srcdir)/util -I.
 
+compat_sources = CubitCompat.cpp
+
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_geom.la
-endif
+noinst_LTLIBRARIES = libcubit_geom.la
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
 
 # The non-template sources
-libcubit_geom_la_SOURCES = \
+if BUILD_CGM
+libcubit_geom_la_SOURCES = $(compat_sources) \
     AllocMemManagersGeom.cpp \
     AnalyticGeometryTool.cpp \
+    AutoMidsurfaceTool.cpp \
     BasicTopologyEntity.cpp \
     Body.cpp \
     BodySM.cpp \
@@ -44,6 +45,7 @@ libcubit_geom_la_SOURCES = \
     CAUniqueId.cpp \
     CGMApp.cpp \
     CGMEngineDynamicLoader.cpp \
+    CGMHistory.cpp \
     Chain.cpp \
     CoEdge.cpp \
     CoEdgeSM.cpp \
@@ -90,6 +92,7 @@ libcubit_geom_la_SOURCES = \
     ModelQueryEngine.cpp \
     OffsetSplitTool.cpp \
     OldUnmergeCode.cpp \
+    PeriodicParamTool.cpp \
     Point.cpp \
     PointSM.cpp \
     RefCollection.cpp \
@@ -118,11 +121,15 @@ libcubit_geom_la_SOURCES = \
     TDUniqueId.cpp \
     TopologyBridge.cpp \
     TopologyEntity.cpp 
+else
+libcubit_geom_la_SOURCES = $(compat_sources) 
+endif
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
 libcubit_geom_la_include_HEADERS = \
   AnalyticGeometryTool.hpp \
+  AutoMidsurfaceTool.hpp \
   BasicTopologyEntity.hpp \
   Body.hpp \
   BodySM.hpp \
@@ -141,6 +148,7 @@ libcubit_geom_la_include_HEADERS = \
   CAUniqueId.hpp \
   CGMApp.hpp \
   CGMEngineDynamicLoader.hpp \
+  CGMHistory.hpp \
   Chain.hpp \
   CoEdge.hpp \
   CoEdgeSM.hpp \
@@ -152,6 +160,8 @@ libcubit_geom_la_include_HEADERS = \
   CubitAttrib.hpp \
   CubitAttribManager.hpp \
   CubitAttribUser.hpp \
+  CubitCompat.h \
+  CubitCompat.hpp \
   CubitEvaluator.hpp \
   CubitGeomConfigure.h \
   CubitPolygon.hpp \
@@ -194,6 +204,7 @@ libcubit_geom_la_include_HEADERS = \
   ModelQueryEngine.hpp \
   OffsetSplitTool.hpp \
   OldUnmergeCode.hpp \
+  PeriodicParamTool.hpp \
   Point.hpp \
   PointSM.hpp \
   RefCollection.hpp \

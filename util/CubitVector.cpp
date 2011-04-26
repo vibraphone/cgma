@@ -44,6 +44,24 @@ double CubitVector::distance_between(const CubitVector& test_vector) const
   return(sqrt(x*x + y*y + z*z));
 }
 
+double CubitVector::distance_from_infinite_line(const CubitVector& point_on_line,
+                                                const CubitVector& line_direction) const
+{
+  return sqrt(distance_from_infinite_line_squared(point_on_line, line_direction));
+}
+
+double CubitVector::distance_from_infinite_line_squared(
+  const CubitVector& point_on_line,
+  const CubitVector& line_direction) const
+{
+  if (line_direction == CubitVector(0, 0, 0))
+    return distance_between_squared(point_on_line);
+
+  CubitVector v = *this - point_on_line;
+  double v_dot_d = v % line_direction;
+  return fabs(v.length_squared() - v_dot_d * v_dot_d / line_direction.length_squared());
+}
+
 // double CubitVector::distance_between(const CubitVector& test_vector, RefEdge* test_edge)
 // {
 //   return( test_edge->get_arc_length(*this, test_vector) );
@@ -204,7 +222,10 @@ double CubitVector::vector_angle_quick(const CubitVector& vec1,
   double y = vec2 % ry;
 
   double angle;
-  assert(x != 0.0 || y != 0.0);
+  if( x == 0.0 && y == 0.0 )
+  {
+    return 0.0;
+  }
 
   angle = atan2(y, x);
 
@@ -243,6 +264,11 @@ CubitVector vectorRotate(const double angle,
   yAxis *= y;
   return CubitVector(xAxis + yAxis);
 }
+
+#ifdef __APPLE__
+// optimization issues on mac osx.
+#pragma optimization_level 0
+#endif
 
 double CubitVector::vector_angle(const CubitVector &vector1,
                                  const CubitVector &vector2) const
@@ -332,6 +358,10 @@ double CubitVector::vector_angle(const CubitVector &vector1,
   }
   return angle;
 }
+
+#ifdef __APPLE__
+#pragma optimization_level reset
+#endif
 
 CubitBoolean CubitVector::within_tolerance( const CubitVector &vectorPtr2,
                                             double tolerance) const

@@ -107,7 +107,6 @@
 #include <BndLib_AddSurface.hxx>
 #include <Precision.hxx>
 #include <BRepAdaptor_Surface.hxx>
-#include <TDataStd_Shape.hxx>
 #include <TDF_ChildIterator.hxx>
 #include <BinTools_ShapeSet.hxx>
 #include "Standard_Boolean.hxx"
@@ -240,9 +239,6 @@ CubitStatus OCCQueryEngine::reflect( BodySM *bodysm,
 // Date       :  10/25/07
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
-                                          int& number_triangles,
-                                          int& number_points,
-                                          int& number_facets,
                                           GMem* g_mem,
                                           unsigned short normal_tolerance,
                                           double distance_tolerance,
@@ -251,12 +247,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   // Because this may be unnecessarily called twice,
   // say there is one triangle.
   if (!g_mem)
-    {
-      number_triangles = 1;
-      number_points = 3;
-      number_facets = 4;
       return CUBIT_SUCCESS;
-    }
 
   OCCSurface *occ_surface_ptr = CAST_TO(surface_ptr, OCCSurface);
   TopoDS_Face * Topo_Face = occ_surface_ptr->get_TopoDS_Face();
@@ -289,9 +280,9 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   //if necessary, the face tolerance can be returned. now, no use.
   //double tol = BRep_Tool::Tolerance(*Topo_Face);   
 
-  number_points = facets->NbNodes();
-  number_triangles = facets->NbTriangles();
-  number_facets = 4 * number_triangles; 
+  int  number_points = facets->NbNodes();
+  int  number_triangles = facets->NbTriangles();
+  int  number_facets = 4 * number_triangles; 
   
   Poly_Array1OfTriangle triangles(0, number_triangles-1);
   triangles.Assign( facets->Triangles() );
@@ -353,7 +344,6 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
 // Date       : 10/26/07
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
-                                          int& num_points,
                                           GMem* gMem,
                                           double /*tolerance*/ ) const
 {
@@ -377,7 +367,7 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
     PRINT_ERROR("Can't tessellate for this curve.\n");
     return CUBIT_FAILURE;
   }
-  num_points = myMesh->NbPoints();
+  int num_points = myMesh->NbPoints();
 
   //! Note: If the polygon is closed, the point of closure is 
   //! repeated at the end of its table of nodes. Thus, on a closed 
@@ -1118,7 +1108,6 @@ OCCQueryEngine::write_topology( const char* file_name,
   DLIList<OCCLump*> single_lumps;
   DLIList< DLIList<CubitSimpleAttrib*>*> lists;
   OCCLump* lump = NULL;
-  int count = 0;
   CubitSimpleAttrib* body_csa = NULL;
   DLIList<CubitSimpleAttrib*> body_csa_list;
   for (i = 0; i < OCC_bodies.size(); i++)
@@ -1365,7 +1354,7 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
 				   bool b_write_buffer,
                                    TDF_Label label)
 {
-  char* file_name = "tempfile";
+  Standard_CString file_name = "tempfile";
   if(!Write(Sh, const_cast<char*>(file_name),label))
       return CUBIT_FAILURE; 
 
@@ -1375,21 +1364,18 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
   long size=infile.tellg();
   infile.seekg(0);
 
-  if (b_write_buffer) {
-    if(n_buffer_size < size)
-      {
-	PRINT_ERROR("Buffer size is not enough, increase buffer size.\n");
-	infile.close();
-	remove(file_name);
-	return CUBIT_FAILURE;
-      }
-    infile.read(pBuffer,size);
+  if(n_buffer_size < size)
+  {
+    PRINT_ERROR("Buffer size is not enough, increase buffer size.\n");
+    infile.close();
+    remove(file_name);
+    return CUBIT_FAILURE;
   }
   else n_buffer_size = size;
 
+  infile.read(pBuffer,size);
   infile.close();
   remove(file_name);
-  
   return CUBIT_TRUE;
 }
                                    
@@ -1418,7 +1404,8 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
 				  const int n_buffer_size,
                                   TDF_Label label)
 {
-  char* file_name = "tempfile";
+  Standard_CString file_name;
+  file_name = "tempfile";
   ofstream outfile (file_name,ofstream::binary);
   outfile.write (pBuffer,n_buffer_size);
 
@@ -1985,7 +1972,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   double area = myProps.Mass();
   double tol = get_sme_resabs_tolerance();
   if(area < tol * tol)
-    return NULL;
+    PRINT_WARNING("Generated a sliver surface. \n");
 
   if (!OCCMap->IsBound(aShape))
   {
@@ -2185,8 +2172,25 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
   GProp_GProps myProps;
   BRepGProp::LinearProperties(aShape, myProps);
   double length =  myProps.Mass();
+  TopExp_Explorer Ex;
   if(length < get_sme_resabs_tolerance())
-    return NULL;
+  {
+    //check if the two vertices are acctually the same point.
+    CubitVector v[2];
+    int i = 0;
+    for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
+    {
+      TopoDS_Vertex vt = TopoDS::Vertex(Ex.Current());
+      gp_Pnt pt = BRep_Tool::Pnt(vt);
+      v[i] = CubitVector(pt.X(), pt.Y(), pt.Z());
+      i++;
+    }  
+      
+    if(v[0] == v[1])
+      return (Curve*) NULL;
+    else  
+      PRINT_WARNING("Generated a sliver curve. \n");
+  }
 
   if (!OCCMap->IsBound(aShape)) 
     {
@@ -2207,7 +2211,6 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
       CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(aShape);
     }
 
-  TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
     populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
 
@@ -2376,7 +2379,7 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
     delete occ_shell->my_lump();
     DLIList<TopologyBridge*> tb_surfaces;
     occ_shell->get_children_virt(tb_surfaces);
-    CubitStatus stat = unhook_ShellSM_from_OCC(occ_shell);
+    unhook_ShellSM_from_OCC(occ_shell);
     for(int k = 0; k < tb_surfaces.size(); k++)
       delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
     delete occ_shell;
@@ -2919,56 +2922,57 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point) const
 //
 // Creation Date : 12/12/07
 //-------------------------------------------------------------------------
-CubitStatus OCCQueryEngine::fire_ray(BodySM * body,
-                                     const CubitVector &start,
-                                     const CubitVector &unit,
-                                     DLIList<double>& ray_parms,
-				     DLIList<GeometryEntity*> *entity_list) const
+CubitStatus OCCQueryEngine::fire_ray( const CubitVector &origin,
+                        const CubitVector &direction,
+                        DLIList<TopologyBridge*> &at_entity_list,
+                        DLIList<double> &ray_params,
+                        int max_hits ,
+                        double ray_radius ,
+                        DLIList<TopologyBridge*> *hit_entity_list_ptr )const
 {
   CubitStatus status = CUBIT_SUCCESS;
 
   //- fire a ray at the specified body, returning the entities hit and
   //- the parameters along the ray; return CUBIT_FAILURE if error
   // - line body intersection. 
-  gp_Pnt p(start.x(), start.y(), start.z());
-  gp_Dir dir(unit.x(), unit.y(), unit.z());
+  gp_Pnt p(origin.x(), origin.y(), origin.z());
+  gp_Dir dir(direction.x(), direction.y(), direction.z());
   gp_Lin L(p, dir);
   TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(L); 
   
-  OCCBody *occBody = CAST_TO(body, OCCBody);
-  if (occBody == NULL)
+  for(int i = 0; i < at_entity_list.size(); i++)
+  {
+    TopologyBridge* tb = at_entity_list.get_and_step();
+    TopoDS_Shape shape;
+    OCCBody *occBody = CAST_TO(tb, OCCBody);
+    if (occBody )
     {
-      PRINT_ERROR("Option not supported for non-occ based geometry.\n");
-      return CUBIT_FAILURE;
-    }
+      shape = *(occBody->get_TopoDS_Shape());
+    
+      BRepExtrema_DistShapeShape distShapeShape(edge, shape);
+      //distShapeShape.Perform();
+      if (!distShapeShape.IsDone())
+      {
+        PRINT_ERROR("Cannot calculate the intersection points for the input body.\n");
+        return CUBIT_FAILURE;
+      }
 
-  BRepExtrema_DistShapeShape distShapeShape(edge,
-					    *(occBody->get_TopoDS_Shape()));
-  //distShapeShape.Perform();
-  if (!distShapeShape.IsDone())
-    {
-      PRINT_ERROR("Cannot calculate the intersection points for the input body.\n");
-      return CUBIT_FAILURE;
-    }
-
-  if (distShapeShape.Value() < get_sme_resabs_tolerance())
-    {
-      int numPnt = distShapeShape.NbSolution();
-      for (int i = 1; i <= numPnt; i++)
-	{
+      if (distShapeShape.Value() < get_sme_resabs_tolerance())
+      {
+        int numPnt = distShapeShape.NbSolution();
+        for (int i = 1; i <= numPnt; i++)
+        {
 	  double para;
 	  distShapeShape.ParOnEdgeS1(i , para);
-	  ray_parms.append(para);
-
-	  TopoDS_Shape shape = distShapeShape.SupportOnShape2(i);
-	  int k = OCCMap->Find(shape);
-	  std::map<int,TopologyBridge*>::iterator it = OccToCGM->find(k);
-	  TopologyBridge* tb = (*it).second;
-	  entity_list->append((GeometryEntity*)tb);
-	}
-    } 
+	  ray_params.append(para);
+        }
+        hit_entity_list_ptr->append(tb);
+      } 
+    }
+  }
   return status;
 }
+
 double OCCQueryEngine::get_sme_resabs_tolerance() const
 {
   return Precision::Confusion(); 

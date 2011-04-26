@@ -52,6 +52,9 @@ enum CubitAttributeType {
     CA_ASSEMBLY_DATA,
     CA_SIZING_FUNCTION_SKELETON,
     CA_SOURCE_FEATURE
+#ifdef CAT
+	,CA_PRO_WELD
+#endif
 };
 
 #endif // __CADEFINES_H__

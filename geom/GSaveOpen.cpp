@@ -8,6 +8,7 @@
 #include "RefEntityFactory.hpp"
 
 // Initialize Globals
+int GSaveOpen::performingUndo = 0;
 int GSaveOpen::gsoSetsIds = 0;
 int GSaveOpen::gsoIncBodyId = 0;
 int GSaveOpen::gsoIncRefVolumeId = 0;
@@ -20,13 +21,25 @@ DLIList<int> GSaveOpen::gsoErrorIdList;
 GSaveOpen::GSaveOpen()
 {
   RefEntityFactory *ref = RefEntityFactory::instance();
-
-  gsoSetsIds = 1;
-  gsoIncBodyId = ref->current_body_id();
-  gsoIncRefVolumeId = ref->current_volume_id();
-  gsoIncRefFaceId = ref->current_face_id();
-  gsoIncRefEdgeId = ref->current_edge_id();
-  gsoIncRefVertexId = ref->current_vertex_id();
+  
+  if( performingUndo == 1 )
+  {
+    gsoSetsIds = 0;
+    gsoIncBodyId = 0;
+    gsoIncRefVolumeId = 0; 
+    gsoIncRefFaceId = 0; 
+    gsoIncRefEdgeId = 0; 
+    gsoIncRefVertexId = 0;
+  }  
+  else
+  {
+    gsoSetsIds = 1;
+    gsoIncBodyId = ref->current_body_id();
+    gsoIncRefVolumeId = ref->current_volume_id();
+    gsoIncRefFaceId = ref->current_face_id();
+    gsoIncRefEdgeId = ref->current_edge_id();
+    gsoIncRefVertexId = ref->current_vertex_id();
+  }
   gsoErrorCount = 0;
 }
 

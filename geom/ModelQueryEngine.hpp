@@ -89,6 +89,8 @@ class CUBIT_GEOM_EXPORT ModelQueryEngine
       ~ModelQueryEngine() ;
       //- Destructor
 
+      static void delete_instance() {if(instance_) delete instance_; }
+
       //HEADER- Query functions on single source objects
       
       CubitStatus query_model( ModelEntity & source_object,

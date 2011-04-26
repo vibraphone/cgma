@@ -17,6 +17,8 @@
 #include "DLIList.hpp"
 #include <math.h>
 #include "CastTo.hpp"
+#include "GfxPreview.hpp"
+#include "GMem.hpp"
 
 #include <fstream>
 using std::cout;
@@ -144,6 +146,7 @@ AnalyticGeometryTool::AnalyticGeometryTool()
 
 AnalyticGeometryTool::~AnalyticGeometryTool()
 {
+  instance_ = NULL;
 }
 
 //***************************************************************************
@@ -1996,57 +1999,85 @@ AnalyticGeometryTool::min_pln_box_int_corners( double pln_norm[3],
    double cubit2pln_mtx[4][4],
       pln2cubit_mtx[4][4];
    double pln_orig[3];
+   double box_tol = 1e-6;
 
+   // Adjust bounding box if it is zero in any direction
+   double abox_min[3], abox_max[3];
+   copy_pnt( box_min, abox_min );
+   copy_pnt( box_max, abox_max );
+
+   double x_range = fabs(box_max[0]-box_min[0]);
+   double y_range = fabs(box_max[1]-box_min[1]);
+   double z_range = fabs(box_max[2]-box_min[2]);
+
+   if( x_range < box_tol || y_range < box_tol || z_range < box_tol )
+   {
+     // Adjust zero length side(s) to maximum range
+     double adj = CUBIT_MAX((CUBIT_MAX((x_range),(y_range))),(z_range))/2.0;
+
+     // Arbitrarily expand box if it is zero in size
+     if( adj < box_tol )
+       adj = 5.0;  
+
+     if( x_range < box_tol )
+     {
+       abox_min[0] -= adj;
+       abox_max[0] += adj;
+     }
+     if( y_range < box_tol )
+     {
+       abox_min[1] -= adj;
+       abox_max[1] += adj;
+     }
+     if( z_range < box_tol )
+     {
+       abox_min[2] -= adj;
+       abox_max[2] += adj;
+     }
+   }
+
+   // Get plane origin
    double A = pln_norm[0];
    double B = pln_norm[1];
    double C = pln_norm[2];
    double D = pln_coeff;
-
-   //PRINT_INFO( "A=%0.4lf, B=%0.4lf, C=%0.4lf, D=%0.4lf\n", A, B, C, D );
-
    get_pln_orig_norm( A, B, C, D, pln_orig );
 
-//   PRINT_INFO( "Plane Orig = %0.4lf, %0.4lf, %0.4lf\n", pln_orig[0],
-//      pln_orig[1], pln_orig[2] );
-
-   // Find intersections of edges with plane.  Add to unique
-   // array.  At most there are 6 intersections...
+   // Find intersections of edges with plane.  Add to unique array.  At most
+   // there are 6 intersections...
    double int_array[6][3];
    int num_int = 0;
-   num_int = get_plane_bbox_intersections( box_min, box_max, pln_orig, pln_norm, int_array );
+   num_int = get_plane_bbox_intersections( abox_min, abox_max, pln_orig, pln_norm,
+     int_array );
 
-   //attempt to adjust bounding box to x,y,z intercepts of plane
-   if( num_int == 0 )
+   // Adjust so plane intercepts bounding box
+   if( num_int < 3 )
    {
-     //Stretch bounding box so that plane will fit, for sure
-     //get x,y,z intercepts
-     double x_intercept = 0;
-     double y_intercept = 0;
-     double z_intercept = 0;
-     if( !dbl_eq( A, 0.0 ) )
-       x_intercept = -D/A;
-     if( !dbl_eq( B, 0.0 ) )
-       y_intercept = -D/B;
-     if( !dbl_eq( C, 0.0 ) )
-       z_intercept = -D/C;
-    
-    //adjust box 
-    if( x_intercept < box_min[0] )
-      box_min[0] = x_intercept;
-    else if( x_intercept > box_max[0] )
-      box_max[0] = x_intercept;
+     // Move the plane to the center of the bounding box
+     double box_cent[3];
+     box_cent[0] = (abox_min[0]+abox_max[0])/2.0;
+     box_cent[1] = (abox_min[1]+abox_max[1])/2.0;
+     box_cent[2] = (abox_min[2]+abox_max[2])/2.0;
 
-    if( y_intercept < box_min[1] )
-      box_min[1] = y_intercept;
-    else if( y_intercept > box_max[1] )
-      box_max[1] = y_intercept;
-      
-    if( z_intercept < box_min[2] )
-      box_min[2] = z_intercept;
-    else if( z_intercept > box_max[2] )
-      box_max[2] = z_intercept;
+     // Get the intersections
+     num_int = get_plane_bbox_intersections( abox_min, abox_max, box_cent, pln_norm, int_array );
 
-     num_int = get_plane_bbox_intersections( box_min, box_max, pln_orig, pln_norm, int_array );
+     // Project the points back to the original plane
+     switch (num_int)
+     {
+     case 6:
+       int_pnt_pln( int_array[5], pln_orig, pln_norm, int_array[5] );
+     case 5:
+       int_pnt_pln( int_array[4], pln_orig, pln_norm, int_array[4] );
+     case 4:
+       int_pnt_pln( int_array[3], pln_orig, pln_norm, int_array[3] );
+     case 3:
+       int_pnt_pln( int_array[2], pln_orig, pln_norm, int_array[2] );
+     case 2:
+       int_pnt_pln( int_array[1], pln_orig, pln_norm, int_array[1] );
+     case 1:
+       int_pnt_pln( int_array[0], pln_orig, pln_norm, int_array[0] );
+     }
    }
 
    if( num_int == 0 )
@@ -2152,12 +2183,11 @@ AnalyticGeometryTool::min_pln_box_int_corners( double pln_norm[3],
 }
 
 int AnalyticGeometryTool::get_plane_bbox_intersections( double box_min[3],
-                                                           double box_max[3],
-                                                           double pln_orig[3],
-                                                           double pln_norm[3],
-                                                           double int_array[6][3])
+                                                        double box_max[3],
+                                                        double pln_orig[3],
+                                                        double pln_norm[3],
+                                                        double int_array[6][3])
 {
-
    // Fill in an array with all 8 box corners
    double corner[8][3];
    get_box_corners( box_min, box_max, corner );
@@ -2211,7 +2241,7 @@ int AnalyticGeometryTool::get_plane_bbox_intersections( double box_min[3],
 }
 
 CubitStatus
-AnalyticGeometryTool::get_tight_bounding_box( DLIList<CubitVector*> &point_list,                                              
+AnalyticGeometryTool::get_tight_bounding_box( DLIList<CubitVector*> &point_list,
                                               CubitVector &center,
                                               CubitVector axes[3],
                                               CubitVector &extension )
@@ -2227,6 +2257,7 @@ AnalyticGeometryTool::get_tight_bounding_box( DLIList<CubitVector*> &point_list,
    for( i=0; i<num_pnts; i++ )
    {
       vec = point_list.get_and_step();
+      //GfxPreview::draw_point( vec, 3 );
 
       pnt_arr[i].x = vec->x();
       pnt_arr[i].y = vec->y();
@@ -3231,6 +3262,17 @@ OBBox3 AnalyticGeometryTool::MinimalBox3 (int N, Point3* pt)
     double angle[3];
     InitialGuess(N,pt,angle);
     double oldVolume = Volume(N,pt,angle);
+ 
+  //if initial guess gives angles that are zero, the rest of this code 
+  //can give bounding box that isn't tight.  This probably 
+  //isn't the best fix but it works.  CDE  4-20-2009
+  if( angle[0] == 0 )
+    angle[0] = 0.5;
+  if( angle[1] == 0 )
+    angle[1] = 0.5;
+  if( angle[2] == 0 )
+    angle[2] = 0.5;
+
     double saveAngle[3] = { angle[0], angle[1], angle[2] };
 
     // Powell's direction set method
@@ -6111,7 +6153,7 @@ AnalyticGeometryTool::Area (AgtTriList* list)
 //---------------------------------------------------------------------------
 
 double
-AnalyticGeometryTool::AreaIntersection( Triangle &tri1, Triangle &tri2 )
+AnalyticGeometryTool::AreaIntersection( Triangle &tri1, Triangle &tri2  )
 {
   AgtTriList* list = Intersection(&tri1,&tri2);
   double area = Area(list);
@@ -6180,7 +6222,7 @@ AnalyticGeometryTool::Normal( Triangle3& tri, double normal[3] )
 }
 
 double
-AnalyticGeometryTool::ProjectedOverlap( Triangle3& tri1, Triangle3& tri2 )
+AnalyticGeometryTool::ProjectedOverlap( Triangle3& tri1, Triangle3& tri2, bool draw_overlap )
 {
   // Transform both triangles into local coordinate system of tri1
   // to eliminate z-coordinate. 
@@ -6209,9 +6251,10 @@ AnalyticGeometryTool::ProjectedOverlap( Triangle3& tri1, Triangle3& tri2 )
   origin[1] = tri1.b.y;
   origin[2] = tri1.b.z;
 
+  double mtxTriOne2Global[4][4];
+  vecs_to_mtx( x, y, z, origin, mtxTriOne2Global ); // Really mtxTriOne2Global
   double mtxGlobal2TriOne[4][4];
-  vecs_to_mtx( x, y, z, origin, mtxGlobal2TriOne ); // Really mtxTriOne2Global
-  inv_trans_mtx( mtxGlobal2TriOne, mtxGlobal2TriOne );
+  inv_trans_mtx( mtxTriOne2Global, mtxGlobal2TriOne );
   
   double v0[3], v1[3], v2[3]; // Vertices of triangle
   v0[0]=tri1.b.x;   v0[1]=tri1.b.y;  v0[2]=tri1.b.z;
@@ -6244,5 +6287,63 @@ AnalyticGeometryTool::ProjectedOverlap( Triangle3& tri1, Triangle3& tri2 )
   T2.v[2].x = v2[0]; T2.v[2].y = v2[1];
 
   // Now find area of overlap
-  return AreaIntersection( T1, T2 );
+  if( draw_overlap )
+  {
+    AgtTriList* list = Intersection(&T1, &T2);
+    double overlap_area = Area(list);
+    while ( list )
+    {
+      Triangle *tmp_tri = list->tri;
+      
+      v0[0]=tmp_tri->v[0].x;   
+      v0[1]=tmp_tri->v[0].y;   
+      v0[2]=0;
+
+      v1[0]=tmp_tri->v[1].x;
+      v1[1]=tmp_tri->v[1].y;
+      v1[2]=0;
+      
+      v2[0]=tmp_tri->v[2].x; 
+      v2[1]=tmp_tri->v[2].y; 
+      v2[2]=0;
+      
+      transform_pnt( mtxTriOne2Global, v0, v0 );
+      transform_pnt( mtxTriOne2Global, v1, v1 );
+      transform_pnt( mtxTriOne2Global, v2, v2 );
+
+      //Now Draw the thing
+       GMem g_mem;
+       g_mem.allocate_tri(1);
+       g_mem.pointListCount = 3;
+      
+       g_mem.point_list()[0].x = v0[0]; 
+       g_mem.point_list()[0].y = v0[1]; 
+       g_mem.point_list()[0].z = v0[2]; 
+        
+       g_mem.point_list()[1].x = v1[0]; 
+       g_mem.point_list()[1].y = v1[1]; 
+       g_mem.point_list()[1].z = v1[2]; 
+        
+       g_mem.point_list()[2].x = v2[0]; 
+       g_mem.point_list()[2].y = v2[1]; 
+       g_mem.point_list()[2].z = v2[2]; 
+
+       g_mem.facet_list()[0] = 3;
+       g_mem.facet_list()[1] = 0;
+       g_mem.facet_list()[2] = 1;
+       g_mem.facet_list()[3] = 2;
+
+       g_mem.fListCount = 1;
+       GfxPreview::draw_polygon(g_mem.point_list(),3,4,4,true);
+
+      AgtTriList* save = list;
+      list = list->next;
+      delete save->tri;
+      delete save;
+    }
+    delete list;
+    return overlap_area;
+  }
+  else
+    return AreaIntersection( T1, T2 );
 }

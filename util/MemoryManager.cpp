@@ -15,8 +15,8 @@
 #include "CubitMessage.hpp"
 #include "ArrayBasedContainer.hpp"
 #include "AppUtil.hpp"
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 #ifndef NT
 #include <unistd.h>
 #endif
@@ -447,37 +447,50 @@ void* MemoryManager::operator_new(size_t size)
 #endif
 
   // send requests of "wrong" size to ::new
-
-  if (size != objectSize) return ::new char[size];
-
+  
+  try
+  {
+    if (size != objectSize) return ::new char[size];
+  }
+  catch(...)
+  {
+    return (void*) NULL;
+  }
   // get new element from head of free list
 
   char* p = headOfFreeList;
 
-  if(!p)
-    {
-    // allocate new block
+  try
+  {
+    if(!p)
+        {
+        // allocate new block
 
-    int block_size  = memAllocatnSize * size;
-    char* new_block = ::new char[block_size];
-    if (!new_block) return (void*) NULL;
+        int block_size  = memAllocatnSize * size;
+        char* new_block = ::new char[block_size];
+        if (!new_block) return (void*) NULL;
 
-    // link new elements to form the free list
+        // link new elements to form the free list
 
-    int fill_limit = (memAllocatnSize - 1) * size;
-    for (int j = 0; j < fill_limit; j += size)
-    {
-      *((char**) &new_block[j]) = &new_block[j + size];
-    }
-    *((char**) &new_block[fill_limit]) = (char*) NULL;
+        int fill_limit = (memAllocatnSize - 1) * size;
+        for (int j = 0; j < fill_limit; j += size)
+        {
+          *((char**) &new_block[j]) = &new_block[j + size];
+        }
+        *((char**) &new_block[fill_limit]) = (char*) NULL;
 
-    // assign new element
+        // assign new element
 
-    p = new_block;
+        p = new_block;
 
-    // save new block to memory block stack
+        // save new block to memory block stack
 
-    memBlockStack = new MemoryBlock(memBlockStack, new_block, block_size);
+        memBlockStack = new MemoryBlock(memBlockStack, new_block, block_size);
+      }
+  }
+  catch(...)
+  {
+    return (void*) NULL;
   }
   //assign head of free list and return p
 

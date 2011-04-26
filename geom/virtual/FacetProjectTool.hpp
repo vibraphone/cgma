@@ -216,7 +216,8 @@ class FacetProjectTool
                                  const CubitVector& segment_end,
                                  PST_Face*& closest_face,
                                  PST_Edge*& closest_edge,
-                                 CubitBoolean & is_boundary_edge );
+                                 CubitBoolean & is_boundary_edge,
+                                 PST_Edge *last_closest_edge);
   
   private:
   

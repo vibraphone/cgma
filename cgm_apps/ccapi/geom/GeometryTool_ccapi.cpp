@@ -92,6 +92,7 @@
 #include "DLRefVertexList.hpp"
 #include "DLCubitEntityList.hpp"
 #include "DLTopologyEntityList.hpp"
+#include "CubitCompat.hpp"
 
 #include "copy_defines.h"
 
@@ -350,7 +351,7 @@ CubitStatus GeometryTool_export_solid_model( /* DLRefEntityList& */ void ***ref_
   DLRefEntityList temp_list;
   COPY_ARRAY_TO_LIST(*ref_entity_list, *ref_entity_list_size, temp_list);
 
-  return GTI->export_solid_model(temp_list, file_name, file_type, 
+  return CubitCompat_export_solid_model(temp_list, file_name, file_type, 
                                  CubitString(cubit_version), logfile_name);
 }
 
@@ -365,13 +366,13 @@ CubitStatus GeometryTool_import_solid_model_1(FILE* file_ptr,
                                   CubitBoolean import_vertices,
                                   CubitBoolean free_surfaces)
 {
-/* < API function for GeometryTool::import_solid_model */
-  return GTI->import_solid_model(file_ptr, file_name, file_type,
-                                 logfile_name,
-                                 heal_step,
-                                 import_bodies, import_surfaces,
-                                 import_curves, import_vertices,
-                                 free_surfaces);
+  assert(file_ptr);
+  CubitCompat_import_solid_model( file_name, file_type,
+                                  logfile_name,
+                                  heal_step,
+                                  import_bodies, import_surfaces,
+                                  import_curves, import_vertices,
+                                  free_surfaces);
 }
 
 CubitStatus GeometryTool_import_solid_model_2(SolidModelerType model_type) 

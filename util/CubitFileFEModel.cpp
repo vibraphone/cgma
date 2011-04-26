@@ -396,6 +396,7 @@ void CFEModel::WriteGroup(UnsignedInt32 xintIndex,
 
 void CFEModel::WriteBlock(UnsignedInt32 xintIndex,
                           UnsignedInt32 xintBlockID,
+                          int unique_id,
                           UnsignedInt32 xintBlockType,
                           UnsignedInt32 xintBlockColor,
                           UnsignedInt32 xintMixedElemType,
@@ -464,6 +465,9 @@ void CFEModel::WriteBlock(UnsignedInt32 xintIndex,
         }
         if(xintAttributeOrder)
             lpIO->Write(xpadblAttributes, xintAttributeOrder);
+
+        lpIO->Write("id", 2);
+        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
         
         mpaBlocks[xintIndex].mintBlockLength = lpIO->EndWriteBlock();
         mFEModel.mintFEModelLength += mpaBlocks[xintIndex].mintBlockLength;
@@ -478,10 +482,12 @@ void CFEModel::WriteBlock(UnsignedInt32 xintIndex,
 
 void CFEModel::WriteNodeSet(UnsignedInt32 xintIndex,
                             UnsignedInt32 xintNodeSetID,
+                            int unique_id,
                             UnsignedInt32 xintColor,
                             UnsignedInt32 xintPointSymbol,
                             UnsignedInt32 xintNumTypes,
-                            SNodeSetData* xpaNodeSetData)
+                            SNodeSetData* xpaNodeSetData,
+                            const std::vector<char>& bcdata)
 {
     if(!mpWriteFile)
         throw CCubitFile::eFileWriteError;
@@ -528,6 +534,17 @@ void CFEModel::WriteNodeSet(UnsignedInt32 xintIndex,
                 xpaNodeSetData[lintNodeSet].mintMemberCount);
         }
         
+        UnsignedInt32 size = bcdata.size();
+        if(size)
+        {
+          lpIO->Write("bc", 2);
+          lpIO->Write(&size, 1);
+          lpIO->Write(&bcdata[0], size);
+        }
+
+        lpIO->Write("id", 2);
+        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+        
         mpaNodeSets[xintIndex].mintNodeSetLength = lpIO->EndWriteBlock();
         mFEModel.mintFEModelLength += mpaNodeSets[xintIndex].mintNodeSetLength;
         delete lpIO;
@@ -541,12 +558,14 @@ void CFEModel::WriteNodeSet(UnsignedInt32 xintIndex,
 
 void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
                             UnsignedInt32 xintSideSetID,
+                            int unique_id,
                             UnsignedInt32 xintColor,
                             UnsignedInt32 xintUseShells,
                             UnsignedInt32 xintNumTypes,
                             SSideSetData_11* xpaSideSetData,
                             UnsignedInt32 xintNumDistFact,
-                            double* xpadblDistribution)
+                            double* xpadblDistribution,
+                            const std::vector<char>& bcdata)
 {
     if(!mpWriteFile)
         throw CCubitFile::eFileWriteError;
@@ -621,6 +640,17 @@ void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
         }
         if(xintNumDistFact)
             lpIO->Write(xpadblDistribution, xintNumDistFact);
+
+        UnsignedInt32 size = bcdata.size();
+        if(size)
+        {
+          lpIO->Write("bc", 2);
+          lpIO->Write(&size, 1);
+          lpIO->Write(&bcdata[0], size);
+        }
+        
+        lpIO->Write("id", 2);
+        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
         
         mpaSideSets[xintIndex].mintSideSetLength = lpIO->EndWriteBlock();
         mFEModel.mintFEModelLength += mpaSideSets[xintIndex].mintSideSetLength;
@@ -991,6 +1021,7 @@ void CFEModel::ReadGroupMembers(UnsignedInt32 xintIndex,
 
 void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
                          UnsignedInt32& xintBlockID,
+                         int& unique_id,
                          UnsignedInt32& xintBlockType,
                          UnsignedInt32& xintBlockColor,
                          UnsignedInt32& xintMixedElemType,
@@ -1002,6 +1033,7 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
                          UnsignedInt32& xintAttributeOrder,
                          double*& xpadblAttributes)
 {
+  unique_id = 0;
     if(!mpReadFile)
         throw CCubitFile::eFileReadError;
     if(xintIndex >= mFEModel.mintBlockCount)
@@ -1035,6 +1067,7 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
         lpIO->BeginReadBlock(mintFEModelOffset,
             mpaBlocks[xintIndex].mintMemberOffset);
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
             lpIO->Read(&xpaBlockData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaBlockData[lintType].mintMemberCount, 1);
@@ -1053,6 +1086,23 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
         }
         if(xintAttributeOrder)
             lpIO->Read(xpadblAttributes, xintAttributeOrder);
+        
+        // see if there is more data
+        int diff = lpIO->GetLocation() - start_location;
+        int remaining = diff - mpaBlocks[xintIndex].mintBlockLength;
+        while(remaining)
+        {
+          // remaining data could be bc data
+          char type[2];
+          lpIO->Read(type, 2);
+          if(type[0] == 'i' && type[1] == 'd')
+          {
+            lpIO->Read(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+          }
+          remaining = (lpIO->GetLocation() - start_location) -
+            mpaBlocks[xintIndex].mintBlockLength;
+        }
+
         lpIO->EndReadBlock();
         delete lpIO;
     }
@@ -1064,11 +1114,14 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
 
 void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
                            UnsignedInt32& xintNodeSetID,
+                           int& unique_id,
                            UnsignedInt32& xintColor,
                            UnsignedInt32& xintPointSymbol,
                            UnsignedInt32& xintNumTypes,
-                           SNodeSetData*& xpaNodeSetData)
+                           SNodeSetData*& xpaNodeSetData,
+                           std::vector<char>& bcdata)
 {
+  unique_id = 0;
     if(!mpReadFile)
         throw CCubitFile::eFileReadError;
     if(xintIndex >= mFEModel.mintNodeSetCount)
@@ -1081,7 +1134,8 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
     xintPointSymbol = mpaNodeSets[xintIndex].mintNodeSetPointSym;
     xintColor = mpaNodeSets[xintIndex].mintNodeSetColor;
 
-    if(xintNumTypes) {
+    if(xintNumTypes) 
+    {
         // Resize the node set return buffer if necessary and then set the return
         // pointers to the buffer.
         xpaNodeSetData = AdjustBuffer(xintNumTypes,
@@ -1095,6 +1149,7 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
         lpIO->BeginReadBlock(mintFEModelOffset,
             mpaNodeSets[xintIndex].mintMemberOffset);
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
             lpIO->Read(&xpaNodeSetData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaNodeSetData[lintType].mintMemberCount, 1);
@@ -1111,6 +1166,31 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
 
             lpIDs = &lpIDs[lintNumMembers];
         }
+        
+        // see if there is more data
+        int diff = lpIO->GetLocation() - start_location;
+        int remaining = diff - mpaNodeSets[xintIndex].mintNodeSetLength;
+        while(remaining)
+        {
+          // remaining data could be bc data
+          char type[2];
+          lpIO->Read(type, 2);
+          if(type[0] == 'b' && type[1] == 'c')
+          {
+            // get serialize data size
+            UnsignedInt32 size;
+            lpIO->Read(&size, 1);
+            bcdata.resize(size);
+            lpIO->Read(&bcdata[0], size);
+          }
+          else if(type[0] == 'i' && type[1] == 'd')
+          {
+            lpIO->Read(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+          }
+          remaining = (lpIO->GetLocation() - start_location) -
+            mpaNodeSets[xintIndex].mintNodeSetLength;
+        }
+
         lpIO->EndReadBlock();
         delete lpIO;
     }
@@ -1220,13 +1300,16 @@ void CFEModel::ReadSideSet_10(UnsignedInt32 xintIndex,
 
 void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
                            UnsignedInt32& xintSideSetID,
+                           int& unique_id,
                            UnsignedInt32& xintColor,
                            UnsignedInt32& xintUseShells,
                            UnsignedInt32& xintNumTypes,
                            SSideSetData_11*& xpaSideSetData,
                            UnsignedInt32& xintNumDistFact,
-                           double*& xpadblDistribution)
+                           double*& xpadblDistribution,
+                           std::vector<char>& bcdata)
 {
+  unique_id = 0;
     if(!mpReadFile)
         throw CCubitFile::eFileReadError;
     if(xintIndex >= mFEModel.mintSideSetCount)
@@ -1263,6 +1346,7 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
         lpIO->BeginReadBlock(mintFEModelOffset,
             mpaSideSets[xintIndex].mintMemberOffset);
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
             lpIO->Read(&xpaSideSetData[lintType].mintMemberCount, 1);
             
@@ -1300,6 +1384,32 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
         }
         if(xintNumDistFact)
             lpIO->Read(xpadblDistribution, xintNumDistFact);
+
+        // see if there is more data
+        int diff = lpIO->GetLocation() - start_location;
+        int remaining = diff - mpaSideSets[xintIndex].mintSideSetLength;
+        while(remaining)
+        {
+          // remaining data could be bc data
+          char type[2];
+          lpIO->Read(type, 2);
+          if(type[0] == 'b' && type[1] == 'c')
+          {
+            // get serialize data size
+            UnsignedInt32 size;
+            lpIO->Read(&size, 1);
+            bcdata.resize(size);
+            lpIO->Read(&bcdata[0], size);
+          }
+          // or unique id
+          else if(type[0] == 'i' && type[1] == 'd')
+          {
+            lpIO->Read(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+          }
+          remaining = (lpIO->GetLocation() - start_location) -
+            mpaSideSets[xintIndex].mintSideSetLength;
+        }
+
         lpIO->EndReadBlock();
         delete lpIO;
     }

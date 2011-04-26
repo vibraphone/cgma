@@ -86,6 +86,12 @@ void CAMergePartner::initialize()
 
 CubitStatus CAMergePartner::actuate()
 {
+  hasActuated = CUBIT_TRUE;
+  return CUBIT_SUCCESS;
+  //We don't need to actuate this attribute here since the merging
+  //happens in GeometryQueryTool::check_mergeable_refentity.
+  
+  /*
   if (hasActuated == CUBIT_TRUE) return CUBIT_SUCCESS;
   
   BasicTopologyEntity * bte_ptr = CAST_TO(attribOwnerEntity,BasicTopologyEntity); 
@@ -93,7 +99,7 @@ CubitStatus CAMergePartner::actuate()
     return CUBIT_FAILURE;
   
   DLIList<RefEntity*> merge_list;
-  merge_prepare(merge_list);
+  //merge_prepare(merge_list);
   merge_list.append_unique(attribOwnerEntity);
 
   CubitStatus result = CUBIT_SUCCESS;
@@ -107,7 +113,7 @@ CubitStatus CAMergePartner::actuate()
     hasActuated = CUBIT_TRUE;
   }        
 
-  return result;
+  return result; */
 }
 
 void CAMergePartner::merge_prepare(DLIList<RefEntity*> &merge_list)
@@ -132,9 +138,15 @@ void CAMergePartner::merge_prepare(DLIList<RefEntity*> &merge_list)
   }
   
     // now put those entities into the merge_list
-  for (i = td_list.size(); i > 0; i--) {
+  for (i = td_list.size(); i > 0; i--) 
+  {
     re_ptr = CAST_TO(td_list.get(), RefEntity);
-    if (re_ptr) merge_list.append(re_ptr);
+    if (re_ptr) 
+    {
+      CubitAttrib *tmp_attrib = re_ptr->get_cubit_attrib( CA_MERGE_PARTNER, CUBIT_FALSE );
+      if( tmp_attrib )
+        merge_list.append(re_ptr);
+    }
     td_list.step();
   }
   

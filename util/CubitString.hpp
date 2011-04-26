@@ -15,13 +15,14 @@
 #if !defined(STRING_HPP)
 #define STRING_HPP
 
-#include <assert.h>
-#include <stdlib.h>
+#include <cassert>
+#include <cstdlib>
 #include <ctype.h>
 #include <string.h>
 #include "CubitDefines.h"
 
 #include <iostream>
+#include <vector>
 
 #include "CubitUtilConfigure.h"
 
@@ -92,8 +93,10 @@ public:
   static void to_lower(char *string);
   void to_upper();
   static void to_upper(char *string);
-  static void trim(char* &string);
   //- Subscripting
+
+  void tokenize( char *delimiter, std::vector<CubitString> &strings );
+
   
   size_t find(const CubitString& s, size_t pos = 0) const;
   size_t find_first_of(const CubitString& s, size_t pos = 0) const;
@@ -137,16 +140,6 @@ inline void CubitString::to_upper(char *string)
   }
 }
 
-inline void CubitString::trim(char* &string)
-{
-	while(isspace(*string))
-		string++;
-	char *p = (string + strlen(string)) - 1;
-	while(isspace(*p))
-		p--;
-	p++;
-	*p = '\0';
-}
 
 #endif
 

@@ -34,6 +34,13 @@ private:
     //- recurses down the rtree to find all all the data members
     //- that fall in the range of the range_box.
 
+  CubitStatus recursive_find(RTreeNode<Z> *rect_tree,
+                             const CubitVector &ray_origin,
+                             const CubitVector &ray_direction,
+                             DLIList <Z> &range_members);
+    //- recurses down the rtree to find all all the data members
+    //- that fall in the range of the ray.
+
   void to_list(DLIList <RTreeNode<Z>*> &member_list,
                RTreeNode<Z> *top);
     //- converts the tree under top to a list.  Note, top is NOT in the list
@@ -67,6 +74,11 @@ public:
 
   CubitStatus find( const CubitBox &range_box, DLIList <Z> &range_members);
     //- searches the range tree for members that intersect this range box
+    //- within the tolerance.
+
+  CubitStatus find( const CubitVector &ray_origin, const CubitVector &ray_direction,
+      DLIList <Z> &range_members);
+    //- searches the range tree for members that intersect this ray
     //- within the tolerance.
 
   CubitBoolean remove(Z data );
