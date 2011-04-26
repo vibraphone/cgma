@@ -298,14 +298,6 @@ static CubitStatus init_cgm( const std::string& engine )
 
 extern "C" {
 
-void iGeom_getDescription( iGeom_Instance geom,
-                           char* descr,
-                           int* err,
-                           int descr_len )
-{
-  iGeom_getLastError( *err, descr, descr_len );
-}
-
 void iGeom_newGeom( const char* options,
                     iGeom_Instance* instance_out,
                     int* err,
@@ -1372,7 +1364,8 @@ iGeom_getTagHandle (iGeom_Instance instance,
   tag_name = tag_name_buf.c_str();
   *tag_handle = reinterpret_cast<iBase_TagHandle>(static_cast<size_t>(TM->getTagHandle( tag_name )));
 
-  *err = iGeom_getLastErrorType();
+    // XXX: this seems really wrong...
+  iGeom_getErrorType(instance, err);
 }
 
 void

@@ -1,5 +1,6 @@
 #include "iGeomError.h"
 #include "iBase.h"
+#include "iGeom.h"
 #include <string>
 #include <assert.h>
 
@@ -65,26 +66,21 @@ void iGeom_setLastError( int error_type, const char* description )
   }
 }
 
-void iGeom_getLastError( int& error_type_out, 
-                         char* description_buffer,
-                         int description_buffer_length )
+void iGeom_getErrorType( iGeom_Instance geom,
+                         int *error_type )
 {
-  error_type_out = lastErrorType;
+  *error_type = lastErrorType;
+}
+
+void iGeom_getDescription( iGeom_Instance geom,
+                           char* description_buffer,
+                           int description_buffer_length )
+{
   if (description_buffer && description_buffer_length > 0) {
     lastErrorDesc.copy( description_buffer, description_buffer_length );
     if (lastErrorDesc.length() < (unsigned)description_buffer_length)
       description_buffer[lastErrorDesc.length()] = '\0';
   }
-}
-
-int iGeom_getLastErrorType()
-{
-  return lastErrorType;
-}
-
-const char* iGeom_getLastErrorDesc()
-{
-  return lastErrorDesc.c_str();
 }
 
 #ifdef __cplusplus
