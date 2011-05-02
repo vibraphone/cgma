@@ -22,7 +22,7 @@
  */
 #include "iGeom.h"
 #include "InitCGMA.hpp"
-
+#include "GMem.hpp"
 #include <iostream>
 #include <math.h>
 #include "GeometryQueryTool.hpp"
@@ -278,6 +278,19 @@ void append_all_ibase_type( int ibase_type,
                             DLIList<RefEntity*>& target_list,
                             int* err );
 
+static
+CubitStatus iGeom_get_graphics(RefFace* face, 
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               unsigned short normal_tolerance = 15,
+                               double distance_tolerance = 0,
+                               double longest_edge = 0) ;
+
+static
+CubitStatus iGeom_get_graphics(RefEdge* edge,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double tolerance = 0.0 ) ;
 
 static CubitStatus init_cgm( const std::string& engine )
 {
@@ -7048,4 +7061,67 @@ void append_all_ibase_type( int ibase_type,
   }
   
   RETURN(iBase_SUCCESS);
+}
+
+static
+CubitStatus iGeom_get_graphics(RefFace* face,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               unsigned short normal_tolerance ,
+                               double distance_tolerance ,
+                               double longest_edge ) 
+{
+  GMem facets;
+  CubitStatus resl = face->get_graphics(facets,  normal_tolerance, 
+                                        distance_tolerance, longest_edge);
+  if(resl == CUBIT_FAILURE) 
+    return   resl;
+
+  int* list = facets.facet_list();
+  GPoint* points = facets.point_list();
+  
+  for(int i = 0; i < facets.point_list_size(); i++)
+  {
+    GPoint pt = points[i]; 
+    CubitVector* p = new CubitVector(pt.x, pt.y, pt.z);
+    point_list.append(p);
+  }
+
+  for(int i = 0; i < facets.facet_list_size(); i++)
+  {
+    facet_list.append(list[i]);
+    i++;
+  }
+  return   resl;
+}
+
+static
+CubitStatus iGeom_get_graphics(RefEdge* edge,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double tolerance ) 
+{
+  GMem facets;
+  CubitStatus resl =  edge->get_graphics(facets, tolerance);
+
+  if(resl == CUBIT_FAILURE)
+    return   resl;
+
+  int* list = facets.facet_list();
+  GPoint* points = facets.point_list();
+  
+  for(int i = 0; i < facets.point_list_size(); i++)
+  {
+    GPoint pt = points[i]; 
+    CubitVector* p = new CubitVector(pt.x, pt.y, pt.z);
+    point_list.append(p);
+  }
+
+  for(int i = 0; i < facets.facet_list_size(); i++)
+  {
+    facet_list.append(list[i]);
+    i++;
+  }
+  return   resl;
+
 }
