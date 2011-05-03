@@ -3921,6 +3921,13 @@ extern "C" {
                     iBase_EntitySetHandle* result_entity_set, 
                     int *err );
 
+  void iGeom_getFacets(iGeom_Instance instance,
+                       iBase_EntityHandle entity,
+                       double dist_tolerance,
+                       double **points, int *points_allocated, int *points_size,
+                       int **facets, int *facets_allocated, int *facets_size,
+                       int *err);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

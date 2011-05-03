@@ -7063,65 +7063,69 @@ void append_all_ibase_type( int ibase_type,
   RETURN(iBase_SUCCESS);
 }
 
-static
-CubitStatus iGeom_get_graphics(RefFace* face,
-                               DLIList<CubitVector*>& point_list,
-                               DLIList<int>& facet_list,
-                               unsigned short normal_tolerance ,
-                               double distance_tolerance ,
-                               double longest_edge ) 
+void iGeom_getFacets(iGeom_Instance instance,
+                     iBase_EntityHandle entity,
+                     double dist_tolerance,
+                     double **points, int *points_allocated, int *points_size,
+                     int **facets, int *facets_allocated, int *facets_size,
+                     int *err)
 {
-  GMem facets;
-  CubitStatus resl = face->get_graphics(facets,  normal_tolerance, 
-                                        distance_tolerance, longest_edge);
-  if(resl == CUBIT_FAILURE) 
-    return   resl;
+  GMem gMem;
+  CubitStatus resl = CUBIT_SUCCESS;
+  RefFace *ref_face = dynamic_cast<RefFace*>(ENTITY_HANDLE(entity));
+  if(ref_face)
+    resl = ref_face->get_graphics(gMem,  15, dist_tolerance);
 
-  int* list = facets.facet_list();
-  GPoint* points = facets.point_list();
-  
-  for(int i = 0; i < facets.point_list_size(); i++)
-  {
-    GPoint pt = points[i]; 
-    CubitVector* p = new CubitVector(pt.x, pt.y, pt.z);
-    point_list.append(p);
-  }
-
-  for(int i = 0; i < facets.facet_list_size(); i++)
-  {
-    facet_list.append(list[i]);
-    i++;
-  }
-  return   resl;
-}
-
-static
-CubitStatus iGeom_get_graphics(RefEdge* edge,
-                               DLIList<CubitVector*>& point_list,
-                               DLIList<int>& facet_list,
-                               double tolerance ) 
-{
-  GMem facets;
-  CubitStatus resl =  edge->get_graphics(facets, tolerance);
+  RefEdge *ref_edge = dynamic_cast<RefEdge*>(ENTITY_HANDLE(entity));
+  if(ref_edge)
+    resl = ref_edge->get_graphics(gMem, dist_tolerance);
 
   if(resl == CUBIT_FAILURE)
-    return   resl;
+      ERROR(iBase_FAILURE, "Can't get facets for this entity.");
 
-  int* list = facets.facet_list();
-  GPoint* points = facets.point_list();
-  
-  for(int i = 0; i < facets.point_list_size(); i++)
+  if(ref_face || ref_edge)
   {
-    GPoint pt = points[i]; 
-    CubitVector* p = new CubitVector(pt.x, pt.y, pt.z);
-    point_list.append(p);
+    int p_count = gMem.point_list_size(); 
+    int f_count = gMem.facet_list_size();
+    if(p_count)
+    {
+      ALLOC_CHECK_ARRAY_NOFAIL(points, p_count * 3);
+      GPoint* gpoints = gMem.point_list();
+      double *x, *y, *z;
+      x = *points;
+      y = x + 1;
+      z = x + 2;
+      size_t step = 3;
+      for(int i = 0; i < p_count; i++)
+      {
+        GPoint pt = gpoints[i];       
+        *x = pt.x;
+        *y = pt.y;
+        *z = pt.z;
+        x += step;
+        y += step;
+        z += step; 
+      } 
+    }
+    if(f_count)
+    {
+      //return all the triangles. Current gMem gives 4*triangle facets which
+      //includes a '3' for each facet set to indicate there are 3 nodes on 
+      //the tessilation. Here trying to ignore the '3'.
+      ALLOC_CHECK_ARRAY_NOFAIL(facets, f_count*3/4);
+      int *connectivity;
+      connectivity = *facets;
+      int* list = gMem.facet_list();
+      for (int i = 0; i < f_count/4; i++)
+      {
+         *connectivity = list[i*4 + 1];
+         *(connectivity + 1) = list[i*4 + 2];
+         *(connectivity + 2) = list[i*4 + 3];
+         connectivity += 3;
+      }
+    } 
+    RETURN(iBase_SUCCESS); 
   }
-
-  for(int i = 0; i < facets.facet_list_size(); i++)
-  {
-    facet_list.append(list[i]);
-    i++;
-  }
-  return   resl;
-
+  else
+    RETURN(iBase_INVALID_ENTITY_TYPE);
 }
