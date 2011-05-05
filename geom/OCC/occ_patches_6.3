@@ -1,4 +1,4 @@
---- OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPElS.cxx	2011-04-28 11:48:39.000000000 -0500
+--- src/Extrema/Extrema_ExtPElS.cxx	2011-04-28 11:48:39.000000000 -0500
 +++ Extrema_ExtPElS.cxx	2011-04-29 10:16:43.000000000 -0500
 @@ -56,6 +56,7 @@
    gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
@@ -43,7 +43,7 @@
    if (V1 < 0.) { V1 += 2. * PI; }
    if (V2 < 0.) { V2 += 2. * PI; }
  
---- OpenCASCADE6.3.0/ros/src/Extrema/Extrema_ExtPS.cxx	2011-04-28 10:13:52.000000000 -0500
+--- src/Extrema/Extrema_ExtPS.cxx	2011-04-28 10:13:52.000000000 -0500
 +++ Extrema_ExtPS.cxx	2011-04-29 10:16:43.000000000 -0500
 @@ -88,10 +88,18 @@
    Standard_Real U, V;
@@ -66,7 +66,7 @@
    }
    if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
        (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
---- OpenCASCADE6.3.0/ros/src/BRepClass/BRepClass_FaceClassifier.cxx	2011-04-28 10:16:13.000000000 -0500
+--- src/BRepClass/BRepClass_FaceClassifier.cxx	2011-04-28 10:16:13.000000000 -0500
 +++ BRepClass_FaceClassifier.cxx	2011-04-29 10:17:24.000000000 -0500
 @@ -55,6 +55,7 @@
    Extrema_ExtPS myExtrem;
@@ -77,7 +77,7 @@
    //-- On cherche le point le plus proche , PUIS 
    //-- On le classifie. 
 
---- OpenCASCADE6.3.0/ros/src/WOKUnix/WOKUnix_FDescr.cxx  2008-05-08 08:11:16.000000000 -0500
+--- src/WOKUnix/WOKUnix_FDescr.cxx  2008-05-08 08:11:16.000000000 -0500
 +++ WOKUnix_FDescr.cxx    2010-09-21 15:04:40.431682809 -0500
 @@ -202,7 +202,9 @@
    if(mknod(apath.ToCString(), 0700 |  S_IFIFO, 0))
