@@ -38,6 +38,9 @@
 #include "TopAbs_Orientation.hxx"
 #include "TopOpeBRep_Point2d.hxx"
 #include "TColgp_Array1OfPnt.hxx"
+#include "TColgp_HArray1OfPnt.hxx"
+#include "TColStd_HArray1OfBoolean.hxx"
+#include "TColgp_Array1OfVec.hxx"
 #include "TColStd_Array1OfReal.hxx"
 #include "TColStd_Array1OfInteger.hxx"
 #include "GC_MakeArcOfCircle.hxx"
@@ -57,6 +60,7 @@
 #include "BRepFilletAPI_MakeFillet.hxx"
 #include "BRepFilletAPI_MakeChamfer.hxx"
 #include "BRepAdaptor_CompCurve.hxx"
+#include "GeomAPI_Interpolate.hxx"
 #include "BRepFilletAPI_MakeFillet2d.hxx"
 #include "ChFi2d_ConstructionError.hxx"
 #include "Geom_BezierCurve.hxx"
@@ -288,88 +292,58 @@ Curve* OCCModifyEngine::make_Curve( DLIList<CubitVector*>& point_list,
         return (Curve *)NULL;
     }
 
-    DLIList<Curve*> new_curves;
-   
-    CubitVector* start_vector = NULL;
-    CubitVector* end_vector = NULL;
-    CubitVector* tangent_vector;
-    gp_Pnt start_pt1, pt1, pt2;
-    int size = 2;
-    TColStd_Array1OfReal knots(1, 2);
-    knots.SetValue(1, 0.);
-    knots.SetValue(2, 1.);
-    TColStd_Array1OfInteger multiplicities(1, 2);
-    multiplicities.SetValue(1,2);
-    multiplicities.SetValue(2,2);
-    int degree = 1;
-    gp_Vec tangent;
-    tangent_vector = point_tangents.get();
-    BRepBuilderAPI_MakeWire aWire;
-    for (int i = 1 ; i < point_list.size(); i++)
+    if(point_list.size() < 2)
     {
-
-        //use every two points to make a spline, so it passes the points.
-        start_vector = point_list.get_and_step();
-        end_vector =  point_list.get() ;
-        TColgp_Array1OfPnt points(1, size); 
-        pt1.SetCoord(start_vector->x(), start_vector->y(), start_vector->z()); 
-        if( i == 1)
-          start_pt1 = pt1;
-        points.SetValue(1, pt1);
-        pt2.SetCoord(end_vector->x(), end_vector->y(), end_vector->z());
-        points.SetValue(2, pt2);
-        Geom_BSplineCurve bcurve(points, knots, multiplicities, degree);
-        Geom_BSplineCurve* pcurve = new Geom_BSplineCurve(bcurve);
- 
-        if(!pcurve )
-        {
-           PRINT_ERROR ("Can't make a Spline curve from the given points.\n");
-           return (Curve*) NULL;
-        }
-
-        //move tangent to the start and end points as given
-        int ierror;
-        if (tangent_vector != NULL)
-        {
-          tangent.SetCoord(tangent_vector->x(), tangent_vector->y(), 
-                           tangent_vector->z()); 
-          pcurve->MovePointAndTangent(0, pt1, tangent, TOL, 0, 0, ierror);
-          if (ierror != 0)
-            PRINT_ERROR("Can't keep tangent on the %dth point. \n", i); 
-        }
-
-        tangent_vector = point_tangents.step_and_get();
-        if (tangent_vector != NULL)
-        {
-          tangent.SetCoord(tangent_vector->x(), tangent_vector->y(), 
-                           tangent_vector->z());
-          pcurve->MovePointAndTangent(1, pt2, tangent, TOL, 0, 0, ierror);
-          if (ierror != 0)
-            PRINT_ERROR("Can't keep tangent on the %dth point. \n", i); 
-        }
-
-        else if(tangent_vector == NULL  || ierror != 0) 
-        {
-          pcurve->D1(1, pt2, tangent);
-          tangent_vector->set(tangent.X(), tangent.Y(), tangent.Z());
-        }
-        Handle(Geom_BoundedCurve) curve_ptr(pcurve); 
-        TopoDS_Vertex vt1 = BRepBuilderAPI_MakeVertex(pt1);
-        TopoDS_Vertex vt2 = BRepBuilderAPI_MakeVertex(pt2);
-        TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, vt1, vt2);
-        aWire.Add(new_edge);
+        PRINT_ERROR("    Can't create a curve with less than 2 points\n");
+        return (Curve *)NULL;
     }
 
-    // combine new topo_edges into single curve
-    BRepAdaptor_CompCurve comp_curve(aWire);
-    if(start_pt1.IsEqual(pt2, TOL))
-      comp_curve.SetPeriodic(Standard_True);
-    Handle_Geom_BSplineCurve spline = comp_curve.BSpline();
-    TopoDS_Edge topo_edge = BRepBuilderAPI_MakeEdge(spline, start_pt1, pt2);
-    TopoDS_Edge *topo_edge_ptr = new TopoDS_Edge(topo_edge);
-    OCCCurve* occ_c = new OCCCurve(topo_edge_ptr);
-     
-    return occ_c;
+    int size = point_list.size();
+    Handle(TColgp_HArray1OfPnt) points = new TColgp_HArray1OfPnt(1, size);
+    TColgp_Array1OfVec tangents(1, size);
+    Handle(TColStd_HArray1OfBoolean) tangentFlags = 
+                                     new TColStd_HArray1OfBoolean(1,size);
+    gp_Pnt pt, pt1;
+    CubitVector *pt_vec, *tangent_vec;
+    gp_Vec tangent;
+    for (int i = 1 ; i <= size; i++)
+    {
+        pt_vec = point_list.get_and_step();
+        pt.SetCoord(pt_vec->x(), pt_vec->y(), pt_vec->z()); 
+        if(i == 1)
+          pt1 = pt; 
+        points->SetValue(i, pt);
+ 
+        tangent_vec = point_tangents.get_and_step();
+        if (!tangent_vec)
+        {
+          tangents.SetValue(i,tangent);
+          tangentFlags->SetValue(i, CUBIT_FALSE);
+        }
+        else
+        {
+          tangent.SetCoord(tangent_vec->x(), tangent_vec->y(),
+                           tangent_vec->z());
+          tangents.SetValue(i,tangent);
+          tangentFlags->SetValue(i, CUBIT_TRUE);
+        }
+    }
+ 
+    GeomAPI_Interpolate interpolater(points, CUBIT_FALSE, TOL);
+    interpolater.Load(tangents, tangentFlags);
+    interpolater.Perform() ;
+    Handle(Geom_BSplineCurve) pcurve;
+    if(interpolater.IsDone())
+      pcurve = interpolater.Curve();
+    
+    else
+    {
+      PRINT_ERROR("Can't create a curve using provided points and tangents.\n");
+      return (Curve *)NULL;
+    }
+   
+    TopoDS_Edge topo_edge = BRepBuilderAPI_MakeEdge(pcurve, pt1, pt);
+    return OCCQueryEngine::instance()->populate_topology_bridge(topo_edge);
 }
 
 //===============================================================================
@@ -1316,6 +1290,8 @@ BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
   }
 
   OCCBody* occ_body = occ_surface->my_body();
+  TopoDS_Face* face = occ_surface->get_TopoDS_Face();
+  TopoDS_Face newFace;
   if(!occ_body)
   {
     DLIList<OCCBody*> original_bodies;
@@ -1324,9 +1300,14 @@ BodySM* OCCModifyEngine::make_BodySM( Surface *surface ) const
       occ_body = original_bodies.get();
   }
   if(occ_body)
-     return occ_body;
+  {
+     //copy the surface to make a sheet body.
+     BRepBuilderAPI_Copy api_copy(*face);
+     TopoDS_Shape newShape = api_copy.ModifiedShape(*face);
+     newFace = TopoDS::Face(newShape);
+     face = new TopoDS_Face(newFace);
+  }
 
-  TopoDS_Face* face = occ_surface->get_TopoDS_Face();
   surface = OCCQueryEngine::instance()->populate_topology_bridge(*face, CUBIT_TRUE);
    
   return CAST_TO(surface, OCCSurface)->my_body();
@@ -6613,6 +6594,12 @@ CubitStatus OCCModifyEngine::get_spheric_mid_surface( Surface* surface_ptr1,
   CubitVector center(center1.X(), center1.Y(), center1.Z());
   OCCQueryEngine::instance()->translate(tool, center);
 
+  //get the tool surfaces as the tool
+  DLIList<Surface*> surfaces;
+  tool->surfaces(surfaces);
+  assert (surfaces.size() == 1);
+  tool = make_BodySM(surfaces.get());
+
   DLIList<BodySM*> from_bodies, midsurface_bodies;
   from_bodies.append(body_to_trim_to);
 
@@ -6818,8 +6805,12 @@ CubitStatus OCCModifyEngine::get_toric_mid_surface( Surface* surface_ptr1,
     return CUBIT_FAILURE;
   }
 
-  BodySM* tool = CAST_TO(lump, OCCLump)->get_body();
-
+  //get the lump surfaces as the tool
+  DLIList<Surface*> surfaces;
+  lump->surfaces(surfaces);
+  assert (surfaces.size() == 1);
+  BodySM* tool = make_BodySM(surfaces.get());
+ 
   DLIList<BodySM*> from_bodies, midsurface_bodies;
   from_bodies.append(body_to_trim_to);
 
