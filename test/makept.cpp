@@ -553,8 +553,31 @@ CubitStatus make_Point()
     tangents.append(NULL);
 
   GeometryModifyEngine* gme = gmti->get_engine(new_edge_1);
-  //Curve* new_curve = gme->make_Curve(list, tangents);
-  //RefEdge * new_edge_11 = gti->make_free_RefEdge(new_curve);
+  Curve* new_curve = gme->make_Curve(list, tangents);
+  RefEdge * new_edge_11 = gti->make_free_RefEdge(new_curve);
+  d = new_edge_11->measure();
+  assert(fabs(d - 29.5517) <0.001);
+
+  CubitVector v11(-1,-1,0);
+  CubitVector v12(3,1,0);
+  tangents.clean_out();
+  tangents.append(&v11);
+  for (int i = 0; i< 4; i++)
+    tangents.append(NULL);
+  tangents.append(&v12);
+
+  new_curve = gme->make_Curve(list, tangents);
+  RefEdge * new_edge_12 = gti->make_free_RefEdge(new_curve);
+  d = new_edge_12->measure(); 
+  assert(fabs(d - 34.33967) < 0.0001);
+
+  num_ents_exported=0;
+  filename = "BsplineCurve.occ";
+  ref_entity_list.clean_out();
+  ref_entity_list.append(new_edge_11);
+  ref_entity_list.append(new_edge_12);
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
 
   //straight line
   RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,
