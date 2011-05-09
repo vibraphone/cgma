@@ -6324,9 +6324,9 @@ iGeom_load_cub_geometry(const char *name, int* err)
     // get the model table
   int model_entries[36], model_offset[6], 
     model_length[6], model_type[6];
-  if (num_models > 6) {
-    ERROR(iBase_INVALID_ARGUMENT, "Too many models in .cub file.");
-  }
+  //if (num_models > 6) {
+  //  ERROR(iBase_INVALID_ARGUMENT, "Too many models in .cub file.");
+  //}
 
   if (model_table_offset+24*num_models-1 > endpos) {
     ERROR(iBase_FAILURE, "Reading model table will go past end of file.");
