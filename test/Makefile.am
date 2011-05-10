@@ -80,6 +80,8 @@ EXTRA_DIST = 62_shaver1.brep \
              proe.stp   \
              diffuser.iges   \
              ex3.iges   \
+             Cylinder_1.brep   \
+             Cylinder_2.brep   \
              stitch.name_occ 
 
 # Files that are created by tests, and that therefore 

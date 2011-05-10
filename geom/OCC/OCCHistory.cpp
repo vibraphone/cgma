@@ -3,7 +3,7 @@
 #include "OCCQueryEngine.hpp"
 #include "CubitMessage.hpp"
 #include "RefEntity.hpp"
-#include "occ_attrib_history.hpp"
+//#include "occ_attrib_history.hpp"
 #include "CGMHistory.hpp"
 #include "GeometryQueryTool.hpp"
 
