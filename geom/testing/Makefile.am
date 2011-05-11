@@ -16,7 +16,6 @@ endif
 AM_CPPFLAGS += -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
 LDADD = libcgm_test.la ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
-SUFFIXES = .acis .occ
 check_PROGRAMS = $(BASE_TESTS:.engine=)
 check_SCRIPT = $(TESTS)
 
@@ -36,6 +35,12 @@ CreateGeometry_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=CreateGeometry
 GraphicsData_SOURCES = main.cpp GraphicsData.cpp
 GraphicsData_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DTEST=GraphicsData
 
-%.acis %.occ: cgm_test_script
-	cp -f $< $@ 
+$(TESTS): Makefile
+	$(AM_V_GEN) test=`expr $@ : '\(.*\)\.'` ;\
+	engine=`expr $@ : '.*\.\(.*\)'` ;\
+	echo "#!/bin/sh" >$@ ;\
+	echo "./$$test -E $$engine" >>$@ ;\
 	chmod a+x $@
+
+MOSTLYCLEANFILES = mmgr.log
+CLEANFILES = $(TESTS)
