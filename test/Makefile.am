@@ -119,6 +119,11 @@ MOSTLYCLEANFILES = \
         prism.occ \
         pyramid.occ \
         fillet.occ \
+        imprint.brep \
+        BsplineCurve.occ \
+        bug.brep \
+        subtract.occ \
+        glue.occ \
 	mmgr.log
  
 
