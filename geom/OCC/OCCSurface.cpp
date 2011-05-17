@@ -560,6 +560,26 @@ CubitStatus OCCSurface::uv_derivitives( double u,
 }
 
 //-------------------------------------------------------------------------
+// Purpose       : Calculates the derivitives at a given parameter location.
+//
+//-------------------------------------------------------------------------
+CubitStatus OCCSurface::uv_2nd_derivitives( double u,
+                                            double v,
+                                            CubitVector &d2u,
+                                            CubitVector &d2v,
+                                            CubitVector &d2uv )
+{
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  gp_Pnt p;
+  gp_Vec d1u, d1v, du, dv, duv ;
+  asurface.D2(u, v, p, d1u, d1v, du, dv, duv);
+  d2u = CubitVector(du.X(), du.Y(), du.Z());
+  d2v = CubitVector(dv.X(), dv.Y(), dv.Z());
+  d2uv =CubitVector(duv.X(), duv.Y(), duv.Z()); 
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
 // Purpose       : Determines whether the surface is parametrically defined.
 //                 Hopefully later this will be available.
 //

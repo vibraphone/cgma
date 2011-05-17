@@ -307,6 +307,17 @@ public :
     //- Determines the u and v derivitives from the given parameter
     //- values.
   
+  CubitStatus uv_2nd_derivitives( double u_param,
+                                  double v_param,
+                                  CubitVector &d2u,
+                                  CubitVector &d2v,
+                                  CubitVector &d2uv );
+    //R CubitStatus
+    //R- CUBIT_SUCCESS/CUBIT_FAILURE
+    //O- d2u, d2v, d2uv
+    //- Determines the u, v and uv 2nd derivitives from the given parameter
+    //- values.
+  
   TopoDS_Face *get_TopoDS_Face()
   {if (myTopoDSFace && !myTopoDSFace->IsNull()) assert (myTopoDSFace->ShapeType() == TopAbs_FACE); return myTopoDSFace;}
   void set_TopoDS_Face(TopoDS_Face& face); 
