@@ -2497,6 +2497,9 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		    }
 		  else
 		    curve = OCCQueryEngine::instance()->populate_topology_bridge(from_edge);
+                  if(!curve)
+                    continue;
+
 		  OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
    
                   if(pt.IsEqual(pt2, TOL) && fabs(d2-d1)< TOL) //overlap

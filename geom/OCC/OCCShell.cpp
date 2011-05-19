@@ -142,7 +142,7 @@ void OCCShell::get_parents_virt( DLIList<TopologyBridge*>& parents )
 { 
   if(mySheetSurface)
   {
-    parents.append(mySheetSurface->my_body());
+    parents.append(mySheetSurface->my_lump());
     return;
   }
 
