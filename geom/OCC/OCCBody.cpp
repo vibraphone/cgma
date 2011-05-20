@@ -256,7 +256,7 @@ CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
   for(int i = 0 ; i < csa_list.size(); i ++)
   {
     CubitSimpleAttrib* csa = csa_list.get_and_step();
-    if(*csa->string_data_list()->get() == name)
+    if(csa->string_data_list()->size() > 0 && *csa->string_data_list()->get() == name)
       csas.append(csa);
   }
   return CUBIT_SUCCESS;

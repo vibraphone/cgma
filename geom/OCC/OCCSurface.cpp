@@ -312,7 +312,8 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
         }
   return CUBIT_SUCCESS;
   }
-  return CUBIT_FAILURE;
+  //return as Acis did.
+  return CUBIT_SUCCESS;
 }
 
 //-------------------------------------------------------------------------
