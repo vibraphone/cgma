@@ -17,7 +17,7 @@ class CUBIT_GEOM_EXPORT CABodies: public CubitAttrib
 {
 private:
  
-  int m_interface, m_uniqueID;;
+  int m_interface, m_uniqueID;
 
   DLIList<int> m_sharedBodies; // shared bodies
 
