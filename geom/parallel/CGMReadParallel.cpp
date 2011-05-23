@@ -4,7 +4,6 @@
 #include "CubitMessage.hpp"
 #include "DLList.hpp"
 #include "RefEntity.hpp"
-//#include "RefVolume.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
@@ -12,11 +11,11 @@
 #include "Body.hpp"
 #include "CastTo.hpp"
 #include "CubitUtil.hpp"
-#include "CubitAttrib.hpp"
 #include "CADefines.hpp"
 #include "CABodies.hpp"
 #include "TDParallel.hpp"
 #include "CAMergePartner.hpp"
+#include "TDUniqueId.hpp"
 
 #include "TopologyBridge.hpp"
 #include "GeometryQueryTool.hpp"
@@ -24,7 +23,7 @@
 #include "CGMParallelConventions.h"
 #include "CGMParallelComm.hpp"
 
-const bool debug = false;
+const bool CGM_read_parallel_debug = false;
 
 enum CGMParallelActions {PA_READ=0, PA_BROADCAST, PA_DELETE_NONLOCAL,
 			 PA_SCATTER, PA_SCATTER_DELETE, PA_BALANCE,
@@ -226,7 +225,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 							     CUBIT_TRUE, CUBIT_FALSE);
   CGMApp::instance()->attrib_manager()->auto_flag(CUBIT_TRUE);
   
-  if (debug) {
+  if (CGM_read_parallel_debug) {
     DEBUG_FLAG(90, CUBIT_TRUE);
     DEBUG_FLAG(138, CUBIT_TRUE);
   }
@@ -235,7 +234,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
   bool i_read = false;
   std::vector<int>::iterator vit;
   int i;
-  //DLIList<RefEntity*> surf_entity_list, body_entity_list;
+
   for (i = 1, vit = pa_vec.begin(); vit != pa_vec.end(); vit++, i++) {
     CubitStatus result = CUBIT_SUCCESS;
     switch (*vit) {
@@ -244,7 +243,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
       i_read = true;
       double tStart, tEnd;
 
-      if (debug) {
+      if (CGM_read_parallel_debug) {
 	std::cout << "Reading file " << file_name << std::endl;
 	tStart = MPI_Wtime();
       }
@@ -255,7 +254,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 	PRINT_ERROR("Reading file %s failed.\n", file_name);
 	return CUBIT_FAILURE;
       }
-      else if (debug) {
+      else if (CGM_read_parallel_debug) {
 	tEnd = MPI_Wtime();
 	PRINT_INFO("Read time in proc %d is %f.\n", m_rank,
 		   tEnd - tStart);
@@ -266,18 +265,18 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 
 //==================
     case PA_BALANCE:
-      if (debug) std::cout << "Balancing entities." << std::endl;
+      if (CGM_read_parallel_debug) std::cout << "Balancing entities." << std::endl;
       
       result = balance();
       if (CUBIT_SUCCESS != result) return result;
 
-      if (debug) PRINT_INFO("Balancing entities done.\n");
+      if (CGM_read_parallel_debug) PRINT_INFO("Balancing entities done.\n");
 
       break;
       
 //==================     
     case PA_DELETE_NONLOCAL:
-      if (debug) {
+      if (CGM_read_parallel_debug) {
 	PRINT_INFO("Deleting nonlocal entities.\n");
 	tStart = MPI_Wtime();
       }
@@ -285,15 +284,12 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
       result = delete_nonlocal_entities(reader_rank,
 					partition_tag_name, 
 					partition_tag_vals);
-					//surf_entity_list,
-					//body_entity_list,
-					//round_robin);
       
       if (CUBIT_SUCCESS != result) {
 	PRINT_ERROR("Delete failed.\n");
 	return CUBIT_FAILURE;
       }
-      else if (debug) {
+      else if (CGM_read_parallel_debug) {
 	tEnd = MPI_Wtime();
 	PRINT_INFO("Delete done.\n");
 	PRINT_INFO("Delete time in proc %d is %f.\n", m_rank,
@@ -305,25 +301,29 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     case PA_BROADCAST:
       // do the actual broadcast; if single-processor, ignore error
       if (m_proc_size > 1) {
-	//if (body_partition) {
-	  if (debug) {
-	    PRINT_INFO("Broadcasting Body entities.\n");
-	    tStart = MPI_Wtime();
-	  }
+        if (CGM_read_parallel_debug) {
+          PRINT_INFO("Broadcasting Body entities.\n");
+          tStart = MPI_Wtime();
+        }
+        
+        result = m_pcomm->broadcast_entities(reader_rank,
+                                             m_pcomm->partition_body_list());
+        
+        if (CUBIT_SUCCESS != result) {
+          PRINT_ERROR("Broadcasting Body entities failed.\n");
+          return CUBIT_FAILURE;
+        }
+        else if (CGM_read_parallel_debug) {
+          tEnd = MPI_Wtime();
+          PRINT_INFO("Bcast bodies done.\n");
+          PRINT_INFO("Broadcast bodies time in proc %d is %f.\n", m_proc_size,
+                     tEnd - tStart);
+        }
 
-	  result = m_pcomm->broadcast_entities(reader_rank,
-					       m_pcomm->partition_body_list());
-	  
-	  if (CUBIT_SUCCESS != result) {
-	    PRINT_ERROR("Broadcasting Body entities failed.\n");
-	    return CUBIT_FAILURE;
-	  }
-	  else if (debug) {
-	    tEnd = MPI_Wtime();
-	    PRINT_INFO("Bcast bodies done.\n");
-	    PRINT_INFO("Broadcast bodies time in proc %d is %f.\n", m_proc_size,
-		       tEnd - tStart);
-	  }
+        if (CGM_read_parallel_debug && !check_partition_info()) {
+          PRINT_ERROR("Check partition info failed.\n");
+          return CUBIT_FAILURE;
+        }
       }
       
       break;
@@ -332,25 +332,30 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     case PA_SCATTER:
       // do the actual scatter
       if (m_proc_size > 1) {
-	  if (debug) {
-	    PRINT_INFO("Scattering body entities.\n");
-	    tStart = MPI_Wtime();
-	  }
-	  result = m_pcomm->scatter_entities(reader_rank,
-					     m_pcomm->partition_body_list());
-	  
-	  if (CUBIT_SUCCESS != result) {
-	    PRINT_ERROR("Scattering body entities failed.\n");
-	    return CUBIT_FAILURE;
-	  }
-	  else if (debug) {
-	    tEnd = MPI_Wtime();
-	    PRINT_INFO("Scatter bodies done.\n");
-	    PRINT_INFO("Scatter bodies time in proc %d is %f.\n", m_proc_size,
-		       tEnd - tStart);
-	  }
+        if (CGM_read_parallel_debug) {
+          PRINT_INFO("Scattering body entities.\n");
+          tStart = MPI_Wtime();
+        }
+        result = m_pcomm->scatter_entities(reader_rank,
+                                           m_pcomm->partition_body_list());
+        
+        if (CUBIT_SUCCESS != result) {
+          PRINT_ERROR("Scattering body entities failed.\n");
+          return CUBIT_FAILURE;
+        }
+        else if (CGM_read_parallel_debug) {
+          tEnd = MPI_Wtime();
+          PRINT_INFO("Scatter bodies done.\n");
+          PRINT_INFO("Scatter bodies time in proc %d is %f.\n", m_proc_size,
+                     tEnd - tStart);
+        }
+
+        if (CGM_read_parallel_debug && !check_partition_info()) {
+          PRINT_ERROR("Check partition info failed.\n");
+          return CUBIT_FAILURE;
+        }
       }
-      if (debug) PRINT_INFO("Scatter done.\n");
+      if (CGM_read_parallel_debug) PRINT_INFO("Scatter done.\n");
       
       break;
 
@@ -406,7 +411,11 @@ CubitStatus CGMReadParallel::balance()
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
   int n_proc = m_proc_size;
   double* loads = new double[n_proc]; // estimated loads for each processor
-  for (i = 0; i < n_proc; i++) loads[i] = 0.0;
+  double* ve_loads = new double[n_proc]; // estimated loads for each processor
+  for (i = 0; i < n_proc; i++) {
+    loads[i] = 0.0;
+    ve_loads[i] = 0.0;
+  }
 
   if (m_round_robin) { // round-robin case
     int n_entity = body_entity_list.size();
@@ -426,16 +435,16 @@ CubitStatus CGMReadParallel::balance()
 	  i_entity_proc++;
 	}
       }
-
+      
       // assign to bodies
       entity = body_entity_list.get_and_step();
       DLIList<int> shared_procs;
       shared_procs.append(proc);
       TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
       if (td_par == NULL) td_par = new TDParallel(entity, NULL, &shared_procs);
-      //loads[proc] += entity->measure();
+      loads[proc] += entity->measure();
 
-      // assign to volumes
+      // assign to volumes, it should be removed in future
       DLIList<RefVolume*> volumes;
       (dynamic_cast<TopologyEntity*> (entity))->ref_volumes(volumes);
       int n_vol = volumes.size();
@@ -444,7 +453,19 @@ CubitStatus CGMReadParallel::balance()
 	RefEntity *vol = volumes.get_and_step();
 	td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
 	if (td_par == NULL) td_par = new TDParallel(vol, NULL, &shared_procs);
-	loads[proc] += vol->measure();
+      }
+
+      // add local surface load
+      DLIList<RefFace*> faces;
+      (dynamic_cast<TopologyEntity*> (entity))->ref_faces(faces);
+      int n_face = faces.size();
+      faces.reset();
+      for (j = 0; j < n_face; j++) {
+        RefFace* face = faces.get_and_step();
+        TopologyEntity *te = CAST_TO(face, TopologyEntity);
+        if (te->bridge_manager()->number_of_bridges() < 2) {
+          loads[proc] = loads[proc] + face->measure();
+        }
       }
     }
 
@@ -454,26 +475,21 @@ CubitStatus CGMReadParallel::balance()
     int n_child = child_list.size();
 
     // assign processors to interface entities
+    child_list.reset();
     for (i = 0; i < n_child; i++) {
       entity = child_list.get_and_step();
-      CubitAttrib* att = entity->get_cubit_attrib(CA_MERGE_PARTNER,
-						  CUBIT_FALSE);
+      TopologyEntity *te = CAST_TO(entity, TopologyEntity);
       
-      if (att != NULL) { // if it is shared entity
-	DLIList<Body*> parent_bodies;
-	//DLIList<RefVolume*> parent_volumes;
+      if (te->bridge_manager()->number_of_bridges() > 1) {
+        //if (att != NULL) { // if it is shared entity
+        DLIList<Body*> parent_bodies;
 	DLIList<int> shared_procs;
 	(dynamic_cast<TopologyEntity*> (entity))->bodies(parent_bodies);
-	//(dynamic_cast<TopologyEntity*> (entity))->ref_volumes(parent_volumes);
 	int n_parent = parent_bodies.size();
-	//int n_parent = parent_volumes.size();
 	
 	for (j = 0; j < n_parent; j++) {
-	  RefEntity *parent_body = parent_bodies.get_and_step();
-	  //RefVolume *parent_vol = parent_volumes.get_and_step();
-	  //RefEntity *parent_vol = CAST_TO(parent_volumes.get_and_step(), RefEntity);
-	  TDParallel *parent_td = (TDParallel *) parent_body->get_TD(&TDParallel::is_parallel);
-	  //TDParallel *parent_td = (TDParallel *) parent_vol->get_TD(&TDParallel::is_parallel);
+	  RefEntity *parent_vol = CAST_TO(parent_bodies.get_and_step(), RefEntity);
+	  TDParallel *parent_td = (TDParallel *) parent_vol->get_TD(&TDParallel::is_parallel);
 	  
 	  if (parent_td == NULL) {
 	    PRINT_ERROR("parent Volume has to be partitioned.");
@@ -485,22 +501,33 @@ CubitStatus CGMReadParallel::balance()
 	if (shared_procs.size() > 1) { // if it is interface
 	  TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
 	  if (td_par == NULL) {
-	    CAMergePartner *camp_ptr = CAST_TO(att, CAMergePartner);
-	    int merge_id = camp_ptr->merge_id();
+            int merge_id = TDUniqueId::get_unique_id(entity);
 	    if (entity->entity_type_info() == typeid(RefFace)) { // face
 	      if (shared_procs.size() != 2) {
 		PRINT_ERROR("Error: # of shared processors of interface surface should be 2.");
 		return CUBIT_FAILURE;
 	      }
-	      // make the first shared processor is charging mesh
-	      if (loads[shared_procs[0]] > loads[shared_procs[1]]) {
-		int temp_proc = shared_procs.pop();
-		shared_procs.append(temp_proc);
+
+	      // balance interface surface loads
+              if (loads[shared_procs[0]] > loads[shared_procs[1]]) {
+                shared_procs.reverse();
 	      }
+              loads[shared_procs[0]] = loads[shared_procs[0]] + entity->measure();
 	      td_par = new TDParallel(entity, NULL, &shared_procs, merge_id, 1);
 	    }
 	    else if (entity->entity_type_info() == typeid(RefEdge) ||
 		     entity->entity_type_info() == typeid(RefVertex)) {
+              // balance interface surface loads
+              int min_p = shared_procs[0];
+              int n_shared_proc = shared_procs.size();
+              for (int i = 1; i < n_shared_proc; i++) {
+                if (ve_loads[shared_procs[i]] < ve_loads[min_p]) {
+                  min_p = shared_procs[i];
+                }
+              }
+              ve_loads[min_p] = ve_loads[min_p] + entity->measure();
+              shared_procs.remove(min_p);
+              shared_procs.insert_first(min_p);
 	      td_par = new TDParallel(entity, NULL, &shared_procs, merge_id, 1);
 	    }
 	  }
@@ -516,41 +543,22 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
 						      std::string &ptag_name,
 						      std::vector<int> &ptag_vals)
 {
-  // find volumes deleted
+  // find bodies deleted
   int i;
   CubitStatus result;
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
-  //DLIList<RefEntity*>& vol_entity_list = m_pcomm->partition_vol_list();
   DLIList<RefEntity*> partition_list, delete_body_list;
   int nEntity = body_entity_list.size();
   body_entity_list.reset();
-  //int nEntity = vol_entity_list.size();
-  //vol_entity_list.reset();
+
   for (i = 0; i < nEntity; i++) {
     RefEntity* entity = body_entity_list.get_and_step();
     TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-
     if (td_par == NULL) {
-      //RefEntity* entity = vol_entity_list.get_and_step();
-      DLIList<RefEntity*> volumes;
-      entity->get_child_ref_entities(volumes);
-      
-      // check if the first Volume is partitioned here
-      volumes.reset();
-      RefEntity *vol = volumes.get();
-      if (vol == NULL || vol->entity_type_info() != typeid(RefVolume)) {
-	PRINT_ERROR("Partitioned Body should have at least one Volume.");
-	return CUBIT_FAILURE;
-      }
-      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
-      
-      if (td_par == NULL) {
-	PRINT_ERROR("Partitioned Volume should have TDParallel data.");
-	return CUBIT_FAILURE;
-      }
+      PRINT_ERROR("Partitioned Volume should have TDParallel data.");
+      return CUBIT_FAILURE;
     }
 
-    //if (td_par->get_charge_proc() != m_rank) delete_body_list.append(entity);
     if (td_par->get_charge_proc() != m_rank) delete_body_list.append(entity);
     else partition_list.append(entity);
   }
@@ -558,23 +566,19 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   // delete bodies
   if (m_rank != reader) {
     nEntity = delete_body_list.size();
-    //nEntity = delete_vol_list.size();
     for (i = 0; i < nEntity; i++) {
       GeometryQueryTool::instance()->delete_RefEntity(delete_body_list[i]);
-      //GeometryQueryTool::instance()->delete_RefEntity(delete_vol_list[i]);
     }
   }
 
-  // update volume list in ParallelComm
+  // update Body list in ParallelComm
   body_entity_list.clean_out();
   body_entity_list += partition_list;
-  //vol_entity_list.clean_out();
-  //vol_entity_list += partition_list;
   
   // print info
   char pre_body[100];
   DLIList<CubitEntity*> tmp_body_list;
-  if (debug) {
+  if (CGM_read_parallel_debug) {
     if (m_rank != reader) {
       CAST_LIST_TO_PARENT(delete_body_list, tmp_body_list);
       sprintf(pre_body, "Deleted %d Bodies: ", tmp_body_list.size());
@@ -582,6 +586,43 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
     }
     std::cerr << "Partitioned Body list size after delete: "
 	      << partition_list.size() << std::endl;
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus CGMReadParallel::check_partition_info()
+{
+  int i, j;
+  DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
+  int nEntity = body_entity_list.size();
+  body_entity_list.reset();
+
+  for (i = 0; i < nEntity; i++) {
+    RefEntity* entity = body_entity_list.get_and_step();
+    TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
+    if (td_par == NULL) { // if body is not partitioned
+      DLIList<RefEntity*> volumes;
+      entity->get_child_ref_entities(volumes);
+
+      // check if the first Volume is partitioned here, should be removed in future
+      volumes.reset();
+      RefEntity *vol = volumes.get();
+      if (vol == NULL || vol->entity_type_info() != typeid(RefVolume)) {
+	PRINT_ERROR("Partitioned Body should have at least one Volume.");
+	return CUBIT_FAILURE;
+      }
+      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
+
+      if (td_par == NULL) {
+	PRINT_ERROR("Partitioned Volume should have TDParallel data.");
+	return CUBIT_FAILURE;
+      }
+
+      DLIList<int> s_procs;
+      s_procs.append(td_par->get_charge_proc());
+      td_par = new TDParallel(entity, NULL, &s_procs);
+    }
   }
 
   return CUBIT_SUCCESS;

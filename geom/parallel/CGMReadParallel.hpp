@@ -66,5 +66,7 @@ private:
   CubitStatus delete_nonlocal_entities(int reader,
 				       std::string &ptag_name,
                                        std::vector<int> &ptag_vals);
+
+  CubitStatus check_partition_info();
 };
 #endif
