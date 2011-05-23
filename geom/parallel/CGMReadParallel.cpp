@@ -320,7 +320,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
                      tEnd - tStart);
         }
 
-        if (CGM_read_parallel_debug && !check_partition_info()) {
+        if (!check_partition_info()) {
           PRINT_ERROR("Check partition info failed.\n");
           return CUBIT_FAILURE;
         }
@@ -350,7 +350,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
                      tEnd - tStart);
         }
 
-        if (CGM_read_parallel_debug && !check_partition_info()) {
+        if (!check_partition_info()) {
           PRINT_ERROR("Check partition info failed.\n");
           return CUBIT_FAILURE;
         }
@@ -481,7 +481,6 @@ CubitStatus CGMReadParallel::balance()
       TopologyEntity *te = CAST_TO(entity, TopologyEntity);
       
       if (te->bridge_manager()->number_of_bridges() > 1) {
-        //if (att != NULL) { // if it is shared entity
         DLIList<Body*> parent_bodies;
 	DLIList<int> shared_procs;
 	(dynamic_cast<TopologyEntity*> (entity))->bodies(parent_bodies);
