@@ -1279,5 +1279,36 @@ CubitStatus make_Point()
   assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_faces() == 7);
   assert (CAST_TO(ref_entity_list.get_and_step(), Body)->num_ref_edges() == 11);
   assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_volumes() == 1);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  for(int i = 0; i < free_entities.size(); i++)
+    gti->delete_RefEntity(free_entities.get_and_step());
+
+  // Read in the geometry from files specified on the command line
+  argv = "webcut.brep";
+  read_geometry(1, &argv, false);
+
+  DLIList<Body*> old_bodies, junk;
+  new_bodies.clean_out();
+  gti->bodies(old_bodies);
+  CubitVector center_l(0, 0, 0);
+  CubitVector axis(0.,0.,1.);
+  double radius = 0.5;
+  rsl= gmti->webcut_with_cylinder(old_bodies,radius,axis, center_l,new_bodies,junk);
+  if (rsl== CUBIT_FAILURE)
+     return rsl;
+
+  num_ents_exported=0;
+  filename = "after_webcut.brep";
+  ref_entity_list.clean_out();
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  assert(num_ents_exported == 2);
   return CUBIT_SUCCESS;
 }
