@@ -720,9 +720,9 @@ OCCQueryEngine::entity_entity_distance( GeometryEntity *entity1,
   return CUBIT_SUCCESS;
 }
 
-TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_ptr)
+TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge * entity_ptr)
 {
-  if (OCCBody *occ_body = CAST_TO( entity_ptr, OCCBody))
+  if (OCCBody * occ_body = CAST_TO( entity_ptr, OCCBody))
     {
       TopoDS_Shape* theShape = occ_body->get_TopoDS_Shape();
       if(!theShape || theShape->IsNull())//single lump or shell or surface
@@ -754,7 +754,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
 	}
     }
 
-  else if( OCCSurface *surface_ptr = CAST_TO( entity_ptr, OCCSurface))
+  else if( OCCSurface * surface_ptr = CAST_TO( entity_ptr, OCCSurface))
     {
       TopoDS_Face *theFace = surface_ptr->get_TopoDS_Face();
       if(!theFace)
@@ -766,7 +766,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
       return (TopoDS_Shape*) theFace;
     }
 
-  else if( OCCCurve *curve_ptr = CAST_TO( entity_ptr, OCCCurve))
+  else if( OCCCurve * curve_ptr = CAST_TO( entity_ptr, OCCCurve))
     {
       TopoDS_Edge *theEdge = curve_ptr->get_TopoDS_Edge();
       if (!theEdge)
@@ -778,7 +778,7 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge *entity_
       return (TopoDS_Shape*) theEdge;
     }
 
-  else if( OCCPoint *point_ptr = CAST_TO( entity_ptr, OCCPoint))
+  else if( OCCPoint * point_ptr = CAST_TO( entity_ptr, OCCPoint))
     {
       TopoDS_Vertex *thePoint = point_ptr->get_TopoDS_Vertex(); 
       if (!thePoint)

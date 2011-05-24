@@ -900,13 +900,6 @@ private:
                                      const CubitVector& split_location,
                                      DLIList<Curve*>& created_curves )const;
 
- void start_tracking_history( DLIList<TopologyBridge*> &bridges,
-                              OCCHistory &history_object,
-                              bool ignore_parents = false );
-
- void stop_tracking_history( DLIList<BodySM*> &new_bodies,
-                             OCCHistory &history_object );
-
   //- Removes all all unnessesary faces, curves, vertices and associated
  //- data from a refentity.
  virtual CubitStatus test_regularize_entity( GeometryEntity *old_entity_ptr)

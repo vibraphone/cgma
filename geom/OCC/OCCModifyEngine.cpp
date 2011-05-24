@@ -135,7 +135,6 @@
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
 #include "OCCAttribSet.hpp"
-#include "OCCHistory.hpp"
 #include "CubitFileIOWrapper.hpp"
 #include "Body.hpp"
 #include "GfxDebug.hpp"
@@ -1747,16 +1746,6 @@ BodySM* OCCModifyEngine::planar_sheet ( const CubitVector& p1,
 //===============================================================================
 BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
 {
-  OCCHistory history_object;
-  if( GeometryQueryTool::instance()->history().is_tracking() )
-  {
-    history_object.highLevelCopying = true;
-    DLIList<TopologyBridge*> my_bridges(1);
-    TopologyBridge *tb = CAST_TO( bodyPtr, TopologyBridge );
-    my_bridges.append( tb );
-    OCCModifyEngine::instance()->start_tracking_history( my_bridges, history_object );
-  }
-
   BodySM* new_body = NULL;
   OCCBody* occ_body = CAST_TO(bodyPtr, OCCBody);
   if (!occ_body)
@@ -1823,13 +1812,6 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
     new_body = OCCQueryEngine::instance()->populate_topology_bridge(newCS);
   }
   
-  if( GeometryQueryTool::instance()->history().is_tracking() )
-  {
-    DLIList<BodySM*> new_bodies(1);
-    new_bodies.append( new_body );
-    OCCModifyEngine::instance()->stop_tracking_history( new_bodies, history_object );
-  }
-
   return new_body;
 }
 
@@ -5241,13 +5223,12 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
                                 ImprintType imprint_type,
                                 bool preview ) const
 {
-  // tool_bldy and webct_body_list will be kept and webcut result is in 
+  // tool_body and webct_body_list will be kept and webcut result is in 
   //results_list.
   //tool_body is a const pointer points to varible BodySM object
   //here trying to create a non-const pointer points to the same BodySM object.
 
-  BodySM *body;
-  *body = *tool_body;
+  BodySM *body = const_cast<BodySM*>(tool_body);
   CubitStatus stat;
   DLIList<BodySM*> tool_bodies;
   tool_bodies.append(body);
@@ -5274,7 +5255,7 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
   stat = intersect(body, webcut_body_list, results_list,
                                CUBIT_TRUE);
  
-  if(stat)
+  if(!stat)
   { 
     PRINT_ERROR("Failed to webcut the bodies.\n"); 
     return CUBIT_FAILURE;
@@ -5285,7 +5266,7 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     imprint = CUBIT_FALSE;
 
   stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
-                  CUBIT_TRUE);
+                  CUBIT_FALSE);
 
   //intersect doesn't have to imprint option, so first do this imprint.
   BodySM* new_body1, *new_body2;
@@ -8872,18 +8853,4 @@ void OCCModifyEngine::get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
   }
 }
 
-void OCCModifyEngine::start_tracking_history( DLIList<TopologyBridge*> &bridges,
-                                              OCCHistory &history_object,
-                                              bool ignore_parents )
-{
-}
-
-void OCCModifyEngine::stop_tracking_history( DLIList<BodySM*> &new_bodies,
-                                             OCCHistory &history_object )
-{
-  DLIList<TopologyBridge*> tbs;
-  CAST_LIST( new_bodies, tbs, TopologyBridge );
-
-  //stop_tracking_history( tbs, history_object );
-}
 // EOF
