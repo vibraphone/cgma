@@ -1216,6 +1216,7 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
   }
   return CUBIT_SUCCESS;
 }
+
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

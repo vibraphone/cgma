@@ -4442,19 +4442,17 @@ CubitStatus OCCModifyEngine :: flip_normals( DLIList<Surface*>& face_list ) cons
           }
         }
       }
-      else //sheet body 
-      {
-        TopoDS_Face* topoface = occ_surface->get_TopoDS_Face();
-        TopAbs_Orientation ori = topoface->Orientation();
-        topoface->Orientation(ori == TopAbs_FORWARD ? TopAbs_REVERSED :
+    }        
+    if(!occ_shell || occ_shell->is_sheet()) //sheet body 
+    {
+      TopoDS_Face* topoface = occ_surface->get_TopoDS_Face();
+      TopAbs_Orientation ori = topoface->Orientation();
+      topoface->Orientation(ori == TopAbs_FORWARD ? TopAbs_REVERSED :
                                                     TopAbs_FORWARD);
-        occ_surface->set_TopoDS_Face(*topoface);
-        surface_list.append(occ_surface);
-      }
+      occ_surface->set_TopoDS_Face(*topoface);
+      surface_list.append(occ_surface);
       PRINT_INFO( "Modified volume\n" );
     }
-    else
-      PRINT_WARNING( "Volume was not modified\n" );
   }
   face_list = surface_list;
   return CUBIT_SUCCESS;
@@ -4639,22 +4637,12 @@ CubitStatus OCCModifyEngine:: sweep_translational(
 CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCCurve*& curve,
                                               TopoDS_Shape& toposhape)const
 {
-  DLIList<OCCLoop*> loops;
-  loops =  curve->loops();
-  if( loops.size()) //not a free curve
-  {
-    //copy the curve
-    Curve* c_curve = make_Curve(curve);
-    if(c_curve)
-     curve = CAST_TO(c_curve, OCCCurve);
-    else
-    {
-      PRINT_ERROR("Can't copy the curve for sweep.\n");
-      return CUBIT_FAILURE;
-    }
-  }
   TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
-  toposhape = BRepBuilderAPI_MakeWire(*edge);
+  BRepBuilderAPI_Copy api_copy(*edge);
+  toposhape = api_copy.ModifiedShape(*edge);
+  TopoDS_Edge new_edge = TopoDS::Edge(toposhape);
+  toposhape = BRepBuilderAPI_MakeWire(new_edge);
+
   return CUBIT_SUCCESS;
 }
 
@@ -4667,23 +4655,6 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
   Surface* c_surface = NULL;
   if(surface != NULL)
   {
-    //check if the surface is sheet body, if not, copy it.
-    OCCBody* body = surface->my_body();
-    DLIList<OCCSurface*> surfaces;
-    if (body)
-      body->get_all_surfaces(surfaces); 
-    if(body == NULL || surfaces.size() > 1) //not a sheet body
-    {
-      c_surface = make_Surface(surface);
-      if (c_surface == NULL)
-      {
-         PRINT_ERROR("Cannot copy surface in sweep_translational.\n");
-         return CUBIT_FAILURE;
-      }
-      OCCSurface *occ_surface = CAST_TO(c_surface, OCCSurface);
-      surface = occ_surface;
-    }
- 
     if(sweep_v_p)
     {
       CubitVector center = surface->center_point();
@@ -4728,7 +4699,9 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
       PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
       return CUBIT_FAILURE;
     }
-    toposhape = *toposhape_prt;
+
+    BRepBuilderAPI_Copy api_copy(*toposhape_prt);
+    toposhape = api_copy.ModifiedShape(*toposhape_prt);
   }
   return CUBIT_SUCCESS;
 }
@@ -5250,6 +5223,94 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     GfxPreview::flush();
 
     return CUBIT_SUCCESS;
+  }
+
+  //if the tool_body is a volume, use intersect & subtract, 
+  //if it's a shell or face body, use section then.
+  OCCBody* occ_body = CAST_TO(body, OCCBody);
+  DLIList<Lump*> lumps;
+  lumps = occ_body->lumps();
+  DLIList<OCCShell*> shells;
+  shells = occ_body->shells();
+  DLIList<OCCSurface*> surfaces;
+  surfaces = occ_body->my_sheet_surfaces();
+ 
+  if(lumps.size() == 0 && (shells.size()==1 || surfaces.size() == 1))
+  {
+    OCCSurface * surface = NULL;
+    TopoDS_Shell* topo_shell = NULL;
+    TopoDS_Face* topo_face = NULL;
+    if(shells.size() == 1)
+    {
+      OCCShell* shell = shells.get(); 
+      DLIList<OCCCoFace*> cofaces = shell->cofaces();     
+      surface = cofaces.get()->surface();
+      topo_shell = shell->get_TopoDS_Shell();
+    }
+    else
+    {
+      surface = surfaces.get();
+      topo_face = surface->get_TopoDS_Face();
+    }
+    CubitVector point_1, normal ;
+    CubitStatus rsl = surface->get_point_normal(point_1, normal);
+    assert(rsl);
+
+    gp_Pnt pt = gp_Pnt( point_1.x(), point_1.y(), point_1.z());
+    gp_Dir normal_dir(normal.x(), normal.y(), normal.z());
+    gp_Vec vec(normal_dir);
+    pt =  pt.Translated(vec);
+
+    TopoDS_Solid solid;
+    if(shells.size() == 1)
+      solid = BRepPrimAPI_MakeHalfSpace(*topo_shell, pt);
+    else
+      solid = BRepPrimAPI_MakeHalfSpace(*topo_face,pt);
+
+    DLIList<CubitBoolean> is_tool_volume;
+    is_tool_volume.append(CUBIT_TRUE);
+    DLIList<CubitBox*> tool_boxes ;
+    Bnd_Box box;
+    BRepBndLib::Add(solid, box);
+    double min[3], max[3];
+    box.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+    CubitBox* cBox = new CubitBox(min, max);
+
+    tool_boxes.append(cBox);
+    DLIList<TopoDS_Shape*> solids;
+    solids.append(&solid);
+    rsl = do_subtract(webcut_body_list, solids, is_tool_volume,
+                     &tool_boxes, results_list, CUBIT_TRUE) ;
+    delete cBox;
+    if(!rsl)
+    {
+      PRINT_ERROR("Failed to webcut the bodies.\n");
+      return CUBIT_FAILURE;
+    }
+    gp_Vec vec2 =  -2 * vec;
+    pt = pt.Translated(vec2);
+    if(shells.size() == 1)
+      solid = BRepPrimAPI_MakeHalfSpace(*topo_shell, pt);
+    else
+      solid = BRepPrimAPI_MakeHalfSpace(*topo_face,pt);
+    Bnd_Box box2;
+    BRepBndLib::Add(solid, box2);
+    box2.Get(min[0], min[1], min[2], max[0], max[1], max[2]);
+    cBox = new CubitBox(min, max);
+    tool_boxes.clean_out();
+    tool_boxes.append(cBox);
+    solids.clean_out();
+    solids.append(&solid);
+    rsl = do_subtract(webcut_body_list, solids, is_tool_volume,
+                     &tool_boxes, results_list, CUBIT_FALSE) ;
+    delete cBox;
+    return rsl;
+  }
+
+  else if(lumps.size() + shells.size() + surfaces.size() > 1)
+  {
+    PRINT_ERROR("Can't webcut with multi-volume-shell-surface body.\n");
+    return CUBIT_FAILURE;
   }
 
   stat = intersect(body, webcut_body_list, results_list,

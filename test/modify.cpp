@@ -1310,5 +1310,48 @@ CubitStatus make_Point()
   rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 2);
+
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  for(int i = 0; i < free_entities.size(); i++)
+    gti->delete_RefEntity(free_entities.get_and_step());
+
+  //test for webcut with curve sweep option
+  argv = "webcut.brep";
+  read_geometry(1, &argv, false);
+  argv = "Line_1.brep";
+  read_geometry(1, &argv, false);
+  argv = "Line_2.brep";
+  read_geometry(1, &argv, false);
+  
+  old_bodies.clean_out();
+  new_bodies.clean_out();
+  gti->bodies(old_bodies);
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  DLIList<RefEdge*> curves;
+  for(int i = 0; i < free_entities.size(); i++)
+  {
+    RefEdge* free_edge = CAST_TO(free_entities.get_and_step(), RefEdge);
+    curves.append(free_edge);
+  }
+
+  axis.set(0.,1.,0.);
+
+  rsl= gmti->webcut_with_sweep_curves(old_bodies,curves,axis,true,NULL,NULL,new_bodies,junk);
+  if (rsl== CUBIT_FAILURE)
+     return rsl;
+  
+  num_ents_exported=0;
+  filename = "webcut_sweep.brep";
+  ref_entity_list.clean_out();
+  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  assert(num_ents_exported == 4);
   return CUBIT_SUCCESS;
 }

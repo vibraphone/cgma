@@ -83,6 +83,8 @@ EXTRA_DIST = 62_shaver1.brep \
              Cylinder_1.brep   \
              Cylinder_2.brep   \
              webcut.brep     \
+             Line_1.brep    \
+             Line_2.brep    \
              stitch.name_occ 
 
 # Files that are created by tests, and that therefore 
@@ -126,6 +128,7 @@ MOSTLYCLEANFILES = \
         subtract.occ \
         glue.occ \
         after_webcut.brep \
+        webcut_sweep.brep \
 	mmgr.log
  
 
