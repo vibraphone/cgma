@@ -141,6 +141,19 @@ CubitStatus make_Point()
   assert(n == 6);
 
   Body* body2 = gmti->brick(10, 10, 10);
+  CubitVector scale(1, 2, 5);
+  gmti->scale(body2, scale);
+  assert(fabs(body2->measure()-10000)< 0.0001);
+  CubitBox box1;
+  box1 = body2->bounding_box();
+  assert(fabs(box1.max_x()-5)<0.001 && fabs(box1.min_x() + 5) < 0.001);
+  assert(fabs(box1.max_y()-10)<0.001 && fabs(box1.min_y() + 10) < 0.001);
+  assert(fabs(box1.max_z()-25)<0.001 && fabs(box1.min_z() + 25) < 0.001);
+  scale.z(0.2);
+  scale.y(0.5);
+  gmti->scale(body2, scale);
+  assert(fabs(body2->measure()-1000)< 0.0001);
+
   CubitVector away(11, 0 , 0);
   gti->translate(body2,away);
   DLIList<RefEdge*> ref_edges;
@@ -476,6 +489,12 @@ CubitStatus make_Point()
   test_body =  gmti->torus(10,5);
   d =  test_body->measure(); //d = 4934.8
   assert(d - 4934.8 < 0.1&& d > 4934.8);
+ 
+  CubitVector factors(1,1,0.5);
+  gmti->scale(test_body, factors);  
+  d = test_body->measure();
+  assert( d > 2475.4 && d < 2475.44);
+ 
   //test for planar_sheet making
   CubitVector p1(0, 0, 0);
   CubitVector p2(0, 0, 1);
