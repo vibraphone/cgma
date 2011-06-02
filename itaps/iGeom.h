@@ -3921,6 +3921,20 @@ extern "C" {
                     iBase_EntitySetHandle* result_entity_set, 
                     int *err );
 
+    /**\brief  Return facet information from solid modeling engine
+     *
+     * Return facet information from solid modeling engine
+     * \param instance iGeom instance handle
+     * \param entity_handle Entity being queried
+     * \param dist_tolerance Tolerance guidance for faceting engine
+     * \param **points List of vertices in faceting of curve or surface
+     * \param *points_allocated Number of points in faceting
+     * \param *points_size Size of points array (should be 3*points_allocated?)
+     * \param **facets List of facets in faceting of surface
+     * \param *facets_allocated Number of facets in surface faceting
+     * \param *facets_size Size of facets array (should be 3*facets_allocated?)
+     * \param *err Pointer to error type returned from function
+     */
   void iGeom_getFacets(iGeom_Instance instance,
                        iBase_EntityHandle entity,
                        double dist_tolerance,

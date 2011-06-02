@@ -7106,6 +7106,8 @@ void iGeom_getFacets(iGeom_Instance instance,
         y += step;
         z += step; 
       } 
+      *points_allocated = p_count;
+      *points_size = p_count * 3;
     }
     if(f_count)
     {
@@ -7123,6 +7125,8 @@ void iGeom_getFacets(iGeom_Instance instance,
          *(connectivity + 2) = list[i*4 + 3];
          connectivity += 3;
       }
+      *facets_allocated = f_count/4;
+      *facets_size = f_count*3/4;
     } 
     RETURN(iBase_SUCCESS); 
   }
