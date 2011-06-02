@@ -108,6 +108,7 @@ bool construct_test(iGeom_Instance geom);
 bool primitives_test(iGeom_Instance geom);
 bool transforms_test(iGeom_Instance geom);
 bool booleans_test(iGeom_Instance geom);
+bool faceting_test(iGeom_Instance geom);
 bool shutdown_test(iGeom_Instance geom, std::string &engine_opt);
 bool save_entset_test(iGeom_Instance geom);
 bool mesh_size_test(iGeom_Instance geom);
@@ -261,6 +262,15 @@ int main( int argc, char *argv[] )
   std::cout << "\n";
 #endif  
   
+    // facet tests
+  std::cout << "   faceting: ";
+  result = faceting_test(geom);
+  handle_error_code(result, number_tests_failed,
+                    number_tests_not_implemented,
+                    number_tests_successful);
+  number_tests++;
+  std::cout << "\n";
+
     // shutdown test
   std::cout << "   shutdown: ";
   result = shutdown_test(geom, engine_opt);
@@ -282,6 +292,7 @@ int main( int argc, char *argv[] )
   
   return number_tests_failed;
 }
+
 
 /*!
   @test 
@@ -1241,8 +1252,7 @@ static int count_num_with_tag( iGeom_Instance geom,
 bool mesh_size_test(iGeom_Instance geom)
 {
   const char* filename = STRINGIFY(SRCDIR) "/size.sat";
-  int err, junk1, junk2;
-  bool result = true;
+  int err;
   
   iGeom_deleteAll( geom, &err ); CHECK("");
   iGeom_load( geom, filename, 0, &err, strlen(filename), 0 );
@@ -1335,6 +1345,71 @@ bool mesh_size_test(iGeom_Instance geom)
   CHECK("Got mesh size for volume.");
 
   return true;
+}
+
+bool faceting_test(iGeom_Instance geom)
+{
+
+  const char* filename = STRINGIFY(SRCDIR) "/size.sat";
+  int err;
+  double dist_tolerance=0.001;
+  
+  iGeom_deleteAll( geom, &err ); CHECK("");
+  iGeom_load( geom, filename, 0, &err, strlen(filename), 0 );
+  CHECK( "Failed to load input file: 'size.sat'" );
+
+  // get entity lists
+  iBase_TagHandle id;
+  iGeom_getTagHandle( geom, "GLOBAL_ID", &id, &err, strlen("GLOBAL_ID") );
+  CHECK( "iGeom_getTagHandle(\"GLOBAL_ID\")" );
+  std::vector<iBase_EntityHandle> verts, curves, surfs, vols;
+  std::vector<int> vert_ids, curve_ids, surf_ids, vol_ids;
+  err = get_entities( geom, iBase_VERTEX, verts,  id, &vert_ids  ); CHECK("");
+  err = get_entities( geom, iBase_EDGE,   curves, id, &curve_ids ); CHECK("");
+  err = get_entities( geom, iBase_FACE,   surfs,  id, &surf_ids  ); CHECK("");
+  err = get_entities( geom, iBase_REGION, vols,   id, &vol_ids   ); CHECK("");
+  
+  unsigned int ent;
+  SimpleArray<double> points(1024*1024);
+  SimpleArray<int> facets(1024*1024);
+  for (ent=0; ent < verts.size(); ent++)
+    {
+      iGeom_getFacets(geom,verts[ent],dist_tolerance,
+		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      if (iBase_INVALID_ENTITY_TYPE != err)
+	{
+	  err = iBase_FAILURE;
+	  CHECK("getFacets should fail for vertices.");
+	}
+    }
+   for (ent=0; ent < curves.size(); ent++)
+    {
+      iGeom_getFacets(geom,curves[ent],dist_tolerance,
+		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      CHECK("getFacets failed for a curve.");
+
+      // should check for known sizes and values of these facets & points
+    }
+   for (ent=0; ent < surfs.size(); ent++)
+    {
+      iGeom_getFacets(geom,surfs[ent],dist_tolerance,
+		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      CHECK("getFacets failed for a surface.");
+
+      // should check for known sizes and values of these facets & points
+    }
+  for (ent=0; ent < vols.size(); ent++)
+    {
+      iGeom_getFacets(geom,vols[ent],dist_tolerance,
+		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      if (iBase_INVALID_ENTITY_TYPE != err)
+	{
+	  err = iBase_FAILURE;
+	  CHECK("getFacets should fail for volumes.");
+	}
+    }
+	
+   return true;
 }
 
 bool shutdown_test(iGeom_Instance geom, std::string &engine_opt) 
