@@ -1370,12 +1370,19 @@ bool faceting_test(iGeom_Instance geom)
   err = get_entities( geom, iBase_REGION, vols,   id, &vol_ids   ); CHECK("");
   
   unsigned int ent;
-  SimpleArray<double> points(1024*1024);
-  SimpleArray<int> facets(1024*1024);
+  std::vector<double> points;
+  double *p_ptr = &points[0];
+  int p_size = 0, p_alloc=points.size();
+  std::vector<int> facets;
+  int *f_ptr = &facets[0];
+  int f_size = 0, f_alloc=facets.size();
+
   for (ent=0; ent < verts.size(); ent++)
     {
-      iGeom_getFacets(geom,verts[ent],dist_tolerance,
-		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      iGeom_getFacets(geom, verts[ent], dist_tolerance, 
+		      &p_ptr, &p_alloc, &p_size, 
+		      &f_ptr, &f_alloc, &f_size, 
+		      &err);
       if (iBase_INVALID_ENTITY_TYPE != err)
 	{
 	  err = iBase_FAILURE;
@@ -1384,24 +1391,65 @@ bool faceting_test(iGeom_Instance geom)
     }
    for (ent=0; ent < curves.size(); ent++)
     {
-      iGeom_getFacets(geom,curves[ent],dist_tolerance,
-		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      iGeom_getFacets(geom, curves[ent], dist_tolerance, 
+		      &p_ptr, &p_alloc, &p_size, 
+		      &f_ptr, &f_alloc, &f_size, 
+		      &err);
+      points.resize(p_size);
+      facets.resize(f_size);
+
+      if ( iBase_BAD_ARRAY_DIMENSION == err || iBase_BAD_ARRAY_SIZE == err)
+	{
+	  p_ptr = &points[0];
+	  p_alloc = points.size();
+	  f_ptr = &facets[0];
+	  f_alloc = facets.size();
+	  iGeom_getFacets(geom, curves[ent], dist_tolerance, 
+			  &p_ptr, &p_alloc, &p_size, 
+			  &f_ptr, &f_alloc, &f_size, 
+			  &err);
+	}
+
       CHECK("getFacets failed for a curve.");
+
+      err = (6 != p_size); CHECK("wrong number of points in curve");
+      err = (0 != f_size); CHECK("Non-zero number of facets in curve");
 
       // should check for known sizes and values of these facets & points
     }
    for (ent=0; ent < surfs.size(); ent++)
     {
-      iGeom_getFacets(geom,surfs[ent],dist_tolerance,
-		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      iGeom_getFacets(geom, surfs[ent], dist_tolerance, 
+		      &p_ptr, &p_alloc, &p_size, 
+		      &f_ptr, &f_alloc, &f_size, 
+		      &err);
+      points.resize(p_size);
+      facets.resize(f_size);
+
+      if ( iBase_BAD_ARRAY_DIMENSION == err || iBase_BAD_ARRAY_SIZE == err)
+	{
+	  p_ptr = &points[0];
+	  p_alloc = points.size();
+	  f_ptr = &facets[0];
+	  f_alloc = facets.size();
+	  iGeom_getFacets(geom, surfs[ent], dist_tolerance, 
+			  &p_ptr, &p_alloc, &p_size, 
+			  &f_ptr, &f_alloc, &f_size, 
+			  &err);
+	}
+      std::cerr << "curve " << ent << ": " << p_size << " points and " << f_size << " facets." << std::endl;
       CHECK("getFacets failed for a surface.");
 
+      err = (12 != p_size); CHECK("wrong number of points in curve");
+      err = (6 != f_size); CHECK("wrong number of facets in curve");
       // should check for known sizes and values of these facets & points
     }
   for (ent=0; ent < vols.size(); ent++)
     {
-      iGeom_getFacets(geom,vols[ent],dist_tolerance,
-		      ARRAY_INOUT(points), ARRAY_INOUT(facets), &err);
+      iGeom_getFacets(geom, vols[ent], dist_tolerance, 
+		      &p_ptr, &p_alloc, &p_size, 
+		      &f_ptr, &f_alloc, &f_size, 
+		      &err);
       if (iBase_INVALID_ENTITY_TYPE != err)
 	{
 	  err = iBase_FAILURE;
