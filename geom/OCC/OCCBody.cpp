@@ -210,27 +210,54 @@ void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
   
 void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 { 
+  DLIList<Lump*> my_lumps;
+  my_lumps = lumps();
+  DLIList<OCCShell*> shells = this->shells();
+  DLIList<OCCSurface*> surfaces = this->my_sheet_surfaces();
+
   if (myTopoDSShape != NULL)
   {
     OCCAttribSet::remove_attribute(csa, *myTopoDSShape);
+    if(csa)
+      csa_list.remove(csa);
+    else
+      csa_list.clean_out();
     return;
   }
  
-  if (csa == NULL)
+  else if (my_lumps.size() == 1)
   {
-    csa_list.clean_out();
+    OCCLump* lump = CAST_TO(my_lumps.get(), OCCLump);
+    TopoDS_Solid* solid = lump->get_TopoDS_Solid();
+    OCCAttribSet::remove_attribute(csa, *solid);
+    if(csa)
+      csa_list.remove(csa);
+    else
+      csa_list.clean_out();
     return;
   }
 
-  for(int i = 0; i < csa_list.size(); i++)
+  else if(shells.size() == 1)
   {
-    CubitBoolean IsEqual = CubitSimpleAttrib::equivalent(csa_list.get(), csa);
-    if (IsEqual)
-      csa_list.remove();
-    
+    TopoDS_Shell * shell = shells.get()->get_TopoDS_Shell();
+    OCCAttribSet::remove_attribute(csa, *shell);
+    if(csa)
+      csa_list.remove(csa);
     else
-      csa_list.step();
+      csa_list.clean_out();
+    return;
   }
+
+  else if(surfaces.size() == 1)
+  {
+    TopoDS_Face* surf = surfaces.get()->get_TopoDS_Face();
+    OCCAttribSet::remove_attribute(csa, *surf);
+    if(csa)
+      csa_list.remove(csa);
+    else
+      csa_list.clean_out();
+    return;
+  } 
 }
 
 
@@ -256,8 +283,9 @@ CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
   for(int i = 0 ; i < csa_list.size(); i ++)
   {
     CubitSimpleAttrib* csa = csa_list.get_and_step();
-    if(csa->string_data_list()->size() > 0 && *csa->string_data_list()->get() == name)
-      csas.append(csa);
+    if(csa->string_data_list()->size() > 0)
+     if (*csa->string_data_list()->get() == name)
+       csas.append(csa);
   }
   return CUBIT_SUCCESS;
 }
@@ -618,6 +646,8 @@ void OCCBody::update_bounding_box()
   //calculate the bounding box
   if(myLumps.size() + mySheetSurfaces.size() + myShells.size() == 0)
   {
+    if(!myTopoDSShape)
+      return;
     TopoDS_Shape shape = *myTopoDSShape;
     BRepBndLib::Add(shape, box);
   }

@@ -5302,8 +5302,11 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     solids.clean_out();
     solids.append(&solid);
     rsl = do_subtract(webcut_body_list, solids, is_tool_volume,
-                     &tool_boxes, results_list, CUBIT_FALSE) ;
+                     &tool_boxes, results_list, CUBIT_TRUE) ;
     delete cBox;
+    for(int i = 0; i < webcut_body_list.size(); i++)
+      OCCQueryEngine::instance()->
+        delete_solid_model_entities(webcut_body_list.get_and_step());
     return rsl;
   }
 
@@ -5327,7 +5330,11 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     imprint = CUBIT_FALSE;
 
   stat = subtract(tool_bodies, webcut_body_list, results_list, imprint, 
-                  CUBIT_FALSE);
+                  CUBIT_TRUE);
+
+  for(int i = 0; i < webcut_body_list.size(); i++)
+      OCCQueryEngine::instance()->
+        delete_solid_model_entities(webcut_body_list.get_and_step());
 
   //intersect doesn't have to imprint option, so first do this imprint.
   BodySM* new_body1, *new_body2;
