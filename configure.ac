@@ -103,6 +103,13 @@ AC_ARG_WITH( CUBIT,
              AC_HELP_STRING([--with-CUBIT=<dir>],[DEPRECATED.  Use --with-cubit (small case)]),
              [CUBIT_DIR="$withval"
               DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-cubit=\"${withval}\""])
+
+if test "x$CUBIT_DIR" != "xno"; then
+  if test "x$WITH_MPI" != "xno"; then
+    AC_MSG_ERROR("CGM from CUBIT shared library dosn't support parallel build. Use serial build.")
+  fi
+fi
+
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
 elif test "x$CUBIT_DIR" != "xno"; then
