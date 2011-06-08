@@ -89,6 +89,18 @@ OCCPoint::~OCCPoint()
   }
 }
 
+void OCCPoint::add_curve(OCCCurve* curve)
+{
+  assert(curve != NULL);
+  myCurveList.append_unique(curve);
+}
+
+void OCCPoint::remove_curve(OCCCurve* curve)
+{
+  assert(curve != NULL);
+  myCurveList.remove(curve);
+}
+
 void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 {
   if(vertex.IsEqual(*myTopoDSVertex))
@@ -231,31 +243,7 @@ CubitBox OCCPoint::bounding_box() const
 
 void OCCPoint::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
 {
-  OCCQueryEngine* oqe = (OCCQueryEngine*) get_geometry_query_engine();
-  OCCCurve * curve = NULL;
-  DLIList <OCCCurve* > *curves = oqe->CurveList;
-  TopTools_IndexedDataMapOfShapeListOfShape M;
-  for(int i = 0; i <  curves->size(); i++)
-  {
-     curve = curves->get_and_step();
-     TopExp::MapShapesAndAncestors(*(curve->get_TopoDS_Edge()),
-                                   TopAbs_VERTEX, TopAbs_EDGE, M);
-     if (!M.Contains(*(get_TopoDS_Vertex())))
-       continue;
-
-     const TopTools_ListOfShape& ListOfShapes =
-                                M.FindFromKey(*(get_TopoDS_Vertex()));
-     if (!ListOfShapes.IsEmpty())
-     {
-         TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
-         for (;it.More(); it.Next())
-         {
-           TopoDS_Edge Edge = TopoDS::Edge(it.Value());
-           int k = oqe->OCCMap->Find(Edge);
-           parents.append_unique((OCCPoint*)(oqe->OccToCGM->find(k))->second);
-         }
-     }
-  }
+  CAST_LIST_TO_PARENT(myCurveList, parents);
 }
 void OCCPoint::get_children_virt( DLIList<TopologyBridge*>& ) 
   {  }

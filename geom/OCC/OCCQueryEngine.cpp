@@ -1110,6 +1110,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   OCCLump* lump = NULL;
   CubitSimpleAttrib* body_csa = NULL;
   DLIList<CubitSimpleAttrib*> body_csa_list;
+
   for (i = 0; i < OCC_bodies.size(); i++)
     {
       OCCBody* body = OCC_bodies.get_and_step();
@@ -1208,6 +1209,7 @@ OCCQueryEngine::write_topology( const char* file_name,
     if(!result)
       return CUBIT_FAILURE;
   } 
+
 #ifdef HAVE_OCC_STEP
   else if(strcmp(file_type, "STEP") == 0)
   {
@@ -2213,7 +2215,10 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
     }
 
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
-    populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
+  {
+    Point* point = populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
+    CAST_TO(point, OCCPoint)->add_curve(CAST_TO(curve, OCCCurve));
+  }
 
   return curve;
 }
@@ -2823,6 +2828,14 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
   OCCCurve* fcurve = dynamic_cast<OCCCurve*>(curve);
   if (!fcurve )
     return CUBIT_FAILURE;
+
+  DLIList<TopologyBridge*> children;
+  fcurve->get_children_virt(children);
+  for(int i = 0; i < children.size(); i++)
+  {
+     Point* point = CAST_TO(children.get_and_step(), Point);
+     CAST_TO(point, OCCPoint)->remove_curve(fcurve);
+  }
 
   unhook_coedges_of_a_curve(fcurve);
     

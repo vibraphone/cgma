@@ -29,6 +29,7 @@
 class CubitSimpleAttrib;
 class BRepBuilderAPI_ModifyShape;
 class BRepAlgoAPI_BooleanOperation;
+class OCCCurve;
 // ********** END FORWARD DECLARATIONS     **********
 
 class OCCPoint : public Point
@@ -37,7 +38,7 @@ private:
 
   TopoDS_Vertex *myTopoDSVertex;
   CubitBoolean myMarked ; 
-
+  DLIList<OCCCurve * > myCurveList;
 public :
   
   OCCPoint(const CubitVector &location );
@@ -60,6 +61,9 @@ public :
 
   virtual ~OCCPoint();
     //- The destructor
+
+  void add_curve(OCCCurve* curve);
+  void remove_curve(OCCCurve* curve);
 
   void set_myMarked(CubitBoolean marked) {myMarked = marked;}
 
