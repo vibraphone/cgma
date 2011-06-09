@@ -260,7 +260,6 @@ int main( int argc, char *argv[] )
                     number_tests_successful);
   number_tests++;
   std::cout << "\n";
-#endif  
   
     // facet tests
   std::cout << "   faceting: ";
@@ -270,6 +269,7 @@ int main( int argc, char *argv[] )
                     number_tests_successful);
   number_tests++;
   std::cout << "\n";
+#endif
 
     // shutdown test
   std::cout << "   shutdown: ";
