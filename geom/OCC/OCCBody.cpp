@@ -218,10 +218,6 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
   if (myTopoDSShape != NULL)
   {
     OCCAttribSet::remove_attribute(csa, *myTopoDSShape);
-    if(csa)
-      csa_list.remove(csa);
-    else
-      csa_list.clean_out();
     return;
   }
  
