@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += modify subtract makept r_w test_occ operation brick_occ merge_occ
+  TESTS += attribute_to_file attribute_to_buffer modify subtract makept r_w test_occ operation brick_occ merge_occ
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -40,6 +40,10 @@ r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
 operation_SOURCES = operation.cpp
 init_SOURCES = init.cpp
+attribute_to_file_SOURCES = attribute_to_file.cpp
+attribute_to_file_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
+attribute_to_buffer_SOURCES = attribute_to_buffer.cpp
+attribute_to_buffer_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
 
 brick_sources = brick.cpp
 brick_acis_SOURCES = $(brick_sources)
@@ -129,6 +133,7 @@ MOSTLYCLEANFILES = \
         glue.occ \
         after_webcut.brep \
         webcut_sweep.brep \
+        bricks2.occ \
 	mmgr.log
  
 
