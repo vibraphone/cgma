@@ -36,6 +36,7 @@ using std::type_info;
 // ********** END CUBIT INCLUDES              **********
 
 // ********** BEGIN FORWARD DECLARATIONS
+class BRep_Builder;
 class TopologyEntity;
 class TopologyBridge;
 class RefEntity;
@@ -65,6 +66,7 @@ class Point;
 class TopologyEntity;
 class CubitBox;
 class CubitString;
+class CubitSimpleAttrib;
 
 class OtherSolidModelingEntity;
 class OCCLump;
@@ -125,6 +127,13 @@ public:
      { return "OCC"; }
 
   TopoDS_Shape *get_TopoDS_Shape_of_entity( TopologyBridge * entity);
+  
+  void body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies, //input
+                                 BRep_Builder &B, //input
+                                 TopoDS_Compound &Co, //input and output,
+                                 DLIList<OCCLump*> &single_lumps, //output
+                                 DLIList< DLIList<CubitSimpleAttrib*>*> &lists);
+
   int get_major_version();
 
   int get_minor_version();

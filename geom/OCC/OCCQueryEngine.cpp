@@ -1081,6 +1081,66 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   return CUBIT_SUCCESS;
 }
 
+void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
+                                  BRep_Builder &B,
+                                  TopoDS_Compound &Co,
+                                  DLIList<OCCLump*> &single_lumps,
+                                  DLIList< DLIList<CubitSimpleAttrib*>*> &lists)
+{
+  //Add every shape to the compound
+  OCCLump* lump = NULL;
+  CubitSimpleAttrib* body_csa = NULL;
+  DLIList<CubitSimpleAttrib*> body_csa_list;
+
+  for (int i = 0; i < OCC_bodies.size(); i++)
+  {
+    OCCBody* body = OCC_bodies.get_and_step();
+    TopoDS_Compound *shape = body->get_TopoDS_Shape();
+    if (shape == NULL || shape->IsNull()) //single lump or sheet or shell body
+    {
+       DLIList<OCCSurface*> surfaces = body->my_sheet_surfaces();
+       DLIList<OCCShell*> shells = body->shells();
+       DLIList<Lump*> lumps = body->lumps();
+       if(surfaces.size() == 1)
+         B.Add(Co,*(surfaces.get()->get_TopoDS_Face()));
+       else if (shells.size() == 1)
+         B.Add(Co,*(shells.get()->get_TopoDS_Shell()));
+       else
+       {
+         lump = CAST_TO(lumps.get(), OCCLump);
+         B.Add(Co, *(lump->get_TopoDS_Solid()));
+         //if body has attributes, add them to the solid.
+         DLIList<CubitSimpleAttrib*> csa_list;
+         body->get_simple_attribute(csa_list);
+         body_csa_list.clean_out();
+         for(int i = 0; i < csa_list.size(); i++)
+         {
+           CubitSimpleAttrib* csa = csa_list.get_and_step();
+           CubitString num_string(i);
+           CubitString* pre_fix = new CubitString("#SINGLELUMP%"+
+                                                  num_string);
+
+           DLIList<CubitString*> *string_list = csa->string_data_list();
+           DLIList<double*> *doubles = csa->double_data_list();
+           DLIList<int*> *ints = csa->int_data_list();
+           body_csa = new CubitSimpleAttrib;
+           body_csa->initialize_from_lists_of_ptrs(string_list,
+                                                   doubles, ints);
+           body_csa->string_data_list()->insert_first(pre_fix);
+           lump->append_simple_attribute_virt(body_csa);
+           body_csa_list.append(body_csa);
+         }
+         if(csa_list.size() > 0)
+         {
+           single_lumps.append(lump);
+           lists.append(new DLIList<CubitSimpleAttrib*>(body_csa_list));
+         }
+       }
+       continue;
+    }
+    B.Add(Co, *shape);
+  }
+} 
 //===========================================================================
 //Function Name:export_solid_model
 //Member Type:  PUBLIC
@@ -1108,58 +1168,9 @@ OCCQueryEngine::write_topology( const char* file_name,
   DLIList<OCCLump*> single_lumps;
   DLIList< DLIList<CubitSimpleAttrib*>*> lists;
   OCCLump* lump = NULL;
-  CubitSimpleAttrib* body_csa = NULL;
-  DLIList<CubitSimpleAttrib*> body_csa_list;
 
-  for (i = 0; i < OCC_bodies.size(); i++)
-    {
-      OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_Compound *shape = body->get_TopoDS_Shape();
-      if (shape == NULL || shape->IsNull()) //single lump or sheet or shell body
-      {
-         DLIList<OCCSurface*> surfaces = body->my_sheet_surfaces();
-         DLIList<OCCShell*> shells = body->shells();
-         DLIList<Lump*> lumps = body->lumps();
-         if(surfaces.size() == 1)
-           B.Add(Co,*(surfaces.get()->get_TopoDS_Face())); 
-         else if (shells.size() == 1)
-    	   B.Add(Co,*(shells.get()->get_TopoDS_Shell()));
-         else
-         {
-           lump = CAST_TO(lumps.get(), OCCLump);
-           B.Add(Co, *(lump->get_TopoDS_Solid()));
-           //if body has attributes, add them to the solid.
-           DLIList<CubitSimpleAttrib*> csa_list;
-           body->get_simple_attribute(csa_list);
-           body_csa_list.clean_out();
-           for(int i = 0; i < csa_list.size(); i++)
-           {
-             CubitSimpleAttrib* csa = csa_list.get_and_step();
-             CubitString num_string(i);
-             CubitString* pre_fix = new CubitString("#SINGLELUMP%"+
-                                                    num_string);
-             
-             DLIList<CubitString*> *string_list = csa->string_data_list();
-             DLIList<double*> *doubles = csa->double_data_list();
-             DLIList<int*> *ints = csa->int_data_list();
-             body_csa = new CubitSimpleAttrib;
-             body_csa->initialize_from_lists_of_ptrs(string_list,
-                                                     doubles, ints);
-             body_csa->string_data_list()->insert_first(pre_fix);
-             lump->append_simple_attribute_virt(body_csa);
-             body_csa_list.append(body_csa);
-           } 
-           if(csa_list.size() > 0)
-           {
-             single_lumps.append(lump);
-             lists.append(new DLIList<CubitSimpleAttrib*>(body_csa_list)); 
-           }
-         }
-         continue;
-      }
-
-      B.Add(Co, *shape);
-    }
+  if(OCC_bodies.size() > 0)
+    body_attributes_for_writing(OCC_bodies, B, Co, single_lumps, lists);
 
   for (i = 0; i < OCC_surfaces.size(); i++)
     {
@@ -1263,27 +1274,12 @@ OCCQueryEngine::write_topology( char*& p_buffer,
   B.MakeCompound(Co);
 
   //Add every shape to the compound
-  for (i = 0; i < OCC_bodies.size(); i++)
-    {
-      OCCBody* body = OCC_bodies.get_and_step();
-      TopoDS_Compound *shape = body->get_TopoDS_Shape();
+  DLIList<OCCLump*> single_lumps;
+  DLIList< DLIList<CubitSimpleAttrib*>*> lists;
+  OCCLump* lump = NULL;
 
-      if (shape == NULL || shape->IsNull()) //single lump or sheet or shell body
-      {
-         DLIList<OCCSurface*> surfaces = body->my_sheet_surfaces();
-         DLIList<OCCShell*> shells = body->shells();
-         DLIList<Lump*> lumps = body->lumps();
-         if(surfaces.size())
-           B.Add(Co,*(surfaces.get()->get_TopoDS_Face())); 
-         else if(shells.size())
-    	   B.Add(Co,*(shells.get()->get_TopoDS_Shell()));
-         else 
-           B.Add(Co,*(CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid()));
-         continue;
-      }
-
-      B.Add(Co, *shape);
-    }
+  if(OCC_bodies.size() > 0)
+    body_attributes_for_writing(OCC_bodies, B, Co, single_lumps, lists);
 
   for (i = 0; i < OCC_surfaces.size(); i++)
     {
@@ -1318,6 +1314,20 @@ OCCQueryEngine::write_topology( char*& p_buffer,
 
     if(!Write(Co, p_buffer, n_buffer_size, b_export_buffer, label))
       return CUBIT_FAILURE;
+
+    //remove the body attributes from lump
+    for (int i = 0; i < single_lumps.size(); i++)
+    {
+      lump = single_lumps.get_and_step();
+      DLIList<CubitSimpleAttrib*>* p_csas = lists.get_and_step();
+      for(int j = 0 ; j < p_csas->size(); j ++)
+      {
+        CubitSimpleAttrib* csa = p_csas->get_and_step();
+        lump->remove_simple_attribute_virt(csa);
+        delete csa;
+      }
+      delete p_csas;
+    }
 
   return CUBIT_SUCCESS;
 }
