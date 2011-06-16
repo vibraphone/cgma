@@ -1,12 +1,14 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+
 #include "InitCGMA.hpp"
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
 #include "Body.hpp"
 #include "CGMApp.hpp"
 #include "CubitAttribManager.hpp"
-#include "CADefines.hpp"
-#include "TDParallel.hpp"
-#include "CABodies.hpp"
+#include "CAEntityId.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,8 +39,8 @@ int main()
   ASSERT(s);
   
   // actuate CA_BODIES attribute and turn on auto flag
-  CGMApp::instance()->attrib_manager()->register_attrib_type(CA_BODIES, "bodies", "BODIES",
-							     CABodies_creator, CUBIT_TRUE,
+  CGMApp::instance()->attrib_manager()->register_attrib_type(CA_ENTITY_ID, "id", "ENTITY_ID",
+							     CAEntityId_creator, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_FALSE);
   CGMApp::instance()->attrib_manager()->auto_flag(CUBIT_TRUE);
@@ -53,24 +55,6 @@ int main()
     s = GeometryQueryTool::instance()->translate( bricks[i], CubitVector(i,0,0) );
     ASSERT(s);
     export_list.append( bricks[i] );
-
-    // add tool data to bodies
-    RefEntity* entity = dynamic_cast<RefEntity*> (bricks[i]);
-    DLIList<int> shared_procs;
-    shared_procs.append(i);
-    TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-    if (td_par == NULL) td_par = new TDParallel(entity, NULL, &shared_procs);
-
-    // add tool data to volumes too
-    DLIList<RefVolume*> volumes;
-    (dynamic_cast<TopologyEntity*> (entity))->ref_volumes(volumes);
-    int n_vol = volumes.size();
-    volumes.reset();
-    for (int j = 0; j < n_vol; j++) {
-      RefEntity *vol = volumes.get_and_step();
-      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
-      if (td_par == NULL) td_par = new TDParallel(vol, NULL, &shared_procs);
-    }
   }
 
   // export as file
@@ -79,6 +63,23 @@ int main()
                                                          FORMAT, junk, CubitString(__FILE__) );
   ASSERT(s);
 
+  //check that the two single volume bodys' attributes are exported as SINGLELUMP%
+  std::ifstream Myfile;
+  std::string line;
+  char* search = "SINGLELUMP%";
+  Myfile.open ("bricks2.occ");
+  int found = 0, offset;
+  if(Myfile.is_open())
+  {
+    while(!Myfile.eof())
+    {
+      getline(Myfile,line);    
+      if ((offset = line.find(search, 0)) != std::string::npos)
+        found ++;
+    }
+  }
+ 
+  assert (found == 2); 
   // delete geometry
   GeometryQueryTool::instance()->delete_geometry();
 
@@ -97,43 +98,9 @@ int main()
   s = GeometryQueryTool::instance()->ref_entity_list("body", body_entity_list, CUBIT_FALSE);
   int n_body = body_entity_list.size();
   body_entity_list.reset();
+  assert (n_body == 2);
 
-  for (int i = 0; i < n_body; i++) {
-    RefEntity* entity = body_entity_list.get_and_step();
-    TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-
-    // check bodies
-    if (td_par == NULL) {
-      std::cout << "Error: Body doesn't have tool data." << std::endl;
-
-      // check child volumes
-      DLIList<RefEntity*> volumes;
-      entity->get_child_ref_entities(volumes);
-
-      // check if the first Volume has tool data
-      volumes.reset();
-      RefEntity *vol = volumes.get();
-      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
-
-      if (td_par == NULL) {
-	std::cout << "Error: Volume doesn't have tool data." << std::endl;
-	return 1;
-      }
-    }
-  }
-  
   return 0;
 }
 
-RefFace* shared_face( Body* b1, Body* b2 )
-{
-  DLIList<RefFace*> faces1, faces2;
-  b1->ref_faces( faces1 );
-  b2->ref_faces( faces2 );
-  faces1.intersect( faces2 );
-  if (faces1.size() == 1)
-    return faces1.get();
-  else
-    return 0;
-}
 
