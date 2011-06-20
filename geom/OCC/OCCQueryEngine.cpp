@@ -1366,29 +1366,26 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
 				   bool b_write_buffer,
                                    TDF_Label label)
 {
-  Standard_CString file_name = "tempfile";
-  if(!Write(Sh, const_cast<char*>(file_name),label))
-      return CUBIT_FAILURE; 
+  // make buffer as ouput stream
+  std::stringbuf sb;
+  std::iostream os(&sb);
+  OCCShapeAttributeSet SS;
+  
+  // write to output stream
+  SS.Add(Sh);
+  os << "DBRep_DrawableShape\n";  // for easy Draw read
+  SS.Write(os);
+  CubitBoolean isGood = os.good();
+  if (!isGood) return isGood;
+  SS.Write(Sh,os,&label);
+  isGood = os.good();
+  if (!isGood) return isGood;
+  
+  n_buffer_size = os.rdbuf()->pubseekoff(0, std::ios_base::end, std::ios::out);
 
-  // get size of file
-  ifstream infile (file_name, ifstream::binary);
-  infile.seekg(0,ifstream::end);
-  long size=infile.tellg();
-  infile.seekg(0);
-
-  if (b_write_buffer) {
-    if(n_buffer_size < size) {
-      PRINT_ERROR("Buffer size is not enough, increase buffer size.\n");
-      infile.close();
-      remove(file_name);
-      return CUBIT_FAILURE;
-    }
-    infile.read(pBuffer,size);
-  }
-  else n_buffer_size = size;
-
-  infile.close();
-  remove(file_name);
+  // get real geometries from output stream to buffer
+  if (b_write_buffer) os.read(pBuffer, n_buffer_size);
+  
   return CUBIT_TRUE;
 }
                                    
@@ -1417,18 +1414,19 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
 				  const int n_buffer_size,
                                   TDF_Label label)
 {
-  Standard_CString file_name;
-  file_name = "tempfile";
-  ofstream outfile (file_name,ofstream::binary);
-  outfile.write (pBuffer,n_buffer_size);
+  // make buffer as input stream
+  std::stringbuf sb;
+  std::iostream is(&sb);
+  is.write(pBuffer, n_buffer_size);
+  
+  // read from input stream
+  OCCShapeAttributeSet SS;
+  SS.Read(is, false);
+  int nbshapes = SS.NbShapes();
+  if (!nbshapes) return CUBIT_FALSE;
+  SS.Read(Sh, is, nbshapes, &label);
 
-  CubitBoolean stat = 
-     Read(Sh, const_cast<char*>(file_name),label, CUBIT_FALSE);
-
-  outfile.close();
-  remove(file_name);
-
-  return stat;;
+  return CUBIT_TRUE;
 }
 
 CubitStatus
