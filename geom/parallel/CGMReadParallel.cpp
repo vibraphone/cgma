@@ -22,6 +22,7 @@
 #include "CGMReadParallel.hpp"
 #include "CGMParallelConventions.h"
 #include "CGMParallelComm.hpp"
+#include "CubitCompat.hpp"
 
 const bool CGM_read_parallel_debug = false;
 
@@ -372,9 +373,9 @@ CubitStatus CGMReadParallel::read_entities(const char* file_name)
 {
   // check file type
   CubitString file_type;
-  //if (strstr(file_name, ".sab")) file_type = "ACIS_SAB";
-  //else if (strstr(file_name, ".sat")) file_type = "ACIS_SAT";
-  if (strstr(file_name, ".stp")) file_type = "STEP";
+  if (strstr(file_name, ".sab")) file_type = "ACIS_SAB";
+  else if (strstr(file_name, ".sat")) file_type = "ACIS_SAT";
+  else if (strstr(file_name, ".stp")) file_type = "STEP";
   else if (strstr(file_name, ".igs")) file_type = "IGES";
   else if (strstr(file_name, ".occ") ||
 	   strstr(file_name, ".OCC") ||
@@ -386,7 +387,8 @@ CubitStatus CGMReadParallel::read_entities(const char* file_name)
   }
 
   // import solid model
-  CubitStatus result = m_gqt->import_solid_model(file_name, file_type.c_str());
+  CubitStatus result = CubitCompat_import_solid_model(file_name,
+                                                      file_type.c_str());
   if (CUBIT_SUCCESS != result) {
     PRINT_ERROR("Reading file %s failed.\n", file_name);
     return CUBIT_FAILURE;

@@ -267,9 +267,11 @@ CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
     return CUBIT_SUCCESS;
   }
 
+#ifdef HAVE_OCC
   CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, pBuffer,
 									 n_buffer_size, b_write_buffer);
   RRA("Failed to write ref entities to buffer.");
+#endif
 
   if (b_write_buffer) m_currentPosition += n_buffer_size;
   return CUBIT_SUCCESS;
@@ -285,9 +287,11 @@ CubitStatus CGMParallelComm::read_buffer(DLIList<RefEntity*> &ref_entity_list,
 #else
   if (n_buffer_size == 0) return CUBIT_SUCCESS;
 
+#ifdef HAVE_OCC
   CubitStatus result = GeometryQueryTool::instance()->import_solid_model(&ref_entity_list, pBuffer,
 									 n_buffer_size);
   RRA("Failed to read ref entities from buffer.");
+#endif
   
   return CUBIT_SUCCESS;
 #endif

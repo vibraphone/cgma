@@ -9,9 +9,10 @@ if USE_MPI
 endif
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_parallel.la
+if build_parallel
+  noinst_LTLIBRARIES = libcubit_parallel.la
+else
+  noinst_LTLIBRARIES =
 endif
 
 # The directory where headers will be installed
