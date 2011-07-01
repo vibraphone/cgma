@@ -291,6 +291,10 @@ EErrorCode meErrorState;
         UnsignedInt32 mintNumModels;
         SModelData* mpaModelData;
     } mModelBuff;
+    char buff[16];// used to pad for the difference between sizeof(CCubitFile)
+                  //   and actual size of object from cubit library
+                  // it seems that we have headers from 12.0, and library
+                  //           is 12.2 
 };
 
 } // namespace NCubitFile
