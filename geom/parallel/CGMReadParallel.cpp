@@ -59,6 +59,8 @@ CGMReadParallel::CGMReadParallel(GeometryQueryTool* gqt, CGMParallelComm *pc)
     if (NULL == m_pcomm) m_pcomm = new CGMParallelComm();
   }
 
+  m_round_robin = false;
+  m_partition_static = false;
   m_scatter = false;
   m_rank = m_pcomm->proc_config().proc_rank();
   m_proc_size = m_pcomm->proc_config().proc_size();
@@ -117,7 +119,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     }
     // static partition, use chaco
     else if (partition_tag_name == "PAR_PARTITION_STATIC") {
-
+      m_partition_static = true;
     }
     // dynamic partition, use zoltan
     else if (partition_tag_name == "PAR_PARTITION_DYNAMIC") {
@@ -267,8 +269,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 //==================
     case PA_BALANCE:
       if (CGM_read_parallel_debug) std::cout << "Balancing entities." << std::endl;
-      
-      result = balance();
+      if (m_round_robin) result = balance_round_robin();
       if (CUBIT_SUCCESS != result) return result;
 
       if (CGM_read_parallel_debug) PRINT_INFO("Balancing entities done.\n");
@@ -406,7 +407,7 @@ CubitStatus CGMReadParallel::read_entities(const char* file_name)
   return result;
 }
 
-CubitStatus CGMReadParallel::balance()
+CubitStatus CGMReadParallel::balance_round_robin()
 {
   // get bodies
   int i, j;
@@ -560,21 +561,33 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
       return CUBIT_FAILURE;
     }
 
-    if (td_par->get_charge_proc() != m_rank) delete_body_list.append(entity);
+    if (td_par->get_charge_proc() != m_rank) { // candidate to be deleted
+      // check child surfaces
+      DLIList<RefFace*> face_list;
+      (dynamic_cast<TopologyEntity*> (entity))->ref_faces(face_list);
+      bool b_partitioned_surf = false;
+      int n_face = face_list.size();
+      face_list.reset();
+      for (int j = 0; j < n_face; j++) {
+        RefEntity* face = face_list.get_and_step();
+        TDParallel *td_par_face = (TDParallel *) face->get_TD(&TDParallel::is_parallel);
+        if (td_par_face != NULL) {
+          DLIList<int>* shared_procs = td_par_face->get_shared_proc_list();
+          int n_shared = shared_procs->size();
+          shared_procs->reset();
+          for (int k = 0; k < n_shared; k++) {
+            if (shared_procs->get_and_step() == m_rank) {
+              b_partitioned_surf = true;
+              break;
+            }
+          }
+        }
+      }
+      if (b_partitioned_surf) partition_list.append(entity);
+      else delete_body_list.append(entity);
+    }
     else partition_list.append(entity);
   }
-  
-  // delete bodies
-  if (m_rank != reader) {
-    nEntity = delete_body_list.size();
-    for (i = 0; i < nEntity; i++) {
-      GeometryQueryTool::instance()->delete_RefEntity(delete_body_list[i]);
-    }
-  }
-
-  // update Body list in ParallelComm
-  body_entity_list.clean_out();
-  body_entity_list += partition_list;
   
   // print info
   char pre_body[100];
@@ -582,12 +595,25 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   if (CGM_read_parallel_debug) {
     if (m_rank != reader) {
       CAST_LIST_TO_PARENT(delete_body_list, tmp_body_list);
-      sprintf(pre_body, "Deleted %d Bodies: ", tmp_body_list.size());
+      sprintf(pre_body, "Will delete %d Bodies: ", tmp_body_list.size());
       CubitUtil::list_entity_ids(pre_body, tmp_body_list );
     }
-    std::cerr << "Partitioned Body list size after delete: "
+    std::cout << "Partitioned Body list size after delete: "
 	      << partition_list.size() << std::endl;
   }
+
+  // delete bodies
+  if (m_rank != reader) {
+    nEntity = delete_body_list.size();
+    delete_body_list.reset();
+    for (i = 0; i < nEntity; i++) {
+      GeometryQueryTool::instance()->delete_RefEntity(delete_body_list.get_and_step());
+    }
+  }
+
+  // update Body list in ParallelComm
+  body_entity_list.clean_out();
+  body_entity_list += partition_list;
 
   return CUBIT_SUCCESS;
 }

@@ -51,7 +51,7 @@ private:
 
   CGMParallelComm *m_pcomm;
 
-  bool m_round_robin, m_scatter, m_reader;
+  bool m_round_robin, m_partition_static, m_scatter, m_reader;
 
   unsigned int m_rank, m_proc_size;
 
@@ -61,7 +61,7 @@ private:
   CubitStatus read_entities(const char* file_name);
 
   // balance and save the information as attribute
-  CubitStatus balance();
+  CubitStatus balance_round_robin();
 
   CubitStatus delete_nonlocal_entities(int reader,
 				       std::string &ptag_name,
