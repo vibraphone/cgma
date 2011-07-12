@@ -723,8 +723,12 @@ CubitStatus make_Point()
   // middle point should be on the curve.
 
   //delete all entities
+  bodies.clean_out();
+  gti->bodies(bodies);
   gti->delete_Body(bodies);
 
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
   for (int j = free_entities.size(); j--;)
     {
       gti->delete_RefEntity( free_entities.get_and_step());

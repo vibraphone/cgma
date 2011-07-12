@@ -77,9 +77,31 @@ int main()
       if ((offset = line.find(search, 0)) != std::string::npos)
         found ++;
     }
+    Myfile.close();
   }
- 
+   
   assert (found == 2); 
+
+  s = GeometryQueryTool::instance()->export_solid_model( export_list, "bricks22.occ",
+                                                         FORMAT, junk, CubitString(__FILE__) );
+  ASSERT(s);
+
+  //check that the two single volume bodys' attributes are exported as SINGLELUMP%
+  Myfile.open ("bricks22.occ");
+  found = 0;
+  if(Myfile.is_open())
+  {
+    while(!Myfile.eof())
+    {
+      getline(Myfile,line);
+      if ((offset = line.find(search, 0)) != std::string::npos)
+        found ++;
+    }
+    Myfile.close();
+  }
+
+  assert (found == 2);
+
   // delete geometry
   GeometryQueryTool::instance()->delete_geometry();
 

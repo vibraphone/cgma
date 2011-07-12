@@ -4,10 +4,10 @@
 #include "Body.hpp"
 #include "CGMApp.hpp"
 #include "CubitAttribManager.hpp"
-#include "CADefines.hpp"
-#include "TDParallel.hpp"
-#include "CABodies.hpp"
+#include "CAEntityId.hpp"
 
+#include <iostream>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,8 +37,8 @@ int main()
   ASSERT(s);
   
   // actuate CA_BODIES attribute and turn on auto flag
-  CGMApp::instance()->attrib_manager()->register_attrib_type(CA_BODIES, "bodies", "BODIES",
-							     CABodies_creator, CUBIT_TRUE,
+  CGMApp::instance()->attrib_manager()->register_attrib_type(CA_ENTITY_ID, "id", "ENTITY_ID",
+							     CAEntityId_creator, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_FALSE);
   CGMApp::instance()->attrib_manager()->auto_flag(CUBIT_TRUE);
@@ -53,24 +53,6 @@ int main()
     s = GeometryQueryTool::instance()->translate( bricks[i], CubitVector(i,0,0) );
     ASSERT(s);
     export_list.append( bricks[i] );
-
-    // add tool data to bodies
-    RefEntity* entity = dynamic_cast<RefEntity*> (bricks[i]);
-    DLIList<int> shared_procs;
-    shared_procs.append(i);
-    TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-    if (td_par == NULL) td_par = new TDParallel(entity, NULL, &shared_procs);
-
-    // add tool data to volumes too
-    DLIList<RefVolume*> volumes;
-    (dynamic_cast<TopologyEntity*> (entity))->ref_volumes(volumes);
-    int n_vol = volumes.size();
-    volumes.reset();
-    for (int j = 0; j < n_vol; j++) {
-      RefEntity *vol = volumes.get_and_step();
-      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
-      if (td_par == NULL) td_par = new TDParallel(vol, NULL, &shared_procs);
-    }
   }
 
   // export as buffer
@@ -87,6 +69,16 @@ int main()
   // delete geometry
   GeometryQueryTool::instance()->delete_geometry();
 
+  //check that the two single volume bodys' attributes are exported as SINGLELUMP%
+  printf (p_buffer); 
+
+  std::string search ("SINGLELUMP%") ;
+  std::string buffer (p_buffer, n_bsize);
+  size_t found = 0;
+  found = buffer.find(search);
+  if(found==std::string::npos)
+    assert(0);
+
   // import it again
   DLIList<RefEntity*> import_list;
   s = GeometryQueryTool::instance()->import_solid_model(NULL, p_buffer, n_bsize);
@@ -101,32 +93,7 @@ int main()
     std::cerr << "Error: # of imported bodies should be 2." << std::endl;
     return 1;
   }
-  body_entity_list.reset();
 
-  for (int i = 0; i < n_body; i++) {
-    RefEntity* entity = body_entity_list.get_and_step();
-    TDParallel *td_par = (TDParallel *) entity->get_TD(&TDParallel::is_parallel);
-
-    // check bodies
-    if (td_par == NULL) {
-      std::cout << "Error: Body doesn't have tool data." << std::endl;
-
-      // check child volumes
-      DLIList<RefEntity*> volumes;
-      entity->get_child_ref_entities(volumes);
-
-      // check if the first Volume has tool data
-      volumes.reset();
-      RefEntity *vol = volumes.get();
-      td_par = (TDParallel *) vol->get_TD(&TDParallel::is_parallel);
-
-      if (td_par == NULL) {
-	std::cout << "Error: Volume doesn't have tool data." << std::endl;
-	return 1;
-      }
-    }
-  }
-  
   return 0;
 }
 
