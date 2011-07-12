@@ -149,7 +149,7 @@ OCCQueryEngine::OCCQueryEngine()
   GeometryQueryTool::instance()->add_gqe( this );
   OCCMap = new TopTools_DataMapOfShapeInteger;
   OccToCGM = new std::map<int, TopologyBridge*>;
-
+  Shape_Label_Map = new std::map<int, TDF_Label>;
   BodyList = new DLIList<OCCBody*>;
   WireList = new DLIList<OCCLoop*>;
   SurfaceList = new DLIList<OCCSurface*>;
@@ -171,6 +171,7 @@ OCCQueryEngine::~OCCQueryEngine()
   instance_ = NULL;
   delete OCCMap;
   delete OccToCGM;
+  delete Shape_Label_Map;
   delete BodyList;
   delete WireList;
   delete SurfaceList;
@@ -1585,10 +1586,10 @@ DLIList<TopologyBridge*> OCCQueryEngine::populate_topology_bridge(TopoDS_Shape& 
     populate_topology_bridge(TopoDS::Wire(aShape), CUBIT_TRUE);
 
   else if(aShape.ShapeType() == TopAbs_EDGE)
-    tblist.append(populate_topology_bridge(TopoDS::Edge(aShape)));
+    tblist.append(populate_topology_bridge(TopoDS::Edge(aShape),CUBIT_TRUE));
 
   else if(aShape.ShapeType() == TopAbs_VERTEX)
-    tblist.append(populate_topology_bridge(TopoDS::Vertex(aShape)));
+    tblist.append(populate_topology_bridge(TopoDS::Vertex(aShape), CUBIT_TRUE));
   else
     PRINT_ERROR("Wrong topology type is given. \n");
   tblist.remove_all_with_value(NULL);
@@ -1600,7 +1601,8 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
   if(aShape.IsNull())
     return (BodySM*)NULL;
   OCCBody *body = (OCCBody*)NULL;
-  if (!OCCMap->IsBound(aShape))
+  if (!OCCMap->IsBound(aShape) || 
+       OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
     {
       //check to see if this compound has only one lump which is already in 
       //in another body. Unite operation will return a one lump compound.
@@ -1674,10 +1676,19 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
       {
         TopoDS_Compound *comsolid = new TopoDS_Compound;
         *comsolid = aShape;
-        (iTotalTBCreated)++;
         body = new OCCBody(comsolid);
-        OCCMap->Bind(*comsolid, iTotalTBCreated);
-        OccToCGM->insert(valType(iTotalTBCreated,
+        int current_id;
+        if(!OCCMap->IsBound(aShape))
+        {
+          iTotalTBCreated++;
+          current_id = iTotalTBCreated;
+          OCCMap->Bind(aShape, current_id);
+        }
+
+        else
+          current_id = OCCMap->Find(aShape);
+
+        OccToCGM->insert(valType(current_id,
                              (TopologyBridge*)body));
         BodyList->append(body);
       }
@@ -1694,16 +1705,25 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
   DLIList<Lump*> lumps;
   for (Ex.Init(aShape, TopAbs_SOLID); Ex.More(); Ex.Next())
   {
-     Lump* lump = populate_topology_bridge(TopoDS::Solid(Ex.Current()));
+     TopoDS_Shape sh = Ex.Current();
+     Lump* lump = populate_topology_bridge(TopoDS::Solid(sh));
      lumps.append(lump);
      CAST_TO(lump, OCCLump)->add_body(body);
+     //add the solid shape into map
+     TopoDS_Shape parent = aShape;
+     int current_id;
+     add_shape_to_map(sh, parent, current_id);
+     if(!OCCMap->IsBound(sh) ||
+        OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+        OccToCGM->insert(valType(current_id, (TopologyBridge*)lump));
   }
   body->lumps(lumps);
 
   DLIList<OCCShell*> shells;
   for (Ex.Init(aShape, TopAbs_SHELL, TopAbs_SOLID);Ex.More(); Ex.Next())
   {
-    OCCShell * shell = populate_topology_bridge(TopoDS::Shell(Ex.Current())); 
+    TopoDS_Shape sh = Ex.Current();
+    OCCShell * shell = populate_topology_bridge(TopoDS::Shell(sh)); 
     OCCLump* lump = shell->my_lump();
     if(lump == (OCCLump*)NULL)
       lump = new OCCLump(NULL, NULL, shell);
@@ -1712,13 +1732,20 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
     shell->set_body(body);
     shell->set_lump(lump);  
     shells.append(shell);
+    TopoDS_Shape parent = aShape;
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)shell));
   }
   body->shells(shells);
   
   DLIList<OCCSurface*> surfaces;
   for (Ex.Init(aShape, TopAbs_FACE, TopAbs_SHELL);Ex.More(); Ex.Next())
   {
-    Surface* face = populate_topology_bridge(TopoDS::Face(Ex.Current()));
+    TopoDS_Shape sh = Ex.Current();
+    Surface* face = populate_topology_bridge(TopoDS::Face(sh));
     OCCSurface *surface = CAST_TO(face, OCCSurface);
     OCCShell* shell = surface->my_shell();
     if (shell == (OCCShell*) NULL)
@@ -1733,7 +1760,14 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
     surface->set_shell(shell);
     shell->set_body(body);
     shell->set_lump(lump);
+    TopoDS_Shape parent = aShape;
     surfaces.append(surface);
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)face));
+
   } 
   body->set_sheet_surfaces(surfaces);
   return body;
@@ -1748,15 +1782,16 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
   OCCLump *lump = NULL;
   OCCBody *body = NULL;
   int current_lump_number = 0;
-  if (!OCCMap->IsBound(aShape))
+  if (!OCCMap->IsBound(aShape) || 
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
   {
     TopoDS_Solid *posolid =  new TopoDS_Solid;
     *posolid = aShape;
-    iTotalTBCreated++;
-    current_lump_number = iTotalTBCreated;
     lump = new OCCLump(posolid);
     if (build_body)
     {
+      iTotalTBCreated++;
+      current_lump_number = iTotalTBCreated;
       body = new OCCBody(NULL, NULL, NULL, lump);
       DLIList<CubitSimpleAttrib*> csa_list;
       lump->get_simple_attribute(csa_list);
@@ -1799,18 +1834,78 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
   TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_SHELL); Ex.More(); Ex.Next())
   {
-    OCCShell* shell = populate_topology_bridge(TopoDS::Shell(Ex.Current()));
+    TopoDS_Shape sh = Ex.Current();
+    OCCShell* shell = populate_topology_bridge(TopoDS::Shell(sh));
     shell->set_lump(lump);
     shell->set_body(body);
-  }
+    TopoDS_Shape parent = aShape;
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)shell));
+  } 
 
-  if(!OCCMap->IsBound(aShape))
+  if(build_body && (!OCCMap->IsBound(aShape)||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end()))
   {
     OCCMap->Bind(aShape, current_lump_number);
     OccToCGM->insert(valType(current_lump_number,
                        (TopologyBridge*)lump));
   }
   return lump;
+}
+
+void OCCQueryEngine::add_shape_to_map(TopoDS_Shape& sh,
+                                      TopoDS_Shape& aShape, /*In, parent */
+                                      int &current_id /*Out*/)
+{
+  //add the shape into map
+  if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+  {
+     DLIList<TopoDS_Shape*> list;
+     //find the sh shape without aShape's location.
+     TopLoc_Location L = aShape.Location();
+     TopoDS_Iterator it(aShape, Standard_True, Standard_False);
+     TopoDS_Shape bare_shape;
+     for(; it.More(); it.Next())
+     {
+       TopoDS_Shape test_shape = it.Value();
+       test_shape.Move(L);
+       if(sh.IsEqual(test_shape))
+       {
+         bare_shape = it.Value();
+         break;
+       }
+     }
+     if(!OCCMap->IsBound(sh))
+     {
+       CubitBoolean shape_found = false;
+       if(OCCMap->IsBound(bare_shape))
+       {
+         current_id = OCCMap->Find(bare_shape);
+         //There are two possiblities when coming here:
+         //1. After OCCAttribute binds the bare_shape but not binds the topo.
+         //2. The bare_shape is bound because it binds to a different topo. 
+         if( OccToCGM->find(current_id) == OccToCGM->end() )        
+         {
+           OCCMap->UnBind(bare_shape);
+           shape_found = true;
+         }
+       }
+       if(!shape_found)
+       {
+         iTotalTBCreated++;
+         current_id = iTotalTBCreated;
+       }
+       OCCMap->Bind(sh, current_id);
+    }
+    else
+      current_id = OCCMap->Find(sh);
+  }
+  else
+    current_id = OCCMap->Find(sh);
 }
 
 OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
@@ -1820,7 +1915,8 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     return (OCCShell*)NULL;
   OCCShell *shell ;
   DLIList<OCCCoFace*> cofaces_old, cofaces_new;
-  if (!OCCMap->IsBound(aShape))
+  if (!OCCMap->IsBound(aShape) ||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
   {
     if(standalone)
     {
@@ -1841,11 +1937,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     }
     TopoDS_Shell *poshell = new TopoDS_Shell;
     *poshell = aShape;
-    iTotalTBCreated++;
     shell = new OCCShell(poshell);
-    OCCMap->Bind(*poshell, iTotalTBCreated);
-    OccToCGM->insert(valType(iTotalTBCreated,
-		       (TopologyBridge*)shell));
     shell->set_body(NULL);
     shell->set_lump(NULL); 
     if(standalone)
@@ -1854,7 +1946,10 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       OCCBody* body = new OCCBody(NULL, NULL, shell);
       shell->set_body(body);
       shell->set_lump(lump);
-      //BodyList->append(body); 
+      iTotalTBCreated++;
+      OCCMap->Bind(*poshell, iTotalTBCreated);
+      OccToCGM->insert(valType(iTotalTBCreated,
+                               (TopologyBridge*)shell));
     }
   }
   else
@@ -1869,10 +1964,18 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
   DLIList<OCCCoFace*> cofaces;
   for (Ex.Init(aShape, TopAbs_FACE); Ex.More(); Ex.Next())
   {
-    TopoDS_Face topo_face = TopoDS::Face(Ex.Current());
+    TopoDS_Shape sh = Ex.Current();
+    TopoDS_Face topo_face = TopoDS::Face(sh);
     Surface* face =
       populate_topology_bridge(topo_face, CUBIT_FALSE);
     
+    TopoDS_Shape parent = aShape; 
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)face));
+
     if(!face)
       continue;
     OCCSurface *occ_surface = CAST_TO(face, OCCSurface);
@@ -1936,10 +2039,10 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
         break;
       }
     }
-    if(!exist)
+    if(!exist )
     {
       TopoDS_Shell* topo_shell = shell->get_TopoDS_Shell();
-      if (!OCCMap->IsBound(*topo_shell))
+      if (!OCCMap->IsBound(*topo_shell) && size > 0)
       {
         DLIList<OCCCoFace*> coface_list = shell->cofaces();
         for(int j = 0; j < coface_list.size(); j++)
@@ -1984,17 +2087,13 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   double tol = get_sme_resabs_tolerance();
   if(area < tol * tol)
     PRINT_WARNING("Generated a sliver surface. \n");
-
-  if (!OCCMap->IsBound(aShape))
+  
+  if (!OCCMap->IsBound(aShape) ||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
   {
     TopoDS_Face *poface = new TopoDS_Face;
     *poface = aShape;
     surface = new OCCSurface(poface);
-
-    iTotalTBCreated++;
-    OCCMap->Bind(*poface, iTotalTBCreated);
-    OccToCGM->insert(valType(iTotalTBCreated,
-                             (TopologyBridge*)surface));
     SurfaceList->append(surface);
     surface->set_body(NULL);
     surface->set_lump(NULL);
@@ -2010,6 +2109,10 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
       shell->set_body(body);
       shell->set_lump(lump);
       //BodyList->append(body);
+      iTotalTBCreated++;
+      OCCMap->Bind(*poface, iTotalTBCreated);
+      OccToCGM->insert(valType(iTotalTBCreated,
+                               (TopologyBridge*)surface));
     }
   } 
 
@@ -2023,7 +2126,16 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
 
   TopExp_Explorer Ex;
   for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
-    populate_topology_bridge(TopoDS::Wire(Ex.Current()));
+  {
+    TopoDS_Shape sh = Ex.Current();
+    OCCLoop* loop = populate_topology_bridge(TopoDS::Wire(sh));
+    TopoDS_Shape parent = aShape;
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)loop));
+  } 
 
   return surface;
 }
@@ -2034,24 +2146,27 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   if(aShape.IsNull())
     return (OCCLoop*)NULL;
   OCCLoop *loop ;
-  if (!OCCMap->IsBound(aShape))
+  if (!OCCMap->IsBound(aShape) ||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
+  {
+    TopoDS_Wire *powire = new TopoDS_Wire;
+    *powire = aShape;
+    loop = new OCCLoop(powire);
+    if(standalone)
     {
-      TopoDS_Wire *powire = new TopoDS_Wire;
-      *powire = aShape;
       iTotalTBCreated++;
-      loop = new OCCLoop(powire);
-      OCCMap->Bind(*powire, iTotalTBCreated);
+      OCCMap->Bind(aShape, iTotalTBCreated);
       OccToCGM->insert(valType(iTotalTBCreated,
-			       (TopologyBridge*)loop));
-      if(standalone)
-	WireList->append(loop);
+                       (TopologyBridge*)loop));
+      WireList->append(loop);
     }
+  }
   else
-    {
-      int k = OCCMap->Find(aShape);
-      loop = (OCCLoop*)(OccToCGM->find(k))->second;
-      loop->set_TopoDS_Wire(aShape);
-    }
+  {
+    int k = OCCMap->Find(aShape);
+    loop = (OCCLoop*)(OccToCGM->find(k))->second;
+    loop->set_TopoDS_Wire(aShape);
+  }
 
   //CubitVector v;
   //double d;
@@ -2060,9 +2175,17 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   coedges_old = loop->coedges();
   for (Ex.Init(aShape); Ex.More(); Ex.Next())
   {
+    TopoDS_Shape crv = Ex.Current();
     Curve* curve = populate_topology_bridge(Ex.Current());
     if(!curve)
       continue;
+    TopoDS_Shape parent = aShape;
+    int current_id;
+    add_shape_to_map(crv, parent, current_id);
+    if(!OCCMap->IsBound(crv) ||
+     OccToCGM->find(OCCMap->Find(crv)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)curve));
+
     OCCCurve *occ_curve = CAST_TO(curve, OCCCurve);
     DLIList<OCCLoop*> loops = occ_curve->loops();
     CubitBoolean exist = CUBIT_FALSE;
@@ -2086,14 +2209,14 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       }
     }   
     
-    if(!exist)
+    if(!exist )
     {
       //search through the curve loops
       for(int i = 0; i < loops.size() ; i++)
       {
         OCCLoop* occ_loop = loops.get_and_step();
         TopoDS_Wire* wire = occ_loop->get_TopoDS_Wire();
-        if (wire->IsNull() || !OCCMap->IsBound(*wire))
+        if (size > 0 && (wire->IsNull() || !OCCMap->IsBound(*wire)))
         { 
           DLIList<OCCCoEdge*> coedge_list = occ_loop->coedges();
           for(int j = 0; j < coedge_list.size(); j++)
@@ -2175,7 +2298,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   return loop;
 }
 
-Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
+Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape,
+                                                CubitBoolean stand_along )
 {
   if(aShape.IsNull())
     return (Curve*)NULL;
@@ -2203,55 +2327,69 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape)
       PRINT_WARNING("Generated a sliver curve. \n");
   }
 
-  if (!OCCMap->IsBound(aShape)) 
+  if (!OCCMap->IsBound(aShape) ||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
+  {
+    TopoDS_Edge *poedge = new TopoDS_Edge;
+    *poedge = aShape;
+    curve = new OCCCurve(poedge);
+    CurveList->append((OCCCurve*)curve);
+    if(stand_along)
     {
-      TopoDS_Edge *poedge = new TopoDS_Edge;
-      *poedge = aShape;
       iTotalTBCreated++;
-      curve = new OCCCurve(poedge);
-      
       OCCMap->Bind(*poedge, iTotalTBCreated);
-      OccToCGM->insert(valType(iTotalTBCreated,
-			       (TopologyBridge*)curve));
-      CurveList->append((OCCCurve*)curve);
+      OccToCGM->insert(valType(iTotalTBCreated, (TopologyBridge*)curve));
     }
+  }
   else 
-    {
-      int i = OCCMap->Find(aShape);
-      curve = (OCCCurve*)(OccToCGM->find(i))->second;
-      CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(aShape);
-    }
+  {
+    int i = OCCMap->Find(aShape);
+    curve = (Curve*)(OccToCGM->find(i))->second;
+    CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(aShape);
+  }
 
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
   {
+    TopoDS_Shape sh = Ex.Current();
     Point* point = populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
     CAST_TO(point, OCCPoint)->add_curve(CAST_TO(curve, OCCCurve));
+    TopoDS_Shape parent = aShape;
+    int current_id;
+    add_shape_to_map(sh, parent, current_id);
+    if(!OCCMap->IsBound(sh) ||
+     OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
+       OccToCGM->insert(valType(current_id, (TopologyBridge*)point));
   }
 
   return curve;
 }
 
-Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape)
+Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape,
+                                                CubitBoolean stand_along)
 {
   if(aShape.IsNull())
     return (Point*)NULL;
   OCCPoint *point;
-  if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape)) 
-    {
-      TopoDS_Vertex *povertex = new TopoDS_Vertex;
-      *povertex = aShape;
+  if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape) ||
+      OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end()) 
+  {
+    TopoDS_Vertex *povertex = new TopoDS_Vertex;
+    *povertex = aShape;
+    point = new OCCPoint(povertex);
+    if(stand_along)
+    { 
       iTotalTBCreated++;
-      point = new OCCPoint(povertex);
       OCCMap->Bind(*povertex, iTotalTBCreated);
-      OccToCGM->insert(valType(iTotalTBCreated,
-			       (TopologyBridge*)point));
-    } 
-  else 
-    {
-      int i = OCCMap->Find(aShape);
-      point = (OCCPoint*)(OccToCGM->find(i))->second;
-      point->set_TopoDS_Vertex(aShape);
+      OccToCGM->insert(valType(iTotalTBCreated, (TopologyBridge*)point));
     }
+
+  } 
+  else 
+  {
+    int i = OCCMap->Find(aShape);
+    point = (OCCPoint*)(OccToCGM->find(i))->second;
+    point->set_TopoDS_Vertex(aShape);
+  }
   return point;
 }
 
@@ -2710,7 +2848,12 @@ OCCQueryEngine::delete_loop( LoopSM* loopsm)const
   CubitStatus status = unhook_LoopSM_from_OCC(loopsm);
 
   for(int i = 0; i < curves.size(); i ++)
-    delete_solid_model_entities(curves.get_and_step());
+  {
+    OCCCurve* occ_curve = CAST_TO(curves.get_and_step(), OCCCurve);
+    unhook_coedges_of_a_curve(occ_curve, occ_loop);
+    occ_curve->remove_loop(occ_loop);
+    delete_solid_model_entities(occ_curve);
+  }
 
   if (status)
   {
@@ -2804,11 +2947,15 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve)const
   if (!fcurve )
     return CUBIT_FAILURE;
 
+  if(fcurve->loops().size() > 0)
+    return CUBIT_FAILURE;
+
   DLIList<TopologyBridge*> children;
   fcurve->get_children_virt(children);
   for(int i = 0; i < children.size(); i++)
   {
      Point* point = CAST_TO(children.get_and_step(), Point);
+     CAST_TO(point, OCCPoint)->remove_curve(fcurve);
      delete_solid_model_entities(point);
   }
   
@@ -2845,7 +2992,7 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
      CAST_TO(point, OCCPoint)->remove_curve(fcurve);
   }
 
-  unhook_coedges_of_a_curve(fcurve);
+  unhook_coedges_of_a_curve(fcurve, NULL);
     
   fcurve->clean_loops();
   TopoDS_Edge* edge = fcurve->get_TopoDS_Edge();
@@ -2888,7 +3035,11 @@ OCCQueryEngine::delete_solid_model_entities( Point* point) const
   if (!fpoint)
     return CUBIT_FAILURE;
 
+  if(fpoint->num_curves() > 0)
+    return CUBIT_FAILURE;
+
   CubitStatus stat = unhook_Point_from_OCC(point);
+  
   if(stat)
     delete point;
   return stat;
@@ -3442,10 +3593,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
   if (it != OccToCGM->end())
      tb = (*it).second;
 
-  else
-     assert(0);
-
-  if (TopAbs_SOLID == old_shape.ShapeType() && !new_shape.IsNull() && 
+  if (tb && TopAbs_SOLID == old_shape.ShapeType() && !new_shape.IsNull() && 
        TopAbs_COMPOUND == new_shape.ShapeType())
   {
     OccToCGM->erase(k);
@@ -3455,7 +3603,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return k;
   }
 
-  if(TopAbs_FACE == old_shape.ShapeType() && !new_shape.IsNull() &&
+  if(tb && TopAbs_FACE == old_shape.ShapeType() && !new_shape.IsNull() &&
        TopAbs_COMPOUND == new_shape.ShapeType())
   {
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
@@ -3486,8 +3634,8 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return k;
   }
 
-  if ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
-        OCCMap->IsBound(new_shape))|| new_shape.IsNull()) 
+  if (tb && ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
+        OCCMap->IsBound(new_shape))|| new_shape.IsNull())) 
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
@@ -3509,7 +3657,12 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
       }
 
       else
+      {
+        OCCPoint* test_p = CAST_TO(ge, OCCPoint);
+        if(test_p)
+          test_p->clear_curves();
         delete_solid_model_entities( ge, CUBIT_FALSE );
+      }
     }
 
     else
@@ -3549,14 +3702,17 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
          }
          unhook_LoopSM_from_OCC(loop);
          delete loop;
+         return k;
       }
     }
   }
 
   else
   {   
-    OCCMap->Bind(new_shape, k);
-    set_TopoDS_Shape(tb, new_shape);
+    if(!OCCMap->IsBound(new_shape))
+      OCCMap->Bind(new_shape, k);
+    if(tb)
+      set_TopoDS_Shape(tb, new_shape);
   }
   return k;
 }
@@ -3581,24 +3737,29 @@ void OCCQueryEngine::unhook_cofaces_of_a_surface(OCCSurface* surface)const
   unhook_CoFaces_from_OCC(cofaces);
 }
 
-void OCCQueryEngine::unhook_coedges_of_a_curve(OCCCurve* curve)const 
+void OCCQueryEngine::unhook_coedges_of_a_curve(OCCCurve* curve,
+                                               OCCLoop* loop)const 
 {
-  DLIList<OCCLoop*> loops;
-  loops = curve->loops();
   DLIList<OCCCoEdge*> coedges;
-  for (int i = 0; i < loops.size(); i ++)
+  DLIList<OCCCoEdge *> children ;
+  if (loop != NULL)
+    children = loop->coedges();
+  else
   {
-     DLIList<OCCCoEdge *> children ;
-     children = loops.get_and_step()->coedges();
-     for(int j = 0; j < children.size(); j++)
-     {
-        OCCCoEdge* coedge = children.get_and_step();
-        if (coedge->curve() == curve)
-           coedges.append(coedge);
-     }
+    DLIList<OCCLoop*> loops;
+    loops = curve->loops();
+    for (int i = 0; i < loops.size(); i ++)
+      children += loops.get_and_step()->coedges();
+  } 
+  for(int j = 0; j < children.size(); j++)
+  {
+     OCCCoEdge* coedge = children.get_and_step();
+     if (coedge->curve() == curve)
+       coedges.append(coedge);
   }
   unhook_CoEdges_from_OCC(coedges);
 }
+
 void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
                                       TopoDS_Shape& shape)
 {
@@ -3630,5 +3791,38 @@ void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
   if(point)
     return CAST_TO(point, OCCPoint)->set_TopoDS_Vertex(TopoDS::Vertex(shape));
   
+}
+
+//Added by Jane Hu on 06/17/11
+void OCCQueryEngine::bound_TopoDS_Shape(const TopoDS_Shape & aShape)
+{
+  (iTotalTBCreated)++;
+  switch (aShape.ShapeType())
+  {
+    case TopAbs_COMPOUND:
+      OCCMap->Bind(TopoDS::Compound(aShape), iTotalTBCreated); 
+      break;
+    case TopAbs_SOLID:
+      OCCMap->Bind(TopoDS::Solid(aShape), iTotalTBCreated);
+      break;
+    case TopAbs_SHELL:
+      OCCMap->Bind(TopoDS::Shell(aShape), iTotalTBCreated);
+      break;
+    case TopAbs_FACE: 
+      OCCMap->Bind(TopoDS::Face(aShape), iTotalTBCreated);
+      break;
+    case TopAbs_WIRE:
+      OCCMap->Bind(TopoDS::Wire(aShape), iTotalTBCreated);
+      break;
+    case TopAbs_EDGE:
+      OCCMap->Bind(TopoDS::Edge(aShape), iTotalTBCreated);
+      break;
+    case TopAbs_VERTEX:
+      OCCMap->Bind(TopoDS::Vertex(aShape), iTotalTBCreated);
+      break;
+
+    default:
+      (iTotalTBCreated)--;
+  }
 }
 //EOF

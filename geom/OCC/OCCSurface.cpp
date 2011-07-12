@@ -99,6 +99,7 @@ OCCSurface::~OCCSurface()
 {
   if(myTopoDSFace)
   {
+    myTopoDSFace->Nullify();
     delete (TopoDS_Face*)myTopoDSFace;
     myTopoDSFace = NULL;
   }
@@ -733,30 +734,20 @@ void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
   for(int i = 0; i <  bodies->size(); i++)
   {
      body = bodies->get_and_step();
-     TopoDS_Shape* shape = body->get_TopoDS_Shape();
-     if(!shape)
+     DLIList<OCCSurface*> surfaces;
+     body = bodies->get_and_step();
+     body->get_all_surfaces(surfaces);
+     if(surfaces.move_to(this))
      {
-       DLIList<Lump*> lumps;
-       DLIList<OCCShell*> shells;
-       DLIList<OCCSurface*> surfaces;
-       surfaces = body->my_sheet_surfaces();
-       shells = body->shells();
-       lumps = body->lumps();
-       if(lumps.size() == 1)
-         shape = CAST_TO(lumps.get(),OCCLump)->get_TopoDS_Solid();
-       else if(shells.size() == 1)
-         shape = shells.get()->get_TopoDS_Shell();
-     }
-     if (!shape)
-       continue;
-     TopExp::MapShapesAndAncestors(*shape, TopAbs_FACE, TopAbs_SHELL, M);
-     if(!M.Contains(*(get_TopoDS_Face())))
-	continue;
-
-     const TopTools_ListOfShape& ListOfShapes =
+       TopoDS_Shape* shape = oqe->instance()->
+          get_TopoDS_Shape_of_entity(CAST_TO(body, TopologyBridge));
+       TopExp::MapShapesAndAncestors(*shape, TopAbs_FACE, TopAbs_SHELL, M);
+       if(!M.Contains(*(get_TopoDS_Face())))
+         continue;
+       const TopTools_ListOfShape& ListOfShapes =
                                 M.FindFromKey(*(get_TopoDS_Face()));
-     if (!ListOfShapes.IsEmpty())
-     {
+       if (!ListOfShapes.IsEmpty())
+       {
          TopTools_ListIteratorOfListOfShape it(ListOfShapes) ;
          for (;it.More(); it.Next())
          {
@@ -764,7 +755,8 @@ void OCCSurface::get_parents_virt( DLIList<TopologyBridge*>& parents )
            int k = oqe->OCCMap->Find(Shell);
            parents.append((OCCShell*)(oqe->OccToCGM->find(k))->second);
          }
-     }
+       }
+    }
   }
 }
 
@@ -801,7 +793,8 @@ int OCCSurface::get_loops( DLIList<OCCLoop*>& result_list )
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
      TopologyBridge *loop = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-     result_list.append_unique(dynamic_cast<OCCLoop*>(loop));
+     if(loop)
+       result_list.append_unique(dynamic_cast<OCCLoop*>(loop));
   }
   return result_list.size();
 }
@@ -836,6 +829,7 @@ int OCCSurface::get_curves( DLIList<OCCCurve*>& result_list )
 int OCCSurface::get_points(DLIList<OCCPoint*>& points)
 {
   DLIList<OCCCurve*> curves;
+  int num_crv = get_curves(curves);
   for(int i = 0; i < curves.size(); i++)
   {
     OCCCurve* curve = curves.get_and_step();

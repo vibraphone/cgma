@@ -64,6 +64,9 @@ public :
 
   void add_curve(OCCCurve* curve);
   void remove_curve(OCCCurve* curve);
+  void clear_curves() {myCurveList.clean_out();}
+  DLIList<OCCCurve * > my_curve_list() {return myCurveList;}
+  int num_curves() {return myCurveList.size();}
 
   void set_myMarked(CubitBoolean marked) {myMarked = marked;}
 

@@ -7,6 +7,8 @@
 #include "OCCShapeAttributeSet.hpp"
 #include "CubitSimpleAttrib.hpp"
 #include "OCCAttribSet.hpp"
+#include "OCCQueryEngine.hpp"
+
 //#include <Poly.hxx>
 #include <TopoDS.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -41,6 +43,7 @@
 #include <BRep_PointOnSurface.hxx>
 //#include <BRep_ListIteratorOfListOfPointRepresentation.hxx>
 #include <TDF_Label.hxx>
+#include <TopTools_DataMapOfShapeInteger.hxx>
 
 #ifndef OCC_VERSION_MINOR
 #include "Standard_Version.hxx"
@@ -424,7 +427,7 @@ void OCCShapeAttributeSet::AddGeometry(const TopoDS_Shape& S)
 
 void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
                                           Standard_IStream&   IS,
-                                          TDF_Label& l_attr)const
+                                          TDF_Label& l_attr)
 {
   std::string buffer, type, stringdata;
   DLIList<CubitString*> strings;
@@ -498,7 +501,7 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
 
 void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
                                            Standard_OStream&   OS,
-                                           TDF_Label& l_attr)const
+                                           TDF_Label& l_attr)
 {
   if(l_attr.IsNull())
     return;
@@ -609,7 +612,7 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
 //purpose  :
 //=======================================================================
 
-void  OCCShapeAttributeSet::Write(Standard_OStream& OS)const
+void  OCCShapeAttributeSet::Write(Standard_OStream& OS)
 {
   //on sauvegarde l'ancien LC_NUMERIC
   
@@ -814,7 +817,7 @@ void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
 //purpose  :
 //=======================================================================
 
-void  OCCShapeAttributeSet::WriteGeometry(Standard_OStream& OS) const
+void  OCCShapeAttributeSet::WriteGeometry(Standard_OStream& OS) 
 {
   myCurves2d.Write(OS);
   myCurves.Write(OS);
@@ -845,7 +848,7 @@ void  OCCShapeAttributeSet::ReadGeometry(Standard_IStream& IS)
 //=======================================================================
 
 void OCCShapeAttributeSet::WritePolygon3D(Standard_OStream&      OS,
-                                        const Standard_Boolean Compact)const
+                                        const Standard_Boolean Compact)
 {
   Standard_Integer i, j, nbpol = myPolygons3D.Extent();
   if (Compact)
@@ -909,7 +912,7 @@ void OCCShapeAttributeSet::WritePolygon3D(Standard_OStream&      OS,
 
 void OCCShapeAttributeSet::WritePolygonOnTriangulation(
                                           Standard_OStream&      OS,
-                                          const Standard_Boolean Compact)const
+                                          const Standard_Boolean Compact)
 {
   Standard_Integer i, j, nbpOntri = myNodes.Extent();
   if (Compact)
@@ -963,7 +966,7 @@ void OCCShapeAttributeSet::WritePolygonOnTriangulation(
 //=======================================================================
 
 void OCCShapeAttributeSet::WriteTriangulation(Standard_OStream&      OS,
-                                        const Standard_Boolean Compact)const
+                                        const Standard_Boolean Compact)
 {
   Standard_Integer i, j, nbNodes, nbtri = myTriangulations.Extent();
   Standard_Integer nbTriangles = 0, n1, n2, n3;
@@ -1050,7 +1053,7 @@ void OCCShapeAttributeSet::WriteTriangulation(Standard_OStream&      OS,
 //=======================================================================
 
 void  OCCShapeAttributeSet::WriteGeometry(const TopoDS_Shape& S,
-                                        Standard_OStream&   OS)const
+                                        Standard_OStream&   OS)
 {
   // Write the geometry
 
@@ -1192,7 +1195,7 @@ void  OCCShapeAttributeSet::WriteGeometry(const TopoDS_Shape& S,
 
 void  OCCShapeAttributeSet::Write(const TopoDS_Shape& S,
                                Standard_OStream& OS,
-                               TDF_Label* l_attr)const
+                               TDF_Label* l_attr)
 {
   if (S.IsNull()) OS << "*";
   else {
@@ -1717,6 +1720,7 @@ void  OCCShapeAttributeSet::Clear()
   myNodes.Clear();
   myTriangulations.Clear();
   myShapes.Clear();
+  my_ShapeNum_Location.clear();
   myLocations.Clear();
 }
 
@@ -1728,10 +1732,11 @@ void  OCCShapeAttributeSet::Clear()
 void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
                                  Standard_IStream& IS,
                                  const int nbshapes,
-                                 TDF_Label* label )const
+                                 TDF_Label* label )
 {
   std::string buffer, buffer_attr;
   IS >> buffer;
+  std::map<int,int>::iterator it;
   if (buffer[0] == '*')
     S = TopoDS_Shape();
   else {
@@ -1759,9 +1764,15 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
       break;
     }
 
-    Standard_Integer l;
+    int l;
     IS >> l;
     S.Location(myLocations.Location(l));
+   
+    int shape_num = nbshapes - num + 1;
+    typedef std::pair <int,int> sh_loc_pair; 
+    it = my_ShapeNum_Location.find(shape_num);
+    if(it == my_ShapeNum_Location.end())
+      my_ShapeNum_Location.insert(sh_loc_pair(shape_num, l));
   }
   if(label != NULL)
   {
@@ -1774,6 +1785,13 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
         break;
       if(buffer_attr[0] == '*') //empty attributes for this shape
         continue;
+      it = my_ShapeNum_Location.find(i);
+      if(it != my_ShapeNum_Location.end())
+      {
+        int loc_num = it->second;
+        if (loc_num > 0)
+          Sh.Location(myLocations.Location(loc_num));
+      }
       ReadAttribute(Sh, IS,*label);
     }
   }
@@ -1798,7 +1816,7 @@ void OCCShapeAttributeSet::Check(const TopAbs_ShapeEnum T,
 //purpose  :
 //=======================================================================
 
-int  OCCShapeAttributeSet::NbShapes() const
+int  OCCShapeAttributeSet::NbShapes() 
 {
   return myShapes.Extent();
 }

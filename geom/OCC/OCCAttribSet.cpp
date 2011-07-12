@@ -28,6 +28,8 @@
   #include "TDataXtd_Shape.hxx"
 #endif
 
+#include "TDF_Label.hxx"
+#include "TopTools_DataMapOfShapeInteger.hxx"
 #include "TCollection_ExtendedString.hxx"
 #include "Handle_TDataStd_Name.hxx"
 #include "Handle_TDataStd_ExtStringArray.hxx"
@@ -40,26 +42,23 @@
 #include "TopoDS_Shape.hxx"
 #include "TDF_ChildIterator.hxx"
 #include <vector>
+typedef std::map<int, TDF_Label>::value_type labType;
 
 void OCCAttribSet::FindShape(TopoDS_Shape& shape,
                              TDF_Label& aLabel,
                              CubitBoolean& found) 
 {
-  for (TDF_ChildIterator it1(OCCQueryEngine::instance()->mainLabel, CUBIT_FALSE);
-    it1.More(); it1.Next())
-  {
-    //find the same shape attribute first
-    aLabel = it1.Value();
+  found = CUBIT_FALSE;
+  if(!OCCQueryEngine::instance()->OCCMap->IsBound(shape))
+    return;
 
-    Handle_TDataXtd_Shape attr_shape;
-    TopoDS_Shape old_shape;
-    if(aLabel.FindAttribute(TDataXtd_Shape::GetID(), attr_shape))
-      old_shape = attr_shape->Get(aLabel);
-    if(old_shape.IsPartner(shape))
-    {
-      found = CUBIT_TRUE;
-      break;
-    }
+  int k = OCCQueryEngine::instance()->OCCMap->Find(shape);
+  std::map<int, TDF_Label>::iterator it = 
+            OCCQueryEngine::instance()->Shape_Label_Map->find(k);
+  if(it != OCCQueryEngine::instance()->Shape_Label_Map->end())
+  {
+    aLabel = (*it).second; 
+    found = CUBIT_TRUE;
   }
 }
 
@@ -68,7 +67,10 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   //Add attributes on child of myLabel
   //1. add shape attribute, first check to make sure there's no shape attribute
   CubitBoolean found = CUBIT_FALSE;
-  TDF_Label aLabel;
+  TDF_Label aLabel, lab;
+  Handle_TDataStd_Name attr_name;
+  CubitString* type = csa->string_data_list()->get_and_step();
+  TCollection_ExtendedString cstring( (Standard_CString)type->c_str() );
 
   FindShape(shape, aLabel, found);
 
@@ -79,36 +81,32 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
     //myLabel.AddAttribute(attr_shape);
     //test if the attribute has been attached
     assert(aLabel.IsAttribute(TDataXtd_Shape::GetID()));
+
+    if(!OCCQueryEngine::instance()->OCCMap->IsBound(shape))
+    {
+      OCCQueryEngine::instance()->iTotalTBCreated++;
+      int k = OCCQueryEngine::instance()->iTotalTBCreated;
+      OCCQueryEngine::instance()->OCCMap->Bind(shape, k);
+    }
+ 
+    int k = OCCQueryEngine::instance()->OCCMap->Find(shape);
+    OCCQueryEngine::instance()->Shape_Label_Map->insert(labType(k, aLabel));
   }
 
   //2. add type attribute , below attributes are added on child lable of myLabel
   //First check if the attributes are already exist, if so, create new data.
-  TDF_Label lab;
-  Handle_TDataStd_Name attr_name;
-  TCollection_ExtendedString name_string;
-  CubitString* type = csa->string_data_list()->get_and_step();
-  TCollection_ExtendedString cstring( (Standard_CString)type->c_str() );
-  found = CUBIT_FALSE;
-  for (TDF_ChildIterator it(aLabel,CUBIT_FALSE); it.More(); it.Next()) 
+  else
   {
-    lab = it.Value();
-    found = find_attribute(lab, csa);
-    if(!found)
+    TCollection_ExtendedString name_string;
+    found = CUBIT_FALSE;
+    for (TDF_ChildIterator it(aLabel,CUBIT_FALSE); it.More(); it.Next()) 
     {
-      //check if the type attribute is the same, disable it
-      TCollection_ExtendedString old_string;
-      if(lab.FindAttribute(TDataStd_Name::GetID(), attr_name))
-      {
-        old_string = attr_name->Get();
-
-        if(old_string == cstring)
-          lab.ForgetAllAttributes();
-      }
+      lab = it.Value();
+      found = find_attribute(lab, csa);
+      if(found)
+        break;
     }
-    if(found)
-      break;
   }
-
   //if not exist,  create new child label
   if (!found)
   {
@@ -297,6 +295,13 @@ void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
     return;
 
   myLabel.ForgetAllAttributes();
+/*
+  if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)) 
+  {
+    int k = OCCQueryEngine::instance()->OCCMap->Find(shape);
+    OCCQueryEngine::instance()->Shape_Label_Map->erase(k);
+  }
+*/
 }
 
 void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa, 
@@ -310,22 +315,41 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa,
   if(!found)
     return;
 
+  int num_children = 0;
+  int num_found = 0;
   for (TDF_ChildIterator it1(myLabel, CUBIT_FALSE); it1.More(); it1.Next())
   {
     //find the same type attribute first
     TDF_Label child = it1.Value();
+    num_children ++;
 
     if(!csa)
+    {
       child.ForgetAllAttributes( );
+      num_found ++;
+    }
 
     else
     {
       CubitBoolean found = find_attribute(child, csa);
 
       if(found)
+      {
         child.ForgetAllAttributes( );
+        num_found ++;
+      } 
     }
   }
+/*
+  if(num_children == num_found)
+  {
+    if(OCCQueryEngine::instance()->OCCMap->IsBound(shape))
+    {
+      int k = OCCQueryEngine::instance()->OCCMap->Find(shape);
+      OCCQueryEngine::instance()->Shape_Label_Map->erase(k);
+    }
+  }
+*/
 }
 
 void OCCAttribSet::get_attributes(TDF_Label &lab,
@@ -412,16 +436,7 @@ CubitStatus OCCAttribSet::get_attributes( TopoDS_Shape& shape,
   if(!found)
     return CUBIT_FAILURE;
 
-  DLIList<CubitString*> strings;
-  CubitString* string;
-  DLIList<double> doubles;
-  DLIList<int> ints;
   TDF_Label lab;
-  Handle_TDataStd_Name attr_name;
-  TCollection_ExtendedString name_string;
-  Handle_TDataStd_ExtStringArray attr_string;
-  Handle_TDataStd_RealArray attr_doubles;
-  Handle_TDataStd_IntegerArray attr_ints;
   for (TDF_ChildIterator it(myLabel,CUBIT_FALSE); it.More(); it.Next())
   {
     lab = it.Value();

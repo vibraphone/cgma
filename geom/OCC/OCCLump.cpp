@@ -81,6 +81,7 @@ OCCLump::~OCCLump()
 { 
   if (myTopoDSSolid)
   {
+    myTopoDSSolid->Nullify();
     delete (TopoDS_Solid*)myTopoDSSolid;
     myTopoDSSolid = NULL;
   }

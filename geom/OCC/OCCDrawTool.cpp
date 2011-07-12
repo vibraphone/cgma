@@ -126,7 +126,7 @@ OCCDrawTool::draw_EDGE( TopoDS_Edge *EDGE_ptr, int color, CubitBoolean flush )
 {
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
 
-  Curve *curve_ptr = OQE->populate_topology_bridge( *EDGE_ptr );
+  Curve *curve_ptr = OQE->populate_topology_bridge( *EDGE_ptr, CUBIT_TRUE );
 
   CubitStatus stat;
   stat = draw_curve(curve_ptr, color, flush);

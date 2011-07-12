@@ -67,6 +67,7 @@ OCCLoop::~OCCLoop()
   disconnect_all_curves();
   if (myTopoDSWire)
   {
+    myTopoDSWire->Nullify();
     delete (TopoDS_Wire*)myTopoDSWire;
     myTopoDSWire = NULL;
   }
@@ -76,6 +77,31 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
 {
    if(loop.IsEqual(*myTopoDSWire))
      return;
+
+   if(!loop.IsSame(*myTopoDSWire))
+   {
+     DLIList<OCCCoEdge*> coedges = this->coedges();
+     for(int i = 0; i < coedges.size(); i++)
+     {
+       OCCCoEdge* coedge = coedges.get_and_step();
+       OCCCurve* curve = CAST_TO(coedge->curve(), OCCCurve);
+       TopoDS_Edge *edge = curve->get_TopoDS_Edge( );
+       BRepTools_WireExplorer Ex;
+       CubitBoolean found = false;
+       for (Ex.Init(loop); Ex.More(); Ex.Next())
+       {
+         TopoDS_Shape crv = Ex.Current();
+         if(edge->IsPartner(crv))
+         {
+           found = true;
+           break;
+         }
+       }
+       if (!found)
+         curve->remove_loop(this); 
+     }
+   }
+
    TopoDS_Wire* the_wire = new TopoDS_Wire(loop);
    if(myTopoDSWire)
      delete (TopoDS_Wire*)myTopoDSWire;

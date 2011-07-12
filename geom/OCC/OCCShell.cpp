@@ -78,6 +78,7 @@ OCCShell::~OCCShell()
 {
   if(myTopoDSShell)
   {
+    myTopoDSShell->Nullify();
     delete (TopoDS_Shell*)myTopoDSShell;
     myTopoDSShell = NULL;
   }

@@ -14,12 +14,11 @@
 #define FACET_BRIDGE_HPP
 
 #include <DLIList.hpp>
-#include "TDF_Label.hxx"
 
 class CubitSimpleAttrib;
 class CubitString;
 class TopoDS_Shape;
-
+class TDF_Label;
 class OCCAttribSet 
 {
 

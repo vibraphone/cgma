@@ -115,6 +115,7 @@ OCCCurve::~OCCCurve()
 {
   if (myTopoDSEdge)
   {
+    myTopoDSEdge->Nullify();
     delete (TopoDS_Edge *)myTopoDSEdge;
     myTopoDSEdge = NULL;
   }
@@ -125,6 +126,29 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
   if(edge.IsEqual(*myTopoDSEdge))
     return;
 
+  if(!edge.IsSame(*myTopoDSEdge))
+  {
+    DLIList<OCCPoint*> points ;
+    this->get_points(points);
+    for(int i = 0; i < points.size(); i++)
+    {
+      OCCPoint* point = points.get_and_step();
+      TopoDS_Vertex* vtx = point->get_TopoDS_Vertex();
+      TopExp_Explorer Ex;
+      CubitBoolean found = false;
+      for (Ex.Init(edge, TopAbs_VERTEX); Ex.More(); Ex.Next())
+      {
+        TopoDS_Shape sh = Ex.Current();
+        if(vtx->IsPartner(sh))
+        {
+           found = true;
+           break;
+         }
+      }
+      if (!found)
+        point->remove_curve(this);
+    }
+  }
   TopoDS_Edge* the_edge = new TopoDS_Edge(edge);
   if(myTopoDSEdge)
     delete (TopoDS_Edge *)myTopoDSEdge;
@@ -1065,12 +1089,12 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
       for (Ex.Init(new_shape,TopAbs_EDGE); Ex.More(); Ex.Next())
       {
         new_edge = TopoDS::Edge(Ex.Current());
-        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
       }
       for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
       {
         new_point = TopoDS::Vertex(Ex.Current());
-        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point));
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point, CUBIT_TRUE));
       } 
       return (Curve*) NULL;
    }
@@ -1096,14 +1120,14 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
       for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
       {
         point = TopoDS::Vertex(Ex.Current());
-        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(point));
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(point, CUBIT_TRUE));
       }
 
       if(edge1.IsNull())
-        return OCCQueryEngine::instance()->populate_topology_bridge(edge2);
+        return OCCQueryEngine::instance()->populate_topology_bridge(edge2, CUBIT_TRUE);
 
       if(edge2.IsNull())
-        return OCCQueryEngine::instance()->populate_topology_bridge(edge1);
+        return OCCQueryEngine::instance()->populate_topology_bridge(edge1, CUBIT_TRUE);
 
       if(edge1.IsNull() && edge2.IsNull())
         return (Curve*) NULL;
@@ -1138,7 +1162,7 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         double d2 = projOncurve2.LowerDistance();
         TopoDS_Edge new_edge =
                 d > d2 ? edge2 : edge1 ;
-        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
       }
 
 
@@ -1171,7 +1195,7 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         Geom_BezierCurve BezierCurve(points);
         Handle(Geom_Curve) curve_ptr(&BezierCurve);
         TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
-        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
       }
    }
    return (Curve*) NULL;

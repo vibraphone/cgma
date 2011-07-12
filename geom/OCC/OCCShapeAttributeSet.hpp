@@ -7,6 +7,8 @@
 
 class TopoDS_Shape;
 class TDF_Label;
+class TopTools_DataMapOfShapeInteger;
+#include <map>
 
 #ifndef _TopTools_LocationSet_HeaderFile
 #include <TopTools_LocationSet.hxx>
@@ -76,32 +78,32 @@ void AddGeometry(const TopoDS_Shape& S) ;
 //!          format that can be read back by Read. <br>
 void WriteAttribute(const TopoDS_Shape& S,
                     Standard_OStream& OS,
-                    TDF_Label& l_attr)const;
+                    TDF_Label& l_attr);
 
 void  ReadAttribute(TopoDS_Shape& S,
                     Standard_IStream&   IS,
-                    TDF_Label& l_attr)const;
+                    TDF_Label& l_attr);
 
 //! Stores <S> and its sub-shape. Returns the index of <S>. <br>
 //!          The method AddGeometry is called on each sub-shape. <br>
 Standard_Integer Add(const TopoDS_Shape& S) ;
 
-void Write(Standard_OStream& OS)const;
+void Write(Standard_OStream& OS);
 
 void Read(Standard_IStream& IS, bool print);
 
 void Read(TopoDS_Shape& S,Standard_IStream& IS, const int nbshapes,
-          TDF_Label* l_attr = NULL) const;
+          TDF_Label* l_attr = NULL) ;
 
 //! Writes the geometry of  me  on the stream <OS> in a <br>
 //!          format that can be read back by Read. <br>
-void WriteGeometry(Standard_OStream& OS) const;
+void WriteGeometry(Standard_OStream& OS) ;
 
 void ReadGeometry(Standard_IStream& IS);
 
 //! Writes the geometry of <S>  on the stream <OS> in a <br>
 //!          format that can be read back by Read. <br>
-void WriteGeometry(const TopoDS_Shape& S,Standard_OStream& OS) const;
+void WriteGeometry(const TopoDS_Shape& S,Standard_OStream& OS); 
 
 void ReadGeometry(const TopAbs_ShapeEnum T,
                   Standard_IStream&      IS,
@@ -112,26 +114,26 @@ void ReadGeometry(const TopAbs_ShapeEnum T,
 //!          of the Location. <br>
 void Write(const TopoDS_Shape& S,
            Standard_OStream& OS,
-           TDF_Label* l_attr = NULL) const;
+           TDF_Label* l_attr = NULL) ;
 
 //! Writes the 3d polygons <br>
 //!          on the stream <OS> in a format that can <br>
 //!          be read back by Read. <br>
-Standard_EXPORT   void WritePolygon3D(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) const;
+Standard_EXPORT   void WritePolygon3D(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) ;
 
 void ReadPolygon3D(Standard_IStream& IS);
 
 //! Writes the polygons on triangulation <br>
 //!          on the stream <OS> in a format that can <br>
 //!          be read back by Read. <br>
-Standard_EXPORT   void WritePolygonOnTriangulation(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) const;
+Standard_EXPORT   void WritePolygonOnTriangulation(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) ;
 
 void ReadPolygonOnTriangulation(Standard_IStream& IS);
 
 //! Writes the triangulation <br>
 //!          on the stream <OS> in a format that can <br>
 //!          be read back by Read. <br>
-Standard_EXPORT   void WriteTriangulation(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) const;
+Standard_EXPORT   void WriteTriangulation(Standard_OStream& OS,const Standard_Boolean Compact = Standard_True) ;
 
 void ReadTriangulation(Standard_IStream& IS);
 
@@ -140,7 +142,7 @@ void  Clear();
 
 void Check(const TopAbs_ShapeEnum T,TopoDS_Shape& S);
 
-int NbShapes() const;
+int NbShapes() ;
 
 protected:
  // Methods PROTECTED
@@ -161,6 +163,7 @@ private:
  //
 BRep_Builder myBuilder;
 TopTools_IndexedMapOfShape myShapes;
+std::map<int,int> my_ShapeNum_Location;
 TopTools_LocationSet myLocations;
 Standard_Integer myFormatNb;
 GeomTools_SurfaceSet mySurfaces;

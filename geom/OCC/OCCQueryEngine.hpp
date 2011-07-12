@@ -275,6 +275,7 @@ public:
   CubitStatus unhook_Surface_from_OCC( Surface* surface) const;
   CubitStatus unhook_Curve_from_OCC( Curve* curve) const;
   CubitStatus unhook_Point_from_OCC( Point* point) const;
+  void bound_TopoDS_Shape(const TopoDS_Shape & aShape);
 
 private:
   CubitStatus import_solid_model(FILE *file_ptr,
@@ -296,7 +297,12 @@ private:
   CubitStatus unhook_LoopSM_from_OCC( LoopSM* loopsm) const;
   CubitStatus delete_loop( LoopSM* loopsm)const;
   void unhook_cofaces_of_a_surface(OCCSurface* surface)const;
-  void unhook_coedges_of_a_curve(OCCCurve* curve)const;
+  void unhook_coedges_of_a_curve(OCCCurve* curve,
+                                 OCCLoop*  loop)const;
+
+  void add_shape_to_map(TopoDS_Shape& sh,
+                        TopoDS_Shape& aShape, /*In, parent shape*/
+                        int &current_id /*Out*/);
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
@@ -375,8 +381,10 @@ public:
 				   CubitBoolean build_body = CUBIT_FALSE);
   Surface* populate_topology_bridge(const TopoDS_Face& aShape,
                                     CubitBoolean build_body = CUBIT_FALSE);
-  Curve* populate_topology_bridge(const TopoDS_Edge& aShape);
-  Point* populate_topology_bridge(const TopoDS_Vertex& aShape);
+  Curve* populate_topology_bridge(const TopoDS_Edge& aShape,
+                                  CubitBoolean stand_along = CUBIT_FALSE );
+  Point* populate_topology_bridge(const TopoDS_Vertex& aShape,
+                                  CubitBoolean stand_along = CUBIT_FALSE);
 
   OCCShell* populate_topology_bridge(const TopoDS_Shell& aShape,
                                      CubitBoolean standalone = CUBIT_FALSE );
@@ -388,6 +396,7 @@ public:
   TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;
+  std::map<int, TDF_Label>* Shape_Label_Map;
   static int iTotalTBCreated ;
   static int total_coedges;
 protected:

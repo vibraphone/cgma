@@ -183,6 +183,7 @@ OCCBody::~OCCBody()
 {
   if (myTopoDSShape)
   {
+    myTopoDSShape->Nullify();
     delete (TopoDS_Compound*)myTopoDSShape;
     myTopoDSShape = NULL;
   }
