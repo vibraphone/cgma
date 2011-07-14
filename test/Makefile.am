@@ -134,6 +134,8 @@ MOSTLYCLEANFILES = \
         after_webcut.brep \
         webcut_sweep.brep \
         bricks2.occ \
+        bricks22.occ \
+        bricks23.occ \
 	mmgr.log
  
 
