@@ -524,8 +524,20 @@ void  OCCShapeAttributeSet::WriteAttribute(const TopoDS_Shape& S,
     {
       if(exsiting_shape.IsPartner(S))
       {
-        found = Standard_True; 
-        break;
+        //It's possible that the myLabel found in this way wasn't the bounded
+        //lable with the shape. Find the bounded one now.
+        if(!OCCQueryEngine::instance()->OCCMap->IsBound(exsiting_shape))
+          continue;
+  
+        int k = OCCQueryEngine::instance()->OCCMap->Find(exsiting_shape);
+        std::map<int, TDF_Label>::iterator it =
+           OCCQueryEngine::instance()->Shape_Label_Map->find(k);
+        if(it != OCCQueryEngine::instance()->Shape_Label_Map->end())
+        {
+          found = Standard_True;
+          myLabel = (*it).second;
+          break;
+        }
       }
     }
   }

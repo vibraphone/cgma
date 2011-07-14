@@ -18,6 +18,14 @@
 //#include <Standard_SStream.hxx>
 //#include <Standard_String.hxx>
 //#include <stringbuf>
+#if OCC_VERSION_MINOR < 5
+  #include "TDataStd_Shape.hxx"
+  typedef TDataStd_Shape TDataXtd_Shape;
+  typedef Handle_TDataStd_Shape Handle_TDataXtd_Shape;
+#else
+  #include "TDataXtd_Shape.hxx"
+#endif
+
 #include "BRep_Tool.hxx"
 #include "gp_Pnt.hxx"
 #include "gp_Ax1.hxx"
@@ -1891,6 +1899,13 @@ void OCCQueryEngine::add_shape_to_map(TopoDS_Shape& sh,
          if( OccToCGM->find(current_id) == OccToCGM->end() )        
          {
            OCCMap->UnBind(bare_shape);
+           std::map<int, TDF_Label>::iterator it = 
+              Shape_Label_Map->find(current_id);
+           if(it != Shape_Label_Map->end())
+           {
+             TDF_Label aLabel = (*it).second;
+             Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, sh);
+           }
            shape_found = true;
          }
        }

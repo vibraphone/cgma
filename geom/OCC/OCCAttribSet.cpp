@@ -321,6 +321,9 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa,
   {
     //find the same type attribute first
     TDF_Label child = it1.Value();
+    if (child.NbAttributes() == 0)
+      continue;
+
     num_children ++;
 
     if(!csa)
