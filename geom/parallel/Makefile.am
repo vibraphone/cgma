@@ -2,7 +2,8 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
                -I$(top_srcdir)/geom/ACIS \
 	       -I$(ACIS_DIR)/include \
-               $(MPI_INCLUDE)
+               $(MPI_INCLUDE) \
+	       $(HAVE_OCC_DEF)
 
 if USE_MPI
   AM_CPPFLAGS += -DUSE_MPI
