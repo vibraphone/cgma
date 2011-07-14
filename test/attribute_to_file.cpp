@@ -27,6 +27,9 @@
 #endif
 
 #define ASSERT(A) if (!(A)) failed(#A,__FILE__,__LINE__)
+CubitBoolean is_files_same(char* filename1,
+                           char* filename2);
+
 void failed( const char* A, const char* FILE, int LINE )
 {
   printf( "Condition failed at %s:%d : %s\n", FILE, LINE, A );
@@ -122,7 +125,61 @@ int main()
   body_entity_list.reset();
   assert (n_body == 2);
 
+  export_list.clean_out();
+  export_list.append(CAST_TO(body_entity_list.get_and_step(), Body));
+  export_list.append(CAST_TO(body_entity_list.get_and_step(), Body));
+  s = GeometryQueryTool::instance()->export_solid_model( export_list, "bricks23.occ",
+                                                         FORMAT, junk, CubitString(__FILE__) );
+  ASSERT(s);
+
+  ASSERT(is_files_same("bricks2.occ", "bricks23.occ"));
   return 0;
 }
 
+CubitBoolean is_files_same(char* filename1,
+                           char* filename2)
+{
+  FILE *fp1, *fp2;
+  char ch1, ch2;
+  CubitBoolean same = false;
+  /* open first file */
+  if((fp1 = fopen(filename1, "rb"))==NULL) {
+    printf("Cannot open first file.\n");
+    exit(false);
+  }
+
+  /* open second file */
+  if((fp2 = fopen(filename2, "rb"))==NULL) {
+    printf("Cannot open second file.\n");
+    exit(false);
+  } 
+
+  /* compare the files */
+  while(!feof(fp1)) {
+    ch1 = fgetc(fp1);
+    if(ferror(fp1)) {
+      printf("Error reading first file.\n");
+      exit(false);
+    }
+    ch2 = fgetc(fp2);
+    if(ferror(fp2)) {
+      printf("Error reading second file.\n");
+      exit(false);
+    }
+    if(ch1 != ch2) {
+      return same;
+    }
+  }
+
+  if(fclose( fp1 ) == EOF) {
+    printf("Error closing first file.\n");
+    exit(false);
+  }
+
+  if(fclose( fp2 ) == EOF) {
+    printf("Error closing second file.\n");
+    exit(false);
+  } 
+  return true;
+}
 
