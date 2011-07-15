@@ -3594,8 +3594,14 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return -1;
 
   //update the attribute label tree
-  copy_attributes(old_shape, new_shape); 
-  OCCAttribSet::remove_attribute(old_shape);
+  int current_id = OCCMap->Find(old_shape);
+  std::map<int, TDF_Label>::iterator it_lab =
+          Shape_Label_Map->find(current_id);
+  if(it_lab != Shape_Label_Map->end())
+  {
+     TDF_Label aLabel = (*it_lab).second;
+     Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, new_shape);
+  }
 
   //update CGM-OCC map
   int k = OCCMap->Find(old_shape);
