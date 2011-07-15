@@ -27,9 +27,7 @@
 const bool CGM_read_parallel_debug = false;
 
 enum CGMParallelActions {PA_READ=0, PA_BROADCAST, PA_DELETE_NONLOCAL,
-			 PA_SCATTER, PA_SCATTER_DELETE, PA_BALANCE,
-			 PA_CHECK_GIDS_SERIAL, PA_RESOLVE_SHARED_ENTS,
-			 PA_EXCHANGE_GHOSTS};
+			 PA_SCATTER, PA_SCATTER_DELETE, PA_BALANCE};
 
 enum CGMPartitionActions {PT_GEOM_DIM=0, PT_PAR_PART};
 
@@ -37,11 +35,7 @@ const char *CGMParallelActionsNames[] = {
   "PARALLEL READ",
   "PARALLEL BROADCAST", 
   "PARALLEL DELETE NONLOCAL",
-  "PARALLEL SCATTER",
-  "PARALLEL CHECK_GIDS_SERIAL",
-  "PARALLEL GET_FILESET_ENTS",
-  "PARALLEL RESOLVE_SHARED_ENTS",
-  "PARALLEL EXCHANGE_GHOSTS"
+  "PARALLEL SCATTER"
 };
 
 const char* CGMReadParallel::CGMparallelOptsNames[] = { "NONE", "READ", "READ_DELETE", "BCAST", 
@@ -59,8 +53,7 @@ CGMReadParallel::CGMReadParallel(GeometryQueryTool* gqt, CGMParallelComm *pc)
     if (NULL == m_pcomm) m_pcomm = new CGMParallelComm();
   }
 
-  m_round_robin = false;
-  m_partition_static = false;
+  m_bal_method = ROUND_ROBIN;
   m_scatter = false;
   m_rank = m_pcomm->proc_config().proc_rank();
   m_proc_size = m_pcomm->proc_config().proc_size();
@@ -99,7 +92,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 
   if (FO_ENTITY_NOT_FOUND == result || partition_tag_name.empty()) {
     partition_tag_name = "GEOM_DIMENSION";
-    m_round_robin = true;
+    m_bal_method = ROUND_ROBIN;
     geom_dim = 3;
   }
   else {
@@ -119,16 +112,16 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     }
     // static partition, use chaco
     else if (partition_tag_name == "PAR_PARTITION_STATIC") {
-      m_partition_static = true;
+      m_bal_method = PARTITION_STATIC;
     }
     // dynamic partition, use zoltan
     else if (partition_tag_name == "PAR_PARTITION_DYNAMIC") {
-
+      m_bal_method = PARTITION_DYNAMIC;
     }
 
     // round-robin
     result = opts.get_null_option("PARTITION_DISTRIBUTE");
-    if (FO_SUCCESS == result) m_round_robin = true;
+    if (FO_SUCCESS == result) m_bal_method = ROUND_ROBIN;
   }
 
   // get MPI IO processor rank
@@ -269,7 +262,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 //==================
     case PA_BALANCE:
       if (CGM_read_parallel_debug) std::cout << "Balancing entities." << std::endl;
-      if (m_round_robin) result = balance_round_robin();
+      if (m_bal_method == ROUND_ROBIN) result = balance_round_robin();
       if (CUBIT_SUCCESS != result) return result;
 
       if (CGM_read_parallel_debug) PRINT_INFO("Balancing entities done.\n");
@@ -420,7 +413,7 @@ CubitStatus CGMReadParallel::balance_round_robin()
     ve_loads[i] = 0.0;
   }
 
-  if (m_round_robin) { // round-robin case
+  if (m_bal_method == ROUND_ROBIN) { // round-robin case
     int n_entity = body_entity_list.size();
     int n_entity_proc = n_entity/n_proc; // # of entities per processor
     int i_entity_proc = n_entity_proc; // entity index limit for each processor
@@ -536,6 +529,8 @@ CubitStatus CGMReadParallel::balance_round_robin()
 	}
       }
     }
+  }
+  else if (m_bal_method == PARTITION_DYNAMIC) {
   }
 
   return CUBIT_SUCCESS;

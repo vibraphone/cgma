@@ -7,6 +7,12 @@
 #include "CGMParallelComm.hpp"
 #include "CGMFileOptions.hpp"
 
+enum BALANCE_METHOD {
+  ROUND_ROBIN = 0,
+  PARTITION_STATIC,
+  PARTITION_DYNAMIC
+};
+
 class CGMReadParallel 
 {
 public:
@@ -51,9 +57,11 @@ private:
 
   CGMParallelComm *m_pcomm;
 
-  bool m_round_robin, m_partition_static, m_scatter, m_reader;
+  bool m_scatter, m_reader;
 
   unsigned int m_rank, m_proc_size;
+
+  BALANCE_METHOD m_bal_method;
 
   // surf ref entity list to be partitioned
   DLIList<RefEntity*> m_surf_entity_list;
