@@ -670,8 +670,8 @@ CubitStatus make_Point()
   // ARC_CURVE_TYPE
 
   box = curve-> bounding_box();
-  min.set(7.3329, 7.2333, 42.6377);
-  max.set(12.24717, 7.2927, 49.1317);
+  min.set(26.75282, 16.7499, 20.3036);
+  max.set(33.24717, 23.24399, 20.36297);
   assert(min.distance_between(box.minimum()) < 0.001 &&
          max.distance_between(box.maximum()) < 0.001);
   // bounding box
