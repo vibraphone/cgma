@@ -271,7 +271,8 @@ public:
 					 const char* pBuffer,
 					 const int n_buffer_size);
     
-  CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm)const;
+  CubitStatus unhook_BodySM_from_OCC( BodySM* bodysm,
+                                    bool remove_lower_entities=CUBIT_TRUE)const;
   CubitStatus unhook_Surface_from_OCC( Surface* surface) const;
   CubitStatus unhook_Curve_from_OCC( Curve* curve) const;
   CubitStatus unhook_Point_from_OCC( Point* point) const;
@@ -304,13 +305,17 @@ private:
                         TopoDS_Shape& aShape, /*In, parent shape*/
                         int &current_id /*Out*/);
 public:
-  virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
+  virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list)const;
     //- Deletes all solid model entities associated with the Bodies in 
     //- the input list. 
+  void delete_bodies(DLIList<BodySM*>& body_list,
+                     bool remove_lower_entities =CUBIT_TRUE) const;
   virtual CubitStatus delete_solid_model_entities(
           GeometryEntity* ref_entity_ptr,
           bool remove_lower_entities) const;
-  virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
+  virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr)const; 
+  CubitStatus delete_body(BodySM* body_ptr ,
+                          bool remove_lower_entities =CUBIT_TRUE) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 
   virtual CubitStatus delete_solid_model_entities( Point* point_ptr)const;

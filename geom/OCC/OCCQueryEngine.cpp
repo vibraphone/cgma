@@ -2100,9 +2100,12 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   BRepGProp::SurfaceProperties(aShape, myProps);
   double area = myProps.Mass();
   double tol = get_sme_resabs_tolerance();
-  if(area < tol * tol)
+  if(area < tol * tol && area > 0.)
     PRINT_WARNING("Generated a sliver surface. \n");
   
+  else if (area < 0.0)
+    PRINT_WARNING("Generated a negative area surface. \n");
+
   if (!OCCMap->IsBound(aShape) ||
       OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
   {
@@ -2417,9 +2420,25 @@ TopologyBridge* OCCQueryEngine::occ_to_cgm(const TopoDS_Shape& shape)
   return (OccToCGM->find(k))->second;
 }	
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // Purpose       : Deletes all solid model entities associated with the
 //                 Bodies in the input list.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 7/23/11
+//-------------------------------------------------------------------------
+void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&bodyList)const
+{
+  delete_bodies(bodyList, true);
+}
+ 
+//-------------------------------------------------------------------------
+// Purpose       : Deletes all solid model entities associated with the
+//                 Bodies in the input list depending on remove_lower_entities
+//                 flag.
 //
 // Special Notes :
 //
@@ -2427,13 +2446,14 @@ TopologyBridge* OCCQueryEngine::occ_to_cgm(const TopoDS_Shape& shape)
 //
 // Creation Date : 4/23/01
 //-------------------------------------------------------------------------
-void OCCQueryEngine::delete_solid_model_entities(DLIList<BodySM*>&bodyList) const
+void OCCQueryEngine::delete_bodies(DLIList<BodySM*>&bodyList,
+                                   bool remove_lower_entities ) const
 {
   BodySM* BodyPtr = NULL;
   for (int i = 0; i < bodyList.size(); i++ )
     {
       BodyPtr = bodyList.get_and_step();
-      this->delete_solid_model_entities(BodyPtr);
+      this->delete_body(BodyPtr, remove_lower_entities);
     }
 
   return;
@@ -2510,7 +2530,6 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
    return CUBIT_FAILURE;
 
 }
-
 //-------------------------------------------------------------------------
 // Purpose       : Delete a OCCBody and child entities.
 //
@@ -2521,21 +2540,42 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
 // Creation Date : 10/29/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
+OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm) const
+{
+  return delete_body(bodysm, true);
+}
+//-------------------------------------------------------------------------
+// Purpose       : Delete a OCCBody and child entities depending on
+//                 remove_lower_entities flag.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 10/29/07
+//-------------------------------------------------------------------------
+CubitStatus
+OCCQueryEngine::delete_body( BodySM* bodysm,
+                             bool remove_lower_entities) const
 {
   OCCBody* occ_body = dynamic_cast<OCCBody*>(bodysm);
   if (!occ_body)
     return CUBIT_FAILURE;
 
+  DLIList<Lump*> lumps;
+  DLIList<ShellSM*> shell_list;
   DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
   for(int i = 0;  i <surfaces.size(); i++)
   { 
     OCCSurface* occ_surface = surfaces.get_and_step();
     occ_surface->set_body((OCCBody*)NULL);
-    delete occ_surface->my_lump();
-    OCCShell* shell = occ_surface->my_shell();
-    delete_solid_model_entities(occ_surface);
-    delete shell;
+    if(remove_lower_entities)
+    {
+      delete occ_surface->my_lump();
+      OCCShell* shell = occ_surface->my_shell();
+      delete_solid_model_entities(occ_surface);
+      delete shell;
+    }
   }
 
   DLIList<OCCShell*> shells = occ_body->shells();
@@ -2543,49 +2583,57 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
   {
     OCCShell* occ_shell = shells.get_and_step();
     occ_shell->set_body((OCCBody*)NULL);
-    delete occ_shell->my_lump();
-    DLIList<TopologyBridge*> tb_surfaces;
-    occ_shell->get_children_virt(tb_surfaces);
-    unhook_ShellSM_from_OCC(occ_shell);
-    for(int k = 0; k < tb_surfaces.size(); k++)
-      delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
-    delete occ_shell;
+    if(remove_lower_entities)
+    {
+      delete occ_shell->my_lump();
+      DLIList<TopologyBridge*> tb_surfaces;
+      occ_shell->get_children_virt(tb_surfaces);
+      unhook_ShellSM_from_OCC(occ_shell);
+      for(int k = 0; k < tb_surfaces.size(); k++)
+        delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
+      delete occ_shell;
+    }
   }
 
   DLIList<TopologyBridge*> children;
-  DLIList<Lump*> lumps = occ_body->lumps();
+  lumps = occ_body->lumps();
   int size = lumps.size();
-  DLIList<ShellSM*> shell_list;
 
   for(int i =0; i < size; i++)
   {
-     Lump* lump = lumps.get_and_step();
-     OCCLump* occ_lump = CAST_TO(lump, OCCLump);
-     if (!occ_lump)
-        continue;
-     children.clean_out();
-     occ_lump->get_children_virt(children);
-     for(int j = 0; j < children.size(); j++)
-     {
-       ShellSM* shell = CAST_TO(children.get_and_step(), ShellSM);
-       
-       if (shell)
-         shell_list.append(shell);
-       DLIList<TopologyBridge*> tb_surfaces;
-       shell->get_children_virt(tb_surfaces);
-       for(int k = 0; k < tb_surfaces.size(); k++)
-         delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
-     }
+    Lump* lump = lumps.get_and_step();
+    OCCLump* occ_lump = CAST_TO(lump, OCCLump);
+    if (!occ_lump)
+       continue;
+    occ_lump->remove_body();
+    if(remove_lower_entities)
+    {
+      children.clean_out();
+      occ_lump->get_children_virt(children);
+      for(int j = 0; j < children.size(); j++)
+      {
+        ShellSM* shell = CAST_TO(children.get_and_step(), ShellSM);
+      
+        if (shell)
+          shell_list.append(shell);
+        DLIList<TopologyBridge*> tb_surfaces;
+        shell->get_children_virt(tb_surfaces);
+        for(int k = 0; k < tb_surfaces.size(); k++)
+          delete_solid_model_entities(CAST_TO(tb_surfaces.get_and_step(), Surface));
+      }
+    }
   }
-
   CubitStatus stat = CUBIT_SUCCESS;
-  stat = unhook_BodySM_from_OCC(bodysm);
+  stat = unhook_BodySM_from_OCC(bodysm, remove_lower_entities);
 
-  for(int j = 0; j < shell_list.size(); j++)
-     delete shell_list.get_and_step();
+  if(remove_lower_entities)
+  {
+    for(int j = 0; j < shell_list.size(); j++)
+       delete shell_list.get_and_step();
 
-  for(int i =0; i < lumps.size(); i++)
-     delete lumps.get_and_step(); 
+    for(int i =0; i < lumps.size(); i++)
+       delete lumps.get_and_step(); 
+  }
 
   BodyList->remove(occ_body);
   delete bodysm;
@@ -2593,7 +2641,8 @@ OCCQueryEngine::delete_solid_model_entities( BodySM* bodysm ) const
 }
 
 CubitStatus
-OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
+OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm ,
+                                        bool remove_lower_entities)const
 {
   OCCBody* occ_body = dynamic_cast<OCCBody*>(bodysm);
   if (!occ_body)
@@ -2624,7 +2673,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm )const
   }
 
   DLIList<Lump*> lumps = occ_body->lumps();
-  for(int i =0; i < lumps.size(); i++)
+  for(int i =0; i < lumps.size()&& remove_lower_entities; i++)
   {
      Lump* lump = lumps.get_and_step();
      //OCCLump* occ_lump = CAST_TO(lump, OCCLump);
@@ -2774,6 +2823,10 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface)const
   OCCSurface* fsurf = dynamic_cast<OCCSurface*>(surface);
   if (!fsurf)
     return CUBIT_FAILURE;
+
+  double d = fsurf->measure();
+  if(d < 0.0)
+    PRINT_WARNING("Negative area surface is being deleted. \n");
 
   DLIList<TopologyBridge*> children;
   fsurf->get_children_virt(children);

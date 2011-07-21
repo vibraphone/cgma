@@ -2195,6 +2195,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
   //indicate if there's more faces to be imprinted
   CubitBoolean more_face = CUBIT_TRUE; 
   DLIList<TopoDS_Face*> list_for_delete;
+  CubitBoolean face_created = CUBIT_FALSE;
 
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces; 
@@ -2409,7 +2410,10 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
 	}
       else
+      {
+        face_created = CUBIT_TRUE;
         face = OCCQueryEngine::instance()->populate_topology_bridge(from_face);
+      }
       OCCSurface* occ_face = CAST_TO(face, OCCSurface);
 
       DLIList<Curve*> common_curves;
@@ -2494,6 +2498,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
 	  CubitVector point_on_surf;
 	  occ_face->closest_point_trimmed(p, point_on_surf);
+
 	  if(p.distance_between(point_on_surf) > TOL) //edge not on from_face
 	    {
 	      skipped = CUBIT_TRUE;
@@ -2553,7 +2558,7 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		  added = CUBIT_TRUE;
 		  curve_list.append(curve); 
 		}
-	    } 
+            }
 	  if(added)
 	    {
 	      topo_changed = CUBIT_TRUE;
@@ -2591,7 +2596,12 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               }
 	    }
 	}
-
+     
+      if(face_created)
+      {
+        OCCQueryEngine::instance()->delete_solid_model_entities(occ_face);
+        face_created = CUBIT_FALSE;
+      }
       DLIList<DLIList<TopoDS_Edge*>*> edge_lists;
       if ( total_edges >= 1)
 	{      
@@ -4288,10 +4298,85 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     }
   }
 */ 
+
+  //In order to distinguish bodies who are not intersecting each other to 
+  //avoid doing the boolean, check the bodies' bounding boxes first.
+  DLIList<BodySM*> revised_bodies;
+  DLIList<BodySM*> overlaped_bodies;
+  while( bodies.size() > 0)
+  {
+    BodySM* first_body = bodies.pop();
+    CubitBox box1 = first_body->bounding_box();
+    revised_bodies.append(first_body);
+    for( int k = 0 ; k < bodies.size(); k++)
+    {
+      BodySM* sec_body = bodies.get();
+      if(sec_body == NULL)
+        continue; 
+      CubitBox box2 = sec_body->bounding_box();
+      if(!box1.overlap(GEOMETRY_RESABS, box2)) 
+      {
+        //check to see if it intersect with other bodies in the revised_bodies
+        CubitBoolean intersect = false;
+        if (revised_bodies.size() > 1)
+        {
+          revised_bodies.reset();
+          for(int j = 0 ; j <  revised_bodies.size() -1 ; j++)
+          {
+            BodySM* test_body = revised_bodies.step_and_get();
+            CubitBox box3 = test_body->bounding_box();
+            if(box2.overlap(GEOMETRY_RESABS, box3))
+            {
+              intersect = true;
+              break;
+            }
+          }
+        }
+        if (!intersect)
+        { 
+          revised_bodies.append(sec_body);
+          bodies.change_to(NULL);
+        }
+      }
+      bodies.step();
+    }
+    bodies.remove_all_with_value(NULL);
+
+    if (revised_bodies.size() > 1)
+    {
+      //simply make all bodies into a compound
+      DLIList<Lump*> lumps;
+      DLIList<OCCShell*> shells;
+      DLIList<OCCSurface*> surfaces;
+      for(int i = 0 ; i <  revised_bodies.size(); i++)
+      {
+        OCCBody* occ_body = CAST_TO(revised_bodies.get_and_step(), OCCBody);
+        lumps += occ_body->lumps();
+        shells += occ_body->shells();
+        surfaces += occ_body->my_sheet_surfaces();
+      }
+      OCCQueryEngine::instance()->delete_bodies(revised_bodies, false);
+                                                             
+      TopoDS_Compound* Co = OCCBody::make_Compound(lumps, shells, surfaces);
+      BodySM* body = OCCQueryEngine::instance()->populate_topology_bridge(*Co);
+      if(body)
+        bodies.append(body);
+      revised_bodies.clean_out();
+    }
+    else
+      overlaped_bodies.append(revised_bodies.pop());
+  }
+
+  if(overlaped_bodies.size() < 2)
+  {
+    newBodies = overlaped_bodies;
+    return CUBIT_SUCCESS;
+  }
+
   DLIList<TopoDS_Shape*> shape_list;
   DLIList<CubitBoolean> is_volume;
   CubitStatus stat =
-    get_shape_list(bodies, shape_list, is_volume, keep_old);
+    get_shape_list(overlaped_bodies, shape_list, is_volume, keep_old);
 
   if(!stat)
     return stat;
