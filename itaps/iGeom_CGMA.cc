@@ -526,6 +526,7 @@ void iGeom_save (iGeom_Instance instance,
   CubitString cubit_version(" (iGeom)");
   CubitStatus status = CubitCompat_export_solid_model(bodies, name, file_type.c_str(),
                                                num_ents_exported, cubit_version, logfile_name );
+
   if (CUBIT_SUCCESS != status) 
     ERROR(iBase_FAILURE, "Trouble saving geometry file.");
 
