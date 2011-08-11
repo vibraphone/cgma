@@ -783,6 +783,16 @@ CubitSense OCCSurface::get_shell_sense( ShellSM* shell_ptr ) const
     return CUBIT_UNKNOWN;
     
   return CUBIT_FORWARD;
+/*
+  DLIList<OCCCoFace*> cofaces = shell->cofaces();
+  for(int i = 0 ; i < cofaces.size(); i++)
+  {
+     OCCCoFace* coface = cofaces.get_and_step();
+     if (coface->surface() == this)
+       return coface->sense();
+  }
+  return CUBIT_UNKNOWN;
+*/
 }
 
 

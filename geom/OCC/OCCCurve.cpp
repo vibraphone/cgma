@@ -123,10 +123,10 @@ OCCCurve::~OCCCurve()
 
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 {
-  if(edge.IsEqual(*myTopoDSEdge))
+  if(edge.IsSame(*myTopoDSEdge))
     return;
 
-  if(!edge.IsSame(*myTopoDSEdge))
+  else
   {
     DLIList<OCCPoint*> points ;
     this->get_points(points);
@@ -737,8 +737,7 @@ CubitStatus OCCCurve::get_center_radius( CubitVector& center,
 double OCCCurve::start_param()
 {
    double start = 0.0, end = 0.0;
-   
-   get_param_range( start, end );
+   get_param_range( start, end ); 
    return start;
 }
 
@@ -781,29 +780,22 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
 {
 	TopTools_IndexedMapOfShape M;
 	TopExp::MapShapes(*myTopoDSEdge, TopAbs_VERTEX, M);
-	TopologyBridge *point1, *point2;
-	if (M.Extent()==1) {
-		point1 = OCCQueryEngine::instance()->occ_to_cgm(M(1));
-                if (point1)
-		  children.append_unique(point1);
-	} else if (M.Extent()==2) {
-		if (  fabs(BRep_Tool::Parameter(TopoDS::Vertex(M(1)), *myTopoDSEdge)-start_param()) > 
-				fabs(BRep_Tool::Parameter(TopoDS::Vertex(M(2)), *myTopoDSEdge)-start_param())  ) {
-			point1 = OCCQueryEngine::instance()->occ_to_cgm(M(2));
-			point2 = OCCQueryEngine::instance()->occ_to_cgm(M(1));
-		} else {
-			point1 = OCCQueryEngine::instance()->occ_to_cgm(M(1));
-			point2 = OCCQueryEngine::instance()->occ_to_cgm(M(2));
-		}
-		if (point1 && point1 == point2) {
-			children.append_unique(point1);
-		} else {
-                        if (point1)
-			  children.append_unique(point1);
-                        if (point2)
-			  children.append_unique(point2);
-		}
-	}
+        int ii ;
+        for (ii = M.Extent();  ii > 0; ii--) {
+             TopologyBridge *point = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+              if (point)
+                children.append_unique(point);
+       }
+       if(children.size() ==0)
+         return;
+       //make sure the points are in the start-end order
+       double start , end;     
+       get_param_range( start, end );
+       CubitVector v;
+       position_from_u(start, v);
+       children.reset();
+       if(!v.about_equal(CAST_TO(children.get(), Point)->coordinates())) 
+         children.reverse();
 }
  
 
@@ -846,12 +838,23 @@ void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSEdge, TopAbs_VERTEX, M);
-  int ii;
-  for (ii=M.Extent(); ii>0; ii--) {
+  int ii ;
+  for ( ii =M.Extent(); ii > 0;  ii--) {
 	  TopologyBridge *point = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
           if (point)
 	    result_list.append_unique(dynamic_cast<OCCPoint*>(point));
   }
+  if(result_list.size() ==0)
+    return;
+  //make sure the points are in the start-end order
+  double start , end;     
+  get_param_range( start, end );
+  CubitVector v;
+  position_from_u(start, v);
+  result_list.reset();
+  if(!v.about_equal(result_list.get()->coordinates()))
+    result_list.reverse();
+
 }
 
 void OCCCurve::get_tangent( CubitVector const& location,

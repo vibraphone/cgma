@@ -2014,12 +2014,14 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoFace * coface = NULL;
     int size = cofaces_old.size();
-    CubitSense sense ;
+    CubitSense sense  = CUBIT_FORWARD;
+/*
     if( aShape.Orientation() == TopAbs_REVERSED )
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (topo_face.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED); 
-
+*/
+/*
     if(sense == CUBIT_REVERSED )
     {
       //When the loop has only one curve, the wire and face sense usually 
@@ -2043,6 +2045,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
         loop->coedges(coedges); 
       }  
     } 
+*/
     for(int i = 0; i < size; i++)
     {
       coface = cofaces_old.get_and_step();
@@ -2084,8 +2087,13 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     if(standalone)
       occ_surface->set_shell(shell);
   }
+/*
   if(aShape.Orientation() == TopAbs_REVERSED)
+  {
     cofaces_new.reverse();
+    PRINT_WARNING("Shell sense is reversed. Please make a validation check.\n");
+  }
+*/ 
   shell->cofaces(cofaces_new);
   return shell;
 }
@@ -2147,6 +2155,21 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   {
     TopoDS_Shape sh = Ex.Current();
     OCCLoop* loop = populate_topology_bridge(TopoDS::Wire(sh));
+/*
+    if( aShape.Orientation() == TopAbs_REVERSED )
+    {
+      DLIList<OCCCoEdge*> coedges_new = loop->coedges();
+      coedges_new.reverse();
+      //Reverse all coedges' senses.
+      for (int i = 0; i < coedges_new.size(); i ++)
+      {
+        OCCCoEdge* coedge = coedges_new.get_and_step();
+        CubitSense sense = (coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        coedge->set_sense(sense);
+      }
+      loop->coedges(coedges_new);
+    } 
+*/
     TopoDS_Shape parent = aShape;
     int current_id;
     add_shape_to_map(sh, parent, current_id);
@@ -2186,8 +2209,8 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
     loop->set_TopoDS_Wire(aShape);
   }
 
-  //CubitVector v;
-  //double d;
+  CubitVector v;
+  double d;
   BRepTools_WireExplorer Ex;
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
   coedges_old = loop->coedges();
@@ -2300,8 +2323,47 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       occ_curve->add_loop(loop);
     }
   }
+
+  //Double check edge sense to make sure it consists with loop direction
+  if(coedges_new.size() > 1)
+  {
+    OCCCoEdge* coedge = coedges_new.get_and_step();
+    double    d1, d2;
+    OCCCoEdge* next_coedge = coedges_new.get();
+    if (coedge->sense() == CUBIT_FORWARD)
+      d1 = coedge->curve()->end_param();
+    else
+      d1 = coedge->curve()->start_param();
+    if( next_coedge->sense() == CUBIT_FORWARD)
+      d2 = next_coedge->curve()->start_param();
+    else
+      d2 = next_coedge->curve()->end_param();
+    CubitVector v1, v2;
+    coedge->curve()->position_from_u(d1, v1);
+    next_coedge->curve()->position_from_u(d2, v2);
+    if(v1.distance_between(v2) > get_sme_resabs_tolerance())
+    {
+      //Reverse all coedges' senses.
+      for (int i = 0; i < coedges_new.size(); i ++)
+      {
+        coedge = coedges_new.get_and_step();
+        CubitSense sense = (coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        coedge->set_sense(sense);
+      }
+    }
+  }
+
+/*
   if(aShape.Orientation() == TopAbs_REVERSED)
     coedges_new.reverse();
+  //Reverse all coedges' senses.
+  for (int i = 0; i < coedges_new.size(); i ++)
+  {
+    OCCCoEdge* coedge = coedges_new.get_and_step();
+    CubitSense sense = (coedge->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+    coedge->set_sense(sense);
+  }
+*/
   loop->coedges(coedges_new);
 
   //remove unused coedges

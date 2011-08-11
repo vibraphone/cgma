@@ -4303,14 +4303,25 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   //avoid doing the boolean, check the bodies' bounding boxes first.
   DLIList<BodySM*> revised_bodies;
   DLIList<BodySM*> overlaped_bodies;
-  while( bodies.size() > 0)
+  DLIList<BodySM*> changeable_bodies;
+  if (keep_old)
   {
-    BodySM* first_body = bodies.pop();
+    for(int i = 0 ; i <  bodies.size(); i++)
+    {
+      BodySM* copied_b = copy_body(bodies.get_and_step());    
+      changeable_bodies.append(copied_b);
+    }
+  }
+  else
+    changeable_bodies = bodies; 
+  while( changeable_bodies.size() > 0)
+  {
+    BodySM* first_body = changeable_bodies.pop();
     CubitBox box1 = first_body->bounding_box();
     revised_bodies.append(first_body);
-    for( int k = 0 ; k < bodies.size(); k++)
+    for( int k = 0 ; k < changeable_bodies.size(); k++)
     {
-      BodySM* sec_body = bodies.get();
+      BodySM* sec_body = changeable_bodies.get();
       if(sec_body == NULL)
         continue; 
       CubitBox box2 = sec_body->bounding_box();
@@ -4335,12 +4346,13 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
         if (!intersect)
         { 
           revised_bodies.append(sec_body);
-          bodies.change_to(NULL);
+          changeable_bodies.change_to(NULL);
         }
       }
-      bodies.step();
+      changeable_bodies.step();
     }
-    bodies.remove_all_with_value(NULL);
+    if (changeable_bodies.size() > 0)
+      changeable_bodies.remove_all_with_value(NULL);
 
     if (revised_bodies.size() > 1)
     {
@@ -4360,7 +4372,7 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
       TopoDS_Compound* Co = OCCBody::make_Compound(lumps, shells, surfaces);
       BodySM* body = OCCQueryEngine::instance()->populate_topology_bridge(*Co);
       if(body)
-        bodies.append(body);
+        changeable_bodies.append(body);
       revised_bodies.clean_out();
     }
     else
@@ -4394,7 +4406,6 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
   is_volume.step(index);
   is_volume.remove();
   bodies.step(index);
-  BodySM* removed_body = bodies.remove();
 
   int size = shape_list.size();
   for(int i = 0; i < size; i++)
@@ -4435,7 +4446,6 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     }
   }
 
-  bodies.append(removed_body); 
   return CUBIT_SUCCESS; 
 }
 
@@ -4802,10 +4812,22 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
                                                   const CubitVector* sweep_v_p,
                                                   TopoDS_Shape& toposhape)const
 {
-  GeometryEntity* ref_ent = NULL;
-  //Make copy of the surface if it's not a sheet surface.
+  GeometryEntity* ref_ent = surface;
+
   if(surface != NULL)
   {
+    //Make copy of the surface's topo_shape.
+    TopoDS_Shape* toposhape_prt =
+          OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
+
+    if(!toposhape_prt)
+    {
+      PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
+      return CUBIT_FAILURE;
+    }
+
+    BRepBuilderAPI_Copy api_copy(*toposhape_prt);
+    toposhape = api_copy.ModifiedShape(*toposhape_prt);
     if(sweep_v_p)
     {
       CubitVector center = surface->center_point();
@@ -4814,11 +4836,8 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
       CubitVector sweep_vector = *sweep_v_p;
       if(normal % sweep_vector > 0)
       {
-        DLIList<Surface*> surfaces;
-        surfaces.append(surface);
-        flip_normals(surfaces);
-        surface = CAST_TO(surfaces.get(), OCCSurface);
-        ref_ent = (GeometryEntity *)surface;
+        toposhape.Orientation(toposhape.Orientation() == TopAbs_FORWARD ?
+           TopAbs_REVERSED : TopAbs_FORWARD);   
       }
 
       else if(normal % sweep_vector == 0)
@@ -4826,11 +4845,7 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
         PRINT_ERROR("Sweeping direction should not be on the surface.\n");
         return CUBIT_FAILURE;
       }
-      else 
-        ref_ent = (GeometryEntity *)surface;
     }
-    else
-      ref_ent = (GeometryEntity *)surface;
 
 /*
     if(surface->my_body()!= NULL ) //sheet body
@@ -4843,17 +4858,6 @@ CubitStatus OCCModifyEngine::get_sweepable_toposhape(OCCSurface*& surface,
       surface->set_body(NULL);
     }
 */
-    TopoDS_Shape* toposhape_prt = 
-          OCCQueryEngine::instance()->get_TopoDS_Shape_of_entity(ref_ent);
-
-    if(!toposhape_prt)
-    {
-      PRINT_WARNING("GeometryEntity without TopoDS_Shape found.\n");
-      return CUBIT_FAILURE;
-    }
-
-    BRepBuilderAPI_Copy api_copy(*toposhape_prt);
-    toposhape = api_copy.ModifiedShape(*toposhape_prt);
 
 /*
     if(surface->my_body()!= NULL ) //sheet body
