@@ -6,7 +6,7 @@ else
   SIDL_DIR = 
 endif 
 
-TESTS = test_edge_orient
+TESTS = 
 if build_ACIS
   TESTS += testgeom
 else
@@ -44,8 +44,7 @@ libiGeom_la_SOURCES = \
 	CATag.cpp \
 	iGeom_CGMA.cc \
 	iGeomError.cc \
-	iGeomError.h \
-        clock.cpp
+	iGeomError.h 
 
 libiGeom_la_include_HEADERS = \
 	iBase.h \
@@ -53,8 +52,7 @@ libiGeom_la_include_HEADERS = \
 	iGeom_FCDefs.h \
 	iGeom_protos.h \
 	iBase_f.h \
-	iGeom_f.h \
-        clock.hpp
+	iGeom_f.h
 
 check_PROGRAMS = chaman $(TESTS)
 
@@ -63,7 +61,6 @@ AM_LDFLAGS += $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_SOURCES = testgeom.cc
 testgeom_occ_SOURCES = $(testgeom_SOURCES)
 testgeom_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DFORCE_OCC
-test_edge_orient_SOURCES = test_edge_orient.cc
 
 chaman_SOURCES = chaman.cc
 
