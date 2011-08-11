@@ -6,7 +6,7 @@ else
   SIDL_DIR = 
 endif 
 
-TESTS = 
+TESTS = test_edge_orient
 if build_ACIS
   TESTS += testgeom
 else
