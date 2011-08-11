@@ -524,7 +524,7 @@ CubitStatus make_Point()
   RefEdge* edge1 = ref_edges1->pop();
   RefEdge* edge2 = ref_edges1->pop();
   double angle = edge2->angle_between(edge1, ref_face);
-  assert(fabs(angle - 4.712) < 0.001);
+  assert(fabs(angle - 1.5707) < 0.001);
 
   //test for curve
   CubitVector c_point, tangent, center;

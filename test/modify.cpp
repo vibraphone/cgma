@@ -139,7 +139,8 @@ CubitStatus make_Point()
   assert(fabs(volume-1000) <= 0.00001);
   n = all_bodies.get()->num_ref_faces();
   assert(n == 6);
-
+  body = all_bodies.get();
+  
   Body* body2 = gmti->brick(10, 10, 10);
   CubitVector scale(1, 2, 5);
   gmti->scale(body2, scale);
@@ -188,7 +189,7 @@ CubitStatus make_Point()
   away *= 3;
   gti->translate(tweak_body, away);
   away /= 3;
-  CubitVector delta(0,-1,0);
+  CubitVector delta(-1, 0, 0);
   DLIList<Body*> tweak_bodies;
   gmti->tweak_move( tweak_edges, delta, tweak_bodies, CUBIT_FALSE,
                     CUBIT_FALSE);
