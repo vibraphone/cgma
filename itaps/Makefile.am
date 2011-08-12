@@ -62,6 +62,8 @@ testgeom_SOURCES = testgeom.cc
 testgeom_occ_SOURCES = $(testgeom_SOURCES)
 testgeom_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DFORCE_OCC
 
+test_edge_orient_SOURCES = test_edge_orient.cc
+
 chaman_SOURCES = chaman.cc
 
 if USE_MPI
