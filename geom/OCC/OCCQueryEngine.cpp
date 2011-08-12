@@ -2341,7 +2341,9 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
     CubitVector v1, v2;
     coedge->curve()->position_from_u(d1, v1);
     next_coedge->curve()->position_from_u(d2, v2);
-    if(v1.distance_between(v2) > get_sme_resabs_tolerance())
+    //get_sme_resabs_tolerance() = 1*10^-7, while the distance difference
+    //we consider would be 1*10^-6.
+    if(v1.distance_between(v2) > get_sme_resabs_tolerance()*10)
     {
       //Reverse all coedges' senses.
       for (int i = 0; i < coedges_new.size(); i ++)
