@@ -94,7 +94,7 @@ install-data-hook:
 
 EXTRA_DIST = testgeom.sat size.sat
 
-CLEANFILES = iGeom-Defs.inc testout.sat mmgr.log
+CLEANFILES = iGeom-Defs.inc testout.sat mmgr.log step_import.log
 DISTCLEANFILES = iGeom_FCDefs.h
 
 FPFX=iGeom
