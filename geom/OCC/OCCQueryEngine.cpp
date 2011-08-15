@@ -2328,22 +2328,39 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   if(coedges_new.size() > 1)
   {
     OCCCoEdge* coedge = coedges_new.get_and_step();
-    double    d1, d2;
+    double    d1, d1_, d2, d2_;
     OCCCoEdge* next_coedge = coedges_new.get();
+    //because of tolerance issue, now check current loop end vertices distance
+    //compared with reversed loop's end vertices distance, which ever shorter
+    //will be the direction.
+    //current loop's parameter not using " _ ", reversed loop's parameter
+    //uses " _ ".
     if (coedge->sense() == CUBIT_FORWARD)
+    { 
       d1 = coedge->curve()->end_param();
+      d1_ = coedge->curve()->start_param();
+    }
     else
+    {
       d1 = coedge->curve()->start_param();
+      d1_ = coedge->curve()->end_param();
+    }
     if( next_coedge->sense() == CUBIT_FORWARD)
+    {
+      d2_ = next_coedge->curve()->end_param();
       d2 = next_coedge->curve()->start_param();
+    }
     else
+    {
       d2 = next_coedge->curve()->end_param();
-    CubitVector v1, v2;
+      d2_ = next_coedge->curve()->start_param();
+    } 
+    CubitVector v1, v1_, v2, v2_;
     coedge->curve()->position_from_u(d1, v1);
+    coedge->curve()->position_from_u(d1_, v1_);
     next_coedge->curve()->position_from_u(d2, v2);
-    //get_sme_resabs_tolerance() = 1*10^-7, while the distance difference
-    //we consider would be 1*10^-6.
-    if(v1.distance_between(v2) > get_sme_resabs_tolerance()*10)
+    next_coedge->curve()->position_from_u(d2_, v2_);
+    if(v1.distance_between(v2) > v1_.distance_between(v2_))
     {
       //Reverse all coedges' senses.
       for (int i = 0; i < coedges_new.size(); i ++)
