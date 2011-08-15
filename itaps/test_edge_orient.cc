@@ -2,8 +2,9 @@
 #include <iostream>
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
-#define FILE_NAME1  "ilc_problem_surf8.stp"
-#define FILE_NAME2  "brick_2.stp"
+#define FILE_NAME1  "ilc_1body.stp"
+#define FILE_NAME2  "ilc_problem_surf8.stp"
+#define FILE_NAME3  "brick_2.stp"
 
 static bool print_error( const char* desc, 
                          int err,
@@ -39,6 +40,10 @@ int main(int argc, char *argv[])
   CHECK( "ERROR : can not load a geometry." );
 
   input_file = FILE_NAME2;
+  iGeom_load(geom, input_file.c_str(), 0, &err, input_file.length(), 0);
+  CHECK( "ERROR : can not load a geometry." );
+ 
+  input_file = FILE_NAME3;
   iGeom_load(geom, input_file.c_str(), 0, &err, input_file.length(), 0);
   CHECK( "ERROR : can not load a geometry." );
 
