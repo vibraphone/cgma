@@ -2080,6 +2080,55 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       CubitVector normal;
       occ_surface->get_point_normal(center, normal);
 
+      //number of coedges = 2 case is checked here.
+      //make sure the normal get from the cross product of the two 
+      //coedges are the same as the normal.
+      DLIList<OCCCoEdge*> codeges;
+      occ_surface->get_coedges(codeges);
+      if(codeges.size() == 2 && occ_surface->measure() > 0.000001)
+      {
+        OCCCoEdge* coedge1 = codeges.get_and_step();
+        OCCCoEdge* coedge2 = codeges.get();
+        OCCCurve* curve1 = CAST_TO(coedge1->curve(), OCCCurve);
+        OCCCurve* curve2 = CAST_TO(coedge2->curve(), OCCCurve);
+        double d1 = curve1->measure();
+        double d2 = curve2->measure();
+        double start1 = curve1->start_param();
+        double start2 = curve2->start_param();
+        double u1, u2;
+        if (coedge1->sense() == CUBIT_REVERSED)
+          u1 = curve1->u_from_arc_length(start1, d1*0.05);
+        else
+          u1 =  curve1->u_from_arc_length(start1, d1*0.95);
+        if (coedge2->sense() == CUBIT_REVERSED)
+          u2 = curve2->u_from_arc_length(start2, d2 * 0.95);
+        else
+          u2 =  curve2->u_from_arc_length(start2, d2*0.05);
+        CubitVector v1, v2, v_cross;
+        double d_dot;
+        curve1->position_from_u(u1,v1);
+        curve2->position_from_u(u2,v2);
+        CubitVector tangent1, tangent2;
+        curve1->get_tangent(v1, tangent1);
+        curve2->get_tangent(v2, tangent2);
+        if (coedge1->sense() == CUBIT_REVERSED)
+          tangent1 *= -1;
+        if (coedge2->sense() == CUBIT_REVERSED)
+          tangent2 *= -1;
+        v_cross = tangent1 * tangent2; 
+        if (v_cross.length() > 0.000001)
+        {
+          d_dot = v_cross % normal;
+          if (d_dot < 0) 
+          {
+             //Reverse all coedges' senses.
+             CubitSense sense = (coedge1->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+             coedge1->set_sense(sense);
+             sense = (coedge2->sense() == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+             coedge2->set_sense(sense);
+          }
+        }
+      }
       cofaces_new.append(coface);
       occ_surface->set_shell(shell);
     }
@@ -2210,7 +2259,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   }
 
   CubitVector v;
-  double d;
+  //double d;
   BRepTools_WireExplorer Ex;
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
   coedges_old = loop->coedges();
@@ -2325,7 +2374,9 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   }
 
   //Double check edge sense to make sure it consists with loop direction
-  if(coedges_new.size() > 1)
+  //coedges size = 2 case is checked in the face level so the face normal will
+  //be considered.
+  if(coedges_new.size() > 2)
   {
     OCCCoEdge* coedge = coedges_new.get_and_step();
     double    d1, d1_, d2, d2_;
