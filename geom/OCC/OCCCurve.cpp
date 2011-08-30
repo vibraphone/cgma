@@ -1001,17 +1001,26 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   if(!shape.IsNull())
     curve = TopoDS::Edge(shape);
 
-  //set the vertices
-  DLIList<TopologyBridge*> vertices;
-  get_children_virt(vertices);
-  for (int i = 1; i <= vertices.size(); i++)
+  //make sure the shape (edge) length is greater than 0.
+  GProp_GProps myProps;
+  BRepGProp::LinearProperties(curve, myProps);
+  double d = myProps.Mass();
+  if(d > OCCQueryEngine::instance()->get_sme_resabs_tolerance())
   {
-     TopologyBridge* tb = vertices.get_and_step();
-     OCCPoint *point = CAST_TO(tb, OCCPoint);
-     if (point)
-       point->update_OCC_entity(aBRepTrsf, op);
+    //set the vertices
+    DLIList<TopologyBridge*> vertices;
+    get_children_virt(vertices);
+    for (int i = 1; i <= vertices.size(); i++)
+    {
+       TopologyBridge* tb = vertices.get_and_step();
+       OCCPoint *point = CAST_TO(tb, OCCPoint);
+       if (point)
+         point->update_OCC_entity(aBRepTrsf, op);
+    }
+    myMarked = 1;
   }
-  myMarked = 1;
+  else
+    curve.Nullify();
   OCCQueryEngine::instance()->update_OCC_map(*myTopoDSEdge, curve);
 }
 

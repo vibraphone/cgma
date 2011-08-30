@@ -3147,7 +3147,7 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve)const
   if (!fcurve )
     return CUBIT_FAILURE;
 
-  if(fcurve->loops().size() > 0)
+  if(fcurve->loops().size() > 0 && fcurve->loops().get() != NULL)
     return CUBIT_FAILURE;
 
   DLIList<TopologyBridge*> children;
@@ -3792,12 +3792,26 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
   int k = OCCMap->Find(old_shape);
   assert (k > 0 && k <= iTotalTBCreated);
 
-  OCCMap->UnBind(old_shape);
-
   std::map<int, TopologyBridge*>::iterator it = OccToCGM->find(k);
   TopologyBridge* tb = NULL;
-  if (it != OccToCGM->end())
+  if (it != OccToCGM->end()) 
      tb = (*it).second;
+
+  //unless just changing location, if the TShape is going to change, remove
+  //old curve_list .
+  if(old_shape.ShapeType() == TopAbs_VERTEX && !new_shape.IsPartner(old_shape)) 
+  {
+    //remove the curve list associated with the vertex too.
+    GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
+    if (ge)
+    {
+      OCCPoint* test_p = CAST_TO(ge, OCCPoint);
+        if(test_p)
+          test_p->clear_curves();
+    }
+  }
+
+  OCCMap->UnBind(old_shape);
 
   if (tb && TopAbs_SOLID == old_shape.ShapeType() && !new_shape.IsNull() && 
        TopAbs_COMPOUND == new_shape.ShapeType())

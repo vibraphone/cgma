@@ -2456,7 +2456,12 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	      for(int j = 0; j < edge_list->size(); j++)
 		{
 		  TopoDS_Edge e = *(edge_list->get_and_step());
-		  myWire.Add(e);
+                  //Don't include zero length edge.
+                  GProp_GProps myProps;
+                  BRepGProp::LinearProperties(e, myProps);
+                  double d = myProps.Mass();
+                  if(d > TOL) 
+		    myWire.Add(e);
 		}
 	      TopoDS_Wire wire = myWire.Wire();
 	      BRepTools_WireExplorer Ex(wire); 
@@ -2549,6 +2554,14 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                     total_edges--;
                     break;
                   }
+  
+                  else if((d2 -d1) < TOL && pc == CUBIT_PNT_ON)
+                  {
+                    added = CUBIT_TRUE;
+                    splitor.Add(from_edge, edge);
+                    total_edges--;
+                    break;
+                  }
                   if(!found_ && from_curve)
                     OCCQueryEngine::instance()->
                       delete_solid_model_entities(from_curve);
@@ -2580,17 +2593,44 @@ CubitStatus OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
               //hexlat3 has tolerance issue where aBox_e.x_min is within 
               //tolerance and greater than aBox_f.x_min, causing no edge
               //imprint of the faces. change to add consideration of tolerance
-	      if (aBox_e.min_x() >= aBox_f.min_x() - TOL &&
-                  aBox_e.min_y() >= aBox_f.min_y() - TOL &&
-                  aBox_e.min_z() >= aBox_f.min_z() - TOL &&
-                  aBox_e.max_x() <= aBox_f.max_x() + TOL &&
-                  aBox_e.max_y() <= aBox_f.max_y() + TOL &&
-                  aBox_e.max_z() <= aBox_f.max_z() + TOL)
+              // lose the bounding box critiral a little more.
+              int num_satisfied = 0;
+              
+              if (aBox_f.min_x() >= 0 && aBox_e.min_x() >= aBox_f.min_x() *0.9)
+                  num_satisfied ++;
+              if(aBox_f.min_x() < 0 && aBox_e.min_x() >= aBox_f.min_x() *1.1)
+		  num_satisfied ++;
+     
+              if (aBox_f.min_y() >= 0 && aBox_e.min_y() >= aBox_f.min_y() *0.9)
+                  num_satisfied ++;
+              if(aBox_f.min_y() < 0 && aBox_e.min_y() >= aBox_f.min_y() *1.1)
+                  num_satisfied ++;
+
+              if(aBox_f.min_z() >= 0 && aBox_e.min_z() >= aBox_f.min_z() *0.9)
+                  num_satisfied ++;
+              if (aBox_f.min_z() < 0 && aBox_e.min_z() >= aBox_f.min_z() *1.1)
+                  num_satisfied ++;
+
+              if (aBox_f.max_x() > 0  && aBox_e.max_x() <= aBox_f.max_x() *1.1)
+                num_satisfied ++;
+              if(aBox_f.max_x() <= 0 && aBox_e.max_x() <= aBox_f.max_x() *0.9)
+                num_satisfied ++;
+              if( aBox_f.max_y() > 0 && aBox_e.max_y() <= aBox_f.max_y() *1.1) 
+                num_satisfied ++;
+              if( aBox_f.max_y() <= 0 && aBox_e.max_y() <= aBox_f.max_y() *0.9)
+                num_satisfied ++;
+              if( aBox_f.max_z() >= 0 && aBox_e.max_z() <= aBox_f.max_z() *1.1)
+                num_satisfied ++;  
+              if( aBox_f.max_z() < 0 && aBox_e.max_z() <= aBox_f.max_z() *0.9)
+                num_satisfied ++;
+
+              if(num_satisfied == 6) 
 		{
-		  curve_list.append(curve);
+		  curve_list.append_unique(curve);
 		}
               else
               {
+                curve_list.remove(curve);
                 OCCQueryEngine::instance()->delete_solid_model_entities( curve );
                 total_edges--;
               }
@@ -3116,6 +3156,7 @@ CubitStatus OCCModifyEngine::get_shape_list(DLIList<BodySM*>& BodySM_list,
 
     DLIList<OCCSurface*> surfaces;
     DLIList<OCCShell*>   shells;
+    DLIList<OCCCurve*>   curves;
     surfaces = occ_body->my_sheet_surfaces();
     shells = occ_body->shells();
     if(surfaces.size() + shells.size() > 1)
@@ -3253,6 +3294,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
     TopoDS_Shape* shape1 = shape_list[i];
     CubitBoolean modified = CUBIT_FALSE;
 
+/*
     if(new_tbs || att_tbs)
     {
       OCCBody* from_body = CAST_TO(from_body_list.get_and_step(), OCCBody);
@@ -3283,6 +3325,7 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
              (curve, std::pair<CubitVector, int>(center,d)));
       }
     }
+*/
 
     for(int j = i+1; j < size+i; j ++)
     {
