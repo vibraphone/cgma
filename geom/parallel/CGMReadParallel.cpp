@@ -557,7 +557,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
     }
 
     if (td_par->get_charge_proc() != m_rank) { // candidate to be deleted
-      // check child surfaces
+      // check child surfaces if surface partitioned
       DLIList<RefFace*> face_list;
       (dynamic_cast<TopologyEntity*> (entity))->ref_faces(face_list);
       bool b_partitioned_surf = false;
@@ -566,14 +566,17 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
       for (int j = 0; j < n_face; j++) {
         RefEntity* face = face_list.get_and_step();
         TDParallel *td_par_face = (TDParallel *) face->get_TD(&TDParallel::is_parallel);
-        if (td_par_face != NULL) {
-          DLIList<int>* shared_procs = td_par_face->get_shared_proc_list();
-          int n_shared = shared_procs->size();
-          shared_procs->reset();
-          for (int k = 0; k < n_shared; k++) {
-            if (shared_procs->get_and_step() == m_rank) {
-              b_partitioned_surf = true;
-              break;
+        if (td_par_face != NULL) { // if surface is partitioned
+          TopologyEntity *te = CAST_TO(face, TopologyEntity);
+          if (te->bridge_manager()->number_of_bridges() < 2) { // if surface is not merged
+            DLIList<int>* shared_procs = td_par_face->get_shared_proc_list();
+            int n_shared = shared_procs->size();
+            shared_procs->reset();
+            for (int k = 0; k < n_shared; k++) {
+              if (shared_procs->get_and_step() == m_rank) {
+                b_partitioned_surf = true;
+                break;
+              }
             }
           }
         }
@@ -598,12 +601,10 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   }
 
   // delete bodies
-  if (m_rank != reader) {
-    nEntity = delete_body_list.size();
-    delete_body_list.reset();
-    for (i = 0; i < nEntity; i++) {
-      GeometryQueryTool::instance()->delete_RefEntity(delete_body_list.get_and_step());
-    }
+  nEntity = delete_body_list.size();
+  delete_body_list.reset();
+  for (i = 0; i < nEntity; i++) {
+    GeometryQueryTool::instance()->delete_RefEntity(delete_body_list.get_and_step());
   }
 
   // update Body list in ParallelComm
