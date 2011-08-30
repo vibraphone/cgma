@@ -205,7 +205,8 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
 	PRINT_ERROR("Partitioned entities should have TDParallel data.");
 	return CUBIT_FAILURE;
       }
-      balancedLists[td_par->get_charge_proc()]->append(entity);
+      int charge_p = td_par->get_charge_proc();
+      if (charge_p != from_proc) balancedLists[charge_p]->append(entity);
     }
     
     // add buffer size for each processors
