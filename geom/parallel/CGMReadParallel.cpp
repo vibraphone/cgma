@@ -212,8 +212,6 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 				       const bool surf_partition
 				       )
 {
-  
-
   // actuate CA_BODIES and turn on auto flag for other attributes
   CGMApp::instance()->attrib_manager()->register_attrib_type(CA_BODIES, "bodies", "BODIES",
 							     CABodies_creator, CUBIT_TRUE,
@@ -403,7 +401,7 @@ CubitStatus CGMReadParallel::read_entities(const char* file_name)
 CubitStatus CGMReadParallel::balance_round_robin()
 {
   // get bodies
-  int i, j;
+  int i, j, k;
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
   int n_proc = m_proc_size;
   double* loads = new double[n_proc]; // estimated loads for each processor
@@ -515,7 +513,7 @@ CubitStatus CGMReadParallel::balance_round_robin()
               // balance interface surface loads
               int min_p = shared_procs[0];
               int n_shared_proc = shared_procs.size();
-              for (int i = 1; i < n_shared_proc; i++) {
+              for (i = 1; i < n_shared_proc; i++) {
                 if (ve_loads[shared_procs[i]] < ve_loads[min_p]) {
                   min_p = shared_procs[i];
                 }
@@ -523,6 +521,18 @@ CubitStatus CGMReadParallel::balance_round_robin()
               ve_loads[min_p] = ve_loads[min_p] + entity->measure();
               shared_procs.remove(min_p);
               shared_procs.insert_first(min_p);
+
+              // add ghost geometries to shared processors for edge
+              if (entity->entity_type_info() == typeid(RefEdge)) {
+                parent_bodies.reset();
+                for (j = 0; j < n_parent; j++) {
+                  RefEntity *parent_vol = CAST_TO(parent_bodies.get_and_step(), RefEntity);
+                  TDParallel *parent_td = (TDParallel *) parent_vol->get_TD(&TDParallel::is_parallel);
+                  for (k = 0; k < n_shared_proc; k++) {
+                    parent_td->add_ghost_proc(shared_procs[k]);
+                  }
+                }
+              }
 	      td_par = new TDParallel(entity, NULL, &shared_procs, merge_id, 1);
 	    }
 	  }
@@ -567,16 +577,13 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
         RefEntity* face = face_list.get_and_step();
         TDParallel *td_par_face = (TDParallel *) face->get_TD(&TDParallel::is_parallel);
         if (td_par_face != NULL) { // if surface is partitioned
-          TopologyEntity *te = CAST_TO(face, TopologyEntity);
-          if (te->bridge_manager()->number_of_bridges() < 2) { // if surface is not merged
-            DLIList<int>* shared_procs = td_par_face->get_shared_proc_list();
-            int n_shared = shared_procs->size();
-            shared_procs->reset();
-            for (int k = 0; k < n_shared; k++) {
-              if (shared_procs->get_and_step() == m_rank) {
-                b_partitioned_surf = true;
-                break;
-              }
+          DLIList<int>* shared_procs = td_par_face->get_shared_proc_list();
+          int n_shared = shared_procs->size();
+          shared_procs->reset();
+          for (int k = 0; k < n_shared; k++) {
+            if (shared_procs->get_and_step() == m_rank) {
+              b_partitioned_surf = true;
+              break;
             }
           }
         }

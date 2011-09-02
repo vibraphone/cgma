@@ -180,7 +180,7 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
   return CUBIT_FAILURE;
 #else
   CubitStatus result = CUBIT_SUCCESS;
-  int i, mySendCount, nEntity;
+  int i, j, mySendCount, nEntity;
   int nProcs = procConfig.proc_size();
   int *sendCounts = new int[nProcs];
   int *displacements = new int[nProcs];
@@ -206,7 +206,17 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
 	return CUBIT_FAILURE;
       }
       int charge_p = td_par->get_charge_proc();
-      if (charge_p != from_proc) balancedLists[charge_p]->append(entity);
+      if (charge_p != from_proc) { // only to compute processors
+        balancedLists[charge_p]->append(entity); // add charge processor
+      }
+      
+      DLIList<int>* ghost_procs = td_par->get_ghost_proc_list();
+      int n_ghost = ghost_procs->size();
+      ghost_procs->reset();
+      for (j = 0; j < n_ghost; j++) { // add ghost processors
+        int ghost_p = ghost_procs->get_and_step();
+        if (ghost_p != from_proc) balancedLists[ghost_p]->append(entity);
+      }
     }
     
     // add buffer size for each processors
@@ -232,7 +242,7 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
   printf("Broadcasting buffer size array from master.\n");
   MPI_Bcast(sendCounts, nProcs, MPI_INT, from_proc, MPI_COMM_WORLD);
   
-  for (int i = 1; i < nProcs; i++) {
+  for (i = 1; i < nProcs; i++) {
     displacements[i] = displacements[i-1] + sendCounts[i-1];
   }
   
