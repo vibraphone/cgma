@@ -36,6 +36,8 @@ private:
   // if this entity is surface, the first processor will mesh it
   DLIList<int> m_sharedProcList;
 
+  DLIList<int> m_ghostProcList;
+
   // back pointer to the owning entity
   ToolDataUser *ownerEntity;
 
@@ -48,7 +50,8 @@ private:
 public:
   
   TDParallel(ToolDataUser *owner = NULL, DLIList<int> *shared_bodies = NULL,
-	     DLIList<int> *shared_procs = NULL, int unique_id = -1, int interface = 0);
+	     DLIList<int> *shared_procs = NULL,
+             int unique_id = -1, int interface = 0);
   
   virtual ~TDParallel();
     //-constructor and destructor
@@ -60,6 +63,8 @@ public:
 
   DLIList<int>* get_shared_proc_list();
   void set_shared_proc_list(DLIList<int> list);
+
+  DLIList<int>* get_ghost_proc_list();
 
   DLIList<int>* get_local_body_list();
   DLIList<int>* get_non_local_body_list();
@@ -84,6 +89,8 @@ public:
 
   void add_shared_proc(unsigned int proc);
 
+  void add_ghost_proc(unsigned int proc);
+
   bool is_shared_proc(unsigned int proc);
 };
 
@@ -101,6 +108,10 @@ inline DLIList<int>* TDParallel::get_non_local_body_list() {
 
 inline DLIList<int>* TDParallel::get_shared_proc_list() {
   return &m_sharedProcList;
+}
+
+inline DLIList<int>* TDParallel::get_ghost_proc_list() {
+  return &m_ghostProcList;
 }
 
 inline unsigned int TDParallel::get_charge_proc()
@@ -141,6 +152,13 @@ inline unsigned int TDParallel::get_n_shared_procs()
 inline void TDParallel::add_shared_proc(unsigned int proc)
 {
   m_sharedProcList.append_unique(proc);
+}
+
+inline void TDParallel::add_ghost_proc(unsigned int proc)
+{
+  if (proc != get_charge_proc()) {
+    m_ghostProcList.append_unique(proc);
+  }
 }
 
 inline bool TDParallel::is_shared_proc(unsigned int p)
