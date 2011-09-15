@@ -64,6 +64,9 @@ void OCCAttribSet::FindShape(TopoDS_Shape& shape,
 
 void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape )
 {
+  if(shape.IsNull())
+    return;
+
   //Add attributes on child of myLabel
   //1. add shape attribute, first check to make sure there's no shape attribute
   CubitBoolean found = CUBIT_FALSE;

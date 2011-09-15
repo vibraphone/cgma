@@ -1869,6 +1869,9 @@ void OCCQueryEngine::add_shape_to_map(TopoDS_Shape& sh,
                                       int &current_id /*Out*/)
 {
   //add the shape into map
+  if(sh.IsNull())
+    return;
+
   if(!OCCMap->IsBound(sh) ||
      OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
   {
@@ -3785,7 +3788,10 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
   if(it_lab != Shape_Label_Map->end())
   {
      TDF_Label aLabel = (*it_lab).second;
-     Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, new_shape);
+     if (!new_shape.IsNull())
+       Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, new_shape);
+     else
+       Shape_Label_Map->erase(it_lab);
   }
 
   //update CGM-OCC map
