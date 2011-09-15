@@ -58,6 +58,12 @@ CABodies::CABodies(RefEntity* new_attrib_owner,
   for (int i = num_list; i > 0; i--) {
     m_sharedProcs.append(*(i_list->get_and_step()));
   }
+
+  // ghost procs
+  num_list = *(i_list->get_and_step());
+  for (int i = num_list; i > 0; i--) {
+    m_ghostProcs.append(*(i_list->get_and_step()));
+  }
 }
 
 CABodies::CABodies(RefEntity* new_attrib_owner)
@@ -112,11 +118,23 @@ CubitStatus CABodies::actuate()
 
     par->get_shared_proc_list()->reset();
     m_sharedProcs.reset();
-    size = par->get_shared_body_list()->size();
+    size = par->get_shared_proc_list()->size();
 
     for (int i = 0; i < size; i++) {
       if (par->get_shared_proc_list()->get_and_step() != m_sharedProcs.get_and_step()) {
 	PRINT_ERROR("Different processor found for %s %d.\n",
+		    attrib_owner()->class_name(), attrib_owner()->id());
+	return CUBIT_FAILURE;
+      }
+    }
+
+    par->get_ghost_proc_list()->reset();
+    m_ghostProcs.reset();
+    size = par->get_ghost_proc_list()->size();
+
+    for (int i = 0; i < size; i++) {
+      if (par->get_ghost_proc_list()->get_and_step() != m_ghostProcs.get_and_step()) {
+	PRINT_ERROR("Different ghost processor found for %s %d.\n",
 		    attrib_owner()->class_name(), attrib_owner()->id());
 	return CUBIT_FAILURE;
       }
@@ -177,6 +195,14 @@ CubitStatus CABodies::update()
     for (int i = 0; i < size; i++) {
       m_sharedProcs.append(td_par->get_shared_proc_list()->get_and_step());
     }
+
+    size = td_par->get_ghost_proc_list()->size();
+    td_par->get_ghost_proc_list()->reset();
+    m_ghostProcs.clean_out();
+
+    for (int i = 0; i < size; i++) {
+      m_ghostProcs.append(td_par->get_ghost_proc_list()->get_and_step());
+    }
 	
     if (delete_attrib() == CUBIT_TRUE) delete_attrib(CUBIT_FALSE);
   }
@@ -211,6 +237,13 @@ CubitSimpleAttrib* CABodies::cubit_simple_attrib()
   i_list.append(m_sharedProcs.size());
   for (i = m_sharedProcs.size(); i > 0; i--) {
     i_list.append(m_sharedProcs.get_and_step());
+  }
+
+  // ghost procs
+  m_ghostProcs.reset();
+  i_list.append(m_ghostProcs.size());
+  for (i = m_ghostProcs.size(); i > 0; i--) {
+    i_list.append(m_ghostProcs.get_and_step());
   }
   
   CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list, NULL, &i_list);

@@ -23,6 +23,8 @@ private:
 
   DLIList<int> m_sharedProcs; // shared processors
 
+  DLIList<int> m_ghostProcs; // ghost processors
+
 public:
 
   virtual ~CABodies();
