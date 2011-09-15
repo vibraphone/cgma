@@ -494,7 +494,7 @@ CubitStatus make_Point()
   CubitVector factors(1,1,0.5);
   gmti->scale(test_body, factors);  
   d = test_body->measure();
-  assert( d > 2475.4 && d < 2475.44);
+  assert( d > 2475 && d < 2475.5);
  
   //test for planar_sheet making
   CubitVector p1(0, 0, 0);
