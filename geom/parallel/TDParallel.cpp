@@ -15,8 +15,8 @@
 #include <time.h>
 
 TDParallel::TDParallel(ToolDataUser *owner, DLIList<int> *shared_bodies,
-		       DLIList<int> *shared_procs, int unique_id,
-		       int interface)
+		       DLIList<int> *shared_procs, DLIList<int> *ghost_procs,
+                       int unique_id, int interface)
   : m_uniqueId(unique_id), m_interface(interface)
 {
   CubitStatus status;
@@ -41,6 +41,15 @@ TDParallel::TDParallel(ToolDataUser *owner, DLIList<int> *shared_bodies,
     m_sharedProcList.clean_out();
     for (int i = 0; i < shared_size; i++) {
       m_sharedProcList.append(shared_procs->get_and_step());
+    }
+  }
+
+  if (ghost_procs != NULL) {
+    int ghost_size = ghost_procs->size();
+    ghost_procs->reset();
+    m_ghostProcList.clean_out();
+    for (int i = 0; i < ghost_size; i++) {
+      m_ghostProcList.append(ghost_procs->get_and_step());
     }
   }
 

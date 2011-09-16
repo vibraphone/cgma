@@ -149,7 +149,7 @@ CubitStatus CABodies::actuate()
   else {
     // else make a new one
     par = new TDParallel(attrib_owner(), &m_sharedBodies, &m_sharedProcs,
-			 m_uniqueID, m_interface);
+			 &m_ghostProcs, m_uniqueID, m_interface);
   }
 
   delete_attrib(CUBIT_TRUE);

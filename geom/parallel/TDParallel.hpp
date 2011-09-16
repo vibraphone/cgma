@@ -1,8 +1,6 @@
 //- Class: TDParallel
 //- Description: This tool data generates local and non-local bodies 
 //-              which the entity is part of
-//- Author: Hong-Jun Kim
-//- Version:
 
 #ifndef TD_PARALLEL
 #define TD_PARALLEL
@@ -50,7 +48,7 @@ private:
 public:
   
   TDParallel(ToolDataUser *owner = NULL, DLIList<int> *shared_bodies = NULL,
-	     DLIList<int> *shared_procs = NULL,
+	     DLIList<int> *shared_procs = NULL, DLIList<int> *ghost_procs = NULL,
              int unique_id = -1, int interface = 0);
   
   virtual ~TDParallel();

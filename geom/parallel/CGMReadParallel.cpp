@@ -506,7 +506,7 @@ CubitStatus CGMReadParallel::balance_round_robin()
                 shared_procs.reverse();
 	      }
               loads[shared_procs[0]] = loads[shared_procs[0]] + entity->measure();
-	      td_par = new TDParallel(entity, NULL, &shared_procs, merge_id, 1);
+	      td_par = new TDParallel(entity, NULL, &shared_procs, NULL, merge_id, 1);
 	    }
 	    else if (entity->entity_type_info() == typeid(RefEdge) ||
 		     entity->entity_type_info() == typeid(RefVertex)) {
@@ -533,7 +533,7 @@ CubitStatus CGMReadParallel::balance_round_robin()
                   }
                 }
               }
-	      td_par = new TDParallel(entity, NULL, &shared_procs, merge_id, 1);
+	      td_par = new TDParallel(entity, NULL, &shared_procs, NULL, merge_id, 1);
 	    }
 	  }
 	}
