@@ -417,12 +417,13 @@ CubitStatus make_Point()
   for (int i = 0; i < ref_edge_list->size(); i++)
   {
     RefEdge * edge = ref_edge_list->get_and_step();
-    double d = edge->measure();
+    d = edge->measure();
     start = edge->start_vertex();
     end = edge->end_vertex();
   }
 
-  RefFace* new_face2 = gmti->make_RefFace(PLANE_SURFACE_TYPE, 
+  RefFace* new_face2;
+  new_face2 = gmti->make_RefFace(PLANE_SURFACE_TYPE, 
                          *ref_edge_list, CUBIT_TRUE, new_face, CUBIT_TRUE);
 
   bodies.clean_out();
@@ -518,7 +519,8 @@ CubitStatus make_Point()
   assert(pc2 == CUBIT_PNT_INSIDE);
 
   ref_edge_loops.clean_out();
-  int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
+  int num_loops;
+  num_loops = ref_face->ref_edge_loops(ref_edge_loops);
   DLIList<RefEdge*> *ref_edges1;
   ref_edges1 = ref_edge_loops.get();
   RefEdge* edge1 = ref_edges1->pop();
@@ -545,8 +547,10 @@ CubitStatus make_Point()
   assert(fabs(d - 28.5)<0.01);
 
   //Spline with points and tangents
-  list.insert_first(&vertex1->coordinates());
-  list.append(&vertex2->coordinates());
+  CubitVector* first_v = new CubitVector(vertex1->coordinates());
+  CubitVector* last_v = new CubitVector(vertex2->coordinates());
+  list.insert_first(first_v);
+  list.append(last_v);
 
   DLIList<CubitVector*> tangents;
   for (int i = 0; i< 6; i++)
@@ -647,7 +651,8 @@ CubitStatus make_Point()
   //make a new refedge out of existing refedge.
   RefEdge* ref_edge = ref_edges.step_and_get();
 
-  RefEdge* new_edge = gmti->make_RefEdge(ref_edge);
+  RefEdge* new_edge;
+  new_edge = gmti->make_RefEdge(ref_edge);
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);

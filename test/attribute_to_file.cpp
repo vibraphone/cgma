@@ -27,8 +27,8 @@
 #endif
 
 #define ASSERT(A) if (!(A)) failed(#A,__FILE__,__LINE__)
-CubitBoolean is_files_same(char* filename1,
-                           char* filename2);
+CubitBoolean is_files_same(std::string filename1,
+                           std::string filename2);
 
 void failed( const char* A, const char* FILE, int LINE )
 {
@@ -69,9 +69,10 @@ int main()
   //check that the two single volume bodys' attributes are exported as SINGLELUMP%
   std::ifstream Myfile;
   std::string line;
-  char* search = "SINGLELUMP%";
+  std::string search = "SINGLELUMP%";
   Myfile.open ("bricks2.occ");
-  int found = 0, offset;
+  int found = 0;
+  size_t offset;
   if(Myfile.is_open())
   {
     while(!Myfile.eof())
@@ -136,20 +137,22 @@ int main()
   return 0;
 }
 
-CubitBoolean is_files_same(char* filename1,
-                           char* filename2)
+CubitBoolean is_files_same(std::string filename1,
+                           std::string filename2)
 {
   FILE *fp1, *fp2;
   char ch1, ch2;
   CubitBoolean same = false;
   /* open first file */
-  if((fp1 = fopen(filename1, "rb"))==NULL) {
+  const char* file1 = filename1.c_str();
+  const char* file2 = filename2.c_str();
+  if((fp1 = fopen(file1, "rb"))==NULL) {
     printf("Cannot open first file.\n");
     exit(false);
   }
 
   /* open second file */
-  if((fp2 = fopen(filename2, "rb"))==NULL) {
+  if((fp2 = fopen(file2, "rb"))==NULL) {
     printf("Cannot open second file.\n");
     exit(false);
   } 

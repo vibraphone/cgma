@@ -70,7 +70,6 @@ int main()
   GeometryQueryTool::instance()->delete_geometry();
 
   //check that the two single volume bodys' attributes are exported as SINGLELUMP%
-  printf (p_buffer); 
 
   std::string search ("SINGLELUMP%") ;
   std::string buffer (p_buffer, n_bsize);
