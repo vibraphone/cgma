@@ -1,29 +1,30 @@
---- src/Extrema/Extrema_ExtPS.cxx	2011-04-11 13:06:46.000000000 -0500
-+++ /home/jhu/OpenCASCADE6.5.0/ros/src/Extrema/Extrema_ExtPS.cxx	2011-04-09 14:13:13.000000000 -0500
-@@ -94,10 +94,18 @@
-   Standard_Real U, V;
-   PS.Parameter(U, V);
-   if (myS->IsUPeriodic()) {
--    U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
-+    Standard_Real Uupper = myuinf+myS->UPeriod();
-+    if(U>(myuinf-mytolu) && U < myuinf) U = myuinf;
-+    else if(U < (Uupper+mytolu) && U > Uupper) U = Uupper;
-+    else
-+      U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
-   }
-   if (myS->IsVPeriodic()) {
--    V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
-+    Standard_Real Vupper = myvinf+myS->VPeriod();
-+    if(V>(myvinf-mytolv) && V < myvinf) V = myvinf;
-+    else if(V < (Vupper+mytolv) && V > Vupper) V = Vupper;
-+    else
-+      V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
-   }
-   if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
-       (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
+--- src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-09-19 10:53:50.000000000 -0500
++++ src_new/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-09-19 10:51:13.000000000 -0500
+@@ -201,9 +201,18 @@
+   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
+   BuildBack (myMod, ModBack);
+   
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
++  TopAbs_ShapeEnum type = SI.ShapeType();
++  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
++  if(type < TopAbs_SHELL)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
++  if(type < TopAbs_FACE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
++  if(type < TopAbs_WIRE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
++  if(type < TopAbs_EDGE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
++  if(type < TopAbs_VERTEX)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
+ 
+ #ifdef DEB
+   if (Affich) {
 
---- /src/Extrema/Extrema_ExtPElS.cxx     2011-04-11 12:00:57.000000000 -0500
-+++ /home/jhu/OpenCASCADE6.5.0/ros/src/Extrema/Extrema_ExtPElS.cxx 2011-04-11 12:03:19.000000000 -0500
+--- src/Extrema/Extrema_ExtPElS.cxx     2011-09-19 11:05:15.000000000 -0500
++++ src_new/Extrema/Extrema_ExtPElS.cxx 2011-09-19 11:03:32.000000000 -0500
 @@ -56,6 +56,7 @@
    gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
    Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
@@ -67,28 +68,27 @@
    if (V1 < 0.) { V1 += 2. * PI; }
    if (V2 < 0.) { V2 += 2. * PI; }
 
---- /src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx      2011-05-27 13:14:09.000000000 -0500
-+++ BRepBuilderAPI_Collect.cxx  2011-05-27 13:15:36.000000000 -0500
-@@ -201,9 +201,18 @@
-   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
-   BuildBack (myMod, ModBack);
-
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
--  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
-+  TopAbs_ShapeEnum type = SI.ShapeType();
-+  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
-+  if(type < TopAbs_SHELL)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
-+  if(type < TopAbs_FACE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
-+  if(type < TopAbs_WIRE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
-+  if(type < TopAbs_EDGE)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
-+  if(type < TopAbs_VERTEX)
-+    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
-
- #ifdef DEB
-   if (Affich) {
+--- src/Extrema/Extrema_ExtPS.cxx       2011-09-19 11:07:19.000000000 -0500
++++ src_new/Extrema/Extrema_ExtPS.cxx   2011-09-19 11:03:45.000000000 -0500
+@@ -94,10 +94,18 @@
+   Standard_Real U, V;
+   PS.Parameter(U, V);
+   if (myS->IsUPeriodic()) {
+-    U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
++    Standard_Real Uupper = myuinf+myS->UPeriod();
++    if(U>(myuinf-mytolu) && U < myuinf) U = myuinf;
++    else if(U < (Uupper+mytolu) && U > Uupper) U = Uupper;
++    else
++      U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
+   }
+   if (myS->IsVPeriodic()) {
+-    V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
++    Standard_Real Vupper = myvinf+myS->VPeriod();
++    if(V>(myvinf-mytolv) && V < myvinf) V = myvinf;
++    else if(V < (Vupper+mytolv) && V > Vupper) V = Vupper;
++    else
++      V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
+   }
+   if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
+       (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
 
