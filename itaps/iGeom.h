@@ -454,7 +454,36 @@ extern "C" {
                               int* err );
 
     /**\brief  Get closest point for an array of entities and points
-     *
+     * For surfaces, closest point could be on the void space inside it.
+     * Get closest point for an array of entities and points.  If either the
+     * number of entities or number of coordinate triples is unity, then all
+     * points or entities are queried for that entity or point, respectively,
+     * otherwise each point corresponds to each entity.  storage_order should be
+     * a value in the iBase_StorageOrder enum.
+     * \param instance iGeom instance handle
+     * \param entity_handles Entity(ies) being queried
+     * \param entity_handles_size Number of entities being queried
+     * \param storage_order Storage order of input points
+     * \param near_coordinates Coordinates of starting point(s)
+     * \param near_coordinates_size Number of values in near_coordinates array
+     * \param on_coordinates Coordinates of closest points
+     * \param on_coordinates_allocated Allocated size of closest point array
+     * \param on_coordinates_size Occupied size of closest point array
+     * \param *err Pointer to error type returned from function
+     */
+
+  void iGeom_getEntClosestPtTrimmed( iGeom_Instance instance,
+                                     iBase_EntityHandle entity_handle,
+                                     double near_x,
+                                     double near_y,
+                                     double near_z,
+                                     double* on_x,
+                                     double* on_y,
+                                     double* on_z,
+                                     int* err );
+
+    /**\brief  Get closest point for an array of entities and points
+     * For surfaces, it made sure the closest point in on surface.
      * Get closest point for an array of entities and points.  If either the
      * number of entities or number of coordinate triples is unity, then all
      * points or entities are queried for that entity or point, respectively,

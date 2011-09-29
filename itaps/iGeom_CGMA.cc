@@ -198,6 +198,10 @@ static CubitStatus iGeom_closest_point( RefEntity* this_entity,
                                         const CubitVector& near,
                                         CubitVector& on );
 
+static CubitStatus iGeom_closest_point_trimmed( RefEntity* this_entity,
+                                        const CubitVector& near,
+                                        CubitVector& on );
+
 static CubitStatus
 iGeom_closest_point_and_normal( RefEntity* this_entity, 
                                 const CubitVector& near,
@@ -1934,6 +1938,26 @@ iGeom_getEntClosestPt(iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
+void iGeom_getEntClosestPtTrimmed( iGeom_Instance instance,
+                                   iBase_EntityHandle entity_handle,
+                                   double near_x,
+                                   double near_y,
+                                   double near_z,
+                                   double* on_x,
+                                   double* on_y,
+                                   double* on_z,
+                                   int* err )
+{
+  RefEntity* entity = (RefEntity*)entity_handle;
+  CubitVector on, near(near_x, near_y, near_z);
+  CubitStatus status = iGeom_closest_point_trimmed( entity, near, on );
+  if (status == CUBIT_FAILURE) {
+    ERROR(iBase_FAILURE, "Problems getting closest point for some entity.");
+  }
+  on.get_xyz( *on_x, *on_y, *on_z );
+  RETURN(iBase_SUCCESS);
+}
+ 
 /**
  * Return a points on specified entities closest to specified points
  * in space.  Input coordinates and output points are interleaved in 
@@ -6480,6 +6504,51 @@ static CubitStatus iGeom_closest_point( RefEntity* this_entity,
       break;
   }
   
+  return status;
+}
+
+static CubitStatus iGeom_closest_point_trimmed( RefEntity* this_entity,
+                                                const CubitVector& near,
+                                                CubitVector& on )
+{
+  RefEdge *this_edge;
+  RefFace *this_face;
+  Surface *this_surf;
+  CubitStatus status;
+
+  switch (this_entity->dimension()) {
+    case 0:
+      on = dynamic_cast<RefVertex*>(this_entity)->coordinates();
+      status = CUBIT_SUCCESS;
+      break;
+    case 1:
+      this_edge = dynamic_cast<RefEdge*>(this_entity);
+      if (NULL == this_edge) return CUBIT_FAILURE;
+
+      status = this_edge->closest_point(near, on);
+
+      if (debug) {
+        std::cout << "Edge " << this_edge->id() << " closest point to ("
+                  << near.x() << ", " << near.y() << ", " << near.z()
+                  << ") is "
+                  << on.x() << ", " << on.y() << ", " << on.z()
+                  << ")" << std::endl;
+      }
+      break;
+    case 2:
+      this_face = dynamic_cast<RefFace*>(this_entity);
+      if (NULL == this_face) return CUBIT_FAILURE;
+      this_surf = this_face->get_surface_ptr();
+      if (NULL == this_surf) return CUBIT_FAILURE;
+      this_surf->closest_point_trimmed( near, on );
+      break;
+    default:
+        // just copy over the coordinates
+      on = near;
+      status = CUBIT_SUCCESS;
+      break;
+  }
+
   return status;
 }
 
