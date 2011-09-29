@@ -13,7 +13,7 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
 
 TESTS = init sheet
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis merge_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis point_project_acis
 else
 if WITH_CUBIT
   TESTS += webcut brick_acis merge_acis
@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file attribute_to_buffer modify subtract makept r_w test_occ operation brick_occ merge_occ
+  TESTS += attribute_to_file attribute_to_buffer modify subtract makept r_w test_occ operation brick_occ merge_occ point_project
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -32,12 +32,16 @@ AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
+point_project_acis_SOURCES = point_project_acis.cpp
+point_project_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="ACIS"'
+
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
 subtract_SOURCES = subtract.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
+point_project_SOURCES = point_project.cpp
 operation_SOURCES = operation.cpp
 init_SOURCES = init.cpp
 attribute_to_file_SOURCES = attribute_to_file.cpp
@@ -89,7 +93,9 @@ EXTRA_DIST = 62_shaver1.brep \
              webcut.brep     \
              Line_1.brep    \
              Line_2.brep    \
-             stitch.name_occ 
+             stitch.name_occ \ 
+             box-w-hole.brep \
+             holysurf.sat
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'
