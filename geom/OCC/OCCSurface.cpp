@@ -48,6 +48,7 @@
 #include "BRep_Builder.hxx"
 #include "LocOpe_SplitShape.hxx"
 #include "TopoDS_Compound.hxx"
+#include "BRepExtrema_DistShapeShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 
@@ -319,7 +320,8 @@ CubitStatus OCCSurface::closest_point( CubitVector const& location,
 
 //-------------------------------------------------------------------------
 // Purpose       : Computes the closest_point on the trimmed surface to the 
-//                 input location. 
+//                 input location. if the point is not on surface, like in the
+//                 hole of the surface, try to project to one of the curves. 
 //
 // Special Notes : 
 //-------------------------------------------------------------------------
@@ -338,8 +340,45 @@ void OCCSurface::closest_point_trimmed( CubitVector from_point,
 			  newP = ext.Point(i).Value();
 		  }
 	  }
+          point_on_surface = CubitVector(newP.X(), newP.Y(), newP.Z());
   }
-  point_on_surface = CubitVector(newP.X(), newP.Y(), newP.Z());
+  else
+    return;
+
+  CubitPointContainment pos = point_containment(point_on_surface);
+  if(pos == CUBIT_PNT_OUTSIDE)
+  {
+    DLIList<OCCCurve*> curves;
+    int num_curve = get_curves(curves);
+    double d_min = 0., d;
+    OCCCurve* the_curve;
+    gp_Pnt pt = gp_Pnt(point_on_surface.x(), point_on_surface.y(), 
+                       point_on_surface.z());
+    TopoDS_Vertex theVertex = BRepBuilderAPI_MakeVertex(pt);
+    CubitVector closest_location;
+    do
+    {
+      for (i = 0; i < curves.size(); i++)
+      {
+        OCCCurve* curve = curves.get_and_step();
+        TopoDS_Edge* theEdge = curve->get_TopoDS_Edge( );
+        BRepExtrema_DistShapeShape distShapeShape(*theEdge, theVertex);
+        d = distShapeShape.Value();
+        if ( i == 0 || d_min > d)
+        {
+          d_min = d;
+          the_curve = curve;
+        }
+     } 
+     the_curve->closest_point(point_on_surface, closest_location);       
+     pos = the_curve->point_containment(closest_location);
+     if(pos == CUBIT_PNT_OUTSIDE)
+       curves.remove(the_curve);
+     else
+       break;
+    }while(curves.size() > 0);
+    point_on_surface = closest_location;
+  }
 }
 
 //-------------------------------------------------------------------------
@@ -679,19 +718,8 @@ CubitPointContainment OCCSurface::point_containment( const CubitVector &point )
    face_classifier.Perform(*face, p, tol);
    TopAbs_State state = face_classifier.State();
    
-   //if surface is part of a periodic TopoDS_Face, it'll check the point
-   //againt the whole periodic Face, even it outside the occsurface 
-   //boundary, if it's on its periodic extension, it'll return as in. 
    if (state == TopAbs_IN)
-   {
-     //double check if the point is projected on the surface
-     CubitVector closest_point;
-     this->closest_point_trimmed(point, closest_point);
-     if(point.distance_between(closest_point) < tol) 
-       return CUBIT_PNT_INSIDE;
-     else
-       return CUBIT_PNT_OUTSIDE;
-   }
+     return CUBIT_PNT_INSIDE;
    else if (state == TopAbs_OUT)
      return CUBIT_PNT_OUTSIDE;
    else if (state == TopAbs_ON)
