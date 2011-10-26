@@ -762,8 +762,8 @@ protected:
   	                        DLIList<DLIList<TopoDS_Edge*>*> topo_edges, 
                                 Surface* old_surface_ptr) const;     
 
- CubitStatus imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*,
-                                DLIList<TopoDS_Face*>*on_faces = NULL) const;
+ int imprint_toposhapes(TopoDS_Shape*&, TopoDS_Shape*,
+                                DLIList<TopoDS_Face*>& on_faces ) const;
 
  TopoDS_Edge* find_imprinting_edge(TopoDS_Shape& from_shape,
                                    TopoDS_Edge& tool_shape,

@@ -3906,7 +3906,8 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
         }
 
         OCCLump* lump = CAST_TO(shell, OCCShell)->my_lump();
-        if(lump && !OCCMap->IsBound(*(lump->get_TopoDS_Solid())))
+        if(lump && (lump->get_TopoDS_Solid() == NULL || 
+           !OCCMap->IsBound(*(lump->get_TopoDS_Solid()))))
         {
           delete CAST_TO(shell, OCCShell)->my_body();
           delete lump;
