@@ -125,10 +125,15 @@ CubitStatus make_Point()
   ref_entities.clean_out();
   rsl = gti->export_solid_model(ref_entities, filename, filetype,
                                  num_ents_exported, cubit_version);
-  assert(num_ents_exported == 1);
+  assert(num_ents_exported == 2);
 
   DLIList<Body*> bodies;
   gti->bodies(bodies);
+  int id = bodies.get_and_step()->id();
+  assert(id == 2);
+  double d = bodies.get_and_step()->measure();
+  assert (d == 900);
+
   //delete all entities
   gti->delete_Body(bodies);
 
@@ -143,7 +148,7 @@ CubitStatus make_Point()
 
   bodies.clean_out();
   gti->bodies(bodies);
-  assert(bodies.size() == 1);
+  assert(bodies.size() == 2);
   //delete all entities
   gti->delete_Body(bodies);
   

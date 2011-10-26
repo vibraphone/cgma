@@ -796,7 +796,7 @@ CubitStatus make_Point()
   assert(free_entities.size() == 0);
  
   from_body  = gmti->brick(4, 4, 4);
-  CubitVector v_move9(2,5,2);
+  CubitVector v_move9(2,3,2);
   gti->translate(from_body,v_move9); 
   ref_faces.clean_out();
   from_body->ref_faces(ref_faces);
