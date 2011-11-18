@@ -554,9 +554,28 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
   //set the Shells
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(old_shape, TopAbs_SOLID, M);
+  TopTools_IndexedMapOfShape M_new;
+  TopExp::MapShapes(new_shape, TopAbs_SOLID, M_new);
   TopTools_ListOfShape shapes;
   TopoDS_Shape shape;
 
+  CubitBoolean updated = CUBIT_FALSE;	
+  if(!old_shape.IsNull() && old_shape.ShapeType() == TopAbs_COMPOUND && 
+     !new_shape.IsNull() && new_shape.ShapeType() == TopAbs_COMPOUND &&
+     !old_shape.IsSame(new_shape) && M.Extent() == M_new.Extent())
+  {
+    //By updating underling solids, shells etc., the old_shape will get changed.
+    //trying to make sure the the number of each entity in the old and new 
+    //shapes are the same, which means that nothing is delete, that we can 
+    //update the map here. Otherwise, when deleting solids, it'll delete the
+    //the old body and create new body. This is Ok for general boolean operation    //except imprint when booleans are called, usually the original body are
+    // supposed to be kept. 
+    updated = CUBIT_TRUE;
+    OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);
+  }
+ 
+  DLIList<int> new_solid_nums;
+  DLIList<int> unfound_nums;
   for(int ii=1; ii<=M.Extent(); ii++)
   {
     TopoDS_Solid solid = TopoDS::Solid(M(ii));
@@ -588,10 +607,38 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
     }
     else if(op->IsDeleted(solid))
     {
-       TopTools_IndexedMapOfShape M_new;
-       TopExp::MapShapes(new_shape, TopAbs_SOLID, M_new);
        if (M_new.Extent()== 1)
          shape = M_new(1);
+       else if(M_new.Extent() > 1)
+       {
+         GProp_GProps myProps;
+         BRepGProp::VolumeProperties(solid, myProps);
+         double bf_mass = myProps.Mass();
+         gp_Pnt old_center = myProps.CentreOfMass();
+         CubitBoolean found = CUBIT_FALSE;
+         for(int l = 1; l <= M_new.Extent(); l++)
+         {
+           BRepGProp::VolumeProperties(M_new(l), myProps);
+           double af_mass = myProps.Mass();
+           double dTol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+           if(fabs(bf_mass-af_mass) < dTol) //unchanged
+           {
+             gp_Pnt  new_center = myProps.CentreOfMass(); 
+             if(new_center.IsEqual(old_center, dTol))
+             {
+               found = CUBIT_TRUE;
+               shape = M_new(l);
+               new_solid_nums.append(l);
+               break;
+             }
+           }
+         }
+         if(!found)
+         {
+           unfound_nums.append(ii); 
+           continue;
+         }
+       }
        else
          shape.Nullify();
     }
@@ -604,7 +651,30 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
     if(shapes.Extent() > 0 || (op && op->IsDeleted(solid)))
       OCCLump::update_OCC_entity(solid, shape, op, sp);
   }
-  if(!old_shape.IsSame(new_shape))
+
+  if( unfound_nums.size() == 1 )
+  {
+    TopoDS_Solid solid = TopoDS::Solid(M(unfound_nums.get()));
+    for(int kk = 1; kk <= M_new.Extent(); kk++)
+    {
+      if(!new_solid_nums.move_to(kk))
+      {
+        shape = M_new(kk);
+        break;
+      } 
+    }
+    OCCLump::update_OCC_entity(solid, shape, op, sp);
+  }
+  else if(unfound_nums.size() > 1)
+  {
+    shape.Nullify();
+    for(int kk = 1; kk <=unfound_nums.size(); kk++)
+    {
+       TopoDS_Solid solid = TopoDS::Solid(M(unfound_nums.get_and_step()));
+       OCCLump::update_OCC_entity(solid, shape, op, sp);
+    }
+  } 
+  if(!old_shape.IsSame(new_shape) && !updated)
     OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);
   return CUBIT_SUCCESS;
 }

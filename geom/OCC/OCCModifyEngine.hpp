@@ -146,7 +146,7 @@ public:
     const CubitVector& p4 ) const;
   
   virtual BodySM* copy_body ( BodySM* bodyPtr) const ;
-  
+
   virtual CubitStatus stitch_surfs(
                       DLIList<BodySM*>& surf_bodies,
                       BodySM*& stitched_body)const;
@@ -776,6 +776,16 @@ CubitStatus stitch_surfs(DLIList<BodySM*>& surf_bodies,
                          TopoDS_Shape& stitched_shape) const;
 
 private:
+ CubitStatus result_1_imprint(BodySM* from_body,
+                              BodySM* tool_body,
+                              BodySM*& newBody)const;
+
+ CubitStatus result_3_imprint(BodySM* from_body,
+                              BodySM* tool_body,
+                              BodySM*& newBody)const;
+
+    //- for periodic surfaces, use webcut first and then unite to get imprints
+
  virtual bool supports_interoperability() { return true; }
     //- Returns whether intermixing of real and virtual geometry operations
     //- is supported for the current geometry kernel.
