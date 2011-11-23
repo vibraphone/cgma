@@ -2408,7 +2408,7 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  int i = OCCQueryEngine::instance()->OCCMap->Find(from_face);
 	  face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(i))->second;
 	}
-      else
+      if (face == NULL)
       {
         face_created = CUBIT_TRUE;
         face = OCCQueryEngine::instance()->populate_topology_bridge(from_face);
@@ -2804,7 +2804,8 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		    }
                   edge_list->clean_out();
                   delete edge_list;
-                  if(!periodic || count_intersection == 2)
+                  if(!periodic || count_intersection == 2 ||
+                     type == PLANE_SURFACE_TYPE)
                   {
 		    splitor.Add(myWire.Wire(),from_face);
 		    topo_changed = CUBIT_TRUE; 
