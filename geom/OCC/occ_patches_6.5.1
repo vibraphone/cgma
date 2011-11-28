@@ -1,0 +1,94 @@
+--- BRepBuilderAPI_Collect.cxx	2011-11-28 09:38:08.000000000 -0600
++++ ../src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-11-28 09:39:02.000000000 -0600
+@@ -201,9 +201,18 @@
+   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
+   BuildBack (myMod, ModBack);
+   
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
++  TopAbs_ShapeEnum type = SI.ShapeType();
++  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
++  if(type < TopAbs_SHELL)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
++  if(type < TopAbs_FACE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
++  if(type < TopAbs_WIRE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
++  if(type < TopAbs_EDGE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
++  if(type < TopAbs_VERTEX)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
+ 
+ #ifdef DEB
+   if (Affich) {
+
+--- Extrema_ExtPElS.cxx 2011-11-28 09:39:25.000000000 -0600
++++ ../src/Extrema/Extrema_ExtPElS.cxx  2011-11-28 09:42:57.000000000 -0600
+@@ -56,6 +56,7 @@
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+
+   gp_Pnt Ps;
+@@ -157,7 +158,9 @@
+   B = MP.Angle(DirZ);
+   if (!Same) { U1 += PI; }
+   U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
++  if (U2 - 2.*PI < Tol && U2 > 2.*PI) {U2 = 2. * PI; }
+   if (U2 > 2.*PI) { U2 -= 2. * PI; }
+   B = MP.Angle(DirZ);
+   A = Abs(A);
+@@ -248,6 +251,7 @@
+     gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+     U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+     U2 = U1 + PI;
++    if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+     if (U1 < 0.) { U1 += 2. * PI; }
+     V = OP.Angle(OPp);
+     if (Zp < 0.) { V = -V; }
+@@ -312,6 +316,7 @@
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+   Standard_Real R = sqrt(R2);
+   gp_Vec OO1 = OPp.Divided(R).Multiplied(S.MajorRadius());
+@@ -324,6 +329,8 @@
+
+   Standard_Real V1 = OO1.AngleWithRef(gp_Vec(O1,P),OO1.Crossed(OZ));
+   Standard_Real V2 = OO2.AngleWithRef(gp_Vec(P,O2),OO2.Crossed(OZ));
++  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
++  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
+   if (V1 < 0.) { V1 += 2. * PI; }
+   if (V2 < 0.) { V2 += 2. * PI; }
+
+--- Extrema_ExtPS.cxx   2011-11-28 09:43:08.000000000 -0600
++++ ../src/Extrema/Extrema_ExtPS.cxx    2011-11-28 09:44:49.000000000 -0600
+@@ -100,10 +100,18 @@
+   Standard_Real U, V;
+   PS.Parameter(U, V);
+   if (myS->IsUPeriodic()) {
+-    U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
++    Standard_Real Uupper = myuinf+myS->UPeriod();
++    if(U>(myuinf-mytolu) && U < myuinf) U = myuinf;
++    else if(U < (Uupper+mytolu) && U > Uupper) U = Uupper;
++    else
++      U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
+   }
+   if (myS->IsVPeriodic()) {
+-    V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
++    Standard_Real Vupper = myvinf+myS->VPeriod();
++    if(V>(myvinf-mytolv) && V < myvinf) V = myvinf;
++    else if(V < (Vupper+mytolv) && V > Vupper) V = Vupper;
++    else
++      V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
+   }
+   if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
+       (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
+
