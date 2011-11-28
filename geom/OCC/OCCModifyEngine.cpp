@@ -2447,7 +2447,6 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       if (common_curves.size() >= 1)
         sort_successful = sort_curves(common_curves, temp_edge_lists);
 
-/*
       if ( common_curves.size() > 2 && 
            (type == CONE_SURFACE_TYPE || type == SPHERE_SURFACE_TYPE ||
             type == TORUS_SURFACE_TYPE ||type == UNDEFINED_SURFACE_TYPE))
@@ -2483,7 +2482,7 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
           //http://www.opencascade.org/org/forum/thread_20672/ for more info
         }
       }
-*/
+
       list_of_edges.Clear(); 
       if (common_curves.size() >= 1)
 	{
