@@ -2289,6 +2289,21 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_FORWARD : CUBIT_REVERSED);
+
+    //for the cylinder side face, there are 4 coedges, 2 of them are seam
+    //edges and should have opposite sense.
+    for(int i = 0; i < coedges_new.size(); i++)
+    {
+      coedge =  coedges_new.get_and_step();
+      Curve* test_c = coedge->curve();
+      if(test_c == curve)
+      {       
+        if(sense == coedge->sense())
+          sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        break;    
+      }
+    }
+
     for(int i = 0; i < size; i++)
     {
       coedge = coedges_old.get_and_step();
@@ -2322,19 +2337,6 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
           if(!wire->IsNull())
             wire->Nullify();
           WireList->remove(occ_loop);
-        }
-      }
-      //for the cylinder side face, there are 4 coedges, 2 of them are seam
-      //edges and should have opposite sense.
-      for(int i = 0; i < coedges_new.size(); i++)
-      {
-        coedge =  coedges_new.get_and_step();
-        Curve* test_c = coedge->curve();
-        if(test_c == curve)
-        {
-          if(sense == coedge->sense())
-            sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
-          break;
         }
       }
 
@@ -2443,7 +2445,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
   for(int i = 0; i < coedges_old.size(); i++)
   {
     OCCCoEdge *coedge = coedges_old.get_and_step();
-    if(coedge->get_mark() != 1)
+    if(coedge->get_mark() == 0)
       delete coedge;
     else
       coedge->set_mark(0);

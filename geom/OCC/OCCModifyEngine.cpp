@@ -2447,9 +2447,10 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
       if (common_curves.size() >= 1)
         sort_successful = sort_curves(common_curves, temp_edge_lists);
 
-      if ( common_curves.size() > 2 && 
+      if ( common_curves.size() >= 2 && 
            (type == CONE_SURFACE_TYPE || type == SPHERE_SURFACE_TYPE ||
-            type == TORUS_SURFACE_TYPE ||type == UNDEFINED_SURFACE_TYPE))
+            type == TORUS_SURFACE_TYPE ||type == UNDEFINED_SURFACE_TYPE ||
+            type == SPLINE_SURFACE_TYPE))
       {
         //if the two shapes has common volume, do boolean operations
         BRepAlgoAPI_Common intersector(*from_shape, *tool_shape);
@@ -2815,8 +2816,10 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
                   {
                     //use the myWire to create a surface and webcut the 
                     //periodic body.
-                    Surface *wire_surf = make_Surface(PLANE_SURFACE_TYPE,
+                    Surface *wire_surf = make_Surface(BEST_FIT_SURFACE_TYPE,
                        wire_curves);
+                    if(wire_surf == NULL)
+                      wire_surf = make_Surface(PLANE_SURFACE_TYPE, wire_curves);
                     if(wire_surf)
                     {
                       OCCSurface* occ_wire_s = CAST_TO(wire_surf, OCCSurface);
@@ -3574,7 +3577,13 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
        {
          BodySM* newBody = NULL;
          BodySM* oldBody = from_body_list[i];
-         do{
+         TopExp_Explorer Ex;
+         Ex.Init(*shape1, TopAbs_SOLID);
+         int nSolid = 0;
+         for(; Ex.More(); Ex.Next())
+           nSolid++;
+         do
+         { 
            TopoDS_Face* face = face_list.pop();
            int k = OCCQueryEngine::instance()->OCCMap->Find(*face);
            OCCSurface* cut_face = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
@@ -3592,6 +3601,10 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
              shape1 = shapes.get();
              shape_list[i] = shape1;
            }
+           if(nSolid == 1)
+             break;
+           else
+             nSolid --;
            result = imprint_toposhapes(shape1, shape2, face_list); 
            oldBody = newBody;
          }while (result == 3);
