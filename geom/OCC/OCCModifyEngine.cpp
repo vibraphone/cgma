@@ -2204,7 +2204,7 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces; 
-  //CubitBoolean need_1_split = CUBIT_FALSE;
+  CubitBoolean need_1_split = CUBIT_FALSE;
   while( more_face)
     {
       TopoDS_Face from_face,tool_face;
@@ -2477,10 +2477,8 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             if(fabs(-after_mass + orig_mass) > TOL && after_mass > TOL)
               return 1; 
           }
-/*
           else
             need_1_split = CUBIT_TRUE;
-*/
           //have to use boolean operation, see 
           //http://www.opencascade.org/org/forum/thread_20672/ for more info
         }
@@ -2725,10 +2723,9 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             CubitBox* pbox = new CubitBox(box);
             bs.append(pbox);
           }
-/*
           if(size > 1)
             need_1_split = CUBIT_TRUE;
-*/
+
           bs.append((CubitBox*) NULL);
 
           for(int i = 0; i < size-1; i++)
@@ -2937,10 +2934,8 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  TopoDS_Face* topo_face = new TopoDS_Face(from_face);
 	  from_faces.append(topo_face);
 	} 
-/*
       if (need_1_split)
         break;
-*/
     }
   
   
