@@ -244,6 +244,8 @@ CubitStatus OCCQueryEngine::reflect( BodySM *bodysm,
 //               information is stored and output in gMem.  The
 //               number of triangles, points and facets are also
 //               output.
+//               normal_tolerance is in degree.
+//               max_edge_length is not considered in getting graphics.
 // Author     :  Jane Hu
 // Date       :  10/25/07
 //================================================================================
@@ -258,6 +260,12 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   if (!g_mem)
       return CUBIT_SUCCESS;
 
+  if(max_edge_length == 0.0)
+  {
+    PRINT_WARNING("OCC surface's tessilation doesn't consider edge_length.\n");
+    PRINT_WARNING("max_edge_length argument is ignored. \n");
+  }
+
   OCCSurface *occ_surface_ptr = CAST_TO(surface_ptr, OCCSurface);
   TopoDS_Face * Topo_Face = occ_surface_ptr->get_TopoDS_Face();
   if (!Topo_Face)
@@ -271,13 +279,14 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   if(facets.IsNull() || facets->NbTriangles() == 0)
   {
     //do triangulation
-    double deflection = 0.01;
-    double angle  = 0.5;
+    if(distance_tolerance == 0.0)
+      distance_tolerance = 0.01;
+    double angle  = CUBIT_PI * normal_tolerance/180;
     BRepAdaptor_Surface asurface(*Topo_Face);
     Bnd_Box aBox;
     BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
     BRepMesh_FastDiscret *myMesh =
-    new BRepMesh_FastDiscret(deflection, *Topo_Face, aBox, angle, Standard_True, Standard_True);
+    new BRepMesh_FastDiscret(distance_tolerance, *Topo_Face, aBox, angle, Standard_True, Standard_True);
     if (myMesh != NULL) delete myMesh;
     facets = BRep_Tool::Triangulation(*Topo_Face, L);
     if(facets.IsNull() || facets->NbTriangles() == 0)
@@ -354,7 +363,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
                                           GMem* gMem,
-                                          double /*tolerance*/ ) const
+                                          double tolerance ) const
 {
   //  get the OCCCurve.
   OCCCurve *occ_curve_ptr = CAST_TO(curve_ptr,OCCCurve);
@@ -366,11 +375,12 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
     return CUBIT_FAILURE;
 
   //do tessellation
-  double deflection = 0.2;
+  if (tolerance  == 0.0)
+    tolerance = 0.2;
   double angle  = 0.2;
   BRepAdaptor_Curve acurve(*Topo_Edge);
   GCPnts_TangentialDeflection *myMesh = 
-        new GCPnts_TangentialDeflection(acurve, angle, deflection);
+        new GCPnts_TangentialDeflection(acurve, angle, tolerance);
   if (myMesh == NULL) 
   {
     PRINT_ERROR("Can't tessellate for this curve.\n");
