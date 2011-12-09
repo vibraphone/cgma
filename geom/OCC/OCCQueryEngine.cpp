@@ -260,7 +260,7 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
   if (!g_mem)
       return CUBIT_SUCCESS;
 
-  if(max_edge_length == 0.0)
+  if(max_edge_length > get_sme_resabs_tolerance())
   {
     PRINT_WARNING("OCC surface's tessilation doesn't consider edge_length.\n");
     PRINT_WARNING("max_edge_length argument is ignored. \n");
