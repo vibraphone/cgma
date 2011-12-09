@@ -2204,7 +2204,7 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 
   //list of face on from_shape that has been imprinted
   DLIList<TopoDS_Face*> from_faces; 
-  CubitBoolean need_1_split = CUBIT_FALSE;
+  //CubitBoolean need_1_split = CUBIT_FALSE;
   while( more_face)
     {
       TopoDS_Face from_face,tool_face;
@@ -2477,8 +2477,10 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             if(fabs(-after_mass + orig_mass) > TOL && after_mass > TOL)
               return 1; 
           }
+/*
           else
             need_1_split = CUBIT_TRUE;
+*/
           //have to use boolean operation, see 
           //http://www.opencascade.org/org/forum/thread_20672/ for more info
         }
@@ -2723,9 +2725,10 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
             CubitBox* pbox = new CubitBox(box);
             bs.append(pbox);
           }
+/*
           if(size > 1)
             need_1_split = CUBIT_TRUE;
-
+*/
           bs.append((CubitBox*) NULL);
 
           for(int i = 0; i < size-1; i++)
@@ -2934,8 +2937,10 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 	  TopoDS_Face* topo_face = new TopoDS_Face(from_face);
 	  from_faces.append(topo_face);
 	} 
+/*
       if (need_1_split)
         break;
+*/
     }
   
   
@@ -3531,35 +3536,8 @@ CubitStatus OCCModifyEngine::imprint(DLIList<BodySM*> &from_body_list ,
          //for cylinder overlapping cases, doing boolean operation is necessary for 
          //now. 10/25/11
          BodySM* tool_copy = copy_body(from_body_list[j%size]);
-/*
-         DLIList<BodySM*> tools;
-         tools.append(tool_copy);
-         DLIList<BodySM*> from_bodies ;
-         BodySM* from_copy = copy_body(from_body_list[i]);
-         from_bodies.append(from_copy);
-         DLIList<BodySM*> new_bodies;
-         CubitStatus stat = subtract(tools, from_bodies, new_bodies, false, false);
-         if (stat)
-         {
-           tool_copy = copy_body(from_body_list[j%size]);
-           from_bodies.clean_out();
-           from_bodies.append(from_body_list[i]);
-           intersect(tool_copy, from_bodies, new_bodies, false);
-           if(new_bodies.size() > 1)
-           {
-             DLIList<BodySM*> final_bodies;
-             unite(new_bodies, final_bodies, false);       
-             new_bodies.clean_out();
-             new_bodies = final_bodies;
-           }
-           modified = CUBIT_TRUE;
-           DLIList<TopoDS_Shape*> shapes;
-           DLIList<CubitBoolean> is_volume;
-           get_shape_list(new_bodies, shapes, is_volume,false); 
-           shape1 = shapes.get();
-         }
-*/
          BodySM* newBody = NULL;
+
          stat = result_1_imprint(from_body_list[i], tool_copy, newBody);
          if (stat && newBody)
          {
@@ -3676,20 +3654,61 @@ CubitStatus OCCModifyEngine::result_1_imprint(BodySM* from_body,
                                               BodySM* tool_body,
                                               BodySM*& newBody)const
 {
+  //for compound of solids in from_body, try to determine if subtracting or
+  //intersecting will keep the from_body un-deleted by checking subtracting
+  //first, if it kept the from_body, don't take any further risk, do intersect
+  //first, then subtract.
+
+  DLIList<TopoDS_Shape*> from_bodies_shapes;
+  DLIList<BodySM*> from_bodies ;
+  DLIList<CubitBoolean> is_volume;
+  from_bodies.append(from_body);
+  //get the from_bodies underling shapes
+  CubitStatus stat = get_shape_list(from_bodies, from_bodies_shapes, is_volume, CUBIT_FALSE);
+
+  TopoDS_Shape* from_shape = from_bodies_shapes.get();
+  int num_solids = 0;
+  if(from_shape->ShapeType() == TopAbs_COMPOUND)
+  {
+    TopExp_Explorer Ex;
+    for (Ex.Init(*from_shape, TopAbs_SOLID);Ex.More(); Ex.Next())
+      num_solids++;
+  }
   BodySM* tool_copy = copy_body(tool_body);
   DLIList<BodySM*> tools;
   tools.append(tool_copy);
-  DLIList<BodySM*> from_bodies ;
+  from_bodies.clean_out() ;
   BodySM* from_copy = copy_body(from_body);
   from_bodies.append(from_copy);
   DLIList<BodySM*> new_bodies;
-  CubitStatus stat = subtract(tools, from_bodies, new_bodies, false, false);
+  stat = subtract(tools, from_bodies, new_bodies, false, false);
   if (stat)
   {
-    tool_copy = copy_body(tool_body);
-    from_bodies.clean_out();
-    from_bodies.append(from_body);
-    intersect(tool_copy, from_bodies, new_bodies, false);
+    if (num_solids > 1 && from_copy == new_bodies.get())
+    {
+      //double check if subtract kept the original from_bodies pointer.
+      //if so, do intersect first, then subtract.
+      tool_copy = copy_body(tool_body);
+      from_bodies.clean_out(); 
+      from_copy = copy_body(from_body);
+      from_bodies.append(from_copy);
+      new_bodies.clean_out();
+      intersect(tool_copy, from_bodies, new_bodies, false);
+
+      tool_copy = copy_body(tool_body);
+      tools.clean_out();
+      tools.append(tool_copy);
+      from_bodies.clean_out();
+      from_bodies.append(from_body);
+      subtract(tools, from_bodies, new_bodies, false, false);
+    }
+    else
+    { 
+      tool_copy = copy_body(tool_body);
+      from_bodies.clean_out();
+      from_bodies.append(from_body);
+      intersect(tool_copy, from_bodies, new_bodies, false);
+    }
     if(new_bodies.size() > 1)
     {
        DLIList<BodySM*> final_bodies;
