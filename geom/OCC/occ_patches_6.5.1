@@ -92,3 +92,30 @@
    if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
        (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
 
+--- TopOpeBRep_EdgesIntersector_1.cxx   2011-12-07 12:06:45.000000000 -0600
++++ ../src/TopOpeBRep/TopOpeBRep_EdgesIntersector_1.cxx 2011-12-07 12:15:44.000000000 -0600
+@@ -215,8 +215,8 @@
+            staB = staINON;
+            staA = staINON;
+          }
+-         else // Middle/Middle is impossible
+-           Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown MM");
++         //else // Middle/Middle is impossible
++          // Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown MM");
+        }
+        else { // posother = Head or End
+          Standard_Boolean opposite = IsOpposite1();
+@@ -258,9 +258,9 @@
+          staB = TopAbs_OUT;
+          staA = staINON;
+        }
+-       else {  // Middle is impossible
+-         Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown M");
+-       }
++       //else {  // Middle is impossible
++         //Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown M");
++       //}
+       } // point is not a segment point
+
+     } // T.Situation == IntRes2d_Unknown
+
