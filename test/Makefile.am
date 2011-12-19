@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file attribute_to_buffer modify subtract makept r_w test_occ operation brick_occ merge_occ point_project
+  TESTS += attribute_to_file attribute_to_buffer modify subtract makept r_w test_occ operation brick_occ merge_occ point_project imprint_bug
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -37,6 +37,7 @@ point_project_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="ACIS"'
 
 makept_SOURCES = makept.cpp
 modify_SOURCES = modify.cpp
+imprint_bug_SOURCES = imprint_bug.cpp
 subtract_SOURCES = subtract.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
@@ -95,6 +96,8 @@ EXTRA_DIST = 62_shaver1.brep \
              Line_2.brep    \
              stitch.name_occ \ 
              box-w-hole.brep \
+             Solid_6.brep  \
+             Solid_7.brep  \
              holysurf.sat
 
 # Files that are created by tests, and that therefore 
