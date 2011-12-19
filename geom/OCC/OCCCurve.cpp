@@ -344,10 +344,6 @@ CubitStatus OCCCurve::get_interior_extrema(
   DLIList<CubitVector*>& interior_points,
   CubitSense& return_sense )
 {
-  // Danilov: try to use GeomAPI_ExtremaCurveCurve
-  // Will do 3 primary directions seperately. 
-  assert(0);
-  
   DLIList<CubitVector*> point_list;
   CubitVector x(1.0, 0.0, 0.0);
   get_interior_extrema_in_direction(point_list, x);
@@ -900,7 +896,6 @@ void OCCCurve::get_curvature( CubitVector const& location,
 //----------------------------------------------------------------
 void OCCCurve::adjust_periodic_parameter(double& param)
 {
-  assert(0);
     // Adjustment only legal if this is a periodic curve.
   double period;
   if ( this->is_periodic(period) && (fabs(period) > CUBIT_RESABS))
