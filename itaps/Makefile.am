@@ -8,14 +8,14 @@ endif
 
 TESTS = test_edge_orient
 if build_ACIS
-  TESTS += testgeom
+  TESTS += testgeom copy_attrib
 else
 if WITH_CUBIT
-  TESTS += testgeom
+  TESTS += testgeom copy_attrib
 endif
 endif
 if build_OCC
-  TESTS += testgeom_occ
+  TESTS += testgeom_occ copy_attrib
 endif
 
 
@@ -66,6 +66,8 @@ test_edge_orient_SOURCES = test_edge_orient.cc
 
 chaman_SOURCES = chaman.cc
 
+copy_attrib_SOURCES = copy_attrib.cpp
+
 if USE_MPI
   check_PROGRAMS += partest
   partest_SOURCES = partest.cpp
@@ -94,7 +96,7 @@ install-data-hook:
 
 EXTRA_DIST = testgeom.sat size.sat
 
-CLEANFILES = iGeom-Defs.inc testout.sat mmgr.log step_import.log
+CLEANFILES = iGeom-Defs.inc testout.sat mmgr.log step_import.log test.occ
 DISTCLEANFILES = iGeom_FCDefs.h
 
 FPFX=iGeom
