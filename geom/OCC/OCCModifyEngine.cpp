@@ -6685,7 +6685,7 @@ CubitStatus OCCModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> & 
 Curve* OCCModifyEngine::create_arc_three( Point* pt1, 
                                           Point* pt2,
                                           Point* pt3, 
-                                          bool full )
+                                          bool full )const
 { 
   if(!full)
   {
@@ -6722,7 +6722,7 @@ Curve* OCCModifyEngine::create_arc_three( Point* pt1,
 Curve* OCCModifyEngine::create_arc_three( Curve* curve1, 
                                           Curve* curve2,
                                           Curve* curve3, 
-                                          bool full  )
+                                          bool full  )const
 { 
   OCCCurve* occ_crv1 = CAST_TO(curve1, OCCCurve);
   OCCCurve* occ_crv2 = CAST_TO(curve2, OCCCurve);
@@ -6886,7 +6886,7 @@ Curve* OCCModifyEngine::create_arc_center_edge( Point* pt1,
                                                 Point* pt3,
                                                 const CubitVector& normal, 
                                                 double radius,
-                                                bool full ) 
+                                                bool full ) const
 { 
   CubitVector vec1 = pt1->coordinates(); // Center of arc
   CubitVector vec2 = pt2->coordinates(); // Position on arc
@@ -9695,4 +9695,231 @@ void OCCModifyEngine::get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
   }
 }
 
+//Following codes are OCC engine only, implemented by Boyd Tidwell
+CubitStatus OCCModifyEngine::create_rectangle_surface( double width,
+            double height,
+            CubitVector plane,
+            BodySM *&sheet_body) const
+{
+  //create points at the 4 corners
+  CubitVector pos1( width*0.5, height*0.5, 0 );
+  CubitVector pos2( -width*0.5, height*0.5, 0 );
+  CubitVector pos3( -width*0.5, -height*0.5, 0 );
+  CubitVector pos4( width*0.5, -height*0.5, 0 );
+
+  DLIList<CubitVector*> vec_list(4);
+  vec_list.append( &pos1 );
+  vec_list.append( &pos2 );
+  vec_list.append( &pos3 );
+  vec_list.append( &pos4 );
+
+  CubitStatus status = create_surface(vec_list, sheet_body, 0, CUBIT_FALSE );
+
+  //rotate it so that it is aligned with the plane defined by vector 'plane'
+  CubitVector current_plane(0,0,1);
+  CubitVector axis_of_rotation = current_plane * plane;
+  double angle_of_rotation = axis_of_rotation.vector_angle(
+current_plane, plane );
+
+  OCCQueryEngine::instance()->rotate( sheet_body, axis_of_rotation,
+                                      RADIANS_TO_DEGREES(angle_of_rotation) );
+
+  return status;
+}
+
+CubitStatus OCCModifyEngine::create_ellipse_surface( Point *pt1,
+                                                     Point *pt3,
+                                                     CubitVector center_point,
+                                                     BodySM *&sheet_body) const
+{
+  // make ellipse by creating two ellipse arcs in each sense direction
+  Curve *ellipse1 = make_elliptical_Curve( pt1, pt3, center_point, 0, 360, CUBIT_FORWARD );
+  if( NULL == ellipse1 )
+    return CUBIT_FAILURE;
+  DLIList<Curve*> curve_list(2);
+  curve_list.append( ellipse1 );
+
+  Curve *ellipse2 = make_elliptical_Curve( pt1, pt3, center_point, 0, 360, CUBIT_REVERSED );
+  if( NULL == ellipse2 )
+    return CUBIT_FAILURE;
+  curve_list.append( ellipse2 );
+
+  Surface *tmp_surface = make_Surface( PLANE_SURFACE_TYPE, curve_list, NULL, false );
+  if( NULL == tmp_surface )
+    return CUBIT_FAILURE;
+
+  sheet_body = make_BodySM( tmp_surface );
+  if( NULL == sheet_body)
+    return CUBIT_FAILURE;
+ 
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus OCCModifyEngine::create_ellipse_surface( double major_radius,
+                                                     double minor_radius,
+                                                     CubitVector plane,
+                                                     BodySM *&sheet_body) const
+{
+  //create the points
+  CubitVector tmp_pt( major_radius, 0, 0 );
+  Point *pt1 = make_Point( tmp_pt );
+
+  tmp_pt.set( 0, minor_radius, 0 );
+  Point *pt2 = make_Point( tmp_pt );
+
+  CubitVector center_point(0,0,0);
+
+  // make ellipse by creating two ellipse arcs in each sense direction
+  Curve *ellipse1 = make_elliptical_Curve( pt1, pt2, center_point, 0, 360, CUBIT_FORWARD );
+  if( NULL == ellipse1 )
+    return CUBIT_FAILURE;
+  DLIList<Curve*> curve_list(2);
+  curve_list.append( ellipse1 );
+
+  Curve *ellipse2 = make_elliptical_Curve( pt1, pt2, center_point, 0, 360, CUBIT_REVERSED );
+  if( NULL == ellipse2 )
+    return CUBIT_FAILURE;
+  curve_list.append( ellipse2 );
+
+  Surface *tmp_surface = make_Surface(PLANE_SURFACE_TYPE, curve_list, NULL, false );
+  if( NULL == tmp_surface )
+    return CUBIT_FAILURE;
+
+  sheet_body = make_BodySM( tmp_surface );
+  if( NULL == sheet_body)
+    return CUBIT_FAILURE;
+
+  //rotate it so that it is aligned with the plane defined by vector 'plane'
+  CubitVector current_plane(0,0,1);
+  CubitVector axis_of_rotation = current_plane * plane;
+  double angle_of_rotation = axis_of_rotation.vector_angle(
+current_plane, plane );
+
+  OCCQueryEngine::instance()->rotate( sheet_body, axis_of_rotation, 
+                                      RADIANS_TO_DEGREES(angle_of_rotation) );
+
+  return CUBIT_SUCCESS;
+}
+
+Curve* OCCModifyEngine::make_elliptical_Curve( Point const* point1,
+                                               Point const* point2,
+                                               CubitVector &center_point,
+                                               double start_angle,
+                                               double end_angle,
+                                               CubitSense sense) const
+{
+  GeometryType curve_type = ELLIPSE_CURVE_TYPE;
+  Curve *curve = make_Curve(curve_type, point1, point2, &center_point, sense );
+  if ( curve == NULL )
+  {
+    PRINT_ERROR("In OCCModifyEngine::make_elliptical_Curve\n"
+                "       Cannot make Curve object.\n");
+    return (Curve *)NULL;
+  }
+  return curve;
+}
+
+CubitStatus OCCModifyEngine::create_circle_surface( Point *pt1,
+                                                    CubitVector center_point,
+                                                    Point *pt3,
+                                                    BodySM *&sheet_body)const 
+{
+  Point *tmp_pt = make_Point( center_point );
+  Curve *circle = create_arc_three( pt1, tmp_pt, pt3, CUBIT_TRUE );
+
+  OCCQueryEngine::instance()->delete_solid_model_entities( tmp_pt );
+
+  DLIList<Curve*> curve_list(1);
+  curve_list.append( circle );
+  Surface *tmp_surface = make_Surface(PLANE_SURFACE_TYPE, curve_list, NULL, false );
+
+  if( NULL == tmp_surface )
+    return CUBIT_FAILURE;
+
+  sheet_body = make_BodySM( tmp_surface );
+  if( NULL == sheet_body)
+    return CUBIT_FAILURE;
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus OCCModifyEngine::create_circle_surface( Point *pt1,
+                                                    Point *pt3,
+                                                    CubitVector center_point,
+                                                    BodySM *&sheet_body)const 
+{
+  Point *tmp_center_pt = make_Point(center_point );
+  CubitVector normal(0,0,0);
+  Curve *circle = create_arc_center_edge(tmp_center_pt, pt1, pt3, normal, 
+                                         CUBIT_TRUE );
+
+  if( NULL == circle )
+    return CUBIT_FAILURE;
+
+  OCCQueryEngine::instance()->delete_solid_model_entities( tmp_center_pt );
+
+  DLIList<Curve*> curve_list(1);
+  curve_list.append( circle );
+  Surface *tmp_surface = make_Surface(PLANE_SURFACE_TYPE, curve_list, NULL, 
+                                      false );
+  if( NULL == tmp_surface )
+    return CUBIT_FAILURE;
+
+  sheet_body = OCCModifyEngine::instance()->make_BodySM( tmp_surface );
+  if( NULL == sheet_body)
+    return CUBIT_FAILURE;
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus OCCModifyEngine::create_circle_surface( double radius,
+                                                    CubitVector plane,
+                                                    BodySM *&sheet_body) const
+{
+  CubitVector center_pt;
+  center_pt.set(0, 0, 0);
+  CubitVector pt2, pt3;
+  if (plane.x() > 0 )
+  {
+    pt2.set( 0, radius, 0 );
+    pt3.set( 0, 0, radius);
+  }
+  else if (plane.y() > 0)
+  {
+    pt2.set(radius, 0, 0);
+    pt3.set(0, 0, -radius);
+  }
+  else if (plane.z() > 0)
+  {
+    pt2.set(radius, 0, 0);
+    pt3.set(0, radius, 0);
+  }
+  else
+  {
+    PRINT_ERROR("In OCCModifyEngine::create_circle_surface\n"
+                "       Invalid plane specified.\n");
+    return CUBIT_FAILURE;
+  }
+  const CubitVector normal(plane.x(), plane.y(), plane.z());
+
+  Point *tbpt1 = make_Point( center_pt );
+  Point *tbpt2 = make_Point( pt2 );
+  Point *tbpt3 = make_Point( pt3 );
+  Curve *circle = create_arc_center_edge(tbpt1, tbpt2, tbpt3, normal, radius,
+                               CUBIT_FALSE);
+
+  DLIList<Curve*> curve_list(1);
+  curve_list.append( circle );
+  Surface *tmp_surface = make_Surface(PLANE_SURFACE_TYPE, curve_list, NULL, 
+                                      false );
+  if( NULL == tmp_surface )
+    return CUBIT_FAILURE;
+
+  sheet_body = make_BodySM( tmp_surface );
+  if( NULL == sheet_body)
+    return CUBIT_FAILURE;
+
+  return CUBIT_SUCCESS;
+
+}
 // EOF

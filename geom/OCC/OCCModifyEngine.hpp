@@ -115,6 +115,42 @@ public:
     Surface *old_surface_ptr = NULL,
     bool check_edges = true ) const;
   
+  CubitStatus create_rectangle_surface( double width,
+                                        double height,
+                                        CubitVector plane,
+                                        BodySM *&sheet_body) const;
+
+  CubitStatus create_ellipse_surface( Point  *pt1,
+                                      Point  *pt3,
+                                      CubitVector center_point,
+                                      BodySM *&sheet_body) const;
+
+  CubitStatus create_ellipse_surface( double major_radius,
+                                      double minor_radius,
+                                      CubitVector plane,
+                                      BodySM *&sheet_body) const;
+
+  Curve* make_elliptical_Curve( Point const* point1,
+                                Point const* point2,
+                                CubitVector &center_point,
+                                double start_angle,
+                                double end_angle,
+                                CubitSense sense) const;
+
+  CubitStatus create_circle_surface( Point *pt1,
+                                     CubitVector center_point,
+                                     Point *pt3,
+                                     BodySM *&sheet_body) const;
+
+  CubitStatus create_circle_surface( Point *pt1,
+                                     Point *pt3,
+                                     CubitVector center_point,
+                                     BodySM *&sheet_body) const;
+
+  CubitStatus create_circle_surface( double radius,
+                                     CubitVector plane,
+                                     BodySM *&sheet_body) const;
+
   virtual Lump* make_Lump( DLIList<Surface*>& surface_list ) const;
   
   //virtual Body *make_Body(Surface *) const;
@@ -434,12 +470,12 @@ public:
   virtual Curve* create_arc_three( Point* ref_vertex1, 
                                    Point* ref_vertex2,
                                    Point* ref_vertex3, 
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual Curve* create_arc_three( Curve* ref_edge1, 
                                    Curve* ref_edge2,
                                    Curve* ref_edge3, 
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual Curve* create_arc_center_edge( 
                                    Point* ref_vertex1, 
@@ -447,7 +483,7 @@ public:
                                    Point* ref_vertex3, 
                                    const CubitVector &normal,
                                    double radius = CUBIT_DBL_MAX,
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual CubitStatus create_curve_combine( DLIList<Curve*>& curve_list, 
                                     Curve *&new_curve_ptr );
