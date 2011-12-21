@@ -2594,7 +2594,7 @@ CubitStatus FacetModifyEngine::create_solid_bodies_from_surfs(DLIList<Surface*> 
 Curve* FacetModifyEngine::create_arc_three( Point* /*ref_vertex1*/, 
                                             Point* /*ref_vertex2*/,
                                             Point* /*ref_vertex3*/, 
-                                            bool /*full*/ )
+                                            bool /*full*/ )const
 {
   MODIFY_CHECK_RETURN_NULL;
   
@@ -2612,7 +2612,7 @@ Curve* FacetModifyEngine::create_arc_three( Point* /*ref_vertex1*/,
 Curve* FacetModifyEngine::create_arc_three( Curve* /*ref_edge1*/, 
                                             Curve* /*ref_edge2*/,
                                             Curve* /*ref_edge3*/, 
-                                            bool /*full*/  )
+                                            bool /*full*/  )const
 {
   MODIFY_CHECK_RETURN_NULL;
   
@@ -2631,7 +2631,7 @@ Curve* FacetModifyEngine::create_arc_center_edge( Point* /*ref_vertex1*/,
                                                   Point* /*ref_vertex3*/,
                                                   const CubitVector& /*normal*/, 
                                                   double /*radius*/,
-                                                  bool /*full*/ ) 
+                                                  bool /*full*/ ) const
 { 
   MODIFY_CHECK_RETURN_NULL;
   

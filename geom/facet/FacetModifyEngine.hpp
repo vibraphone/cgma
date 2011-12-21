@@ -384,12 +384,12 @@ public:
   virtual Curve* create_arc_three( Point* ref_vertex1, 
                                    Point* ref_vertex2,
                                    Point* ref_vertex3, 
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual Curve* create_arc_three( Curve* ref_edge1, 
                                    Curve* ref_edge2,
                                    Curve* ref_edge3, 
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual Curve* create_arc_center_edge( 
                                    Point* ref_vertex1, 
@@ -397,7 +397,7 @@ public:
                                    Point* ref_vertex3, 
                                    const CubitVector &normal,
                                    double radius = CUBIT_DBL_MAX,
-                                   bool full = false );
+                                   bool full = false )const;
   
   virtual CubitStatus create_curve_combine( DLIList<Curve*>& curve_list, 
                                     Curve *&new_curve_ptr );
