@@ -728,18 +728,18 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
       virtual Curve* create_arc_three( Point* pt1, 
                                        Point* pt2,
                                        Point* pt3,
-                                       bool full = false ) = 0;
+                                       bool full = false ) const= 0;
       virtual Curve* create_arc_three( Curve* curve1,
                                        Curve* curve2,
                                        Curve* curve3,
-                                       bool full = false ) = 0;
+                                       bool full = false ) const= 0;
   
       virtual Curve* create_arc_center_edge( Point* point1,
                                              Point* point2,
                                              Point* point3,
                                              const CubitVector &normal,
                                              double radius = CUBIT_DBL_MAX,
-                                             bool full = false ) = 0;
+                                             bool full = false ) const= 0;
 
       //- Methods to create arcs.  First uses 3 points on arc, next creates arc
       //- tangent to 3 curves, last creates arc using center and two points on arc.
