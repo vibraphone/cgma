@@ -34,6 +34,7 @@ class TopoDS_Face;
 class CubitBox;
 class BRepAlgoAPI_BooleanOperation;
 class BRepOffsetAPI_ThruSections;
+class BRepBuilderAPI_Copy;
 class OCCHistory;
 
 class OCCModifyEngine : public GeometryModifyEngine
@@ -47,6 +48,9 @@ private:
   OCCModifyEngine();
   
   static OCCModifyEngine* instance_;
+
+  CubitStatus copy_body_attributes(TopoDS_Shape orig_shape,
+                            BRepBuilderAPI_Copy& api_copy)const;
   
 public:
   static inline OCCModifyEngine* instance()

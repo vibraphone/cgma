@@ -659,6 +659,7 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
   occ_surface->get_param_range_V(VMin, VMax);
 
   TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
+
   if( !theFace)
   {
      PRINT_ERROR("Cannot create an OCC surface from the given surface.\n"
@@ -1771,6 +1772,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
      return (BodySM *)NULL;
   }
 
+  DLIList<CubitSimpleAttrib*> list;
   TopoDS_Compound *theCS = occ_body->get_TopoDS_Shape();
   
   if (theCS == NULL) //single lump or shell or surface body
@@ -1784,6 +1786,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
       TopoDS_Shape newShape = api_copy.ModifiedShape(*shell);
       TopoDS_Shell newShell = TopoDS::Shell(newShape);
       new_body = OCCQueryEngine::instance()->populate_topology_bridge(newShell, CUBIT_TRUE)->my_body();
+      copy_body_attributes((TopoDS_Shape)(*shell), api_copy);
     }
  
     DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
@@ -1791,15 +1794,16 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
     
     for(int i = 0 ; !new_body && i < surfaces.size(); i++)
     {
-      Surface* surface = make_Surface(surfaces.get_and_step());
-      if (surface == NULL)
-      {
-         PRINT_ERROR("Cannot create an OCC sheet bodySM from the given bodySM.\n");
-         return (BodySM *)NULL;
-      }
-
+      OCCSurface *occ_surface = CAST_TO(surfaces.get_and_step(), OCCSurface);
+      TopoDS_Face *theFace = occ_surface->get_TopoDS_Face();
+      BRepBuilderAPI_Copy api_copy(*theFace);
+      TopoDS_Shape newShape = api_copy.ModifiedShape(*theFace);
+      TopoDS_Face newFace = TopoDS::Face(newShape);
+      Surface* surface = OCCQueryEngine::instance()->populate_topology_bridge(
+                           newFace, CUBIT_TRUE );
       OCCSurface* occ_surf = CAST_TO(surface, OCCSurface);
       new_body = occ_surf->my_body();
+      copy_body_attributes((TopoDS_Shape)(*theFace) , api_copy);
     }
 
     //single lump body
@@ -1814,6 +1818,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
                                                         CUBIT_TRUE);
 
       new_body = CAST_TO(lump, OCCLump)->get_body();
+      copy_body_attributes((TopoDS_Shape)solid, api_copy);
     }
   }
 
@@ -1824,13 +1829,121 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
     TopoDS_Shape newShape = api_copy.ModifiedShape(*theCS);
 
     TopoDS_Compound newCS = TopoDS::Compound(newShape);
+    OCCQueryEngine::instance()->copy_attributes(*theCS, newCS);
 
     new_body = OCCQueryEngine::instance()->populate_topology_bridge(newCS);
+    copy_body_attributes((TopoDS_Shape)(*theCS), api_copy);
+    OCCAttribSet::get_attributes(newCS, list);
+    for(int kk = 0; kk < list.size(); kk++)
+      new_body->append_simple_attribute_virt(list.get_and_step());
   }
   
   return new_body;
 }
 
+CubitStatus OCCModifyEngine::copy_body_attributes(TopoDS_Shape orig_shape,
+                                           BRepBuilderAPI_Copy& api_copy)const 
+{
+  DLIList<CubitSimpleAttrib*> list;
+  TopTools_IndexedMapOfShape M;
+  TopExp::MapShapes(orig_shape, TopAbs_SOLID, M);
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Solid solid = TopoDS::Solid(M(ii));
+    TopoDS_Solid new_solid = TopoDS::Solid(api_copy.ModifiedShape(solid));
+    if(!new_solid.IsNull())
+      OCCQueryEngine::instance()->copy_attributes(solid, new_solid);
+    list.clean_out();
+    OCCAttribSet::get_attributes(new_solid,list);
+    OCCLump *lump = NULL;
+    int k = OCCQueryEngine::instance()->OCCMap->Find(new_solid);
+    lump = (OCCLump*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;         
+    for(int kk = 0; kk < list.size(); kk++)
+      lump->append_simple_attribute_virt(list.get_and_step());
+    
+    if (list.size() == 0)
+    {
+      k = OCCQueryEngine::instance()->OCCMap->Find(orig_shape);
+      OCCLump *orig_lump = (OCCLump*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+      OCCBody* body = (OCCBody*)orig_lump->get_body();
+      if(body)
+      {
+        body->get_simple_attribute(list);
+        for (int kk = 0; kk < list.size(); kk++) 
+          lump->get_body()->append_simple_attribute_virt(list.get_and_step()); 
+      }
+    }
+  }
+
+  M.Clear();
+  TopExp::MapShapes(orig_shape, TopAbs_FACE, M);
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Face face = TopoDS::Face(M(ii));
+    TopoDS_Face new_face = TopoDS::Face(api_copy.ModifiedShape(face));
+    if(!new_face.IsNull())
+      OCCQueryEngine::instance()->copy_attributes(face, new_face);
+    list.clean_out();
+    OCCAttribSet::get_attributes(new_face, list);
+    OCCSurface* surf = NULL;
+    int k = OCCQueryEngine::instance()->OCCMap->Find(new_face);
+    surf = (OCCSurface*)(OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+    for(int kk = 0; kk < list.size(); kk++)
+      surf->append_simple_attribute_virt(list.get_and_step());
+  
+    if(list.size() == 0)
+    {
+      k = OCCQueryEngine::instance()->OCCMap->Find(orig_shape);
+      OCCSurface *orig_surf = (OCCSurface*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+      OCCBody* body = orig_surf->my_body();
+      if(body)
+      {
+        body->get_simple_attribute(list);
+        for (int kk = 0; kk < list.size(); kk++) 
+          surf->my_body()->append_simple_attribute_virt(list.get_and_step());
+      }
+    }
+  }
+
+  M.Clear();
+  TopExp::MapShapes(orig_shape, TopAbs_EDGE, M);
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Edge edge = TopoDS::Edge(M(ii));
+    TopoDS_Edge new_edge = TopoDS::Edge(api_copy.ModifiedShape(edge));
+    if(!new_edge.IsNull())
+      OCCQueryEngine::instance()->copy_attributes(edge, new_edge);
+    list.clean_out();
+    OCCAttribSet::get_attributes(new_edge, list);
+    if(list.size() > 0)
+    {
+      int k = OCCQueryEngine::instance()->OCCMap->Find(new_edge);
+      OCCCurve* curve = (OCCCurve*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+      for(int kk = 0; kk < list.size(); kk++)
+        curve->append_simple_attribute_virt(list.get_and_step());
+    }
+  }
+
+  M.Clear();
+  TopExp::MapShapes(orig_shape, TopAbs_VERTEX, M);
+  for(int ii=1; ii<=M.Extent(); ii++)
+  {
+    TopoDS_Vertex vertex = TopoDS::Vertex(M(ii));
+    TopoDS_Vertex new_vertex = TopoDS::Vertex(api_copy.ModifiedShape(vertex));
+    if(!new_vertex.IsNull())
+      OCCQueryEngine::instance()->copy_attributes(vertex, new_vertex);
+    list.clean_out();
+    OCCAttribSet::get_attributes(new_vertex, list);
+    if(list.size() > 0)
+    {
+      int k = OCCQueryEngine::instance()->OCCMap->Find(new_vertex);
+      OCCPoint* point = (OCCPoint*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+      for(int kk = 0; kk < list.size(); kk++)
+        point->append_simple_attribute_virt(list.get_and_step());
+    }
+  }
+  return CUBIT_SUCCESS;
+}
 //===============================================================================
 // Function   : stitch_surfs
 // Member Type: PUBLIC
