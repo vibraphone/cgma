@@ -8,10 +8,10 @@ endif
 
 TESTS = test_edge_orient
 if build_ACIS
-  TESTS += testgeom copy_attrib
+  TESTS += testgeom 
 else
 if WITH_CUBIT
-  TESTS += testgeom copy_attrib
+  TESTS += testgeom 
 endif
 endif
 if build_OCC
