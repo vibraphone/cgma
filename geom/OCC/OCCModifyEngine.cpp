@@ -4025,26 +4025,11 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
       }
       occ_body = bodies.get();
     }
-    TopoDS_Compound *shape = occ_body->get_TopoDS_Shape();
+    TopoDS_Shape *shape ; 
+    occ_body->get_TopoDS_Shape(shape);
+
     if(shape && !shape->IsNull())
       shape_list.append_unique(shape);
-    else
-    {
-      DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
-      DLIList<OCCShell*> shells = occ_body->shells();
-      DLIList<Lump*> lumps = occ_body->lumps();
-      if(lumps.size() == 0)
-      {
-        PRINT_ERROR("Must have a volume to project curve on. \n");
-        continue;
-      }
-      for (int i = 0; i < surfaces.size(); i ++)
-        shape_list.append_unique(surfaces.get_and_step()->get_TopoDS_Face());
-      for(int i = 0; i < shells.size(); i ++)
-        shape_list.append_unique(shells.get_and_step()->get_TopoDS_Shell());
-      for(int i = 0; i < lumps.size(); i++)
-        shape_list.append_unique(CAST_TO(lumps.get_and_step(), OCCLump)->get_TopoDS_Solid());
-    }
   }
 
   if(keep_old)
@@ -5184,17 +5169,7 @@ CubitStatus OCCModifyEngine:: sweep_translational(
   else if(to_body)
   {
      OCCBody* occ_body = CAST_TO(to_body, OCCBody);
-     DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
-     DLIList<OCCShell*> shells = occ_body->shells();
-     DLIList<Lump*> lumps = occ_body->lumps();
-     if(surfaces.size() == 1 && shells.size() == 0 && lumps.size() == 0)
-       stop_shape = surfaces.get()->get_TopoDS_Face();
-     else if(shells.size() == 1 && surfaces.size()== 0 && lumps.size() == 0)
-       stop_shape = shells.get()->get_TopoDS_Shell();
-     else if(lumps.size() == 1 && surfaces.size()== 0 && shells.size() == 0)
-       stop_shape = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid(); 
-     else
-       stop_shape = occ_body->get_TopoDS_Shape();
+     occ_body->get_TopoDS_Shape(stop_shape);
   }
 
   gp_Dir adir(sweep_vector.x(), sweep_vector.y(), sweep_vector.z());
@@ -6362,41 +6337,16 @@ CubitStatus OCCModifyEngine::reverse_body( BodySM* body_ptr )
   }
 
   TopoDS_Shape* orig_S;
-  orig_S = occ_body->get_TopoDS_Shape();
   TopoDS_Shape S;
   BRep_Builder B;
-  if (!orig_S || orig_S->IsNull() ) //single lump or shell or surface body
-  {
-    DLIList<OCCShell*> shells = occ_body->shells();
-    DLIList<OCCSurface*> occ_faces = occ_body->my_sheet_surfaces();
-    DLIList<Lump*> lumps = occ_body->lumps();
-    if (shells.size() == 1) 
-      orig_S = shells.get()->get_TopoDS_Shell();
-
-    else if (occ_faces.size() == 1)
-      orig_S = occ_faces.get()->get_TopoDS_Face();
-    
-    else if(lumps.size() == 1) 
-      orig_S = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-
-    S = orig_S->EmptyCopied();
-    TopoDS_Iterator it(*orig_S);
-    while (it.More()) {
-      B.Add(S,it.Value().Reversed());
-      it.Next();
-    }
-  }
-
-  else
-  {
-    S = orig_S->EmptyCopied();
-    TopoDS_Iterator it(*orig_S);
-    while (it.More()) {
-      B.Add(S,it.Value().Reversed());
-      it.Next();
-    }
-    occ_body->set_TopoDS_Shape(TopoDS::Compound(S)); 
-  }
+  occ_body->get_TopoDS_Shape(orig_S);
+  S = orig_S->EmptyCopied();
+  TopoDS_Iterator it(*orig_S);
+  while (it.More()) {
+    B.Add(S,it.Value().Reversed());
+    it.Next();
+  } 
+  occ_body->set_TopoDS_Shape(TopoDS::Compound(S)); 
   
   //Bind the new shape and its underlining sub-shapes.
   TopExp_Explorer Ex_orig, Ex;
@@ -7666,8 +7616,8 @@ CubitStatus OCCModifyEngine::tweak_chamfer( DLIList<Curve*> & curve_list,
     for(int i = 0; i < new_bodysm_list.size(); i++)
     {
       BodySM* new_bodysm = new_bodysm_list.get_and_step();
-      TopoDS_Shape* modified_shape =
-          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopoDS_Shape* modified_shape; 
+      CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape(modified_shape);
       TopExp_Explorer Ex;
       Ex.Init(*modified_shape, TopAbs_FACE);
       for( ; Ex.More(); Ex.Next() )
@@ -7805,8 +7755,8 @@ OCCModifyEngine::tweak_chamfer_solid( DLIList<Point*> &point_list,
     for(int i = 0; i < new_bodysm_list.size(); i++)
     {
       BodySM* new_bodysm = new_bodysm_list.get_and_step();
-      TopoDS_Shape* modified_shape =
-          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopoDS_Shape* modified_shape ;
+      CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape(modified_shape);
       TopExp_Explorer Ex;
       Ex.Init(*modified_shape, TopAbs_FACE);
       for( ; Ex.More(); Ex.Next() )
@@ -8048,8 +7998,8 @@ CubitStatus OCCModifyEngine::tweak_fillet( DLIList<Curve*> & curve_list,
     for(int i = 0; i < new_bodysm_list.size(); i++)
     {
       BodySM* new_bodysm = new_bodysm_list.get_and_step();
-      TopoDS_Shape* modified_shape = 
-          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopoDS_Shape* modified_shape ; 
+      CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape(modified_shape);
       TopExp_Explorer Ex;
       Ex.Init(*modified_shape, TopAbs_FACE);
       for( ; Ex.More(); Ex.Next() )
@@ -8140,13 +8090,8 @@ CubitStatus OCCModifyEngine::tweak_fillet( Curve * curve_ptr,
   {
     OCCBody* body = bodies->get_and_step();
     TopExp_Explorer Ex;
-    TopoDS_Shape* pshape = body->get_TopoDS_Shape();
-    if(!pshape || pshape->IsNull())//single lump or shell or surface
-    {
-      DLIList<Lump*> lumps = body->lumps();
-      if (lumps.size() > 0)
-        pshape = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-    }
+    TopoDS_Shape* pshape ; 
+    body->get_TopoDS_Shape(pshape);
     
     if (pshape && !pshape->IsNull())
     {
@@ -8285,13 +8230,8 @@ OCCModifyEngine::tweak_fillet_chamfer_sheet( DLIList<Point*> & ref_vertex_list,
       {
         OCCBody* occ_body = bodies->get_and_step();
         TopExp_Explorer Ex;
-        TopoDS_Shape* pshape = occ_body->get_TopoDS_Shape();
-        if(!pshape || pshape->IsNull())//single lump or shell or surface
-        {
-          DLIList<Lump*> lumps = occ_body->lumps();
-          if (lumps.size() > 0)
-            pshape = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-        }
+        TopoDS_Shape* pshape ; 
+        occ_body->get_TopoDS_Shape(pshape);
         if(pshape && !pshape->IsNull())
         {
           M.Clear();
@@ -8563,8 +8503,8 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Surface*> & surface_list,
     for(int i = 0; i < new_bodysm_list.size(); i++)
     {
       BodySM* new_bodysm = new_bodysm_list.get_and_step();
-      TopoDS_Shape* modified_shape =
-          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopoDS_Shape* modified_shape ;
+      CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape(modified_shape);
       TopExp_Explorer Ex;
       Ex.Init(*modified_shape, TopAbs_FACE);
       for( ; Ex.More(); Ex.Next() )
@@ -8679,8 +8619,8 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
     for(int i = 0; i < new_bodysm_list.size(); i++)
     {
       BodySM* new_bodysm = new_bodysm_list.get_and_step();
-      TopoDS_Shape* modified_shape =
-          CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape();
+      TopoDS_Shape* modified_shape ;
+      CAST_TO(new_bodysm, OCCBody)->get_TopoDS_Shape(modified_shape);
       TopExp_Explorer Ex;
       Ex.Init(*modified_shape, TopAbs_FACE);
       for( ; Ex.More(); Ex.Next() )
@@ -8862,7 +8802,6 @@ CubitStatus  OCCModifyEngine::split_curve( Curve* curve_to_split,
   //find if the curve is stand-along or in a body.
   OCCQueryEngine* oqe = OCCQueryEngine::instance();
   DLIList <OCCBody* > *bodies = oqe->BodyList;
-  DLIList<OCCSurface*> *surfaces = oqe->SurfaceList;
   DLIList<OCCLoop*> *loops = oqe->WireList;
   OCCCurve* occ_curve = CAST_TO(curve_to_split, OCCCurve);
   TopoDS_Edge* edge = occ_curve->get_TopoDS_Edge();
@@ -8874,21 +8813,12 @@ CubitStatus  OCCModifyEngine::split_curve( Curve* curve_to_split,
   for(int i = 0; i < bodies->size(); i ++)
   {
     OCCBody* body = bodies->get_and_step();
-    TopoDS_Compound* topo_comp = body->get_TopoDS_Shape();
-    TopoDS_Solid* topo_solid;
-    if(topo_comp == NULL)
-    {
-      DLIList<Lump*> lumps = body->lumps();
-      topo_solid = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-      assert (topo_solid != NULL);
-    }
+    TopoDS_Shape* topo_shape;
+    body->get_TopoDS_Shape(topo_shape);
+    from_shape = *topo_shape;
     TopTools_IndexedDataMapOfShapeListOfShape M;
-    if(topo_comp)
-      from_shape = *topo_comp;
-    else
-      from_shape = *topo_solid;
 
-    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_SOLID, M);
+    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_SHAPE, M);
     
     if(M.Contains(*edge) )   
     {
@@ -8897,20 +8827,6 @@ CubitStatus  OCCModifyEngine::split_curve( Curve* curve_to_split,
     }
   }
   
-  for(int i = 0 ; found == false && i < surfaces->size(); i++)
-  {
-    OCCSurface* surf = surfaces->get_and_step();
-    TopoDS_Face* topo_face = surf->get_TopoDS_Face();
-    TopTools_IndexedDataMapOfShapeListOfShape M;
-    from_shape = *topo_face;
-    TopExp::MapShapesAndAncestors(from_shape, TopAbs_EDGE, TopAbs_FACE, M); 
-    if(M.Contains(*edge))
-    { 
-      found = true;
-      break;
-    }
-  }
-
   for(int i = 0 ; found == false && i < loops->size(); i++)
   {
     OCCLoop* loop = loops->get_and_step();

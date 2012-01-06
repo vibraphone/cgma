@@ -72,6 +72,7 @@ public:
     //- associated with the object.
   
   TopoDS_Compound *get_TopoDS_Shape(); 
+  void get_TopoDS_Shape(TopoDS_Shape *& shape);
   void set_TopoDS_Shape( TopoDS_Compound& theshape);
 
   virtual CubitStatus get_transforms( CubitTransformMatrix &tfm );

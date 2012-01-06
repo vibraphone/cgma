@@ -1205,11 +1205,14 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
      body = all_bodies->get_and_step();
      TopExp_Explorer Ex;
      TopoDS_Face the_face;
-     TopoDS_Shape* pshape = body->get_TopoDS_Shape();
+     TopoDS_Shape* pshape;
+     body->get_TopoDS_Shape(pshape);
      TopoDS_Shape ashape;
      if (pshape && !pshape->IsNull() && 
+         pshape->ShapeType() <= TopAbs_SHELL &&
          OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == CUBIT_TRUE)
        ashape = *pshape;
+/*
      else
      {
        BRep_Builder B;
@@ -1240,6 +1243,7 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
 
        ashape = Co;
      }
+*/
      M.Clear();
      TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPOUND, M);
      if(!M.Contains(*topo_face))

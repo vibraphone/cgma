@@ -743,21 +743,8 @@ TopoDS_Shape* OCCQueryEngine::get_TopoDS_Shape_of_entity(TopologyBridge * entity
 {
   if (OCCBody * occ_body = CAST_TO( entity_ptr, OCCBody))
     {
-      TopoDS_Shape* theShape = occ_body->get_TopoDS_Shape();
-      if(!theShape || theShape->IsNull())//single lump or shell or surface
-      {
-        DLIList<Lump*> lumps = occ_body->lumps();
-        DLIList<OCCShell*>   shells = occ_body->shells();
-        DLIList<OCCSurface*> surfaces = occ_body->my_sheet_surfaces();
-        if (lumps.size() > 0)
-          theShape = CAST_TO(lumps.get(), OCCLump)->get_TopoDS_Solid();
-        else if(shells.size() > 0)
-          theShape = shells.get()->get_TopoDS_Shell();
-        else if(surfaces.size() > 0)
-          theShape = surfaces.get()->get_TopoDS_Face();
-        else
-          PRINT_ERROR("Wrong body structure, need to be debugged.\n");
-      }
+      TopoDS_Shape* theShape;
+      occ_body->get_TopoDS_Shape(theShape);
       return theShape;
     }
 
@@ -3360,13 +3347,13 @@ CubitStatus OCCQueryEngine::fire_ray( const CubitVector &origin,
   for(int i = 0; i < at_entity_list.size(); i++)
   {
     TopologyBridge* tb = at_entity_list.get_and_step();
-    TopoDS_Shape shape;
+    TopoDS_Shape *shape;
     OCCBody *occBody = CAST_TO(tb, OCCBody);
     if (occBody )
     {
-      shape = *(occBody->get_TopoDS_Shape());
+      occBody->get_TopoDS_Shape(shape);
     
-      BRepExtrema_DistShapeShape distShapeShape(edge, shape);
+      BRepExtrema_DistShapeShape distShapeShape(edge, *shape);
       //distShapeShape.Perform();
       if (!distShapeShape.IsDone())
       {
@@ -3740,8 +3727,10 @@ CubitBoolean OCCQueryEngine::bodies_overlap (BodySM * body_ptr_1,
   if ( !box_1.overlap( GEOMETRY_RESABS, box_2 ) )
     return CUBIT_FALSE;
 
-  TopoDS_Shape *shape1 = occ_body1->get_TopoDS_Shape();
-  TopoDS_Shape *shape2 = occ_body2->get_TopoDS_Shape(); 
+  TopoDS_Shape *shape1;
+  occ_body1->get_TopoDS_Shape(shape1);
+  TopoDS_Shape *shape2;
+  occ_body2->get_TopoDS_Shape(shape2); 
   
   //BRepAlgoAPI_Section calculates intersection between faces only.
   TopExp_Explorer Ex1, Ex2;

@@ -81,8 +81,40 @@ OCCBody::OCCBody(TopoDS_Compound *theShape,
 TopoDS_Compound* OCCBody::get_TopoDS_Shape()
 {
   if (myTopoDSShape && !myTopoDSShape->IsNull())
+  {
     assert(myTopoDSShape->ShapeType() == TopAbs_COMPOUND);
-  return myTopoDSShape;
+    return myTopoDSShape;
+  }
+}
+
+void OCCBody::get_TopoDS_Shape(TopoDS_Shape *& shape)
+{
+  if (myTopoDSShape && !myTopoDSShape->IsNull())
+  {
+    assert(myTopoDSShape->ShapeType() == TopAbs_COMPOUND);
+    shape =  myTopoDSShape;
+  }
+  else
+  {
+    DLIList<Lump*> lumps = this->lumps();
+    DLIList<OCCShell*> shells = this->shells();
+    DLIList<OCCSurface*> surfaces = this->my_sheet_surfaces();
+    if(lumps.size() + shells.size() + surfaces.size() == 1)
+    {
+      if(lumps.size() == 1)
+      {
+        OCCLump* lump = CAST_TO(lumps.get(), OCCLump);
+        assert(lump != NULL);
+        shape = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
+      }
+      else if(shells.size() == 1)
+        shape = shells.get()->get_TopoDS_Shell(); 
+      else
+        shape = surfaces.get()->get_TopoDS_Face();
+    }
+    else
+      shape = NULL;
+  }
 }
 
 void OCCBody::set_sheet_surfaces(DLIList<OCCSurface*> surfaces)
