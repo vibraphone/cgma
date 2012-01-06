@@ -544,7 +544,11 @@ CubitStatus make_Point()
   RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
                                           vertex2, list);
   d = new_edge_1->measure();
-  assert(fabs(d - 28.5)<0.01);
+  assert(fabs(d - 29.55)<0.01);
+  new_edge_1->closest_point_trimmed(center_pnt1, closest_location);
+  assert(center_pnt1.distance_between(closest_location) < 1.E-6);
+  new_edge_1->closest_point_trimmed(center_pnt2,closest_location);
+  assert(center_pnt2.distance_between(closest_location) < 1.E-6); 
 
   //Spline with points and tangents
   CubitVector* first_v = new CubitVector(vertex1->coordinates());

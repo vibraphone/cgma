@@ -1266,8 +1266,8 @@ CubitStatus make_Point()
   bodies.last();
   body = bodies.get();
   d = body->measure();
-  //d = 93.697, no effect of draft angle.
-  assert(d - 93.697 < 0.001 && d > 93.697);
+  //d = 92.1335, no effect of draft angle.
+  assert(d - 92.1335 < 0.001 && d > 92.1335);
 
   bodies.clean_out();
   gti->bodies(bodies);
