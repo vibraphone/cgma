@@ -388,7 +388,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
  
   gp_Pnt pt;
   int size = 2+vector_list.size();
-  TColgp_Array1OfPnt points(1, size);
+  Handle(TColgp_HArray1OfPnt) points = new TColgp_HArray1OfPnt(1, size);
   CubitVector vector;
   CubitVector closest_location;
   for(int i = 1; i <= size; i++)
@@ -417,19 +417,22 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
        pt.SetCoord(closest_location.x(), closest_location.y(), closest_location.z()) ;  	 
      }
 
-     points.SetValue(i, pt); 
+     points->SetValue(i, pt); 
   }    
      
   //make curve according to the curve type.
   if(curve_type == SPLINE_CURVE_TYPE)
   {
-    Geom_BezierCurve BezierCurve(points);
-    Geom_BezierCurve* curve =  new Geom_BezierCurve(BezierCurve);
-    Handle(Geom_BoundedCurve) curve_ptr(curve);
-    TopoDS_Vertex * vt1 = occ_point1->get_TopoDS_Vertex();
-    TopoDS_Vertex * vt2 = occ_point2->get_TopoDS_Vertex(); 
-    TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr, *vt1, *vt2);
-    return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, true); 
+    GeomAPI_Interpolate spline(points, CUBIT_FALSE, TOL);
+    spline.Perform();
+    if(spline.IsDone())
+    {
+      Handle_Geom_BSplineCurve curve = spline.Curve();
+      TopoDS_Vertex * vt1 = occ_point1->get_TopoDS_Vertex();
+      TopoDS_Vertex * vt2 = occ_point2->get_TopoDS_Vertex(); 
+      TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve, *vt1, *vt2);
+      return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, true); 
+    }
   }
 
   return (Curve*) NULL;
