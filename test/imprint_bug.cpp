@@ -16,6 +16,7 @@
 #include "CubitMessage.hpp"
 #include "Body.hpp"
 #include "RefVolume.hpp"
+#include "Shell.hpp"
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
 #include "RefVertex.hpp"
@@ -57,7 +58,7 @@ int main (int argc, char **argv)
      PRINT_INFO("Operation Failed");
 
   int ret_val = ( CubitMessage::instance()->error_count() );
-  if ( ret_val != 7 )
+  if ( ret_val != 0 )
   {
     PRINT_ERROR("Errors found during Mergechk session.\n");
   }
@@ -119,5 +120,25 @@ CubitStatus make_Point()
   gti->bodies(from_bodies);
   //Bug 247 test, when this bug get fixed, the comment should be removed.
 //  status = gmti->imprint(from_bodies, new_bodies, CUBIT_FALSE);
+
+  DLIList<Body*> bodies;
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  DLIList<RefEntity*>  free_entities;
+  gti->get_free_ref_entities(free_entities);
+  for(int i = 0; i < free_entities.size(); i++)
+    gti->delete_RefEntity(free_entities.get_and_step()); 
+
+  Body* body = gmti->brick(10, 10, 10);
+  DLIList<Shell*> shells;
+  body->shells(shells);
+  ShellSM* shell = shells.get()->get_shell_sm_ptr(); 
+  OCCShell* occ_shell = CAST_TO(shell, OCCShell);
+  DLIList<TopologyBridge*> parents;
+  occ_shell->get_parents_virt(parents);
+  assert (parents.size() == 1);
   return status;
 }
