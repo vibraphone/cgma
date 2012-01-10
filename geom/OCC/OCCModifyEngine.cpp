@@ -221,6 +221,8 @@ Curve* OCCModifyEngine::make_Curve(Curve * curve_ptr) const
  
   TopoDS_Edge newEdge = TopoDS::Edge(newShape);
 
+  OCCQueryEngine::instance()->copy_attributes(*theEdge, newEdge);
+
   return OCCQueryEngine::instance()->populate_topology_bridge(newEdge, true);
 }
 
