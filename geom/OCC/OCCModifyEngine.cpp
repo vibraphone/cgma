@@ -389,29 +389,14 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
      occ_face = CAST_TO(face_ptr, OCCSurface);
  
   gp_Pnt pt;
-  int size = 2+vector_list.size();
+  int size = vector_list.size();
   Handle(TColgp_HArray1OfPnt) points = new TColgp_HArray1OfPnt(1, size);
   CubitVector vector;
   CubitVector closest_location;
   for(int i = 1; i <= size; i++)
   {
-     if (i == 1) 
-     {
-       TopoDS_Vertex *point = occ_point1->get_TopoDS_Vertex();
-       pt = BRep_Tool::Pnt(*point);
-       vector = point1_ptr->coordinates();
-     }
-     else if (i == size)
-     {
-       TopoDS_Vertex *point = occ_point2->get_TopoDS_Vertex();
-       pt = BRep_Tool::Pnt(*point);
-       vector = point2_ptr->coordinates(); 
-     } 
-     else
-     {
-       vector = *vector_list.get_and_step();
-       pt.SetCoord(vector.x(), vector.y(), vector.z());
-     } 
+     vector = *vector_list.get_and_step();
+     pt.SetCoord(vector.x(), vector.y(), vector.z());
 
      if (occ_face != NULL)
      {
@@ -419,7 +404,7 @@ Curve* OCCModifyEngine::make_Curve( GeometryType curve_type,
        pt.SetCoord(closest_location.x(), closest_location.y(), closest_location.z()) ;  	 
      }
 
-     points->SetValue(i, pt); 
+     points->SetValue(i, pt);
   }    
      
   //make curve according to the curve type.
