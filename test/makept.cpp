@@ -537,10 +537,12 @@ CubitStatus make_Point()
   CubitVector center_pnt1(5,8,10);
   CubitVector center_pnt2(1,2,10);
   CubitVector center_pnt3(-2,-3.5,10);
+  list.append(&vector1);
   list.append(&center_pnt1);
   list.append(&center_pnt2);
   list.append(&center_pnt);
   list.append(&center_pnt3);
+  list.append(&vector2);
   RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
                                           vertex2, list);
   d = new_edge_1->measure();
@@ -551,11 +553,6 @@ CubitStatus make_Point()
   assert(center_pnt2.distance_between(closest_location) < 1.E-6); 
 
   //Spline with points and tangents
-  CubitVector* first_v = new CubitVector(vertex1->coordinates());
-  CubitVector* last_v = new CubitVector(vertex2->coordinates());
-  list.insert_first(first_v);
-  list.append(last_v);
-
   DLIList<CubitVector*> tangents;
   for (int i = 0; i< 6; i++)
     tangents.append(NULL);

@@ -1251,11 +1251,14 @@ CubitStatus make_Point()
   CubitVector pt7(0,1,-15);
   RefVertex* vt5 = gmti->make_RefVertex(pt7);
   DLIList<CubitVector*> vector_list;
+  vector_list.append(&pt1);
   vector_list.append(&pt5);
-  
+  vector_list.append(&pt4); 
   RefEdge* edge4 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt1, vt4, vector_list);
   vector_list.clean_out();
+  vector_list.append(&pt4);
   vector_list.append(&pt6);
+  vector_list.append(&pt7);
   RefEdge* edge5 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt4, vt5, vector_list);  
   edges.clean_out();
   edges.append(edge4);
