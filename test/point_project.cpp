@@ -110,13 +110,13 @@ CubitStatus point_project()
   CubitVector point(1,1,-5); 
   CubitVector on_surf;
   surf->closest_point_trimmed(point, on_surf); 
-  assert (on_surf.z() == -5);
+  assert (fabs(on_surf.z() + 5) < 0.0001);
   assert (on_surf.y() < 1.001 && on_surf.y() > 0.999);
   assert (on_surf.x() < 2.122 && on_surf.x() > 2.121 );
 
   CubitVector p1(0, 1.5, -6 );
   surf->closest_point_trimmed(p1, on_surf);
-  assert (on_surf.z() == -5);
+  assert (fabs(on_surf.z() + 5) < 0.0001);
   assert (on_surf.y() < 2.122 && on_surf.y() > 2.121);
   assert (on_surf.x() < 0.0001 && on_surf.x() > -0.0001 );
   return CUBIT_SUCCESS;
