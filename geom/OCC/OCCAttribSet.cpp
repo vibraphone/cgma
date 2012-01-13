@@ -81,7 +81,7 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   { 
     aLabel = OCCQueryEngine::instance()->mainLabel.NewChild();
     Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, shape);
-    //myLabel.AddAttribute(attr_shape);
+    //aLabel.AddAttribute(attr_shape);
     //test if the attribute has been attached
     assert(aLabel.IsAttribute(TDataXtd_Shape::GetID()));
 
@@ -115,6 +115,7 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   {
     lab = aLabel.NewChild();
     attr_name = TDataStd_Name::Set(lab, cstring);
+    //lab.AddAttribute(attr_name);
     assert(lab.IsAttribute(TDataStd_Name::GetID()));
   }
      
@@ -141,8 +142,10 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   }
   
   if (strings && size > 0)
+  {
+    //lab.AddAttribute(attr_string);
     assert(lab.IsAttribute(TDataStd_ExtStringArray::GetID()));
-
+  }
   //4. add double attribute
   DLIList<double*>* doubles = csa->double_data_list();
   Handle_TDataStd_RealArray attr_double;
@@ -157,8 +160,10 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
     attr_double->SetValue(i, *(doubles->get_and_step()));
 
   if(doubles && size > 0)
+  {
+    //lab.AddAttribute(attr_double);
     assert(lab.IsAttribute(TDataStd_RealArray::GetID()));
-    
+  }  
   //5. add int attribute
   DLIList<int*>* ints = csa->int_data_list();
   Handle_TDataStd_IntegerArray attr_int;
@@ -173,7 +178,10 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
     attr_int->SetValue(i, *(ints->get_and_step()));
 
   if(ints && size > 0)
+  {
+    //lab.AddAttribute(attr_int);
     assert(lab.IsAttribute(TDataStd_IntegerArray::GetID()));
+  }
 }
 
 CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,

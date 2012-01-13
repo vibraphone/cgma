@@ -1853,7 +1853,7 @@ CubitStatus OCCModifyEngine::copy_body_attributes(TopoDS_Shape orig_shape,
     
     if (list.size() == 0)
     {
-      k = OCCQueryEngine::instance()->OCCMap->Find(orig_shape);
+      k = OCCQueryEngine::instance()->OCCMap->Find(solid);
       OCCLump *orig_lump = (OCCLump*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
       OCCBody* body = (OCCBody*)orig_lump->get_body();
       if(body)
