@@ -32,6 +32,7 @@
 #include "gp_Ax2.hxx"
 #include "Geom_Surface.hxx"
 #include "Geom_Curve.hxx"
+#include "Interface_Static.hxx"
 #include "BRepBuilderAPI.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepBuilderAPI_GTransform.hxx"
@@ -849,6 +850,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 						const char* file_name,
 						const char* file_type,
 						const CubitString &,
+                                                const char* unit,
 						const char*)
 {
   if( strcmp( file_type, "OCC" ) != 0 && 
@@ -858,6 +860,14 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
       //PRINT_ERROR("The specified file type, %s, is not supported!\n", filetype );
       return CUBIT_FAILURE;
     }
+ 
+  char* name = "write.iges.unit";
+  Standard_CString orig_unit;
+  if(strcmp( file_type, "IGES") == 0 && unit != NULL)
+  {
+    orig_unit = Interface_Static::CVal(name);
+    Interface_Static::SetCVal (name, unit); 
+  }
  
   DLIList<OCCBody*>    OCC_bodies;
   DLIList<OCCSurface*> OCC_surfaces;
@@ -921,6 +931,10 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   status = write_topology( file_name, file_type,
                            OCC_bodies, OCC_surfaces,
                            OCC_curves, OCC_points );
+  //set the unit back.
+  if(strcmp( file_type, "IGES") == 0 && unit != NULL) 
+    Interface_Static::SetCVal (name,orig_unit);
+
   if( status == CUBIT_FAILURE ) return CUBIT_FAILURE;
 
   if( free_body_count || free_surface_count || 
@@ -1463,7 +1477,8 @@ CubitStatus OCCQueryEngine::import_solid_model(
 					       CubitBoolean import_surfaces,
 					       CubitBoolean import_curves,
 					       CubitBoolean import_vertices,
-					       CubitBoolean free_surfaces)
+					       CubitBoolean free_surfaces,
+                                               const char*  unit )
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
   
@@ -1477,7 +1492,15 @@ CubitStatus OCCQueryEngine::import_solid_model(
   else if (strcmp(file_type, "STEP") == 0)
   {
     STEPControl_Reader reader;
+    char* name = "xstep.cascade.unit";
+    
+    Standard_CString orig_unit = Interface_Static::CVal(name);
+    Interface_Static::SetCVal (name, unit); //this set is good for both step
+                                            // and iges files.
     IFSelect_ReturnStatus stat = reader.ReadFile( (char*) file_name);
+    //set the unit back.
+    Interface_Static::SetCVal (name,orig_unit);
+
     if (stat  != IFSelect_RetDone)
     {
        PRINT_INFO("%s: Cannot open file", file_name );
@@ -1491,8 +1514,12 @@ CubitStatus OCCQueryEngine::import_solid_model(
   else if(strcmp(file_type, "IGES") == 0)
   {
     IGESControl_Reader reader;
+    char* name = "xstep.cascade.unit";
+    Interface_Static::SetCVal (name, unit); //this set is good for both step
+                                            // and iges files.
     const Standard_CString string1 = file_name;
     IFSelect_ReturnStatus stat = reader.ReadFile( string1);
+    Interface_Static::SetCVal (name, "MM");
     if (stat  != IFSelect_RetDone)
     {
        PRINT_INFO("%s: Cannot open file", file_name );
