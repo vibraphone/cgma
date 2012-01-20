@@ -1652,6 +1652,7 @@ CubitStatus VirtualQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ,
                                         const char* ,
                                         const char* ,
                                         const CubitString &,
+                                        const char*,
                                                        const char* )  
 {
   return CUBIT_FAILURE;
@@ -1691,7 +1692,8 @@ CubitStatus VirtualQueryEngine::import_solid_model(
                                                       CubitBoolean ,
                                                       CubitBoolean ,
                                                       CubitBoolean ,
-                                                      CubitBoolean  )  
+                                                      CubitBoolean ,
+                                                      const char* )  
 {
   PRINT_INFO("VirtualQueryEngine::import_solid_model\n");
   
