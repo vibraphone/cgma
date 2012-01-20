@@ -74,6 +74,7 @@ public:
                                    const char* file_name,
                                    const char* file_type,
                                    const CubitString &cubit_version,
+                                   const char* unit = NULL,
                                    const char* logfile_name = NULL ) = 0;
 
       virtual CubitStatus export_solid_model(
@@ -137,8 +138,8 @@ public:
                                 bool import_surfaces = true,
                                 bool import_curves = true,
                                 bool import_vertices = true,
-                                bool free_surfaces = true
-					                      ) = 0;
+                                bool free_surfaces = true,
+			        const char* unit = NULL        ) = 0;
 
      virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
 					    const char* pBuffer,

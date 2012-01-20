@@ -334,7 +334,8 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
                                              char const* filetype,
                                              int &num_ents_exported,
                                              const CubitString &cubit_version,
-                                             const char* logfile_name )
+                                             const char* logfile_name,
+                                             const char* unit )
 {
   if (0 == gqeList.size())
   {
@@ -439,7 +440,7 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
 
   int num_ents_before = bridge_list.size();
   temp_result = gqeList.get()->export_solid_model(bridge_list, filename, filetype,
-                                        cubit_version, logfile_name );
+                                        cubit_version, unit, logfile_name );
   if (temp_result == CUBIT_SUCCESS )
     result = temp_result;
 
@@ -960,6 +961,7 @@ CubitStatus GeometryQueryTool::import_solid_model(
 						  const char* file_name,
 						  const char* file_type,
 						  const char* logfile_name,
+                                                  const char* unit,
 						  CubitBoolean heal_step,
 						  CubitBoolean import_bodies,
 						  CubitBoolean import_surfaces,
@@ -989,7 +991,7 @@ CubitStatus GeometryQueryTool::import_solid_model(
   {
     status = gqeList.get_and_step()->import_solid_model( file_name,
       file_type, bridge_list, CUBIT_TRUE,logfile_name, heal_step, import_bodies,
-      import_surfaces, import_curves, import_vertices, free_surfaces );
+      import_surfaces, import_curves, import_vertices, free_surfaces, unit );
 
     if( bridge_list.size() > 0 )
       break;
