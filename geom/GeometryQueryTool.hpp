@@ -373,7 +373,8 @@ public :
 #endif
                                   int &num_ents_exported,
                                   const CubitString &cubit_version,
-                                  const char* logfile_name = NULL );
+                                  const char* logfile_name = NULL,
+                                  const char* unit = NULL);
 
   CubitStatus export_solid_model(DLIList<RefEntity*>& ref_entity_list,
 				 char*& p_buffer,
@@ -417,6 +418,7 @@ public :
 #endif
 #if CUBIT_12 == 0
                                  const char* logfile_name = NULL,
+                                 const char* unit = NULL,
                                  CubitBoolean heal_step = CUBIT_TRUE,
                                  CubitBoolean import_bodies = CUBIT_TRUE,
                                  CubitBoolean import_surfaces = CUBIT_TRUE,
