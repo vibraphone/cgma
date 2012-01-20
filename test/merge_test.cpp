@@ -71,6 +71,7 @@ int main()
   s = CubitCompat_import_solid_model( FILE_NAME,
                                       FORMAT,
                                       NULL,
+                                      NULL,
                                       CUBIT_FALSE,
                                       CUBIT_TRUE,
                                       CUBIT_TRUE,

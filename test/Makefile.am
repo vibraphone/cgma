@@ -145,6 +145,9 @@ MOSTLYCLEANFILES = \
         bricks2.occ \
         bricks22.occ \
         bricks23.occ \
+        cduct_exp.iges \
+        diffuser_exp.iges \
+        diffuser.occ \
 	mmgr.log
  
 

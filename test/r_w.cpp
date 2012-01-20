@@ -32,7 +32,8 @@
 #define SRCPATH STRINGIFY(SRCDIR) "/"
 
 // forward declare some functions used and defined later
-CubitStatus read_geometry(int, char **, bool local = false);
+CubitStatus read_geometry(int, char **, bool local = false,  
+                          const char* unit = NULL);
 CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
@@ -80,7 +81,8 @@ std::string type_from_file_name( const std::string& filename )
 /// 
 /// Arguments: file name(s) of geometry files in which to look
 ///
-CubitStatus read_geometry(int num_files, const char **argv, bool local) 
+CubitStatus read_geometry(int num_files, const char **argv, bool local,
+                          const char* unit ) 
 {
   CubitStatus status = CUBIT_SUCCESS;
   GeometryQueryTool *gti = GeometryQueryTool::instance();
@@ -96,7 +98,8 @@ CubitStatus read_geometry(int num_files, const char **argv, bool local)
     std::string filename( local ? "./" : SRCPATH );
     char const* local_name = argv[i];
     filename += local_name;  
-    status = CubitCompat_import_solid_model(filename.c_str(), type.c_str());
+    status = CubitCompat_import_solid_model(filename.c_str(), type.c_str(),
+                                            NULL, unit);
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", filename.c_str());
       abort();
@@ -116,17 +119,72 @@ CubitStatus make_Point()
   DLIList<RefEntity*>  free_entities;
 
   //Read in the geometry from iges file
-  const char *argiges = "ex3.iges";
-  CubitStatus status = read_geometry(1, &argiges, false);
-  //Constructed 18 Free Curves: 1 to 18
+  const char *argiges2 = "diffuser.iges";
+  CubitStatus status = read_geometry(1, &argiges2, false, "IN");
+  //Constructed 7 Volumes: 1 to 7
   if (status == CUBIT_FAILURE) exit(1);
 
-  CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
-  const char * filename = "ex3.occ";
+  const char * filename = "diffuser.occ";
   const char * filetype = "OCC";
+
+  CubitStatus rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+
+  //Exported:   7 OCC Bodies to diffuser.occ
+  assert(num_ents_exported == 7);
+
+  filetype = "IGES";
+  filename = "diffuser_exp.iges";
+  num_ents_exported=0;
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version, NULL, "IN");
+
+  //Exported:  7 OCC Curves to diffuer_exp.iges
+  assert(num_ents_exported == 7);
+
+
+  //check that the unit is exported as 1HM
+  std::ifstream Myfile;
+  std::string line;
+  std::string search = "1,4HINCH";
+  Myfile.open ("diffuer_exp.iges");
+  int found = 0;
+  size_t offset;
+  if(Myfile.is_open())
+  {
+    while(!Myfile.eof())
+    {
+      getline(Myfile,line);
+      if ((offset = line.find(search, 0)) != std::string::npos)
+        found ++;
+    }
+    Myfile.close();
+  }
+
+  assert (found == 1);
+
+  gti->bodies(bodies);
+
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  free_entities.clean_out();
+  gti->get_free_ref_entities(free_entities);
+  assert (free_entities.size() == 0);
+
+  const char *argiges = "ex3.iges";
+  status = read_geometry(1, &argiges, false, NULL);
+  //Constructed 18 Free Curves: 1 to 18
+  if (status == CUBIT_FAILURE) exit(1);
+
+  rsl = CUBIT_SUCCESS;
+  ref_entity_list.clean_out();
+  num_ents_exported=0;
+  filename = "ex3.occ";
+  filetype = "OCC";
 
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
@@ -163,22 +221,38 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
-  
-  const char *argiges2 = "diffuser.iges";
-  status = read_geometry(1, &argiges2, false);
-  //Constructed 7 Volumes: 1 to 7
+  const char *argiges3 = "cduct.igs";
+  status = read_geometry(1, &argiges2, false, "M");
+  //Constructed 7 Volumes: 8 to 14
   if (status == CUBIT_FAILURE) exit(1);
 
-  filetype = "OCC";
+  filetype = "IGES";
+  filename = "cduct_exp.iges";
   ref_entity_list.clean_out();
   num_ents_exported=0;
-  filename = "diffuser.occ";
-
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
-                                 num_ents_exported, cubit_version);
+                                 num_ents_exported, cubit_version, NULL, "M");
 
-  //Exported:   7 OCC Bodies to diffuser.occ
+  //7 OCC Bodies to cduct_exp.iges
   assert(num_ents_exported == 7);
+
+
+  //check that the unit is exported as 1HM
+  search = "6,1HM";
+  Myfile.open ("cduct_exp.iges");
+  found = 0;
+  if(Myfile.is_open())
+  {
+    while(!Myfile.eof())
+    {
+      getline(Myfile,line);
+      if ((offset = line.find(search, 0)) != std::string::npos)
+        found ++;
+    }
+    Myfile.close();
+  }
+
+  assert (found == 1);
 
   gti->bodies(bodies);
 
@@ -187,14 +261,10 @@ CubitStatus make_Point()
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
-
-  for (int j = free_entities.size(); j--;)
-    {
-      gti->delete_RefEntity( free_entities.get_and_step());
-    }
+  assert(free_entities.size() == 0);
 
   const char *argstep = "proe.stp";
-  status = read_geometry(1, &argstep, false);
+  status = read_geometry(1, &argstep, false, NULL);
   //Constructed 12 Volumes: 8 to 19
   if (status == CUBIT_FAILURE) exit(1);
   
@@ -238,7 +308,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   const char *argv = "stitch.name_occ";
-  status = read_geometry(1, &argv, false);
+  status = read_geometry(1, &argv, false, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -266,7 +336,7 @@ CubitStatus make_Point()
     }
 
   const char *argv1 = "beforesub.occ";
-  status = read_geometry(1, &argv1, true);
+  status = read_geometry(1, &argv1, true, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -316,7 +386,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   const char *argv2 = "unite1.occ";
-  status = read_geometry(1, &argv2, false);
+  status = read_geometry(1, &argv2, false, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -346,7 +416,7 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   const char *argv3 = "unite1.occ";
-  status = read_geometry(1, &argv3, false);
+  status = read_geometry(1, &argv3, false, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -378,7 +448,7 @@ CubitStatus make_Point()
 
     // Read in the geometry from files specified on the command line
   const char *argv4 = "unite4.occ";
-  status = read_geometry(1, &argv4, false);
+  status = read_geometry(1, &argv4, false, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -406,7 +476,7 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  status = read_geometry(1, &argv4, false);
+  status = read_geometry(1, &argv4, false, NULL);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -436,5 +506,32 @@ CubitStatus make_Point()
 
   gti->get_free_ref_entities(free_entities);
   assert(free_entities.size() ==0);
+
+  //testing for copy command which will copy attributes.
+  //const char *argv2 = "unite1.occ";
+  status = read_geometry(1, &argv2, false, NULL);
+  if (status == CUBIT_FAILURE) exit(1);
+  //Read in 2 volumes.
+
+  from_bodies.clean_out();
+  gti->bodies(from_bodies);
+  Body* orig_body = from_bodies.get();
+  Body* copy_body = gmti->copy_body(orig_body);
+  assert (copy_body);
+  filename = "copy_attrib.occ";
+  ref_entity_list.clean_out();
+  ref_entity_list.append(copy_body);
+  num_ents_exported = 0;
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  assert(num_ents_exported == 1);
+  bodies.clean_out();
+  gti->bodies(bodies);
+  //delete all entities
+  gti->delete_Body(bodies);
+
+  gti->get_free_ref_entities(free_entities);
+  assert(free_entities.size() ==0);
+
   return CUBIT_SUCCESS;
 }
