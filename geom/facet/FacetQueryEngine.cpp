@@ -702,6 +702,7 @@ CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_
                                                      const char* file_name,
                                                      const char* file_type,
                                                      const CubitString &,
+                                                     const char*,
                                                      const char*)
 {
   if( strcmp( file_type, "FACET" ) )
@@ -1751,7 +1752,8 @@ CubitStatus FacetQueryEngine::import_solid_model(
                                                  CubitBoolean import_surfaces,
                                                  CubitBoolean import_curves,
                                                  CubitBoolean import_vertices,
-                                                 CubitBoolean free_surfaces)
+                                                 CubitBoolean free_surfaces,
+                                                 const char* unit) //not used
 {
   errno = 0;
   FILE *file_ptr = fopen(file_name, "rb");
