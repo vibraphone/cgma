@@ -49,7 +49,6 @@ CubitStatus
 CubitCompat_import_solid_model( const char* file_name,
                                 const char* file_type,
                                 const char* logfile_name,
-                                const char* unit,
                                 CubitBoolean heal_step,
                                 CubitBoolean import_bodies,
                                 CubitBoolean import_surfaces,
@@ -71,9 +70,9 @@ CubitCompat_import_solid_model( const char* file_name,
                                         free_surfaces,
                                         merge_globally,
                                         no_assembly_level_features,
-                                        logfile_name ? logfile_name : ""};
+                                        logfile_name ? logfile_name : "" };
 #else 
-  #define CubitCompat_opts logfile_name, unit ? unit : "", heal_step, \
+  #define CubitCompat_opts logfile_name, heal_step, \
                            import_bodies, import_surfaces, \
                            import_curves, import_vertices, \
                            free_surfaces
@@ -92,8 +91,7 @@ CubitCompat_export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                 const char * filetype,
                                 int &num_ents_exported,
                                 const CubitString &cubit_version,
-                                const char* logfile_name,
-                                const char* unit )
+                                const char* logfile_name )
 {
   return GeometryQueryTool::instance()->export_solid_model(
            ref_entity_list,
@@ -101,6 +99,5 @@ CubitCompat_export_solid_model( DLIList<RefEntity*>& ref_entity_list,
            CubitCompat_file_type(filetype),
            num_ents_exported,
            cubit_version,
-           logfile_name,
-           unit );
+           logfile_name );
 }
