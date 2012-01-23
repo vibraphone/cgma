@@ -357,7 +357,6 @@ protected:
                                           const char* file_name,
                                           const char* file_type,
                                           const CubitString &cubit_version,
-                                          const char* unit = NULL,
                                           const char* logfile_name = NULL );
 
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
@@ -387,8 +386,7 @@ protected:
                              CubitBoolean import_surfaces = CUBIT_TRUE,
                              CubitBoolean import_curves = CUBIT_TRUE,
                              CubitBoolean import_vertices = CUBIT_TRUE,
-                             CubitBoolean free_surfaces = CUBIT_TRUE,
-                             const char*  unit = NULL );
+                             CubitBoolean free_surfaces = CUBIT_TRUE );
 
   virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
 					 const char* pBuffer,
