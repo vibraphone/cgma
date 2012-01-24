@@ -94,7 +94,7 @@ EXTRA_DIST = 62_shaver1.brep \
              webcut.brep     \
              Line_1.brep    \
              Line_2.brep    \
-             stitch.name_occ \ 
+             stitch.name_occ \
              box-w-hole.brep \
              Solid_6.brep  \
              Solid_7.brep  \
