@@ -374,12 +374,24 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
  
   TopoDS_Shape shape;
+  TopTools_ListOfShape shapes;
+ 
   if(aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Solid());
+  {
+    shapes = aBRepTrsf->Modified(*get_TopoDS_Solid());
+    if(shapes.Extent() == 1)
+      shape = shapes.First();
+    else
+    {
+      PRINT_ERROR("Tranformation is wrong. \n");
+      return CUBIT_FAILURE;
+    }
+  }
+ 
+    //shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Solid());
 
   else
   {
-    TopTools_ListOfShape shapes;
     shapes.Assign(op->Modified(*get_TopoDS_Solid()));
     if(shapes.Extent() == 0)
       shapes.Assign(op->Generated(*get_TopoDS_Solid()));

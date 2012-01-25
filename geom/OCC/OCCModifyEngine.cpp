@@ -113,6 +113,10 @@
 #include "TopOpeBRep_EdgesIntersector.hxx"
 #include "TopExp_Explorer.hxx"
 #include "TopExp.hxx"
+#ifndef OCC_VERSION_MINOR
+#include "Standard_Version.hxx"
+#endif
+
 #include "OCCDrawTool.hpp"
 #include "OCCModifyEngine.hpp"
 #include "OCCQueryEngine.hpp"
@@ -703,7 +707,11 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
 	 radius2 = height * tan(fabs(semi_angle));
          Handle(Geom_RectangularTrimmedSurface) trimmed_cone;
          trimmed_cone = GC_MakeTrimmedCone(Apex, p2, 0, radius2); 
+#if OCC_VERSION_MAINTENANCE < 2 
          newFace = BRepBuilderAPI_MakeFace(trimmed_cone);
+#else
+         newFace = BRepBuilderAPI_MakeFace(trimmed_cone, TOL);
+#endif
        }
        else
        {
@@ -713,14 +721,18 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
          gp_Ax1 axis = cylinder.Axis(); 
          Handle(Geom_RectangularTrimmedSurface) trimmed_cyl;
          trimmed_cyl = GC_MakeTrimmedCylinder(axis, radius, height);
+#if OCC_VERSION_MAINTENANCE < 2 
          newFace = BRepBuilderAPI_MakeFace(trimmed_cyl);
+#else
+         newFace = BRepBuilderAPI_MakeFace(trimmed_cyl, TOL);
+#endif
        } 
      }
      else if(type == SPHERE_SURFACE_TYPE)
      {
        //make a whole sphere.
        gp_Sphere sphere = asurface.Sphere();
-       newFace = BRepBuilderAPI_MakeFace(sphere); 
+       newFace = BRepBuilderAPI_MakeFace(sphere);
      }
      else if(type == TORUS_SURFACE_TYPE)
      {
@@ -732,7 +744,11 @@ Surface* OCCModifyEngine::make_Surface( Surface * surface_ptr,
      {
        //extend the surfaces using the equation if possible.
        Handle(Geom_BezierSurface) bezier = asurface.Bezier();
-       newFace = BRepBuilderAPI_MakeFace(bezier, U1, U2, V1, V2);
+#if  OCC_VERSION_MAINTENANCE < 2                           
+        newFace = BRepBuilderAPI_MakeFace(bezier, U1, U2, V1, V2);
+#else
+        newFace = BRepBuilderAPI_MakeFace(bezier, U1, U2, V1, V2, TOL);
+#endif
      }
   }
  
@@ -8578,7 +8594,11 @@ CubitStatus OCCModifyEngine::tweak_move( DLIList<Curve*> & curves,
       PRINT_ERROR( "Can not tweak move the %dth curve\n", i);
       return CUBIT_FAILURE;
     }
+#if OCC_VERSION_MAINTENANCE < 2
     TopoDS_Face FACE = BRepBuilderAPI_MakeFace(trimmed_surface);
+#else  
+    TopoDS_Face FACE = BRepBuilderAPI_MakeFace(trimmed_surface, TOL);
+#endif
     Surface*  extrude_surf= OCCQueryEngine::instance()->populate_topology_bridge(FACE, CUBIT_TRUE);
     BodySM* body = CAST_TO(extrude_surf, OCCSurface)->my_body();
     //subtract or unite the two surfaces
