@@ -6507,10 +6507,10 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves,
                                             int gap_type )
 {
   //gap_type has no effect here.
-  gp_Dir offset(offset_direction.x(), offset_direction.y(), offset_direction.z()); 
   if( curves.size() == 1 && (offset_direction.x() || 
         offset_direction.y() || offset_direction.z()) )
   {
+    gp_Dir offset(offset_direction.x(), offset_direction.y(), offset_direction.z());
     //check if the curve is straight, error out for non-straight curve.
     Curve* curve = curves.get();
     OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
@@ -6551,6 +6551,20 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves,
   else if( offset_direction.x() || offset_direction.y() || offset_direction.z() )
       PRINT_WARNING( "Direction qualifier ignored - only valid for one straight curve\n" );
 
+  else if (offset_direction.x() == 0.0 && offset_direction.y() == 0.0 &&
+           offset_direction.z() == 0.0)
+  {
+    for(int i = 0 ; i < curves.size(); i++)
+    {
+      Curve* curve = curves.get_and_step();
+      OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);  
+      if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE)
+      {
+        PRINT_ERROR("Must have an offset direction for any straight curve.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+  }
   //make wire out of ref_edge_list
   BRepBuilderAPI_MakeWire awire;
   TopTools_ListOfShape L; 
@@ -6609,12 +6623,7 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves,
     
     Ex.Init(wire);
     Ex.Next(); //omit the connecting curve
-    if(offset_distance < 0)
-    {
-      for(int i = 0 ; i < curves.size(); i++)
-        Ex.Next();//omit all positive offset curves.
-      Ex.Next(); //omit conection curve
-    }
+
     for(int i = 0 ; i < curves.size(); i++)
     {
       TopoDS_Edge new_edge = Ex.Current();
