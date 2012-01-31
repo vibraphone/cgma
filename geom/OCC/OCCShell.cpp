@@ -210,18 +210,9 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   assert (aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
-  BRepBuilderAPI_Transform* pTrsf = NULL;
-  BRepBuilderAPI_GTransform* gTrsf = NULL;
   if(aBRepTrsf)
-  {
-    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
-    shape = pTrsf->ModifiedShape(*get_TopoDS_Shell());
-    if(shape.IsNull())
-    {
-      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
-      shape = gTrsf->ModifiedShape(*get_TopoDS_Shell());
-    }
-  }
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Shell());
+
   else if(!mySheetSurface)
   {
     TopTools_ListOfShape shapes;

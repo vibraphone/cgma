@@ -522,9 +522,9 @@ CubitStatus OCCBody::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
 
   TopoDS_Compound compsolid;
   TopoDS_Shape shape;
+  shape = aBRepTrsf->Shape();
   if(aBRepTrsf && myTopoDSShape)
   {
-    shape = aBRepTrsf->ModifiedShape(*myTopoDSShape);
     compsolid = TopoDS::Compound(shape);
   
     if(OCCQueryEngine::instance()->OCCMap->IsBound(*myTopoDSShape) )

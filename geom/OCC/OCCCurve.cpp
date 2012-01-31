@@ -954,19 +954,9 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
   
   TopoDS_Shape shape;
-  BRepBuilderAPI_Transform* pTrsf = NULL;
-  BRepBuilderAPI_GTransform* gTrsf = NULL;
   if(aBRepTrsf)
-  {
-    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
-    if(!pTrsf)
-    {
-      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
-      shape = gTrsf->ModifiedShape(*get_TopoDS_Edge());
-    }
-    else
-      shape = pTrsf->ModifiedShape(*get_TopoDS_Edge());
-  }
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Edge());
+
   else
   {
     TopTools_ListOfShape shapes;

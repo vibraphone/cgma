@@ -24,7 +24,6 @@
 #include "gp_Cone.hxx"
 #include "gp_Sphere.hxx"
 #include "gp_Torus.hxx"
-#include "BRepOffsetAPI_MakeOffset.hxx"
 #include "BRepBuilderAPI_MakeShell.hxx"
 #include "BRepBuilderAPI_MakeSolid.hxx"
 #include "BRepOffsetAPI_MakeDraft.hxx"
@@ -6508,132 +6507,29 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves,
 {
   //gap_type has no effect here.
   gp_Dir offset(offset_direction.x(), offset_direction.y(), offset_direction.z()); 
-  if( curves.size() == 1 && (offset_direction.x() || 
-        offset_direction.y() || offset_direction.z()) )
-  {
-    //check if the curve is straight, error out for non-straight curve.
-    Curve* curve = curves.get();
-    OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
-    if(occ_curve->geometry_type() == STRAIGHT_CURVE_TYPE)
-    {
-      //based on the definitions of the offset curve on OCC, calculate the 
-      //offset direction to make it consistant with ACIS
-      double u1, u2;
-      occ_curve->get_param_range(u1, u2);
-      CubitVector p1, p2, tangent;
-      occ_curve->position_from_u(u1, p1);
-      occ_curve->position_from_u(u2, p2);
-      tangent = p2 -p1;
-      CubitVector cal_offset_dir =  offset_direction * tangent;
-      gp_Dir offset(cal_offset_dir.x(), cal_offset_dir.y(), cal_offset_dir.z()); 
-      TopoDS_Edge * edge = occ_curve->get_TopoDS_Edge();
-      Standard_Real first;
-      Standard_Real last;
-      Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last);
-      Handle(Geom_OffsetCurve) new_curve =
-        new Geom_OffsetCurve(myCurve,offset_distance, offset);
-      if(!new_curve)
-      {
-        TopologyEntity *entity = curve->topology_entity();
-        BasicTopologyEntity *bte = CAST_TO(entity, BasicTopologyEntity);
-        PRINT_ERROR("Can't create offset curve for curve %d.\n", bte->id());
-        return CUBIT_FAILURE;
-      }
-      TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(new_curve, u1, u2);
-      Curve* offset_curve = OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
-      new_curves.append(offset_curve);
-      return CUBIT_SUCCESS;
-    }
-    else 
-      PRINT_WARNING( "Direction qualifier ignored - only valid for one straight curve\n" );
-  }
-  
-  else if( offset_direction.x() || offset_direction.y() || offset_direction.z() )
-      PRINT_WARNING( "Direction qualifier ignored - only valid for one straight curve\n" );
-
-  //make wire out of ref_edge_list
-  BRepBuilderAPI_MakeWire awire;
-  TopTools_ListOfShape L; 
-  OCCCurve* occ_curve = NULL;
   for(int i = 0 ; i < curves.size(); i++)
   {
     Curve* curve = curves.get_and_step();
-    occ_curve = CAST_TO(curve, OCCCurve);
+    OCCCurve* occ_curve = CAST_TO(curve, OCCCurve);
     if(!occ_curve)
       continue;
-    TopoDS_Edge* topoedge = occ_curve->get_TopoDS_Edge( );
-    BRepBuilderAPI_Copy api_copy(*topoedge);
-    TopoDS_Shape newShape = api_copy.ModifiedShape(*topoedge);
-    L.Append(newShape);
-  }
-
-  awire.Add(L);
-  if(awire.Error())
-  {
-    PRINT_ERROR("Curves must form a planar chain in order for offset to work.\n");
-    return CUBIT_FAILURE;
-  }
-  TopoDS_Wire wire;
-  wire = awire.Wire();
-
-  CubitBoolean closed = wire.Closed();
-  BRepOffsetAPI_MakeOffset offsetcurve(wire);
-  offsetcurve.Perform(offset_distance);
-  offsetcurve.Build();
-  //For an open wire:
-  //It returns a closed wire, with two connecting curves and a positive offset
-  //curve list and a negative offset curve list.
-  //For a closed wire:
-  //It returns a closed wire outside of the original one if offset_distance > 0
-  //It returns a closed wire inside of the original one if offset_distance < 0
-
-  TopoDS_Shape wire_shape = offsetcurve.Shape();
-  wire = TopoDS::Wire(wire_shape);
-
-  BRepTools_WireExplorer Ex(wire);
-  if(!closed)
-  {
-    //There should be 2*(size of curve list) + 2 curves, if more than that,
-    //error out.
-    int num_curves = 0;
-    for(; Ex.More(); Ex.Next())
-      num_curves ++;
-
-    if((2+2*curves.size()) != num_curves)
+    TopoDS_Edge * edge = occ_curve->get_TopoDS_Edge();
+    Standard_Real first;
+    Standard_Real last;
+    Handle(Geom_Curve) myCurve = BRep_Tool::Curve(*edge, first, last); 
+    Handle(Geom_OffsetCurve) new_curve = 
+      new Geom_OffsetCurve(myCurve,offset_distance, offset);
+    if(!new_curve)
     {
-      PRINT_ERROR("Opencascade can't calculate one offset curve for each"
-                  " input curve. It's a limitation, try use other type of"
-                  " curves to offset.\n");
-      return CUBIT_FAILURE;
+      TopologyEntity *entity = curve->topology_entity();
+      BasicTopologyEntity *bte = CAST_TO(entity, BasicTopologyEntity);
+      PRINT_ERROR("Can't create offset curve for curve %d.\n", bte->id());
+      continue;
     }
-    
-    Ex.Init(wire);
-    Ex.Next(); //omit the connecting curve
-    if(offset_distance < 0)
-    {
-      for(int i = 0 ; i < curves.size(); i++)
-        Ex.Next();//omit all positive offset curves.
-      Ex.Next(); //omit conection curve
-    }
-    for(int i = 0 ; i < curves.size(); i++)
-    {
-      TopoDS_Edge new_edge = Ex.Current();
-      Curve* offset_curve = 
-        OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
-      new_curves.append(offset_curve);
-      Ex.Next();
-    }
-    return CUBIT_SUCCESS;
-  }
-
-  //If closed
-  for(; Ex.More(); Ex.Next())
-  {
-    TopoDS_Edge new_edge = Ex.Current(); 
-    Curve* offset_curve =
-      OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
+    *edge = BRepBuilderAPI_MakeEdge(new_curve);
+    Curve* offset_curve = OCCQueryEngine::instance()->populate_topology_bridge(*edge, CUBIT_TRUE);
     new_curves.append(offset_curve);
-  }
+  } 
   return CUBIT_SUCCESS;
 }
 

@@ -262,18 +262,8 @@ void OCCPoint::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   assert(aBRepTrsf != NULL || op != NULL);
 
   TopoDS_Shape shape;
-  BRepBuilderAPI_Transform* pTrsf = NULL;
-  BRepBuilderAPI_GTransform* gTrsf = NULL;
   if(aBRepTrsf)
-  {
-    pTrsf = (BRepBuilderAPI_Transform*)aBRepTrsf;
-    shape = pTrsf->ModifiedShape(*get_TopoDS_Vertex());
-    if(shape.IsNull())
-    {
-      gTrsf = (BRepBuilderAPI_GTransform*)aBRepTrsf;
-      shape = gTrsf->ModifiedShape(*get_TopoDS_Vertex());
-    }
-  }
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Vertex());
  
   else
   {
