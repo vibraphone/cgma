@@ -1836,7 +1836,7 @@ BodySM* OCCModifyEngine::copy_body ( BodySM* bodyPtr ) const
     TopoDS_Shape newShape = api_copy.ModifiedShape(*theCS);
 
     TopoDS_Compound newCS = TopoDS::Compound(newShape);
-    OCCQueryEngine::instance()->copy_attributes(*theCS, newCS);
+    //OCCQueryEngine::instance()->copy_attributes(*theCS, newCS);
 
     new_body = OCCQueryEngine::instance()->populate_topology_bridge(newCS);
     copy_body_attributes((TopoDS_Shape)(*theCS), api_copy);
@@ -6627,11 +6627,31 @@ CubitStatus OCCModifyEngine::offset_curves( DLIList<Curve*>& curves,
     for(int i = 0 ; i < curves.size(); i++)
     {
       TopoDS_Edge new_edge = Ex.Current();
+      Curve* curve = curves.get_and_step();
       Curve* offset_curve = 
         OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
+      //double check here to make sure we get the correct offset curve
+      //which is if the offset_distance is positive, the new curve should be
+      //longer than the original curve.
+      if(i == 0)
+      {
+        double d_offset = offset_curve->measure();
+        double d_orig = curve->measure();
+        if((offset_distance > 0 && d_offset < d_orig) ||
+           (offset_distance < 0 && d_offset > d_orig)) 
+        {
+          for(int j = 0; j < curves.size(); j++)
+            Ex.Next();
+          Ex.Next();  
+        }
+        TopoDS_Edge new_edge = Ex.Current();
+        offset_curve = OCCQueryEngine::instance()->
+            populate_topology_bridge(new_edge, CUBIT_TRUE);
+      }    
       new_curves.append(offset_curve);
       Ex.Next();
     }
+
     return CUBIT_SUCCESS;
   }
 
