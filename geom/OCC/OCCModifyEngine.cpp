@@ -9279,7 +9279,7 @@ CubitStatus OCCModifyEngine::loft_surfaces_to_body( Surface * face1,
 
    TopoDS_Shape shape = loft.Shape();
    TopoDS_Solid solid = TopoDS::Solid(shape);
-   Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(solid);
+   Lump* lump = OCCQueryEngine::instance()->populate_topology_bridge(solid, CUBIT_TRUE);
    if (lump == NULL)
    {
      PRINT_ERROR("In OCCModifyEngine::loft_surfaces_to_body\n"
@@ -9301,18 +9301,31 @@ CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
      PRINT_ERROR("Surfaces are not OCC type.\n");
      return CUBIT_FAILURE;
    }
+
    TopoDS_Face* topo_face1 = surf1->get_TopoDS_Face();
    TopoDS_Face* topo_face2 = surf2->get_TopoDS_Face();
+
+   TopoDS_Face  new_face1, new_face2;
+   BRepBuilderAPI_Copy api_copy(*topo_face1);
+   TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_face1);
+   new_face1 = TopoDS::Face(newShape);
+
+   BRepBuilderAPI_Copy api_copy2(*topo_face2);
+   newShape = api_copy2.ModifiedShape(*topo_face2);
+   new_face2 = TopoDS::Face(newShape);
+
    TopExp_Explorer Ex;
-   Ex.Init(*topo_face1, TopAbs_WIRE);
+   Ex.Init(new_face1, TopAbs_WIRE);
    TopoDS_Wire wire1 = TopoDS::Wire(Ex.Current());
+   Ex.Next();
    if(Ex.More())
    {
      PRINT_ERROR("Surface1 must have only one loop.\n");
      return CUBIT_FAILURE;
    }
-   Ex.Init(*topo_face2, TopAbs_WIRE);
+   Ex.Init(new_face2, TopAbs_WIRE);
    TopoDS_Wire wire2 = TopoDS::Wire(Ex.Current());
+   Ex.Next();
    if(Ex.More())
    {
      PRINT_ERROR("Surface2 must have only one loop.\n");
