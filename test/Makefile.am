@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file attribute_to_buffer modify subtract makept offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug
+  TESTS += attribute_to_file attribute_to_buffer modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -37,6 +37,7 @@ point_project_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="ACIS"'
 
 makept_SOURCES = makept.cpp
 offset_curves_SOURCES = offset_curves.cpp
+loft_SOURCES = loft.cpp
 modify_SOURCES = modify.cpp
 imprint_bug_SOURCES = imprint_bug.cpp
 subtract_SOURCES = subtract.cpp
@@ -139,6 +140,7 @@ MOSTLYCLEANFILES = \
         imprint.brep \
         BsplineCurve.occ \
         curves.brep \
+        loft.brep \
         bug.brep \
         subtract.occ \
         glue.occ \
