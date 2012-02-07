@@ -3971,6 +3971,13 @@ extern "C" {
                        int **facets, int *facets_allocated, int *facets_size,
                        int *err);
 
+  /* checks if a point is on a surface or a curve or a body*/
+  void iGeom_isPositionOn(iGeom_Instance instance,
+                          iBase_EntityHandle entity,
+                          double x,
+                          double y,
+                          double z,
+                          bool isOn); 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

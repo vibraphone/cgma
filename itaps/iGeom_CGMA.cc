@@ -310,7 +310,6 @@ static CubitStatus init_cgm( const std::string& engine )
   return status;
 }
 
-
 extern "C" {
 
 void iGeom_newGeom( const char* options,
@@ -6274,6 +6273,35 @@ iGeom_mergeEnts (iGeom_Instance instance,
   }
 }
 
+void iGeom_isPositionOn(iGeom_Instance instance,
+                        iBase_EntityHandle entity,
+                        double x,
+                        double y,
+                        double z,
+                        bool IsOn)
+{
+  CubitVector position(x,y,z);
+  CubitPointContainment pc;
+  RefFace *ref_face = dynamic_cast<RefFace*>(ENTITY_HANDLE(entity));
+  if(ref_face)
+    pc = ref_face->point_containment(position);
+
+  RefEdge *ref_edge = dynamic_cast<RefEdge*>(ENTITY_HANDLE(entity));
+  if(ref_edge)
+    pc = ref_edge->point_containment(position);
+
+  Body *body = dynamic_cast<Body*>(ENTITY_HANDLE(entity));
+  if(body)
+    pc = body->point_containment(position);
+
+  if (pc == CUBIT_PNT_INSIDE || pc == CUBIT_PNT_BOUNDARY)
+    IsOn = true;
+
+  else
+    IsOn = false;
+  return;
+}
+
 } // extern "C"
 
 /********************* HELPER FUNCTION IMPLEMENTATIONS ***************************/
@@ -7192,3 +7220,4 @@ void iGeom_getFacets(iGeom_Instance instance,
   else
     RETURN(iBase_INVALID_ENTITY_TYPE);
 }
+
