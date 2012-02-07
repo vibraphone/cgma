@@ -6278,7 +6278,7 @@ void iGeom_isPositionOn(iGeom_Instance instance,
                         double x,
                         double y,
                         double z,
-                        bool IsOn)
+                        bool &IsOn)
 {
   CubitVector position(x,y,z);
   CubitPointContainment pc;

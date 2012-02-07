@@ -3977,7 +3977,7 @@ extern "C" {
                           double x,
                           double y,
                           double z,
-                          bool isOn); 
+                          bool &isOn); 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
