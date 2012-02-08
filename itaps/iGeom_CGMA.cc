@@ -6278,10 +6278,10 @@ void iGeom_isPositionOn(iGeom_Instance instance,
                         double x,
                         double y,
                         double z,
-                        bool &IsOn)
+                        int* IsOn)
 {
   CubitVector position(x,y,z);
-  CubitPointContainment pc;
+  CubitPointContainment pc = CUBIT_PNT_UNKNOWN;
   RefFace *ref_face = dynamic_cast<RefFace*>(ENTITY_HANDLE(entity));
   if(ref_face)
     pc = ref_face->point_containment(position);
@@ -6295,10 +6295,10 @@ void iGeom_isPositionOn(iGeom_Instance instance,
     pc = body->point_containment(position);
 
   if (pc == CUBIT_PNT_INSIDE || pc == CUBIT_PNT_BOUNDARY)
-    IsOn = true;
+    *IsOn = 1;
 
   else
-    IsOn = false;
+    *IsOn = 0;
   return;
 }
 
