@@ -885,6 +885,9 @@ private:
                      Surface * face1,
                      Surface * face2) const;
 
+ CubitStatus do_loft(BRepOffsetAPI_ThruSections& loft,
+                     DLIList<DLIList<TopoDS_Edge*>*> loops) const;
+
  void make_base_for_prim_pyramid(double major,
                                  double minor,
                                  double height,

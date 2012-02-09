@@ -842,8 +842,42 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
 
   CubitStatus stat = sort_curves(curve_list, topo_edges_loops); 
-  if( stat == CUBIT_FAILURE ) //case of one disconnected curve 
-     return (Surface*) NULL;
+  if( stat == CUBIT_FAILURE ) //case of one disconnected curve , open wires
+  {
+     //loft curves.
+     BRepOffsetAPI_ThruSections loft(CUBIT_FALSE);
+     CubitStatus stat = do_loft(loft, topo_edges_loops);
+     if(!stat)
+       return (Surface*) NULL;
+
+     TopoDS_Shape shape = loft.Shape();
+     TopoDS_Shell shell = TopoDS::Shell(shape);
+     TopExp_Explorer Ex;
+     int num_surfaces = 0;
+     TopoDS_Face topo_face ;
+     for (Ex.Init(shell, TopAbs_FACE); Ex.More(); Ex.Next())
+     {
+       topo_face = TopoDS::Face(Ex.Current());
+       num_surfaces ++;
+     }
+
+     if(num_surfaces != 1)
+     {
+       PRINT_ERROR("In OCCModifyEngine::skin_surface\n"
+                 "   Cannot create a skin surface for given curves.\n");
+       return (Surface*) NULL;
+     }
+   
+     Surface* surf = OCCQueryEngine::instance()->populate_topology_bridge(topo_face, CUBIT_TRUE);
+     if (surf == NULL)
+     {
+       PRINT_ERROR("In OCCModifyEngine::skin_surfaces\n"
+                   "   Cannot create a skin surface for given curves.\n");
+       return (Surface*) NULL;
+     }
+ 
+     return surf;
+  }
  
   // Use the topo_edges to make a topo_face
   TopoDS_Face* topo_face;
@@ -887,6 +921,36 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
   }
   return surface ;
 }
+
+CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
+                                     DLIList<DLIList<TopoDS_Edge*>*> loops) const
+{
+   BRepBuilderAPI_MakeWire aWire;
+   TopoDS_Edge  new_edge;
+   for(int i = 0; i < loops.size(); i++)
+   {
+     DLIList<TopoDS_Edge*> edges = *(loops.get_and_step());
+
+     for(int j = 0; j <  edges.size(); j++)
+     {
+       TopoDS_Edge* topo_edge = edges.get_and_step();
+
+       BRepBuilderAPI_Copy api_copy(*topo_edge);
+       TopoDS_Shape newShape = api_copy.ModifiedShape(*topo_edge);
+       new_edge = TopoDS::Edge(newShape);
+       aWire.Add(new_edge);
+     }
+     loft.AddWire(aWire.Wire());
+     aWire = BRepBuilderAPI_MakeWire();
+   }
+   loft.Build();
+   if(!loft.IsDone())
+   {
+     PRINT_ERROR("Curves can't be loft into a surface.\n");
+     return CUBIT_FAILURE;
+   }
+   return CUBIT_SUCCESS;
+} 
 
 //===============================================================================
 // Function   : sort_curves
