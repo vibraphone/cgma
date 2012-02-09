@@ -847,6 +847,14 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
      //loft curves.
      BRepOffsetAPI_ThruSections loft(CUBIT_FALSE);
      CubitStatus stat = do_loft(loft, topo_edges_loops);
+     for (int i = 0; i < topo_edges_loops.size(); i++)
+     {
+       DLIList<TopoDS_Edge*>* topo_edges = topo_edges_loops.get_and_step();
+       for(int j = 0; j < topo_edges->size(); j++)
+         topo_edges->pop();
+       delete topo_edges;
+       topo_edges = NULL;
+     }
      if(!stat)
        return (Surface*) NULL;
 
