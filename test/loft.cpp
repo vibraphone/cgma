@@ -132,6 +132,34 @@ CubitStatus make_Point()
   //delete all entities
   gti->delete_Body(bodies);
   
+  CubitVector p1(0, 0 ,0);
+  CubitVector p2(1, 0 ,0);
+  CubitVector p3(0, 1 ,0);
+  CubitVector p4(1, 1 ,0);
+
+  gmti->make_RefVertex(p1,5);
+  gmti->make_RefVertex(p2,5);
+  gmti->make_RefVertex(p3,5);
+  gmti->make_RefVertex(p4,5);
+  DLIList<RefEntity*>  free_entities;
+  gti->get_free_ref_entities(free_entities);
+
+  RefVertex* vertex1 = CAST_TO(free_entities.step_and_get(),RefVertex);
+  RefVertex* vertex2 = CAST_TO(free_entities.step_and_get(),RefVertex);
+  RefVertex* vertex3 = CAST_TO(free_entities.step_and_get(),RefVertex);
+  RefVertex* vertex4 = CAST_TO(free_entities.step_and_get(),RefVertex);
+  RefEdge* new_edge1 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1, vertex2);
+  RefEdge* new_edge2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex3, vertex4);
+  DLIList<RefEdge*> edges;
+  edges.append(new_edge1);
+  edges.append(new_edge2);
+  DLIList<RefEdge*> guides;
+  gmti->create_skin_surface(edges, new_body, guides); 
+  CubitVector center = new_body->center_point();
+  CubitVector comp (0.5, 0.5, 0);
+  assert(center.distance_between(comp) < 0.00001);
+  CubitBoolean is_sheet = new_body->is_sheet_body();
+  assert(is_sheet == CUBIT_TRUE);  
   return CUBIT_SUCCESS;
 }
 
