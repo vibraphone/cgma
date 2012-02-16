@@ -6569,6 +6569,7 @@ static CubitStatus iGeom_closest_point_trimmed( RefEntity* this_entity,
       this_surf = this_face->get_surface_ptr();
       if (NULL == this_surf) return CUBIT_FAILURE;
       this_surf->closest_point_trimmed( near, on );
+      status = CUBIT_SUCCESS;
       break;
     default:
         // just copy over the coordinates
