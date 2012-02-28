@@ -933,10 +933,10 @@ Surface* OCCModifyEngine::make_Surface( GeometryType surface_type,
 CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
                                      DLIList<DLIList<TopoDS_Edge*>*> loops) const
 {
-   BRepBuilderAPI_MakeWire aWire;
    TopoDS_Edge  new_edge;
    for(int i = 0; i < loops.size(); i++)
    {
+     BRepBuilderAPI_MakeWire aWire;
      DLIList<TopoDS_Edge*> edges = *(loops.get_and_step());
 
      for(int j = 0; j <  edges.size(); j++)
@@ -949,7 +949,6 @@ CubitStatus OCCModifyEngine::do_loft(BRepOffsetAPI_ThruSections& loft,
        aWire.Add(new_edge);
      }
      loft.AddWire(aWire.Wire());
-     aWire = BRepBuilderAPI_MakeWire();
    }
    loft.Build();
    if(!loft.IsDone())
