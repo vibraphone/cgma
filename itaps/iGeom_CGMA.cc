@@ -6879,7 +6879,7 @@ static iBase_ErrorType
 iGeom_get_vtx_to_uv(RefVertex* vertex, RefFace* face, double& u, double& v)
 {
   DLIList<RefVertex*> pts;
-  TopologyEntity *topo_ent = dynamic_cast<const TopologyEntity*>(face);
+  TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(face);
   topo_ent->ref_vertices(pts);
 
   pts.reset();
