@@ -33,6 +33,10 @@
 #include <map>
 #include <vector>
 
+#ifdef ITAPS_SHIM
+# include "iGeom_binding.h"
+#endif
+
 #define ARRAY_IN_DECL(a, b) \
   a const* b, const int b ## _size  
 
@@ -46,6 +50,9 @@ class CATag;
 class CGMTagManager 
 {
 public:
+#ifdef ITAPS_SHIM
+  iGeom_vtable *vtable;
+#endif
 
   friend class CATag;
   

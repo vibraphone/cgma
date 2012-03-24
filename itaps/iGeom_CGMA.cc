@@ -20,7 +20,6 @@
  * Renamed iGeom_CGMA.cc and added to ANL ITAPS repository by J.Kraftcheck,
  * 2007-6-15
  */
-#include "iGeom.h"
 #include "InitCGMA.hpp"
 #include "GMem.hpp"
 #include <iostream>
@@ -32,10 +31,19 @@
 # include "config.h"
 #endif
 
+#ifdef ITAPS_SHIM
+# include "iGeom_binding.h"
+# include "iGeom_private.h"
+# define ITAPS_API static
+#else
+# include "iGeom.h"
+# define ITAPS_API
+#endif
+
 const bool debug = false;
 
-#define RETURN(a) do {iGeom_setLastError((*err = a)); return; } while(false)
-#define ERROR(a, b) do {iGeom_setLastError((*err = a), b); return; } while(false)
+#define RETURN(a) do {CGM_iGeom_setLastError((*err = a)); return; } while(false)
+#define ERROR(a, b) do {CGM_iGeom_setLastError((*err = a), b); return; } while(false)
 
 #define ARRAY_IN(b) \
   b, b ## _size  
@@ -312,10 +320,222 @@ static CubitStatus init_cgm( const std::string& engine )
 
 extern "C" {
 
-void iGeom_newGeom( const char* options,
-                    iGeom_Instance* instance_out,
-                    int* err,
-                    const int options_size) 
+#ifdef ITAPS_SHIM
+static struct iGeom_vtable CGM_iGeom_vtable = {
+  iGeom_getDescription,
+  iGeom_getErrorType,
+  iGeom_dtor,
+  iGeom_load,
+  iGeom_save,
+  iGeom_getRootSet,
+  iGeom_getBoundBox,
+  iGeom_getEntities,
+  iGeom_getNumOfType,
+  iGeom_getEntType,
+  iGeom_getArrType,
+  iGeom_getEntAdj,
+  iGeom_getArrAdj,
+  iGeom_getEnt2ndAdj,
+  iGeom_getArr2ndAdj,
+  iGeom_isEntAdj,
+  iGeom_isArrAdj,
+  iGeom_getTopoLevel,
+  iGeom_getEntClosestPt,
+  iGeom_getEntClosestPtTrimmed,
+  iGeom_getArrClosestPt,
+  iGeom_getEntNrmlXYZ,
+  iGeom_getArrNrmlXYZ,
+  iGeom_getEntNrmlPlXYZ,
+  iGeom_getArrNrmlPlXYZ,
+  iGeom_getEntTgntXYZ,
+  iGeom_getArrTgntXYZ,
+  iGeom_getFcCvtrXYZ,
+  iGeom_getEgCvtrXYZ,
+  iGeom_getEntArrCvtrXYZ,
+  iGeom_getEgEvalXYZ,
+  iGeom_getFcEvalXYZ,
+  iGeom_getArrEgEvalXYZ,
+  iGeom_getArrFcEvalXYZ,
+  iGeom_getEntBoundBox,
+  iGeom_getArrBoundBox,
+  iGeom_getVtxCoord,
+  iGeom_getVtxArrCoords,
+  iGeom_getPntRayIntsct,
+  iGeom_getPntArrRayIntsct,
+  iGeom_getPntClsf,
+  iGeom_getPntArrClsf,
+  iGeom_getEntNrmlSense,
+  iGeom_getArrNrmlSense,
+  iGeom_getEgFcSense,
+  iGeom_getEgFcArrSense,
+  iGeom_getEgVtxSense,
+  iGeom_getEgVtxArrSense,
+  iGeom_measure,
+  iGeom_getFaceType,
+  iGeom_getParametric,
+  iGeom_isEntParametric,
+  iGeom_isArrParametric,
+  iGeom_getEntUVtoXYZ,
+  iGeom_getArrUVtoXYZ,
+  iGeom_getEntUtoXYZ,
+  iGeom_getArrUtoXYZ,
+  iGeom_getEntXYZtoUV,
+  iGeom_getEntXYZtoU,
+  iGeom_getArrXYZtoUV,
+  iGeom_getArrXYZtoU,
+  iGeom_getEntXYZtoUVHint,
+  iGeom_getArrXYZtoUVHint,
+  iGeom_getEntUVRange,
+  iGeom_getEntURange,
+  iGeom_getArrUVRange,
+  iGeom_getArrURange,
+  iGeom_getEntUtoUV,
+  iGeom_getVtxToUV,
+  iGeom_getVtxToU,
+  iGeom_getArrUtoUV,
+  iGeom_getVtxArrToUV,
+  iGeom_getVtxArrToU,
+  iGeom_getEntNrmlUV,
+  iGeom_getArrNrmlUV,
+  iGeom_getEntTgntU,
+  iGeom_getArrTgntU,
+  iGeom_getEnt1stDrvt,
+  iGeom_getArr1stDrvt,
+  iGeom_getEnt2ndDrvt,
+  iGeom_getArr2ndDrvt,
+  iGeom_getFcCvtrUV,
+  iGeom_getFcArrCvtrUV,
+  iGeom_isEntPeriodic,
+  iGeom_isArrPeriodic,
+  iGeom_isFcDegenerate,
+  iGeom_isFcArrDegenerate,
+  iGeom_getTolerance,
+  iGeom_getEntTolerance,
+  iGeom_getArrTolerance,
+  iGeom_initEntIter,
+  iGeom_initEntArrIter,
+  iGeom_getNextEntIter,
+  iGeom_getNextEntArrIter,
+  iGeom_resetEntIter,
+  iGeom_resetEntArrIter,
+  iGeom_endEntIter,
+  iGeom_endEntArrIter,
+  iGeom_copyEnt,
+  iGeom_sweepEntAboutAxis,
+  iGeom_deleteAll,
+  iGeom_deleteEnt,
+  iGeom_createSphere,
+  iGeom_createPrism,
+  iGeom_createBrick,
+  iGeom_createCylinder,
+  iGeom_createCone,
+  iGeom_createTorus,
+  iGeom_moveEnt,
+  iGeom_rotateEnt,
+  iGeom_reflectEnt,
+  iGeom_scaleEnt,
+  iGeom_uniteEnts,
+  iGeom_subtractEnts,
+  iGeom_intersectEnts,
+  iGeom_sectionEnt,
+  iGeom_imprintEnts,
+  iGeom_mergeEnts,
+  iGeom_createEntSet,
+  iGeom_destroyEntSet,
+  iGeom_isList,
+  iGeom_getNumEntSets,
+  iGeom_getEntSets,
+  iGeom_addEntToSet,
+  iGeom_rmvEntFromSet,
+  iGeom_addEntArrToSet,
+  iGeom_rmvEntArrFromSet,
+  iGeom_addEntSet,
+  iGeom_rmvEntSet,
+  iGeom_isEntContained,
+  iGeom_isEntArrContained,
+  iGeom_isEntSetContained,
+  iGeom_addPrntChld,
+  iGeom_rmvPrntChld,
+  iGeom_isChildOf,
+  iGeom_getNumChld,
+  iGeom_getNumPrnt,
+  iGeom_getChldn,
+  iGeom_getPrnts,
+  iGeom_createTag,
+  iGeom_destroyTag,
+  iGeom_getTagName,
+  iGeom_getTagSizeValues,
+  iGeom_getTagSizeBytes,
+  iGeom_getTagHandle,
+  iGeom_getTagType,
+  iGeom_setEntSetData,
+  iGeom_setEntSetIntData,
+  iGeom_setEntSetDblData,
+  iGeom_setEntSetEHData,
+  iGeom_setEntSetESHData,
+  iGeom_getEntSetData,
+  iGeom_getEntSetIntData,
+  iGeom_getEntSetDblData,
+  iGeom_getEntSetEHData,
+  iGeom_getEntSetESHData,
+  iGeom_getAllEntSetTags,
+  iGeom_rmvEntSetTag,
+  iGeom_getArrData,
+  iGeom_getIntArrData,
+  iGeom_getDblArrData,
+  iGeom_getEHArrData,
+  iGeom_getESHArrData,
+  iGeom_setArrData,
+  iGeom_setIntArrData,
+  iGeom_setDblArrData,
+  iGeom_setEHArrData,
+  iGeom_setESHArrData,
+  iGeom_rmvArrTag,
+  iGeom_getData,
+  iGeom_getIntData,
+  iGeom_getDblData,
+  iGeom_getEHData,
+  iGeom_getESHData,
+  iGeom_setData,
+  iGeom_setIntData,
+  iGeom_setDblData,
+  iGeom_setEHData,
+  iGeom_setESHData,
+  iGeom_getAllTags,
+  iGeom_rmvTag,
+  iGeom_subtract,
+  iGeom_intersect,
+  iGeom_unite,
+  iGeom_getFacets
+};
+
+void CGM_iGeom_register()
+{
+  iGeom_register("cgm", iGeom_newGeom);
+}
+#endif
+
+
+ITAPS_API void
+iGeom_getErrorType( iGeom_Instance geom,
+                    int *error_type )
+{
+  *error_type = CGM_iGeom_getLastErrorType();
+}
+
+ITAPS_API void
+iGeom_getDescription( iGeom_Instance geom,
+                      char* description_buffer,
+                      int description_buffer_length )
+{
+  CGM_iGeom_getLastErrorDesc(description_buffer, description_buffer_length);
+}
+
+ITAPS_API void
+iGeom_newGeom( const char* options,
+               iGeom_Instance* instance_out,
+               int* err,
+               const int options_size ) 
 {
     // scan options for default engine option
   std::string engine;
@@ -340,13 +560,17 @@ void iGeom_newGeom( const char* options,
     RETURN (iBase_FAILURE);
 
     // return the tagmanager as the instance
+#ifdef ITAPS_SHIM
+  CGMTagManager::instance().vtable = &CGM_iGeom_vtable;
+#endif
   *instance_out = reinterpret_cast<iGeom_Instance>(&CGMTagManager::instance());
   RETURN(iBase_SUCCESS);
 }
 
 
-void
-iGeom_dtor(iGeom_Instance instance, int* err) 
+ITAPS_API void
+iGeom_dtor( iGeom_Instance instance,
+            int* err ) 
 {
   if (NULL == TM) 
     ERROR(iBase_INVALID_ARGUMENT, "NUll Instance");
@@ -368,12 +592,13 @@ iGeom_dtor(iGeom_Instance instance, int* err)
  * @param name Name of the model
  * @param options String options 
  */
-void iGeom_load( iGeom_Instance instance,
-                 /*in*/ const char *name,
-                 /*in*/ const char *options,
-                 int* err,
-                 int name_len,
-                 int options_size )
+ITAPS_API void
+iGeom_load( iGeom_Instance instance,
+            /*in*/ const char *name,
+            /*in*/ const char *options,
+            int* err,
+            int name_len,
+            int options_size )
 {
     // pre-get all entities, so we can filter them out later; use cubit list
     // 'cuz we need to get both volumes and bodies
@@ -465,12 +690,13 @@ void iGeom_load( iGeom_Instance instance,
  * @param name Name of the model
  * @param options String options 
  */
-void iGeom_save (iGeom_Instance instance,
-                 /*in*/ const char *name,
-                 /*in*/ const char* options,
-                 int* err,
-                 int name_len,
-                 int options_len)
+ITAPS_API void
+iGeom_save( iGeom_Instance instance,
+            /*in*/ const char *name,
+            /*in*/ const char* options,
+            int* err,
+            int name_len,
+            int options_len )
 {
     // make sure strings are null terminated
   std::string name_buf(name, name_len);
@@ -535,21 +761,25 @@ void iGeom_save (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void iGeom_getRootSet( iGeom_Instance, iBase_EntitySetHandle* root, int* err )
+ITAPS_API void
+iGeom_getRootSet( iGeom_Instance,
+                  iBase_EntitySetHandle* root,
+                  int* err )
 {
   *root = NULL;
   RETURN(iBase_SUCCESS);
 }
 
 
-void iGeom_getBoundBox( iGeom_Instance,
-                        double* min_x,
-                        double* min_y,
-                        double* min_z,
-                        double* max_x,
-                        double* max_y,
-                        double* max_z,
-                        int* err ) 
+ITAPS_API void
+iGeom_getBoundBox( iGeom_Instance,
+                   double* min_x,
+                   double* min_y,
+                   double* min_z,
+                   double* max_x,
+                   double* max_y,
+                   double* max_z,
+                   int* err ) 
 {
   CubitBox box = GeometryQueryTool::instance()->model_bounding_box();
   *min_x = box.min_x();
@@ -568,24 +798,25 @@ void iGeom_getBoundBox( iGeom_Instance,
  * @param gentity_iterator Iterator initialized by this function
  */
 
-void iGeom_initEntIter ( iGeom_Instance instance,
-                         iBase_EntitySetHandle entity_set_handle,
-                         const int dimension,
-                         iBase_EntityIterator *iterator,
-                         int* err)
+ITAPS_API void
+iGeom_initEntIter( iGeom_Instance instance,
+                   iBase_EntitySetHandle entity_set_handle,
+                   const int dimension,
+                   iBase_EntityIterator *iterator,
+                   int* err )
 {
   iGeom_initEntArrIter( instance, entity_set_handle, dimension, 1, 
                         reinterpret_cast<iBase_EntityArrIterator*>(iterator), 
                         err );
 }
 
-void
-iGeom_initEntArrIter (iGeom_Instance instance,
+ITAPS_API void
+iGeom_initEntArrIter( iGeom_Instance instance,
                       /*in*/ iBase_EntitySetHandle entity_set_handle,
                       /*in*/ int type,
                       /*in*/ int requested_array_size,
                       /*out*/ iBase_EntityArrIterator* entArr_iterator,
-                      int* err)
+                      int* err )
 {
   DLIList<RefEntity*> entities;
   if (RefGroup* group = reinterpret_cast<RefGroup*>(entity_set_handle)) {
@@ -612,13 +843,12 @@ iGeom_initEntArrIter (iGeom_Instance instance,
  * @return If true, there were more gentities, if false, the iterator was
  *         already at the end.
  */
-void
-iGeom_getNextEntIter (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getNextEntIter( iGeom_Instance instance,
                       /*in*/ iBase_EntityIterator gentity_iterator,
                       /*out*/ iBase_EntityHandle *gentity_handle,
                       int* has_data,
-                      int* err
-                      )
+                      int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   RefEntity** out_handle = reinterpret_cast<RefEntity**>(gentity_handle);
@@ -631,15 +861,14 @@ iGeom_getNextEntIter (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getNextEntArrIter(iGeom_Instance instance,
-                        /*in*/ iBase_EntityArrIterator entArr_iterator,
-                        /*inout*/ iBase_EntityHandle **entity_handles,
-                        int *entity_handles_allocated,
-                        int *entity_handles_size,
-                        int* has_data,
-                        int* err
-                        )
+ITAPS_API void
+iGeom_getNextEntArrIter( iGeom_Instance instance,
+                         /*in*/ iBase_EntityArrIterator entArr_iterator,
+                         /*inout*/ iBase_EntityHandle **entity_handles,
+                         int *entity_handles_allocated,
+                         int *entity_handles_size,
+                         int* has_data,
+                         int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(entArr_iterator);
   *has_data = !iterator->at_end();
@@ -655,22 +884,20 @@ iGeom_getNextEntArrIter(iGeom_Instance instance,
  * Reset an iterator back to the first gentity
  * @param gentity_iterator Iterator reset by this function
  */
-void
-iGeom_resetEntIter(iGeom_Instance instance,
-                   /*in*/ iBase_EntityIterator gentity_iterator,
-                   int* err
-                   )
+ITAPS_API void
+iGeom_resetEntIter( iGeom_Instance instance,
+                    /*in*/ iBase_EntityIterator gentity_iterator,
+                    int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   iterator->reset();
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_resetEntArrIter(iGeom_Instance instance,
-                      /*in*/ iBase_EntityArrIterator gentity_iterator,
-                      int* err
-                      )
+ITAPS_API void
+iGeom_resetEntArrIter( iGeom_Instance instance,
+                       /*in*/ iBase_EntityArrIterator gentity_iterator,
+                       int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   iterator->reset();
@@ -681,20 +908,20 @@ iGeom_resetEntArrIter(iGeom_Instance instance,
  * Delete an iterator
  * @param gentity_iterator Iterator deleted by this function
  */
-void
-iGeom_endEntIter (iGeom_Instance instance,
+ITAPS_API void
+iGeom_endEntIter( iGeom_Instance instance,
                   /*in*/ iBase_EntityIterator gentity_iterator,
-                  int* err)
+                  int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   delete iterator;
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_endEntArrIter (iGeom_Instance instance,
+ITAPS_API void
+iGeom_endEntArrIter( iGeom_Instance instance,
                      /*in*/ iBase_EntityArrIterator gentity_iterator,
-                     int* err)
+                     int* err )
 {
   CGMAIterator* iterator = reinterpret_cast<CGMAIterator*>(gentity_iterator);
   delete iterator;
@@ -705,12 +932,12 @@ iGeom_endEntArrIter (iGeom_Instance instance,
  *   Returns true if the gentity_sets are related through a parent/child
  *   relationship.
  */
-void
-iGeom_isChildOf (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isChildOf( iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle parent_entity_set,
                  /*in*/ iBase_EntitySetHandle child_entity_set,
                  int* is_child,
-                 int* err)
+                 int* err )
 {
   std::vector<RefGroup*> *par1, *ch1, *par2, *ch2;
   TM->pc_list(const_cast<RefGroup*>(SET_HANDLE(parent_entity_set)), par1, ch1, false);
@@ -738,14 +965,14 @@ iGeom_isChildOf (iGeom_Instance instance,
  *   Recursively gets the children of this gentity_set up to num_hops
  *   levels; if num_hops is set to -1 all children are returned
  */
-void
-iGeom_getChldn (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getChldn( iGeom_Instance instance,
                 /*in*/ iBase_EntitySetHandle from_entity_set,
                 /*in*/ const int num_hops,
                 /*inout*/ iBase_EntitySetHandle** entity_set_handles,
                 int* entity_set_handles_allocated,
                 int* entity_set_handles_size,
-                int* err)
+                int* err )
 {
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
@@ -762,14 +989,14 @@ iGeom_getChldn (iGeom_Instance instance,
  *   Recursively gets the parents of this gentity_set up to num_hops
  *   levels; if num_hops is set to -1 all parents are returned
  */
-void
-iGeom_getPrnts (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getPrnts( iGeom_Instance instance,
                 /*in*/ iBase_EntitySetHandle from_entity_set,
                 /*in*/ const int num_hops,
                 /*inout*/ iBase_EntitySetHandle **entity_set_handles,
                 int *entity_set_handles_allocated,
                 int *entity_set_handles_size,
-                int* err)
+                int* err )
 {
   std::vector<RefGroup*> group_ptrs;
   const RefGroup *this_grp = SET_HANDLE(from_entity_set);
@@ -785,12 +1012,12 @@ iGeom_getPrnts (iGeom_Instance instance,
  *   Returns the number of immediate children in the gentity_set (one
  *   level down only)
  */
-void
-iGeom_getNumChld (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getNumChld( iGeom_Instance instance,
                   /*in*/ iBase_EntitySetHandle entity_set,
                   /*in*/ const int num_hops,
                   int* num_child, 
-                  int* err)
+                  int* err )
 {
     // HJK: num_hops has to be handled
   if (0 < num_hops) {
@@ -806,12 +1033,12 @@ iGeom_getNumChld (iGeom_Instance instance,
  *   Returns the number of immediate parents to the gentity_set (one
  *   level up only)
  */
-void
-iGeom_getNumPrnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getNumPrnt( iGeom_Instance instance,
                   /*in*/ iBase_EntitySetHandle entity_set,
                   /*in*/ const int num_hops,
                   int* num_parent,
-                  int* err)
+                  int* err )
 {
     // HJK: num_hops has to be handled
   if (0 < num_hops) {
@@ -826,11 +1053,11 @@ iGeom_getNumPrnt (iGeom_Instance instance,
 /**
  *   Add a parent to the gentity_set 
  */
-void
-iGeom_addPrntChld (iGeom_Instance instance,
+ITAPS_API void
+iGeom_addPrntChld( iGeom_Instance instance,
                    /*inout*/ iBase_EntitySetHandle parent_entity_set,
                    /*inout*/ iBase_EntitySetHandle child_entity_set,
-                   int* err)
+                   int* err )
 {
   std::vector<RefGroup*> *my_parents = 
     TM->pc_list(SET_HANDLE(child_entity_set), 0, true);
@@ -846,11 +1073,11 @@ iGeom_addPrntChld (iGeom_Instance instance,
 /**
  *   Remove a parent/child link between gentity_sets
  */
-void
-iGeom_rmvPrntChld (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvPrntChld( iGeom_Instance instance,
                    /*inout*/ iBase_EntitySetHandle parent_entity_set,
                    /*inout*/ iBase_EntitySetHandle child_entity_set,
-                   int* err)
+                   int* err )
 {
   RefGroup *parent = reinterpret_cast<RefGroup *>(parent_entity_set);
   RefGroup *child = reinterpret_cast<RefGroup *>(child_entity_set);
@@ -871,14 +1098,14 @@ iGeom_rmvPrntChld (iGeom_Instance instance,
  * @param gentity_dimension Dimension of entities being queried
  * @param gentity_handles Entity handles
  */
-void
-iGeom_getEntities (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntities( iGeom_Instance instance,
                    /*in*/ iBase_EntitySetHandle set_handle,
                    /*in*/ int gentity_type,
                    /*out*/ iBase_EntityHandle **gentity_handles,
                    int *gentity_handles_allocated,
                    int *gentity_handles_size,
-                   int* err)
+                   int* err )
 {
   if (RefGroup *this_set = SET_HANDLE(set_handle)) {
     static DLIList<CubitEntity*> centities;
@@ -910,12 +1137,12 @@ iGeom_getEntities (iGeom_Instance instance,
  * @param gentity_dimension Dimension of entities being queried
  * @return Number of entities
  */
-void
-iGeom_getNumOfType (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getNumOfType( iGeom_Instance instance,
                     /*in*/ iBase_EntitySetHandle set_handle,
                     /*in*/ int gentity_type,
                     int* count,
-                    int* err)
+                    int* err )
 {
   const RefGroup *this_set = SET_HANDLE(set_handle);
   if (0 == this_set) {
@@ -952,11 +1179,11 @@ iGeom_getNumOfType (iGeom_Instance instance,
   }
 }
 
-void
-iGeom_getEntType (iGeom_Instance instance, 
+ITAPS_API void
+iGeom_getEntType( iGeom_Instance instance, 
                   iBase_EntityHandle handle,
                   int* gtype,
-                  int* err)
+                  int* err )
 {
   RefEntity* entity = reinterpret_cast<RefEntity*>(handle);
   if (dynamic_cast<Body*>(entity))
@@ -970,14 +1197,14 @@ iGeom_getEntType (iGeom_Instance instance,
  *    Returns an integer array of topological dimensions for an input
  *    array of entity handles.
  */
-void
-iGeom_getArrType (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrType( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle const *gentity_handles,
                   int gentity_handles_size,
                   /*inout*/ int **gtype,
                   int *gtype_allocated,
                   int *gtype_size, 
-                  int* err)
+                  int* err )
 {
     // go through each entity and look up its dimension
   ALLOC_CHECK_ARRAY_NOFAIL(gtype, gentity_handles_size);
@@ -1000,14 +1227,14 @@ iGeom_getArrType (iGeom_Instance instance,
  * @param to_dimension Target dimension of adjacent entities
  * @param adj_gentities List returned with adjacent entities
  */
-void
-iGeom_getEntAdj (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntAdj( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle gentity_handle,
                  /*in*/int to_dimension,
                  /*inout*/ iBase_EntityHandle **adj_gentities,
                  int *adj_gentities_allocated,
                  int *adj_gentities_size,
-                 int* err)
+                 int* err )
 {
   const RefEntity *tmp_hndl = ENTITY_HANDLE(gentity_handle);
 
@@ -1024,18 +1251,18 @@ iGeom_getEntAdj (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getArrAdj(iGeom_Instance instance,
-                /*in*/ iBase_EntityHandle const *entity_handles,
-                const int entity_handles_size,
-                /*in*/ int requested_entity_type,
-                /*inout*/ iBase_EntityHandle **adj_entity_handles,
-                int *adj_entity_handles_allocated,
-                int *adj_entity_handles_size,
-                /*inout*/ int **offset,
-                int *offset_allocated,
-                int *offset_size,
-                int* err)
+ITAPS_API void
+iGeom_getArrAdj( iGeom_Instance instance,
+                 /*in*/ iBase_EntityHandle const *entity_handles,
+                 const int entity_handles_size,
+                 /*in*/ int requested_entity_type,
+                 /*inout*/ iBase_EntityHandle **adj_entity_handles,
+                 int *adj_entity_handles_allocated,
+                 int *adj_entity_handles_size,
+                 /*inout*/ int **offset,
+                 int *offset_allocated,
+                 int *offset_size,
+                 int* err )
 {
   ALLOC_CHECK_ARRAY(offset, entity_handles_size+1);
   DLIList<RefEntity*> temp_list, total_list;
@@ -1066,15 +1293,15 @@ iGeom_getArrAdj(iGeom_Instance instance,
  * @param bridge_dimension Dimension of "bridge" entities
  * @param adj_gentities List returned with 2nd order adjacent entities
  */
-void
-iGeom_getEnt2ndAdj (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEnt2ndAdj( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle gentity_handle,
                     /*in*/ int bridge_dimension,
                     /*in*/ int to_dimension,
                     /*out*/ iBase_EntityHandle **adjacent_gentities,
                     int *adjacent_gentities_allocated,
                     int *adjacent_gentities_size,
-                    int* err)
+                    int* err )
 {
     // for better or worse, go to cgm as quickly as possible, to avoid working with
     // sidl arrays
@@ -1100,19 +1327,19 @@ iGeom_getEnt2ndAdj (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getArr2ndAdj(iGeom_Instance instance,
-                   /*in*/ iBase_EntityHandle const *entity_handles,
-                   int entity_handles_size,
-                   /*in*/ int order_adjacent_key,
-                   /*in*/ int requested_entity_type,
-                   /*inout*/ iBase_EntityHandle **adj_entity_handles,
-                   int *adj_entity_handles_allocated,
-                   int *adj_entity_handles_size,
-                   /*inout*/ int **offset,
-                   int *offset_allocated,
-                   int *offset_size,
-                   int *err)
+ITAPS_API void
+iGeom_getArr2ndAdj( iGeom_Instance instance,
+                    /*in*/ iBase_EntityHandle const *entity_handles,
+                    int entity_handles_size,
+                    /*in*/ int order_adjacent_key,
+                    /*in*/ int requested_entity_type,
+                    /*inout*/ iBase_EntityHandle **adj_entity_handles,
+                    int *adj_entity_handles_allocated,
+                    int *adj_entity_handles_size,
+                    /*inout*/ int **offset,
+                    int *offset_allocated,
+                    int *offset_size,
+                    int *err )
 {
   ALLOC_CHECK_ARRAY(offset, entity_handles_size+1);
   DLIList<RefEntity*> bridge_list, temp_list, entity_list, total_list;
@@ -1147,12 +1374,12 @@ iGeom_getArr2ndAdj(iGeom_Instance instance,
  * @param gentity_handle2 2nd entity
  * @param are_adjacent If true, entities are adjacent
  */
-void
-iGeom_isEntAdj (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isEntAdj( iGeom_Instance instance,
                 /*in*/ iBase_EntityHandle gentity_handle1,
                 /*in*/ iBase_EntityHandle gentity_handle2,
                 /*out*/ int *are_adjacent,
-                int* err)
+                int* err )
 {
   const TopologyEntity *ent1 = dynamic_cast<const TopologyEntity*>(ENTITY_HANDLE(gentity_handle1));
   const TopologyEntity *ent2 = dynamic_cast<const TopologyEntity*>(ENTITY_HANDLE(gentity_handle2));
@@ -1162,8 +1389,8 @@ iGeom_isEntAdj (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_isArrAdj (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isArrAdj( iGeom_Instance instance,
                 /*in*/ iBase_EntityHandle const *entity_handles_1,
                 int entity_handles_1_size,
                 /*in*/ iBase_EntityHandle const *entity_handles_2,
@@ -1171,7 +1398,7 @@ iGeom_isArrAdj (iGeom_Instance instance,
                 /*inout*/ int **is_adjacent_info,
                 int *is_adjacent_info_allocated,
                 int *is_adjacent_info_size,
-                int* err)
+                int* err )
 {
   RefEntity **list_1_iter = (RefEntity**)entity_handles_1, 
     **list_2_iter = (RefEntity**)entity_handles_2;
@@ -1209,10 +1436,10 @@ iGeom_isArrAdj (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getTopoLevel (iGeom_Instance instance,
-                     /*out*/ int* level,
-                     int* err)
+ITAPS_API void
+iGeom_getTopoLevel( iGeom_Instance instance,
+                    /*out*/ int* level,
+                    int* err )
 {
   *level = 2; // 0->basic entities only, 1->manifold, 2->non-manifold
   RETURN(iBase_SUCCESS);
@@ -1228,14 +1455,14 @@ iGeom_getTopoLevel (iGeom_Instance instance,
  *   functions defined later.  The implementation is assumed to
  *   allocate memory as needed to store the tag data.
  */
-void
-iGeom_createTag (iGeom_Instance instance,
+ITAPS_API void
+iGeom_createTag( iGeom_Instance instance,
                  /*in*/ const char *tag_name,
                  /*in*/ int tag_size,
                  /*in*/ int tag_type,
                  /*out*/ iBase_TagHandle *tag_handle,
                  int* err,
-                 int tag_name_len)
+                 int tag_name_len )
 {
   long new_tag;
   int this_size = tag_size;
@@ -1277,11 +1504,11 @@ iGeom_createTag (iGeom_Instance instance,
  *   implementation does not support the requested deletion mechanism,
  *   an error will be returned.
  */
-void
-iGeom_destroyTag (iGeom_Instance instance,
+ITAPS_API void
+iGeom_destroyTag( iGeom_Instance instance,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ int forced,
-                  int* err)
+                  int* err )
 {
   iBase_ErrorType retval = TM->destroyTag(TAG_HANDLE(tag_handle), forced);
   RETURN(retval);
@@ -1290,12 +1517,12 @@ iGeom_destroyTag (iGeom_Instance instance,
 /**
  *   Get the tag name associated with a given tag handle.
  */
-void
-iGeom_getTagName (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTagName( iGeom_Instance instance,
                   /*in*/ iBase_TagHandle tag_handle,
                   char* name,
                   int* err,
-                  int name_len)
+                  int name_len )
 {
   const char* name_ptr = TM->getTagName(TAG_HANDLE(tag_handle));
   int len = strlen(name_ptr) + 1;
@@ -1308,11 +1535,11 @@ iGeom_getTagName (iGeom_Instance instance,
 /**
  *   Get the size of the data associated with a given tag handle.
  */
-void
-iGeom_getTagSizeValues (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTagSizeValues( iGeom_Instance instance,
                         /*in*/ iBase_TagHandle tag_handle,
                         int* tag_size,
-                        int* err)
+                        int* err )
 {
   *tag_size = TM->getTagSize(TAG_HANDLE(tag_handle));
   int type;
@@ -1339,21 +1566,21 @@ iGeom_getTagSizeValues (iGeom_Instance instance,
 /**
  *   Get the size of the data associated with a given tag handle.
  */
-void
-iGeom_getTagSizeBytes (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTagSizeBytes( iGeom_Instance instance,
                        /*in*/ iBase_TagHandle tag_handle,
                        int* tag_size,
-                       int* err)
+                       int* err )
 {
   *tag_size = TM->getTagSize(TAG_HANDLE(tag_handle));
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getTagType (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTagType( iGeom_Instance instance,
                   /*in*/ iBase_TagHandle tag_handle,
                   int* type,
-                  int* err)
+                  int* err )
 {
   *type = TM->getTagType(TAG_HANDLE(tag_handle));
   RETURN(iBase_SUCCESS);
@@ -1362,12 +1589,12 @@ iGeom_getTagType (iGeom_Instance instance,
 /**
  *     Get the tag handle associated with a given string name.
  */
-void
-iGeom_getTagHandle (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTagHandle( iGeom_Instance instance,
                     /*in*/ const char *tag_name,
                     iBase_TagHandle* tag_handle,
                     int* err,
-                    int tag_name_len)
+                    int tag_name_len )
 {
     // make sure string is null-terminated
   std::string tag_name_buf( tag_name, tag_name_len );
@@ -1378,12 +1605,12 @@ iGeom_getTagHandle (iGeom_Instance instance,
   iGeom_getErrorType(instance, err);
 }
 
-void
-iGeom_rmvArrTag (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvArrTag( iGeom_Instance instance,
                  const iBase_EntityHandle *entity_handles,
                  int entity_handles_size,
                  iBase_TagHandle tag_handle,
-                 int* err) 
+                 int* err )
 {
   RefEntity *const *tmp_entity_handles = reinterpret_cast<RefEntity*const *>(entity_handles);  
   iBase_ErrorType retval = TM->rmvArrTag(tmp_entity_handles, entity_handles_size, TAG_HANDLE(tag_handle));
@@ -1396,11 +1623,11 @@ iGeom_rmvArrTag (iGeom_Instance instance,
  *   this call, but can be deleted later using the deleteTag function
  *   defined above.
  */
-void
-iGeom_rmvTag (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvTag( iGeom_Instance instance,
               /*in*/ iBase_EntityHandle entity_handle,
               /*in*/ iBase_TagHandle tag_handle,
-              int* err)
+              int* err )
 {
   RefEntity *tmp_entity = ENTITY_HANDLE(entity_handle);
   iBase_ErrorType retval = TM->rmvArrTag(&tmp_entity, 1, TAG_HANDLE(tag_handle));
@@ -1410,28 +1637,28 @@ iGeom_rmvTag (iGeom_Instance instance,
 /**
  *   Get all tag handles associated with a given gentity.
  */
-void
-iGeom_getAllTags (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getAllTags( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle entity_handle,
                   /*inout*/ iBase_TagHandle **tag_handles,
                   int *tag_handles_allocated,
                   int *tag_handles_size,
-                  int* err)
+                  int* err )
 {
   iBase_ErrorType retval = TM->getAllTags(SET_HANDLE(entity_handle), 
                                           TAG_HANDLE_ARRAY_INOUT(tag_handles));
   RETURN(retval);
 }
 
-void
-iGeom_getArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrData( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle const *entity_handles,
                   int entity_handles_size,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*inout*/ void **tag_value_tmp,
                   int *tag_value_allocated,
                   int *tag_value_size,
-                  int* err)
+                  int* err )
 {
   char **tag_value = reinterpret_cast<char**>(tag_value_tmp);
   iBase_ErrorType retval = TM->getArrData(reinterpret_cast<RefEntity*const*>(entity_handles),
@@ -1442,15 +1669,15 @@ iGeom_getArrData (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getIntArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getIntArrData( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles,
                      int entity_handles_size,
                      /*in*/ iBase_TagHandle tag_handle,
                      /*inout*/ int **tag_value,
                      int *tag_value_allocated,
                      int *tag_value_size,
-                     int* err)
+                     int* err )
 {
   int tag_value_allocated_tmp = *tag_value_allocated * sizeof(int);
   int tag_value_size_tmp = *tag_value_size * sizeof(int);
@@ -1465,15 +1692,15 @@ iGeom_getIntArrData (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getDblArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getDblArrData( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles,
                      int entity_handles_size,
                      /*in*/ iBase_TagHandle tag_handle,
                      /*inout*/ double **tag_value,
                      int *tag_value_allocated,
                      int *tag_value_size,
-                     int* err)
+                     int* err )
 {
   int tag_value_allocated_tmp = *tag_value_allocated * sizeof(double);
   int tag_value_size_tmp = *tag_value_size * sizeof(double);
@@ -1487,15 +1714,15 @@ iGeom_getDblArrData (iGeom_Instance instance,
   *tag_value_size = tag_value_size_tmp / sizeof(double);
 }
 
-void
-iGeom_getEHArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEHArrData( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *entity_handles,
                     int entity_handles_size,
                     /*in*/ iBase_TagHandle tag_handle,
                     /*inout*/ iBase_EntityHandle **tag_value,
                     int *tag_value_allocated,
                     int *tag_value_size,
-                    int* err)
+                    int* err )
 {
   int tag_value_allocated_tmp = *tag_value_allocated * sizeof(iBase_EntityHandle);
   int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntityHandle);
@@ -1509,15 +1736,15 @@ iGeom_getEHArrData (iGeom_Instance instance,
   *tag_value_size = tag_value_size_tmp / sizeof(iBase_EntityHandle);
 }
 
-void
-iGeom_getESHArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getESHArrData( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles,
                      int entity_handles_size,
                      /*in*/ iBase_TagHandle tag_handle,
                      /*inout*/ iBase_EntitySetHandle **tag_value,
                      int *tag_value_allocated,
                      int *tag_value_size,
-                     int* err)
+                     int* err )
 {
   int tag_value_allocated_tmp = *tag_value_allocated * sizeof(iBase_EntitySetHandle);
   int tag_value_size_tmp = *tag_value_size * sizeof(iBase_EntitySetHandle);
@@ -1531,14 +1758,14 @@ iGeom_getESHArrData (iGeom_Instance instance,
   *tag_value_size = tag_value_size_tmp / sizeof(iBase_EntitySetHandle);
 }
 
-void
-iGeom_setArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setArrData( iGeom_Instance instance,
                   const iBase_EntityHandle *entity_handles,
                   int entity_handles_size,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ const void *tag_value_tmp,
                   const int tag_value_size,
-                  int* err)
+                  int* err )
 {
   const char *tag_value = reinterpret_cast<const char*>(tag_value_tmp);
   iBase_ErrorType retval = TM->setArrData(ENTITY_HANDLE_CONST_ARRAY(entity_handles),
@@ -1548,42 +1775,42 @@ iGeom_setArrData (iGeom_Instance instance,
   RETURN(retval);
 }
 
-void
-iGeom_setIntArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setIntArrData( iGeom_Instance instance,
                      const iBase_EntityHandle *entity_handles,
                      int entity_handles_size,
                      iBase_TagHandle tag_handle,
                      const int *tag_value,
                      int tag_value_size,
-                     int* err)
+                     int* err )
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
                    tag_value, sizeof(int)*tag_value_size, err);
 }
 
-void
-iGeom_setDblArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setDblArrData( iGeom_Instance instance,
                      const iBase_EntityHandle *entity_handles,
                      int entity_handles_size,
                      iBase_TagHandle tag_handle,
                      const double *tag_value,
                      int tag_value_size,
-                     int* err)
+                     int* err )
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
                    tag_value, sizeof(double)*tag_value_size, err);
 }
 
-void
-iGeom_setEHArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEHArrData( iGeom_Instance instance,
                     const iBase_EntityHandle *entity_handles,
                     int entity_handles_size,
                     iBase_TagHandle tag_handle,
                     iBase_EntityHandle const *tag_values,
                     int tag_values_size,
-                    int* err)
+                    int* err )
 {
   iGeom_setArrData(instance, entity_handles, 
                    entity_handles_size, tag_handle, 
@@ -1591,14 +1818,14 @@ iGeom_setEHArrData (iGeom_Instance instance,
                    err);
 }
 
-void
-iGeom_setESHArrData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setESHArrData( iGeom_Instance instance,
                      const iBase_EntityHandle *entity_handles,
                      int entity_handles_size,
                      iBase_TagHandle tag_handle,
                      iBase_EntitySetHandle const *tag_values,
                      int tag_values_size,
-                     int* err)
+                     int* err )
 {
   iGeom_setArrData(instance, entity_handles,
                    entity_handles_size, tag_handle,
@@ -1610,14 +1837,14 @@ iGeom_setESHArrData (iGeom_Instance instance,
  *   Allows the user to retrieve an array of tag values associated with
  *   a tag handle from an input array of gentity handles
  */
-void
-iGeom_getData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getData( iGeom_Instance instance,
                /*in*/ iBase_EntityHandle entity_handle,
                /*in*/ iBase_TagHandle tag_handle,
                /*inout*/ void **tag_value_tmp,
                int *tag_value_allocated,
                int *tag_value_size,
-               int* err)
+               int* err )
 {
   char **tag_value = reinterpret_cast<char **>(tag_value_tmp);
   RefEntity *tmp_entity = ENTITY_HANDLE(entity_handle);
@@ -1626,8 +1853,8 @@ iGeom_getData (iGeom_Instance instance,
   RETURN(retval);
 }
 
-void
-iGeom_getIntData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getIntData( iGeom_Instance instance,
                   iBase_EntityHandle entity_handle,
                   iBase_TagHandle tag_handle,
                   int* data_out,
@@ -1639,8 +1866,8 @@ iGeom_getIntData (iGeom_Instance instance,
                    tag_handle, &val_ptr, &val_size, &val_size, err);
 }
 
-void
-iGeom_getDblData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getDblData( iGeom_Instance instance,
                   iBase_EntityHandle entity_handle,
                   iBase_TagHandle tag_handle,
                   double* data_out,
@@ -1652,8 +1879,8 @@ iGeom_getDblData (iGeom_Instance instance,
                    tag_handle, &val_ptr, &val_size, &val_size, err);
 }
 
-void
-iGeom_getEHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEHData( iGeom_Instance instance,
                  iBase_EntityHandle entity_handle,
                  iBase_TagHandle tag_handle,
                  iBase_EntityHandle* data_out,
@@ -1665,8 +1892,8 @@ iGeom_getEHData (iGeom_Instance instance,
                    tag_handle, &val_ptr, &val_size, &val_size, err);
 }
 
-void
-iGeom_getESHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getESHData( iGeom_Instance instance,
                   iBase_EntityHandle entity_handle,
                   iBase_TagHandle tag_handle,
                   iBase_EntitySetHandle* data_out,
@@ -1682,13 +1909,13 @@ iGeom_getESHData (iGeom_Instance instance,
  *   Allows the user to set the tag data values on an array of gentity
  *   handles
  */
-void
-iGeom_setData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setData( iGeom_Instance instance,
                /*in*/ iBase_EntityHandle entity_handle,
                /*in*/ iBase_TagHandle tag_handle,
                /*in*/ const void *tag_value_tmp,
                int tag_value_size,
-               int* err)
+               int* err )
 {
   const char *tag_value = reinterpret_cast<const char *>(tag_value_tmp);
   RefEntity *tmp_entity = ENTITY_HANDLE(entity_handle);
@@ -1698,8 +1925,8 @@ iGeom_setData (iGeom_Instance instance,
   RETURN(retval);
 }
 
-void
-iGeom_setIntData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setIntData( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle entity_handle,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ int tag_value,
@@ -1709,8 +1936,8 @@ iGeom_setIntData (iGeom_Instance instance,
                    tag_handle, &tag_value, sizeof(int), err);
 }
 
-void
-iGeom_setDblData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setDblData( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle entity_handle,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ double tag_value,
@@ -1720,8 +1947,8 @@ iGeom_setDblData (iGeom_Instance instance,
                    tag_handle, &tag_value, sizeof(double), err);
 }
 
-void
-iGeom_setEHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEHData( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle entity_handle,
                  /*in*/ iBase_TagHandle tag_handle,
                  /*in*/ iBase_EntityHandle tag_value,
@@ -1731,8 +1958,8 @@ iGeom_setEHData (iGeom_Instance instance,
                    tag_handle, &tag_value, sizeof(iBase_EntityHandle), err);
 }
 
-void
-iGeom_setESHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setESHData( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle entity_handle,
                   /*in*/ iBase_TagHandle tag_handle,
                   /*in*/ iBase_EntitySetHandle tag_value,
@@ -1747,11 +1974,11 @@ iGeom_setESHData (iGeom_Instance instance,
  *   gentity_set.  The tag data is not destroyed in this function, but
  *   can be destroyed using the deleteTag function.
  */
-void
-iGeom_rmvEntSetTag (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvEntSetTag( iGeom_Instance instance,
                     /*in*/ iBase_EntitySetHandle entity_set,
                     /*in*/ iBase_TagHandle tag_handle,
-                    int* err)
+                    int* err )
 {
     // have to go through RefEntity* so that RefEntity** gets set right
   RefEntity *tmp_entity = SET_HANDLE(entity_set);
@@ -1762,13 +1989,13 @@ iGeom_rmvEntSetTag (iGeom_Instance instance,
 /**
  *   Get all tag handles associated with a given mesh or gentity_set.
  */
-void
-iGeom_getAllEntSetTags (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getAllEntSetTags( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*inout*/ iBase_TagHandle **tag_handles,
                         int *tag_handles_allocated,
                         int *tag_handles_size,
-                        int* err)
+                        int* err )
 {
     // have to go through RefEntity* so that RefEntity** gets set right
   const RefEntity *tmp_entity = SET_HANDLE(entity_set);
@@ -1782,14 +2009,14 @@ iGeom_getAllEntSetTags (iGeom_Instance instance,
  *   allocated by the application before being passed into the getTag
  *   function.
  */
-void
-iGeom_getEntSetData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSetData( iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
                      /*in*/ iBase_TagHandle tag_handle,
                      /*inout*/ void **tag_value_tmp,
                      int *tag_value_allocated,
                      int *tag_value_size,
-                     int* err)
+                     int* err )
 {
   char **tag_value = reinterpret_cast<char **>(tag_value_tmp);
     // have to go through RefEntity* so that RefEntity** gets set right
@@ -1799,8 +2026,8 @@ iGeom_getEntSetData (iGeom_Instance instance,
   RETURN(retval);
 }
 
-void
-iGeom_getEntSetIntData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSetIntData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         int* tag_ptr,
@@ -1812,8 +2039,8 @@ iGeom_getEntSetIntData (iGeom_Instance instance,
                       &tag_size, &tag_size, err);
 }
 
-void
-iGeom_getEntSetDblData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSetDblData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         double* tag_ptr,
@@ -1825,8 +2052,8 @@ iGeom_getEntSetDblData (iGeom_Instance instance,
                       &tag_size, &tag_size, err);
 }
 
-void
-iGeom_getEntSetEHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSetEHData( iGeom_Instance instance,
                        /*in*/ iBase_EntitySetHandle entity_set,
                        /*in*/ iBase_TagHandle tag_handle,
                        iBase_EntityHandle* tag_ptr,
@@ -1838,8 +2065,8 @@ iGeom_getEntSetEHData (iGeom_Instance instance,
                       &tag_size, &tag_size, err);
 }
 
-void
-iGeom_getEntSetESHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSetESHData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         iBase_EntitySetHandle* tag_ptr,
@@ -1855,13 +2082,13 @@ iGeom_getEntSetESHData (iGeom_Instance instance,
  *   Set the tag data associated with a given tag handle on the mesh or
  *   gentity_set
  */
-void
-iGeom_setEntSetData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEntSetData( iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
                      /*in*/ iBase_TagHandle tag_handle,
                      /*in*/ const void *tag_value_tmp,
                      int tag_value_size,
-                     int* err)
+                     int* err )
 {
   const char *tag_value = reinterpret_cast<const char *>(tag_value_tmp);
     // have to go through RefEntity* so that RefEntity** gets set right
@@ -1871,8 +2098,8 @@ iGeom_setEntSetData (iGeom_Instance instance,
   RETURN(retval);
 }
 
-void
-iGeom_setEntSetIntData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEntSetIntData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         /*in*/ int tag_value,
@@ -1882,8 +2109,8 @@ iGeom_setEntSetIntData (iGeom_Instance instance,
                       &tag_value, sizeof(int), err);
 }
 
-void
-iGeom_setEntSetDblData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEntSetDblData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         /*in*/ double tag_value,
@@ -1893,8 +2120,8 @@ iGeom_setEntSetDblData (iGeom_Instance instance,
                       &tag_value, sizeof(double), err);
 }
 
-void
-iGeom_setEntSetEHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEntSetEHData( iGeom_Instance instance,
                        /*in*/ iBase_EntitySetHandle entity_set,
                        /*in*/ iBase_TagHandle tag_handle,
                        /*in*/ iBase_EntityHandle tag_value,
@@ -1905,8 +2132,8 @@ iGeom_setEntSetEHData (iGeom_Instance instance,
                       sizeof(iBase_EntityHandle), err);
 }
 
-void
-iGeom_setEntSetESHData (iGeom_Instance instance,
+ITAPS_API void
+iGeom_setEntSetESHData( iGeom_Instance instance,
                         /*in*/ iBase_EntitySetHandle entity_set,
                         /*in*/ iBase_TagHandle tag_handle,
                         /*in*/ iBase_EntitySetHandle tag_value,
@@ -1916,16 +2143,16 @@ iGeom_setEntSetESHData (iGeom_Instance instance,
                       &tag_value, sizeof(iBase_EntitySetHandle), err);
 }
 
-void
-iGeom_getEntClosestPt(iGeom_Instance instance,
-                      /*in*/ iBase_EntityHandle entity_handle,
-                      /*in*/ double near_x,
-                      /*in*/ double near_y,
-                      /*in*/ double near_z,
-                      /*out*/ double* on_x,
-                      /*out*/ double* on_y, 
-                      /*out*/ double* on_z,
-                      int* err)
+ITAPS_API void
+iGeom_getEntClosestPt( iGeom_Instance instance,
+                       /*in*/ iBase_EntityHandle entity_handle,
+                       /*in*/ double near_x,
+                       /*in*/ double near_y,
+                       /*in*/ double near_z,
+                       /*out*/ double* on_x,
+                       /*out*/ double* on_y, 
+                       /*out*/ double* on_z,
+                       int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   CubitVector on, near(near_x, near_y, near_z);
@@ -1937,15 +2164,16 @@ iGeom_getEntClosestPt(iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void iGeom_getEntClosestPtTrimmed( iGeom_Instance instance,
-                                   iBase_EntityHandle entity_handle,
-                                   double near_x,
-                                   double near_y,
-                                   double near_z,
-                                   double* on_x,
-                                   double* on_y,
-                                   double* on_z,
-                                   int* err )
+ITAPS_API void
+iGeom_getEntClosestPtTrimmed( iGeom_Instance instance,
+                              iBase_EntityHandle entity_handle,
+                              double near_x,
+                              double near_y,
+                              double near_z,
+                              double* on_x,
+                              double* on_y,
+                              double* on_z,
+                              int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   CubitVector on, near(near_x, near_y, near_z);
@@ -1965,8 +2193,8 @@ void iGeom_getEntClosestPtTrimmed( iGeom_Instance instance,
  * @param near_coordinates Input coordinates
  * @param on_coordinates Closest point on gentity
  */
-void
-iGeom_getArrClosestPt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrClosestPt( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle const *gentity_handles,
                        int gentity_handles_size,
                        /*in*/ int storage_order,
@@ -1975,7 +2203,7 @@ iGeom_getArrClosestPt (iGeom_Instance instance,
                        /*out*/ double **on_coordinates,
                        int *on_coordinates_allocated,
                        int *on_coordinates_size,
-                       int* err)
+                       int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2053,19 +2281,19 @@ iGeom_getArrClosestPt (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getEntNrmlPlXYZ(iGeom_Instance instance,
-                      /*in*/ iBase_EntityHandle entity_handle,
-                      /*in*/ double x,
-                      /*in*/ double y,
-                      /*in*/ double z,
-                      /*out*/ double* pt_x,
-                      /*out*/ double* pt_y, 
-                      /*out*/ double* pt_z,
-                      /*out*/ double* nmrl_i,
-                      /*out*/ double* nmrl_j, 
-                      /*out*/ double* nmrl_k,
-                      int* err)
+ITAPS_API void
+iGeom_getEntNrmlPlXYZ( iGeom_Instance instance,
+                       /*in*/ iBase_EntityHandle entity_handle,
+                       /*in*/ double x,
+                       /*in*/ double y,
+                       /*in*/ double z,
+                       /*out*/ double* pt_x,
+                       /*out*/ double* pt_y, 
+                       /*out*/ double* pt_z,
+                       /*out*/ double* nmrl_i,
+                       /*out*/ double* nmrl_j, 
+                       /*out*/ double* nmrl_k,
+                       int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   CubitVector pt, nmrl, near(x, y, z);
@@ -2087,8 +2315,8 @@ iGeom_getEntNrmlPlXYZ(iGeom_Instance instance,
  * @param near_coordinates Input coordinates
  * @param on_coordinates Closest point on gentity
  */
-void
-iGeom_getArrNrmlPlXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrNrmlPlXYZ( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle const *gentity_handles,
                        const int gentity_handles_size,
                        /*in*/ int storage_order,
@@ -2100,7 +2328,7 @@ iGeom_getArrNrmlPlXYZ (iGeom_Instance instance,
                        /*out*/ double **normals,
                        int *normals_allocated,
                        int *normals_size,
-                       int* err)
+                       int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2190,8 +2418,8 @@ iGeom_getArrNrmlPlXYZ (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntNrmlXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntNrmlXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double near_x,
                      /*in*/ double near_y,
@@ -2199,7 +2427,7 @@ iGeom_getEntNrmlXYZ (iGeom_Instance instance,
                      /*out*/ double* nmrl_i,
                      /*out*/ double* nmrl_j, 
                      /*out*/ double* nmrl_k,
-                     int* err)
+                     int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -2221,8 +2449,8 @@ iGeom_getEntNrmlXYZ (iGeom_Instance instance,
  * @param coordinates Input coordinates, interleaved
  * @param normals The normals at the specified points, interleaved
  */
-void
-iGeom_getArrNrmlXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrNrmlXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
                      int storage_order,
@@ -2231,7 +2459,7 @@ iGeom_getArrNrmlXYZ (iGeom_Instance instance,
                      /*out*/ double **normals,
                      int *normals_allocated,
                      int *normals_size,
-                     int* err)
+                     int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2310,8 +2538,8 @@ iGeom_getArrNrmlXYZ (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getEntTgntXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntTgntXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double x,
                      /*in*/ double y,
@@ -2319,7 +2547,7 @@ iGeom_getEntTgntXYZ (iGeom_Instance instance,
                      /*out*/ double* tgnt_i,
                      /*out*/ double* tgnt_j, 
                      /*out*/ double* tgnt_k,
-                     int* err)
+                     int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -2341,8 +2569,8 @@ iGeom_getEntTgntXYZ (iGeom_Instance instance,
  * @param coordinates Input coordinates, interleaved
  * @param tangents The tangents at the specified points, interleaved
  */
-void
-iGeom_getArrTgntXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrTgntXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
                      /*in*/ int storage_order,
@@ -2351,7 +2579,7 @@ iGeom_getArrTgntXYZ (iGeom_Instance instance,
                      /*out*/ double **tangents,
                      int *tangents_allocated,
                      int *tangents_size,
-                     int* err)
+                     int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2431,19 +2659,19 @@ iGeom_getArrTgntXYZ (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getFcCvtrXYZ(iGeom_Instance instance,
-                   /*in*/ iBase_EntityHandle face_handle,
-                   /*in*/ double x,
-                   /*in*/ double y,
-                   /*in*/ double z,
-                   /*out*/ double* cvtr1_i,
-                   /*out*/ double* cvtr1_j,
-                   /*out*/ double* cvtr1_k,
-                   /*out*/ double* cvtr2_i,
-                   /*out*/ double* cvtr2_j,
-                   /*out*/ double* cvtr2_k,
-                   int* err)
+ITAPS_API void
+iGeom_getFcCvtrXYZ( iGeom_Instance instance,
+                    /*in*/ iBase_EntityHandle face_handle,
+                    /*in*/ double x,
+                    /*in*/ double y,
+                    /*in*/ double z,
+                    /*out*/ double* cvtr1_i,
+                    /*out*/ double* cvtr1_j,
+                    /*out*/ double* cvtr1_k,
+                    /*out*/ double* cvtr2_i,
+                    /*out*/ double* cvtr2_j,
+                    /*out*/ double* cvtr2_k,
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)face_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -2462,16 +2690,16 @@ iGeom_getFcCvtrXYZ(iGeom_Instance instance,
   RETURN( (status == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_getEgCvtrXYZ(iGeom_Instance instance,
-                   /*in*/ iBase_EntityHandle edge_handle,
-                   /*in*/ double x,
-                   /*in*/ double y,
-                   /*in*/ double z,
-                   /*out*/ double* cvtr_i,
-                   /*out*/ double* cvtr_j,
-                   /*out*/ double* cvtr_k,
-                   int* err)
+ITAPS_API void
+iGeom_getEgCvtrXYZ( iGeom_Instance instance,
+                    /*in*/ iBase_EntityHandle edge_handle,
+                    /*in*/ double x,
+                    /*in*/ double y,
+                    /*in*/ double z,
+                    /*out*/ double* cvtr_i,
+                    /*out*/ double* cvtr_j,
+                    /*out*/ double* cvtr_k,
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)edge_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -2484,20 +2712,20 @@ iGeom_getEgCvtrXYZ(iGeom_Instance instance,
   RETURN( (status == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_getEntArrCvtrXYZ(iGeom_Instance instance,
-                       /*in*/ const iBase_EntityHandle *entity_handles,
-                       int entity_handles_size,
-                       /*in*/ int storage_order,
-                       /*in*/ const double *coordinates,
-                       int coordinates_size,
-                       /*inout*/ double **cvtr_1,
-                       int *cvtr_1_allocated,
-                       int *cvtr_1_size,
-                       /*inout*/ double **cvtr_2,
-                       int *cvtr_2_allocated,
-                       int *cvtr_2_size,
-                       int* err)
+ITAPS_API void
+iGeom_getEntArrCvtrXYZ( iGeom_Instance instance,
+                        /*in*/ const iBase_EntityHandle *entity_handles,
+                        int entity_handles_size,
+                        /*in*/ int storage_order,
+                        /*in*/ const double *coordinates,
+                        int coordinates_size,
+                        /*inout*/ double **cvtr_1,
+                        int *cvtr_1_allocated,
+                        int *cvtr_1_size,
+                        /*inout*/ double **cvtr_2,
+                        int *cvtr_2_allocated,
+                        int *cvtr_2_size,
+                        int* err )
 {
   RefEntity** entities = (RefEntity**)(entity_handles);
   
@@ -2613,22 +2841,22 @@ iGeom_getEntArrCvtrXYZ(iGeom_Instance instance,
 }
 
 
-void
-iGeom_getEgEvalXYZ(iGeom_Instance instance,
-                   /*in*/ iBase_EntityHandle edge_handle,
-                   /*in*/ double x,
-                   /*in*/ double y,
-                   /*in*/ double z,
-                   /*out*/ double* on_x,
-                   /*out*/ double* on_y,
-                   /*out*/ double* on_z,
-                   /*out*/ double* tan_i,
-                   /*out*/ double* tan_j,
-                   /*out*/ double* tan_k,
-                   /*out*/ double* cvtr_i,
-                   /*out*/ double* cvtr_j,
-                   /*out*/ double* cvtr_k,
-                   int* err)
+ITAPS_API void
+iGeom_getEgEvalXYZ( iGeom_Instance instance,
+                    /*in*/ iBase_EntityHandle edge_handle,
+                    /*in*/ double x,
+                    /*in*/ double y,
+                    /*in*/ double z,
+                    /*out*/ double* on_x,
+                    /*out*/ double* on_y,
+                    /*out*/ double* on_z,
+                    /*out*/ double* tan_i,
+                    /*out*/ double* tan_j,
+                    /*out*/ double* tan_k,
+                    /*out*/ double* cvtr_i,
+                    /*out*/ double* cvtr_j,
+                    /*out*/ double* cvtr_k,
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)edge_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -2643,25 +2871,25 @@ iGeom_getEgEvalXYZ(iGeom_Instance instance,
   RETURN( (status == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_getFcEvalXYZ(iGeom_Instance instance,
-                   /*in*/ iBase_EntityHandle face_handle,
-                   /*in*/ double x,
-                   /*in*/ double y,
-                   /*in*/ double z,
-                   /*out*/ double* on_x,
-                   /*out*/ double* on_y,
-                   /*out*/ double* on_z,
-                   /*out*/ double* norm_i,
-                   /*out*/ double* norm_j,
-                   /*out*/ double* norm_k,
-                   /*out*/ double* cvtr1_i,
-                   /*out*/ double* cvtr1_j,
-                   /*out*/ double* cvtr1_k,
-                   /*out*/ double* cvtr2_i,
-                   /*out*/ double* cvtr2_j,
-                   /*out*/ double* cvtr2_k,
-                   int* err)
+ITAPS_API void
+iGeom_getFcEvalXYZ( iGeom_Instance instance,
+                    /*in*/ iBase_EntityHandle face_handle,
+                    /*in*/ double x,
+                    /*in*/ double y,
+                    /*in*/ double z,
+                    /*out*/ double* on_x,
+                    /*out*/ double* on_y,
+                    /*out*/ double* on_z,
+                    /*out*/ double* norm_i,
+                    /*out*/ double* norm_j,
+                    /*out*/ double* norm_k,
+                    /*out*/ double* cvtr1_i,
+                    /*out*/ double* cvtr1_j,
+                    /*out*/ double* cvtr1_k,
+                    /*out*/ double* cvtr2_i,
+                    /*out*/ double* cvtr2_j,
+                    /*out*/ double* cvtr2_k,
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)face_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -2683,8 +2911,8 @@ iGeom_getFcEvalXYZ(iGeom_Instance instance,
   RETURN( (status == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
                        
-void
-iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrEgEvalXYZ( iGeom_Instance instance,
                        /*in*/ const iBase_EntityHandle *edge_handles,
                        int edge_handles_size,
                        /*in*/ int storage_order,
@@ -2699,7 +2927,7 @@ iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
                        /*inout*/ double **curvatures,
                        int *curvatures_allocated,
                        int *curvatures_size,
-                       int* err)
+                       int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2807,8 +3035,8 @@ iGeom_getArrEgEvalXYZ (iGeom_Instance instance,
   RETURN(result);
 }
                        
-void
-iGeom_getArrFcEvalXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrFcEvalXYZ( iGeom_Instance instance,
                        /*in*/ const iBase_EntityHandle *face_handles,
                        int face_handles_size,
                        /*in*/ int storage_order,
@@ -2826,7 +3054,7 @@ iGeom_getArrFcEvalXYZ (iGeom_Instance instance,
                        /*inout*/ double **curvatures_2,
                        int *curvatures_2_allocated,
                        int *curvatures_2_size,
-                       int* err)
+                       int* err )
 {
     /* set up iteration according to storage order.
        allow either gentity_handles or near_coordinates to contain
@@ -2956,14 +3184,14 @@ iGeom_getArrFcEvalXYZ (iGeom_Instance instance,
  * @param measures Arc length / area / volume of the entities
  * @param measures_length Number of entries in measures
  */
-void
+ITAPS_API void
 iGeom_measure( iGeom_Instance instance,
                /*in*/ const iBase_EntityHandle *gentity_handles,
                int gentity_handles_size,
                /*out*/ double **measures,
                int *measures_allocated,
                int *measures_size,
-               int* err) 
+               int* err )
 {
   RefEntity **handle_array = (RefEntity**)(gentity_handles);
 
@@ -2975,16 +3203,16 @@ iGeom_measure( iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntBoundBox(iGeom_Instance instance,
-                     /*in*/ iBase_EntityHandle entity_handle,
-                     /*out*/ double* min_x,
-                     /*out*/ double* min_y,
-                     /*out*/ double* min_z,
-                     /*out*/ double* max_x,
-                     /*out*/ double* max_y,
-                     /*out*/ double* max_z,
-                     int* err)
+ITAPS_API void
+iGeom_getEntBoundBox( iGeom_Instance instance,
+                      /*in*/ iBase_EntityHandle entity_handle,
+                      /*out*/ double* min_x,
+                      /*out*/ double* min_y,
+                      /*out*/ double* min_z,
+                      /*out*/ double* max_x,
+                      /*out*/ double* max_y,
+                      /*out*/ double* max_z,
+                      int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   CubitVector minc, maxc;
@@ -2999,12 +3227,12 @@ iGeom_getEntBoundBox(iGeom_Instance instance,
  * @param face_handle Face for which the type is requested
  * @param face_type Type of face, returned as a string
  */
-void
+ITAPS_API void
 iGeom_getFaceType( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle gentity_handle,
                    /*out*/ char *face_type,
                    int* err,
-                   int *face_type_length) 
+                   int *face_type_length )
 {
   static const char *surf_types[] = {"cone", "plane", "sphere", "spline", 
                                      "torus", "best_fit", "facet", "undefined"};
@@ -3039,8 +3267,8 @@ iGeom_getFaceType( iGeom_Instance instance,
  * @param min_corners Minimum corner coordinates of the boxes, interleaved
  * @param max_corners Maximum corner coordinates of the boxes, interleaved
  */
-void
-iGeom_getArrBoundBox (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrBoundBox( iGeom_Instance instance,
                       /*in*/ const iBase_EntityHandle *gentity_handles,
                       int gentity_handles_size,
                       /*in*/ int storage_order,
@@ -3050,7 +3278,7 @@ iGeom_getArrBoundBox (iGeom_Instance instance,
                       /*out*/ double **max_corner,
                       int *max_corner_allocated,
                       int *max_corner_size,
-                      int* err)
+                      int* err )
 {
     // check or pre-allocate the coordinate arrays
   ALLOC_CHECK_ARRAY(min_corner, 3*gentity_handles_size);
@@ -3097,13 +3325,13 @@ iGeom_getArrBoundBox (iGeom_Instance instance,
   RETURN(result);
 }
 
-void
-iGeom_getVtxCoord (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxCoord( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle vertex_handle,
                    /*out*/ double* x,
                    /*out*/ double* y,
                    /*out*/ double* z,
-                   int* err)
+                   int* err )
 {
   RefEntity* entity = (RefEntity*)vertex_handle;
   RefVertex* vertex = dynamic_cast<RefVertex*>(entity);
@@ -3120,15 +3348,15 @@ iGeom_getVtxCoord (iGeom_Instance instance,
  * @param gentity_handles The gentities being queried
  * @param coordinates The coordinates of the gvertices, interleaved.
  */
-void
-iGeom_getVtxArrCoords (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxArrCoords( iGeom_Instance instance,
                        /*in*/ const iBase_EntityHandle *gentity_handles,
                        int gentity_handles_size,
                        /*in*/ int storage_order,
                        /*out*/ double **coordinates,
                        int *coordinates_allocated,
                        int *coordinates_size,
-                       int* err)
+                       int* err )
 {
   const RefEntity **handle_array = (const RefEntity**)(gentity_handles);
 
@@ -3171,7 +3399,7 @@ iGeom_getVtxArrCoords (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
+ITAPS_API void
 iGeom_getPntRayIntsct( iGeom_Instance instance,
                        /*in*/ double x,
                        /*in*/ double y,
@@ -3189,7 +3417,7 @@ iGeom_getPntRayIntsct( iGeom_Instance instance,
                        /*inout*/ double **param_coords,
                        int *param_coords_allocated,
                        int *param_coords_size,
-                       int* err)
+                       int* err )
 {
   DLIList<double> ray_params;
   DLIList<RefEntity*> entities;
@@ -3229,7 +3457,7 @@ iGeom_getPntRayIntsct( iGeom_Instance instance,
   RETURN(iBase_SUCCESS);  
 }
 
-void
+ITAPS_API void
 iGeom_getPntArrRayIntsct( iGeom_Instance instance,
                           /*in*/ int storage_order,
                           /*in*/ const double *points,
@@ -3248,7 +3476,7 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
                           /*inout*/ double **param_coords,
                           int *param_coords_allocated,
                           int *param_coords_size,
-                          int* err)
+                          int* err )
 {
   if (points_size != directions_size || points_size % 3) {
     ERROR(iBase_INVALID_ARGUMENT, "Mismatched or invalid input array size");
@@ -3324,13 +3552,13 @@ iGeom_getPntArrRayIntsct( iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getPntClsf (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getPntClsf( iGeom_Instance instance,
                   /*in*/ double x,
                   /*in*/ double y,
                   /*in*/ double z,
                   /*out*/ iBase_EntityHandle* entity_handle,
-                  int* err)
+                  int* err )
 {
   RefEntity** ptr = (RefEntity**)entity_handle;
   const CubitVector pt(x,y,z);
@@ -3338,15 +3566,15 @@ iGeom_getPntClsf (iGeom_Instance instance,
   RETURN( *ptr ? iBase_SUCCESS : iBase_FAILURE );
 }
 
-void
-iGeom_getPntArrClsf (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getPntArrClsf( iGeom_Instance instance,
                      /*in*/ int storage_order,
                      /*in*/ const double *coords,
                      int coords_size,
                      /*inout*/ iBase_EntityHandle **entity_handles,
                      int *entity_handles_allocated,
                      int *entity_handles_size,
-                     int* err)
+                     int* err )
 {
   size_t init, step;
   int count = coords_size / 3;
@@ -3389,12 +3617,12 @@ iGeom_getPntArrClsf (iGeom_Instance instance,
  * @param gface face whose sense is being queried.
  * @param gregion region gface is being queried with respect to
  */
-void
-iGeom_getEntNrmlSense (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntNrmlSense( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle gface,
                        /*in*/ iBase_EntityHandle gregion,
                        int* rel_sense,
-                       int* err)
+                       int* err )
 {
   const RefFace *face_ent = dynamic_cast<const RefFace*>(ENTITY_HANDLE(gface));
   if (NULL == face_ent) {
@@ -3423,16 +3651,16 @@ iGeom_getEntNrmlSense (iGeom_Instance instance,
   *rel_sense = iGeom_get_nonmanifold_sense( face_ent, volume_ent, err );
 }
 
-void
-iGeom_getArrNrmlSense(iGeom_Instance instance,
-                      /*in*/ iBase_EntityHandle const *faces,
-                      int faces_size,
-                      /*in*/ iBase_EntityHandle const *regions,
-                      int regions_size,
-                      /*inout*/ int **senses,
-                      int *senses_allocated,
-                      int *senses_size,
-                      int* err)
+ITAPS_API void
+iGeom_getArrNrmlSense( iGeom_Instance instance,
+                       /*in*/ iBase_EntityHandle const *faces,
+                       int faces_size,
+                       /*in*/ iBase_EntityHandle const *regions,
+                       int regions_size,
+                       /*inout*/ int **senses,
+                       int *senses_allocated,
+                       int *senses_size,
+                       int* err )
 {
   size_t faces_step, regions_step;
   int count;
@@ -3504,12 +3732,12 @@ iGeom_getArrNrmlSense(iGeom_Instance instance,
  * @param gedge Gedge whose sense is being queried.
  * @param gface Gface gedge is being queried with respect to
  */
-void
-iGeom_getEgFcSense (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEgFcSense( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle gedge,
                     /*in*/ iBase_EntityHandle gface,
                     int* rel_sense,
-                    int* err)
+                    int* err )
 {
   const RefEdge *edge_ent = dynamic_cast<const RefEdge*>(ENTITY_HANDLE(gedge));
   if (NULL == edge_ent) {
@@ -3523,16 +3751,16 @@ iGeom_getEgFcSense (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEgFcArrSense(iGeom_Instance instance,
-                      /*in*/ iBase_EntityHandle const *edges,
-                      int edges_size,
-                      /*in*/ iBase_EntityHandle const *faces,
-                      int faces_size,
-                      /*inout*/ int **senses,
-                      int *senses_allocated,
-                      int *senses_size,
-                      int* err)
+ITAPS_API void
+iGeom_getEgFcArrSense( iGeom_Instance instance,
+                       /*in*/ iBase_EntityHandle const *edges,
+                       int edges_size,
+                       /*in*/ iBase_EntityHandle const *faces,
+                       int faces_size,
+                       /*inout*/ int **senses,
+                       int *senses_allocated,
+                       int *senses_size,
+                       int* err )
 {
   size_t faces_step, edges_step;
   int count;
@@ -3588,13 +3816,13 @@ iGeom_getEgFcArrSense(iGeom_Instance instance,
  * @param gvertex1 First gvertex
  * @param gvertex2 Second gvertex
  */
-void
-iGeom_getEgVtxSense (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEgVtxSense( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle gedge,
                      /*in*/ iBase_EntityHandle gvertex1,
                      /*in*/ iBase_EntityHandle gvertex2,
                      int* rel_sense,
-                     int* err)
+                     int* err )
 {
   const RefEdge *this_edge = dynamic_cast<const RefEdge*>(ENTITY_HANDLE(gedge));
   const RefVertex *vertex1 = dynamic_cast<const RefVertex*>(ENTITY_HANDLE(gvertex1));
@@ -3606,8 +3834,8 @@ iGeom_getEgVtxSense (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEgVtxArrSense (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEgVtxArrSense( iGeom_Instance instance,
                         /*in*/ iBase_EntityHandle const *edges ,
                         int edges_size,
                         /*in*/ iBase_EntityHandle const *start_vertices ,
@@ -3617,7 +3845,7 @@ iGeom_getEgVtxArrSense (iGeom_Instance instance,
                         /*inout*/  int **senses ,
                         int *senses_allocated,
                         int *senses_size,
-                        int* err)
+                        int* err )
 {
   int count;
   size_t edge_step, start_step, end_step;
@@ -3675,12 +3903,12 @@ iGeom_getEgVtxArrSense (iGeom_Instance instance,
  * @param gentity_set_handle Entity set being queried
  * @return Number of entity sets in gentity_set_handle
  */
-void
-iGeom_getNumEntSets (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getNumEntSets( iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
                      /*in*/ int num_hops,
                      int* num_ent_sets,
-                     int* err)
+                     int* err )
 {
     // HJK: num_hops has to be handled
   if (0 < num_hops) {
@@ -3708,14 +3936,14 @@ iGeom_getNumEntSets (iGeom_Instance instance,
  * @param contained_gentity_set_handles Number of entity sets in 
  *  gentity_set_handle
  */
-void
-iGeom_getEntSets (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntSets( iGeom_Instance instance,
                   /*in*/ iBase_EntitySetHandle entity_set,
                   /*in*/ int num_hops,
                   /*inout*/ iBase_EntitySetHandle **contained_entity_set_handles,
                   int *contained_entity_set_handles_allocated,
                   int *contained_entity_set_handles_size,
-                  int *err)
+                  int *err )
 {
   if (0 < num_hops) {
     ERROR(iBase_NOT_SUPPORTED, "Num_hops argument not yet supported.");
@@ -3751,11 +3979,11 @@ iGeom_getEntSets (iGeom_Instance instance,
  *   this gentity_set
  * @param gentity_set_created Entity_set created by this function
  */
-void
-iGeom_createEntSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_createEntSet( iGeom_Instance instance,
                     /*in*/ int isList,
                     /*out*/ iBase_EntitySetHandle *entity_set,
-                    int* err)
+                    int* err )
 {
   RefGroup* grp = RefEntityFactory::instance()->construct_RefGroup();
   *entity_set = reinterpret_cast<iBase_EntitySetHandle>(grp);
@@ -3774,10 +4002,10 @@ iGeom_createEntSet (iGeom_Instance instance,
  *   gentities, not the gentities themselves.
  * @param gentity_set Entity_set to be destroyed
  */
-void
-iGeom_destroyEntSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_destroyEntSet( iGeom_Instance instance,
                      /*in*/ iBase_EntitySetHandle entity_set,
-                     int* err)
+                     int* err )
 {
   if (NULL == entity_set) {
     ERROR(iBase_INVALID_ARGUMENT, "Can't destroy interface set.");
@@ -3794,11 +4022,11 @@ iGeom_destroyEntSet (iGeom_Instance instance,
   
 }
 
-void
-iGeom_isList (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isList( iGeom_Instance instance,
               /*in*/ iBase_EntitySetHandle entity_set,
               int* result,
-              int* err) 
+              int* err )
 {
   *result = true;
   RETURN (iBase_SUCCESS);
@@ -3813,11 +4041,11 @@ iGeom_isList (iGeom_Instance instance,
  * @param gentity_set Set to which other sets are being added
  * @param gentity_set_handles Sets added to gentity_set
  */
-void
-iGeom_addEntSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_addEntSet( iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle entity_set_to_add,
                  /*inout*/ iBase_EntitySetHandle entity_set_handle,
-                 int* err)
+                 int* err )
 {
   iGeom_addEntToSet(instance, reinterpret_cast<iBase_EntityHandle>(entity_set_to_add), entity_set_handle, err);
 }
@@ -3830,11 +4058,11 @@ iGeom_addEntSet (iGeom_Instance instance,
  * @param gentity_set Set from which other sets are being removed
  * @param gentity_set_handles Sets being removed from gentity_set
  */
-void
-iGeom_rmvEntSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvEntSet( iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle entity_set_to_remove,
                  /*inout*/ iBase_EntitySetHandle entity_set_handle,
-                 int* err)
+                 int* err )
 {
   iGeom_rmvEntFromSet(instance, reinterpret_cast<iBase_EntityHandle>(entity_set_to_remove), entity_set_handle, err);
 }
@@ -3848,11 +4076,11 @@ iGeom_rmvEntSet (iGeom_Instance instance,
  * @param gentity_set Set to which other sets are being added
  * @param gentity_set_handles Sets added to gentity_set
  */
-void
-iGeom_addEntToSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_addEntToSet( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle entity_to_add,
                    /*inout*/ iBase_EntitySetHandle entity_set_handle,
-                   int* err)
+                   int* err )
 {
   if (NULL == entity_to_add) RETURN(iBase_INVALID_ARGUMENT);
   
@@ -3874,11 +4102,11 @@ iGeom_addEntToSet (iGeom_Instance instance,
  * @param gentity_set Set from which other sets are being removed
  * @param gentity_set_handles Sets being removed from gentity_set
  */
-void
-iGeom_rmvEntFromSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvEntFromSet( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_to_remove,
                      /*inout*/ iBase_EntitySetHandle entity_set_handle,
-                     int* err)
+                     int* err )
 {
   if (NULL == entity_set_handle) RETURN(iBase_INVALID_ARGUMENT);
   
@@ -3891,12 +4119,12 @@ iGeom_rmvEntFromSet (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_isEntContained (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isEntContained( iGeom_Instance instance,
                       /*in*/ iBase_EntitySetHandle containing_entity_set,
                       /*in*/ iBase_EntityHandle contained_entity,
                       int* is_contained,
-                      int* err) 
+                      int* err )
 {
     // everything is contained in root set
   if (NULL == containing_entity_set && NULL != contained_entity) {
@@ -3913,14 +4141,15 @@ iGeom_isEntContained (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void iGeom_isEntArrContained( iGeom_Instance instance,
-                       /*in*/ iBase_EntitySetHandle containing_set,
-                       /*in*/ const iBase_EntityHandle* entity_handles,
-                       /*in*/ int num_entity_handles,
-                    /*inout*/ int** is_contained,
-                    /*inout*/ int* is_contained_allocated,
-                      /*out*/ int* is_contained_size,
-                      /*out*/ int* err )
+ITAPS_API void
+iGeom_isEntArrContained( iGeom_Instance instance,
+                         /*in*/ iBase_EntitySetHandle containing_set,
+                         /*in*/ const iBase_EntityHandle* entity_handles,
+                         /*in*/ int num_entity_handles,
+                         /*inout*/ int** is_contained,
+                         /*inout*/ int* is_contained_allocated,
+                         /*out*/ int* is_contained_size,
+                         /*out*/ int* err )
 {
     // go through each entity and look up its dimension
   ALLOC_CHECK_ARRAY(is_contained, num_entity_handles);
@@ -3935,12 +4164,12 @@ void iGeom_isEntArrContained( iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_isEntSetContained (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isEntSetContained( iGeom_Instance instance,
                          /*in*/ iBase_EntitySetHandle containing_entity_set,
                          /*in*/ iBase_EntitySetHandle contained_entity_set,
                          int* is_contained,
-                         int* err) 
+                         int* err )
 {
   iGeom_isEntContained( instance, containing_entity_set, 
                         reinterpret_cast<iBase_EntityHandle>(contained_entity_set),
@@ -3955,12 +4184,12 @@ iGeom_isEntSetContained (iGeom_Instance instance,
  * @param gentity_set Set being added to
  * @param gentity_handles Gentities being added to gentity_set
  */
-void
-iGeom_addEntArrToSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_addEntArrToSet( iGeom_Instance instance,
                       /*in*/ iBase_EntityHandle const* entity_handles,
                       int entity_handles_size,
                       /*inout*/ iBase_EntitySetHandle entity_set,
-                      int* err)
+                      int* err )
 {
   if (NULL == entity_set) RETURN(iBase_INVALID_ARGUMENT);
 
@@ -3984,12 +4213,12 @@ iGeom_addEntArrToSet (iGeom_Instance instance,
  * @param gentity_set Set being removed from
  * @param gentity_handles Gentities being removed from gentity_set
  */
-void
-iGeom_rmvEntArrFromSet (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rmvEntArrFromSet( iGeom_Instance instance,
                         /*in*/ iBase_EntityHandle const* entity_handles,
                         int entity_handles_size,
                         /*inout*/ iBase_EntitySetHandle entity_set,
-                        int* err)
+                        int* err )
 {
   if (NULL == entity_set) RETURN(iBase_INVALID_ARGUMENT);
 
@@ -4015,22 +4244,22 @@ iGeom_rmvEntArrFromSet (iGeom_Instance instance,
  * @param relative_tolerance Relative tolerance for model as a whole
  * @param absolute_tolerance Absolute tolerance for model as a whole
  */
-void
-iGeom_getTolerance (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getTolerance( iGeom_Instance instance,
                     /*out*/ int* type,
                     /*out*/ double* tolerance,
-                    int* err)
+                    int* err )
 {
   *type = 1;
   *tolerance = gqt->get_sme_resabs_tolerance();
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntTolerance (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntTolerance( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle entity_handle,
                        double* tolerance,
-                       int* err)
+                       int* err )
 {
   *tolerance = gqt->get_sme_resabs_tolerance();
   RETURN(iBase_SUCCESS);
@@ -4044,14 +4273,14 @@ iGeom_getEntTolerance (iGeom_Instance instance,
  * @param relative_tolerances Relative tolerances
  * @param absolute_tolerances Absolute tolerances
  */
-void
-iGeom_getArrTolerance (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrTolerance( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle const *gentity_handles,
                        const int gentity_handles_size,
                        /*out*/ double **tolerances,
                        int *tolerances_allocated,
                        int *tolerances_size,
-                       int* err)
+                       int* err )
 {
   ALLOC_CHECK_ARRAY_NOFAIL(tolerances, gentity_handles_size);
   double dum_abs_tol = gqt->get_sme_resabs_tolerance();
@@ -4061,8 +4290,10 @@ iGeom_getArrTolerance (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getParametric(iGeom_Instance instance, int* is_parametric, int* err)
+ITAPS_API void
+iGeom_getParametric( iGeom_Instance instance,
+                     int* is_parametric,
+                     int* err )
 {
   *is_parametric = true;
   RETURN(iBase_SUCCESS);
@@ -4074,24 +4305,24 @@ iGeom_getParametric(iGeom_Instance instance, int* is_parametric, int* err)
  * when called on that entity.
  * @param gentity_handle Entity being queried.
  */
-void
-iGeom_isEntParametric (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isEntParametric( iGeom_Instance instance,
                        /*in*/ iBase_EntityHandle gentity_handle,
                        int* is_parametric,
-                       int* err)
+                       int* err )
 {
   *is_parametric = iGeom_is_parametric( (RefEntity*)gentity_handle );
   RETURN (iBase_SUCCESS);
 }
 
-void
-iGeom_isArrParametric (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isArrParametric( iGeom_Instance instance,
                        iBase_EntityHandle const *entity_handles,
                        int entity_handles_size,
                        int **is_parametric,
                        int *is_parametric_allocated,
                        int *is_parametric_size,
-                       int* err)
+                       int* err )
 {
   ALLOC_CHECK_ARRAY_NOFAIL( is_parametric, entity_handles_size );
   RefEntity** const ent_array = (RefEntity**)entity_handles;
@@ -4100,15 +4331,15 @@ iGeom_isArrParametric (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntUVtoXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntUVtoXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double u,
                      /*in*/ double v,
                      /*out*/ double* x,
                      /*out*/ double* y,
                      /*out*/ double* z,
-                     int* err)
+                     int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -4129,8 +4360,8 @@ iGeom_getEntUVtoXYZ (iGeom_Instance instance,
  * @param uv Input parametric coordinates
  * @param xyz Output real space coordinates
  */
-void
-iGeom_getArrUVtoXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrUVtoXYZ( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
                      /*in*/ int storage_order,
@@ -4139,7 +4370,7 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
                      /*out*/ double **coordinates,
                      int *coordinates_allocated,
                      int *coordinates_size,
-                     int* err)
+                     int* err )
 {
   size_t ent_step, coord_step, uv_step;
   int count;
@@ -4204,14 +4435,14 @@ iGeom_getArrUVtoXYZ (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntUtoXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntUtoXYZ( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle entity_handle,
                     /*in*/ double u,
                     /*out*/ double* x,
                     /*out*/ double* y,
                     /*out*/ double* z,
-                    int* err)
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -4225,8 +4456,8 @@ iGeom_getEntUtoXYZ (iGeom_Instance instance,
   RETURN( (s == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_getArrUtoXYZ (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrUtoXYZ( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *gentity_handles,
                     int gentity_handles_size,
                     /*in*/ const double *u,
@@ -4235,7 +4466,7 @@ iGeom_getArrUtoXYZ (iGeom_Instance instance,
                     /*out*/ double **coordinates,
                     int *coordinates_allocated,
                     int *coordinates_size,
-                    int* err)
+                    int* err )
 {
   int count;
   size_t ent_step, coord_step, u_step;
@@ -4299,15 +4530,15 @@ iGeom_getArrUtoXYZ (iGeom_Instance instance,
   RETURN(result);
 }
 
-void
-iGeom_getEntXYZtoUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntXYZtoUV( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double x,
                      /*in*/ double y,
                      /*in*/ double z,
                      /*out*/ double* u,
                      /*out*/ double* v,
-                     int* err)
+                     int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -4329,8 +4560,8 @@ iGeom_getEntXYZtoUV (iGeom_Instance instance,
  * @param xyz Input real space coordinates
  * @param uv Output parametric coordinates
  */
-void
-iGeom_getArrXYZtoUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrXYZtoUV( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
                      /*in*/ int storage_order,
@@ -4339,7 +4570,7 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
                      /*out*/ double **uv,
                      int *uv_allocated,
                      int *uv_size,
-                     int* err)
+                     int* err )
 {
   int count;
   size_t ent_step, coord_step, uv_step;
@@ -4407,14 +4638,14 @@ iGeom_getArrXYZtoUV (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getEntXYZtoU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntXYZtoU( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle entity_handle,
                     /*in*/ double x,
                     /*in*/ double y,
                     /*in*/ double z,
                     /*out*/ double* u,
-                    int* err)
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -4428,8 +4659,8 @@ iGeom_getEntXYZtoU (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getArrXYZtoU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrXYZtoU( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *gentity_handles,
                     int gentity_handles_size,
                     /*in*/ int storage_order,
@@ -4438,7 +4669,7 @@ iGeom_getArrXYZtoU (iGeom_Instance instance,
                     /*out*/ double **u,
                     int *u_allocated,
                     int *u_size,
-                    int* err)
+                    int* err )
 {
   int count;
   size_t ent_step, coord_step;
@@ -4495,15 +4726,15 @@ iGeom_getArrXYZtoU (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntXYZtoUVHint (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntXYZtoUVHint( iGeom_Instance instance,
                          /*in*/ iBase_EntityHandle entity_handle,
                          /*in*/ double x,
                          /*in*/ double y,
                          /*in*/ double z,
                          /*inout*/ double* u,
                          /*inout*/ double* v,
-                         int* err)
+                         int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -4525,8 +4756,8 @@ iGeom_getEntXYZtoUVHint (iGeom_Instance instance,
  * @param xyz Input real space coordinates
  * @param uv Output parametric coordinates
  */
-void
-iGeom_getArrXYZtoUVHint (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrXYZtoUVHint( iGeom_Instance instance,
                          /*in*/ iBase_EntityHandle const *gentity_handles,
                          int gentity_handles_size,
                          /*in*/ int storage_order,
@@ -4535,7 +4766,7 @@ iGeom_getArrXYZtoUVHint (iGeom_Instance instance,
                          /*inout*/ double **uv,
                          int *uv_allocated,
                          int *uv_size,
-                         int* err)
+                         int* err )
 {
   int count;
   size_t ent_step, coord_step, uv_step;
@@ -4600,14 +4831,14 @@ iGeom_getArrXYZtoUVHint (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntUVRange (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntUVRange( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*out*/ double *u_min,
                      /*out*/ double *v_min,
                      /*out*/ double *u_max,
                      /*out*/ double *v_max,
-                     int* err)
+                     int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefFace* face = dynamic_cast<RefFace*>(entity);
@@ -4620,12 +4851,12 @@ iGeom_getEntUVRange (iGeom_Instance instance,
   RETURN( ((r1 && r2) ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_getEntURange (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntURange( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle entity_handle,
                     /*out*/ double *u_min,
                     /*out*/ double *u_max,
-                    int* err)
+                    int* err )
 {
   RefEntity* entity = (RefEntity*)entity_handle;
   RefEdge* edge = dynamic_cast<RefEdge*>(entity);
@@ -4644,8 +4875,8 @@ iGeom_getEntURange (iGeom_Instance instance,
  * @param uv_min Minimum parameters of gentities, interleaved
  * @param uv_max Maximum parameters of gentities, interleaved
  */
-void
-iGeom_getArrUVRange (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrUVRange( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *gentity_handles,
                      int gentity_handles_size,
                      /*in*/ int storage_order,
@@ -4655,7 +4886,7 @@ iGeom_getArrUVRange (iGeom_Instance instance,
                      /*out*/ double **uv_max,
                      int *uv_max_allocated,
                      int *uv_max_size,
-                     int* err)
+                     int* err )
 {
   ALLOC_CHECK_ARRAY(uv_min, 2*gentity_handles_size);
   ALLOC_CHECK_ARRAY(uv_max, 2*gentity_handles_size);
@@ -4699,8 +4930,8 @@ iGeom_getArrUVRange (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getArrURange (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrURange( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *gentity_handles,
                     const int gentity_handles_size,
                     /*out*/ double **u_min,
@@ -4709,7 +4940,7 @@ iGeom_getArrURange (iGeom_Instance instance,
                     /*out*/ double **u_max,
                     int *u_max_allocated,
                     int *u_max_size,
-                    int* err)
+                    int* err )
 {
   ALLOC_CHECK_ARRAY(u_min, gentity_handles_size);
   ALLOC_CHECK_ARRAY(u_max, gentity_handles_size);
@@ -4732,14 +4963,14 @@ iGeom_getArrURange (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntUtoUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntUtoUV( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle edge_handle,
                    /*in*/ iBase_EntityHandle face_handle,
                    /*in*/ double in_u,
                    /*out*/ double* u,
                    /*out*/ double* v,
-                   int* err)
+                   int* err )
 {
   RefEdge* edge = dynamic_cast<RefEdge*>((RefEntity*)edge_handle);
   RefFace* face = dynamic_cast<RefFace*>((RefEntity*)face_handle);
@@ -4763,8 +4994,8 @@ iGeom_check_array_size(int size1, int size2)
     return size1 == 1 || size2 == 1 || size1 == size2;        
 }
 
-void
-iGeom_getArrUtoUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrUtoUV( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle const *edge_handles,
                    int edge_handles_size,
                    /*in*/ iBase_EntityHandle const *face_handles,
@@ -4775,7 +5006,7 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
                    /*inout*/ double **uv,
                    int *uv_allocated,
                    int *uv_size,
-                   int* err)
+                   int* err )
 {
   int count;
   size_t edge_step, face_step, coord_step, in_u_step;
@@ -4836,13 +5067,13 @@ iGeom_getArrUtoUV (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getVtxToUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxToUV( iGeom_Instance instance,
                   /*in*/ iBase_EntityHandle vertex_handle,
                   /*in*/ iBase_EntityHandle face_handle,
                   /*out*/ double* u,
                   /*out*/ double* v,
-                  int* err)
+                  int* err )
 {
   RefVertex* vtx = dynamic_cast<RefVertex*>((RefEntity*)vertex_handle);
   RefFace* face = dynamic_cast<RefFace*>((RefEntity*)face_handle);
@@ -4854,8 +5085,8 @@ iGeom_getVtxToUV (iGeom_Instance instance,
   RETURN(result);
 }  
 
-void
-iGeom_getVtxArrToUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxArrToUV( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *vertex_handles,
                      int vertex_handles_size,
                      /*in*/ iBase_EntityHandle const *face_handles,
@@ -4864,7 +5095,7 @@ iGeom_getVtxArrToUV (iGeom_Instance instance,
                      /*inout*/ double **uv,
                      int *uv_allocated,
                      int *uv_size,
-                     int* err)
+                     int* err )
 {
   int count;
   size_t vtx_step, face_step, uv_step;
@@ -4923,12 +5154,12 @@ iGeom_getVtxArrToUV (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getVtxToU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxToU( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle vertex_handle,
                  /*in*/ iBase_EntityHandle edge_handle,
                  /*out*/ double* u,
-                 int* err)
+                 int* err )
 {
   RefVertex* vtx = dynamic_cast<RefVertex*>((RefEntity*)vertex_handle);
   RefEdge* edge = dynamic_cast<RefEdge*>((RefEntity*)edge_handle);
@@ -4940,8 +5171,8 @@ iGeom_getVtxToU (iGeom_Instance instance,
   RETURN(result);
 }
 
-void
-iGeom_getVtxArrToU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getVtxArrToU( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *vertex_handles ,
                     int vertex_handles_size,
                     /*in*/ iBase_EntityHandle const *edge_handles ,
@@ -4949,7 +5180,7 @@ iGeom_getVtxArrToU (iGeom_Instance instance,
                     /*inout*/  double **u ,
                     int *u_allocated,
                     int *u_size,
-                    int* err)
+                    int* err )
 {
   int count;
   size_t vtx_step, edge_step;
@@ -4994,15 +5225,15 @@ iGeom_getVtxArrToU (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEntNrmlUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntNrmlUV( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle entity_handle,
                     /*in*/ double u,
                     /*in*/ double v,
                     /*out*/ double* nrml_i,
                     /*out*/ double* nrml_j,
                     /*out*/ double* nrml_k,
-                    int* err)
+                    int* err )
 {
   RefFace* face = dynamic_cast<RefFace*>((RefEntity*)entity_handle);
   if (!face) {
@@ -5023,8 +5254,8 @@ iGeom_getEntNrmlUV (iGeom_Instance instance,
  * @param parameters The uv parameters of points being queried, interleaved
  * @param normals Normals at specified points, interleaved
  */
-void
-iGeom_getArrNrmlUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrNrmlUV( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle const *gface_handles,
                     int gface_handles_size,
                     /*in*/ int storage_order,
@@ -5033,7 +5264,7 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
                     /*out*/ double **normals,
                     int *normals_allocated,
                     int *normals_size,
-                    int* err)
+                    int* err )
 {
   int count;
   size_t face_step, param_step, norm_step;
@@ -5102,14 +5333,14 @@ iGeom_getArrNrmlUV (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getEntTgntU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEntTgntU( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle entity_handle,
                    /*in*/ double param_coord,
                    /*out*/ double* tngt_i,
                    /*out*/ double* tngt_j,
                    /*out*/ double* tngt_k,
-                   int* err)
+                   int* err )
 {
   double x, y, z;
   iGeom_getEntUtoXYZ( instance, entity_handle, param_coord, &x, &y, &z, err );
@@ -5125,8 +5356,8 @@ iGeom_getEntTgntU (iGeom_Instance instance,
  * @param parameters The u parameters of points being queried
  * @param tangents Tangents at specified points, interleaved
  */
-void
-iGeom_getArrTgntU (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArrTgntU( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle const *gedge_handles,
                    int gedge_handles_size,
                    /*in*/ int storage_order,
@@ -5135,7 +5366,7 @@ iGeom_getArrTgntU (iGeom_Instance instance,
                    /*out*/ double **tangents,
                    int *tangents_allocated,
                    int *tangents_size,
-                   int* err)
+                   int* err )
 {
   iGeom_getArrUtoXYZ(instance, ARRAY_IN(gedge_handles),
                      ARRAY_IN(parameters), storage_order, 
@@ -5145,8 +5376,8 @@ iGeom_getArrTgntU (iGeom_Instance instance,
                         *tangents, *tangents_size, ARRAY_INOUT(tangents), err);
 }
 
-void
-iGeom_getEnt1stDrvt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEnt1stDrvt( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double u,
                      /*in*/ double v,
@@ -5156,7 +5387,7 @@ iGeom_getEnt1stDrvt (iGeom_Instance instance,
                      /*inout*/  double **dvrt_v ,
                      int *dvrt_v_allocated,
                      int *dvrt_v_size,
-                     int* err)
+                     int* err )
 {
   RefFace* face = dynamic_cast<RefFace*>((RefEntity*)entity_handle);
   if (!face) { 
@@ -5176,8 +5407,8 @@ iGeom_getEnt1stDrvt (iGeom_Instance instance,
   RETURN (iBase_SUCCESS);
 }
 
-void
-iGeom_getArr1stDrvt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArr1stDrvt( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles ,
                      int entity_handles_size,
                      /*in*/ int storage_order,
@@ -5195,7 +5426,7 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
                      /*inout*/  int **v_offset ,
                      int *v_offset_allocated,
                      int *v_offset_size,
-                     int* err)
+                     int* err )
 {
   if (2*entity_handles_size != uv_size) {
     ERROR(iBase_INVALID_ENTITY_COUNT, "Mismatched input array sizes.");
@@ -5265,8 +5496,8 @@ iGeom_getArr1stDrvt (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_getEnt2ndDrvt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getEnt2ndDrvt( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*in*/ double u,
                      /*in*/ double v,
@@ -5279,13 +5510,13 @@ iGeom_getEnt2ndDrvt (iGeom_Instance instance,
                      /*inout*/  double **dvrt_vv ,
                      int *dvrt_vv_allocated,
                      int *dvrt_vv_size,
-                     int* err)
+                     int* err )
 {
   RETURN(iBase_NOT_SUPPORTED);
 }
 
-void
-iGeom_getArr2ndDrvt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getArr2ndDrvt( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles ,
                      int entity_handles_size,
                      /*in*/ int storage_order,
@@ -5309,13 +5540,13 @@ iGeom_getArr2ndDrvt (iGeom_Instance instance,
                      /*inout*/  int **vv_offset ,
                      int *vv_offset_allocated,
                      int *vv_offset_size,
-                     int* err)
+                     int* err )
 {
   RETURN(iBase_NOT_SUPPORTED);
 }
 
-void
-iGeom_getFcCvtrUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getFcCvtrUV( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle entity_handle,
                    /*in*/ double u,
                    /*in*/ double v,
@@ -5325,7 +5556,7 @@ iGeom_getFcCvtrUV (iGeom_Instance instance,
                    /*out*/ double* cvtr2_i,
                    /*out*/ double* cvtr2_j,
                    /*out*/ double* cvtr2_k,
-                   int* err)
+                   int* err )
 {
   double x, y, z;
   iGeom_getEntUVtoXYZ(instance, entity_handle, u, v, &x, &y, &z, err );
@@ -5337,8 +5568,8 @@ iGeom_getFcCvtrUV (iGeom_Instance instance,
 }
 
 
-void
-iGeom_getFcArrCvtrUV (iGeom_Instance instance,
+ITAPS_API void
+iGeom_getFcArrCvtrUV( iGeom_Instance instance,
                       /*in*/ const  iBase_EntityHandle *face_handles ,
                       int face_handles_size,
                       /*in*/ int storage_order,
@@ -5350,7 +5581,7 @@ iGeom_getFcArrCvtrUV (iGeom_Instance instance,
                       /*inout*/  double **cvtr_2 ,
                       int *cvtr_2_allocated,
                       int *cvtr_2_size,
-                      int* err)
+                      int* err )
 {
   iGeom_getArrUVtoXYZ(instance, ARRAY_IN(face_handles), storage_order, 
                       ARRAY_IN(uv), ARRAY_INOUT(cvtr_1), err);
@@ -5360,25 +5591,25 @@ iGeom_getFcArrCvtrUV (iGeom_Instance instance,
                            ARRAY_INOUT(cvtr_1), ARRAY_INOUT(cvtr_2), err);
 }
 
-void
-iGeom_isEntPeriodic (iGeom_Instance instance, 
+ITAPS_API void
+iGeom_isEntPeriodic( iGeom_Instance instance, 
                      /*in*/ iBase_EntityHandle entity_handle,
                      /*out*/ int* in_u,
                      /*out*/ int* in_v,
-                     int* err)
+                     int* err )
 {
   CubitStatus s = iGeom_is_periodic( (RefEntity*)entity_handle, *in_u, *in_v );
   RETURN( (s == CUBIT_SUCCESS ? iBase_SUCCESS : iBase_FAILURE) );
 }
 
-void
-iGeom_isArrPeriodic (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isArrPeriodic( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle const *entity_handles ,
                      const int entity_handles_size,
                      /*inout*/  int **in_uv ,
                      int *in_uv_allocated,
                      int *in_uv_size,
-                     int* err)
+                     int* err )
 {
   ALLOC_CHECK_ARRAY( in_uv, 2*entity_handles_size );
   RefEntity** ents = (RefEntity**)entity_handles;
@@ -5392,11 +5623,11 @@ iGeom_isArrPeriodic (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_isFcDegenerate (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isFcDegenerate( iGeom_Instance instance,
                       /*in*/ iBase_EntityHandle entity_handle,
                       int* is_degenerate,
-                      int* err)
+                      int* err )
 {
   RefFace* face = dynamic_cast<RefFace*>((RefEntity*)entity_handle);
   if (!face) { RETURN (iBase_INVALID_ENTITY_TYPE); }
@@ -5404,14 +5635,14 @@ iGeom_isFcDegenerate (iGeom_Instance instance,
   RETURN (iBase_SUCCESS);
 }
 
-void
-iGeom_isFcArrDegenerate (iGeom_Instance instance,
+ITAPS_API void
+iGeom_isFcArrDegenerate( iGeom_Instance instance,
                          /*in*/ iBase_EntityHandle const *face_handles ,
                          const int face_handles_size,
                          /*inout*/  int **degenerate ,
                          int *degenerate_allocated,
                          int *degenerate_size,
-                         int* err)
+                         int* err )
 {
   ALLOC_CHECK_ARRAY( degenerate, face_handles_size );
   RefEntity** faces = (RefEntity**)face_handles;
@@ -5434,12 +5665,12 @@ iGeom_isFcArrDegenerate (iGeom_Instance instance,
  *   ordered sets? What if gentity_set 2 is not a subset of gentity set
  *   1?  Should be consistent with STL... )
  */
-void
-iGeom_subtract (iGeom_Instance instance,
+ITAPS_API void
+iGeom_subtract( iGeom_Instance instance,
                 /*in*/ iBase_EntitySetHandle entity_set_1,
                 /*in*/ iBase_EntitySetHandle entity_set_2,
                 /*out*/ iBase_EntitySetHandle *result_entity_set,
-                int* err)
+                int* err )
 {
   const RefGroup *set1 = SET_HANDLE(entity_set_1);
   const RefGroup *set2 = SET_HANDLE(entity_set_2);
@@ -5458,12 +5689,12 @@ iGeom_subtract (iGeom_Instance instance,
  *   gentity_set_1.  If both are multisets and both contain 2 entries of
  *   gentity k, the intersection contains 2 entries as well.
  */
-void
-iGeom_intersect (iGeom_Instance instance,
+ITAPS_API void
+iGeom_intersect( iGeom_Instance instance,
                  /*in*/ iBase_EntitySetHandle entity_set_1,
                  /*in*/ iBase_EntitySetHandle entity_set_2,
                  /*out*/ iBase_EntitySetHandle *result_entity_set,
-                 int* err)
+                 int* err )
 {
   const RefGroup *set1 = SET_HANDLE(entity_set_1);
   const RefGroup *set2 = SET_HANDLE(entity_set_2);
@@ -5482,12 +5713,12 @@ iGeom_intersect (iGeom_Instance instance,
  *   returned in gentity_set_1.  The multiset flag in gentityset 1
  *   determines if duplicate entries are allowed.
  */
-void
-iGeom_unite (iGeom_Instance instance,
+ITAPS_API void
+iGeom_unite( iGeom_Instance instance,
              /*in*/ iBase_EntitySetHandle entity_set_1,
              /*in*/ iBase_EntitySetHandle entity_set_2,
              /*out*/ iBase_EntitySetHandle *result_entity_set,
-             int* err)
+             int* err )
 {
   const RefGroup *set1 = SET_HANDLE(entity_set_1);
   const RefGroup *set2 = SET_HANDLE(entity_set_2);
@@ -5501,11 +5732,11 @@ iGeom_unite (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_copyEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_copyEnt( iGeom_Instance instance,
                /*in*/ iBase_EntityHandle geom_entity,
                /*out*/ iBase_EntityHandle *geom_entity2,
-               int* err)
+               int* err )
 {
   Body *this_body = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   RefVolume *this_vol = dynamic_cast<RefVolume*>(ENTITY_HANDLE(geom_entity));
@@ -5535,15 +5766,15 @@ iGeom_copyEnt (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
       
-void
-iGeom_sweepEntAboutAxis (iGeom_Instance instance,
+ITAPS_API void
+iGeom_sweepEntAboutAxis( iGeom_Instance instance,
                          /*in*/ iBase_EntityHandle geom_entity,
                          /*in*/ const double angle,
                          /*in*/ const double axis_normal_x,
                          /*in*/ const double axis_normal_y,
                          /*in*/ const double axis_normal_z,
                          /*out*/ iBase_EntityHandle *geom_entity2,
-                         int* err)
+                         int* err )
 {
   DLIList<RefEntity*> ents;
   RefEntity *this_ent = ENTITY_HANDLE(geom_entity);
@@ -5592,18 +5823,19 @@ iGeom_sweepEntAboutAxis (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_deleteAll( iGeom_Instance , int* err )
+ITAPS_API void
+iGeom_deleteAll( iGeom_Instance,
+                 int* err )
 {
   GeometryQueryTool::instance()->delete_geometry();
   *err = iBase_SUCCESS;
 }
 
 
-void
-iGeom_deleteEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_deleteEnt( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle geom_entity,
-                 int* err)
+                 int* err )
 {
   RefEntity *this_ent = ENTITY_HANDLE(geom_entity);
 
@@ -5631,7 +5863,7 @@ iGeom_deleteEnt (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
+ITAPS_API void
 iGeom_createSphere( iGeom_Instance instance,
                     double radius,
                     iBase_EntityHandle *geom_entity,
@@ -5647,14 +5879,14 @@ iGeom_createSphere( iGeom_Instance instance,
 }
 
 
-void
+ITAPS_API void
 iGeom_createPrism( iGeom_Instance instance,
                    /*in*/ double height,
-		   /*in*/ int n_sides,
-		   /*in*/ double major_rad,
-		   /*in*/ double minor_rad,
-		   /*out*/ iBase_EntityHandle *geom_entity,
-		   int* err )
+                   /*in*/ int n_sides,
+                   /*in*/ double major_rad,
+                   /*in*/ double minor_rad,
+                   /*out*/ iBase_EntityHandle *geom_entity,
+                   int* err )
 {
   if ( 0.0>=height ) {
     ERROR(iBase_INVALID_ARGUMENT, "Prism height must be positive.");
@@ -5668,13 +5900,13 @@ iGeom_createPrism( iGeom_Instance instance,
 }
 
 
-void
-iGeom_createBrick (iGeom_Instance instance,
+ITAPS_API void
+iGeom_createBrick( iGeom_Instance instance,
                    /*in*/ double x,
                    /*in*/ double y,
                    /*in*/ double z,
                    /*out*/ iBase_EntityHandle *geom_entity,
-                   int* err)
+                   int* err )
 {
   double tmp_x = x;
   double tmp_y = y;
@@ -5699,13 +5931,13 @@ iGeom_createBrick (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
           
-void
-iGeom_createCylinder (iGeom_Instance instance,
+ITAPS_API void
+iGeom_createCylinder( iGeom_Instance instance,
                       /*in*/ double height,
                       /*in*/ double major_rad,
                       /*in*/ double minor_rad,
                       /*out*/ iBase_EntityHandle *geom_entity,
-                      int* err)
+                      int* err )
 {
   double tmp_minor = (0.0 == minor_rad ? major_rad : minor_rad);
   RefEntity *temp_body = 
@@ -5720,14 +5952,14 @@ iGeom_createCylinder (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
       
-void
-iGeom_createCone (iGeom_Instance instance,
-		  /*in*/ double height,
-		  /*in*/ double major_rad_base,
-		  /*in*/ double minor_rad_base,
-		  /*in*/ double rad_top,
-		  /*out*/ iBase_EntityHandle *geom_entity,
-		  int* err)
+ITAPS_API void
+iGeom_createCone( iGeom_Instance instance,
+                  /*in*/ double height,
+                  /*in*/ double major_rad_base,
+                  /*in*/ double minor_rad_base,
+                  /*in*/ double rad_top,
+                  /*out*/ iBase_EntityHandle *geom_entity,
+                  int* err )
 {
   double tmp_minor = (0.0 == minor_rad_base ? major_rad_base : minor_rad_base);
   RefEntity *temp_body = 
@@ -5742,12 +5974,12 @@ iGeom_createCone (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
     
-void
-iGeom_createTorus (iGeom_Instance instance,
+ITAPS_API void
+iGeom_createTorus( iGeom_Instance instance,
                    /*in*/ double major_rad,
                    /*in*/ double minor_rad,
                    /*out*/ iBase_EntityHandle *geom_entity,
-                   int* err)
+                   int* err )
 {
   if (minor_rad >= major_rad) {
     ERROR(iBase_INVALID_ARGUMENT, "Major radius must be greater than minor radius for tori.");
@@ -5763,13 +5995,13 @@ iGeom_createTorus (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_moveEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_moveEnt( iGeom_Instance instance,
                /*inout*/ iBase_EntityHandle geom_entity,
                /*in*/ double x,
                /*in*/ double y,
                /*in*/ double z,
-               int* err)
+               int* err )
 {
   CubitVector vec(x, y, z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
@@ -5822,14 +6054,14 @@ iGeom_moveEnt (iGeom_Instance instance,
   ERROR(iBase_INVALID_ENTITY_TYPE, "Wrong type of entity specified for move.");
 }
       
-void
-iGeom_rotateEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_rotateEnt( iGeom_Instance instance,
                  /*inout*/ iBase_EntityHandle geom_entity,
                  /*in*/ double angle,
                  /*in*/ double axis_normal_x,
                  /*in*/ double axis_normal_y,
                  /*in*/ double axis_normal_z,
-                 int* err)
+                 int* err )
 {
   CubitVector this_axis(axis_normal_x, axis_normal_y, axis_normal_z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
@@ -5855,14 +6087,14 @@ iGeom_rotateEnt (iGeom_Instance instance,
   
   ERROR(iBase_INVALID_ENTITY_TYPE, "Wrong type of entity specified for move.");
 }
-      
-void
-iGeom_reflectEnt (iGeom_Instance instance,
+
+ITAPS_API void
+iGeom_reflectEnt( iGeom_Instance instance,
                   /*inout*/ iBase_EntityHandle geom_entity,
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
                   /*in*/ double plane_normal_z,
-                  int* err)
+                  int* err )
 {
   CubitVector this_plane(plane_normal_x, plane_normal_y, plane_normal_z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
@@ -5891,13 +6123,13 @@ iGeom_reflectEnt (iGeom_Instance instance,
   ERROR(iBase_INVALID_ENTITY_TYPE, "Wrong type of entity specified for reflect.");
 }
 
-void
-iGeom_scaleEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_scaleEnt( iGeom_Instance instance,
                 /*inout*/ iBase_EntityHandle geom_entity,
                 /*in*/ double scale_x,
                 /*in*/ double scale_y,
                 /*in*/ double scale_z,
-                int* err) 
+                int* err )
 {
   CubitVector factor(scale_x, scale_y, scale_z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
@@ -5947,12 +6179,12 @@ iGeom_scaleEnt (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_uniteEnts (iGeom_Instance instance,
+ITAPS_API void
+iGeom_uniteEnts( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle const* geom_entities,
                  int geom_entities_size,
                  /*out*/ iBase_EntityHandle *geom_entity,
-                 int* err)
+                 int* err )
 {
   DLIList<Body*> bods, orig_bods;
   RefEntity* const* handle_array = ENTITY_HANDLE_CONST_ARRAY(geom_entities);
@@ -5988,13 +6220,13 @@ iGeom_uniteEnts (iGeom_Instance instance,
 
   RETURN(iBase_SUCCESS);
 }
-      
-void
-iGeom_subtractEnts (iGeom_Instance instance,
+
+ITAPS_API void
+iGeom_subtractEnts( iGeom_Instance instance,
                     /*in*/ iBase_EntityHandle blank,
                     /*in*/ iBase_EntityHandle tool,
                     /*out*/ iBase_EntityHandle *geom_entity,
-                    int* err)
+                    int* err )
 {
   Body *this_blank = dynamic_cast<Body*>(ENTITY_HANDLE(blank));
   Body *blank_copy = gmt->copy_body(this_blank);
@@ -6027,12 +6259,12 @@ iGeom_subtractEnts (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_intersectEnts ( iGeom_Instance instance,
+ITAPS_API void
+iGeom_intersectEnts( iGeom_Instance instance,
                      /*in*/ iBase_EntityHandle ent1,
-		     /*in*/ iBase_EntityHandle ent2,
-		     /*out*/ iBase_EntityHandle *geom_entity,
-		     int* err )
+                     /*in*/ iBase_EntityHandle ent2,
+                     /*out*/ iBase_EntityHandle *geom_entity,
+                     int* err )
 {
   Body *this_ent1 = dynamic_cast<Body*>(ENTITY_HANDLE(ent1));
   Body *ent1_copy = gmt->copy_body(this_ent1);
@@ -6065,8 +6297,8 @@ iGeom_intersectEnts ( iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_sectionEnt (iGeom_Instance instance,
+ITAPS_API void
+iGeom_sectionEnt( iGeom_Instance instance,
                   /*inout*/ iBase_EntityHandle geom_entity,
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
@@ -6074,7 +6306,7 @@ iGeom_sectionEnt (iGeom_Instance instance,
                   /*in*/ double offset,
                   /*in*/ int reverse,
                   /*out*/ iBase_EntityHandle *geom_entity2,
-                  int* err)
+                  int* err )
 {
   Body *this_body = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   if (NULL == this_body) {
@@ -6128,11 +6360,11 @@ iGeom_sectionEnt (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
 
-void
-iGeom_imprintEnts (iGeom_Instance instance,
+ITAPS_API void
+iGeom_imprintEnts( iGeom_Instance instance,
                    /*in*/ iBase_EntityHandle const* gentity_handles,
                    int gentity_handles_size,
-                   int* err) 
+                   int* err )
 {
   if (gentity_handles_size < 1) // GMT::imprint segfaults if passed an empty list
     RETURN(iBase_SUCCESS);
@@ -6176,12 +6408,12 @@ iGeom_imprintEnts (iGeom_Instance instance,
   RETURN(iBase_SUCCESS);
 }
   
-void
-iGeom_mergeEnts (iGeom_Instance instance,
+ITAPS_API void
+iGeom_mergeEnts( iGeom_Instance instance,
                  /*in*/ iBase_EntityHandle const* gentity_handles,
                  int gentity_handles_size,
                  double tolerance,
-                 int* err) 
+                 int* err )
 {
   double old_factor = GeometryQueryTool::instance()->get_geometry_factor();
   if (tolerance != old_factor) 
@@ -6273,12 +6505,13 @@ iGeom_mergeEnts (iGeom_Instance instance,
   }
 }
 
-void iGeom_isPositionOn(iGeom_Instance instance,
-                        iBase_EntityHandle entity,
-                        double x,
-                        double y,
-                        double z,
-                        int* IsOn)
+ITAPS_API void
+iGeom_isPositionOn( iGeom_Instance instance,
+                    iBase_EntityHandle entity,
+                    double x,
+                    double y,
+                    double z,
+                    int* IsOn )
 {
   CubitVector position(x,y,z);
   CubitPointContainment pc = CUBIT_PNT_UNKNOWN;
@@ -6639,7 +6872,7 @@ iGeom_bounding_box( RefEntity* entity, CubitVector& minc, CubitVector& maxc )
   else if(Body* body = dynamic_cast<Body*>(entity))
     box = body->bounding_box();
   else {
-    iGeom_setLastError(iBase_INVALID_ENTITY_HANDLE, "Entities passed into gentityBoundingBox must be vertex, edge, face, or region."); 
+    CGM_iGeom_setLastError(iBase_INVALID_ENTITY_HANDLE, "Entities passed into gentityBoundingBox must be vertex, edge, face, or region."); 
     return CUBIT_FAILURE;
   }
   
@@ -6822,7 +7055,7 @@ static int iGeom_get_nonmanifold_sense( const BasicTopologyEntity* child,
   const_cast<BasicTopologyEntity*>(child)
     ->get_sense_entities( se_list, const_cast<BasicTopologyEntity*>(parent) );
   if (se_list.size() == 0) {
-    iGeom_setLastError((*err = iBase_INVALID_ENTITY_HANDLE), "Relative senes of unrelated entities"); 
+    CGM_iGeom_setLastError((*err = iBase_INVALID_ENTITY_HANDLE), "Relative senes of unrelated entities"); 
     return 2;
   }
   se_list.reset();
@@ -6847,7 +7080,7 @@ int iGeom_edge_vertex_sense( const RefEdge* cedge,
     return vtx1 == vtx2 ? 0 : 1;
   else if (edge->start_vertex() == vtx2 && edge->end_vertex() == vtx1)
     return -1;
-  iGeom_setLastError((*err = iBase_INVALID_ENTITY_HANDLE), "Relative senes of unrelated entities"); 
+  CGM_iGeom_setLastError((*err = iBase_INVALID_ENTITY_HANDLE), "Relative senes of unrelated entities"); 
   return 2;
 }
 
@@ -6994,7 +7227,7 @@ int count_ibase_type( int ibase_type, const DLIList<CubitEntity*>& list, int* er
     case iBase_VERTEX:    return count_type<RefVertex>(list);
     default:
       *err = iBase_INVALID_ENTITY_TYPE;
-      iGeom_setLastError( *err );
+      CGM_iGeom_setLastError( *err );
       return -1;
   }
 }

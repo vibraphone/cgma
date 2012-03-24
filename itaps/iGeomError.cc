@@ -13,7 +13,7 @@ iBase_ErrorType lastErrorType = iBase_SUCCESS;
 extern "C" {
 #endif
 
-void iGeom_clearLastError()
+void CGM_iGeom_clearLastError()
 {
   if (lastErrorType != iBase_SUCCESS) { // don't copy string not needed
     lastErrorType = iBase_SUCCESS;
@@ -21,7 +21,7 @@ void iGeom_clearLastError()
   }
 }
 
-void iGeom_setLastError( int error_type, const char* description )
+void CGM_iGeom_setLastError( int error_type, const char* description )
 {
     // don't do string copies for non-errors
   if (error_type == iBase_SUCCESS && lastErrorType == iBase_SUCCESS)
@@ -66,15 +66,13 @@ void iGeom_setLastError( int error_type, const char* description )
   }
 }
 
-void iGeom_getErrorType( iGeom_Instance geom,
-                         int *error_type )
+int CGM_iGeom_getLastErrorType()
 {
-  *error_type = lastErrorType;
+  return lastErrorType;
 }
 
-void iGeom_getDescription( iGeom_Instance geom,
-                           char* description_buffer,
-                           int description_buffer_length )
+void CGM_iGeom_getLastErrorDesc(char* description_buffer,
+                                int description_buffer_length )
 {
   if (description_buffer && description_buffer_length > 0) {
     lastErrorDesc.copy( description_buffer, description_buffer_length );

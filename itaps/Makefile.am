@@ -39,8 +39,8 @@ if USE_MPI
 endif
 
 libiGeom_la_SOURCES = \
-        CGMAIterator.hpp \
-        CATag.hpp \
+	CGMAIterator.hpp \
+	CATag.hpp \
 	CATag.cpp \
 	iGeom_CGMA.cc \
 	iGeomError.cc \
@@ -48,11 +48,19 @@ libiGeom_la_SOURCES = \
 
 libiGeom_la_include_HEADERS = \
 	iBase.h \
-	iGeom.h \
 	iGeom_FCDefs.h \
 	iGeom_protos.h \
-	iBase_f.h \
+	iBase_f.h
+
+if ITAPS_SHIM
+  AM_CPPFLAGS += -DITAPS_SHIM
+  libiGeom_la_SOURCES += \
+	iGeom_private.h
+else
+  libiGeom_la_include_HEADERS += \
+	iGeom.h \
 	iGeom_f.h
+endif
 
 check_PROGRAMS = chaman $(TESTS)
 

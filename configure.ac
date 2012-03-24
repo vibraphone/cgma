@@ -393,6 +393,13 @@ AC_SUBST(BABEL_DIR)
 AC_SUBST(USE_BABEL)
 AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 
+################################################################################
+#                           ITAPS shim
+################################################################################
+AC_ARG_ENABLE([shim],[AC_HELP_STRING([--enable-shim],
+  [Enable ITAPS shim])],
+  [ITAPS_SHIM=$enableval],[ITAPS_SHIM=no])
+AM_CONDITIONAL([ITAPS_SHIM],[test "xyes" = "x$ITAPS_SHIM"])
 
 ################################################################################
 #                           OCC Options 

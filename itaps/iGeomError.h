@@ -5,14 +5,16 @@
 extern "C" {
 #endif
 
-void iGeom_clearLastError();
+void CGM_iGeom_clearLastError();
 
-void iGeom_setLastError( int error_type, const char* description = 0 );
+void CGM_iGeom_setLastError( int error_type, const char* description = 0 );
 
-int iGeom_getLastErrorType();
+int CGM_iGeom_getLastErrorType();
 
-void iGeom_getLastErrorDesc( char* description_buffer,
-                             int description_buffer_length );
+void CGM_iGeom_getLastErrorDesc( char* description_buffer,
+                                 int description_buffer_length );
+
+
 
 #ifdef __cplusplus
  } // extern "C"

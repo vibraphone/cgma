@@ -40,7 +40,7 @@
     array = (type*)malloc(this_size*sizeof(type));\
     array ## _allocated=this_size;\
     if (NULL == array) { \
-      iGeom_setLastError(iBase_MEMORY_ALLOCATION_FAILED);\
+      CGM_iGeom_setLastError(iBase_MEMORY_ALLOCATION_FAILED);\
       return retval; \
     }\
   }; \
@@ -67,7 +67,7 @@ static inline iBase_ErrorType tag_check_size( char*& array,
   if (iBase_ErrorType tag_check_size_tmp = tag_check_size( array, allocated, size )) \
     return tag_check_size_tmp;
 
-#define RETURN(a) {iGeom_setLastError(a); return a;}
+#define RETURN(a) {CGM_iGeom_setLastError(a); return a;}
 
 const char *CGMTagManager::CATag_NAME = "ITAPS_Tag";
 const char *CGMTagManager::CATag_NAME_INTERNAL = "ITAPS_TAG";
@@ -141,7 +141,7 @@ CGMTagManager::CGMTagManager()
                                                  &CGMTagManager::CATag_creator, false, true, 
                                                  true, true, true, false);
   if (CUBIT_FAILURE == status) {
-    iGeom_setLastError( iBase_FAILURE, "Couldn't create cgm attribute for tags." );
+    CGM_iGeom_setLastError( iBase_FAILURE, "Couldn't create cgm attribute for tags." );
   }
   else
     CATag_att_type = max_type;
@@ -266,7 +266,7 @@ iBase_ErrorType CGMTagManager::createTag (/*in*/ const char *tag_name,
                    presetTagInfo[-mit->second]).isActive;
     *tag_handle = mit->second;
     if (active) {
-      iGeom_setLastError( iBase_TAG_ALREADY_EXISTS );
+      CGM_iGeom_setLastError( iBase_TAG_ALREADY_EXISTS );
       return iBase_TAG_ALREADY_EXISTS;
     }
 
@@ -308,14 +308,14 @@ iBase_ErrorType CGMTagManager::destroyTag (/*in*/ const long tag_handle,
 
 const char *CGMTagManager::getTagName (/*in*/ const long tag_handle)
 {
-  iGeom_clearLastError();
+  CGM_iGeom_clearLastError();
   return (tag_handle > 0 ? tagInfo[tag_handle].tagName.c_str() : 
           presetTagInfo[-tag_handle].tagName.c_str());
 }
 
 int CGMTagManager::getTagSize (/*in*/ const long tag_handle)
 {
-  iGeom_clearLastError();
+  CGM_iGeom_clearLastError();
   return (tag_handle > 0 ? 
           tagInfo[tag_handle].tagLength : 
           presetTagInfo[-tag_handle].tagLength);
@@ -329,18 +329,18 @@ long CGMTagManager::getTagHandle (/*in*/ const char *tag_name)
     bool active = (it->second > 0 ? tagInfo[it->second] :
                    presetTagInfo[-it->second]).isActive;
     if (active) {
-      iGeom_clearLastError();
+      CGM_iGeom_clearLastError();
       return it->second;
     }
   }
 
-  iGeom_setLastError( iBase_TAG_NOT_FOUND );
+  CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND );
   return 0;
 }
 
 int CGMTagManager::getTagType (/*in*/ const long tag_handle) 
 {
-  iGeom_clearLastError();
+  CGM_iGeom_clearLastError();
   return (tag_handle > 0 ? 
           tagInfo[tag_handle].tagType : 
           presetTagInfo[-tag_handle].tagType);
@@ -387,7 +387,7 @@ iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_hand
     if (NULL != catag) {
       tmp_result = catag->get_tag_data(tag_handle, val_ptr);
       if (iBase_SUCCESS != tmp_result)
-        iGeom_setLastError( tmp_result, "Problem getting tag data." );
+        CGM_iGeom_setLastError( tmp_result, "Problem getting tag data." );
     }
     else if (NULL != tinfo->defaultValue) {
       memcpy(val_ptr, tinfo->defaultValue, tinfo->tagLength);
@@ -395,7 +395,7 @@ iBase_ErrorType CGMTagManager::getArrData (ARRAY_IN_DECL(RefEntity*, entity_hand
     }
     else {
       tmp_result = iBase_TAG_NOT_FOUND;
-      iGeom_setLastError( iBase_TAG_NOT_FOUND );
+      CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND );
     }
 
     if (iBase_SUCCESS != tmp_result) result = tmp_result;
@@ -523,28 +523,28 @@ iBase_ErrorType CGMTagManager::setPresetTagData(RefEntity *entity,
       if (presetTagInfo[-tag_handle].tagLength != tag_size) {
         std::string tmp_str = "Tag of type '";
         tmp_str += presetTagInfo[-tag_handle].tagName + "' is the wrong size.";
-        iGeom_setLastError(iBase_INVALID_ARGUMENT, tmp_str.c_str());
+        CGM_iGeom_setLastError(iBase_INVALID_ARGUMENT, tmp_str.c_str());
         return iBase_INVALID_ARGUMENT;
       }
       entity->entity_name(CubitString(tag_value));
       RETURN(iBase_SUCCESS);
     case 2:
         // entity id
-      iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set id of entities with this implementation." );
+      CGM_iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set id of entities with this implementation." );
       return iBase_NOT_SUPPORTED;
     case 3:
         // unique id
-      iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set unique id of entities with this implementation." );
+      CGM_iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set unique id of entities with this implementation." );
       return iBase_NOT_SUPPORTED;
     case 4: // mesh interval
     case 5: // mesh size
     case 6: // mesh interval firmness
     default:
-      iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set this tag on entities with this implementation." );
+      CGM_iGeom_setLastError( iBase_NOT_SUPPORTED, "Can't set this tag on entities with this implementation." );
       return iBase_NOT_SUPPORTED;
   }
 
-  iGeom_setLastError( iBase_TAG_NOT_FOUND );
+  CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND );
   return iBase_TAG_NOT_FOUND;
 }
 
@@ -554,13 +554,13 @@ CubitSimpleAttrib* CGMTagManager::get_simple_attrib(RefEntity* entity,
   TopologyEntity* te_ptr = dynamic_cast<TopologyEntity*>(entity);
   TopologyBridge* tb_ptr = te_ptr ? te_ptr->bridge_manager()->topology_bridge() : 0;
   if (!tb_ptr) {
-    iGeom_setLastError( iBase_INVALID_ENTITY_HANDLE, "Entity not topology" );
+    CGM_iGeom_setLastError( iBase_INVALID_ENTITY_HANDLE, "Entity not topology" );
     return 0;
   }
   DLIList<CubitSimpleAttrib*> attr_list;
   tb_ptr->get_simple_attribute("MESH_INTERVAL", attr_list);
   if (attr_list.size() == 0) {
-    iGeom_setLastError( iBase_TAG_NOT_FOUND, "No MESH_INTERVAL attribute" );
+    CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "No MESH_INTERVAL attribute" );
     return 0;
   }
   CubitSimpleAttrib* result = attr_list.pop();
@@ -582,7 +582,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
   int *this_uid;
   
   if (-tag_handle >= numPresetTag || tag_handle >= 0) {
-    iGeom_setLastError( iBase_INVALID_TAG_HANDLE, "Invalid tag handle" );
+    CGM_iGeom_setLastError( iBase_INVALID_TAG_HANDLE, "Invalid tag handle" );
     return false;
   }
   
@@ -636,7 +636,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
         if (info.defaultValue)
           val = *(int*)info.defaultValue;
         else {
-          iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval not set" );
+          CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval not set" );
           return 0;
         }
       }
@@ -657,7 +657,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
           dval = *(double*)info.defaultValue;
         else {
           delete csa;
-          iGeom_setLastError( iBase_TAG_NOT_FOUND, "Mesh size not set" );
+          CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "Mesh size not set" );
           return false;
         }
       }
@@ -672,7 +672,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
         return false;
       if (csa->string_data_list()->size() < 2) {
         delete csa;
-        iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval firmness not set" );
+        CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval firmness not set" );
         return false;
       }
       csa->string_data_list()->reset();
@@ -917,7 +917,7 @@ iBase_ErrorType CATag::get_tag_data(long tag_handle, void *tag_data)
     if (NULL != tinfo->defaultValue)
       memcpy(tag_data, tinfo->defaultValue, tinfo->tagLength);
     else {
-      iGeom_setLastError( iBase_TAG_NOT_FOUND );
+      CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND );
       return iBase_TAG_NOT_FOUND;
     }
     
