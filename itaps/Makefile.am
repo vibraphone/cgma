@@ -54,8 +54,6 @@ libiGeom_la_include_HEADERS = \
 
 if ITAPS_SHIM
   AM_CPPFLAGS += -DITAPS_SHIM
-  libiGeom_la_SOURCES += \
-	iGeom_private.h
 else
   libiGeom_la_include_HEADERS += \
 	iGeom.h \

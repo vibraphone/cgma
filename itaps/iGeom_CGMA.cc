@@ -33,7 +33,6 @@
 
 #ifdef ITAPS_SHIM
 # include "iGeom_binding.h"
-# include "iGeom_private.h"
 # define ITAPS_API static
 #else
 # include "iGeom.h"
