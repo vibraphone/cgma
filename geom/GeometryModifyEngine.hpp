@@ -495,6 +495,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- for some reason, the hollow operation did not go well, the output
     //- argument is assigned a NULL value and the function returns
     //- CUBIT_FAILURE.
+
      virtual CubitStatus flip_normals( DLIList<Surface*>& face_list ) const = 0;
     //R CubitStatus
     //R-the result of the flip_normal operation: Success or Failure

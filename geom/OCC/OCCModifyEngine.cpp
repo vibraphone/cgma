@@ -1972,8 +1972,19 @@ CubitStatus OCCModifyEngine::copy_body_attributes(TopoDS_Shape orig_shape,
     if(list.size() == 0)
     {
       k = OCCQueryEngine::instance()->OCCMap->Find(orig_shape);
-      OCCSurface *orig_surf = (OCCSurface*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
-      OCCBody* body = orig_surf->my_body();
+      OCCBody* body = NULL;
+      if(orig_shape.ShapeType() == TopAbs_FACE)
+      {
+        OCCSurface *orig_surf = (OCCSurface*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+        body = orig_surf->my_body();
+      }
+      else if(orig_shape.ShapeType() == TopAbs_SHELL)
+      {
+        OCCShell* orig_shell = (OCCShell*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+        body = orig_shell->my_body();
+      }
+      else
+        body = (OCCBody*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
       if(body)
       {
         body->get_simple_attribute(list);
