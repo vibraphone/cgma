@@ -1983,13 +1983,13 @@ CubitStatus OCCModifyEngine::copy_body_attributes(TopoDS_Shape orig_shape,
         OCCShell* orig_shell = (OCCShell*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
         body = orig_shell->my_body();
       }
-      else
-        body = (OCCBody*) (OCCQueryEngine::instance()->OccToCGM->find(k))->second;
+      //Solid and Compound case has been considered in the above cases.
       if(body)
       {
+        OCCBody* new_body = surf->my_body();
         body->get_simple_attribute(list);
         for (int kk = 0; kk < list.size(); kk++) 
-          surf->my_body()->append_simple_attribute_virt(list.get_and_step());
+          new_body->append_simple_attribute_virt(list.get_and_step());
       }
     }
   }
