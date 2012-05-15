@@ -34,6 +34,7 @@
 #include <vector>
 
 #ifdef ITAPS_SHIM
+typedef struct iGeom_Instance_Private *iGeom_Instance;
 # include "iGeom_binding.h"
 #endif
 
