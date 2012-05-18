@@ -106,12 +106,12 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   const char *argv = "Solid_2.brep";
-  CubitStatus  status = read_geometry(1, &argv, true);
+  CubitStatus  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 1 volume.
 
   argv = "Solid_7.brep";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 1 volume.
 
