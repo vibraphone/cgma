@@ -396,10 +396,21 @@ AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 ################################################################################
 #                           ITAPS shim
 ################################################################################
-AC_ARG_ENABLE([shim],[AC_HELP_STRING([--enable-shim],
-  [Enable ITAPS shim])],
-  [ITAPS_SHIM=$enableval],[ITAPS_SHIM=no])
-AM_CONDITIONAL([ITAPS_SHIM],[test "xyes" = "x$ITAPS_SHIM"])
+AC_ARG_WITH(shim,
+            [AC_HELP_STRING([--with-shim],
+                            [Enable ITAPS shim])],
+            [SHIM_DIR="$withval"],
+            [SHIM_DIR=no])
+
+AM_CONDITIONAL([ITAPS_SHIM],[test "xno" != "x$SHIM_DIR"])
+if test "x$CUBIT_DIR" == "xyes"; then
+  AC_MSG_ERROR([Option --with-shim without specifying Cubit directory.])
+elif test "x$SHIM_DIR" != "xno"; then
+  if ! test -d "$SHIM_DIR"; then
+    AC_MSG_ERROR([$SHIM_DIR: not a directory.])
+  fi
+  AM_CPPFLAGS="$AM_CPPFLAGS -I$SHIM_DIR"
+fi
 
 ################################################################################
 #                           OCC Options 
