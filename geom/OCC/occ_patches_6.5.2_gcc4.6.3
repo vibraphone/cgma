@@ -1,0 +1,135 @@
+diff -rupN orgOCC652/ros/src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx OCC652/ros/src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx
+--- orgOCC652/ros/src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2011-07-15 02:27:59.000000000 -0500
++++ OCC652/ros/src/BRepBuilderAPI/BRepBuilderAPI_Collect.cxx	2012-05-23 11:44:30.190980273 -0500
+@@ -201,9 +201,18 @@ void BRepBuilderAPI_Collect::Add (const
+   BuildBack (myGen, GenBack);   // Vraiment pas optimum a Revoir
+   BuildBack (myMod, ModBack);
+   
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
+-  Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
++  TopAbs_ShapeEnum type = SI.ShapeType();
++  Update (myMod,myGen,ModBack,GenBack,SI,MKS,type);
++  if(type < TopAbs_SHELL)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_SHELL);
++  if(type < TopAbs_FACE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_FACE);
++  if(type < TopAbs_WIRE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_WIRE);
++  if(type < TopAbs_EDGE)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_EDGE);
++  if(type < TopAbs_VERTEX)
++    Update (myMod,myGen,ModBack,GenBack,SI,MKS,TopAbs_VERTEX);
+ 
+ #ifdef DEB
+   if (Affich) {
+diff -rupN orgOCC652/ros/src/BRepClass3d/BRepClass3d_SClassifier.cxx OCC652/ros/src/BRepClass3d/BRepClass3d_SClassifier.cxx
+--- orgOCC652/ros/src/BRepClass3d/BRepClass3d_SClassifier.cxx	2011-08-12 05:09:56.000000000 -0500
++++ OCC652/ros/src/BRepClass3d/BRepClass3d_SClassifier.cxx	2012-05-23 09:29:19.235267158 -0500
+@@ -90,7 +90,8 @@ void BRepClass3d_SClassifier::PerformInf
+   myState=2; 
+   for(aSE.InitShell(); aSE.MoreShell() && nump<2;  aSE.NextShell()) { 
+     for(aSE.InitFace();	aSE.MoreFace()  && nump<2; ) {
+-      aF =*((TopoDS_Face*)&aSE.CurrentFace());
++      TopoDS_Face tmpVar = aSE.CurrentFace(); 
++      aF =*((TopoDS_Face*)&tmpVar);
+       aSE.NextFace();
+       if(!nump) { 
+ 	nump++;
+diff -rupN orgOCC652/ros/src/Extrema/Extrema_ExtPElS.cxx OCC652/ros/src/Extrema/Extrema_ExtPElS.cxx
+--- orgOCC652/ros/src/Extrema/Extrema_ExtPElS.cxx	2011-07-15 02:29:06.000000000 -0500
++++ OCC652/ros/src/Extrema/Extrema_ExtPElS.cxx	2012-05-23 11:44:30.190980273 -0500
+@@ -56,6 +56,7 @@ void Extrema_ExtPElS::Perform(const gp_P
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ); //-PI<U1<PI
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+ 
+   gp_Pnt Ps;
+@@ -157,7 +158,9 @@ void Extrema_ExtPElS::Perform(const gp_P
+   B = MP.Angle(DirZ);
+   if (!Same) { U1 += PI; }
+   U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
++  if (U2 - 2.*PI < Tol && U2 > 2.*PI) {U2 = 2. * PI; }
+   if (U2 > 2.*PI) { U2 -= 2. * PI; }
+   B = MP.Angle(DirZ);
+   A = Abs(A);
+@@ -248,6 +251,7 @@ void Extrema_ExtPElS::Perform(const gp_P
+     gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+     U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+     U2 = U1 + PI;
++    if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+     if (U1 < 0.) { U1 += 2. * PI; }
+     V = OP.Angle(OPp);
+     if (Zp < 0.) { V = -V; }
+@@ -312,6 +316,7 @@ void Extrema_ExtPElS::Perform(const gp_P
+   gp_Vec myZ = Pos.XDirection()^Pos.YDirection();
+   Standard_Real U1 = gp_Vec(Pos.XDirection()).AngleWithRef(OPp,myZ);
+   Standard_Real U2 = U1 + PI;
++  if(U1 > -Tol && U1 < 0.) {U1 = 0.;}
+   if (U1 < 0.) { U1 += 2. * PI; }
+   Standard_Real R = sqrt(R2);
+   gp_Vec OO1 = OPp.Divided(R).Multiplied(S.MajorRadius());
+@@ -324,6 +329,8 @@ void Extrema_ExtPElS::Perform(const gp_P
+ 
+   Standard_Real V1 = OO1.AngleWithRef(gp_Vec(O1,P),OO1.Crossed(OZ));
+   Standard_Real V2 = OO2.AngleWithRef(gp_Vec(P,O2),OO2.Crossed(OZ));
++  if(V1 > -Tol && V1 < 0.){ V1 = 0.;}
++  if(V2 > -Tol && V2 < 0.){ V2 = 0.;}
+   if (V1 < 0.) { V1 += 2. * PI; }
+   if (V2 < 0.) { V2 += 2. * PI; }
+ 
+diff -rupN orgOCC652/ros/src/Extrema/Extrema_ExtPS.cxx OCC652/ros/src/Extrema/Extrema_ExtPS.cxx
+--- orgOCC652/ros/src/Extrema/Extrema_ExtPS.cxx	2011-07-15 02:29:06.000000000 -0500
++++ OCC652/ros/src/Extrema/Extrema_ExtPS.cxx	2012-05-23 11:44:30.194980274 -0500
+@@ -100,10 +100,18 @@ void Extrema_ExtPS::TreatSolution (const
+   Standard_Real U, V;
+   PS.Parameter(U, V);
+   if (myS->IsUPeriodic()) {
+-    U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
++    Standard_Real Uupper = myuinf+myS->UPeriod();
++    if(U>(myuinf-mytolu) && U < myuinf) U = myuinf;
++    else if(U < (Uupper+mytolu) && U > Uupper) U = Uupper;
++    else
++      U = ElCLib::InPeriod(U, myuinf, myuinf+myS->UPeriod());
+   }
+   if (myS->IsVPeriodic()) {
+-    V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
++    Standard_Real Vupper = myvinf+myS->VPeriod();
++    if(V>(myvinf-mytolv) && V < myvinf) V = myvinf;
++    else if(V < (Vupper+mytolv) && V > Vupper) V = Vupper;
++    else
++      V = ElCLib::InPeriod(V, myvinf, myvinf+myS->VPeriod());
+   }
+   if ((myuinf-U) <= mytolu && (U-myusup) <= mytolu &&
+       (myvinf-V) <= mytolv && (V-myvsup) <= mytolv) {
+diff -rupN orgOCC652/ros/src/TopOpeBRep/TopOpeBRep_EdgesIntersector_1.cxx OCC652/ros/src/TopOpeBRep/TopOpeBRep_EdgesIntersector_1.cxx
+--- orgOCC652/ros/src/TopOpeBRep/TopOpeBRep_EdgesIntersector_1.cxx	2011-07-15 02:28:39.000000000 -0500
++++ OCC652/ros/src/TopOpeBRep/TopOpeBRep_EdgesIntersector_1.cxx	2012-05-23 11:44:30.194980274 -0500
+@@ -215,8 +215,8 @@ TopOpeBRepDS_Transition TopOpeBRep_Edges
+ 	    staB = staINON;
+ 	    staA = staINON;
+ 	  }
+-	  else // Middle/Middle is impossible
+-	    Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown MM");
++	  //else // Middle/Middle is impossible
++	  //  Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown MM");
+ 	}
+ 	else { // posother = Head or End
+ 	  Standard_Boolean opposite = IsOpposite1();
+@@ -258,9 +258,9 @@ TopOpeBRepDS_Transition TopOpeBRep_Edges
+ 	  staB = TopAbs_OUT;
+ 	  staA = staINON;
+ 	}
+-	else {  // Middle is impossible
+-	  Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown M");
+-	}
++	//else {  // Middle is impossible
++	//  Standard_Failure::Raise("TopOpeBRep_EdgesIntersector : Situation Unknown M");
++	//}
+       } // point is not a segment point
+       
+     } // T.Situation == IntRes2d_Unknown
