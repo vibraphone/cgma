@@ -226,10 +226,6 @@ static inline void box_min_max( double dir,
                                 double pt,
                                 double& tmin,
                                 double& tmax );
-static bool
-iBase_intersect_ray_box( const CubitBox& box,
-                         const CubitVector& point,
-                         const CubitVector& direction );
 
 static CubitStatus
 iGeom_fire_ray( const CubitVector& point,
@@ -288,20 +284,6 @@ static
 void append_all_ibase_type( int ibase_type, 
                             DLIList<RefEntity*>& target_list,
                             int* err );
-
-static
-CubitStatus iGeom_get_graphics(RefFace* face, 
-                               DLIList<CubitVector*>& point_list,
-                               DLIList<int>& facet_list,
-                               unsigned short normal_tolerance = 15,
-                               double distance_tolerance = 0,
-                               double longest_edge = 0) ;
-
-static
-CubitStatus iGeom_get_graphics(RefEdge* edge,
-                               DLIList<CubitVector*>& point_list,
-                               DLIList<int>& facet_list,
-                               double tolerance = 0.0 ) ;
 
 static CubitStatus init_cgm( const std::string& engine )
 {
@@ -6572,6 +6554,7 @@ static bool match_option( const std::string& opt,
 void
 iGeom_load_cub_geometry(const char *name, int* err) 
 {
+  size_t bytes_read;
   FILE *cubfile = fopen(name, "rb");
   if (NULL == cubfile) RETURN(iBase_FILE_NOT_FOUND);
 
@@ -6585,7 +6568,10 @@ iGeom_load_cub_geometry(const char *name, int* err)
   long endpos = ftell(cubfile);
   
   char magic_str[4] = {'\0', '\0', '\0', '\0'};
-  fread(magic_str, 1, 4, cubfile);
+  bytes_read = fread(magic_str, 1, 4, cubfile);
+  if (bytes_read != 4) {
+    ERROR(iBase_FAILURE, "Error reading .cub file");
+  }
   if (!strcmp(magic_str, "CUBE")) {
     ERROR(iBase_NOT_SUPPORTED, "Wrong magic string in .cub file.");
   }
@@ -6597,7 +6583,10 @@ iGeom_load_cub_geometry(const char *name, int* err)
     ERROR(iBase_FAILURE, "Seek failed reading cub file header.");
   }
   int header[6];
-  fread(header, 4, 6, cubfile);
+  bytes_read = fread(header, 4, 6, cubfile);
+  if (bytes_read != 4*6) {
+    ERROR(iBase_FAILURE, "Error reading .cub file");
+  }
   int num_models = header[2];
   int model_table_offset = header[3];
 
@@ -6617,7 +6606,10 @@ iGeom_load_cub_geometry(const char *name, int* err)
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed seeking to model table.");
   }
-  fread(model_entries, 4, 6*num_models, cubfile);
+  bytes_read = fread(model_entries, 4, 6*num_models, cubfile);
+  if (bytes_read != 4*6*static_cast<size_t>(num_models)) {
+    ERROR(iBase_FAILURE, "Error reading .cub file");
+  }
   for (int i = 0; i < num_models; i++) {
     model_type[i] = model_entries[6*i];
     model_offset[i] = model_entries[6*i+1];
@@ -6904,30 +6896,6 @@ static inline void box_min_max( double dir,
     tmax = (min - pt) / dir;
   }
 }
-
-static bool
-iBase_intersect_ray_box( const CubitBox& box,
-                         const CubitVector& point,
-                         const CubitVector& direction )
-{
-  double txmin, txmax, tymin, tymax, tzmin, tzmax;
-  box_min_max( direction.x(), box.minimum().x(), box.maximum().x(), point.x(), txmin, txmax );
-  box_min_max( direction.y(), box.minimum().y(), box.maximum().y(), point.y(), tymin, tymax );
-  if (txmin > tymax || tymin > txmax)
-    return false;
-  
-  if (tymin > txmin)
-    txmin = tymin;
-  if (tymax < txmax)
-    txmax = tymax;
-  
-  box_min_max( direction.z(), box.minimum().z(), box.maximum().z(), point.z(), tzmin, tzmax );
-  if (txmin > txmax || tzmin > txmax)
-    return false;
-  
-  return true;
-}
-
 
 static CubitStatus
 iGeom_fire_ray( const CubitVector& point,
