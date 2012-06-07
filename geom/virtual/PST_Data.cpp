@@ -1204,12 +1204,16 @@ void PST_Face::print()
              "----------  -----------  -----------  -----------  -----------\n" );
   PST_CoEdge* coe = coedge_;
     PRINT_INFO("%10p %10p  %10p  %10p  %10p\n",
-      this, coe, coe->edge(), coe->start_point(), coe->end_point() );
+      static_cast<void*>(this), static_cast<void*>(coe),
+      static_cast<void*>(coe->edge()), static_cast<void*>(coe->start_point()),
+      static_cast<void*>(coe->end_point()) );
   coe = coe->next();
   while( coe && coe != coedge_ )
   {
     PRINT_INFO("            %10p  %10p  %10p  %10p\n",
-      coe, coe->edge(), coe->start_point(), coe->end_point() );
+      static_cast<void*>(coe), static_cast<void*>(coe->edge()),
+      static_cast<void*>(coe->start_point()),
+      static_cast<void*>(coe->end_point()) );
     coe = coe->next();
   }
 }

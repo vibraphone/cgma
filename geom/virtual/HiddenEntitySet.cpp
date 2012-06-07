@@ -168,7 +168,7 @@ void HiddenEntitySet::print_debug_info( const char* prefix ) const
     prefix = "";
   
   PRINT_INFO("%sHiddenEntitySet %p owned by %s %p\n", 
-    prefix, static_cast<void*>(this),
+    prefix, static_cast<const void*>(this),
     myOwner ? fix_type_name(typeid(*myOwner).name()) : "(null)",
     static_cast<void*>(myOwner) );
     

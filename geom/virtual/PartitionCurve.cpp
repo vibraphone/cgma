@@ -296,7 +296,7 @@ void PartitionCurve::print_debug_info( const char* prefix,
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );
   strcat( new_prefix, "  ");
-  PRINT_INFO("%sPartitionCurve %p\n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sPartitionCurve %p\n", prefix, static_cast<const void*>(this) );
   
   if(entset)
     sub_entity_set().print_debug_info( new_prefix );

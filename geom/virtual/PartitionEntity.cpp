@@ -29,7 +29,8 @@ void PartitionEntity::print_debug_info( const char* prefix,
                                         bool print_subent_set ) const
 {
   if( !prefix ) prefix = "";
-  PRINT_INFO("%sPartitionEntity %p\n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sPartitionEntity %p\n", prefix,
+    static_cast<const void*>(this) );
   if( print_subent_set )
     sub_entity_set().print_debug_info(prefix);
   else

@@ -93,7 +93,8 @@ void PartitionSurface::print_debug_info( const char* prefix ,
                                          bool print_sub_entity_set ) const
 {
   if( !prefix ) prefix = "";
-  PRINT_INFO("%sPartitionSurface %p\n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sPartitionSurface %p\n", prefix,
+    static_cast<const void*>(this) );
   PartitionLoop* loop = 0;
   while( (loop = next_loop(loop)) )
   {

@@ -165,7 +165,8 @@ void CompositePoint::print_debug_info( const char* prefix, bool brief ) const
     realPoint ? fix_type_name(typeid(*realPoint).name()) : "NO REAL POINT", 
     realPoint ? realPoint->get_id() : 0 );
 #else  
-  PRINT_INFO("%sCompositePoint %p : %s %p\n", prefix, static_cast<void*>(this),
+  PRINT_INFO("%sCompositePoint %p : %s %p\n", prefix,
+    static_cast<const void*>(this),
     realPoint ? fix_type_name(typeid(*realPoint).name()) : "NO REAL POINT", 
     static_cast<void*>(realPoint));
 #endif

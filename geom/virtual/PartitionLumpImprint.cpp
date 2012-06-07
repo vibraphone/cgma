@@ -353,7 +353,7 @@ void PartitionLumpImprint::set_point_owner( CubitPoint* pt,
     RefEntity* re = dynamic_cast<RefEntity*>(tb->topology_entity());
     PART_LUMP_PRINT("%d. (%f,%f,%f) -> %s %p (%d)\n", index,
       pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z(), 
-      type, static_cast<void*>(owner, re?re->id():0 );
+      type, static_cast<void*>(owner), re?re->id():0 );
     GfxDebug::draw_point( pt->coordinates(), color );
     GfxDebug::flush();
   }

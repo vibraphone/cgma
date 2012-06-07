@@ -1075,7 +1075,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
       PRINT_INFO(": %d curves.\n", num_curves() );
 #else
     PRINT_INFO("%sCompositeCurve %p : points (%p,%p) ", prefix,
-      static_cast<void*>(this), static_cast<void*>(startPoint),
+      static_cast<const void*>(this), static_cast<void*>(startPoint),
       static_cast<void*>(endPoint) );
     if ( num_curves() == 1 )
       PRINT_INFO(": %s %p\n", fix_type_name(typeid(*get_curve(0)).name()), 
@@ -1093,7 +1093,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
 #ifdef TOPOLOGY_BRIDGE_IDS
   PRINT_INFO("%sCompositeCurve %d\n", prefix, get_id() );
 #else
-  PRINT_INFO("%sCompositeCurve %p\n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sCompositeCurve %p\n", prefix, static_cast<const void*>(this) );
 #endif
   compGeom->print_debug_info( new_prefix );
   if( hiddenSet ) hiddenSet->print_debug_info( new_prefix );
