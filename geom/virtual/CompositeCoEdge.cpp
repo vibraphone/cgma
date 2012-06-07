@@ -555,10 +555,10 @@ void CompositeCoEdge::print_debug_info( const char* prefix, bool brief )
   const char* sense = mySense == CUBIT_FORWARD ? "Forward" :
                       mySense == CUBIT_REVERSED ? "Reverse" : "UNKNOWN";
                       
-  PRINT_INFO("%sCompCoEdge %p %s ", prefix, this, sense );
+  PRINT_INFO("%sCompCoEdge %p %s ", prefix, static_cast<void*>(this), sense );
   if ( num_coedges() == 1 )
     PRINT_INFO("%s %p ", fix_type_name(typeid(*get_coedge(0)).name()),
-      get_coedge(0));
+      static_cast<void*>(get_coedge(0)));
   else
     PRINT_INFO("%d coedges ", num_coedges() );
     
@@ -566,9 +566,9 @@ void CompositeCoEdge::print_debug_info( const char* prefix, bool brief )
     PRINT_INFO("NULL CURVE\n");
   else if( brief )
 #ifdef TOPOLOGY_BRIDGE_IDS
-    PRINT_INFO("curve %d\n", myCurve->get_id() );
+  PRINT_INFO("curve %d\n", myCurve->get_id() );
 #else
-    PRINT_INFO("curve %p\n", myCurve );
+  PRINT_INFO("curve %p\n", static_cast<void*>(myCurve) );
 #endif
   else
     { PRINT_INFO("\n  ");  myCurve->print_debug_info(prefix, true); }
@@ -582,7 +582,8 @@ void CompositeCoEdge::print_debug_info( const char* prefix, bool brief )
   {
     PRINT_INFO("\n");
     for( int i = 0; i < coedgeSet.size(); i++ )
-      PRINT_INFO("%s  CoEdgeSM[%d] = %p\n", prefix, i, coedgeSet[i] );
+      PRINT_INFO("%s  CoEdgeSM[%d] = %p\n", prefix, i,
+        static_cast<void*>(coedgeSet[i]) );
   }
 */
 }

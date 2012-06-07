@@ -332,14 +332,15 @@ void SubEntitySet::print_debug_info( const char* prefix ) const
   
   PRINT_INFO("%sSubEntitySet for %s %p\n", prefix, 
     myEntity ? fix_type_name(typeid(*myEntity).name()) : "TopologyBridge", 
-    myEntity );
+    static_cast<void*>(myEntity) );
 
   PRINT_INFO("%s  SubEntities:\n", prefix );
   PartitionEntity* ent = subEntityHead;
   while( ent )
   {
     PRINT_INFO("%s    %s %d (%p)\n", prefix, 
-      fix_type_name(typeid(*ent).name()), ent->entitySetId, ent );
+      fix_type_name(typeid(*ent).name()), ent->entitySetId,
+      static_cast<void*>(ent) );
     ent = ent->entitySetNext;
   }
 
@@ -348,11 +349,12 @@ void SubEntitySet::print_debug_info( const char* prefix ) const
   while( ent )
   {
     PRINT_INFO("%s    %s %d (%p)\n", prefix, 
-      fix_type_name(typeid(*ent).name()), ent->entitySetId, ent );
+      fix_type_name(typeid(*ent).name()), ent->entitySetId,
+      static_cast<void*>(ent) );
     ent = ent->entitySetNext;
   }
   
-  PRINT_INFO("%s  Body: %p\n",prefix,  bodyPtr );
+  PRINT_INFO("%s  Body: %p\n",prefix, static_cast<void*>(bodyPtr) );
 }
 
 bool SubEntitySet::is_attribute( CubitSimpleAttrib* csa, int id ) const

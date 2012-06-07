@@ -1559,10 +1559,12 @@ void CompositeSurface::print_debug_info( const char* line_prefix,
       PRINT_INFO("%d surfaces.\n", num_surfs());
 
 #else
-    PRINT_INFO("%sCompositeSurface %p : %d loops ", line_prefix, this, count );
+    PRINT_INFO("%sCompositeSurface %p : %d loops ", line_prefix,
+      static_cast<void*>(this), count );
     if ( num_surfs() == 1 )
       PRINT_INFO("%s %d\n", fix_type_name(typeid(*get_surface(0)).name()), get_surface(0)->get_saved_id());
-   //   PRINT_INFO("%s %p\n", fix_type_name(typeid(*get_surface(0)).name()), get_surface(0));
+   //   PRINT_INFO("%s %p\n", fix_type_name(typeid(*get_surface(0)).name()),
+   //     static_cast<void*>(get_surface(0)));
     else
       PRINT_INFO("%d surfaces.\n", num_surfs());
 #endif
@@ -1576,7 +1578,8 @@ void CompositeSurface::print_debug_info( const char* line_prefix,
   PRINT_INFO("%sCompositeSurface %d\n", line_prefix, get_id() );
 #else
   PRINT_INFO("%sCompositeSurface %d\n", line_prefix, this->get_saved_id() );
- // PRINT_INFO("%sCompositeSurface %p\n", line_prefix, this );
+ // PRINT_INFO("%sCompositeSurface %p\n", line_prefix,
+ // static_cast<void*>(this) );
 #endif
   compGeom->print_debug_info( new_prefix );
 

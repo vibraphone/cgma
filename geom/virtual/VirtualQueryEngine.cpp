@@ -208,7 +208,8 @@ CubitStatus VirtualQueryEngine::get_graphics(
   {
     PRINT_INFO("VirtualQueryEngine::get_graphics_facets"
                "( s%p, %p, %d, %f ) = CUBIT_FAILURE\n",
-               surf_ptr, gMem, normal_tol, dist_tol);
+               static_cast<void*>(surf_ptr), static_cast<void*>(gMem),
+               normal_tol, dist_tol);
     return CUBIT_FAILURE;
   }
 }

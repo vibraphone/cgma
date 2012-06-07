@@ -4721,7 +4721,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       return CUBIT_SUCCESS;
 
     PRINT_DEBUG_86("Reading partition geometry on %s %p\n", 
-      fix_type_name( typeid(*surf).name() ), surf );
+      fix_type_name( typeid(*surf).name() ), static_cast<void*>(surf) );
       
       // Find max ID
     attribs.reset();
@@ -4768,7 +4768,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       new_geom.append(new_pt);
       delete attrib;
       PRINT_DEBUG_86("  Created Point %p (%d in subset) at (%f,%f,%f)\n", 
-        new_pt, new_pt->sub_entity_set().get_id(new_pt), 
+        static_cast<void*>(new_pt), new_pt->sub_entity_set().get_id(new_pt), 
         new_pt->coordinates().x(), new_pt->coordinates().y(), 
         new_pt->coordinates().z() );
       if (DEBUG_FLAG(86))
@@ -4806,9 +4806,9 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
         new_geom.append( pt_curve );
         PRINT_DEBUG_86("  Created point-curve %p (%d in subset) with\n"
                        "    point %p (%d in subset) at (%f,%f,%f)\n", 
-          pt_curve, 
+          static_cast<void*>(pt_curve),
           pt_curve->sub_entity_set().get_id(pt_curve), 
-          pt_curve->start_point(),
+          static_cast<void*>(pt_curve->start_point()),
           pt_curve->start_point()->sub_entity_set().get_id(pt_curve->start_point()),
           pt_curve->start_point()->coordinates().x(),
           pt_curve->start_point()->coordinates().y(), 
@@ -4836,15 +4836,15 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       PRINT_DEBUG_86("  Created polyline curve %p (%d in subset) with %d segments.\n"
                      "    start point %p (%d in subset) at (%f,%f,%f)\n" 
                      "      end point %p (%d in subset) at (%f,%f,%f)\n", 
-          new_curve, 
+          static_cast<void*>(new_curve), 
           new_curve->sub_entity_set().get_id(new_curve),
           new_curve->point_count() - 1, 
-          new_curve->start_point(),
+          static_cast<void*>(new_curve->start_point()),
           new_curve->start_point()->sub_entity_set().get_id(new_curve->start_point()),
           new_curve->start_point()->coordinates().x(),
           new_curve->start_point()->coordinates().y(), 
           new_curve->start_point()->coordinates().z(),
-          new_curve->end_point(),
+          static_cast<void*>(new_curve->end_point()),
           new_curve->end_point()->sub_entity_set().get_id(new_curve->end_point()),
           new_curve->end_point()->coordinates().x(),
           new_curve->end_point()->coordinates().y(), 
@@ -5047,7 +5047,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
 
           ent = entity_from_id( set_id, ent_id, first_surf->sub_entity_set() );
           PartitionCurve* curve = dynamic_cast<PartitionCurve*>(ent);
-          PRINT_DEBUG_86(" %p,%d,%d%c", curve, set_id, ent_id*sense, loop?',':'\n');
+          PRINT_DEBUG_86(" %p,%d,%d%c", static_cast<void*>(curve), set_id,
+            ent_id*sense, loop?',':'\n');
           if(!curve)
           {
             PRINT_ERROR("Nonexistant curve specified in saved connectivity.\n");

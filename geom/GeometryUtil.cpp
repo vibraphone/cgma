@@ -1939,7 +1939,7 @@ CubitBoolean GeometryUtil::valid_shell_cofaces( Shell* shell_ptr,
         result = CUBIT_FALSE;
         if( print_error )
           PRINT_ERROR("CoEdge @ %p in Surface %d has no Curve!\n",
-            coedge_ptr, face_ptr->id() );
+            static_cast<void*>(coedge_ptr), face_ptr->id() );
         continue;
       }
       
@@ -2276,7 +2276,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( Body* body_ptr, CubitBoolean print
     {
       if( print ) PRINT_ERROR(
         "No RefVolume for Lump %p in %s\n",
-        lump, body_ptr->entity_name().c_str() );
+        static_cast<void*>(lump), body_ptr->entity_name().c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -2378,7 +2378,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( RefVolume* vol_ptr, CubitBoolean p
     {
       if( print ) PRINT_ERROR(
         "No Shell for ShellSM %p in %s\n",
-        shell, vol_ptr->entity_name().c_str() );
+        static_cast<void*>(shell), vol_ptr->entity_name().c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -2410,7 +2410,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(Shell* shell_ptr, CubitBoolean prin
   if ( shell_bridges.size() != 1 )
   {
     PRINT_ERROR("Shell %p (in Volume %d) has %d attached ShellSM(s).\n", 
-      shell_ptr,  shell_ptr->get_ref_volume_ptr() ? 
+      static_cast<void*>(shell_ptr),  shell_ptr->get_ref_volume_ptr() ? 
       shell_ptr->get_ref_volume_ptr()->id() : 0,
       shell_bridges.size() );
     result = CUBIT_FALSE;
@@ -2427,7 +2427,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(Shell* shell_ptr, CubitBoolean prin
     {
       PRINT_ERROR("Bad SolidModel Topology!\n");
       PRINT_ERROR("ShellSM %p in Shell %p (in Volume %d) has %d parent Lumps.\n",
-       shellsm, shell_ptr,  
+       static_cast<void*>(shellsm), static_cast<void*>(shell_ptr),
        shell_ptr->get_ref_volume_ptr() ? shell_ptr->get_ref_volume_ptr()->id() : 0,
        temp_list.size() );
     }
@@ -2500,7 +2500,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(Shell* shell_ptr, CubitBoolean prin
     {
       if( print ) PRINT_ERROR(
         "No RefFace for Surface %p in Shell %p in %s\n",
-        surface, shell_ptr, 
+        static_cast<void*>(surface), static_cast<void*>(shell_ptr),
         vol_list.size() ?
           vol_list.get()->entity_name().c_str() :
           "NO REFVOLUME" );
@@ -2609,7 +2609,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( RefFace* face_ptr, CubitBoolean pr
     {
       if( print ) PRINT_ERROR(
         "No Loop for LoopSM %p in %s\n",
-        loop, face_ptr->entity_name().c_str() );
+        static_cast<void*>(loop), face_ptr->entity_name().c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -2645,7 +2645,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
   if ( loop_bridges.size() == 0 )
   {
     PRINT_ERROR("Loop %p (in surface %d) has no attached LoopSM(s).\n", 
-      loop_ptr, 
+                static_cast<void*>(loop_ptr), 
       loop_ptr->get_ref_face_ptr() ? loop_ptr->get_ref_face_ptr()->id() : 0 );
     result = CUBIT_FALSE;
   }
@@ -2739,7 +2739,8 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
         face_name = face_list.get()->entity_name();
       if( print ) PRINT_ERROR(
         "No CoEdge for CoEdgeSM %p in Loop %p in %s\n",
-        coedge, loop_ptr, face_name.c_str() );
+        static_cast<void*>(coedge), static_cast<void*>(loop_ptr),
+        face_name.c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -2774,8 +2775,8 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
     {
       if( print ) PRINT_ERROR(
         "Loop %p in %s has %d coedges, while LoopSM %p has %d coedgesms.\n",
-          loop_ptr, face_str_ptr, coedge_list.size(),
-          loopsm_ptr, coedge_bridges.size() );
+        static_cast<void*>(loop_ptr), face_str_ptr, coedge_list.size(),
+        static_cast<void*>(loopsm_ptr), coedge_bridges.size() );
       result = CUBIT_FAILURE;
       continue;
     }
@@ -2796,7 +2797,8 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
     {
       if( print ) PRINT_ERROR(
         "Order of CoEdges in Loop %p in %s is incorrect w.r.t. LoopSM %p.\n",
-        loop_ptr, face_str_ptr, loopsm_ptr);
+        static_cast<void*>(loop_ptr), face_str_ptr,
+        static_cast<void*>(loopsm_ptr));
       result = CUBIT_FAILURE;
       continue;
     }
@@ -2819,7 +2821,8 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
       {
         if( print ) PRINT_ERROR(
           "Order of CoEdges in Loop %p in %s is incorrect w.r.t. loopsm %p.\n",
-          loop_ptr, face_str_ptr,loopsm_ptr);
+          static_cast<void*>(loop_ptr), face_str_ptr,
+          static_cast<void*>(loopsm_ptr));
         result = CUBIT_FAILURE;
         break;
       }
@@ -2836,7 +2839,8 @@ CubitBoolean GeometryUtil::valid_sm_topology( Loop* loop_ptr, CubitBoolean print
       result = CUBIT_FAILURE;
       if (print) PRINT_ERROR(
         "Loop %p in %s is reversed w.r.t. loopsm %p.\n",
-        loop_ptr, face_str_ptr, loopsm_ptr);
+        static_cast<void*>(loop_ptr), face_str_ptr,
+        static_cast<void*>(loopsm_ptr));
     }
     
   }       
@@ -2865,7 +2869,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(CoEdge* coedge_ptr, CubitBoolean pr
   {
     if (print) PRINT_ERROR(
       "CoEdge %p (curve %d %s in surface %d) has no attached CoEdgeSM(s).\n", 
-      coedge_ptr, 
+      static_cast<void*>(coedge_ptr),
       coedge_ptr->get_ref_edge_ptr() ? coedge_ptr->get_ref_edge_ptr()->id() : 0,
       coedge_ptr->get_sense() == CUBIT_FORWARD ? "FORWARD" :
       coedge_ptr->get_sense() == CUBIT_REVERSED ? "REVERSED" : "UNKNOWN",
@@ -2885,7 +2889,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(CoEdge* coedge_ptr, CubitBoolean pr
       PRINT_ERROR(
         "Bad SolidModel topoloy.  CoEdgeSM %p in CoEdge %p "
         "(curve %d %s in surface %d) has %d parent LoopSMs.\n", 
-        coedgesm, coedge_ptr,
+        static_cast<void*>(coedgesm), static_cast<void*>(coedge_ptr),
         coedge_ptr->get_ref_edge_ptr() ? coedge_ptr->get_ref_edge_ptr()->id() : 0,
         coedge_ptr->get_sense() == CUBIT_FORWARD ? "FORWARD" :
         coedge_ptr->get_sense() == CUBIT_REVERSED ? "REVERSED" : "UNKNOWN",
@@ -2910,7 +2914,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(CoEdge* coedge_ptr, CubitBoolean pr
       }
       if( print ) PRINT_ERROR(
         "Missing VGI Entity for LoopSM %p. Discovered on CoEdge with %s\n",
-        loopsm, edge_str );
+        static_cast<void*>(loopsm), edge_str );
       result = CUBIT_FALSE;
     }
     else if( !loop_list.is_in_list(loop_ptr) )
@@ -2963,7 +2967,7 @@ CubitBoolean GeometryUtil::valid_sm_topology(CoEdge* coedge_ptr, CubitBoolean pr
       result = CUBIT_FAILURE;
       if (print) PRINT_ERROR(
         "CoEdge %p (curve %d %s in surface %d) has wrong sense w.r.t CoEdgeSM.\n", 
-        coedge_ptr, 
+        static_cast<void*>(coedge_ptr),
         coedge_ptr->get_ref_edge_ptr() ? coedge_ptr->get_ref_edge_ptr()->id() : 0,
         coedge_ptr->get_sense() == CUBIT_FORWARD ? "FORWARD" :
         coedge_ptr->get_sense() == CUBIT_REVERSED ? "REVERSED" : "UNKNOWN",
@@ -3011,7 +3015,8 @@ CubitBoolean GeometryUtil::valid_sm_topology(CoEdge* coedge_ptr, CubitBoolean pr
         face_name = faces.get()->entity_name();
       if( print ) PRINT_ERROR(
         "No RefEdge for Curve %p in CoEdge %p in %s\n",
-        curve, coedge_ptr, face_name.c_str() );
+        static_cast<void*>(curve), static_cast<void*>(coedge_ptr),
+        face_name.c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -3108,7 +3113,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( RefEdge* edge_ptr, CubitBoolean pr
     {
       if( print ) PRINT_ERROR(
         "No RefVertex for Point %p in %s\n",
-        point, edge_ptr->entity_name().c_str() );
+        static_cast<void*>(point), edge_ptr->entity_name().c_str() );
       result = CUBIT_FALSE;
     }
   } 
@@ -3153,7 +3158,7 @@ CubitBoolean GeometryUtil::valid_sm_topology( RefVertex* vtx_ptr, CubitBoolean p
       {
         if( print ) PRINT_ERROR(
           "Missing VGI Entity for Curve %p.  Discovered as parent of %s\n",
-            curve, vtx_ptr->entity_name().c_str() );
+          static_cast<void*>(curve), vtx_ptr->entity_name().c_str() );
         result = CUBIT_FAILURE;
       }
       else if( !edge_list.is_in_list(edge_ptr) )

@@ -93,18 +93,19 @@ void PartitionSurface::print_debug_info( const char* prefix ,
                                          bool print_sub_entity_set ) const
 {
   if( !prefix ) prefix = "";
-  PRINT_INFO("%sPartitionSurface %p\n", prefix, this );
+  PRINT_INFO("%sPartitionSurface %p\n", prefix, static_cast<void*>(this) );
   PartitionLoop* loop = 0;
   while( (loop = next_loop(loop)) )
   {
-    PRINT_INFO("%s  Loop %p:\n", prefix, loop );
+    PRINT_INFO("%s  Loop %p:\n", prefix, static_cast<void*>(loop) );
     PartitionCoEdge* coedge = loop->first_coedge();
     do
     {
       PRINT_INFO("%s    CoEdge %p %s -> Curve %p\n",
-        prefix, coedge, coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
-                        coedge->sense() == CUBIT_REVERSED ? "REVERSE" :
-                        "UNKNOWN", coedge->get_curve() );
+        prefix, static_cast<void*>(coedge),
+        coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
+          coedge->sense() == CUBIT_REVERSED ? "REVERSE" : "UNKNOWN",
+        static_cast<void*>(coedge->get_curve()) );
       coedge = loop->next_coedge(coedge);
     } while( coedge != loop->first_coedge() );
   }

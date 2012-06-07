@@ -30,7 +30,8 @@
 /*
 void print_point_list( PartitionPoint* point )
 {
-  PRINT_INFO("  Point %p: (%d curves)\n", point, point ? point->num_curves() : 0 );
+  PRINT_INFO("  Point %p: (%d curves)\n", static_cast<void*>(point),
+    point ? point->num_curves() : 0 );
   if(!point) { PRINT_INFO("\n\n"); return; }
   
   PartitionCurve* curve = 0;
@@ -295,7 +296,7 @@ void PartitionCurve::print_debug_info( const char* prefix,
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );
   strcat( new_prefix, "  ");
-  PRINT_INFO("%sPartitionCurve %p\n", prefix, this );
+  PRINT_INFO("%sPartitionCurve %p\n", prefix, static_cast<void*>(this) );
   
   if(entset)
     sub_entity_set().print_debug_info( new_prefix );
@@ -312,17 +313,18 @@ void PartitionCurve::print_debug_info( const char* prefix,
     PRINT_INFO("%s  %s on Surface %p\n", prefix, 
       coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
       coedge->sense() == CUBIT_REVERSED ? "REVERSE" : "UNKNOWN",
-      surf_ptr );
+      static_cast<void*>(surf_ptr) );
   }
   
-  PRINT_INFO("%s  start point: %p\n", prefix, start_point() );
+  PRINT_INFO("%s  start point: %p\n", prefix,
+    static_cast<void*>(start_point()) );
   if( start_point() && print_children )
     start_point()->print_debug_info( new_prefix, false );
   
   if( end_point() && end_point() == start_point() )
     PRINT_INFO("%s  end point SAME as start point\n", prefix ); 
   else
-    PRINT_INFO("%s  end point: %p\n", prefix, end_point() );
+    PRINT_INFO("%s  end point: %p\n", prefix, static_cast<void*>(end_point()) );
   if( end_point() && end_point() != start_point() && print_children )
     end_point()->print_debug_info( new_prefix, false );
   

@@ -138,7 +138,7 @@ void PartitionPoint::print_debug_info( const char* prefix,
   strcat( new_prefix, "  ");
   CubitVector p = coordinates();
   PRINT_INFO("%sPartitionPoint %p at (%f,%f,%f)\n", 
-    prefix, this, p.x(), p.y(), p.z() );
+    prefix, static_cast<void*>(this), p.x(), p.y(), p.z() );
   DLIList<Curve*> curve_list;
   const_cast<PartitionPoint*>(this)->TopologyBridge::curves( curve_list );
   PRINT_INFO("%s  %d Curves (%d PartitionCurves).\n", prefix, 
@@ -147,8 +147,8 @@ void PartitionPoint::print_debug_info( const char* prefix,
   if ( facet_point() ) {
     p = facet_point()->coordinates();
     PRINT_INFO("%s  CubitPoint %p at [%f,%f,%f] (%f)\n", prefix,
-            facet_point(), p.x(), p.y(), p.z(), 
-            (coordinates() - facet_point()->coordinates()).length());
+      static_cast<void*>(facet_point()), p.x(), p.y(), p.z(), 
+      (coordinates() - facet_point()->coordinates()).length());
   }
   
   if( ent_set )

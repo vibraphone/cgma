@@ -716,7 +716,8 @@ void CompositeGeom::print_debug_info( const char* line_prefix )
   if( line_prefix == 0 )
     line_prefix = "";
   
-  PRINT_INFO("%sCompositeGeom @ %p : \n", line_prefix, this );
+  PRINT_INFO("%sCompositeGeom @ %p : \n", line_prefix,
+    static_cast<void*>(this) );
   for( int i = 0; i < entityList.size(); i++ )
   {
     GeometryEntity* ptr = entityList[i].entity;
@@ -731,7 +732,7 @@ void CompositeGeom::print_debug_info( const char* line_prefix )
     /*
     PRINT_INFO("%s  %15s %p %7s\n", line_prefix, 
       ptr ? fix_type_name(typeid(*ptr).name()) : "GeometryEntity",
-      ptr, 
+      static_cast<void*>(ptr),
       entityList[i].sense == CUBIT_FORWARD ? "Forward" :
       entityList[i].sense == CUBIT_REVERSED ? "Reverse" :
       "Unknown");

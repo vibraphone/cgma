@@ -1074,10 +1074,12 @@ void CompositeCurve::print_debug_info( const char* prefix,
     else
       PRINT_INFO(": %d curves.\n", num_curves() );
 #else
-    PRINT_INFO("%sCompositeCurve %p : points (%p,%p) ", prefix, this,
-      startPoint, endPoint );
+    PRINT_INFO("%sCompositeCurve %p : points (%p,%p) ", prefix,
+      static_cast<void*>(this), static_cast<void*>(startPoint),
+      static_cast<void*>(endPoint) );
     if ( num_curves() == 1 )
-      PRINT_INFO(": %s %p\n", fix_type_name(typeid(*get_curve(0)).name()), get_curve(0));
+      PRINT_INFO(": %s %p\n", fix_type_name(typeid(*get_curve(0)).name()), 
+        static_cast<void*>(get_curve(0)));
     else
       PRINT_INFO(": %d curves.\n", num_curves() );
 #endif
@@ -1091,7 +1093,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
 #ifdef TOPOLOGY_BRIDGE_IDS
   PRINT_INFO("%sCompositeCurve %d\n", prefix, get_id() );
 #else
-  PRINT_INFO("%sCompositeCurve %p\n", prefix, this );
+  PRINT_INFO("%sCompositeCurve %p\n", prefix, static_cast<void*>(this) );
 #endif
   compGeom->print_debug_info( new_prefix );
   if( hiddenSet ) hiddenSet->print_debug_info( new_prefix );
@@ -1122,7 +1124,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
     PRINT_INFO("%s  %s on Surface %p\n", prefix, 
       coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
       coedge->sense() == CUBIT_REVERSED ? "REVERSE" : "UNKNOWN",
-      surf_ptr );
+      static_cast<void*>(surf_ptr) );
 #endif
 
     if (!coedge->get_loop())

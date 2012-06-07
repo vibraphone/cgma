@@ -168,9 +168,9 @@ void HiddenEntitySet::print_debug_info( const char* prefix ) const
     prefix = "";
   
   PRINT_INFO("%sHiddenEntitySet %p owned by %s %p\n", 
-    prefix, this, 
+    prefix, static_cast<void*>(this),
     myOwner ? fix_type_name(typeid(*myOwner).name()) : "(null)",
-    myOwner );
+    static_cast<void*>(myOwner) );
     
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );
@@ -191,7 +191,7 @@ void HiddenEntitySet::print_debug_info( const char* prefix ) const
 #ifdef TOPOLOGY_BRIDGE_IDS
       PRINT_INFO("%s%s %d\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), (*iter)->get_id() );
 #else
-      PRINT_INFO("%s%s %p\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), (*iter) );
+      PRINT_INFO("%s%s %p\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), static_cast<void*>(*iter) );
 #endif
   }
   delete [] new_prefix;

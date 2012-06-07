@@ -857,7 +857,7 @@ void SegmentedCurve::print_debug_info( const char* prefix, bool pss ) const
 {
   if( prefix == 0 ) prefix = "";
   PartitionCurve::print_debug_info( prefix, pss );
-  PRINT_INFO("%sSegmentedCurve %p\n", prefix, this );
+  PRINT_INFO("%sSegmentedCurve %p\n", prefix, static_cast<void*>(this) );
   PRINT_INFO("%s%d segment points:\n", prefix, point_list.size());
   int i;
   for( i = 0; i  < point_list.size() - 1; i+= 2 )
