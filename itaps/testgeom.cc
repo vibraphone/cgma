@@ -1189,6 +1189,7 @@ static int get_entities( iGeom_Instance geom, int entity_type,
   return iBase_SUCCESS;
 }
 
+/*
 static int check_firmness( iGeom_Instance geom,
                            const std::vector<iBase_EntityHandle>& entities,
                            const std::vector<int>& ids,
@@ -1222,6 +1223,7 @@ static int check_firmness( iGeom_Instance geom,
   
   return iBase_SUCCESS;
 }
+*/
 
 static int count_num_with_tag( iGeom_Instance geom,
                                const std::vector<iBase_EntityHandle>& ents,
