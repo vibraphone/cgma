@@ -6554,7 +6554,7 @@ static bool match_option( const std::string& opt,
 void
 iGeom_load_cub_geometry(const char *name, int* err) 
 {
-  size_t bytes_read;
+  size_t items_read;
   FILE *cubfile = fopen(name, "rb");
   if (NULL == cubfile) RETURN(iBase_FILE_NOT_FOUND);
 
@@ -6566,25 +6566,28 @@ iGeom_load_cub_geometry(const char *name, int* err)
   }
   
   long endpos = ftell(cubfile);
-  
-  char magic_str[4] = {'\0', '\0', '\0', '\0'};
-  bytes_read = fread(magic_str, 1, 4, cubfile);
-  if (bytes_read != 4) {
-    ERROR(iBase_FAILURE, "Error reading .cub file");
+  result = fseek(cubfile, 0, 0 /*SEEK_SET*/);
+  if (result) {
+    ERROR(iBase_FAILURE, "Seek failed reading cub file header.");
   }
-  if (!strcmp(magic_str, "CUBE")) {
+
+  char magic_str[5] = "";
+  items_read = fread(magic_str, 1, 4, cubfile);
+  if (items_read != 4) {
+    ERROR(iBase_FAILURE, "Error reading .cub file magic string");
+  }
+  if (strcmp(magic_str, "CUBE")) {
     ERROR(iBase_NOT_SUPPORTED, "Wrong magic string in .cub file.");
   }
   
     // get the model header
-  //result = fseek(cubfile, 4, SEEK_SET);
-  result = fseek(cubfile, 4, 0);
+  result = fseek(cubfile, 4, 0 /*SEEK_SET*/);
   if (result) {
-    ERROR(iBase_FAILURE, "Seek failed reading cub file header.");
+    ERROR(iBase_FAILURE, "Seek failed reading after cub file header.");
   }
   int header[6];
-  bytes_read = fread(header, 4, 6, cubfile);
-  if (bytes_read != 4*6) {
+  items_read = fread(header, 4, 6, cubfile);
+  if (items_read != 6) {
     ERROR(iBase_FAILURE, "Error reading .cub file");
   }
   int num_models = header[2];
@@ -6606,8 +6609,8 @@ iGeom_load_cub_geometry(const char *name, int* err)
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed seeking to model table.");
   }
-  bytes_read = fread(model_entries, 4, 6*num_models, cubfile);
-  if (bytes_read != 4*6*static_cast<size_t>(num_models)) {
+  items_read = fread(model_entries, 4, 6*num_models, cubfile);
+  if (items_read != 6*static_cast<size_t>(num_models)) {
     ERROR(iBase_FAILURE, "Error reading .cub file");
   }
   for (int i = 0; i < num_models; i++) {
