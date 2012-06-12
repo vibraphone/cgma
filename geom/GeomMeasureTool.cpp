@@ -1899,7 +1899,6 @@ void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_v
                                           DLIList <RefFace*> &surfs_with_narrow_regions)
 {
   int j;
-  double tol_sq = tol*tol;
 
   int ii, jj;
   DLIList <RefFace*> ref_faces, temp_faces;
@@ -1991,7 +1990,6 @@ bool GeomMeasureTool::is_surface_narrow(RefFace *face, double small_curve_size)
       int num_incs = (int)(edge_length/small_curve_size) + 1;
       double start, end;
       cur_edge->get_param_range(start, end);
-      double dt = small_curve_size*((end-start)/edge_length);
       double t = start;
       bool one_bad = false;
       for(j=0; j<num_incs && ret == true; j++)
@@ -2268,8 +2266,6 @@ int GeomMeasureTool::narrow_region_exists(
 {
   int ret = 0;
   double tol_sq = tol*tol;
-  double small_step = 5.0*tol;
-  double small_step_sq = small_step*small_step;
   double max_dist_sq = 0.0;
   RefVertex *e1_start_vert = e1->start_vertex();
   RefVertex *e1_end_vert = e1->end_vertex();
@@ -2474,8 +2470,6 @@ int GeomMeasureTool::narrow_region_exists(
     e2_vert_list.reset();
     for(i=e1_pos_list.size(); i--;)
     {
-      CubitVector *e1_pos = e1_pos_list.get_and_step();
-      CubitVector *e2_pos = e2_pos_list.get_and_step();
       RefVertex *e1_vert = e1_vert_list.get_and_step();
       RefVertex *e2_vert = e2_vert_list.get_and_step();
 
@@ -3882,7 +3876,7 @@ void GeomMeasureTool::find_blends( RefVolume *ref_volume,
   }
     //Find out how many different groups of surfaces there
     //are that share curves.
-  DLIList <RefFace*> *blend_group;
+  DLIList <RefFace*> *blend_group = NULL;
   DLIList <RefFace*> stack;
   RefFace *start_face = NULL, *other_face;
   
@@ -4609,7 +4603,7 @@ CubitStatus GeomMeasureTool::get_centroid( RefFace *ref_face, CubitVector &centr
 CubitStatus
 GeomMeasureTool::center( DLIList<RefFace*> ref_faces )
 {
-  int ii,id;
+  int ii,id(0);
   double surf_area;
   double tot_area = 0.0;
   CubitVector surf_centroid;
@@ -5043,7 +5037,6 @@ CubitStatus GeomMeasureTool::find_near_coincident_vertex_curve_pairs(
     
   double curr_percent = 0.0;
   int processed_verts = 0;
-  int times = 0;
   std::multimap<double, dist_vert_curve_struct> distance_vertex_curve_map; 
 
   //for each vertex

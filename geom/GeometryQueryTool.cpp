@@ -562,7 +562,7 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
   // use the original bridge list because it gets emptied.
   DLIList<TopologyBridge*> copy_of_bridge_list = bridge_list;
 
-  int num_input_entities = bridge_list.size();
+  /*int num_input_entities =*/ bridge_list.size();
 
     // now call auto update on this combined list; this will update both visible
     // and hidden entities; the combined list should be used here, but only the
@@ -984,7 +984,7 @@ CubitStatus GeometryQueryTool::import_solid_model(
   gqeList.reset();
   DLIList<TopologyBridge*> bridge_list;
 
-  CubitStatus status;
+  CubitStatus status = CUBIT_SUCCESS;
   for(int i = 0; i < gqeList.size(); i++)
   {
     status = gqeList.get_and_step()->import_solid_model( file_name,
@@ -1049,7 +1049,7 @@ CubitStatus GeometryQueryTool::import_solid_model(DLIList<RefEntity*> *imported_
   gqeList.reset();
   DLIList<TopologyBridge*> bridge_list;
   
-  CubitStatus status;
+  CubitStatus status = CUBIT_SUCCESS;
   for(int i = 0; i < gqeList.size(); i++)
   {
     status = gqeList.get_and_step()->import_solid_model( bridge_list, pBuffer, n_buffer_size );
@@ -5571,7 +5571,7 @@ void GeometryQueryTool::translate( DLIList<RefEntity*> &entities_to_transform,
   RefFace *tmp_face;
   RefEdge *tmp_curve;
   RefVertex *tmp_vertex;
-  CubitStatus result;
+  CubitStatus result = CUBIT_FAILURE;
 
   for(i = entities_to_transform.size(); i > 0; i--)
   {
@@ -5703,7 +5703,7 @@ CubitStatus GeometryQueryTool::rotate( DLIList<RefEntity*> &entities_to_transfor
   RefFace *tmp_face;
   RefEdge *tmp_curve;
   RefEntity *tmp_ent;
-  CubitStatus result;
+  CubitStatus result = CUBIT_SUCCESS;
   for(i=entities_to_transform.size(); i > 0; i--)
   {
     tmp_ent = entities_to_transform.get_and_step();
@@ -5940,7 +5940,7 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
       }
   }
   
-  CubitStatus result;
+  CubitStatus result = CUBIT_FAILURE;
   for(i=entities_to_transform.size(); i--; )
   {
     RefEntity *tmp_ent = entities_to_transform.get_and_step();
@@ -5976,6 +5976,7 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
      result = scale( tmp_curve, CubitVector(scale_x, scale_y, scale_z),
                 check_before_transforming, preview);
     }
+
     if(result)
       entities_scaled.append( tmp_ent );
   } 
@@ -6796,7 +6797,7 @@ double GeometryQueryTool::estimate_merge_tolerance(DLIList<RefVolume*> &vol_list
     if(num_total > 2)
     {
       int num_triplets = num_total - 2;
-      int h, min_index, min_diff;
+      int h, min_index(0), min_diff(0);
       DLIList<int> diffs;
       for(h=0; h<num_triplets; h++)
       {
