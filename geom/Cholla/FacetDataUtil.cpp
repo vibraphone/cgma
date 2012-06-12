@@ -1270,7 +1270,7 @@ CubitStatus FacetDataUtil::write_facets( const char *file_name, DLIList<CubitFac
   {
     pt = point_list.get_and_step();
     pt->set_id(ii);
-    fprintf(fp, "%d %lf %lf %lf\n", ii, pt->x(), pt->y(), pt->z() );
+    fprintf(fp, "%d %f %f %f\n", ii, pt->x(), pt->y(), pt->z() );
   }
 
   CubitFacet *facet;
@@ -1800,7 +1800,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
           CubitVector loc_on_edge;
           CubitBoolean is_on_edge;
           double dist = edge->dist_to_edge(pt->coordinates(), loc_on_edge, is_on_edge);
-          PRINT_INFO("edge %d dist = %lf is_on_edge = %d\n", edge->id(), dist, is_on_edge);
+          PRINT_INFO("edge %d dist = %f is_on_edge = %d\n", edge->id(), dist, is_on_edge);
         }
         dview();
         pt = pt;

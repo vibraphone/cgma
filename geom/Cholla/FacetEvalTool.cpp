@@ -2308,7 +2308,7 @@ FacetEvalTool::project_to_facets(
   if (normal_ptr) {
     CubitVector normal;
     if (eval_facet_normal( best_facet, best_areacoord, normal ) 
-      != CUBIT_SUCCESS) {
+	!= CUBIT_SUCCESS) {
       return CUBIT_FAILURE;
     }
     *normal_ptr = normal;
@@ -2324,8 +2324,7 @@ FacetEvalTool::project_to_facets(
 
   // clear the marks from the used facets
 
-  for (ii=0; ii<used_facet_list.size(); ii++)
-  {
+  for (ii=0; ii<used_facet_list.size(); ii++) {
     facet = used_facet_list.get_and_step();
     facet->marked( 0 );
   }
@@ -2334,9 +2333,7 @@ FacetEvalTool::project_to_facets(
     nncheck+= ncheck;
     calls++;
     if (calls%100==0){
-      char message[100];
-      sprintf(message,"calls = %d, ckecks = %d, ntol = %d\n",calls,nncheck,ntol);
-      PRINT_INFO(message);
+      PRINT_INFO("calls = %d, ckecks = %d, ntol = %d\n",calls,nncheck,ntol);
     }
   }
   
@@ -3823,22 +3820,19 @@ void FacetEvalTool::debug_draw_location(CubitVector &loc, int color )
 //===========================================================================
 void FacetEvalTool::write_loops()
 {
-  char message[128];
   int ii, jj;
   for (ii=0; ii<myLoopList.size(); ii++)
   {
     DLIList<CubitFacetEdge*> *loop = myLoopList.get_and_step();
-    sprintf (message, "======= Loop %d =========\n", ii);
-    PRINT_INFO( message );
+    PRINT_INFO( "======= Loop %d =========\n", ii );
     for (jj=0; jj<loop->size(); jj++)
     {
       CubitFacetEdge *edge = loop->get_and_step();
       CubitPoint *point0 = edge->point( 0 );
       CubitPoint *point1 = edge->point( 1 );
-      sprintf( message, "  (%d) %f, %f, %f   (%d) %f, %f, %f\n",
-        point0->id(), point0->x(), point0->y(), point0->z(),
-        point1->id(), point1->x(), point1->y(), point1->z());
-      PRINT_INFO( message );
+      PRINT_INFO( "  (%d) %f, %f, %f   (%d) %f, %f, %f\n",
+		  point0->id(), point0->x(), point0->y(), point0->z(),
+		  point1->id(), point1->x(), point1->y(), point1->z() );
     }
   }
 }

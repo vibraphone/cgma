@@ -1090,7 +1090,7 @@ SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
   }  
   if( draw_overlap == CUBIT_TRUE ) 
   {
-    PRINT_INFO("Total overlapping area = %lf\n", area );
+    PRINT_INFO("Total overlapping area = %f\n", area );
 
     if( area > 0.0 )
       return CUBIT_TRUE;

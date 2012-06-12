@@ -4961,27 +4961,27 @@ CubitStatus FacetQueryEngine::scale( BodySM* body, const CubitVector& f )
 
 CubitStatus FacetQueryEngine::translate( GeometryEntity* , const CubitVector&  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("%s", fqe_xform_err);
   return CUBIT_FAILURE;
 }
 CubitStatus FacetQueryEngine::rotate( GeometryEntity* , const CubitVector& , double  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("%s", fqe_xform_err);
   return CUBIT_FAILURE;
 }
 CubitStatus FacetQueryEngine::scale( GeometryEntity* , double  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("%s", fqe_xform_err);
   return CUBIT_FAILURE;
 }
 CubitStatus FacetQueryEngine::scale( GeometryEntity* , const CubitVector&  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("%s", fqe_xform_err);
   return CUBIT_FAILURE;
 }
 CubitStatus FacetQueryEngine::reflect( GeometryEntity* , const CubitVector&  )
 {
-  PRINT_ERROR(fqe_xform_err);
+  PRINT_ERROR("%s", fqe_xform_err);
   return CUBIT_FAILURE;
 }
 

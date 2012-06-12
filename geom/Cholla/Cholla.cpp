@@ -1901,11 +1901,11 @@ int *triEdge, *quadEdge;
     {
       int kk;
       for(kk=0; kk<3; kk++);
-      fprintf(fp, "(%d) %.6lf %.6lf %.6lf\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
-      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
-      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
-      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
-      fprintf(fp, "    %.6lf %.6lf %.6lf\n", P1.x(), P1.y(), P1.z()); 
+      fprintf(fp, "(%d) %.6f %.6f %.6f\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
+      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
+      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
+      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
+      fprintf(fp, "    %.6f %.6f %.6f\n", P1.x(), P1.y(), P1.z()); 
     }
     edge_ptr->control_points( Pi, 4 );
   } 

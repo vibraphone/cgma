@@ -893,7 +893,7 @@ int edge1_vert0_type, edge1_vert1_type, edge2_vert0_type, edge2_vert1_type;
   }
 
   if ( ifoundit == false ) {
-    PRINT_ERROR("unaccounted for case in add_intersection_edges: tt[] =  %le %le %le %le\n",
+    PRINT_ERROR("unaccounted for case in add_intersection_edges: tt[] =  %e %e %e %e\n",
       tt[0],tt[1],tt[2],tt[3]);
     return CUBIT_FAILURE;
   } else {
