@@ -41,8 +41,8 @@ static CpuTimer timer;
 */
 
 CompositeSurface::CompositeSurface( Surface* surface )
-  : stitchPartner(0), firstCoSurf(0), firstLoop(0), hiddenSet(0), facetTool(0),
-  HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), stitchPartner(0), firstCoSurf(0), firstLoop(0),
+    hiddenSet(0), facetTool(0)
 {
   assert( surface != NULL );
   compGeom = new CompositeGeom(1);
@@ -53,13 +53,8 @@ CompositeSurface::CompositeSurface( Surface* surface )
 }
 
 CompositeSurface::CompositeSurface( CompositeGeom* geometry )
-  : compGeom( geometry ),
-    stitchPartner(0),
-    firstCoSurf(0),
-    firstLoop(0),
-    hiddenSet(0),
-    facetTool(0),
-    HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), compGeom( geometry ), stitchPartner(0),
+    firstCoSurf(0), firstLoop(0), hiddenSet(0), facetTool(0)
 {
   assert( geometry != NULL );
   for( int i = 0; i < compGeom->num_entities(); i++ )
@@ -878,7 +873,7 @@ CubitStatus CompositeSurface::closest_point( CubitVector const& location,
   
   if ( facetTool )
   {
-    CubitStatus result;
+    CubitStatus result = CUBIT_SUCCESS;
     CubitVector facet_closest;
 
       // look for multiple surfaces if normal is requested

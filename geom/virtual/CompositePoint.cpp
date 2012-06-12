@@ -15,7 +15,7 @@
 #include "VirtualQueryEngine.hpp"
 
 CompositePoint::CompositePoint( Point* real_pt )
-  : firstCurve(0), realPoint(real_pt), stitchNext(0), HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), firstCurve(0), realPoint(real_pt), stitchNext(0)
 {
   if( real_pt->owner() )
     real_pt->owner()->swap_bridge( real_pt, this, false );

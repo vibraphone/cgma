@@ -32,14 +32,8 @@
 // Creation Date : 12/19/01
 //-------------------------------------------------------------------------
 CompositeCurve::CompositeCurve( Curve* curve )
-  : hiddenSet(0), 
-    firstCoEdge(0),
-    startPoint(0), 
-    endPoint(0), 
-    startNext(0), 
-    endNext(0),
-    stitchNext(0),
-    HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), hiddenSet(0), firstCoEdge(0), startPoint(0), 
+    endPoint(0), startNext(0), endNext(0), stitchNext(0)
 {
   compGeom = new CompositeGeom(1);
   compGeom->append( curve, CUBIT_FORWARD );
@@ -49,15 +43,8 @@ CompositeCurve::CompositeCurve( Curve* curve )
 }
 
 CompositeCurve::CompositeCurve( CompositeGeom* geometry )
-  : compGeom( geometry ),
-    hiddenSet( 0 ),
-    firstCoEdge( 0 ),
-    startPoint( 0 ),
-    endPoint( 0 ),
-    startNext( 0 ),
-    endNext( 0 ),
-    stitchNext(0),
-    HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), compGeom(geometry), hiddenSet(0), firstCoEdge(0),
+    startPoint(0), endPoint(0), startNext(0), endNext(0), stitchNext(0)
 {
   for( int i = 0; i < compGeom->num_entities(); i++ )
   {
@@ -77,14 +64,8 @@ CompositeCurve::CompositeCurve( CompositeGeom* geometry )
 // Creation Date : 02/27/04
 //-------------------------------------------------------------------------
 CompositeCurve::CompositeCurve( CompositePoint* point )
-  : hiddenSet(0), 
-    firstCoEdge(0),
-    startPoint(0), 
-    endPoint(0), 
-    startNext(0), 
-    endNext(0),
-    stitchNext(0),
-    HadBridgeRemoved(0)
+  : HadBridgeRemoved(0), hiddenSet(0), firstCoEdge(0), startPoint(0), 
+    endPoint(0), startNext(0), endNext(0), stitchNext(0)
 {
   compGeom = new CompositeGeom(1);
   //compGeom->append( point, CUBIT_FORWARD );
@@ -1323,8 +1304,10 @@ void CompositeCurve::notify_split( TopologyBridge* new_bridge,
   
     // find new point
   bool sp = (new_start == old_start || new_start == old_end);
+#ifndef NDEBUG
   bool ep = (new_end   == old_start || new_end   == old_end);
   assert( ep != sp ); // one must be true and one must be false
+#endif
   Point* new_pt = sp ? new_start : new_end;
   
     // find relative sense of curves

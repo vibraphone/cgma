@@ -118,15 +118,21 @@ void PartitionSurface::print_debug_info( const char* prefix ,
 } 
 
 PartitionSurface::PartitionSurface()
-  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
+  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
 {}
 
 PartitionSurface::PartitionSurface( PartitionLump* lump )
-  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
+  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
 {
   lump->sub_entity_set().add_lower_order( this );
 }
 
+PartitionSurface::PartitionSurface( PartitionSurface* split_from )
+  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
+{
+  split_from->sub_entity_set().add_lower_order( this );
+}
+  
 PartitionSurface::~PartitionSurface()
 {
   while( firstLoop )
@@ -894,12 +900,6 @@ void PartitionSurface::reverse_sense()
     surf_facets.get_and_step()->flip();
 }
 
-PartitionSurface::PartitionSurface( PartitionSurface* split_from )
-  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
-{
-  split_from->sub_entity_set().add_lower_order( this );
-}
-  
 PartitionSurface* PartitionSurface::copy()
 {
   return new PartitionSurface(this);
@@ -976,9 +976,11 @@ void PartitionSurface::notify_split( FacetEntity* old_tri, FacetEntity* new_tri 
   if ( dynamic_cast<CubitFacetEdge*>(old_tri) )
     return;
   
-  CubitFacetData* old_ptr = dynamic_cast<CubitFacetData*>(old_tri);
   CubitFacetData* new_ptr = dynamic_cast<CubitFacetData*>(new_tri);
+#ifndef NDEBUG
+  CubitFacetData* old_ptr = dynamic_cast<CubitFacetData*>(old_tri);
   assert(old_ptr && new_ptr && facetList.is_in_list(old_ptr));
+#endif
   TDVGFacetOwner::set(new_ptr,this);
   facetList.append(new_ptr);
 }
