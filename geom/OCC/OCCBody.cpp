@@ -85,7 +85,7 @@ TopoDS_Compound* OCCBody::get_TopoDS_Shape()
     assert(myTopoDSShape->ShapeType() == TopAbs_COMPOUND);
     return myTopoDSShape;
   }
-  return 0;
+  return (TopoDS_Compound*)NULL;
 }
 
 void OCCBody::get_TopoDS_Shape(TopoDS_Shape *& shape)
