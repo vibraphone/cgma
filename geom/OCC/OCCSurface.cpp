@@ -37,18 +37,6 @@
 #include "ShellSM.hpp"
 #include "Lump.hpp"
 #include "LoopSM.hpp"
-#include "BRepAlgoAPI_BooleanOperation.hxx"
-#include "BRepBuilderAPI_MakeShape.hxx"
-#include "BRepBuilderAPI_Transform.hxx"
-#include "BRepBuilderAPI_GTransform.hxx"
-#include "BRepFilletAPI_MakeFillet2d.hxx"
-#include "BRepTools_WireExplorer.hxx"
-#include "TopExp.hxx"
-#include "BRep_Tool.hxx"
-#include "BRep_Builder.hxx"
-#include "LocOpe_SplitShape.hxx"
-#include "TopoDS_Compound.hxx"
-#include "BRepExtrema_DistShapeShape.hxx"
 // ********** END CUBIT INCLUDES           **********
 
 
@@ -70,6 +58,25 @@
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepClass_FaceClassifier.hxx"
 #include "BRepBuilderAPI_ModifyShape.hxx"
+#include "BRepAlgoAPI_BooleanOperation.hxx"
+#include "BRepBuilderAPI_MakeShape.hxx"
+#include "BRepBuilderAPI_Transform.hxx"
+#include "BRepBuilderAPI_GTransform.hxx"
+#include "BRepFilletAPI_MakeFillet2d.hxx"
+#include "BRepTools_WireExplorer.hxx"
+#include "TopExp.hxx"
+#include "BRep_Tool.hxx"
+#include "BRep_Builder.hxx"
+#include "LocOpe_SplitShape.hxx"
+#include "TopoDS_Compound.hxx"
+#include "BRepExtrema_DistShapeShape.hxx"
+#include "Geom_BSplineSurface.hxx"
+#include "TColgp_Array2OfPnt.hxx"
+#include "TColStd_Array2OfReal.hxx"
+#include "TColStd_Array1OfReal.hxx"
+#include "gp_Sphere.hxx"
+#include "gp_Cone.hxx"
+#include "gp_Torus.hxx"
 // ********** END OpenCascade INCLUDES      **********
 
 
@@ -108,7 +115,7 @@ OCCSurface::~OCCSurface()
 
 void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 {
-  if(face.IsEqual(*myTopoDSFace))
+  if(myTopoDSFace && face.IsEqual(*myTopoDSFace))
     return;
 
   TopoDS_Face* face_ptr = new TopoDS_Face(face);
@@ -358,7 +365,7 @@ void OCCSurface::closest_point_trimmed( CubitVector from_point,
     CubitVector closest_location;
     do
     {
-      for (i = 0; i < curves.size(); i++)
+      for (i = 0; i < num_curve; i++)
       {
         OCCCurve* curve = curves.get_and_step();
         TopoDS_Edge* theEdge = curve->get_TopoDS_Edge( );
@@ -868,7 +875,7 @@ int OCCSurface::get_points(DLIList<OCCPoint*>& points)
 {
   DLIList<OCCCurve*> curves;
   int num_crv = get_curves(curves);
-  for(int i = 0; i < curves.size(); i++)
+  for(int i = 0; i < num_crv; i++)
   {
     OCCCurve* curve = curves.get_and_step();
     curve->get_points(points);
@@ -901,14 +908,6 @@ CubitStatus OCCSurface::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf
       shape = shapes.First();
     else if(shapes.Extent() > 1)
     {
-      //update all attributes first.
-      TopTools_ListIteratorOfListOfShape it;
-      it.Initialize(shapes);
-      for(; it.More(); it.Next())
-      {
-        shape = it.Value();
-        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Face(), shape);
-      }
       shape = shapes.First();
     }
     else if(op->IsDeleted(*get_TopoDS_Face()))
@@ -959,12 +958,6 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   TopExp::MapShapes(new_surface, TopAbs_FACE,M);
   if(M.Extent() > 1 )
   {
-    //update all attributes first.
-    for(int ii=1; ii<=M.Extent(); ii++)
-    {
-      TopoDS_Face surface = TopoDS::Face(M(ii));
-      OCCQueryEngine::instance()->copy_attributes(old_surface, surface);
-    }
     OCCQueryEngine::instance()->update_OCC_map(old_surface, new_surface);
     return CUBIT_SUCCESS;
   }
@@ -1126,7 +1119,7 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
          //find the vertices within tolerance distance with old_vertex.
          {
            TopoDS_Iterator It(shape_edge);
-           for(It; It.More(); It.Next())
+           for(; It.More(); It.Next())
            {
              TopoDS_Vertex v = TopoDS::Vertex(It.Value());
              gp_Pnt pt1 = BRep_Tool::Pnt(v);
@@ -1209,42 +1202,12 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
      body->get_TopoDS_Shape(pshape);
      TopoDS_Shape ashape;
      if (pshape && !pshape->IsNull() && 
-         pshape->ShapeType() <= TopAbs_SHELL &&
+         pshape->ShapeType() <= TopAbs_FACE &&
          OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == CUBIT_TRUE)
        ashape = *pshape;
-/*
-     else
-     {
-       BRep_Builder B;
-       TopoDS_Compound Co;
-       B.MakeCompound(Co);
-       DLIList<Lump*> lumps = body->lumps();
-       for(int i = 0; i < lumps.size(); i ++)
-       {
-         OCCLump* lump = CAST_TO(lumps.get_and_step(), OCCLump);
-         assert(lump != NULL);
-         TopoDS_Solid * solid = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
-         B.Add(Co, *solid);
-       }
 
-       DLIList<OCCShell*> shells = body->shells();
-       for(int i = 0; i < shells.size(); i ++)
-       {
-         TopoDS_Shell * shell = shells.get_and_step()->get_TopoDS_Shell();
-         B.Add(Co, *shell);
-       }
-
-       DLIList<OCCSurface*> surfaces = body->my_sheet_surfaces();
-       for(int i = 0; i < surfaces.size(); i ++)
-       {
-         TopoDS_Face * face = surfaces.get_and_step()->get_TopoDS_Face();
-         B.Add(Co, *face);
-       }
-
-       ashape = Co;
-     }
-*/
      M.Clear();
+
      TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPOUND, M);
      if(!M.Contains(*topo_face))
        continue;

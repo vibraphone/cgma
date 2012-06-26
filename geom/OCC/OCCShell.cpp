@@ -91,7 +91,7 @@ OCCCoFace* OCCShell::remove_coface(OCCCoFace *coface)
 
 void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
 {
-  if(shell.IsEqual(*myTopoDSShell))
+  if(myTopoDSShell && shell.IsEqual(*myTopoDSShell))
     return;
 
   TopoDS_Shell* the_shell = new TopoDS_Shell(shell);
@@ -220,20 +220,8 @@ CubitStatus OCCShell::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
     if(shapes.Extent() == 0)
       shapes.Assign(op->Generated(*get_TopoDS_Shell()));
     if (shapes.Extent())
-    {
-      if(shapes.Extent() > 1)
-      {
-        TopTools_ListIteratorOfListOfShape it;
-        it.Initialize(shapes);
-        for(; it.More(); it.Next())
-        {
-          shape = it.Value();
-          OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Shell(), 
-                                                      shape);
-        }
-      }
       shape = shapes.First();
-    }
+    
     else if(op->IsDeleted(*get_TopoDS_Shell()))
       ;
     else
@@ -296,16 +284,8 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
     if(shapes.Extent() == 1)
       shape = shapes.First();
     else if(shapes.Extent() > 1)
-    {
-      TopTools_ListIteratorOfListOfShape it;
-      it.Initialize(shapes);
-      for(; it.More(); it.Next())
-      {
-        shape = it.Value();
-        OCCQueryEngine::instance()->copy_attributes(face, shape);
-      }
-      shape.Nullify() ;
-    }
+      shape = shapes.First() ;
+    
     else 
       shape.Nullify();
     if(shapes.Extent() > 0 || (op && op->IsDeleted(face)))

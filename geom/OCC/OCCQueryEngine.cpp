@@ -51,6 +51,7 @@
 #include "Handle_Poly_Triangulation.hxx"
 #include "GCPnts_TangentialDeflection.hxx"
 #include "BRepAdaptor_Curve.hxx"
+#include "TopExp.hxx"
 #ifdef HAVE_OCC_STEP
 #  include "STEPControl_Reader.hxx"
 #  include "STEPControl_Writer.hxx"
@@ -133,6 +134,7 @@ using namespace NCubitFile;
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
 typedef std::map<int, TopologyBridge*>::value_type valType;
+typedef std::map<int, TDF_Label>::value_type labType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
 //================================================================================
@@ -1164,7 +1166,7 @@ void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
   }
 } 
 //===========================================================================
-//Function Name:export_solid_model
+//Function Name:write_topology
 //Member Type:  PUBLIC
 //Description:  function called for write out temporary Brep file
 //Author:       Jane Hu
@@ -1674,17 +1676,20 @@ BodySM* OCCQueryEngine::populate_topology_bridge(const TopoDS_Compound& aShape)
 
       if(num_faces + num_shells + num_lumps == 1)
       {
-        if (num_faces  == 1 && !OCCMap->IsBound(face))
+        if (num_faces  == 1 && (!OCCMap->IsBound(face) ||
+                      OccToCGM->find(OCCMap->Find(face)) == OccToCGM->end()))
         {
           Surface* surface = populate_topology_bridge(face, CUBIT_TRUE);
           return CAST_TO(surface, OCCSurface)->my_body();
         }
-        else if (num_shells == 1 && !OCCMap->IsBound(shell))
+        else if (num_shells == 1 && (!OCCMap->IsBound(shell)||
+                  OccToCGM->find(OCCMap->Find(shell)) == OccToCGM->end()))
         {
           OCCShell* occ_shell = populate_topology_bridge(shell, CUBIT_TRUE);
           return occ_shell->my_body();
         }
-        else if( num_lumps == 1 && !OCCMap->IsBound(solid))
+        else if( num_lumps == 1 && (!OCCMap->IsBound(solid) ||
+                  OccToCGM->find(OCCMap->Find(solid)) == OccToCGM->end()))
         {
           Lump* lump= populate_topology_bridge(solid, CUBIT_TRUE);
           return CAST_TO(lump, OCCLump)->get_body();
@@ -2001,6 +2006,7 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
     {
       OCCLump* lump = new OCCLump(NULL, NULL, shell);
       OCCBody* body = new OCCBody(NULL, NULL, shell);
+      BodyList->append(body);
       shell->set_body(body);
       shell->set_lump(lump);
       int k;
@@ -2231,7 +2237,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
       surface->set_shell(shell);
       shell->set_body(body);
       shell->set_lump(lump);
-      //BodyList->append(body);
+      BodyList->append(body);
       int k;
       if(!OCCMap->IsBound(aShape))
       {
@@ -3026,6 +3032,10 @@ OCCQueryEngine::delete_solid_model_entities( Surface* surface)const
   OCCSurface* fsurf = dynamic_cast<OCCSurface*>(surface);
   if (!fsurf)
     return CUBIT_FAILURE;
+
+  OCCBody* sheet_body = fsurf->my_body();
+  if(sheet_body != NULL)
+    BodyList->remove(sheet_body);
 
   double d = fsurf->measure();
   if(d < 0.0)
@@ -3829,14 +3839,29 @@ CubitBoolean OCCQueryEngine::volumes_overlap (Lump *lump1, Lump *lump2 ) const
 void OCCQueryEngine::copy_attributes(TopoDS_Shape& old_shape,
                                      TopoDS_Shape& new_shape)
 {
+  if(new_shape.IsNull())
+    return;
+
   //update the attribute label tree
   DLIList<CubitSimpleAttrib*> list;
   OCCAttribSet::get_attributes(old_shape, list);
 
-  for(int i = 0; !new_shape.IsNull() && i < list.size(); i ++)
+  for(int i = 0; i < list.size(); i ++)
   {
     CubitSimpleAttrib* s_attr = list.get_and_step();
-    OCCAttribSet::append_attribute(s_attr, new_shape);
+    TopAbs_ShapeEnum type = old_shape.ShapeType();
+    if(new_shape.ShapeType() < type)
+    {
+      TopTools_IndexedMapOfShape M;
+      TopExp::MapShapes(new_shape, type, M); 
+      for(int j = 1; j <= M.Extent() ; j++ )
+      {
+        TopoDS_Shape sub_shape = M(j);
+        OCCAttribSet::append_attribute(s_attr, sub_shape); 
+      }
+    }
+    else    
+      OCCAttribSet::append_attribute(s_attr, new_shape);
   }
 }
 
@@ -3851,17 +3876,43 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
   int current_id = OCCMap->Find(old_shape);
   std::map<int, TDF_Label>::iterator it_lab =
           Shape_Label_Map->find(current_id);
+  CubitBoolean newlyBound = CUBIT_FALSE;
+  TopTools_IndexedMapOfShape M;
+  TopoDS_Shape new_subshape;
+  new_subshape.Nullify();
+
+  if(old_shape.ShapeType() == TopAbs_SOLID)
+    TopExp::MapShapes(new_shape, TopAbs_SOLID, M);
+  else if (old_shape.ShapeType() == TopAbs_SHELL)
+    TopExp::MapShapes(new_shape, TopAbs_SHELL, M);
+  else if (old_shape.ShapeType() == TopAbs_FACE)
+    TopExp::MapShapes(new_shape, TopAbs_FACE, M);
+
   if(it_lab != Shape_Label_Map->end())
   {
-     TDF_Label aLabel = (*it_lab).second;
-     if (!new_shape.IsNull())
-       Handle_TDataXtd_Shape attr_shape = TDataXtd_Shape::Set(aLabel, new_shape);
+     CubitBoolean isNewShapeBound = CUBIT_FALSE;
+     if(old_shape.ShapeType() > TopAbs_COMPOUND && !new_shape.IsNull() &&
+        new_shape.ShapeType() == TopAbs_COMPOUND && M.Extent() == 1)
+     {
+       new_subshape = M(1); 
+       isNewShapeBound = OCCMap->IsBound(new_subshape);
+       copy_attributes(old_shape, new_subshape);
+       Shape_Label_Map->erase(current_id);
+       if(isNewShapeBound != OCCMap->IsBound(new_subshape)) 
+         newlyBound = CUBIT_TRUE;
+     }
      else
-       Shape_Label_Map->erase(it_lab);
+     {
+       isNewShapeBound = OCCMap->IsBound(new_shape);
+       copy_attributes(old_shape, new_shape);
+       Shape_Label_Map->erase(current_id);
+       if(isNewShapeBound != OCCMap->IsBound(new_shape))
+         newlyBound = CUBIT_TRUE; 
+     }
   }
 
   //update CGM-OCC map
-  int k = OCCMap->Find(old_shape);
+  int k = current_id;
   assert (k > 0 && k <= iTotalTBCreated);
 
   std::map<int, TopologyBridge*>::iterator it = OccToCGM->find(k);
@@ -3871,6 +3922,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
 
   //unless just changing location, if the TShape is going to change, remove
   //old curve_list .
+  CubitBoolean curve_removed = CUBIT_FALSE;
   if(old_shape.ShapeType() == TopAbs_VERTEX && !new_shape.IsPartner(old_shape)) 
   {
     //remove the curve list associated with the vertex too.
@@ -3878,15 +3930,20 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     if (ge)
     {
       OCCPoint* test_p = CAST_TO(ge, OCCPoint);
-        if(test_p)
-          test_p->clear_curves();
+      if(test_p)
+      { 
+        test_p->clear_curves();
+        curve_removed = CUBIT_TRUE;
+      }
     }
   }
 
   OCCMap->UnBind(old_shape);
+  if(new_subshape.IsNull())
+    new_subshape = new_shape;
 
   if (tb && TopAbs_SOLID == old_shape.ShapeType() && !new_shape.IsNull() && 
-       TopAbs_COMPOUND == new_shape.ShapeType())
+       TopAbs_COMPOUND == new_shape.ShapeType() && M.Extent() > 1)
   {
     OccToCGM->erase(k);
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
@@ -3895,8 +3952,8 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return k;
   }
 
-  if(tb && TopAbs_FACE == old_shape.ShapeType() && !new_shape.IsNull() &&
-       TopAbs_COMPOUND == new_shape.ShapeType())
+  else if(tb && TopAbs_FACE == old_shape.ShapeType() && !new_shape.IsNull() &&
+       TopAbs_COMPOUND == new_shape.ShapeType() && M.Extent() > 1)
   {
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
@@ -3926,8 +3983,10 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return k;
   }
 
-  if (tb && ((!new_shape.IsNull() && !old_shape.IsSame(new_shape)&& 
-        OCCMap->IsBound(new_shape))|| new_shape.IsNull())) 
+  else if (tb && ((!new_subshape.IsNull() && !old_shape.IsSame(new_subshape)&& 
+        OCCMap->IsBound(new_subshape) &&
+        OccToCGM->find(OCCMap->Find(new_subshape))!= OccToCGM->end()) || 
+        new_shape.IsNull()))
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape
@@ -4002,10 +4061,23 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
 
   else
   {   
-    if(!OCCMap->IsBound(new_shape))
-      OCCMap->Bind(new_shape, k);
-    if(tb)
-      set_TopoDS_Shape(tb, new_shape);
+    //if the new_shape is bounded in copy_attribute, unbind it and rebind to 
+    //the old k
+    if(newlyBound)
+    {
+      int new_k = OCCMap->Find(new_subshape);
+      TDF_Label aLabel;
+      CubitBoolean found = CUBIT_FALSE;
+      OCCAttribSet::FindShape(new_subshape, aLabel, found);
+      assert(found);
+      Shape_Label_Map->erase(new_k);
+      Shape_Label_Map->insert(labType(k, aLabel)); 
+      OCCMap->UnBind(new_subshape);
+    }      
+    if(!OCCMap->IsBound(new_subshape))
+      OCCMap->Bind(new_subshape, k);
+    if(tb && !curve_removed)
+      set_TopoDS_Shape(tb, new_subshape);
   }
   return k;
 }

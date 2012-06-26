@@ -70,6 +70,7 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   //Add attributes on child of myLabel
   //1. add shape attribute, first check to make sure there's no shape attribute
   CubitBoolean found = CUBIT_FALSE;
+  int result = 1;
   TDF_Label aLabel, lab;
   Handle_TDataStd_Name attr_name;
   CubitString* type = csa->string_data_list()->get_and_step();
@@ -101,17 +102,20 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   else
   {
     TCollection_ExtendedString name_string;
-    found = CUBIT_FALSE;
     for (TDF_ChildIterator it(aLabel,CUBIT_FALSE); it.More(); it.Next()) 
     {
       lab = it.Value();
-      found = find_attribute(lab, csa);
-      if(found)
+      result = find_attribute(lab, csa);
+      if(result != 1)
         break;
     }
   }
   //if not exist,  create new child label
-  if (!found)
+  Handle_TDataStd_ExtStringArray attr_string;
+  DLIList<CubitString*>* strings = csa->string_data_list();
+  int size = strings->size()-1;
+ 
+  if (result == 1)
   {
     lab = aLabel.NewChild();
     attr_name = TDataStd_Name::Set(lab, cstring);
@@ -119,13 +123,62 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
     assert(lab.IsAttribute(TDataStd_Name::GetID()));
   }
      
-  else//nothing to do
+  else if(result == 3)//nothing to do
     return;
 
+  else if(result == 2) 
+  //adding the name strings
+  {
+    lab.FindAttribute(TDataStd_ExtStringArray::GetID(), attr_string);
+    TCollection_ExtendedString name1, name2;
+    DLIList<CubitString*>* strings = csa->string_data_list();
+    DLIList<CubitString*> new_names;
+    int length = 0;
+    strings->reset();
+    strings->step();//type string filters out
+    for(int j = 1; j < strings->size();j++)
+    { 
+      CubitString* name_string = strings->get_and_step();
+      char const* string1 = name_string->c_str();
+      TCollection_ExtendedString cstring(string1, Standard_True );
+      bool dup = false;
+      length = attr_string->Length() ;
+
+      for(int i = 0; i < length; i++)
+      {
+        name1 = attr_string->Value(i);
+        //it could be string[0] = "volume 1", string[1] = "volume_1";
+    
+        if(name1.IsEqual(cstring))
+        {
+          dup = true;
+          break;
+        }
+      }
+      if(!dup) 
+        new_names.append(name_string);
+    }
+    if(new_names.size() > 0)
+    {
+      lab.ForgetAttribute(attr_string);
+      Handle_TDataStd_ExtStringArray attr_string_new; 
+      attr_string_new = TDataStd_ExtStringArray::Set(lab, 0, 
+                                       length+new_names.size()-1); 
+      for(int i = 0; i < attr_string_new->Length(); i++)
+      {
+        if (i < length)
+          attr_string_new->SetValue(i, attr_string->Value(i));
+        else
+        {
+          char const* string1 = new_names.get_and_step()->c_str();
+          TCollection_ExtendedString cstring(string1, Standard_True );
+          attr_string_new->SetValue(i, cstring);
+        }
+      }
+    } 
+    return;
+  } 
   //3. add string attribute
-  DLIList<CubitString*>* strings = csa->string_data_list();
-  Handle_TDataStd_ExtStringArray attr_string;
-  int size = strings->size()-1;
   if(strings && size > 0)
   {
     //set the length of String Array .
@@ -184,8 +237,11 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   }
 }
 
-CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
-                                          CubitSimpleAttrib* csa)
+// return 1 = not found
+// return 2 = found ENTITY_NAME attribute
+// return 3 = found the same attribute
+int  OCCAttribSet::find_attribute(TDF_Label child,
+                                  CubitSimpleAttrib* csa)
 {
   DLIList<int*>* ints = csa->int_data_list();
   CubitString type = csa->character_type();
@@ -201,17 +257,22 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
   if(child.FindAttribute(TDataStd_Name::GetID(), attr_name))
   {
     old_string = attr_name->Get();
-
+    Standard_Boolean isMultiByte = Standard_True;
+    char const* string = "ENTITY_NAME";
+    TCollection_ExtendedString string2( string, isMultiByte );
     if(old_string != cstring)
-      return CUBIT_FALSE;
+      return 1;
+
+    else if(cstring.IsEqual(string2))
+      return 2;
   }
 
   else
-    return CUBIT_FALSE;
+    return 1;
 
   //continue to compare the rest attributes.
   CubitBoolean is_same = CUBIT_TRUE;
-  if(ints->size() > 0 )
+  if(ints->size()> 0 )
   {
     Handle_TDataStd_IntegerArray attr_ints;
     if(child.FindAttribute(TDataStd_IntegerArray::GetID(), attr_ints) &&
@@ -226,7 +287,7 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
     }
   }
   if(!is_same)
-    return is_same;
+    return 1;
 
   if(doubles->size() > 0 )
   {
@@ -244,7 +305,7 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
   }
 
   if(!is_same)
-    return is_same;
+    return 1;
 
   if(strings->size() > 0 )
   {
@@ -265,8 +326,10 @@ CubitBoolean OCCAttribSet::find_attribute(TDF_Label child,
         }
       }
     }
+    if(!is_same)
+      return 1;
   }
-  return is_same  ;
+  return 3  ;
 }
 
 void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa)
@@ -287,10 +350,10 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa)
       //find the same type attribute first
       TDF_Label child = it1.Value();
 
-      CubitBoolean found = find_attribute(child, csa);
+      int found = find_attribute(child, csa);
 
-      if(found)
-        child.ForgetAllAttributes( );
+      if(found == 3)
+        child.ForgetAllAttributes( false );
     }
   }
 }
@@ -305,7 +368,7 @@ void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
   if(!found)
     return;
 
-  myLabel.ForgetAllAttributes();
+  myLabel.ForgetAllAttributes(false);
 /*
   if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)) 
   {
@@ -339,17 +402,28 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa,
 
     if(!csa)
     {
-      child.ForgetAllAttributes( );
+      //only name attributes can't be forget here.
+      Handle_TDataStd_Name attr_name;
+      if(child.FindAttribute(TDataStd_Name::GetID(), attr_name))
+      {
+        TCollection_ExtendedString old_string = attr_name->Get();
+        char const* string1 = "ENTITY_NAME";
+        Standard_Boolean isMultiByte = Standard_True;
+        TCollection_ExtendedString cstring( string1, isMultiByte );
+        if( old_string == cstring)
+          continue;
+      }
+      child.ForgetAllAttributes(false );
       num_found ++;
     }
 
     else
     {
-      CubitBoolean found = find_attribute(child, csa);
+      int found = find_attribute(child, csa);
 
-      if(found)
+      if(found == 3)
       {
-        child.ForgetAllAttributes( );
+        child.ForgetAllAttributes( false );
         num_found ++;
       } 
     }
@@ -401,6 +475,8 @@ void OCCAttribSet::get_attributes(TDF_Label &lab,
     {
       name_string = attr_string->Value(i);
       int length2 = name_string.Length();
+      if (length2 == 0)
+        continue;
       std::vector<char> temp_string(length2+1);
       for(int j = 1; j <= length2; j ++)
       {

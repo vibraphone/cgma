@@ -31,8 +31,8 @@ class OCCAttribSet
                           TDF_Label& aLabel,
                           CubitBoolean& found);
     
-    static CubitBoolean find_attribute(TDF_Label child,
-                                       CubitSimpleAttrib* csa);
+    static int find_attribute(TDF_Label child,
+                              CubitSimpleAttrib* csa);
 
     static void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
     

@@ -89,7 +89,7 @@ OCCLump::~OCCLump()
 
 void OCCLump::set_TopoDS_Solid(TopoDS_Solid solid)
 {
-  if(solid.IsEqual(*myTopoDSSolid) )
+  if(myTopoDSSolid && solid.IsEqual(*myTopoDSSolid) )
     return;
 
   TopoDS_Solid* the_solid = new TopoDS_Solid(solid);
@@ -434,19 +434,11 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   //set the Shells
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape, shape2;
+  CubitBoolean isCompound = CUBIT_FALSE;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
   TopoDS_Solid new_solid;
   if(M.Extent() > 1 )
-  {
-    //update all attributes first.
-    for(int ii=1; ii<=M.Extent(); ii++)
-    {
-      TopoDS_Solid solid = TopoDS::Solid(M(ii));
-      OCCQueryEngine::instance()->copy_attributes(old_solid, solid);
-    }
-    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_shape);
-    return CUBIT_SUCCESS;
-  }
+    isCompound = CUBIT_TRUE;
 
   if(M.Extent() == 1 )
     new_solid = TopoDS::Solid(M(1));  
@@ -520,7 +512,9 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
     if(shapes.Extent() > 0 || (op && op->IsDeleted(shell)))
       OCCShell::update_OCC_entity(shell, shape, op, sp);
   }
-  if(!old_solid.IsSame(new_shape))
+  if(!new_solid.IsNull() && !old_solid.IsSame(new_solid))
     OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
+  else if(isCompound)
+    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_shape);
   return CUBIT_SUCCESS;
 }

@@ -344,6 +344,10 @@ BodySM* OCCBody::copy()
 //----------------------------------------------------------------
 CubitStatus OCCBody::move(double dx, double dy, double dz)
 {
+  double tol = OCCQueryEngine::instance()->get_sme_resabs_tolerance();
+  if(fabs(dx) < tol && fabs(dy) < tol && fabs(dz) < tol)
+    return CUBIT_SUCCESS;
+
   gp_Vec aVec(dx, dy, dz);
   gp_Trsf aTrsf;
   aTrsf.SetTranslation(aVec);
@@ -385,6 +389,10 @@ CubitStatus OCCBody::rotate( double x, double y, double z,
 //----------------------------------------------------------------
 CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
 {
+  TopoDS_Shape * shape;
+  get_TopoDS_Shape(shape);
+  aBRepTrsf.Perform(*shape);
+/*
   for(int i = 0; i < mySheetSurfaces.size(); i++)
   {
     OCCSurface* surface = mySheetSurfaces.get_and_step();
@@ -413,7 +421,7 @@ CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
       aBRepTrsf.Perform(*solid);
     }
   } 
-
+*/
   update_OCC_entity(&aBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
@@ -454,6 +462,11 @@ CubitStatus OCCBody::scale(double scale_factor_x,
 
   BRepBuilderAPI_GTransform gBRepTrsf(gTrsf);
 
+  TopoDS_Shape * shape;
+  get_TopoDS_Shape(shape);
+  gBRepTrsf.Perform(*shape);
+/*
+
   for(int i = 0; i < mySheetSurfaces.size(); i++)
   {
     OCCSurface* surface = mySheetSurfaces.get_and_step();
@@ -480,6 +493,7 @@ CubitStatus OCCBody::scale(double scale_factor_x,
       gBRepTrsf.Perform(*solid);
     }
   }
+*/
   update_OCC_entity(&gBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
@@ -634,15 +648,17 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
       for(; it.More(); it.Next())
       {
         shape = it.Value();
-        OCCQueryEngine::instance()->copy_attributes(old_shape, shape);
+        OCCQueryEngine::instance()->copy_attributes(solid, shape);
       } 
       shape = shapes.First();
     }
     else if(op->IsDeleted(solid))
     {
-       if (M_new.Extent()== 1)
+       if (M_new.Extent()== 1 && ii == 1)
          shape = M_new(1);
-       else if(M_new.Extent() > 1)
+       else if(M_new.Extent()== 1 && ii > 1)
+         shape.Nullify();
+       else if(M_new.Extent() > 1 ) 
        {
          GProp_GProps myProps;
          BRepGProp::VolumeProperties(solid, myProps);
@@ -891,38 +907,11 @@ CubitPointContainment OCCBody::point_containment( const CubitVector &point )
 
 void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
 {
-  TopoDS_Shape shape;
-  TopoDS_Compound Co;
-  if(myTopoDSShape != NULL)
-    shape = *myTopoDSShape;
-
-  if(!myTopoDSShape || shape.IsNull() ||
-     OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
-  {
-    BRep_Builder B;
-    B.MakeCompound(Co);
-    for(int i = 0; i < myLumps.size(); i ++)
-    {
-      OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      assert(lump != NULL);
-      TopoDS_Solid * solid = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
-      B.Add(Co, *solid);
-    }
-    for(int i = 0; i < myShells.size(); i ++)
-    {
-      TopoDS_Shell * shell = myShells.get_and_step()->get_TopoDS_Shell();
-      B.Add(Co, *shell);
-    }
-    for(int i = 0; i < mySheetSurfaces.size(); i ++)
-    {
-      TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
-    }
-    shape = Co;
-  }
+  TopoDS_Shape *shape;
+  get_TopoDS_Shape(shape);
 
   TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(shape, TopAbs_FACE, M);
+  TopExp::MapShapes(*shape, TopAbs_FACE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
        TopologyBridge *face = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
@@ -944,38 +933,11 @@ void OCCBody::get_all_surfaces(DLIList<OCCSurface*> &surfaces)
 
 void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
 {
-  TopoDS_Shape shape;
-  TopoDS_Compound Co;
-  if(myTopoDSShape)
-    shape = *myTopoDSShape;
-
-  if(!myTopoDSShape || shape.IsNull() ||
-     OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
-  {
-    BRep_Builder B;
-    B.MakeCompound(Co);
-    for(int i = 0; i < myLumps.size(); i ++)
-    {
-      OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      assert(lump != NULL); 
-      TopoDS_Solid * solid = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
-      B.Add(Co, *solid);
-    }
-    for(int i = 0; i < myShells.size(); i ++)
-    {
-      TopoDS_Shell * shell = myShells.get_and_step()->get_TopoDS_Shell();
-      B.Add(Co, *shell);
-    }
-    for(int i = 0; i < mySheetSurfaces.size(); i ++)
-    {
-      TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
-    }
-    shape = Co;
-  }
+  TopoDS_Shape *shape;
+  get_TopoDS_Shape(shape);
 
   TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(shape, TopAbs_EDGE, M);
+  TopExp::MapShapes(*shape, TopAbs_EDGE, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
        TopologyBridge *curve = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
@@ -997,38 +959,11 @@ void OCCBody::get_all_curves(DLIList<OCCCurve*> &curves)
 
 void OCCBody::get_all_points(DLIList<OCCPoint*> &points)
 {
-  TopoDS_Shape shape;
-  if(myTopoDSShape)
-    shape = *myTopoDSShape;
-  TopoDS_Compound Co;
-
-  if(!myTopoDSShape || shape.IsNull() ||
-     OCCQueryEngine::instance()->OCCMap->IsBound(shape) == CUBIT_FALSE )
-  {
-    BRep_Builder B;
-    B.MakeCompound(Co);
-    for(int i = 0; i < myLumps.size(); i ++)
-    {
-      OCCLump* lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      assert(lump != NULL);
-      TopoDS_Solid * solid = CAST_TO(lump, OCCLump)->get_TopoDS_Solid();
-      B.Add(Co, *solid);
-    }
-    for(int i = 0; i < myShells.size(); i ++)
-    {
-      TopoDS_Shell * shell = myShells.get_and_step()->get_TopoDS_Shell();
-      B.Add(Co, *shell);
-    }
-    for(int i = 0; i < mySheetSurfaces.size(); i ++)
-    {
-      TopoDS_Face * face = mySheetSurfaces.get_and_step()->get_TopoDS_Face();
-      B.Add(Co, *face);
-    }
-    shape = Co;
-  }
+  TopoDS_Shape *shape;
+  get_TopoDS_Shape(shape);
 
   TopTools_IndexedMapOfShape M;
-  TopExp::MapShapes(shape, TopAbs_VERTEX, M);
+  TopExp::MapShapes(*shape, TopAbs_VERTEX, M);
   int ii;
   for (ii=1; ii<=M.Extent(); ii++) {
        TopologyBridge *vertex = OCCQueryEngine::instance()->occ_to_cgm(M(ii));

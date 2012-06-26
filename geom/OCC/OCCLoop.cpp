@@ -75,10 +75,10 @@ OCCLoop::~OCCLoop()
 
 void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
 {
-   if(loop.IsEqual(*myTopoDSWire))
+   if(myTopoDSWire && loop.IsEqual(*myTopoDSWire))
      return;
 
-   if(!loop.IsSame(*myTopoDSWire))
+   if(myTopoDSWire &&!loop.IsSame(*myTopoDSWire))
    {
      DLIList<OCCCoEdge*> coedges = this->coedges();
      for(int i = 0; i < coedges.size(); i++)
@@ -320,14 +320,7 @@ CubitStatus OCCLoop::update_OCC_entity(TopoDS_Wire & old_loop,
     shapes.Assign(sp->DescendantShapes(edge));
     if(shapes.Extent() > 1)
     {
-      //update all attributes first.
-      TopTools_ListIteratorOfListOfShape it;
-      it.Initialize(shapes);
-      for(; it.More(); it.Next())
-      {
-        shape_edge = it.Value();
-        OCCQueryEngine::instance()->copy_attributes(edge, shape_edge);
-      }
+      shape_edge = shapes.First(); 
       OCCQueryEngine::instance()->update_OCC_map(edge, shape_edge);
     } 
   }

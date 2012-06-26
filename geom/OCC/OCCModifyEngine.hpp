@@ -979,8 +979,7 @@ private:
   virtual CubitStatus stitch( DLIList<BodySM*> &bodies_to_stitch,
                       DLIList<BodySM*> &new_bodies,
                       bool tighten_gaps,
-                      double tolerance )const
-  {return CUBIT_FAILURE; }
+                      double tolerance )const;
 
 } ;
 

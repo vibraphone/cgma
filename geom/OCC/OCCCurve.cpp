@@ -51,6 +51,7 @@
 #include <TopoDS.hxx>
 #include "BRepBuilderAPI_MakeEdge.hxx"
 #include "Geom_BezierCurve.hxx"
+#include "Geom_BSplineCurve.hxx"
 #include "GeomAPI_ProjectPointOnCurve.hxx"
 #include "TColgp_Array1OfPnt.hxx"
 #include "GeomAdaptor_Curve.hxx"
@@ -123,7 +124,7 @@ OCCCurve::~OCCCurve()
 
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 {
-  if(edge.IsSame(*myTopoDSEdge))
+  if(myTopoDSEdge && edge.IsEqual(*myTopoDSEdge))
     return;
 
   else
@@ -967,14 +968,6 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
       shape = shapes.First();
     else if(shapes.Extent() > 1)
     {
-      //update all attributes first.
-      TopTools_ListIteratorOfListOfShape it;
-      it.Initialize(shapes);
-      for(; it.More(); it.Next())
-      {
-        shape = it.Value();
-        OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Edge(), shape);
-      }
       shape = shapes.First();
     }
     else if (op->IsDeleted(*get_TopoDS_Edge()))
