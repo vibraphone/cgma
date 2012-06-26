@@ -53,11 +53,11 @@ int main (int argc, char **argv)
      PRINT_INFO("Operation Failed");
 
   int ret_val = ( CubitMessage::instance()->error_count() );
-  if ( ret_val > 0 )
+  if ( ret_val > 2 )
   {
     PRINT_ERROR("Errors found during Mergechk session.\n");
   }
-  return ret_val;
+  return ret_val-2;
   
 }
 
@@ -385,17 +385,23 @@ CubitStatus make_Point()
   //check for surface
   DLIList<OCCSurface*> surfaces;
   occ_body->get_all_surfaces(surfaces);
-  OCCSurface* surface = surfaces.step_and_get();
-  GeometryType type = surface->geometry_type();
-  // CONE_SURFACE_TYPE
-
-  box = surface->bounding_box();
-  // bounding box
+  assert(surfaces.size() == 981);
+  OCCSurface* surface = NULL;
+  GeometryType type;
 
   DLIList<RefFace*> ref_faces;
   gti->ref_faces(ref_faces);
-  //  RefFace* ref_face = ref_faces.step_and_get();
+  for(int i = 0; i < ref_faces.size(); i++)
+  {
+    surface = CAST_TO(ref_faces.step_and_get()->get_surface_ptr(), OCCSurface);
+    type = surface->geometry_type();
+    if (type == CONE_SURFACE_TYPE)
+      break;
+  }
+
   RefFace* ref_face = ref_faces.get();
+  box = surface->bounding_box();
+  // bounding box
 
   //make a new refface out of existing refface.
   CubitBoolean extended_from = CUBIT_TRUE;
@@ -423,8 +429,10 @@ CubitStatus make_Point()
   }
 
   RefFace* new_face2;
-  new_face2 = gmti->make_RefFace(PLANE_SURFACE_TYPE, 
+  new_face2 = gmti->make_RefFace(CONE_SURFACE_TYPE, 
                          *ref_edge_list, CUBIT_TRUE, new_face, CUBIT_TRUE);
+  assert(new_face2 == NULL);
+  //2 Errors here for failing making a surface. negtive test here.
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -435,76 +443,49 @@ CubitStatus make_Point()
      if( i != 2)
         continue;
      Body * entity = bodies.get();
+     vi = entity->center_point();
      gti->translate(entity, i*vector1);
+     vii = entity->center_point();
   }
 
-  RefVolume* volume = NULL;
-  if ( new_face->get_surface_ptr()->is_closed_in_U())
-    volume = new_face->ref_volume(); 
-  else
-    vi = new_face->center_point();
-  //center point should moved by (20,20,20) compared with the original one below
-
-  vii = ref_face->center_point();
   assert(fabs(vi.distance_between(vii)-vector1.length()*2) < 0.0001);
 
-  CubitVector normal;
-  normal = ref_face->normal_at(vii);
-  vi.set(0, -0.0091, 0.999958);
-  assert(fabs(vi.distance_between( normal )) < 0.0001);
-  // surface normal at center point.
+  double area = ref_face->measure();
+  assert(fabs(area - 45.57587) < 0.0001);
 
-  CubitVector closest_location ;
-  CubitVector unit_normal_ptr ;
-  CubitVector curvature1_ptr ;
-  CubitVector curvature2_ptr ; 
+  double lower, upper;
+  ref_face->get_param_range_U(lower, upper);
+  assert(fabs(lower) < 0.0001 && fabs(upper - 1.57079) < 0.0001);
 
-  ref_face->find_closest_point_trimmed(vii, closest_location);  
-  vi.set(-37.69135, -3.23057, -91.71684);
-  assert(fabs(vi.distance_between(closest_location)) < 0.0001); 
-  // Found surface projection location for vi.
+  ref_face->get_param_range_V(lower, upper);
+  assert(fabs(lower - 1.81177) < 0.01 && fabs(upper - 6.64752) < 0.01 );
+  // get surface V direction boundaries. here it's (24,24.5)
 
-  double curvature1, curvature2;
-  ref_face->get_principal_curvatures(closest_location, curvature1, curvature2);
-  assert(curvature1 == 0  && curvature2 == 0);
-  // get principal curvatures at center point.
-
-  double area = ref_face->area();
-  assert(fabs(area-3) < 0.0001);
-  // area of the face
-
-  double u = -2.5;      
-  double v = 24.3;
+  double u = 1;      
+  double v = 3;
   vi = ref_face->position_from_u_v(u,v);
-  vii.set(-37.5, -3.2805, -91.7173);
+  vii.set(8.95117, 37.63107, 131.90751);
   assert(fabs(vi.distance_between(vii)) < 0.0001);
   // get location on surface for it's u,v
 
   ref_face->u_v_from_position(vi, u, v);
-  assert(fabs(u + 2.5) < 0.0001 && fabs(v -24.3) < 0.00001);
+  assert(fabs(u - 1) < 0.0001 && fabs(v - 3) < 0.00001);
   // get (u,v) from this vi.
 
   CubitBoolean periodic = ref_face->is_periodic();
-  assert(periodic == CUBIT_FALSE);
+  assert(periodic == CUBIT_TRUE);
   // found if surface is periodic.
 
   double p = 0; //period
   periodic = ref_face->is_periodic_in_U(p); 
-  assert(periodic == CUBIT_FALSE  );
+  assert(periodic == CUBIT_TRUE  );
+  assert(fabs(p - 6.28318) < 0.0001);
   // found if surface is periodic in U and its period.
 
   periodic = ref_face->is_periodic_in_V(p);
   assert(periodic == CUBIT_FALSE );
 
   //All OCC entities are parametric.
-
-  double lower, upper;
-  ref_face->get_param_range_U(lower, upper);
-  assert(fabs(lower- -5.30865) < 0.0001 && fabs(upper - 0.69135) < 0.0001);
-
-  ref_face->get_param_range_V(lower, upper);
-  assert(fabs(lower - 24) < 0.01 && fabs(upper - 24.5) < 0.01 );
-  // get surface V direction boundaries. here it's (24,24.5)
 
   CubitBoolean closed = ref_face->is_closed_in_U();
   assert(closed == CUBIT_FALSE);
@@ -515,7 +496,7 @@ CubitStatus make_Point()
   CubitPointContainment pc = ref_face->point_containment(7,25);
   assert(pc == CUBIT_PNT_OUTSIDE);
 
-  CubitPointContainment pc2 = ref_face->point_containment(-3,24.2);
+  CubitPointContainment pc2 = ref_face->point_containment(1,3);
   assert(pc2 == CUBIT_PNT_INSIDE);
 
   ref_edge_loops.clean_out();
@@ -526,7 +507,7 @@ CubitStatus make_Point()
   RefEdge* edge1 = ref_edges1->pop();
   RefEdge* edge2 = ref_edges1->pop();
   double angle = edge2->angle_between(edge1, ref_face);
-  assert(fabs(angle - 1.5707) < 0.001);
+  assert(fabs(angle - 4.71238) < 0.001);
 
   //test for curve
   CubitVector c_point, tangent, center;
@@ -537,16 +518,19 @@ CubitStatus make_Point()
   CubitVector center_pnt1(5,8,10);
   CubitVector center_pnt2(1,2,10);
   CubitVector center_pnt3(-2,-3.5,10);
-  list.append(&vector1);
+  CubitVector start_pt = vertex1->coordinates();
+  CubitVector end_pt = vertex2->coordinates();
+  list.append(&start_pt);
   list.append(&center_pnt1);
   list.append(&center_pnt2);
   list.append(&center_pnt);
   list.append(&center_pnt3);
-  list.append(&vector2);
+  list.append(&end_pt);
   RefEdge* new_edge_1 = gmti->make_RefEdge(SPLINE_CURVE_TYPE, vertex1,
                                           vertex2, list);
   d = new_edge_1->measure();
   assert(fabs(d - 29.55)<0.01);
+  CubitVector closest_location;
   new_edge_1->closest_point_trimmed(center_pnt1, closest_location);
   assert(center_pnt1.distance_between(closest_location) < 1.E-6);
   new_edge_1->closest_point_trimmed(center_pnt2,closest_location);
@@ -669,15 +653,18 @@ CubitStatus make_Point()
   DLIList<OCCCurve*> curves;
   CAST_TO(body, OCCBody)->get_all_curves(curves);
 
-  OCCCurve *curve = curves.step_and_get();
-
-  type = curve->geometry_type();
-  assert(type == ARC_CURVE_TYPE);
-  // ARC_CURVE_TYPE
+    OCCCurve *curve = NULL;
+  for(int i = 0; i < curves.size(); i ++)
+  {
+    curve = curves.step_and_get();
+    type = curve->geometry_type();
+    if(type == ARC_CURVE_TYPE)
+      break;
+  }
 
   box = curve-> bounding_box();
-  min.set(26.75282, 16.7499, 20.3036);
-  max.set(33.24717, 23.24399, 20.36297);
+  min.set(7.50564, 41.24873, 128.69915);
+  max.set(14, 41.30805, 135.19324);
   assert(min.distance_between(box.minimum()) < 0.001 &&
          max.distance_between(box.maximum()) < 0.001);
   // bounding box
@@ -708,6 +695,7 @@ CubitStatus make_Point()
   // middle point's u value.
 
   double radius;
+  CubitVector curvature1_ptr;
   ref_edge->closest_point(vi, c_point, &tangent, & curvature1_ptr);
   vii.set(0, -1, 0);
   assert(tangent.distance_between(vii) < 0.001);
