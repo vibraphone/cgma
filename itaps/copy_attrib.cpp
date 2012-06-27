@@ -65,7 +65,7 @@ int main(){
   std::cout << "name tag: ";
   std::string b = "b";
   Tag_Body(geom, name_tag, b, cyl);
-  Tag_Get (geom, name_tag, cyl); 
+  //  Tag_Get (geom, name_tag, cyl); 
 
   // Copy
   iGeom_copyEnt(geom, cyl, &tmp_cyl, &err);
