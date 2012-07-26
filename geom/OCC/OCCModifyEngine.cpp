@@ -3119,50 +3119,42 @@ int OCCModifyEngine::imprint_toposhapes(TopoDS_Shape*& from_shape,
 		{
 		  TopoDS_Compound old_csolid = TopoDS::Compound(*from_shape);
 		  OCCBody::update_OCC_entity(old_csolid, new_from_shape, &splitor);
-                  if(!from_shape->IsNull())
+                  if(!old_csolid.IsEqual(new_from_shape))
                   {
 		    from_shape->Nullify();
-		    delete from_shape;
-                    from_shape = NULL;
+                    *from_shape = new_from_shape;
                   }
-                  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 
 	      else if(from_shape->ShapeType() == TopAbs_SOLID)
 		{
 		  TopoDS_Solid old_solid = TopoDS::Solid(*from_shape);
 		  OCCLump::update_OCC_entity(old_solid, new_from_shape, &splitor);
-                  if(!from_shape->IsNull())
+                  if(!old_solid.IsEqual(new_from_shape))
                   {
                     from_shape->Nullify();
-                    delete from_shape;
-                    from_shape = NULL;
+                    *from_shape = new_from_shape;
                   }
-		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 	      else if(from_shape->ShapeType() == TopAbs_SHELL)
 		{
 		  TopoDS_Shell old_shell = TopoDS::Shell(*from_shape);
 		  OCCShell::update_OCC_entity(old_shell,new_from_shape, &splitor);
-                  if(!from_shape->IsNull())
+                  if(!old_shell.IsEqual(new_from_shape))
                   {
                     from_shape->Nullify();
-                    delete from_shape;
-                    from_shape = NULL;
+                    *from_shape = new_from_shape;
                   }
-		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 	      else if(from_shape->ShapeType() == TopAbs_FACE)
 		{
 		  TopoDS_Face old_face = TopoDS::Face(*from_shape);
 		  OCCSurface::update_OCC_entity(old_face,new_from_shape, &splitor);
-                  if(!from_shape->IsNull())
+                  if(!old_face.IsEqual(new_from_shape))
                   {
                     from_shape->Nullify();
-                    delete from_shape;
-                    from_shape = NULL;
+                    *from_shape = new_from_shape;
                   }
-		  from_shape = new TopoDS_Shape(new_from_shape);
 		}
 
 	      TopTools_ListOfShape shapes;
@@ -4158,7 +4150,7 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
         record_faces.append(face_list.get_and_step()); 
 
       imprint_toposhapes(shape, (TopoDS_Shape*)edge, face_list);
-      for (int e = 0; e < face_list.size()&& keep_old; e++)  
+      for (int e = 0; e < record_faces.size()&& keep_old; e++)  
       {
         TopoDS_Face* test_face = record_faces.get_and_step();
         if(!face_list.move_to(test_face))
@@ -4172,7 +4164,7 @@ OCCModifyEngine::face_edge_imprint( DLIList<Surface*> &ref_face_list,
 
   for(int j = 0; keep_old && j < face_list.size(); j++)
   {
-    TopoDS_Face* face = face_list.get(); 
+    TopoDS_Face* face = face_list.get_and_step(); 
     face->Nullify();
     delete face;
   }
@@ -4714,12 +4706,12 @@ CubitStatus OCCModifyEngine::intersect(BodySM*  tool_body_ptr,
         {
           if(!keep_old)
             OCCQueryEngine::instance()->delete_solid_model_entities(from_body); 
-          from_shape->Nullify();
+          from_shape = NULL;
         }
       }
     }
       
-    if(from_shape->IsNull() )
+    if(from_shape == NULL || from_shape->IsNull() )
     {
       PRINT_INFO("The %d body did not have common part with the tool_body.\n", i+1);
     }

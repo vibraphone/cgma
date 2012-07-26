@@ -187,7 +187,6 @@ OCCQueryEngine::~OCCQueryEngine()
   delete WireList;
   delete SurfaceList;
   delete CurveList;
-  delete MyDF;
 }
 
 int OCCQueryEngine::get_major_version()

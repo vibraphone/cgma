@@ -102,10 +102,9 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
      }
    }
 
-   TopoDS_Wire* the_wire = new TopoDS_Wire(loop);
    if(myTopoDSWire)
-     delete (TopoDS_Wire*)myTopoDSWire;
-   myTopoDSWire = the_wire;
+     myTopoDSWire->Nullify();
+   *myTopoDSWire = loop;
 }
 //-------------------------------------------------------------------------
 // Purpose       : Tear down topology

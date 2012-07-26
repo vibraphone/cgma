@@ -118,10 +118,9 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
   if(myTopoDSFace && face.IsEqual(*myTopoDSFace))
     return;
 
-  TopoDS_Face* face_ptr = new TopoDS_Face(face);
   if(myTopoDSFace)
-    delete (TopoDS_Face*)myTopoDSFace;
-  myTopoDSFace = face_ptr ; 
+    myTopoDSFace->Nullify();
+  *myTopoDSFace = face ; 
 }
 
 

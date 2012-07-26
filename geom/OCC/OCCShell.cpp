@@ -94,11 +94,10 @@ void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
   if(myTopoDSShell && shell.IsEqual(*myTopoDSShell))
     return;
 
-  TopoDS_Shell* the_shell = new TopoDS_Shell(shell);
   if (myTopoDSShell)
-    delete (TopoDS_Shell*)myTopoDSShell;
+    myTopoDSShell->Nullify();
 
-  myTopoDSShell = the_shell;
+  *myTopoDSShell = shell;
 }
 
 //-------------------------------------------------------------------------

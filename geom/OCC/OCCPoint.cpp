@@ -105,10 +105,9 @@ void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 {
   if(myTopoDSVertex && vertex.IsEqual(*myTopoDSVertex))
     return;
-  TopoDS_Vertex* the_vertex = new TopoDS_Vertex(vertex);
   if(myTopoDSVertex)
-    delete (TopoDS_Vertex*)myTopoDSVertex;
-  myTopoDSVertex = the_vertex;
+    myTopoDSVertex->Nullify();
+  *myTopoDSVertex = vertex;
 }
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to append a

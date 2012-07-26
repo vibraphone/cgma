@@ -50,7 +50,6 @@ class RefVolume;
 class RefFace;
 class RefEdge;
 class RefVertex;
-class Point;
 class Curve;
 class Surface;
 class Lump;
@@ -397,7 +396,7 @@ public:
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
-  TDocStd_Document* MyDF;
+  Handle_TDocStd_Document MyDF;
   TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;

@@ -150,10 +150,9 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
         point->remove_curve(this);
     }
   }
-  TopoDS_Edge* the_edge = new TopoDS_Edge(edge);
   if(myTopoDSEdge)
-    delete (TopoDS_Edge *)myTopoDSEdge;
-  myTopoDSEdge = the_edge;
+    myTopoDSEdge->Nullify();
+  *myTopoDSEdge = edge;
 }
 
 //-------------------------------------------------------------------------

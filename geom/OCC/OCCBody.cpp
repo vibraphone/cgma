@@ -158,10 +158,9 @@ void OCCBody::set_TopoDS_Shape( TopoDS_Compound& theshape)
 
   else
   {
-    TopoDS_Compound * the_comp = new TopoDS_Compound(theshape);
     if(myTopoDSShape)
-      delete (TopoDS_Compound*)myTopoDSShape;
-    myTopoDSShape = the_comp;
+      myTopoDSShape->Nullify();
+    *myTopoDSShape = theshape;
   }
 }
 
