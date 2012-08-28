@@ -608,7 +608,7 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
   CubitBoolean updated = CUBIT_FALSE;	
   if(!old_shape.IsNull() && old_shape.ShapeType() == TopAbs_COMPOUND && 
      !new_shape.IsNull() && new_shape.ShapeType() == TopAbs_COMPOUND &&
-     !old_shape.IsSame(new_shape) && M.Extent() == M_new.Extent())
+     !old_shape.IsSame(new_shape) )
   {
     //By updating underling solids, shells etc., the old_shape will get changed.
     //trying to make sure the the number of each entity in the old and new 
