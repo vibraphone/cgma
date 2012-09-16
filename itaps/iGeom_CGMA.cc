@@ -6594,7 +6594,7 @@ iGeom_load_cub_geometry(const char *name, int* err)
   int model_table_offset = header[3];
 
     // get the model table
-  int model_entries[36], model_offset[6], 
+  int model_entries[42], model_offset[6],
     model_length[6], model_type[6];
   //if (num_models > 6) {
   //  ERROR(iBase_INVALID_ARGUMENT, "Too many models in .cub file.");
