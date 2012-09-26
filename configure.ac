@@ -533,7 +533,7 @@ if test "x$occ_DIR" != "xno"; then
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([#include "Standard_Mutex.hxx"], [Standard_Mutex mutex; mutex.TryLock();])],
         [AC_MSG_RESULT([yes]); OCC_LIBS="$OCC_LIBS -lpthread"],
-        [AC_MSG_ERROR([Cannot link libTKKernel with Standard_Mutex])]
+        [AC_MSG_ERROR([Cannot link libTKernel with Standard_Mutex])]
       )])
   
 
