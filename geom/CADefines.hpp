@@ -51,7 +51,8 @@ enum CubitAttributeType {
                       // attribute type (eg. for the last index in a loop)
     CA_ASSEMBLY_DATA,
     CA_SIZING_FUNCTION_SKELETON,
-    CA_SOURCE_FEATURE
+    CA_SOURCE_FEATURE,
+    CA_ITAPS_TAG
 #ifdef CAT
 	,CA_PRO_WELD
 #endif
