@@ -11,4 +11,4 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(CUBIT_CGM) \
                -I$(top_srcdir)/geom/Cholla \
                -I$(top_srcdir)/geom/facet
 
-LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(CGM_EXT_LIBS)

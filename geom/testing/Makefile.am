@@ -14,7 +14,7 @@ if build_OCC
 endif
 
 AM_CPPFLAGS += -I$(top_srcdir)/util -I$(top_srcdir)/geom -I.
-LDADD = libcgm_test.la ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+LDADD = libcgm_test.la ../../libcgm.la  $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(CGM_EXT_LIBS)
 
 check_PROGRAMS = $(BASE_TESTS:.engine=)
 check_SCRIPT = $(TESTS)

@@ -27,7 +27,7 @@ endif
 
 check_PROGRAMS = $(TESTS)
 
-LDADD = ../libcgm.la
+LDADD = ../libcgm.la $(CGM_EXT_LIBS)
 AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 webcut_SOURCES = webcut.cpp
