@@ -2415,9 +2415,15 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
         DLIList<OCCLoop*> old_loops = occ_curve->loops();
         for (int i = 0; i < 2; i++)
         {
-          OCCLoop* old_loop = old_loops.get_and_step();
-          DLIList<OCCCoEdge*> test_coedges = old_loop->coedges();
           int found = 0;
+          OCCLoop* old_loop = old_loops.get_and_step();
+          TopoDS_Wire* thewire = old_loop->get_TopoDS_Wire();
+          if (!thewire || thewire->IsNull())
+          {
+            found = 1;
+            break;
+          }
+          DLIList<OCCCoEdge*> test_coedges = old_loop->coedges();
           for(int j = 0; j < test_coedges.size() ; j++)
           {
             if(test_coedges.get()->curve() != curve)
@@ -3985,7 +3991,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
   else if (tb && ((!new_subshape.IsNull() && !old_shape.IsSame(new_subshape)&& 
         OCCMap->IsBound(new_subshape) &&
         OccToCGM->find(OCCMap->Find(new_subshape))!= OccToCGM->end()) || 
-        new_shape.IsNull()))
+        new_subshape.IsNull()))
   //already has a TB built on new_shape
   {
     //delete the second TB corresponding to old_shape

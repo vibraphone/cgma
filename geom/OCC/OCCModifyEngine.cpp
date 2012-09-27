@@ -2363,13 +2363,16 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
                     &cutter, keep_old);
       else
       {
+/*
         if(!keep_old)
           OCCQueryEngine::instance()->delete_solid_model_entities(from_body);
         from_shape->Nullify();
+*/
+        from_shape = NULL;
       }
 
       int stat;
-      if(!has_changed && !from_shape->IsNull())
+      if(!has_changed && from_shape && !from_shape->IsNull())
       {
         //Add imprint code here 
         DLIList<TopoDS_Face*> face_list;
@@ -2387,9 +2390,9 @@ CubitStatus OCCModifyEngine::do_subtract(DLIList<BodySM*> &from_bodies,
     }
 
     //ok, we're done with all cuts, construct new Body'
-    if (count < tool_bodies_copy.size() && !from_shape->IsNull())
+    if (count < tool_bodies_copy.size() && from_shape && !from_shape->IsNull())
       tbs += OCCQueryEngine::instance()->populate_topology_bridge(*from_shape);
-    else if (!from_shape->IsNull())
+    else if (from_shape && !from_shape->IsNull())
     {
       PRINT_INFO("The %d body did not change because cutting tools are not interscting with it.\n", i+1);
       from_bodies.change_to(NULL);
@@ -3268,8 +3271,8 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
 {
   int  count_intersection = 0;
 
-  gp_Pnt pt1(0,0,0), pt2(0,0,0); 
-  gp_Pnt intsec_pnt[2] = {pt1, pt2} ;
+  gp_Pnt newP[2] , p_test ;
+
   for(int kk = 0; kk < edge_list->size(); kk++)
   {
     TopoDS_Edge* edge = edge_list->get_and_step();
@@ -3277,8 +3280,6 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
     double lower_bound = acurve.FirstParameter();
     double upper_bound = acurve.LastParameter();
     TopExp_Explorer Ex;
-    gp_Pnt p1(0,0,0), p2(0,0,0); 
-    gp_Pnt newP[2] = {p1, p2 };
     for (Ex.Init(from_face, TopAbs_EDGE); Ex.More(); Ex.Next())
     {
       TopoDS_Edge from_edge = TopoDS::Edge(Ex.Current());
@@ -3286,91 +3287,48 @@ int OCCModifyEngine::check_intersection(DLIList<TopoDS_Edge*>*& edge_list,
       double lower_bound2 = acurve2.FirstParameter();
       double upper_bound2 = acurve2.LastParameter();
       BRepExtrema_DistShapeShape distShapeShape(*edge, from_edge);
-      DLIList<CubitBoolean> qualified;
 
       if (distShapeShape.IsDone() && distShapeShape.Value() < TOL)
       {
-        newP[0] = distShapeShape.PointOnShape1(1);
-        if (distShapeShape.NbSolution() == 2)
-          newP[1] = distShapeShape.PointOnShape1(2);
+        //double check that the point is on the edges.
         double newVal;
-        for(int j =0; j < distShapeShape.NbSolution(); j++)
+        for(int j =1; j <= distShapeShape.NbSolution(); j++)
         {
-          Extrema_ExtPC ext(newP[j], acurve, Precision::Approximation());
+          if(count_intersection == 2)
+            break;
+
+          p_test = distShapeShape.PointOnShape1(j);
+          Extrema_ExtPC ext(p_test, acurve, Precision::Approximation());
           // At this time, there must be a intersection point at least.
           if (ext.IsDone() && (ext.NbExt() > 0)) {
             for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
-              if ( ext.IsMin(i) ) {
-        	newVal = ext.Point(i).Parameter();
-		if ((newVal-lower_bound) >= -TOL && 
-                    (upper_bound - newVal) >= -TOL)
-		{
-		  qualified.append(CUBIT_TRUE);
-		  break;
-		}
+              newVal = ext.Point(i).Parameter();
+	      if ((newVal-lower_bound) >= -TOL && 
+                  (upper_bound - newVal) >= -TOL)
+	      {
+                Extrema_ExtPC ext(p_test, acurve2, Precision::Approximation());
+                if (ext.IsDone() && (ext.NbExt() > 0)) { 
+                  for ( int k = 1 ; k <= ext.NbExt() ; k++ ) { 
+                    newVal = ext.Point(i).Parameter();
+                    if ((newVal-lower_bound2) >= -TOL && 
+                        (upper_bound2 - newVal) >= -TOL)
+                    {
+                      newP[count_intersection] = p_test;
+                      count_intersection ++;
+	              break;
+                    }
+                  }
+                } 
 	      }
 	    }
           }
-          else if(ext.IsDone() && (ext.NbExt() == 0))
-          {
-            qualified.append(CUBIT_TRUE);
-            break;
-          }
         }
-        for(int j = 0; j < distShapeShape.NbSolution(); j++)
-        {
-	  if (qualified.get())
-	  {
-	    Extrema_ExtPC ext(newP[j], acurve2, Precision::Approximation());
-	    double newVal;
-	    if (ext.IsDone() && (ext.NbExt() > 0)) {
-              qualified.change_to( CUBIT_FALSE );
-	      for ( int i = 1 ; i <= ext.NbExt() ; i++ ) {
-	      	if ( ext.IsMin(i) ) {
-		  newVal = ext.Point(i).Parameter();
-                  if ((newVal-lower_bound2) >= -TOL &&
-                      (upper_bound2 - newVal) >= -TOL)
-		  {
-		    qualified.change_to( CUBIT_TRUE);
-		    break;
-		  }
-		}
-    	      }
-	    }
-	  }
-          qualified.step();
-        }
-        for(int k = 0; count_intersection < 3 && k < distShapeShape.NbSolution(); k++)
-        {
-          int curve_intersect_num = 0;
-          for (int ki = 0; ki < qualified.size() && qualified.get_and_step(); ki ++)
-          {
-            curve_intersect_num ++;
-              count_intersection++;
-
-          }
-
-          if (curve_intersect_num == 1)
-            intsec_pnt[count_intersection-1] = newP[k];
-          else if(curve_intersect_num == 2)
-          {
-            intsec_pnt[0] = newP[0];
-            intsec_pnt[1] = newP[1];
-            count_intersection = 2;
-            if (edge_list->size() > 1)
-            {
-              edge_list->clean_out();
-              edge_list->append(edge);
-            }
-          }
-   
-          if (count_intersection == 2)
-          {
-            //make sure the two intersect point are not the same one 
-            if (intsec_pnt[0].IsEqual(intsec_pnt[1], TOL))
-              count_intersection--;
-          }
-        }
+      }
+      if (count_intersection == 2)
+      { 
+         //make sure the two intersect point are not the same one 
+         if (newP[0].IsEqual(newP[1], TOL))
+           count_intersection--;
       }
       if (count_intersection == 2)
 	break;

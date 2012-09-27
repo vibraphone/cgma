@@ -462,14 +462,12 @@ CubitStatus OCCCurve::closest_point(
   double sqr_dist = CUBIT_DBL_MAX;
   double pparam;
   for (int i = 1; i <= ext.NbExt(); ++i) {
-    if (ext.IsMin(i)) {
       double new_sqr_dist = p.SquareDistance( ext.Point(i).Value() );
       if (new_sqr_dist < sqr_dist) {
         sqr_dist = new_sqr_dist;
         newP = ext.Point(i).Value();
         pparam = ext.Point(i).Parameter();
       }
-    }
   }
 
     // if we didn't find any minimum...
