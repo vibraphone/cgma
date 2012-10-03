@@ -2418,7 +2418,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
           int found = 0;
           OCCLoop* old_loop = old_loops.get_and_step();
           TopoDS_Wire* thewire = old_loop->get_TopoDS_Wire();
-          if (!thewire || thewire->IsNull())
+          if (thewire < (void*) 0x1000 || thewire->IsNull())
           {
             found = 1;
             break;

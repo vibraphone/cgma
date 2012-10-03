@@ -49,7 +49,7 @@ public :
 
   void set_myMarked( CubitBoolean marked) {myMarked = marked;}
 
-  void add_loop(OCCLoop* loop) { myLoopList.append_unique(loop);}   
+  void add_loop(OCCLoop* loop) ;   
   DLIList<OCCLoop*> loops() {return myLoopList;}
   void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}
   void clean_loops(){myLoopList.clean_out();}

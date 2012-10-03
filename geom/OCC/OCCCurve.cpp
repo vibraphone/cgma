@@ -122,6 +122,28 @@ OCCCurve::~OCCCurve()
   }
 }
 
+void OCCCurve::add_loop(OCCLoop* loop) 
+{ 
+  //before add the loop into the looplist, check to make sure the 
+  //looplist is up-to-date
+  //It should be done somewhere else, however, in large mcnp2cad test, there's
+  //no way to check where the code forget to remove the out-dated loop.
+  for (int i = 0; i < myLoopList.size(); i++)
+  {
+    OCCLoop* myLoop = CAST_TO(myLoopList.get(), OCCLoop);
+
+    if(!myLoop) 
+      this->remove_loop(myLoopList.get());
+    else if(myLoop->get_TopoDS_Wire() < (void*) 0x1000)
+      this->remove_loop(myLoop);
+    else if(myLoop->coedges().size() == 0)
+      this->remove_loop(myLoop);
+    myLoopList.step();
+  }
+  if(loop != NULL)
+    myLoopList.append_unique(loop);
+}
+
 void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 {
   if(myTopoDSEdge && edge.IsEqual(*myTopoDSEdge))
@@ -755,6 +777,9 @@ double OCCCurve::end_param()
 
 void OCCCurve::get_parents_virt( DLIList<TopologyBridge*>& parents ) 
 { 
+   //check to see all myLoops are up-to-date.
+   add_loop(NULL);
+
    for(int i = 0; i < myLoopList.size(); i++) 
    {
       DLIList<OCCCoEdge*> coedges = myLoopList.get_and_step()->coedges();
