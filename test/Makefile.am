@@ -13,7 +13,7 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
 
 TESTS = init sheet
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis merge_acis point_project_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis point_project_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
 else
 if WITH_CUBIT
   TESTS += webcut brick_acis merge_acis
@@ -22,13 +22,17 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file attribute_to_buffer modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug
-endif
+  TESTS += attribute_to_file attribute_to_buffer AngleCalc_occ  CreateGeometry_occ GraphicsData_occ modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug
+endif 
 
 check_PROGRAMS = $(TESTS)
 
-LDADD = ../libcgm.la $(CGM_EXT_LIBS)
+LDADD = libcgm_test.la ../libcgm.la
 AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+
+noinst_LTLIBRARIES = libcgm_test.la
+libcgm_test_la_SOURCES = TestUtilities.hpp \
+                         TestUtilities.cpp
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
@@ -67,6 +71,21 @@ merge_occ_SOURCES = $(merge_sources)
 merge_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
 merge_facet_SOURCES = $(merge_sources)
 merge_facet_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_FACET
+
+AngleCalc_acis_SOURCES = AngleCalc.cpp
+AngleCalc_acis_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_ACIS
+AngleCalc_occ_SOURCES = AngleCalc.cpp
+AngleCalc_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
+
+CreateGeometry_acis_SOURCES = CreateGeometry.cpp
+CreateGeometry_acis_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_ACIS
+CreateGeometry_occ_SOURCES = CreateGeometry.cpp
+CreateGeometry_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
+
+GraphicsData_acis_SOURCES = GraphicsData.cpp
+GraphicsData_acis_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_ACIS
+GraphicsData_occ_SOURCES =  GraphicsData.cpp
+GraphicsData_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
 
 # Files that are used as input to tests, and therefore
 # must be included in tarball for tests to run.
