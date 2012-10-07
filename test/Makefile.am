@@ -27,7 +27,7 @@ endif
 
 check_PROGRAMS = $(TESTS)
 
-LDADD = libcgm_test.la ../libcgm.la
+LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS)
 AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 noinst_LTLIBRARIES = libcgm_test.la

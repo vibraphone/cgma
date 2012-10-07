@@ -621,8 +621,6 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/OCC/Makefile
            geom/parallel/Makefile
-           geom/testing/Makefile
-           geom/testing/TestConfig.h
            geom/virtual/Makefile 
            init/Makefile
            compat/Makefile
@@ -633,6 +631,7 @@ AC_CONFIG_FILES(Makefile
 	   itaps/SIDL/common.make
            itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
+           test/TestConfig.h
            cgm_apps/Makefile
            cgm_apps/examples/Makefile
            cgm_apps/examples/driverc++/Makefile

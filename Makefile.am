@@ -48,7 +48,8 @@ else
   CORE_CGM_LIBS = geom/libcubit_geom.la $(CGM_ll_LIB)
 endif
 
-SUBDIRS = compat util geom init . $(igeom_DIR) test cgm_apps geom/testing
+SUBDIRS = compat util geom init . $(igeom_DIR) test cgm_apps 
+# geom/testing
 
 libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
 
