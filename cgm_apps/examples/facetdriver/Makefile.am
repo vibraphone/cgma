@@ -6,7 +6,7 @@ check_PROGRAMS = facets
 
 facets_SOURCES = facets.cpp
 
-AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(CUBIT_CGM) \ 
+AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(CUBIT_CGM) \
                -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
                -I$(top_srcdir)/geom/Cholla \
