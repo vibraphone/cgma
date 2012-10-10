@@ -41,8 +41,8 @@ static CpuTimer timer;
 */
 
 CompositeSurface::CompositeSurface( Surface* surface )
-  : HadBridgeRemoved(0), stitchPartner(0), firstCoSurf(0), firstLoop(0),
-    hiddenSet(0), facetTool(0)
+  : stitchPartner(0), firstCoSurf(0), firstLoop(0), hiddenSet(0), facetTool(0),
+  HadBridgeRemoved(0)
 {
   assert( surface != NULL );
   compGeom = new CompositeGeom(1);
@@ -53,8 +53,13 @@ CompositeSurface::CompositeSurface( Surface* surface )
 }
 
 CompositeSurface::CompositeSurface( CompositeGeom* geometry )
-  : HadBridgeRemoved(0), compGeom( geometry ), stitchPartner(0),
-    firstCoSurf(0), firstLoop(0), hiddenSet(0), facetTool(0)
+  : compGeom( geometry ),
+    stitchPartner(0),
+    firstCoSurf(0),
+    firstLoop(0),
+    hiddenSet(0),
+    facetTool(0),
+    HadBridgeRemoved(0)
 {
   assert( geometry != NULL );
   for( int i = 0; i < compGeom->num_entities(); i++ )
@@ -632,23 +637,24 @@ void CompositeSurface::update_facets_to_ignore()
    if(facetTool)
    {
       int i;
+      DLIList<int> surfaces_to_ignore;
       int num_surfs_in_composite = num_surfs();
       for (i=0; i<num_surfs_in_composite; i++)
       {
-         // Default to "don't ingore".
-         facetTool->set_ignore_flag(i, 0);
-
          Surface *cur_surf = get_surface(i);
          surfacesToIgnore.reset();
          for(int j=surfacesToIgnore.size(); j--;)
          {
             if(cur_surf == surfacesToIgnore.get_and_step())
             {
-               facetTool->set_ignore_flag(i, 1);
+               surfaces_to_ignore.append( i );
                j=0;
             }
          }
       }
+      
+      //do it all at once
+      facetTool->set_ignore_flag( surfaces_to_ignore, 1 );
    }
 }
 
@@ -751,6 +757,25 @@ CubitStatus CompositeSurface::closest_point_uv_guess(
   else
     return closest_point(location, closest_location, unit_normal);
 }
+
+CubitStatus CompositeSurface::evaluate( double u, double v,
+                                        CubitVector *position,                                   
+                                        CubitVector *normal,
+                                        CubitVector *curvature1,
+                                        CubitVector *curvature2 )
+{
+  if( position || normal || (curvature1 && curvature2) )
+  {
+    if ( num_surfs() == 1)
+      return get_surface(0)->evaluate(u, v, position, normal, curvature1, curvature2 ); 
+    else
+      return CUBIT_FAILURE; 
+  }
+  else
+    return CUBIT_FAILURE;
+}
+
+
 
 /*
 //-------------------------------------------------------------------------
@@ -873,7 +898,7 @@ CubitStatus CompositeSurface::closest_point( CubitVector const& location,
   
   if ( facetTool )
   {
-    CubitStatus result = CUBIT_SUCCESS;
+    CubitStatus result;
     CubitVector facet_closest;
 
       // look for multiple surfaces if normal is requested
@@ -1554,12 +1579,10 @@ void CompositeSurface::print_debug_info( const char* line_prefix,
       PRINT_INFO("%d surfaces.\n", num_surfs());
 
 #else
-    PRINT_INFO("%sCompositeSurface %p : %d loops ", line_prefix,
-      static_cast<void*>(this), count );
+    PRINT_INFO("%sCompositeSurface %p : %d loops ", line_prefix, this, count );
     if ( num_surfs() == 1 )
       PRINT_INFO("%s %d\n", fix_type_name(typeid(*get_surface(0)).name()), get_surface(0)->get_saved_id());
-   //   PRINT_INFO("%s %p\n", fix_type_name(typeid(*get_surface(0)).name()),
-   //     static_cast<void*>(get_surface(0)));
+   //   PRINT_INFO("%s %p\n", fix_type_name(typeid(*get_surface(0)).name()), get_surface(0));
     else
       PRINT_INFO("%d surfaces.\n", num_surfs());
 #endif
@@ -1573,8 +1596,7 @@ void CompositeSurface::print_debug_info( const char* line_prefix,
   PRINT_INFO("%sCompositeSurface %d\n", line_prefix, get_id() );
 #else
   PRINT_INFO("%sCompositeSurface %d\n", line_prefix, this->get_saved_id() );
- // PRINT_INFO("%sCompositeSurface %p\n", line_prefix,
- // static_cast<void*>(this) );
+ // PRINT_INFO("%sCompositeSurface %p\n", line_prefix, this );
 #endif
   compGeom->print_debug_info( new_prefix );
 
@@ -1944,3 +1966,67 @@ void CompositeSurface::notify_transformed()
   }
 }
 
+
+
+CubitStatus CompositeSurface::get_projected_distance_on_surface( CubitVector *pos1,
+                                                                 CubitVector *pos2, 
+                                                                 double &distance )
+{
+  if ( num_surfs() == 1)
+      return get_surface(0)->get_projected_distance_on_surface( pos1, pos2, distance );
+    else
+      return CUBIT_FAILURE; 
+  return CUBIT_FAILURE;
+}
+CubitStatus CompositeSurface::get_sphere_params
+(
+  CubitVector &center,
+  double &radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine sphere parameters for CompositeSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus CompositeSurface::get_cone_params
+(
+   CubitVector &center,
+   CubitVector &normal,
+   CubitVector &major_axis,
+   double &radius_ratio,
+   double &sine_angle,
+   double &cos_angle
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine cone parameters for CompositeSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus CompositeSurface::get_torus_params
+(
+  CubitVector &center,
+  CubitVector &normal,
+  double &major_radius,
+  double &minor_radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine torus parameters for CompositeSurface.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus CompositeSurface::get_nurb_params
+(
+  bool &rational,
+  int &degree_u,
+  int &degree_v,
+  int &num_cntrl_pts_u,
+  int &num_cntrl_pts_v,
+  DLIList<CubitVector> &cntrl_pts,
+  DLIList<double> &cntrl_pt_weights,
+  DLIList<double> &u_knots,
+  DLIList<double> &v_knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine nurbs parameters for CompositeSurface.\n");
+  return CUBIT_FAILURE;
+}

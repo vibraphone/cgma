@@ -129,7 +129,7 @@ void CGMHistory::print_port_events()
     for( i=0; i<port_event.TopologyBridges.size(); i++ )
     {
       TopologyBridge *tb = port_event.TopologyBridges[i];
-      PRINT_INFO(" %p", static_cast<void*>(tb) );
+      PRINT_INFO(" %p", tb );
     }
     PRINT_INFO("\n"); 
   }

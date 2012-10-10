@@ -48,20 +48,8 @@ public:
   void x( const double x ); //- Set x component of point
   void y( const double y ); //- Set y component of point
 
-#ifdef BOYD15
-  double distance_between(const Cubit2DPoint& test_point);
-    //- Calculate the distance between this point and another.
-#endif
-
   void print_me();
     //- Prints out the coordinates of this point.
-
-#ifdef BOYD15
-  CubitBoolean within_tolerance(const Cubit2DPoint &pnt2,
-                                double tol = 1e-10) const;
-    //- Compare two points to see if they are spatially equal
-    //- within the tolerance given.
-#endif
 
   void min_max( const Cubit2DPoint &pnt2,
                 double &xmin, double &xmax,

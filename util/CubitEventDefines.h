@@ -9,6 +9,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* A ModelEntity was created */
                  MODEL_ENTITY_CONSTRUCTED,
                    /* A ModelEntity was created */
+                 MODEL_ENTITY_MODIFIED,
+                   /* A ModelEntity was changed */
                  MODEL_ENTITY_DESTRUCTED,
                    /* A ModelEntity was deleted */
                  COMPARISON_FOUND,
@@ -27,6 +29,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* 1 or more RefEntities was meshed */
                  MESH_MODIFIED,
                    /* 1 or more RefEntities had its exiting mesh modified */
+                 MESH_TRANSFORMED,
+                   /* Mesh nodes moved*/
                  GEOMETRY_TOPOLOGY_MODIFIED,
                    /* Both geometry and topology was
                     modified. e.g. partitioned.
@@ -41,6 +45,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                  COMPOSITE_CREATION_COMPLETED,
                    /* Notifies that a composite was created */
                  SPLIT_SURFACE_COMPLETED,
+                   /* Notifies that a split face operation is done */
+                 SEPARATE_OPERATION_COMPLETED,
                    /* Notifies that a split face operation is done */
                  COLLAPSE_CURVE_COMPLETED,
                    /* Notifies that a collapse curve operation is done */
@@ -112,18 +118,58 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    // Block, nodeset or sideset was deleted.
                  GENESIS_ENTITY_MODIFIED,
                    // Block, nodeset or sideset was modified.
-                 MATERIAL_CREATED,
-                   // Material created
-                 MATERIAL_MODIFIED,
-                   // Material modified
-                 MATERIAL_DELETED,
-                   // Material deleted
                  SUSPEND_GENESIS_PROCESSING,
                    // Suspend processing (in CubitInterface) for Genesis events
                  RESUME_GENESIS_PROCESSING,
                    // Resume processing (in CubitInterface) for Genesis events
                  UPDATE_GENESIS_DISPLAY,
                    // Force an update of all genesis entity display
+                 SUSPEND_TREE_PROCESSING,
+                   // suspend processing of events sent to the GUI tree
+                 RESUME_TREE_PROCESSING,
+                   // resume processing of events sent to the GUI tree
+                 MATERIAL_CREATED,
+                   // Material created
+                 MATERIAL_MODIFIED,
+                   // Material modified
+                 MATERIAL_DELETED,
+                   // Material deleted
+                 MEDIA_CREATED,
+                   // Media created
+                 MEDIA_MODIFIED,
+                   // Media modified
+                 MEDIA_DELETED,
+                   // Media deleted
+                 BC_ENTITY_CREATED,
+                   // BCS
+                 BC_ENTITY_DELETED,
+                   // BCS
+                 BC_ENTITY_MODIFIED,
+                   // BCS
+                 IC_ENTITY_CREATED,
+                   // ICS
+                 IC_ENTITY_DELETED,
+                   // ICS
+                 IC_ENTITY_MODIFIED,
+                   // ICS
+                 BC_CONTAINER_ENTITY_CREATED,
+                   // BC Set, Contact Pair
+                 BC_CONTAINER_ENTITY_DELETED,
+                 // BC Set, Contact Pair
+                 BC_CONTAINER_ENTITY_MODIFIED,
+                 // BC Set, Contact Pair
+                 CONSTRAINT_ENTITY_CREATED,
+                 // Constraints
+                 CONSTRAINT_ENTITY_DELETED,
+                 // Constraints
+                 CONSTRAINT_ENTITY_MODIFIED,
+                 // Constraints
+                 COORDINATE_SYSTEM_CREATED,
+                   // Coordinate system
+                 COORDINATE_SYSTEM_DELETED,
+                   // Coordinate system
+                 COORDINATE_SYSTEM_MODIFIED,
+                   // Coordinate system
                  UNDO_STATE_CHANGED,
                    // Undo has been changed in some way
                  UNDO_COMPLETE,
@@ -171,7 +217,7 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    // (get_part(), get_volume())
                    // Sent just after a volume is removed from a part
                  
-                 ASSEMBLY_TREE_STRING_PROPERTY_CHANGE
+                 ASSEMBLY_TREE_STRING_PROPERTY_CHANGE,
                    // (get_property())
                    // Sent just after a property of the tree changes.
                    // These are properties that apply to the tree as a whole,
@@ -179,6 +225,25 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
 
                    // 
                    // ********* End of Assembly Events **********
+
+                 ACIS_FILE_IMPORTED,
+                   // Import an ACIS file
+                   
+                 GRANITE_FILE_IMPORTED,
+                   // Import a granite file
+
+                 GEOMETRY_ENGINE_CHANGED,
+                   // The geometry engine changed
+
+                 WORKING_DIRECTORY_CHANGED,
+                   // The working directory has changed
+
+                 APREPRO_MODIFIED,
+                   // The working directory has changed
+
+                 FATAL_ERROR_ENCOUNTERED
+                   // If this event occurs, you're done
+
 };
 
 #endif // __CUBIT_EVENT_DEFINES__

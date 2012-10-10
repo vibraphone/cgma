@@ -37,10 +37,12 @@
 #include "CAUniqueId.hpp"
 #include "CADeferredAttrib.hpp"
 #include "CAEntityColor.hpp"
+#include "CAEntityTol.hpp"
 #include "CAMergeStatus.hpp"
 #include "CASourceFeature.hpp"
+#include "CAEntitySense.hpp"
 #ifdef CAT
-#include "cat\CAProWeld.hpp"
+#include "CAProWeld.hpp"
 #endif
 
 CGMApp* CGMApp::instance_ = NULL;
@@ -106,10 +108,8 @@ void CGMApp::shutdown()
    MergeTool::delete_instance();
    ModelQueryEngine::delete_instance();
 
-   CGMApp::delete_instance();
-
-   AppUtil::instance()->shutdown();
-   AppUtil::delete_instance();
+   DAG::delete_instance();
+   mAppStarted = CUBIT_FALSE;
 }
 
 void CGMApp::initialize_settings()
@@ -152,6 +152,12 @@ void CGMApp::register_attributes()
                                                CUBIT_TRUE, CUBIT_FALSE);
   assert (CUBIT_SUCCESS == result);
 
+  result = mAttribManager.register_attrib_type(CA_ENTITY_TOL, "tolerance", "ENTITY_TOL",
+                                               CAEntityTol_creator, CUBIT_FALSE,
+                                               CUBIT_FALSE, CUBIT_TRUE, CUBIT_TRUE,
+                                               CUBIT_FALSE, CUBIT_TRUE);
+  assert (CUBIT_SUCCESS == result);
+
   result = mAttribManager.register_attrib_type(CA_UNIQUE_ID, "unique id", "UNIQUE_ID",
                                                CAUniqueId_creator, CUBIT_FALSE,
                                                CUBIT_FALSE, CUBIT_TRUE, CUBIT_TRUE,
@@ -182,6 +188,14 @@ void CGMApp::register_attributes()
                                                CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
                                                CUBIT_TRUE, CUBIT_FALSE);
   assert (CUBIT_SUCCESS == result);
+
+  result = CGMApp::instance()->attrib_manager()->register_attrib_type(
+                                               CA_ENTITY_SENSE, "entity sense", "ENTITY_SENSE",
+                                               CAEntitySense_creator, CUBIT_TRUE,
+                                               CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
+                                               CUBIT_FALSE, CUBIT_FALSE);
+  assert (CUBIT_SUCCESS == result);
+
 #ifdef CAT
   result = CGMApp::instance()->attrib_manager()->register_attrib_type(
                                                CA_PRO_WELD, "pro weld", "PRO_WELD",

@@ -14,8 +14,8 @@
 #include "CompositeEngine.hpp"
 #include "VirtualQueryEngine.hpp"
 
-CompositePoint::CompositePoint( Point* real_pt )
-  : HadBridgeRemoved(0), firstCurve(0), realPoint(real_pt), stitchNext(0)
+CompositePoint::CompositePoint( TBPoint* real_pt )
+  : firstCurve(0), realPoint(real_pt), stitchNext(0), HadBridgeRemoved(0)
 {
   if( real_pt->owner() )
     real_pt->owner()->swap_bridge( real_pt, this, false );
@@ -141,8 +141,8 @@ CubitStatus CompositePoint::swap_bridge( TopologyBridge* oldtb,
                                          TopologyBridge* newtb, 
                                          bool )
 {
-  Point* oldpt = dynamic_cast<Point*>(oldtb);
-  Point* newpt = dynamic_cast<Point*>(newtb);
+  TBPoint* oldpt = dynamic_cast<TBPoint*>(oldtb);
+  TBPoint* newpt = dynamic_cast<TBPoint*>(newtb);
   if( !(oldpt && newpt) || newpt->owner() )
     return CUBIT_FAILURE;
 
@@ -165,10 +165,9 @@ void CompositePoint::print_debug_info( const char* prefix, bool brief ) const
     realPoint ? fix_type_name(typeid(*realPoint).name()) : "NO REAL POINT", 
     realPoint ? realPoint->get_id() : 0 );
 #else  
-  PRINT_INFO("%sCompositePoint %p : %s %p\n", prefix,
-    static_cast<const void*>(this),
+  PRINT_INFO("%sCompositePoint %p : %s %p\n", prefix, this,
     realPoint ? fix_type_name(typeid(*realPoint).name()) : "NO REAL POINT", 
-    static_cast<void*>(realPoint));
+    realPoint);
 #endif
   
   if ( !brief )

@@ -16,7 +16,7 @@
 
 #include "CubitObserver.hpp"
 #include "CubitDefines.h"
-#include "CubitGeomConfigure.h"
+#include "CubitGeomConfigure.h" 
 
 class RefVertex;
 class RefEdge;
@@ -29,7 +29,7 @@ class RefEntity;
 class RefAssembly;
 class RefPart;
 #endif
-class Point;
+class TBPoint;
 class Curve;
 class Surface;
 class Lump;
@@ -52,7 +52,7 @@ public:
 
   static void delete_instance();
 
-  virtual RefVertex *construct_RefVertex(Point *point = NULL);
+  virtual RefVertex *construct_RefVertex(TBPoint *point = NULL);
 
   virtual RefEdge *construct_RefEdge(Curve *curve = NULL);
 
@@ -196,6 +196,7 @@ protected:
   static RefEntityFactory *instance_;
     //- the singleton instance
   
+  bool ManageListSorting;
   int maxBodyId;
   int maxRefVolumeId;
   int maxRefGroupId;
@@ -208,11 +209,6 @@ protected:
 #ifdef PROE
   int maxRefAssemblyId;
   int maxRefPartId;
-#endif
-
-#ifdef BOYD17 
-  DLIList<RefEntity*> refEntityList;
-    //- temporary list used return generic versions of global lists
 #endif
 
 private:

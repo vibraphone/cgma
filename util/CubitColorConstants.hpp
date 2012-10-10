@@ -17,6 +17,7 @@ const int CUBIT_GOLD          = 11;
 const int CUBIT_LIGHTBLUE     = 12;
 const int CUBIT_LIGHTGREEN    = 13;
 const int CUBIT_SALMON        = 14;
+const int CUBIT_CORAL         = 15;
 const int CUBIT_PINK          = 16;
 
 #endif

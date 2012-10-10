@@ -56,30 +56,6 @@ class CUBIT_UTIL_EXPORT ParamCubitPlane : public CubitPlane
 	//- Constructors from CubitPlane
 	//- An arbitraty parameterization is generated.
 	
-#ifdef BOYD15
-	CubitStatus u_v_from_position( const CubitVector& position,
-	                               double& u, double& v ) const;
-	//R CubitStatus
-	//R- CUBIT_SUCCESS/CUBIT_FAILURE
-	//I position
-	//I- A position on the plane
-	//O u, v
-	//O- The parameter values at the specified position.
-	//- Find the parameter values u and v at the specified
-	//- position on the plane.
-	
-	CubitStatus position_from_u_v( double u, double v,
-	                               CubitVector& position ) const;
-	//R CubitStatus
-	//R- CUBIT_SUCCESS/CUBIT_FAILURE
-	//I u, v
-	//I- parameter values
-	//O position
-	//O- The position on the surface at the specified parameter values.
-	//- Given parameter values on the surface, pass back the 
-	//- corresponding position.
-#endif
-	
 	CubitStatus closest_point( const CubitVector& position,
 	                           CubitVector& closest_position ) const;
 	//R CubitStatus

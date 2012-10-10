@@ -247,13 +247,22 @@
 #define PRINT_DEBUG_208 PRINT_DEBUG(208)
 #define PRINT_DEBUG_209 PRINT_DEBUG(209)
 #define PRINT_DEBUG_210 PRINT_DEBUG(210)
-#define NUM_DEBUG_FLAGS 210
+#define PRINT_DEBUG_211 PRINT_DEBUG(211)
+#define PRINT_DEBUG_212 PRINT_DEBUG(212)
+#define PRINT_DEBUG_213 PRINT_DEBUG(213)
+#define PRINT_DEBUG_214 PRINT_DEBUG(214)
+#define PRINT_DEBUG_215 PRINT_DEBUG(215)
+#define PRINT_DEBUG_216 PRINT_DEBUG(216)
+#define PRINT_DEBUG_217 PRINT_DEBUG(217)
+#define PRINT_DEBUG_218 PRINT_DEBUG(218)
+#define PRINT_DEBUG_219 PRINT_DEBUG(219)
+#define NUM_DEBUG_FLAGS 219
 
 #define PRINT_ERROR CubitMessage::instance()->print_error
 #define PRINT_WARNING CubitMessage::instance()->print_warning
 #define PRINT_INFO CubitMessage::instance()->print_info
 #define DIAGNOSTIC CubitMessage::instance()->print_diagnostic
-#define DIAGNOSTIC_FLAG CubitMessage::instance()->diagnostic_flag
+#define DIAGNOSTIC_FLAG CubitMessage::instance()->get_diagnostic_flag
 #define DEBUG_FLAG CubitMessage::instance()->debug_flag
 #define GET_INFO_FLAG CubitMessage::instance()->get_info_flag
 #define SET_INFO_FLAG CubitMessage::instance()->set_info_flag
@@ -395,9 +404,9 @@ public:
   int  number_of_debug_flags();
   //- debug flag, used with internal_error
 
-  virtual void set_debug_flag_gui(bool /*flag*/){};
+  virtual void set_debug_flag_gui(bool flag){};
   virtual int is_debug_flag_gui_set(){return 0;};
-  virtual int print_debug_gui( const char */*format*/, ... ){return 0;};
+  virtual int print_debug_gui( const char *format, ... ){return 0;};
   //- write out a debug message (from GUI only)
   //- used for GUI Debugging (CAT-only)
 
@@ -469,14 +478,6 @@ public:
   static void set_error_logging_file_setting(const char* file, CubitBoolean resume_flag = CUBIT_FALSE);
 
   static void initialize_settings();
-
-  virtual CubitBoolean Interrupt();
-    //- passes back value of interrupt flag (see CubitDefines.h for how
-    //- this flag is stored)
-
-  virtual void clear_Interrupt();
-    //- clears the value of interrupt flag (see CubitDefines.h for how
-    //- this flag is stored)
 
   static void set_message_handler(CubitMessageHandler *handler);
   static CubitMessageHandler* get_message_handler();

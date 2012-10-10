@@ -25,14 +25,13 @@
 
 // ********** BEGIN FORWARD DECLARATIONS   **********
 // ********** END FORWARD DECLARATIONS     **********
-
-class CUBIT_GEOM_EXPORT Point : public GeometryEntity
+class CUBIT_GEOM_EXPORT TBPoint : public GeometryEntity
 {
 public :
-  Point() ;
+  TBPoint() ;
     //- The default constructor
   
-  virtual ~Point() ;
+  virtual ~TBPoint() ;
     //- The destructor
   
   virtual const type_info& topology_entity_type_info() const;
@@ -62,7 +61,6 @@ protected:
   
 private:
 } ;
-
 
 // ********** BEGIN INLINE FUNCTIONS       **********
 // ********** END INLINE FUNCTIONS         **********

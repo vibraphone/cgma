@@ -95,18 +95,20 @@ CubitStatus CurveFacetEvalTool::initialize(
 //===========================================================================
 CubitStatus CurveFacetEvalTool::initialize(
   DLIList<CubitFacetEdge*> &edge_list, // the ordered facet edges on this curve
-  DLIList<CubitPoint*> &point_list)    // the ordered points on this curve
+  DLIList<CubitPoint*> &point_list, FacetEvalTool* surf_eval)    // the ordered points on this curve
 {
 //   static int counter = 0;
   output_id = -1;
   myBBox = NULL;
   curvSense = CUBIT_FORWARD;
-  surfFacetEvalTool = NULL;
+  surfFacetEvalTool = surf_eval;
   myEdgeList = edge_list;
   myPointList = point_list;
   set_length();
   fix_point_edge_order();
   interpOrder = 0;
+  if(surf_eval)
+    interpOrder = surf_eval->interp_order();
   bounding_box();
   goodCurveData = CUBIT_TRUE;
   return CUBIT_SUCCESS;
@@ -1971,15 +1973,12 @@ void CurveFacetEvalTool::fix_point_edge_order()
   next_edge = myEdgeList.prev(2);
   if( 0 == this_edge->num_adj_facets() )
   {
-    
-    next_edge = myEdgeList.get_and_step();
-
-    this_pt1 = this_edge->point( 1 );
+    CubitPoint* this_pt0 = this_edge->point( 0 );
     next_pt0 = next_edge->point( 0 );
     next_pt1 = next_edge->point( 1 );
 
-    if( this_pt1 != next_pt0 &&
-        this_pt1 != next_pt1 )
+    if( this_pt0 != next_pt0 &&
+        this_pt0 != next_pt1 )
     {
         //Swap direction of edge.(mod. 3-7-06)  Now calling flip instead
         // of doing the flip manually.  The flip function also tracks
@@ -2046,4 +2045,12 @@ CubitBoolean CurveFacetEvalTool::replace_facets( DLIList< CubitFacetEdge *> &cur
   this->myPointList = point_list;
 
   return CUBIT_TRUE;
+}
+
+
+void CurveFacetEvalTool::remove_facets( DLIList<CubitFacetEdge*> &facet_edges)
+{
+  facet_edges = myEdgeList;
+  myEdgeList.clean_out();
+  myPointList.clean_out();
 }

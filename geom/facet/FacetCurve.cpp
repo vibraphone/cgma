@@ -59,7 +59,7 @@
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 FacetCurve::FacetCurve(CurveFacetEvalTool *curve_facet_tool,
-                       Point *start_ptr, Point *end_ptr,
+                       TBPoint *start_ptr, TBPoint *end_ptr,
                        DLIList<CoEdgeSM*> &coedge_list )
                        : sense_(CUBIT_FORWARD)
 {
@@ -83,7 +83,7 @@ FacetCurve::FacetCurve(CurveFacetEvalTool *curve_facet_tool,
 // Creation Date : 02/03/03
 //-------------------------------------------------------------------------
 FacetCurve::FacetCurve(CurveFacetEvalTool *curve_facet_tool,
-                       Point *start_ptr, Point *end_ptr,
+                       TBPoint *start_ptr, TBPoint *end_ptr,
                        CubitSense sense )
 {
   static int counter = 0;
@@ -719,7 +719,7 @@ void FacetCurve::curves(DLIList<Curve*> &curves)
   curves.append_unique( this );
 }
 
-void FacetCurve::points(DLIList<Point*> &points)
+void FacetCurve::points(DLIList<TBPoint*> &points)
 {
   points.append_unique( myStartPoint );
   points.append_unique( myEndPoint );
@@ -992,6 +992,31 @@ CubitStatus FacetCurve::disconnect_coedge( FacetCoEdge* coedge )
   coedge->remove_curve();
   
   return CUBIT_SUCCESS;
+}
+
+CubitStatus FacetCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for FacetCurves.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetCurve::get_ellipse_params
+(
+  CubitVector &center_vec,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine ellipse parameters for FacetCurves.\n");
+  return CUBIT_FAILURE;
 }
 
 // ********** END PRIVATE FUNCTIONS        **********

@@ -113,6 +113,21 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
     RefVertex* vtx = vertex_list.get_and_step();
     vtx->marked( vtx->marked() + 1 );
   }
+  // Check for edges that will have both vertices removed.
+  // If any exist then we want to set the flag to have the
+  // DAG updated after each vertex is removed.  Otherwise
+  // things get left in a bad state.
+  bool update_dag = false;
+  for(i=edge_list.size(); i>0; i--)
+  {
+    RefEdge* edge = edge_list.get_and_step();
+    if(edge->start_vertex()->marked() == 2 &&
+       edge->end_vertex()->marked() == 2)
+    {
+      update_dag = true;
+      i=0;
+    }
+  }
   for( i = vertex_list.size(); i--; )
     if( vertex_list.step_and_get()->marked() == 2 )
       vertex_list.get()->marked(0);
@@ -128,7 +143,6 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
     PRINT_ERROR("Cannot create any composites from passed curves.\n");
     return 0;
   }
- 
   vertex_list.reset();
   RefEdge* result = 0;
   DLIList<RefEdge*> vtx_edges;
@@ -151,9 +165,21 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
          continue;
       }
     
-      result = remove_vertex( vtx, false, false, survivor );
+      result = remove_vertex( vtx, false, update_dag, survivor );
       if (result)
+      {
+        // First remove any edges from the list that got destroyed in the
+        // last remove_vertex operation.
+        if(result == first_edge && modified_edges.move_to(second_edge))
+        {
+          modified_edges.remove();
+        }
+        else if(result == second_edge && modified_edges.move_to(first_edge))
+        {
+          modified_edges.remove();
+        }
         modified_edges.append_unique(result);
+      }
     }  
   }
   
@@ -179,7 +205,7 @@ RefEdge* CompositeTool::composite( DLIList<RefEdge*>& edge_list,
       update_surfaces.merge_unique(curve_surfaces);
     }
   }
-  
+
   update_surfaces.reset();
   for ( i = update_surfaces.size(); i--; )
   {
@@ -223,13 +249,14 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
   RefEdge *edge = 0, *refedge1 = 0, *refedge2 = 0;
   point_bridges.clean_out();
   vertex->bridge_manager()->get_bridge_list( point_bridges );
-  
+    
+  std::vector<CubitString> names_to_add;
   Curve* end_result = 0;
   point_bridges.reset();
   while( point_bridges.size() )
   {
     Curve* result_curve = 0;
-    Point* point = dynamic_cast<Point*>(point_bridges.pop());
+    TBPoint* point = dynamic_cast<TBPoint*>(point_bridges.pop());
 
       // get the RefEdges that will be joined when the vertex is removed
     DLIList<Curve*> curves;
@@ -249,9 +276,9 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
       /*
       Curve* first_curve = curves.pop();
     
-      Point* other = 0;
+      TBPoint* other = 0;
       for ( i = point_bridges.size(); i--; ) {
-        Point* temp = dynamic_cast<Point*>(point_bridges.step_and_get());
+        TBPoint* temp = dynamic_cast<TBPoint*>(point_bridges.step_and_get());
         curves.clean_out();
         temp->curves(curves);
         if ( curves.size() == 1 && curves.get()->owner() != first_curve->owner() ) 
@@ -280,16 +307,31 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     {
       break;
     }
-    
+
+
     TopologyEntity* topo = curves.get()->topology_entity();
     refedge1 = CAST_TO(topo, RefEdge);
     assert(refedge1 != NULL);
     curves.get()->set_saved_id(refedge1->id());
+    DLIList<CubitString*> tmp_names;
+    std::vector<CubitString> edge1_names;
+    refedge1->entity_names( tmp_names );
+    curves.get()->set_saved_names( tmp_names );  
+    for( int i=tmp_names.size(); i--; )
+      edge1_names.push_back( *(tmp_names.get_and_step()) );
+    tmp_names.clean_out();
+    refedge1->remove_entity_names();
 
     topo = curves.next()->topology_entity();
     refedge2 = CAST_TO(topo, RefEdge);
-    assert(refedge2 != NULL);
+    assert(refedge2 != NULL);   
     curves.next()->set_saved_id(refedge2->id());
+    std::vector<CubitString> edge2_names;
+    refedge2->entity_names( tmp_names );
+    curves.next()->set_saved_names( tmp_names );    
+    for( int i=tmp_names.size(); i--; )
+      edge2_names.push_back( *(tmp_names.get_and_step()) );   
+    refedge2->remove_entity_names();
 
     Curve* keep = 0;
     if (keep_edge) {
@@ -308,12 +350,18 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
 
     if( !result_curve )
     {
+      //reapply names
+      for( int i=edge1_names.size(); i--; )
+        refedge1->entity_name( edge1_names[i] );
+      for( int i=edge2_names.size(); i--; )
+        refedge2->entity_name( edge2_names[i] );
+
       PRINT_ERROR("Failed to remove vertex %d\n", vertex->id() );
       break;
     }
     else if( !edge )
     {
-      edge = dynamic_cast<RefEdge*>(result_curve->topology_entity());
+      edge = dynamic_cast<RefEdge*>(result_curve->topology_entity());     
     }
     else
     {
@@ -336,6 +384,9 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
           coe->owner()->remove_bridge( coe );
       }
     }
+
+    names_to_add.insert(names_to_add.end(), edge1_names.begin(), edge1_names.end() );
+    names_to_add.insert(names_to_add.end(), edge2_names.begin(), edge2_names.end() );
     
     if ( result_curve )
       end_result = result_curve;
@@ -352,6 +403,12 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     // TODO - make a simple function for this notification since it is  times????
     dead = result != refedge1 ? refedge1 : result != refedge2 ? refedge2 : 0;
     update_combined_edges( result, dead );
+
+    //append all names to this ref entity
+    int k;
+    for(k=0; k<names_to_add.size(); k++ )      
+      result->entity_name( names_to_add[k] );
+    
   }
 
   if ( result && update_dag )
@@ -378,6 +435,7 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     DAG::instance()->cleanout_deactivated_DAG_nodes();
     CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_MERGE_PARTNER, flag);
   }
+
   
   return result;
 }
@@ -581,6 +639,7 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
   RefFace *face1 = NULL;
   RefFace *face2 = NULL;
     
+  std::vector<CubitString> names_to_add;
   curves.reset();
   Surface* surface = 0;
   for( i = curves.size(); i--; )
@@ -594,8 +653,26 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
     assert(surfs.size() > 0  && surfs.size() <= 2);  // should be one or two surfs
     face1 = dynamic_cast<RefFace*>(surfs.get()->topology_entity());
     face2 = dynamic_cast<RefFace*>(surfs.next()->topology_entity());
-    surfs.get() ->set_saved_id(face1->id());
+
+    //Save the names and ids
+    surfs.get()->set_saved_id(face1->id());
+    DLIList<CubitString*> tmp_names;
+    face1->entity_names( tmp_names );        
+    surfs.get()->set_saved_names( tmp_names );
+    std::vector<CubitString> face1_names;
+    for( int i=tmp_names.size(); i--; )
+      face1_names.push_back( *(tmp_names.get_and_step()) );
+    tmp_names.clean_out();       
+    face1->remove_entity_names();
+    
     surfs.next()->set_saved_id(face2->id());
+    face2->entity_names( tmp_names );        
+    surfs.next()->set_saved_names( tmp_names );
+    std::vector<CubitString> face2_names;
+    for( int i=tmp_names.size(); i--; )
+      face2_names.push_back( *(tmp_names.get_and_step()) );
+    tmp_names.clean_out();       
+    face2->remove_entity_names();
 
       // if only one surface, the edge should be internal to a composite surface
     surfs.reset();
@@ -620,6 +697,12 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
 
     if( !result )
     {
+      //reapply names
+      for( int i=face1_names.size(); i--; )
+        face1->entity_name( face1_names[i] );
+      for( int i=face2_names.size(); i--; )
+        face2->entity_name( face2_names[i] );
+
       PRINT_ERROR("Failed to remove curve %d\n",edge->id());
       break;
     }
@@ -642,6 +725,9 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
             
       }
     }
+    
+    names_to_add.insert(names_to_add.end(), face1_names.begin(), face1_names.end() );
+    names_to_add.insert(names_to_add.end(), face2_names.begin(), face2_names.end() );
       
     if( result )
       surface = result;
@@ -655,7 +741,12 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
   
   RefFace* result = dynamic_cast<RefFace*>(surface->topology_entity());
   assert( result == face );
-  
+
+  //append all names to this ref entity
+  int k;
+  for(k=0; k<names_to_add.size(); k++ )      
+    result->entity_name( names_to_add[k] );
+
     // notify observers that one face is being composited into another
 
   // We need to pass the result face and also the one that wasn't chosen
@@ -853,8 +944,8 @@ RefVolume* CompositeTool::remove_face( RefFace* face,
         
         if (point1 != point2)
           CompositeEngine::instance().stitch_points( 
-            dynamic_cast<Point*>(point1), 
-            dynamic_cast<Point*>(point2) );
+            dynamic_cast<TBPoint*>(point1), 
+            dynamic_cast<TBPoint*>(point2) );
       }
       
       CompositeEngine::instance().stitch_curves( 
@@ -889,8 +980,17 @@ RefVolume* CompositeTool::remove_face( RefFace* face,
     // get the two Lumps that will be involved in the composite operation
     // when the surface is removed
   Lump* lump = 0;
-  lumps.get() ->set_saved_id( dynamic_cast<RefVolume*>(lumps.get() ->topology_entity())->id() );
-  lumps.next()->set_saved_id( dynamic_cast<RefVolume*>(lumps.next()->topology_entity())->id() );
+  RefVolume *tmp_vol = dynamic_cast<RefVolume*>(lumps.get()->topology_entity());
+  lumps.get()->set_saved_id( tmp_vol->id() );
+  DLIList<CubitString*> names;
+  tmp_vol->entity_names( names );
+  lumps.get()->set_saved_names( names );
+  names.clean_out();  
+
+  tmp_vol = dynamic_cast<RefVolume*>(lumps.get()->topology_entity());
+  lumps.next()->set_saved_id( tmp_vol->id() );
+  tmp_vol->entity_names( names );
+  lumps.next()->set_saved_names( names );
 
     // if only one lump, the surface should be internal to a composite lump
   lumps.reset();
@@ -1201,7 +1301,7 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
                                         DLIList<RefEdge*>* restored_edges)
 {
   int i;
-  DLIList<Point*> hidden_points;
+  DLIList<TBPoint*> hidden_points;
   DLIList<RefFace*> face_list;
   DLIList<Curve*> curve_list;
   
@@ -1218,8 +1318,11 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
   if( !curve_ptr )
     return CUBIT_FAILURE;
   
-  for( i = 0; i < curve_ptr->num_curves(); i++ )
+  for( i = 0; i < curve_ptr->num_curves(); i++ )  
     curve_list.append( curve_ptr->get_curve(i) );
+
+  //remove all names off this ref entity
+  composite_edge->remove_entity_names();
   
   curve_ptr->get_hidden_points( hidden_points );
   CubitStatus result = CUBIT_SUCCESS;
@@ -1247,8 +1350,9 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
   }
   if ( smallest_id && composite_edge->id() != smallest_id )
     composite_edge->set_id( smallest_id );
+
   
-  for( i = face_list.size(); i--; )
+  for( i = face_list.size(); i--; ) 
   {
     Surface* surf = face_list.get_and_step()->get_surface_ptr();
     GeometryQueryTool::instance()->make_RefFace( surf );
@@ -1256,20 +1360,23 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
   for( i = face_list.size(); i--; )
     GeometryQueryTool::instance()->destroy_dead_entity( face_list.get_and_step() );
   
-  if( restored_edges )
+  for( i = curve_list.size(); i--; )
   {
-    for( i = curve_list.size(); i--; )
-    {
-      //remove attributes off the underlying curves
-      CompositeEngine::strip_attributes( curve_list.get() );
+    //remove attributes off the underlying curves
+    Curve *tmp_curve = curve_list.get_and_step();
+    CompositeEngine::strip_attributes( tmp_curve );
 
-      BridgeManager* bm = dynamic_cast<BridgeManager*>(
-      	curve_list.get_and_step()->owner());
-      RefEdge* edge = bm ? dynamic_cast<RefEdge*>(bm->topology_entity()) : 0;
+    BridgeManager* bm = dynamic_cast<BridgeManager*>(tmp_curve->owner());
+    RefEdge* edge = bm ? dynamic_cast<RefEdge*>(bm->topology_entity()) : 0;
+    if( restored_edges )
       restored_edges->append( edge );
-    }
+    DLIList<CubitString*> underlying_names;
+    tmp_curve->get_saved_names( underlying_names );
+    int k;
+    for( k=underlying_names.size(); k--; )    
+      edge->entity_name( *(underlying_names.get_and_step()) );    
   }
-  
+    
   return result;
 }
 
@@ -1283,7 +1390,7 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
 //
 // Creation Date : 08/06/03
 //-------------------------------------------------------------------------
-CubitStatus CompositeTool::restore_merged_point( Point* hidden_pt,
+CubitStatus CompositeTool::restore_merged_point( TBPoint* hidden_pt,
                                       DLIList<RefFace*>& modified,
                                       bool force )
 {
@@ -1312,12 +1419,12 @@ CubitStatus CompositeTool::restore_merged_point( Point* hidden_pt,
      
   DLIList<CompositeCurve*> curves(num_curves);
   CAST_LIST(curve_bridges, curves, CompositeCurve);
-  DLIList<Point*> points(curves.size());
+  DLIList<TBPoint*> points(curves.size());
   
   assert(curves.is_in_list(owner));
   CubitVector position = hidden_pt->coordinates();
   
-  DLIList<Point*> curve_pts;
+  DLIList<TBPoint*> curve_pts;
   curves.reset();
   GeometryQueryTool* gqt = GeometryQueryTool::instance();
   double factor = gqt->get_geometry_factor();
@@ -1327,7 +1434,7 @@ CubitStatus CompositeTool::restore_merged_point( Point* hidden_pt,
     curves.get_and_step()->get_hidden_points(curve_pts);
     for (int j = curve_pts.size(); j--; )
     {
-      Point* curve_pt = curve_pts.get_and_step();
+      TBPoint* curve_pt = curve_pts.get_and_step();
       if (gqt->about_spatially_equal(position, curve_pt->coordinates(), factor))
       {
         points.append(curve_pt);
@@ -1348,7 +1455,7 @@ CubitStatus CompositeTool::restore_merged_point( Point* hidden_pt,
   points.last();
   for ( i = points.size(); i--; )
   {
-    Point* pt = points.step_and_get();
+    TBPoint* pt = points.step_and_get();
     if (CompositePoint* cp = dynamic_cast<CompositePoint*>(pt))
       pt = cp->get_point();
     
@@ -1368,7 +1475,7 @@ CubitStatus CompositeTool::restore_merged_point( Point* hidden_pt,
   RefVertex* new_vtx = gqt->make_RefVertex(points.get());
   for ( i = points.size(); i--; )
   {
-    Point* pt = points.get_and_step();
+    TBPoint* pt = points.get_and_step();
     if (pt->owner())
       assert(pt->topology_entity() == new_vtx);
     else
@@ -1517,6 +1624,9 @@ CubitStatus CompositeTool::uncomposite( RefFace* composite_face,
   CompositeSurface* surf_ptr = dynamic_cast<CompositeSurface*>(composite_face->get_surface_ptr());
   if( !surf_ptr )
     return CUBIT_FAILURE;
+
+  //remove all names off this ref entity
+  composite_face->remove_entity_names();
   
   for( i = 0; i < surf_ptr->num_surfs(); i++ )
     surface_list.append( surf_ptr->get_surface(i) );
@@ -1544,7 +1654,7 @@ CubitStatus CompositeTool::uncomposite( RefFace* composite_face,
     curve->get_children(points, true);
     while (points.size())
     {
-      Point* pt = dynamic_cast<Point*>(points.pop());
+      TBPoint* pt = dynamic_cast<TBPoint*>(points.pop());
 
       //remove attributes off the underlying points 
       CompositeEngine::strip_attributes( pt ); 
@@ -1603,18 +1713,22 @@ CubitStatus CompositeTool::uncomposite( RefFace* composite_face,
   for( i = vol_list.size(); i--; )
     GeometryQueryTool::instance()->destroy_dead_entity( vol_list.get_and_step() );
   
-  if( restored_faces )
+  for( i = surface_list.size(); i--; )
   {
-    for( i = surface_list.size(); i--; )
-    {
-      //remove attributes off the surfaces 
-      CompositeEngine::strip_attributes( surface_list.get() ); 
+    Surface *tmp_surf = surface_list.get_and_step();
+    //remove attributes off the surfaces 
+    CompositeEngine::strip_attributes( tmp_surf ); 
 
-      BridgeManager* bm = dynamic_cast<BridgeManager*>(
-      	surface_list.get_and_step()->owner());
-      RefFace* face = bm ? dynamic_cast<RefFace*>(bm->topology_entity()) : 0;
+    BridgeManager* bm = dynamic_cast<BridgeManager*>(tmp_surf->owner());
+    RefFace* face = bm ? dynamic_cast<RefFace*>(bm->topology_entity()) : 0;
+    if( restored_faces )
       restored_faces->append( face );
-    }
+    DLIList<CubitString*> underlying_names;
+    tmp_surf->get_saved_names( underlying_names );
+    int k;
+    for( k=underlying_names.size(); k--; )
+      face->entity_name( *(underlying_names.get_and_step()) );
+
   }
   
   return result;
@@ -2252,7 +2366,7 @@ CubitStatus CompositeTool::composite( DLIList<RefFace*>& faces_to_composite,
   
 
   
-CubitStatus CompositeTool::stitch_points( Point* pt1, Point* pt2 )
+CubitStatus CompositeTool::stitch_points( TBPoint* pt1, TBPoint* pt2 )
 {
   if ( pt1->owner() && pt2->owner() && pt1->owner() != pt2->owner() )
     return CUBIT_FAILURE;
@@ -2267,19 +2381,19 @@ CubitStatus CompositeTool::stitch_curves( Curve* cv1, Curve* cv2 )
     return CUBIT_FAILURE;
   
   DLIList<TopologyBridge*> points;
-  Point *start1, *end1, *start2, *end2;
+  TBPoint *start1, *end1, *start2, *end2;
 
   points.clean_out();
   cv1->get_children( points );
   points.reset();
-  start1 = dynamic_cast<Point*>(points.get_and_step());
-  end1 = dynamic_cast<Point*>(points.get_and_step());
+  start1 = dynamic_cast<TBPoint*>(points.get_and_step());
+  end1 = dynamic_cast<TBPoint*>(points.get_and_step());
 
   points.clean_out();
   cv2->get_children( points );
   points.reset();
-  start2 = dynamic_cast<Point*>(points.get_and_step());
-  end2 = dynamic_cast<Point*>(points.get_and_step());
+  start2 = dynamic_cast<TBPoint*>(points.get_and_step());
+  end2 = dynamic_cast<TBPoint*>(points.get_and_step());
   
   assert( start1 && start2 && end1 && end2 );
   

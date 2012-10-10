@@ -29,8 +29,6 @@
 #include "CompositeCoEdge.hpp"
 #include "CompositeSurface.hpp"
 
-#include <algorithm>
-
 
 HiddenEntitySet::~HiddenEntitySet()
 {
@@ -152,12 +150,12 @@ void HiddenEntitySet::hidden_curves( DLIList<Curve*>& result )
   }
 }
 
-void HiddenEntitySet::hidden_points( DLIList<Point*>& result )
+void HiddenEntitySet::hidden_points( DLIList<TBPoint*>& result )
 {
   std::vector<TopologyBridge*>::iterator iter;
   for (iter=hiddenList.begin(); iter!=hiddenList.end(); iter++)
   {
-    if (Point* ptr = dynamic_cast<Point*>( *iter ))
+    if (TBPoint* ptr = dynamic_cast<TBPoint*>( *iter ))
       result.append(ptr);
   }
 }
@@ -168,9 +166,9 @@ void HiddenEntitySet::print_debug_info( const char* prefix ) const
     prefix = "";
   
   PRINT_INFO("%sHiddenEntitySet %p owned by %s %p\n", 
-    prefix, static_cast<const void*>(this),
+    prefix, this, 
     myOwner ? fix_type_name(typeid(*myOwner).name()) : "(null)",
-    static_cast<void*>(myOwner) );
+    myOwner );
     
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );
@@ -191,7 +189,7 @@ void HiddenEntitySet::print_debug_info( const char* prefix ) const
 #ifdef TOPOLOGY_BRIDGE_IDS
       PRINT_INFO("%s%s %d\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), (*iter)->get_id() );
 #else
-      PRINT_INFO("%s%s %p\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), static_cast<void*>(*iter) );
+      PRINT_INFO("%s%s %p\n", new_prefix, fix_type_name(typeid(*(*iter)).name()), (*iter) );
 #endif
   }
   delete [] new_prefix;

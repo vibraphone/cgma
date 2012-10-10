@@ -86,29 +86,6 @@ public :
   //! Query to see if this is a sheet body.
   CubitBoolean is_sheet_body();
 
-#ifdef BOYD14
-  CubitStatus get_transforms(CubitTransformMatrix &tfm);
-  /*- returns the body transformation matrix
-   */
-#endif
-  
-#ifdef BOYD14
-  CubitStatus transform_position(CubitVector const& position_vector,
-                                 CubitVector & transformed_vector);
-  /*R CubitStatus
-   *R- CUBIT_SUCCESS/FAILURE
-   *I position_vector
-   *I- The input vector that needs to be transformed.
-   *O transformed_vector
-   *O- The transformed CubitVector -- sent in by reference.
-   *- This function will transform the input position_vector using
-   *- the transformation matrix associated with the underlying geometry
-   *- of this Body.  If there is none, then CUBIT_FAILURE is returned
-   *- and transformed_vector is left untouched.
-   *- Note: The input vector *must* have 3 components.
-   */
-#endif
-
   //! Do a measure and api entity check.
   virtual int validate();
   
@@ -132,17 +109,6 @@ protected:
 
 private:
    
-#ifdef BOYD14
-  void notify_model(CubitEventType eventType);
-  /*R void
-   *I eventType
-   *I- The type of event that occurred 
-   *- This function notifies the owning Model of the event that
-   *- occured to this Body (see the EventType enum for the list of
-   *- recognized events).
-   */
-#endif
-
   Body( const Body& );
   void operator=( const Body& );
 

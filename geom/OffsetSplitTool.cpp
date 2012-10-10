@@ -82,7 +82,7 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
 
         // generate a swept body at each curve
         DLIList<BodySM*> body_list;
-        DLIList<Point*> points;
+        DLIList<TBPoint*> points;
         GeometryModifyEngine* gme = 0;
         GeometryQueryEngine* gqe = 0;
         edge_list.reset();
@@ -148,7 +148,7 @@ CubitStatus OffsetSplitTool::split_surfaces_offset(DLIList<RefFace*> &ref_face_l
             return CUBIT_FAILURE;
         }
 
-        DLIList<Point*> blunt_points;
+        DLIList<TBPoint*> blunt_points;
         if(blunt_flg == CUBIT_TRUE)
         {
             for(i = 0; i < points.size(); i++)
@@ -361,9 +361,6 @@ CubitStatus OffsetSplitTool::draw_preview(
     DLIList<Curve*> &curve_list,
     int color )
 {
-    // clear any previous previews
-    GfxPreview::clear();
-
     int i;
     Curve *curve_ptr;
     curve_list.reset();
@@ -385,9 +382,6 @@ CubitStatus OffsetSplitTool::draw_preview(
 {
     CubitStatus result;
     GMem g_mem;
-
-    // clear any previous previews
-    GfxPreview::clear();
 
     // get the graphics
     result = curve_ptr->get_geometry_query_engine()->
@@ -506,9 +500,6 @@ Curve *OffsetSplitTool::create_sweep_curve(
         return offset_curve;
     }
 
-#ifdef BOYD17 
-    int frac_div = 1;
-#endif
     DLIList<CubitVector*> pnt_list;
     CubitVector* loc_0 = new CubitVector(start_pos);
     CubitVector* loc_1 = new CubitVector(end_pos);
@@ -525,11 +516,6 @@ Curve *OffsetSplitTool::create_sweep_curve(
         double frac_0 = frac_list.get_and_step();
         double frac_1 = frac_list.get();
         pnt_list.step();
-
-#ifdef BOYD17 
-        if(frac_0>frac_1)
-            double test_0 =  frac_1 -frac_0;
-#endif
 
         if(frac_0>frac_1)
             break;
@@ -588,8 +574,8 @@ Curve *OffsetSplitTool::create_sweep_curve(
 
     // create a spline sweep path
     pnt_list.reset();
-    Point* start_point = gme->make_Point(*(pnt_list.get_and_back()));
-    Point* end_point = gme->make_Point(*(pnt_list.get_and_step()));
+    TBPoint* start_point = gme->make_Point(*(pnt_list.get_and_back()));
+    TBPoint* end_point = gme->make_Point(*(pnt_list.get_and_step()));
 
     // Create the curve
 
@@ -633,9 +619,9 @@ Surface* OffsetSplitTool::create_sweep_section(
     y_axis.normalize();
     z_axis.normalize();
 
-    Point* start_point = gme->make_Point(start_pos+x_axis);
-    Point* end_point = gme->make_Point(start_pos-x_axis);
-    Point* center_point = gme->make_Point(start_pos);
+    TBPoint* start_point = gme->make_Point(start_pos+x_axis);
+    TBPoint* end_point = gme->make_Point(start_pos-x_axis);
+    TBPoint* center_point = gme->make_Point(start_pos);
 
     Curve* arc_curve_0 =
         gme->create_arc_center_edge(center_point,start_point,end_point,z_axis,distance);
@@ -746,22 +732,22 @@ DLIList<Curve*> OffsetSplitTool::create_divide_curves(
                     // and the projection to the source curves
 
                     // first curve
-                    Point* start_point_0 = gme->make_Point(pnt_0);
-                    Point* end_point_0 = gme->make_Point(pnt_1);
+                    TBPoint* start_point_0 = gme->make_Point(pnt_0);
+                    TBPoint* end_point_0 = gme->make_Point(pnt_1);
                     CubitVector vert3_coord_0 = start_point_0->coordinates();
 
                     Curve* new_curve_0 =
                         gme->make_Curve(STRAIGHT_CURVE_TYPE,
-                        start_point_0,end_point_0,&vert3_coord_0,CUBIT_FORWARD);
+                        start_point_0,end_point_0,&vert3_coord_0 );
 
                     // second curve
-                    Point* start_point_1 = gme->make_Point(pnt_4);
-                    Point* end_point_1 = gme->make_Point(pnt_5);
+                    TBPoint* start_point_1 = gme->make_Point(pnt_4);
+                    TBPoint* end_point_1 = gme->make_Point(pnt_5);
                     CubitVector vert3_coord_1 = start_point_1->coordinates();
 
                     Curve* new_curve_1 =
                         gme->make_Curve(STRAIGHT_CURVE_TYPE,
-                        start_point_1,end_point_1,&vert3_coord_1,CUBIT_FORWARD);
+                        start_point_1,end_point_1,&vert3_coord_1 );
 
                     // if the target surface is not a plane then do a projection
                     if(target_surface->geometry_type() != PLANE_SURFACE_TYPE)

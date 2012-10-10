@@ -70,10 +70,6 @@ class SubEntitySet : public TBOwnerSet
     int get_id( PartitionEntity* entity ) const;
     PartitionEntity* entity_from_id( int id ) const;
     
-#ifdef BOYD15
-    void merge( SubEntitySet& dead_set, bool reverse, bool prepend = false );
-#endif
-    
       // The following two methods are used by PartitionEngine
       // when restoring geometry.  Calling them at the wrong
       // time will result in the loss of attribute data.

@@ -7,12 +7,6 @@
 #include "CGMParallelComm.hpp"
 #include "CGMFileOptions.hpp"
 
-enum BALANCE_METHOD {
-  ROUND_ROBIN = 0,
-  PARTITION_STATIC,
-  PARTITION_DYNAMIC
-};
-
 class CGMReadParallel 
 {
 public:
@@ -57,11 +51,9 @@ private:
 
   CGMParallelComm *m_pcomm;
 
-  bool m_scatter, m_reader;
+  bool m_round_robin, m_scatter, m_reader;
 
   unsigned int m_rank, m_proc_size;
-
-  BALANCE_METHOD m_bal_method;
 
   // surf ref entity list to be partitioned
   DLIList<RefEntity*> m_surf_entity_list;
@@ -69,12 +61,10 @@ private:
   CubitStatus read_entities(const char* file_name);
 
   // balance and save the information as attribute
-  CubitStatus balance_round_robin();
+  CubitStatus balance();
 
   CubitStatus delete_nonlocal_entities(int reader,
 				       std::string &ptag_name,
                                        std::vector<int> &ptag_vals);
-
-  CubitStatus check_partition_info();
 };
 #endif

@@ -128,29 +128,6 @@ private:
     /// the bounding box of add_to.
     ///
 
-#ifdef BOYD15
-  CubitStatus pick_seeds(RStarTreeNode<Y> **input_list,
-                         const int input_list_size,
-                         RStarTreeNode<Y> *&seed_1,
-                         RStarTreeNode<Y> *&seed_2);
-    ///
-    /// Picks the two starting children of the input list that
-    /// are best for creating the two new groups of quadratic_split_node.
-    ///
-#endif
-
-#ifdef BOYD15
-  CubitStatus pick_next(DLIList <RStarTreeNode<Y>*> &remaining_nodes,
-                        RStarTreeNode<Y>* group_1,
-                        RStarTreeNode<Y>* group_2,
-                        RStarTreeNode<Y>*& next,
-                        CubitBoolean &add_to_group_1);
-    ///
-    /// picks one remainng entry for classification in a group.  Also
-    /// indicates which group that should be by the add_to_group_1 flag.
-    ///
-#endif
-  
   CubitStatus find_leaf( Y e,
                          CubitBox &e_box,
                          RStarTreeNode<Y> *t,
@@ -311,13 +288,6 @@ public:
     /// to null.  Resets the counters and sets the range as the new_box.
     ///
   
-#ifdef BOYD15
-  void update_box( CubitBox &new_box );
-    ///
-    /// updates the nodes box with the new box.
-    ///
-#endif
-
   void recalc_b_box();
     ///
     /// recalculates the bounding box for the node. (won't do it if
@@ -400,9 +370,8 @@ template <class Y> inline double RStarTreeNode<Y>::volume(RStarTreeNode<Y>* curr
   CubitBox box = curr->bounding_box();
   return box.x_range()*box.y_range()*box.z_range();
 }
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "RStarTreeNode.cpp"
-#endif
+
+#include "RStarTreeNode.cpp"
 
 #endif
 

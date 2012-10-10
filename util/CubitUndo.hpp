@@ -61,6 +61,8 @@ public:
   static void note_result_entities( DLIList<RefEntity*> &entities_to_delete );
   static void note_result_entities( DLIList<MRefVolume*> &vols_to_delete );
   static void note_result_entity( RefEntity *entity_to_delete );
+  static void note_result_boundary_conditions( RefEntity *owner_entity );
+
   static void remove_last_undo();
   static void remove_last_undo_group();
   static void create_dummy_undo_object();
@@ -110,6 +112,7 @@ protected:
   virtual void p_note_result_entities( DLIList<RefEntity*> &entities_to_delete )=0;
   virtual void p_note_result_entities( DLIList<MRefVolume*> &vols_to_delete )=0;
   virtual void p_note_result_entity( RefEntity *entity_to_delete )=0;
+  virtual void p_note_result_boundary_conditions( RefEntity *owner_entity )=0;
   virtual void p_remove_last_undo_group()=0;
   virtual void p_remove_last_undo()=0;
   virtual void p_create_dummy_undo_object()=0;

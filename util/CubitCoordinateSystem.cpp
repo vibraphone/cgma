@@ -4,11 +4,14 @@
 #include <cassert>
 
 #include "CubitMessage.hpp"
+#include "CubitBox.hpp"
+#include "CubitObserver.hpp"
 
 //! default constructor, initializes to rectangular type with an identity transform
 CubitCoordinateSystem::CubitCoordinateSystem(int id)
- : mId(id), mType(Rectangular), mMatrix(CubitTransformMatrix()), mReference(0)
+ : mType(Rectangular), mMatrix(CubitTransformMatrix()), mReference(0)
 {
+    this->set_id(id);
 }
 
 CubitCoordinateSystem::~CubitCoordinateSystem()
@@ -26,6 +29,28 @@ CubitCoordinateSystem::~CubitCoordinateSystem()
       mReference->mUses.append(sys);
     mUses.remove();
   }
+
+  this->remove_from_observers();
+
+  CubitObserver::notify_static_observers(this, COORDINATE_SYSTEM_DELETED);
+}
+
+CubitBox CubitCoordinateSystem::bounding_box()
+{
+    assert(0); // this function is only here b/c CubitEntity requires it
+    
+    CubitBox temp;
+    return temp;
+}
+
+const type_info& CubitCoordinateSystem::entity_type_info() const
+{
+    return typeid(CubitCoordinateSystem);
+}
+
+const char* CubitCoordinateSystem::class_name() const
+{
+    return "Coordinate System";
 }
 
 CubitCoordinateSystem::Type CubitCoordinateSystem::get_type() const
@@ -36,6 +61,7 @@ CubitCoordinateSystem::Type CubitCoordinateSystem::get_type() const
 void CubitCoordinateSystem::set_type(CubitCoordinateSystem::Type type)
 {
   mType = type;
+  CubitObserver::notify_static_observers(this, COORDINATE_SYSTEM_MODIFIED);
 }
 
 
@@ -48,6 +74,7 @@ const CubitTransformMatrix& CubitCoordinateSystem::get_transform() const
 void CubitCoordinateSystem::set_transform(const CubitTransformMatrix& mat)
 {
   mMatrix = mat;
+  CubitObserver::notify_static_observers(this, COORDINATE_SYSTEM_MODIFIED);
 }
 
 

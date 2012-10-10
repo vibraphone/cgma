@@ -187,7 +187,7 @@ CubitStatus CompositeShell::get_simple_attribute(
 void CompositeShell::print_debug_info( const char* prefix )
 {
   if( prefix == 0 ) prefix = "";
-  PRINT_INFO("%sCompositeShell @ %p : \n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sCompositeShell @ %p : \n", prefix, this );
     
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );

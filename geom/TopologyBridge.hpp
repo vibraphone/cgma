@@ -19,7 +19,7 @@
 
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 
@@ -44,7 +44,7 @@ class Surface;
 class LoopSM;
 class Curve;
 class CoEdgeSM;
-class Point;
+class TBPoint;
 class TopologyBridge;
 class TopologyEntity;
 class BodySM;
@@ -54,7 +54,6 @@ class Surface;
 class LoopSM;
 class Curve;
 class CoEdgeSM;
-class Point;
 
 // ********** END FORWARD DECLARATIONS     **********
 
@@ -186,10 +185,6 @@ public:
                    DLIList<TopologyBridge*> &related);
     //- get the related entities of type other_type
   
-#ifdef BOYD14
-  CubitBoolean is_related(TopologyBridge *other_entity);
-    //- returns CUBIT_TRUE if this and other_entity are directly related
-#endif
   void bodysms(DLIList<BodySM*> &bodies,bool unique = true);
   void lumps(DLIList<Lump*> &lumps,bool unique = true);
   void shellsms(DLIList<ShellSM*> &shellsms,bool unique = true);
@@ -199,21 +194,12 @@ public:
   void curves(DLIList<Curve*> &curves, bool unique = true);
   void curves_ignore_virtual(DLIList<Curve*> &curves, bool unique = true);
   void coedgesms(DLIList<CoEdgeSM*> &coedgesms,bool unique = true);
-  void points(DLIList<Point*> &points,bool unique = true);
+  void points(DLIList<TBPoint*> &points,bool unique = true);
     //- topology traversal of TB's; implemented based on native traversal
     //- functions in the modeler
   
   BodySM *bodysm();
   Lump *lump();
-#ifdef BOYD14
-  ShellSM *shellsm();
-  Surface *vgi_surface();
-  Curve *vgi_curve();
-  CoEdgeSM *coedgesm();
-  Point *point();
-    //- topology traversal of TB's; implemented based on native traversal
-    //- functions in the modeler
-#endif
   LoopSM *loopsm();
   
   virtual void get_parents_virt(DLIList<TopologyBridge*> &parents ) = 0;

@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <signal.h>
-#ifndef NT
+#ifndef WIN32
 #  include <unistd.h>
 #  include <termios.h>
 #  include <sys/ioctl.h>
@@ -32,7 +32,7 @@
 #include "StubProgressTool.hpp"
 
 // Different platforms follow different conventions
-#ifndef NT
+#ifndef WIN32
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,6 +56,17 @@ extern "C" int getrusage(int, struct rusage *);
 #endif
 #endif
 
+#ifndef PATH_MAX
+  #define PATH_MAX _MAX_PATH
+#endif
+
+#ifdef WIN32
+#include <windows.h>
+extern "C" IMAGE_DOS_HEADER __ImageBase;
+#else
+#include <dlfcn.h>
+#endif
+
 AppUtil* AppUtil::instance_ = NULL;
 
 #ifdef HP
@@ -65,18 +76,37 @@ extern "C" int Error;
 int Error = 0;
 #endif //unix_port
 #endif
-#ifdef NT
+#ifdef WIN32
 #  include <direct.h>
 #  include <windows.h>
 //#  define strdup _strdup
 #endif
 #include "CubitUtil.hpp"
 
-
+// Interrupt handling defintions.
+/*  Setting this flag (asynchronously) to CUBIT_TRUE 
+ *  will cause Cubit/CGM to attempt to abort any current
+ *  operations and return.  
+ * 
+ * NOTE: IT IS THE RESPONSIBILITY OF THE APPLICATION 
+ *       USING CGM TO RESET THIS FLAG TO CUBIT_FALSE!!!
+ *       For Cubit, this flag is reset in UserInterface.
+ *       
+ *  CubitApp provides a default signal hander that will
+ *  set this flag to CUBIT_TRUE whenever a SIGINT (^C)
+ *  is detected.  It is still the responsibility of the
+ *  application using CGM to reset the flag to false!
+ *  The signal hander provided by CubitApp may be set by 
+ *  calling CubitApp::instance()->catch_interrupt(CUBIT_TRUE).
+ *
+ *  The storage space for this flag is defined in CubitApp.cpp
+ *  and initialized in CubitApp::initialize().
+ */    
+static volatile CubitBoolean cubit_intr = CUBIT_FALSE;
 
 extern "C" void cubit_update_terminal_size(int)
 {
-#if defined(NT)
+#if defined(WIN32)
 
   // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/getconsolescreenbufferinfo.asp
   // http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dllproc/base/scrolling_a_screen_buffer_s_window.asp
@@ -226,7 +256,7 @@ void AppUtil::report_resource_usage() const
 {
 
 #ifndef JANUS
-#ifndef NT
+#ifndef WIN32
    struct rusage r_usage;
    float utime, stime;
    apputil_getrusage(r_usage);
@@ -244,13 +274,11 @@ void AppUtil::report_resource_usage() const
    PRINT_INFO("Minor Page Faults     = %ld\n", r_usage.ru_minflt);
    PRINT_INFO("Major Page Faults     = %ld\n", r_usage.ru_majflt);
    PRINT_INFO("Swaps                 = %ld\n", r_usage.ru_nswap);
-#endif// NT
+#endif// WIN32
 #endif//JANUS
 }
 
 
-// Interrupt handling defintions.
-volatile CubitBoolean cubit_intr = CUBIT_FALSE;
 
 // Default handler for SIGINT provided by AppUtil.
 extern "C" void sigint_handler(int)
@@ -283,63 +311,31 @@ void AppUtil::catch_interrupt( CubitBoolean yesno )
 #endif
 }
 
+
 void AppUtil::startup(int argc, char ** argv)
 {
 
     if (mAppStarted)
         return;
-
-    if ( argc > 0 ) {
-      char* path = CubitUtil::util_strdup(argv[0]);
-
-      char* end;
-      for (end = path; *end; end++);
-
-      for ( ; end > path; end--) {
-        if ( *end == '/'
-#ifdef NT
-             || *end == '\\'
-#endif
-           ) {
-          break;
-        }
-      }
-      *end = '\0';
-      end = path;
-
-#ifndef NT
-      bool local = *end != '/';
-#else
-      bool local = true;
-      if (isalpha(*end) && (*(end+1) == ':'))
-      {
-        if (*(end+2) == '/' || *(end+2) == '\\')
-          local = false;
-        else
-          end += 2;
-      }
-      else if ( ((*end == '/') || (*end == '\\')) && (*end == *(end+1)) )
-        local = false;
-#endif
-
-      if (local)
-      {
-#ifndef NT
-        char buffer[PATH_MAX];
-        getcwd(buffer, PATH_MAX);
-#else
-        char buffer[_MAX_PATH];
-        _getcwd(buffer, _MAX_PATH);
-#endif
-        cubitDir = buffer;
-        cubitDir += "/";
-        cubitDir += end;
-      }
-      else
-        cubitDir = path;
-
-      CubitUtil::util_strdup_free(path);
+   
+    // get paths to binaries that AppUtil is compiled into
+    // we'll make this our "cubitDir" and can be used a reference for 
+    // where Cubit is installed
+    char path_buffer[PATH_MAX];
+#ifdef WIN32
+    if(GetModuleFileName((HINSTANCE)&__ImageBase, path_buffer, PATH_MAX))
+    {
+      *strrchr(path_buffer, '\\') = '\0';
+      cubitDir = path_buffer;
     }
+#else
+    Dl_info dl_info;
+    dladdr((void*) AppUtil::instance, &dl_info);
+    strcpy(path_buffer, dl_info.dli_fname);
+    if(strchr(path_buffer, '/'))
+      *strrchr(path_buffer, '/') = '\0';
+    cubitDir = path_buffer;
+#endif
 
     mAppStarted = CUBIT_TRUE;
     // add startup code here
@@ -376,7 +372,7 @@ void AppUtil::apputil_getrusage(struct rusage &r_usage) const
 {
     // get the resource usage as defined by getrusage
 #ifndef JANUS
-#ifndef NT
+#ifndef WIN32
    getrusage(RUSAGE_SELF, &r_usage);
 
    if (r_usage.ru_maxrss == 0) {
@@ -432,7 +428,7 @@ void AppUtil::apputil_getrusage(struct rusage &r_usage) const
      }
 #endif // CUBIT_LINUX
    }
-#endif // NT
+#endif // WIN32
 #endif // JANUS
 }
 
@@ -473,3 +469,30 @@ void AppUtil::initialize_settings()
 {
   CubitMessage::initialize_settings();
 }
+
+CubitBoolean AppUtil::interrupt()
+{
+  if (mProgressTool)
+    mProgressTool->check_interrupt();
+
+  return cubit_intr;
+}
+
+void AppUtil::set_interrupt(CubitBoolean f)
+{
+  if(f)
+  {
+    // call raise so it works regardless of the current signal handler
+    raise(SIGINT);
+  }
+  else
+  {
+    cubit_intr = f;
+  }
+}
+
+void AppUtil::clear_interrupt()
+{
+  cubit_intr = CUBIT_FALSE;
+}
+

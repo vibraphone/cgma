@@ -23,7 +23,6 @@
 #include "debug.hpp"
 #include "TDFacetBoundaryEdge.hpp"
 #include "TDFacetBoundaryPoint.hpp"
-#include "TDGeomFacet.hpp"
 #include "GfxDebug.hpp"
 //#include "FacetParamTool.hpp"
 #include "KDDTree.hpp"
@@ -34,7 +33,7 @@
 double FacetEvalTool::timeGridSearch = 0.0;
 double FacetEvalTool::timeFacetProject = 0.0;
 int FacetEvalTool::numEvals = 0;
-#define GRID_SEARCH_THRESHOLD 2000
+#define GRID_SEARCH_THRESHOLD 20
 
 //===========================================================================
 //Function Name: FacetEvalTool
@@ -138,6 +137,11 @@ FacetEvalTool::FacetEvalTool()
   toolID = counter++;
   myBBox = NULL;
   aTree = NULL;
+  lastFacet = NULL;
+  isFlat = -999;
+  myArea = -1.0;
+  interpOrder = 0;
+  minDot = 0;
 }
 
 //===========================================================================
@@ -316,7 +320,7 @@ CubitStatus FacetEvalTool::init_gradient()
 
 //===========================================================================
 //Function Name: init_quadrics
-//
+// NOTE: I (Roshan) fixed couple of bugs on Aug 02, 2010.  See BUGFIX comments below.  I didn't test this function; however, I have tested CMLSmoothTool::init_quadric(). 
 //Member Type:  PRIVATE
 //Descriptoin:  initialize the quadrics at the facet vertices for order 2 
 //              interpolation
@@ -379,45 +383,47 @@ CubitStatus FacetEvalTool::init_quadrics()
 
     // fill up the matrices
 
-    lhs.set_to_identity();
-    rhs.set_to_identity();
-    coef.set_to_identity();
+    //lhs.set_to_identity();
+    //rhs.set_to_identity();
+    //coef.set_to_identity();
 
-    double dx, dy, wjdx, wjdy, dx2, dy2, dxdy;
+    double dx, dy, wjdx, wjdy, dx2, dy2, dxdy, dz;
     for (j=0; j<num_close; j++) {
       weight[j] /= totweight;
-      dx = - coords[j].x();
-      dy = - coords[j].y();
+      weight[j] = 1; // BUGFIX: ignore weights for now and reset weights to 1
+      dx = /*-*/ coords[j].x(); //BUGFIX: Why we need -ve coords?
+      dy = /*-*/ coords[j].y(); //BUGFIX: Why we need -ve coords?
       wjdx = weight[j] * dx;
       wjdy = weight[j] * dy;
       dx2 = sqr( dx );
       dy2 = sqr( dy );
       dxdy = dx * dy;
+      dz = coords[j].z(); 
       
       lhs.add( 0, 0, wjdx * dx );
       lhs.add( 0, 1, wjdx * dy );
       lhs.add( 0, 2, wjdx * dx2 );
       lhs.add( 0, 3, wjdx * dxdy );
       lhs.add( 0, 4, wjdx * dy2 );
-      rhs.add( 0, 0, wjdx );
+      rhs.add( 0, 0, wjdx * dz ); // BUGFIX: dz was missing
       
       lhs.add( 1, 1, wjdy * dy );
       lhs.add( 1, 2, wjdy * dx2 );
       lhs.add( 1, 3, wjdy * dxdy );
       lhs.add( 1, 4, wjdy * dx * dy2 );
-      rhs.add( 1, 0, wjdy );
+      rhs.add( 1, 0, wjdy * dz ); // BUGFIX: dz was missing
       
       lhs.add( 2, 2, wjdx * dx2 * dx );
       lhs.add( 2, 3, wjdx * dx2 * dy );
-      lhs.add( 2, 4, wjdx * dx * dy2 );
-      rhs.add( 2, 0, wjdx * dx );
+      lhs.add( 2, 4, wjdx * dx * dy2 ); 
+      rhs.add( 2, 0, wjdx * dx * dz );// BUGFIX: dz was missing
 
       lhs.add( 3, 3, wjdx * dx * dy2 );
       lhs.add( 3, 4, wjdx * dy * dy2 );
-      rhs.add( 3, 0, wjdx * dy );
+      rhs.add( 3, 0, wjdx * dy * dz ); // BUGFIX: dz was missing
       
       lhs.add( 4, 4, wjdy * dy * dy2 );
-      rhs.add( 4, 0, wjdy * dy );
+      rhs.add( 4, 0, wjdy * dy * dz ); // BUGFIX: dz was missing
     }
     lhs.set( 1, 0, lhs.get(0,1) );
     lhs.set( 2, 0, lhs.get(0,2) );
@@ -1727,6 +1733,18 @@ CubitBoolean FacetEvalTool::move_ac_inside( CubitVector &ac, double tol )
   return (nout > 0) ? CUBIT_TRUE : CUBIT_FALSE;
 }
 
+bool FacetEvalTool::have_data_to_calculate_bbox(void)
+{
+  if(myPointList.size() > 0 ||
+     (interpOrder == 4 && 
+         (myEdgeList.size() > 0 || 
+          myFacetList.size() > 0)))
+  {
+    return true;
+  }
+  return false;
+}
+
 //===========================================================================
 //Function Name: reset_bounding_box
 //
@@ -1736,26 +1754,23 @@ CubitBoolean FacetEvalTool::move_ac_inside( CubitVector &ac, double tol )
 //===========================================================================
 void FacetEvalTool::reset_bounding_box()
 {
-  if (myBBox != NULL)
+  if(have_data_to_calculate_bbox())
   {
-    delete myBBox;
-    myBBox = NULL;
+    if (myBBox != NULL)
+    {
+      delete myBBox;
+      myBBox = NULL;
+    }
+    
+    bounding_box();
+
+    double diag = sqrt(sqr(myBBox->x_range()) + 
+                       sqr(myBBox->y_range()) + 
+                       sqr(myBBox->z_range()));
+    compareTol = 1.0e-3 * diag;
+
+    set_up_grid_search( diag );
   }
-  
-  bounding_box();
-
-  double diag = sqrt(sqr(myBBox->x_range()) + 
-	                   sqr(myBBox->y_range()) + 
-	                   sqr(myBBox->z_range()));
-  compareTol = 1.0e-3 * diag;
-  if(myFacetList.size()>0){
-      compareTol/=myFacetList.size();
-  }
-  // set up grid search if we have a lot of facets
-
-  set_up_grid_search( diag );
-
-//    //bounding_box();
 }
 
 
@@ -1905,7 +1920,7 @@ CubitFacet* FacetEvalTool::closest_facet( const CubitVector& point )
 {
   CubitVector non_const(point);
   CubitBoolean junk;
-  CubitStatus result = project_to_facets( non_const, false, &junk, 0, 0 );
+  CubitStatus result = project_to_facets( non_const, true, &junk, 0, 0 ); 
   return result ? lastFacet : 0;
 }
 
@@ -1914,13 +1929,13 @@ CubitFacet* FacetEvalTool::closest_facet( const CubitVector& point )
 //
 //Member Type:  PRIVATE
 //Description:  find the closest facets to the point in the search grid
+// by starting with a default tolerance and expanding until facets are found
 //===========================================================================
-CubitStatus FacetEvalTool::facets_from_search_grid( 
+void FacetEvalTool::facets_from_search_grid( 
   CubitVector &this_point,
-  DLIList<CubitFacet *> &facet_list )
+  DLIList<CubitFacet *> &facet_list,
+  double &tol_used)
 {
-  CubitStatus rv = CUBIT_SUCCESS;
-
   double tol = compareTol * 10;
   while (facet_list.size() == 0)
   {
@@ -1932,10 +1947,36 @@ CubitStatus FacetEvalTool::facets_from_search_grid(
                        this_point.z() + tol );
     CubitBox ptbox(ptmin,ptmax);
     aTree->find(ptbox,facet_list);
-    tol *= 2.0;
+
+    if (0 == facet_list.size())
+      tol *= 2.0;
   }
 
-  return rv;
+  tol_used = tol;
+}
+
+//===========================================================================
+//Function Name: facets_from_search_grid
+//
+//Member Type:  PRIVATE
+//Description:  find the closest facets to the point in the search grid
+// for a given tolerance
+//===========================================================================
+void FacetEvalTool::facets_from_search_grid( 
+  CubitVector &this_point,
+  double compare_tol,
+  DLIList<CubitFacet *> &facet_list )
+{
+  double tol = compare_tol;
+
+  CubitVector ptmin( this_point.x() - tol, 
+                     this_point.y() - tol, 
+                     this_point.z() - tol );
+  CubitVector ptmax( this_point.x() + tol, 
+                     this_point.y() + tol, 
+                     this_point.z() + tol );
+  CubitBox ptbox(ptmin,ptmax);
+  aTree->find(ptbox,facet_list);
 }
 
 //===========================================================================
@@ -1969,15 +2010,55 @@ FacetEvalTool::project_to_facets(CubitVector &this_point,
   if (aTree != NULL)
   {
     DLIList<CubitFacet *> facet_list;
-    rv = facets_from_search_grid( this_point, facet_list );
+    double search_tol = DBL_MAX;
+    facets_from_search_grid( this_point, facet_list, search_tol );
     if ( DEBUG_FLAG(110) )
       timeGridSearch += function_time.cpu_secs();
 
-    if (rv == CUBIT_SUCCESS)
+    if (facet_list.size())
     {
+      CubitVector grid_close_pt;
       rv = project_to_facets(facet_list,lastFacet,interpOrder,compareTol,
-                             this_point,trim,outside,closest_point_ptr,
+                             this_point,trim,outside, &grid_close_pt,
                              normal_ptr);
+
+      if (CUBIT_SUCCESS == rv)
+      {
+        if (closest_point_ptr)
+        {
+          *closest_point_ptr = grid_close_pt;
+        }
+
+        // when we do the projection, if we end up with the closest point being farther
+        // away than the grid search tolerance, we may have missed a closer facet
+        // so redo the grid search using the distance as a tolerance
+        double distance = grid_close_pt.distance_between( this_point );
+        if (distance > search_tol)
+        {
+          DLIList<CubitFacet*> facets_within_distance;
+          CubitVector grid_close_pt2;
+          facets_from_search_grid(this_point, distance, facets_within_distance);
+          if (facets_within_distance.size() &&
+              (facets_within_distance != facet_list) )
+          {
+            rv = project_to_facets(facets_within_distance, lastFacet, interpOrder, compareTol,
+                                   this_point, trim, outside, &grid_close_pt2,
+                                   normal_ptr);
+            if (CUBIT_SUCCESS == rv)
+            {
+              double distance2 = grid_close_pt2.distance_between( this_point );
+              if (distance2 < distance)
+              {
+                if (closest_point_ptr)
+                {
+                  *closest_point_ptr = grid_close_pt2;
+                }
+              }
+            }
+          }
+        }
+      }
+
       if ( DEBUG_FLAG(110) )
       {
         timeFacetProject += function_time.cpu_secs();
@@ -2122,6 +2203,10 @@ FacetEvalTool::project_to_facets(
           continue;
         }
       }
+
+      // skip zero area facets
+      if(facet->area() <= 0.0)
+        continue;
 
       // Only facets that pass the bounding box test will get past here!
 
@@ -2308,7 +2393,7 @@ FacetEvalTool::project_to_facets(
   if (normal_ptr) {
     CubitVector normal;
     if (eval_facet_normal( best_facet, best_areacoord, normal ) 
-	!= CUBIT_SUCCESS) {
+      != CUBIT_SUCCESS) {
       return CUBIT_FAILURE;
     }
     *normal_ptr = normal;
@@ -2324,7 +2409,8 @@ FacetEvalTool::project_to_facets(
 
   // clear the marks from the used facets
 
-  for (ii=0; ii<used_facet_list.size(); ii++) {
+  for (ii=0; ii<used_facet_list.size(); ii++)
+  {
     facet = used_facet_list.get_and_step();
     facet->marked( 0 );
   }
@@ -3315,11 +3401,12 @@ CubitStatus FacetEvalTool::get_loops_from_facets(
 
   if (mydebug)
   {
+    GfxDebug::clear();
     for (i = 0; i< myFacetList.size(); i++)
       myFacetList.get_and_step()->debug_draw();
     GfxDebug::flush();
     GfxDebug::mouse_xforms();
-  }
+  } 
 
   for ( i = 0; i < all_edge_list.size(); i++)
   {
@@ -3356,7 +3443,12 @@ CubitStatus FacetEvalTool::get_loops_from_facets(
             if (nextfacet == NULL) {
               if (edge != startedge) {
                 edge_list->append( edge );
-                if (mydebug) debug_draw_edge(edge);
+                if (mydebug) 
+                {
+                  debug_draw_edge(edge);
+                  GfxDebug::mouse_xforms();
+                }
+
               }
               found = CUBIT_TRUE;
             }
@@ -3394,7 +3486,8 @@ CubitStatus FacetEvalTool::get_edges_from_facets(
   for ( i = 0; i < facet_list.size(); i++) {
     facet = facet_list.get_and_step();
     for (j=0; j<3; j++) {
-      if (!(edge = facet->edge(j))) {
+      if (!(edge = facet->edge(j))) 
+      {
         facet->get_edge_pts( j, p0, p1 );
         edge = NULL;
         k = -1;
@@ -3824,15 +3917,15 @@ void FacetEvalTool::write_loops()
   for (ii=0; ii<myLoopList.size(); ii++)
   {
     DLIList<CubitFacetEdge*> *loop = myLoopList.get_and_step();
-    PRINT_INFO( "======= Loop %d =========\n", ii );
+    PRINT_INFO("======= Loop %d =========\n", ii);
     for (jj=0; jj<loop->size(); jj++)
     {
       CubitFacetEdge *edge = loop->get_and_step();
       CubitPoint *point0 = edge->point( 0 );
       CubitPoint *point1 = edge->point( 1 );
-      PRINT_INFO( "  (%d) %f, %f, %f   (%d) %f, %f, %f\n",
-		  point0->id(), point0->x(), point0->y(), point0->z(),
-		  point1->id(), point1->x(), point1->y(), point1->z() );
+      PRINT_INFO("  (%d) %f, %f, %f   (%d) %f, %f, %f\n",
+        point0->id(), point0->x(), point0->y(), point0->z(),
+        point1->id(), point1->x(), point1->y(), point1->z());
     }
   }
 }
@@ -3908,29 +4001,6 @@ void FacetEvalTool::calculate_area()
       facet = myFacetList.get_and_step();
       myArea += facet->area();
     }
-}
-
-//===========================================================================
-//Function Name: is_boundary_facet
-//Description: decides if this is a boundary facet based on whether its
-//             edges or points have boundary tool datas attached.
-//Member Type:  PUBLIC
-//===========================================================================
-CubitBoolean FacetEvalTool::is_boundary_facet( CubitFacet *facet_ptr )
-{
-  TDGeomFacet *td_fbe = NULL;
-  TDGeomFacet *td_fbp = NULL;
-  int ii;
-  for (ii=0; ii<3; ii++)
-  {
-    td_fbe = TDGeomFacet::get_geom_facet( facet_ptr->edge( ii ) );
-    if ( td_fbe->on_boundary() )
-      return CUBIT_TRUE;
-    td_fbp = TDGeomFacet::get_geom_facet( facet_ptr->point( ii ) );
-    if ( td_fbe->on_boundary() )
-      return CUBIT_TRUE;
-  }
-  return CUBIT_FALSE;
 }
 
 //===========================================================================
@@ -4188,15 +4258,16 @@ CubitStatus FacetEvalTool::save(
 
    // write ids of edges that belong to this tool 
   CubitFacetEdge *edge_ptr;
-  int nedges = myEdgeList.size();
+  int32 nedges = myEdgeList.size();
   int32* edge_id = new int32 [nedges];
   myEdgeList.reset();
   for (ii=0; ii<nedges; ii++)
   {
     edge_ptr = myEdgeList.get_and_step();
     edge_id[ii] = edge_ptr->id();
+    volatile int test_int = edge_id[ii] + 1;   // this is a test line to look for uninitialized data rjm
   }
-  cio.Write(reinterpret_cast<int32*>(&nedges), 1);
+  cio.Write( &nedges, 1);
   if (nedges > 0)
   {
     cio.Write(edge_id, nedges);
@@ -4445,7 +4516,7 @@ CubitStatus FacetEvalTool::get_intersections(CubitVector point1,
   return CUBIT_SUCCESS;
 }
 
-int FacetEvalTool::intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance )
+int FacetEvalTool::intersect_ray( CubitVector &origin, CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance )
 {
 	// This algorithm can be found at http://geometryalgorithms.com/
 
@@ -4524,7 +4595,7 @@ int FacetEvalTool::intersect_ray( const CubitVector &origin, const CubitVector &
 
 }
 
-int FacetEvalTool::intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacetEdge* facet_edge, CubitVector* point, double &hit_distance )
+int FacetEvalTool::intersect_ray( CubitVector &origin, CubitVector &direction, CubitFacetEdge* facet_edge, CubitVector* point, double &hit_distance )
 {
 	// This algorithm can be found at http://geometryalgorithms.com/
 	double tol = GEOMETRY_RESABS;

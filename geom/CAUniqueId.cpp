@@ -8,9 +8,12 @@
 #include "CubitSimpleAttrib.hpp"
 #include "RefEntity.hpp"
 #include "TDUniqueId.hpp"
+#include "GSaveOpen.hpp"
+#include "GeometryQueryTool.hpp"
 
 DLIList<CAUniqueId *> CAUniqueId::allCAUniqueIds;
 bool CAUniqueId::autoUniqueId = false;
+UIDMap CAUniqueId::oldUIDToNewUID;
 
 CubitAttrib* CAUniqueId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
 {
@@ -65,7 +68,32 @@ CubitStatus CAUniqueId::actuate()
       return CUBIT_FAILURE;
     }
   }
-  else {
+  else 
+  {
+    if( !GSaveOpen::performingUndo && 
+         GeometryQueryTool::importingSolidModel &&
+        !GeometryQueryTool::mergeGloballyOnImport)
+    {
+      //Is there an entity that already has this id?
+      ToolDataUser *tdu = TDUniqueId::find_td_unique_id(uniqueId);
+      if( tdu )
+      {
+        //is it already in the map
+        UIDMap::iterator iter;
+        iter = oldUIDToNewUID.find( uniqueId );
+        
+        if( iter != oldUIDToNewUID.end() )
+          uniqueId = (*iter).second;
+        else
+        {
+          int new_unique_id = TDUniqueId::generate_unique_id();
+          UIDMap::value_type this_pair(uniqueId, new_unique_id);
+          oldUIDToNewUID.insert(this_pair);
+          uniqueId = new_unique_id;
+        }
+      }
+    }
+
       // else make a new one
     uid = new TDUniqueId(attrib_owner(), uniqueId);
   }
@@ -127,3 +155,9 @@ void CAUniqueId::print()
              attribOwnerEntity->class_name(), attribOwnerEntity->id(),
              uniqueId);
 }
+
+void CAUniqueId::clear_out_old_to_new_map()
+{
+  oldUIDToNewUID.clear(); 
+}
+

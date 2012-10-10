@@ -21,7 +21,7 @@
 // ********** BEGIN STANDARD INCLUDES         **********
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 
@@ -49,7 +49,7 @@ class RefVolume;
 class RefFace;
 class RefEdge;
 class RefVertex;
-class Point;
+class TBPoint;
 class Curve;
 class Surface;
 class Lump;
@@ -107,6 +107,8 @@ public:
     //- Controlled access and creation of the sole instance of this class.
 
   virtual ~FacetQueryEngine();
+
+  static void delete_instance();
   
   const char* modeler_type()
      { return "facet"; }
@@ -133,21 +135,21 @@ public:
 
   CubitBoolean can_delete_bodies(DLIList<Body*>body_list);
   
-  virtual Point* make_Point( GeometryType point_type,
+  virtual TBPoint* make_Point( GeometryType point_type,
                              CubitVector const& point) const ;
   virtual Curve* make_Curve(Curve *) const;
-  virtual Curve* make_Curve( Point const* ,
-                             Point const* ,
+  virtual Curve* make_Curve( TBPoint const* ,
+                             TBPoint const* ,
                              RefFace* ,
                              CubitVector * ) const;
   virtual Curve* make_Curve( GeometryType ,
-                             Point const* ,
-                             Point const* ,
+                             TBPoint const* ,
+                             TBPoint const* ,
                              DLIList<CubitVector*>& ,
                              RefFace*  ) const;
   virtual Curve* make_Curve( GeometryType ,
-                             Point const* ,
-                             Point const* ,
+                             TBPoint const* ,
+                             TBPoint const* ,
                              CubitVector const* ,
                              CubitSense ) const;
   virtual Surface* make_Surface( Surface *,
@@ -171,9 +173,12 @@ public:
                                           unsigned short normal_tolerance,
                                           double distance_tolerance,
                                           double max_edge_length ) const;
+
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    GMem* gMem = NULL,
-                                    double tolerance = 0.0 ) const;
+                                    GMem* gMem,
+                                    double angle_tolerance=0,
+                                    double distance_tolerance=0,
+                                    double max_edge_length=0 ) const;
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
     //I ref_edge_ptr
@@ -247,14 +252,9 @@ public:
 
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
                                           const char* file_name,
-                                          const char* file_type,
+                                          Model_File_Type file_type,
                                           const CubitString &cubit_version,
-                                          const char* logfile_name = NULL );
-
-  virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
-					  char*& p_buffer,
-					  int& n_buffer_size,
-					  bool b_export_buffer);
+                                          ModelExportOptions &export_options );
 
   virtual CubitStatus save_temp_geom_file( DLIList<TopologyBridge*>& ref_entity_list,
                                           const char *file_name,
@@ -264,36 +264,18 @@ public:
 
  virtual CubitStatus import_temp_geom_file(FILE* file_ptr,
                                       const char* file_name,
-                                      const char* file_type,
+                                      Model_File_Type file_type,
                                       DLIList<TopologyBridge*> &bridge_list );
 
  virtual CubitStatus import_solid_model(const char* file_name,
-                                         const char* file_type,
+                                         Model_File_Type file_type,
                                          DLIList<TopologyBridge*>& imported_entities,
-                                         CubitBoolean print_results = CUBIT_TRUE,
-                                         const char* logfile_name = NULL,
-                                         CubitBoolean heal_step = CUBIT_TRUE,
-                                         CubitBoolean import_bodies = CUBIT_TRUE,
-                                         CubitBoolean import_surfaces = CUBIT_TRUE,
-                                         CubitBoolean import_curves = CUBIT_TRUE,
-                                         CubitBoolean import_vertices = CUBIT_TRUE,
-                                         CubitBoolean free_surfaces = CUBIT_TRUE );
+                                         ModelImportOptions &import_options );
 
- virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
-					const char* pBuffer,
-					const int n_buffer_size);
-    private:
+private:
   CubitStatus import_solid_model(FILE *file_ptr,
-                                 const char* /*file_type*/,
-                                 DLIList<TopologyBridge*> &imported_entities,
-                                 CubitBoolean print_results = CUBIT_TRUE,
-                                 const char* logfile_name = NULL,
-                                 CubitBoolean heal_step = CUBIT_TRUE,
-                                 CubitBoolean import_bodies = CUBIT_TRUE,
-                                 CubitBoolean import_surfaces = CUBIT_TRUE,
-                                 CubitBoolean import_curves = CUBIT_TRUE,
-                                 CubitBoolean import_vertices = CUBIT_TRUE,
-                                 CubitBoolean free_surfaces = CUBIT_TRUE);
+                                 DLIList<TopologyBridge*> &imported_entities );
+
 public:
   virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const;
     //- Deletes all solid model entities associated with the Bodies in 
@@ -302,10 +284,10 @@ public:
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const;
-  virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const;
+  virtual CubitStatus delete_solid_model_entities( TBPoint* point_ptr ) const;
 
-  virtual CubitStatus fire_ray( const CubitVector &origin,
-                                const CubitVector &direction,
+  virtual CubitStatus fire_ray( CubitVector &origin,
+                                CubitVector &direction,
                                 DLIList<TopologyBridge*> &at_entity_list,
                                 DLIList<double> &ray_params,
                                 int max_hits,
@@ -334,11 +316,6 @@ public:
   static CubitStatus make_facets( int *conn, int nfacets,
                                   DLIList<CubitFacet *> &facet_list );
     //- create facets from a list of points and connectivity
-
-#ifdef BOYD14
-  static CubitStatus check_facets( DLIList<CubitPoint*>&point_list, DLIList<CubitFacet*> &facet_list );
-    //- check integrity of facets
-#endif
 
   CubitStatus ensure_is_ascii_stl_file(FILE * fp, CubitBoolean &is_ascii);
   //- returns true in is_ascii if fp points to an ascii stl file
@@ -382,18 +359,6 @@ public:
                                   int &npoints, 
                                   int &nquad, int &ntri, 
                                   FacetFileFormat file_format = CUBIT_FACET_FILE );
-#ifdef BOYD14
-  static CubitStatus read_vtk_facets( const char * file_name,
-                                  double *&points,
-                                  int *&conn,
-                                  int &npoints, 
-                                  int &tri );
-  static CubitStatus read_obj_facets( const char * file_name,
-                                  double *&points,
-                                  int *&conn,
-                                  int &npoints, 
-                                  int &tri );
-#endif
   static CubitStatus read_cholla_file( const char *file_name, 
                                        double &feature_angle,
                                        DLIList<CubitPoint *> &point_list, 
@@ -407,11 +372,6 @@ public:
     //- determine if one of the facets in the list is within a
     //- certain distance of the point.
 
-#ifdef BOYD14
-  CubitStatus make_sph( DLIList <CubitPoint *>&point_list,
-                        DLIList <CubitFacet *>&facet_list,
-                        double size, char *filename);
-#endif
   static CubitStatus export_facets(DLIList<CubitFacet*> &facet_list,
                                   char *filename);
     //-  export a list of facets to a facet file for debugging purposes

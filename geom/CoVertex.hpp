@@ -63,15 +63,6 @@ class CUBIT_GEOM_EXPORT CoVertex : public SenseEntity
 
       DagType dag_type() const { return DagType::co_vertex_type(); }
   
-#ifdef BOYD14
-      RefEdge* get_ref_edge() ;
-      //R RefEdge*
-      //R- A pointer to the parent RefEdge
-      //- This function returns a pointer to the parent RefEdge
-      //- of this CoVertex.  It will assert that the CoVertex
-      //- has exactly one parent RefEdge.
-#endif
-
       RefVertex* get_ref_vertex_ptr()  ;
       //R RefVertex*
       //R- A pointer to the RefVertex which the current sense

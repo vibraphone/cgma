@@ -94,8 +94,10 @@ public:
                         
   CubitPointContainment point_containment( const CubitVector& vect );
   
-  CubitStatus get_graphics( GMem& result ) ;
- 
+  CubitStatus get_graphics( GMem& result,
+                            double angle_tolerance=0,
+                            double distance_tolerance=0,
+                            double max_edge_length=0); 
   
   void reverse_sense();
   
@@ -104,6 +106,26 @@ public:
 
   virtual void transform( const CubitTransformMatrix& );
   
+  //R CubitStatus
+  //O- true or false if spline is rational or not.
+  //O- the degree of this spline
+  //O- the control points
+  //O- If rational, weight for each control point
+  //O- the knots
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots ) const;
+  //R CubitStatus
+  //O- center - ellipse center point
+  //O- normal - normal of the plane of the ellipse
+  //O- major_axis - major axis of the ellipse
+  //O- radius_ratio - ratio of the length of the major to minor axis.
+  virtual CubitStatus get_ellipse_params( CubitVector &center,
+                                          CubitVector &normal,
+                                          CubitVector &major_axis,
+                                          double &radius_ratio ) const;
 protected:
   
   int segment_from_u( double& u );

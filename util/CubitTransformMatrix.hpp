@@ -39,18 +39,10 @@ public:
   CubitTransformMatrix& scale_about_origin (const CubitVector& scale);
   CubitTransformMatrix& scale_about_origin (double x, double y, double z);
   CubitTransformMatrix& scale_about_origin (double scale);
-#ifdef BOYD15
-  CubitTransformMatrix& scale_about_point  (const CubitVector& scale,
-                                     const CubitVector& about_point);
-#endif
-
-#ifdef BOYD15
-  CubitTransformMatrix& transpose();
-#endif
   CubitTransformMatrix& inverse();
   
   CubitVector operator* (const CubitVector& point) const;
-  friend CubitVector operator* (const CubitVector& point,
+  friend CUBIT_UTIL_EXPORT CubitVector operator* (const CubitVector& point,
                                 const CubitTransformMatrix& matrix);
   
   CubitTransformMatrix operator*(const CubitTransformMatrix& matrix) const;

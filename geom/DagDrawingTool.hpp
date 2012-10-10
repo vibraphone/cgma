@@ -44,9 +44,6 @@ class CUBIT_GEOM_EXPORT DagNodeTable
 		DagNodeTable( int num_rows );
 		~DagNodeTable();
 		
-#ifdef BOYD14
-		void initialize_row( int row, DLIList<ModelEntity*>& node_list );
-#endif
 		int rows() const { return length_; }
 		
 		DagNodeRow& operator[]( int row );
@@ -74,11 +71,6 @@ class CUBIT_GEOM_EXPORT DagDrawingTool
 		void draw_DAG( RefEdge*   edge,   int up, int down );
 		void draw_DAG( RefVertex* vertex, int up           );
 */		
-#ifdef BOYD14
-		void traverse_secondary_links( CubitBoolean yes_no );
-		CubitBoolean traverse_secondary_links() const;
-		//Follow secondary links not originating with current node set?
-#endif
     
 //    void draw_host_parasite_links( CubitBoolean yes_no );
 //    CubitBoolean draw_host_parasite_links() const;
@@ -157,19 +149,12 @@ class CUBIT_GEOM_EXPORT DagDrawingTool
 		void draw_DAG( DLIList<RefEntity*>& enity_list, int up, int down );
 		void draw_DAG( DLIList<ModelEntity*>& node_list, int up, int down );
 
-#ifdef BOYD14
-		void sort_table( );
-#endif
 //		void draw_table( );
 		
 		//const char* name( ModelEntity* node_ptr );
 		//const char* name( int row, int index );
 		//int name_width( int row );
 		//int name_width( ModelEntity* node_ptr );
-#ifdef BOYD14
-		const char* short_name( RefEntity* re_ptr );
-		const char* short_name( ModelEntity* me_ptr );
-#endif
 		
 		//direction-indenpendent query stuff:
 		void get_relatives( ModelEntity* node_ptr, 
@@ -183,9 +168,6 @@ class CUBIT_GEOM_EXPORT DagDrawingTool
 		               int direction );
 		int link_type( int source_row, int source_index,
 		               int target_row, int target_index );
-#ifdef BOYD14
-    int host_para_relation( int row, int node1_index, int node2_index );
-#endif
 		               
 		void position( int row, int index, float& x, float& y );
                 /*
@@ -250,9 +232,6 @@ class CUBIT_GEOM_EXPORT DagDrawingTool
 		
 		//Working data
 		DagNodeTable* node_table;
-#ifdef BOYD17
-		int start_row;
-#endif
 };
 
 class DagListTool

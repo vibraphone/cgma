@@ -132,19 +132,10 @@ public:
     // Read FactAttribs from file
   
   void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#ifdef BOYD14
-  void get_lumps   ( DLIList<FacetLump   *>& lumps    );
-#endif
   void get_shells  ( DLIList<FacetShell  *>& shells   );
   void get_surfaces( DLIList<FacetSurface*>& surfaces );
-#ifdef BOYD14
-  void get_loops   ( DLIList<FacetLoop   *>& loops    );
-#endif
   void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
   void get_curves  ( DLIList<FacetCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<FacetPoint  *>& points   );
-#endif
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );

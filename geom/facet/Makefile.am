@@ -4,10 +4,9 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom/facetbool 
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_facet.la
-endif
+lib_LTLIBRARIES = libcubit_facet.la
+
+AM_LDFLAGS += -lcubit_facetbool
 
 # The directory where headers will be installed
 libcubit_facet_la_includedir = $(includedir)

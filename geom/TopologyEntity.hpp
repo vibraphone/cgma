@@ -120,32 +120,12 @@ public :
     //- object. 
     //-
 
-#ifdef BOYD14
-  Shell *shell();
-  Loop *loop();
-  Chain *chain();
-  CoVolume *co_volume();
-  CoFace *co_face();
-  CoVertex *co_vertex();
-    //- get a single connected entity of the given type
-
-  int num_bodies();
-  int num_shells();
-  int num_chains();
-#endif
   CoEdge *co_edge();
   int num_loops();
   int num_ref_volumes();
   int num_ref_faces();
   int num_ref_edges();
   int num_ref_vertices();
-#ifdef BOYD14
-  int num_co_volumes();
-  int num_co_faces();
-  int num_co_edges();
-  int num_co_vertices();
-    //- return the number of connected entities of the given type
-#endif
 
   const BridgeManager* bridge_manager() const
     { return &bridgeMan; }

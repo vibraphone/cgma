@@ -19,9 +19,6 @@ public:
   
   PartitionLump* get_lump() const;
   
-#ifdef BOYD15
-  int num_co_surfaces() const;
-#endif
   PartitionCoSurf* next_co_surface( const PartitionCoSurf* prev = 0 ) const;
   
   CubitStatus add( PartitionCoSurf* cosurf );

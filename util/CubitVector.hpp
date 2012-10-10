@@ -44,7 +44,7 @@ public:
   CubitVector(const CubitVectorStruct& from);  
   
     //- Heading: Set and Inquire Functions
-  void set(const double x_coord, const double y_coord, const double z_coord);
+  void set(const double x, const double y, const double z);
     //- Change vector components to {x}, {y}, and {z}
   
   void set( const double xyz[3] );
@@ -66,22 +66,22 @@ public:
   double& y();
   double& z();
   
-  void get_xyz( double &x_coord, double &y_coord, double &z_coord ) const; //- Get x, y, z components
+  void get_xyz( double &x, double &y, double &z ) const; //- Get x, y, z components
   void get_xyz( double xyz[3] ) const; //- Get xyz tuple
   
   double &r(); //- Return r component of vector, if (r,theta) format
   
   double &theta();  //- Return theta component of vector, if (r,theta) format
   
-  void x( const double x_coord ); //- Set x component of vector
+  void x( const double x ); //- Set x component of vector
   
-  void y( const double y_coord ); //- Set y component of vector
+  void y( const double y ); //- Set y component of vector
   
-  void z( const double z_coord ); //- Set z component of vector
+  void z( const double z ); //- Set z component of vector
   
-  void r( const double radius ); //- Set r component of vector, if (r,theta) format
+  void r( const double x ); //- Set r component of vector, if (r,theta) format
   
-  void theta( const double angle ); //- Set theta component of vector, if (r,theta) format
+  void theta( const double y ); //- Set theta component of vector, if (r,theta) format
   
   void xy_to_rtheta();
     //- convert from cartesian to polar coordinates, just 2d for now
@@ -313,26 +313,26 @@ inline void CubitVector::get_xyz(double xyz[3]) const
   xyz[1] = yVal;
   xyz[2] = zVal;
 }
-inline void CubitVector::get_xyz(double &x_coord, double &y_coord, double &z_coord) const
+inline void CubitVector::get_xyz(double &x, double &y, double &z) const
 {
-  x_coord = xVal; 
-  y_coord = yVal; 
-  z_coord = zVal;
+  x = xVal; 
+  y = yVal; 
+  z = zVal;
 }
 inline double &CubitVector::r()
 { return xVal; }
 inline double &CubitVector::theta()
 { return yVal; }
-inline void CubitVector::x( const double x_coord )
-{ xVal = x_coord; }
-inline void CubitVector::y( const double y_coord )
-{ yVal = y_coord; }
-inline void CubitVector::z( const double z_coord )
-{ zVal = z_coord; }
-inline void CubitVector::r( const double radius )
-{ xVal = radius; }
-inline void CubitVector::theta( const double angle )
-{ yVal = angle; }
+inline void CubitVector::x( const double x )
+{ xVal = x; }
+inline void CubitVector::y( const double y )
+{ yVal = y; }
+inline void CubitVector::z( const double z )
+{ zVal = z; }
+inline void CubitVector::r( const double x )
+{ xVal = x; }
+inline void CubitVector::theta( const double y )
+{ yVal = y; }
 inline CubitVector& CubitVector::operator+=(const CubitVector &v)
 {
   xVal += v.xVal;
@@ -396,13 +396,13 @@ inline void CubitVector::perpendicular_z()
   y( -temp );
 }
 
-inline void CubitVector::set(const double x_coord,
-                             const double y_coord,
-                             const double z_coord)
+inline void CubitVector::set(const double x,
+                             const double y,
+                             const double z)
 {
-  xVal = x_coord;
-  yVal = y_coord;
-  zVal = z_coord;
+  xVal = x;
+  yVal = y;
+  zVal = z;
 }
 
 inline void CubitVector::set(const double xyz[3])
@@ -445,7 +445,9 @@ inline CubitVector& CubitVector::operator*=(const double scalar)
 // Scales all values by 1/scalar
 inline CubitVector& CubitVector::operator/=(const double scalar)
 {
-  assert (scalar != 0);
+  if(scalar == 0)
+    throw ("Cannot divide by zero.");
+  //assert (scalar != 0);
   xVal /= scalar;
   yVal /= scalar;
   zVal /= scalar;
@@ -490,7 +492,9 @@ inline CubitVector CubitVector::operator-() const
 
 inline double CubitVector::operator[](int i) const
 {
-  assert(i > -1 && i < 3);
+  if(i < 0 || i > 2)
+    throw ("Index Out of Bounds");
+  //assert(i > -1 && i < 3);
   if      (i == 0) return xVal;
   else if (i == 1) return yVal;
   else             return zVal;

@@ -78,6 +78,15 @@ CFEModel::~CFEModel()
 {
     if(mpaGeoms)
         delete [] mpaGeoms;
+    if(mpaGroups)
+        delete [] mpaGroups;
+    if(mpaBlocks)
+        delete [] mpaBlocks;
+    if(mpaNodeSets)
+        delete [] mpaNodeSets;
+    if(mpaSideSets)
+        delete [] mpaSideSets;
+
     if(mNodeBuff.mpaNodeIDs)
         delete [] mNodeBuff.mpaNodeIDs;
     if(mNodeBuff.mpadblX)
@@ -427,13 +436,12 @@ void CFEModel::WriteBlock(UnsignedInt32 xintIndex,
                 !xpaBlockData[lintBlock].mpaMemberIDs)
                 throw CCubitFile::ePassedNullPointer;
         }
-        if(xintAttributeOrder) {
-            if(!xpadblAttributes)
-                throw CCubitFile::ePassedNullPointer;
-        }
     }
-    else if(xintAttributeOrder)
-        throw CCubitFile::ePassedNullPointer;
+
+    if(xintAttributeOrder) {
+        if(!xpadblAttributes)
+            throw CCubitFile::ePassedNullPointer;
+    }
 
     mpaBlocks[xintIndex].mintBlockID = xintBlockID;
     mpaBlocks[xintIndex].mintBlockElementType = xintBlockType;
@@ -445,39 +453,33 @@ void CFEModel::WriteBlock(UnsignedInt32 xintIndex,
     mpaBlocks[xintIndex].mintBlockDimension = xintBlockDimension;
     mpaBlocks[xintIndex].mintAttributeOrder = xintAttributeOrder;
     
-    if(xintNumTypes) {
-        CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
-        mpaBlocks[xintIndex].mintMemberOffset =
-            lpIO->BeginWriteBlock(mintFEModelOffset);
+    
+    CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
+    mpaBlocks[xintIndex].mintMemberOffset =
+        lpIO->BeginWriteBlock(mintFEModelOffset);
 
-        for(lintBlock = 0; lintBlock < xintNumTypes; lintBlock++) {
-            if(!xpaBlockData[lintBlock].mintMemberCount) {
-                mpaBlocks[xintIndex].mintMemberTypeCount--;
-                continue;
-            }
-            mpaBlocks[xintIndex].mintMemberCount +=
-                xpaBlockData[lintBlock].mintMemberCount;
-            
-            lpIO->Write(&xpaBlockData[lintBlock].mintMemberType, 1);
-            lpIO->Write(&xpaBlockData[lintBlock].mintMemberCount, 1);
-            lpIO->Write(xpaBlockData[lintBlock].mpaMemberIDs,
-                xpaBlockData[lintBlock].mintMemberCount);
+    for(lintBlock = 0; lintBlock < xintNumTypes; lintBlock++) {
+        if(!xpaBlockData[lintBlock].mintMemberCount) {
+            mpaBlocks[xintIndex].mintMemberTypeCount--;
+            continue;
         }
-        if(xintAttributeOrder)
-            lpIO->Write(xpadblAttributes, xintAttributeOrder);
+        mpaBlocks[xintIndex].mintMemberCount +=
+            xpaBlockData[lintBlock].mintMemberCount;
 
-        lpIO->Write("id", 2);
-        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
-        
-        mpaBlocks[xintIndex].mintBlockLength = lpIO->EndWriteBlock();
-        mFEModel.mintFEModelLength += mpaBlocks[xintIndex].mintBlockLength;
-        delete lpIO;
+        lpIO->Write(&xpaBlockData[lintBlock].mintMemberType, 1);
+        lpIO->Write(&xpaBlockData[lintBlock].mintMemberCount, 1);
+        lpIO->Write(xpaBlockData[lintBlock].mpaMemberIDs,
+            xpaBlockData[lintBlock].mintMemberCount);
     }
-    else {
-        // An empty block does not have a data block in the file.
-        mpaBlocks[xintIndex].mintMemberOffset = 0;
-        mpaBlocks[xintIndex].mintBlockLength = 0;
-    }
+    if(xintAttributeOrder)
+        lpIO->Write(xpadblAttributes, xintAttributeOrder);
+
+    lpIO->Write("id", 2);
+    lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+
+    mpaBlocks[xintIndex].mintBlockLength = lpIO->EndWriteBlock();
+    mFEModel.mintFEModelLength += mpaBlocks[xintIndex].mintBlockLength;
+    delete lpIO;
 }
 
 void CFEModel::WriteNodeSet(UnsignedInt32 xintIndex,
@@ -515,45 +517,38 @@ void CFEModel::WriteNodeSet(UnsignedInt32 xintIndex,
     mpaNodeSets[xintIndex].mintNodeSetPointSym = xintPointSymbol;
     mpaNodeSets[xintIndex].mintNodeSetColor = xintColor;
     
-    if(xintNumTypes) {
-        CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
-        mpaNodeSets[xintIndex].mintMemberOffset =
-            lpIO->BeginWriteBlock(mintFEModelOffset);
+    CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
+    mpaNodeSets[xintIndex].mintMemberOffset =
+        lpIO->BeginWriteBlock(mintFEModelOffset);
 
-        for(lintNodeSet = 0; lintNodeSet < xintNumTypes; lintNodeSet++) {
-            if(!xpaNodeSetData[lintNodeSet].mintMemberCount) {
-                mpaNodeSets[xintIndex].mintMemberTypeCount--;
-                continue;
-            }
-            mpaNodeSets[xintIndex].mintMemberCount +=
-                xpaNodeSetData[lintNodeSet].mintMemberCount;
-            
-            lpIO->Write(&xpaNodeSetData[lintNodeSet].mintMemberType, 1);
-            lpIO->Write(&xpaNodeSetData[lintNodeSet].mintMemberCount, 1);
-            lpIO->Write(xpaNodeSetData[lintNodeSet].mpaMemberIDs,
-                xpaNodeSetData[lintNodeSet].mintMemberCount);
+    for(lintNodeSet = 0; lintNodeSet < xintNumTypes; lintNodeSet++) {
+        if(!xpaNodeSetData[lintNodeSet].mintMemberCount) {
+            mpaNodeSets[xintIndex].mintMemberTypeCount--;
+            continue;
         }
-        
-        UnsignedInt32 size = bcdata.size();
-        if(size)
-        {
-          lpIO->Write("bc", 2);
-          lpIO->Write(&size, 1);
-          lpIO->Write(&bcdata[0], size);
-        }
+        mpaNodeSets[xintIndex].mintMemberCount +=
+            xpaNodeSetData[lintNodeSet].mintMemberCount;
 
-        lpIO->Write("id", 2);
-        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
-        
-        mpaNodeSets[xintIndex].mintNodeSetLength = lpIO->EndWriteBlock();
-        mFEModel.mintFEModelLength += mpaNodeSets[xintIndex].mintNodeSetLength;
-        delete lpIO;
+        lpIO->Write(&xpaNodeSetData[lintNodeSet].mintMemberType, 1);
+        lpIO->Write(&xpaNodeSetData[lintNodeSet].mintMemberCount, 1);
+        lpIO->Write(xpaNodeSetData[lintNodeSet].mpaMemberIDs,
+            xpaNodeSetData[lintNodeSet].mintMemberCount);
     }
-    else {
-        // An empty node set does not have a data block in the file.
-        mpaNodeSets[xintIndex].mintMemberOffset = 0;
-        mpaNodeSets[xintIndex].mintNodeSetLength = 0;
+
+    UnsignedInt32 size = bcdata.size();
+    if(size)
+    {
+        lpIO->Write("bc", 2);
+        lpIO->Write(&size, 1);
+        lpIO->Write(&bcdata[0], size);
     }
+
+    lpIO->Write("id", 2);
+    lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+
+    mpaNodeSets[xintIndex].mintNodeSetLength = lpIO->EndWriteBlock();
+    mFEModel.mintFEModelLength += mpaNodeSets[xintIndex].mintNodeSetLength;
+    delete lpIO;
 }
 
 void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
@@ -593,13 +588,12 @@ void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
                     throw CCubitFile::ePassedNullPointer;
             }
         }
-        if(xintNumDistFact) {
-            if(!xpadblDistribution)
-                throw CCubitFile::ePassedNullPointer;
-        }
     }
-    else if(xintNumDistFact)
-        throw CCubitFile::ePassedNullPointer;
+    
+    if(xintNumDistFact) {
+        if(!xpadblDistribution)
+            throw CCubitFile::ePassedNullPointer;
+    }
 
     mpaSideSets[xintIndex].mintSideSetID = xintSideSetID;
     mpaSideSets[xintIndex].mintMemberTypeCount = xintNumTypes;
@@ -607,61 +601,53 @@ void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
     mpaSideSets[xintIndex].mintUseShells = xintUseShells;
     mpaSideSets[xintIndex].mintNumDistFact = xintNumDistFact;
 
-    if(xintNumTypes) {
-        CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
-        mpaSideSets[xintIndex].mintMemberOffset =
-            lpIO->BeginWriteBlock(mintFEModelOffset);
+    CIOWrapper* lpIO = new CIOWrapper(mpWriteFile);
+    mpaSideSets[xintIndex].mintMemberOffset =
+        lpIO->BeginWriteBlock(mintFEModelOffset);
 
-        for(lintSideSet = 0; lintSideSet < xintNumTypes; lintSideSet++) {
-            if(!xpaSideSetData[lintSideSet].mintMemberCount) {
-                mpaSideSets[xintIndex].mintMemberTypeCount--;
-                continue;
-            }
-            mpaSideSets[xintIndex].mintMemberCount +=
-                xpaSideSetData[lintSideSet].mintMemberCount;
-            
-            lpIO->Write(&xpaSideSetData[lintSideSet].mintMemberCount, 1);
-            lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberTypes, 
-                xpaSideSetData[lintSideSet].mintMemberCount);
-            lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberIDs,
-                xpaSideSetData[lintSideSet].mintMemberCount);
-            lpIO->Write(xpaSideSetData[lintSideSet].mpachrMemberSenses,
-                xpaSideSetData[lintSideSet].mintMemberCount, 1);
-            UnsignedInt32* end = xpaSideSetData[lintSideSet].mpaintMemberWRTEntities;
-            int i;
-            for(i=0; i<(int)xpaSideSetData[lintSideSet].mintMemberCount; i++)
-            {
-              UnsignedInt32 num_wrt = *end;
-              end = end + 1 + (num_wrt * 2);
-            }
-            UnsignedInt32 wrt_size = end - xpaSideSetData[lintSideSet].mpaintMemberWRTEntities;
-            lpIO->Write(&wrt_size, 1);
-            lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberWRTEntities, wrt_size);
+    for(lintSideSet = 0; lintSideSet < xintNumTypes; lintSideSet++) {
+        if(!xpaSideSetData[lintSideSet].mintMemberCount) {
+            mpaSideSets[xintIndex].mintMemberTypeCount--;
+            continue;
         }
-        if(xintNumDistFact)
-            lpIO->Write(xpadblDistribution, xintNumDistFact);
+        mpaSideSets[xintIndex].mintMemberCount +=
+            xpaSideSetData[lintSideSet].mintMemberCount;
 
-        UnsignedInt32 size = bcdata.size();
-        if(size)
+        lpIO->Write(&xpaSideSetData[lintSideSet].mintMemberCount, 1);
+        lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberTypes, 
+            xpaSideSetData[lintSideSet].mintMemberCount);
+        lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberIDs,
+            xpaSideSetData[lintSideSet].mintMemberCount);
+        lpIO->Write(xpaSideSetData[lintSideSet].mpachrMemberSenses,
+            xpaSideSetData[lintSideSet].mintMemberCount, 1);
+        UnsignedInt32* end = xpaSideSetData[lintSideSet].mpaintMemberWRTEntities;
+        int i;
+        for(i=0; i<(int)xpaSideSetData[lintSideSet].mintMemberCount; i++)
         {
-          lpIO->Write("bc", 2);
-          lpIO->Write(&size, 1);
-          lpIO->Write(&bcdata[0], size);
+            UnsignedInt32 num_wrt = *end;
+            end = end + 1 + (num_wrt * 2);
         }
-        
-        lpIO->Write("id", 2);
-        lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
-        
-        mpaSideSets[xintIndex].mintSideSetLength = lpIO->EndWriteBlock();
-        mFEModel.mintFEModelLength += mpaSideSets[xintIndex].mintSideSetLength;
-        delete lpIO;
+        UnsignedInt32 wrt_size = end - xpaSideSetData[lintSideSet].mpaintMemberWRTEntities;
+        lpIO->Write(&wrt_size, 1);
+        lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberWRTEntities, wrt_size);
     }
-    else {
-        // An empty side set does not have a data block in the file.
-        mpaSideSets[xintIndex].mintMemberOffset = 0;
-        mpaSideSets[xintIndex].mintSideSetLength = 0;
-        mpaSideSets[xintIndex].mintNumDistFact = 0;
+    if(xintNumDistFact)
+        lpIO->Write(xpadblDistribution, xintNumDistFact);
+
+    UnsignedInt32 size = bcdata.size();
+    if(size)
+    {
+        lpIO->Write("bc", 2);
+        lpIO->Write(&size, 1);
+        lpIO->Write(&bcdata[0], size);
     }
+
+    lpIO->Write("id", 2);
+    lpIO->Write(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
+
+    mpaSideSets[xintIndex].mintSideSetLength = lpIO->EndWriteBlock();
+    mFEModel.mintFEModelLength += mpaSideSets[xintIndex].mintSideSetLength;
+    delete lpIO;
 }
 
 UnsignedInt32 CFEModel::EndWrite()
@@ -1051,65 +1037,59 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
     xintBlockDimension = mpaBlocks[xintIndex].mintBlockDimension;
     xintAttributeOrder = mpaBlocks[xintIndex].mintAttributeOrder;
 
-    if(xintNumTypes) {
-        // Resize the block return buffer if necessary and then set the return
-        // pointers to the buffer.
-        xpaBlockData = AdjustBuffer(xintNumTypes,
-            mBlockBuff.mintNumTypes, mBlockBuff.mpaBlockData);
-        UnsignedInt32* lpIDs =
-            AdjustBuffer(mpaBlocks[xintIndex].mintMemberCount,
-            mBlockBuff.mintNumMembers, mBlockBuff.mpaintMemberIDs);
-        xpadblAttributes = AdjustBuffer(xintAttributeOrder,
-            mBlockBuff.mintAttributeOrder, mBlockBuff.mpadblAttributes);
+    // Resize the block return buffer if necessary and then set the return
+    // pointers to the buffer.
+    xpaBlockData = AdjustBuffer(xintNumTypes,
+        mBlockBuff.mintNumTypes, mBlockBuff.mpaBlockData);
+    UnsignedInt32* lpIDs =
+        AdjustBuffer(mpaBlocks[xintIndex].mintMemberCount,
+        mBlockBuff.mintNumMembers, mBlockBuff.mpaintMemberIDs);
+    xpadblAttributes = AdjustBuffer(xintAttributeOrder,
+        mBlockBuff.mintAttributeOrder, mBlockBuff.mpadblAttributes);
 
-        // Read the block from the file.
-        UnsignedInt32 lintNumMembers, lintTotalMembers = 0;
-        CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
-        lpIO->BeginReadBlock(mintFEModelOffset,
-            mpaBlocks[xintIndex].mintMemberOffset);
-        long start_location = lpIO->GetLocation();
-        for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
-            lpIO->Read(&xpaBlockData[lintType].mintMemberType, 1);
-            lpIO->Read(&xpaBlockData[lintType].mintMemberCount, 1);
+    // Read the block from the file.
+    UnsignedInt32 lintNumMembers, lintTotalMembers = 0;
+    CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
+    lpIO->BeginReadBlock(mintFEModelOffset,
+        mpaBlocks[xintIndex].mintMemberOffset);
+    long start_location = lpIO->GetLocation();
+    for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
+        lpIO->Read(&xpaBlockData[lintType].mintMemberType, 1);
+        lpIO->Read(&xpaBlockData[lintType].mintMemberCount, 1);
 
-            xpaBlockData[lintType].mpaMemberIDs = lpIDs;
-            lintNumMembers = xpaBlockData[lintType].mintMemberCount;
-            // Make sure the total number of block members does not exceed what
-            // was specified in the block table entry.
-            lintTotalMembers += lintNumMembers;
-            if(lintTotalMembers > mpaBlocks[xintIndex].mintMemberCount)
-                throw CCubitFile::eFileReadError;
+        xpaBlockData[lintType].mpaMemberIDs = lpIDs;
+        lintNumMembers = xpaBlockData[lintType].mintMemberCount;
+        // Make sure the total number of block members does not exceed what
+        // was specified in the block table entry.
+        lintTotalMembers += lintNumMembers;
+        if(lintTotalMembers > mpaBlocks[xintIndex].mintMemberCount)
+            throw CCubitFile::eFileReadError;
 
-            lpIO->Read(xpaBlockData[lintType].mpaMemberIDs, lintNumMembers);
+        lpIO->Read(xpaBlockData[lintType].mpaMemberIDs, lintNumMembers);
 
-            lpIDs = &lpIDs[lintNumMembers];
-        }
-        if(xintAttributeOrder)
-            lpIO->Read(xpadblAttributes, xintAttributeOrder);
-        
-        // see if there is more data
-        int diff = lpIO->GetLocation() - start_location;
-        int remaining = diff - mpaBlocks[xintIndex].mintBlockLength;
-        while(remaining)
+        lpIDs = &lpIDs[lintNumMembers];
+    }
+    if(xintAttributeOrder)
+        lpIO->Read(xpadblAttributes, xintAttributeOrder);
+
+    // see if there is more data
+    int diff = lpIO->GetLocation() - start_location;
+    int remaining = diff - mpaBlocks[xintIndex].mintBlockLength;
+    while(remaining)
+    {
+        // remaining data could be bc data
+        char type[2];
+        lpIO->Read(type, 2);
+        if(type[0] == 'i' && type[1] == 'd')
         {
-          // remaining data could be bc data
-          char type[2];
-          lpIO->Read(type, 2);
-          if(type[0] == 'i' && type[1] == 'd')
-          {
             lpIO->Read(reinterpret_cast<UnsignedInt32*>(&unique_id), 1);
-          }
-          remaining = (lpIO->GetLocation() - start_location) -
-            mpaBlocks[xintIndex].mintBlockLength;
         }
+        remaining = (lpIO->GetLocation() - start_location) -
+            mpaBlocks[xintIndex].mintBlockLength;
+    }
 
-        lpIO->EndReadBlock();
-        delete lpIO;
-    }
-    else {
-        xpaBlockData = NULL;
-        xpadblAttributes = NULL;
-    }
+    lpIO->EndReadBlock();
+    delete lpIO;
 }
 
 void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
@@ -1134,8 +1114,9 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
     xintPointSymbol = mpaNodeSets[xintIndex].mintNodeSetPointSym;
     xintColor = mpaNodeSets[xintIndex].mintNodeSetColor;
 
-    if(xintNumTypes) 
-    {
+    // fix for bug 8623: empty nodesets are allowed
+    //if(xintNumTypes) 
+    //{
         // Resize the node set return buffer if necessary and then set the return
         // pointers to the buffer.
         xpaNodeSetData = AdjustBuffer(xintNumTypes,
@@ -1193,9 +1174,9 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
 
         lpIO->EndReadBlock();
         delete lpIO;
-    }
+    /*}
     else
-        xpaNodeSetData = NULL;
+        xpaNodeSetData = NULL;*/
 }
 
 void CFEModel::ReadSideSet_10(UnsignedInt32 xintIndex,
@@ -1323,7 +1304,8 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
     xintUseShells = mpaSideSets[xintIndex].mintUseShells;
     xintNumDistFact = mpaSideSets[xintIndex].mintNumDistFact;
 
-    if(xintNumTypes) {
+    // fix for bug 8623: don't do this check: empty sidesets are allowed
+    //if(xintNumTypes) {
         // Resize the side set return buffer if necessary and then set the return
         // pointers to the buffer.
         xpaSideSetData = AdjustBuffer(xintNumTypes,
@@ -1412,11 +1394,11 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
 
         lpIO->EndReadBlock();
         delete lpIO;
-    }
-    else {
-        xpaSideSetData = NULL;
-        xpadblDistribution = NULL;
-    }
+    //}
+    //else {
+    //    xpaSideSetData = NULL;
+    //    xpadblDistribution = NULL;
+    //}
 }
 
 void CFEModel::EndRead()

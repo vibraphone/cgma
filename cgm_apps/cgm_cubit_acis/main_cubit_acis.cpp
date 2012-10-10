@@ -5,7 +5,6 @@
 #include "CubitAttribManager.hpp"
 #include "CGMApp.hpp"
 #include "Body.hpp"
-#include "CubitCompat.hpp"
 #include <iostream>
 
 extern int snippet();
@@ -27,7 +26,8 @@ int main (int argc, char **argv)
     // do something
   CGMApp::instance()->attrib_manager()->auto_flag(true);
   
-  CubitStatus result = CubitCompat_import_solid_model(argv[1],"ACIS_SAT");
+  CubitStatus result = GeometryQueryTool::instance()->import_solid_model(argv[1],
+                                                                         "ACIS_SAT");
   if (CUBIT_SUCCESS != result) {
     std::cout << "Trouble opening file." << std::endl;
     return 1;

@@ -293,9 +293,6 @@ public:
   //!R- has been set.
   RefEntity* get_compare_partner() ;
 
-  //! Premodify function called after CGM has been modified
-  virtual void geometry_premodify() { return; };
-
 //========  Change Code by RY of Cat,  5/7/99 11:08:12 AM  ========
   void get_related_entity_list(const type_info& related_entity_type,
 			       DLIList<RefEntity*>& entity_list);
@@ -320,6 +317,10 @@ public:
   //! Gets the color of this RefEntity.
   virtual int color() const;
 
+  //! Get and set the local tolerance of this RefEntity. This is used in tolerant imprinting. 
+  inline void local_tolerance( double value ){ localTolerance = value; }
+  inline double local_tolerance( void ){ return localTolerance; }
+
 protected :
 
   int          autoMergeStatus;//- Whether entity will participate
@@ -340,6 +341,10 @@ private:
     //- Generic flag for marking whether an entity is in a list or not.
     //- For internal use by RefEntity.
 
+  // This local tolerance is used in tolerant imprinting
+  // This local tolerance is set automatically by LocalToleranceTool class
+  double localTolerance;
+
 };
 
 // ********** BEGIN INLINE FUNCTIONS       **********
@@ -350,7 +355,7 @@ RefEntity::marked(int value)
 
 inline int
 RefEntity::marked()
-{return static_cast<int>(markedFlag);}
+{return (int) markedFlag;}
 
 inline void
 RefEntity::list_mark(int value)

@@ -33,6 +33,10 @@ public:
   virtual void percent( double pcnt );
   // move the control bar to a specified percent
   // pcnt should be between 0 and 1
+
+  virtual void check_interrupt();
+  // callback to allow the progress tool to check for interrupt
+
 };
 
 #endif

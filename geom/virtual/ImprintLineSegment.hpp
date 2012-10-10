@@ -27,9 +27,6 @@ private:
   RefEntity *myOwner;
   DLIList <ImprintMatchData*> *segMatches;
   
-#ifdef BOYD17
-  int markedFlag;
-#endif
   CubitBoolean inactiveFlag;
   static MemoryManager memoryManager;
     //- memory management object

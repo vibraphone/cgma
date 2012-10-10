@@ -63,30 +63,7 @@ public:
   ~RStarTree();
     //- Constructor/Destructor
 
-#ifdef BOYD15
-  CubitStatus add(Z data);
-    //- Adds the data member to the RStarTree.
-#endif
-
-#ifdef BOYD15
-  CubitStatus find( const CubitBox &range_box, DLIList <Z> &range_members);
-    //- searches the range tree for members that intersect this range box
-    //- within the tolerance.
-
-  CubitBoolean remove(Z data );
-    //- Remove the data member's entry in the rectangle tree.
-    //- Returns CUBIT_TRUE if item removed.  FALSE if item not
-    //- in tree.
-#endif
-
   typedef double (*DistSqFunc)(CubitVector &a, Z& b);
-#ifdef BOYD15
-  CubitStatus k_nearest_neighbor(CubitVector &q,
-                                 int k,
-                                 double &closest_dist,
-                                 DLIList<Z> &nearest_neighbors,
-                                 DistSqFunc dist_sq_point_data);
-#endif
   
   void set_tol(double tol)
     {myTolerance = tol;}
@@ -95,16 +72,9 @@ public:
     //- Sets/Gets the tolerance used for the bounding box overlap test,
     //- which is used during the range search.
 
-#ifdef BOYD15
-  static bool less_than_func(RStarTreeNode<Z> *&node_a,
-                             RStarTreeNode<Z> *&node_b);
-    //- Function to use with the priority queue for sorting.
-#endif
-  
 };
-#if defined(TEMPLATE_DEFS_INCLUDED)
- #include "RStarTree.cpp"
-#endif
+
+#include "RStarTree.cpp"
 
 #endif
 

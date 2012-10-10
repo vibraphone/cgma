@@ -119,18 +119,9 @@ template <class X, class E> class OctTreeCell
       // CubitNodes contained in this box.
       // Always zero for non-leaf boxes.
     
-#ifdef BOYD15
-    int count_all_nodes();
-      // Get nodes contained in this box and all child boxes.
-#endif
 };
 
-#ifdef TEMPLATE_DEFS_INCLUDED
-#  define INCLUDED_FROM_OCT_TREE_CELL_HPP
-#  include "OctTreeCell.cpp"
-#  undef INCLUDED_FROM_OCT_TREE_CELL_HPP
-#endif
-
+#include "OctTreeCell.cpp"
 
 #endif
 

@@ -20,24 +20,20 @@
 #include "VGDefines.h"
 template <class X> class DLIList;
 
-class CompositePoint : public Point, public TBOwner
+class CompositePoint : public TBPoint, public TBOwner
 {
 friend class CompositeCurve;
 
 public:
   int HadBridgeRemoved;
 
-  CompositePoint( Point* real_pt );
+  CompositePoint( TBPoint* real_pt );
   virtual ~CompositePoint();
   
   CompositeCurve* next_curve( CompositeCurve* prev = 0 ) const
     { return prev ? prev->next( this ) : firstCurve; }
-#ifdef BOYD15
-  int num_curves() const;
-  bool is_parent( CompositeCurve* curve ) const;
-#endif
   
-  Point* get_point() const
+  TBPoint* get_point() const
     { return realPoint; }
   
   void append_simple_attribute_virt( CubitSimpleAttrib* csa )
@@ -75,7 +71,7 @@ private:
 
   CompositeCurve* firstCurve;
   
-  Point* realPoint;
+  TBPoint* realPoint;
   
   CompositePoint* stitchNext;
 };

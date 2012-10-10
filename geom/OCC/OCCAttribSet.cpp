@@ -115,7 +115,7 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   DLIList<CubitString*>* strings = csa->string_data_list();
   int size = strings->size()-1;
  
-  if (result == 1)
+  if (result == 1) 
   {
     lab = aLabel.NewChild();
     attr_name = TDataStd_Name::Set(lab, cstring);
@@ -264,7 +264,7 @@ int  OCCAttribSet::find_attribute(TDF_Label child,
       return 1;
 
     else if(cstring.IsEqual(string2))
-      return 2;
+      return 2;  
   }
 
   else
@@ -353,7 +353,7 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa)
       int found = find_attribute(child, csa);
 
       if(found == 3)
-        child.ForgetAllAttributes( false );
+        child.ForgetAllAttributes(false );
     }
   }
 }
@@ -367,7 +367,7 @@ void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
 
   if(!found)
     return;
-
+ 
   myLabel.ForgetAllAttributes(false);
 /*
   if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)) 
@@ -423,7 +423,7 @@ void OCCAttribSet::remove_attribute( CubitSimpleAttrib* csa,
 
       if(found == 3)
       {
-        child.ForgetAllAttributes( false );
+        child.ForgetAllAttributes(false );
         num_found ++;
       } 
     }

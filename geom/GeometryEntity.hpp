@@ -71,11 +71,15 @@ public :
 
   int get_saved_id() const { return myId; }
   void set_saved_id( int value ) { myId = value; }
+
+  void get_saved_names( DLIList<CubitString*> &names );
+  void set_saved_names( DLIList<CubitString*> names );
   
 protected:
 private:
 
   int myId;
+  std::vector<CubitString> myNames;
   
 };
 

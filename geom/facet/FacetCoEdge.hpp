@@ -102,17 +102,8 @@ public:
   CubitSense sense();
     //- returns the sense of the underlying coedge wrt the underlying edge
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#endif
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
-#ifdef BOYD14
-  void get_surfaces( DLIList<FacetSurface*>& surfaces );
-  void get_loops   ( DLIList<FacetLoop   *>& loops    );
-  void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
-  void get_points  ( DLIList<FacetPoint  *>& points   );
-#endif
   void get_curves  ( DLIList<FacetCurve  *>& curves   );
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
@@ -122,10 +113,6 @@ public:
     { myLoop = loop_ptr; }
     //- set the loop pointer that this coedge is asociated
 
-#ifdef BOYD14
-  void set_sense( CubitSense sense );
-    //- set the sense of the coedge wrt the surface loop
-#endif
   CubitSense get_sense()
     {return edgeSense;}
     //- get the sense of the coedge wrt the surface loop

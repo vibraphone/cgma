@@ -111,18 +111,6 @@ ChollaEngine::ChollaEngine(DLIList<CubitFacet*>     &facet_list,
   chollaSurfaceList = cholla_surfaces;
   chollaCurveList = cholla_curves;
   chollaPointList = cholla_points;
-  
-  CubitBoolean use_feature_angle = CUBIT_FALSE; 
-  double min_dot = 0.0;                    
-  int interp_order = 0;                 
-  CubitBoolean smooth_non_manifold = CUBIT_FALSE;
-  CubitBoolean split_surfaces = CUBIT_FALSE;
-
-  build_eval_tools(chollaSurfaceList,
-                   chollaCurveList,
-                   interp_order, use_feature_angle, 
-                   min_dot, smooth_non_manifold,
-                   split_surfaces );
 }
                           
 
@@ -143,6 +131,21 @@ void ChollaEngine::set_up_tool_datas( )
     fe_ptr = pointList.get_and_step();
     TDGeomFacet::add_geom_facet( fe_ptr, -1 );
   }
+}
+
+CubitStatus ChollaEngine::build_eval_tools()
+{
+  CubitBoolean use_feature_angle = CUBIT_FALSE; 
+  double min_dot = 0.0;                    
+  int interp_order = 0;                 
+  CubitBoolean smooth_non_manifold = CUBIT_FALSE;
+  CubitBoolean split_surfaces = CUBIT_FALSE;
+
+  return build_eval_tools( chollaSurfaceList,
+                           chollaCurveList,
+                           interp_order, use_feature_angle, 
+                           min_dot, smooth_non_manifold,
+                           split_surfaces );
 }
 
 //============================================================================
@@ -1034,7 +1037,7 @@ CubitStatus ChollaEngine::build_eval_tools(
   CubitBoolean smooth_non_manifold,
   CubitBoolean split_surfaces )
 {
-  CubitStatus stat = CUBIT_SUCCESS;
+  CubitStatus stat = CUBIT_SUCCESS;  
 
   if (stat == CUBIT_SUCCESS)
     stat = build_surface_and_curve_eval_tools( cholla_surface_list,
@@ -1085,16 +1088,55 @@ CubitStatus ChollaEngine::build_curve_eval_tools(
         DLIList<CubitFacetEdge*> edge_list;
         CAST_LIST( facet_list, edge_list, CubitFacetEdge );
         if (stat != CUBIT_SUCCESS)
-          return stat;
+          return stat;     
 
         curv_eval_tool_ptr = new CurveFacetEvalTool;
         stat = curv_eval_tool_ptr->initialize( edge_list, point_list );
+
         if ( stat != CUBIT_SUCCESS )
         {
             return stat;
         }
         chcurv_ptr->assign_eval_tool(curv_eval_tool_ptr);
-      }      
+      }
+      else
+      {       
+        //fix up the orientation of the Cholla curve
+        stat = chcurv_ptr->order_edges();
+        if ( stat != CUBIT_SUCCESS )
+        {         
+          return stat;
+        }
+        
+        DLIList<FacetEntity*> facet_ents;
+        facet_ents = chcurv_ptr->get_facet_list();
+        DLIList<CubitFacetEdge*> edge_facets;
+        CAST_LIST(facet_ents, edge_facets, CubitFacetEdge );
+        DLIList<CubitPoint*> ordered_points;
+        
+        for( int k=0; k<edge_facets.size(); k++ )
+        {
+          CubitFacetEdge *tmp_edge = edge_facets.get_and_step();          
+          if( k==0 )
+          {
+            ordered_points.append( tmp_edge->point(0) );            
+            ordered_points.append( tmp_edge->point(1) );            
+          }
+          else        
+            ordered_points.append( tmp_edge->point(1) );                      
+        }     
+
+        FacetEvalTool *surf_eval_tool = chsurf_list.get()->get_eval_tool();
+        CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool;       
+        edge_facets.reset();        
+        stat = curv_eval_tool_ptr->initialize( edge_facets, ordered_points, surf_eval_tool );          
+
+        if ( stat != CUBIT_SUCCESS )
+        {
+          return stat;
+        }
+        chcurv_ptr->assign_eval_tool( curv_eval_tool_ptr );           
+      }
     }   
   }
   return stat;
@@ -1107,8 +1149,7 @@ CubitStatus ChollaEngine::build_curve_eval_tools(
 CubitStatus ChollaEngine::build_surface_and_curve_eval_tools(
   DLIList<ChollaSurface*> &cholla_surface_list,
   int interp_order,
-  double min_dot,
-  bool new_curv_tool)
+  double min_dot)
 {
   CubitStatus stat = CUBIT_SUCCESS;
   int ii, kk;
@@ -1127,15 +1168,14 @@ CubitStatus ChollaEngine::build_surface_and_curve_eval_tools(
   for ( kk = cholla_surface_list.size(); kk > 0; kk-- )
   {
     ChollaSurface *chsurf_ptr = cholla_surface_list.get_and_step();
-    DLIList<FacetEntity*> facet_entity_list;
-    DLIList<CubitPoint*> point_list;
-    chsurf_ptr->get_points(point_list);
+    DLIList<FacetEntity*> facet_entity_list;    
     chsurf_ptr->get_facets(facet_entity_list);
     DLIList<CubitFacet*> facet_list;
     CAST_LIST( facet_entity_list, facet_list, CubitFacet );
 
-    FacetEvalTool *eval_tool_ptr = new FacetEvalTool( facet_list,point_list,
-                                                      interp_order,min_dot );
+    FacetEvalTool *eval_tool_ptr = new FacetEvalTool();
+    eval_tool_ptr->replace_facets(facet_list);
+
     chsurf_ptr->assign_eval_tool(eval_tool_ptr);
 
     // go through each of this surface's curves and create CurveFacetEvalTools
@@ -1144,25 +1184,151 @@ CubitStatus ChollaEngine::build_surface_and_curve_eval_tools(
     chsurf_ptr->get_curves( chcurv_list );
     for (ii=0; ii<chcurv_list.size(); ii++)
     {
-      ChollaCurve *chcurv_ptr = chcurv_list.get_and_step();
-      if (chcurv_ptr->get_eval_tool() == NULL || new_curv_tool)
-      {
-        CubitSense orientation_wrt_surface;
-        determine_curve_orientation( chsurf_ptr, chcurv_ptr, orientation_wrt_surface );
-        CubitPoint *start_ptr, *end_ptr;
-        chcurv_ptr->get_ends( start_ptr, end_ptr );
+      ChollaCurve *chcurv_ptr = chcurv_list.get_and_step();   
 
-        CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool;
-        stat = curv_eval_tool_ptr->initialize( eval_tool_ptr, start_ptr, end_ptr, orientation_wrt_surface );
+      if (chcurv_ptr->get_eval_tool() == NULL)
+      {
+        //fix up the orientation of the Cholla curve
+        stat = chcurv_ptr->order_edges();
+        if ( stat != CUBIT_SUCCESS )
+        {         
+          PRINT_ERROR("Problems ordering edges!!!!!\n");          
+          return stat;
+        }        
+        
+        DLIList<FacetEntity*> facet_ents;
+        facet_ents = chcurv_ptr->get_facet_list();
+        DLIList<CubitFacetEdge*> edge_facets;
+        CAST_LIST(facet_ents, edge_facets, CubitFacetEdge );
+        DLIList<CubitPoint*> ordered_points;
+        
+        for( int k=0; k<edge_facets.size(); k++ )
+        {
+          CubitFacetEdge *tmp_edge = edge_facets.get_and_step();          
+          if( k==0 )
+          {
+            ordered_points.append( tmp_edge->point(0) );            
+            ordered_points.append( tmp_edge->point(1) );            
+          }
+          else        
+            ordered_points.append( tmp_edge->point(1) );                      
+        }     
+
+        CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool;       
+        edge_facets.reset();        
+        stat = curv_eval_tool_ptr->initialize( edge_facets, ordered_points, eval_tool_ptr );          
+
         if ( stat != CUBIT_SUCCESS )
         {
-            return stat;
+          return stat;
         }
-        chcurv_ptr->assign_eval_tool( curv_eval_tool_ptr );
+        chcurv_ptr->assign_eval_tool( curv_eval_tool_ptr );     
       }
     }
   }
   return stat;
+}
+
+CubitStatus ChollaEngine::rebuild_surface_and_curve_eval_tools(
+  DLIList<ChollaSurface*> &cholla_surface_list,
+  int interp_order,
+  double min_dot )
+{
+  CubitStatus stat = CUBIT_SUCCESS;
+  int ii, kk;
+
+  // make sure the facet flags have been reset
+  for ( kk = cholla_surface_list.size(); kk > 0; kk-- )
+  {
+    ChollaSurface *chsurf_ptr = cholla_surface_list.get_and_step();
+    chsurf_ptr->reset_facet_flags();    
+  }
+
+  // get unique list of curves
+  DLIList<ChollaCurve *> all_chcurves;
+  for ( kk = cholla_surface_list.size(); kk > 0; kk-- )
+  {
+    ChollaSurface *chsurf_ptr = cholla_surface_list.get_and_step();
+    DLIList<ChollaCurve *> chcurv_list;
+    chsurf_ptr->get_curves( chcurv_list );
+    all_chcurves += chcurv_list;    
+  }
+  all_chcurves.uniquify_ordered();
+
+  // now loop through surfaces and create them
+
+  int mydebug = 0;
+  for ( kk = cholla_surface_list.size(); kk > 0; kk-- )
+  {
+    ChollaSurface *chsurf_ptr = cholla_surface_list.get_and_step();
+    DLIList<FacetEntity*> facet_entity_list;
+    DLIList<CubitPoint*> point_list;
+    chsurf_ptr->get_points(point_list);
+    chsurf_ptr->get_facets(facet_entity_list);
+    DLIList<CubitFacet*> facet_list;
+    CAST_LIST( facet_entity_list, facet_list, CubitFacet );
+
+    FacetEvalTool *eval_tool_ptr = chsurf_ptr->get_eval_tool();
+    if (NULL != eval_tool_ptr)
+    {
+      DLIList<CubitFacet*> facets;
+      eval_tool_ptr->remove_facets(facets);
+      delete eval_tool_ptr;
+    }
+
+    eval_tool_ptr = new FacetEvalTool(facet_list, point_list, interp_order, min_dot);
+    //eval_tool_ptr = new FacetEvalTool();
+    //eval_tool_ptr->replace_facets(facet_list);
+
+    chsurf_ptr->assign_eval_tool(eval_tool_ptr);
+  }
+
+  // go through each of the curves and create CurveFacetEvalTools
+  for (ii=0; ii<all_chcurves.size(); ii++)
+  {
+    ChollaCurve *chcurv_ptr = all_chcurves.get_and_step();    
+    
+    CubitStatus rv = chcurv_ptr->order_edges();
+
+    CurveFacetEvalTool* curve_eval = chcurv_ptr->get_eval_tool();
+    if (NULL != curve_eval)
+    {
+      DLIList<CubitFacetEdge*> eval_facets;
+      curve_eval->remove_facets(eval_facets);
+      delete curve_eval;
+    }
+
+    DLIList<FacetEntity*> facet_ents;
+    facet_ents = chcurv_ptr->get_facet_list();
+    DLIList<CubitFacetEdge*> edge_facets;
+    CAST_LIST(facet_ents, edge_facets, CubitFacetEdge );
+    DLIList<CubitPoint*> ordered_points;
+
+    for( int k=0; k<edge_facets.size(); k++ )
+    {
+      CubitFacetEdge *tmp_edge = edge_facets.get_and_step();          
+      if( k==0 )
+      {
+        ordered_points.append( tmp_edge->point(0) );            
+        ordered_points.append( tmp_edge->point(1) );            
+      }
+      else        
+        ordered_points.append( tmp_edge->point(1) );                      
+    }     
+
+    CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool;       
+    edge_facets.reset();
+    ordered_points.reset();
+    stat = curv_eval_tool_ptr->initialize( edge_facets, ordered_points);          
+
+    if ( stat != CUBIT_SUCCESS )
+    {
+      return stat;
+    }
+    chcurv_ptr->assign_eval_tool( curv_eval_tool_ptr );       
+  }
+
+  return stat; 
 }
 
 //===============================================================================
@@ -1187,12 +1353,13 @@ CubitStatus ChollaEngine::determine_curve_orientation(
   // get the adjacent face on this surface
 
   DLIList<FacetEntity*> adj_face_list;
-  FacetEntity *face_ptr = NULL;
   edge_ptr->get_parents( adj_face_list );
-  int found = 0;int jj;
-  for ( jj = 0; jj < adj_face_list.size() && !found; jj++ )
+
+  DLIList<FacetEntity*> face_ptrs;
+  int jj;
+  for ( jj = 0; jj < adj_face_list.size(); jj++ )
   {
-    face_ptr = adj_face_list.get_and_step();    
+    FacetEntity* face_ptr = adj_face_list.get_and_step();    
     TDGeomFacet *td_gm_face = TDGeomFacet::get_geom_facet(face_ptr); 
     DLIList<ChollaSurface*> chsurf_list;
     if(td_gm_face)
@@ -1203,28 +1370,39 @@ CubitStatus ChollaEngine::determine_curve_orientation(
         ChollaSurface *face_chsurf_ptr = chsurf_list.get();
         if(face_chsurf_ptr == chsurf_ptr)
         {
-          found = 1;
+          face_ptrs.append(face_ptr);
         }
       }
     }
   }
-  if (!found)
+  if(!face_ptrs.size())
     return CUBIT_FAILURE;  // didn't find an adj face on the surface ???
     
+
+  // if there are two, we'll just say the orientation is unknown
+  // this happens when there is a non-manifold, callers are responsible for dealing with those
+  if(face_ptrs.size() >= 2)
+  {
+    orientation = CUBIT_UNKNOWN;
+    return CUBIT_SUCCESS;
+  }
+
+  FacetEntity* face_ptr = face_ptrs[0];
+
   // determine orientation of nodes on this mesh face
 
   CubitPoint *start_ptr, *end_ptr;
   chcurv_ptr->get_ends( start_ptr, end_ptr );
   end_ptr = edge_ptr->other_point( start_ptr );
   if (end_ptr == NULL)    
-  {
+  {  
     return CUBIT_FAILURE;  // the edge list may not be ordered correctly??
   }
   CubitPoint *points[3];
   CubitFacet *tri_ptr = CAST_TO( face_ptr, CubitFacet );
   tri_ptr->points( points[0], points[1], points[2] );
-
-  found = 0;
+  
+  int found = 0;
   for ( jj = 0; jj < 3 && !found; jj++ )
   {
     if (points[jj] == start_ptr)
@@ -2809,7 +2987,8 @@ static CubitStatus create_tri_facets(int *face_list,int current_position,
 // Date: 
 //===================================================================================
 CubitStatus ChollaEngine::get_facets(GMem& gMem, DLIList<CubitFacet*> &facet_list, 
-                                     DLIList<CubitPoint*> &dl_point_list)
+                                     DLIList<CubitPoint*> &dl_point_list,
+                                     bool insert_null_facets )
 {
   if(gMem.fListCount == 0)
     return CUBIT_FAILURE;
@@ -2873,6 +3052,8 @@ CubitStatus ChollaEngine::get_facets(GMem& gMem, DLIList<CubitFacet*> &facet_lis
           //Eventually we will have to split this polygon into more facets.
         PRINT_ERROR("Facets were not triangular, and couldn't be made so.\n");
         PRINT_ERROR("Surface has: %d points forming a facet.\n", step);
+        if( insert_null_facets )
+          facet_list.append( NULL );
         return CUBIT_FAILURE;
     }
   }
@@ -3051,7 +3232,7 @@ CubitStatus ChollaEngine::disassociate_surface( ChollaSurface *cholla_surf )
   if( cholla_surf->get_eval_tool() )
   {
 #ifdef _DEBUG
-    PRINT_INFO("WARNING: delete ch_surf->facet_eval_tool safely \n");//   
+    //PRINT_INFO("WARNING: delete ch_surf->facet_eval_tool safely \n");//   
 #endif
     //delete cholla_surf->get_eval_tool();
     // set eval tool to NULL
@@ -3307,22 +3488,91 @@ CubitStatus ChollaEngine::detach_volumes()
   // use them for detaching the facets
   
   std::map<ChollaSurface *, ChollaSurface *> surf_map;
-  std::map<ChollaCurve *, ChollaCurve *> curve_map;
-  std::map<ChollaPoint *, ChollaPoint *> point_map;
+  std::multimap<ChollaCurve *, ChollaCurve *> curve_map;
+  std::multimap<ChollaPoint *, ChollaPoint *> point_map; 
   
-  for (int isurf=0; isurf<chollaSurfaceList.size(); isurf++)
+  for( int i=chollaVolumeList.size(); i--; )
   {
-    ChollaSurface *chsurf_ptr = chollaSurfaceList.get_and_step();
+    ChollaVolume *chvol = chollaVolumeList.get_and_step();
+    DLIList<ChollaSurface*> ch_surfaces;
+    chvol->get_surfaces( ch_surfaces );    
+
+    std::map<ChollaCurve *, ChollaCurve *> tmp_curve_map;
+    std::map<ChollaPoint *, ChollaPoint *> tmp_point_map; 
     
-    // look for any surfaces that are associated with exactly two volumes
-    
-    if (chsurf_ptr->num_volumes() == 2)
+    DLIList<ChollaSurface*> surfaces_to_detach;
+    DLIList<ChollaCurve*> curves_to_detach;
+    for( int j=ch_surfaces.size(); j--; )
     {
-      rv = detach_surface( chsurf_ptr, surf_map, curve_map, point_map );
+      ChollaSurface *chsurf_ptr = ch_surfaces.get_and_step();     
+
+      // look for any surfaces that are associated with exactly two volumes
+      if (chsurf_ptr->num_volumes() == 2)      
+        surfaces_to_detach.append( chsurf_ptr );   
+      else
+      {
+        //look for any curves that are attached to two volumes
+        DLIList<ChollaCurve*> ch_curves;
+        chsurf_ptr->get_curves( ch_curves );
+        for( int k=ch_curves.size(); k--; )
+        {
+          ChollaCurve *tmp_curve = ch_curves.get_and_step();
+          if( tmp_curve->num_volumes() > 1 )
+            curves_to_detach.append( tmp_curve );
+        }
+      }
+    }   
+
+    //filter out curves that are in surfs in 'surfaces_to_detach'
+    //since they will get detached when the parent surface gets detached
+    for( int j=curves_to_detach.size(); j--; )
+    {
+      ChollaCurve *tmp_curve = curves_to_detach.get();
+      DLIList<ChollaSurface*> tmp_surfs = tmp_curve->get_surfaces();
+
+      for( int k=tmp_surfs.size(); k--; )
+      {
+        ChollaSurface *tmp_surf = tmp_surfs.get_and_step();
+        if( surfaces_to_detach.is_in_list( tmp_surf ) )
+        {
+          curves_to_detach.change_to(NULL);
+          break;
+        }
+      }
+      curves_to_detach.step();    
+    }  
+    
+    curves_to_detach.uniquify_unordered();
+    curves_to_detach.remove_all_with_value( NULL );
+
+    if( surfaces_to_detach.size() || curves_to_detach.size() )
+    {
+      rv = detach_surfaces( surfaces_to_detach, curves_to_detach, chvol, surf_map, tmp_curve_map, tmp_point_map );
       if (rv != CUBIT_SUCCESS)
         return CUBIT_FAILURE;
+      
+      //for all detached surfaces, detach all the facets and create new ones for
+      //the detached surfaces
+      rv = detach_facets(surfaces_to_detach, curves_to_detach, chvol, surf_map, tmp_curve_map, tmp_point_map);
+      if (rv != CUBIT_SUCCESS)
+        return rv;
+
+      // set the cubitpoints at the correct start/end locations on the cholla curves   
+      rv = set_curve_endpoints(tmp_point_map, tmp_curve_map );
+      if (rv != CUBIT_SUCCESS)
+        return rv;
     }
-  }
+
+    //append the map to the multi-map
+    std::map<ChollaCurve*, ChollaCurve*>::iterator iter = tmp_curve_map.begin();
+    for( ; iter!=tmp_curve_map.end(); iter++)
+      curve_map.insert( std::pair<ChollaCurve*,ChollaCurve*>(iter->first, iter->second) );
+
+    //append the map to the multi-map
+    std::map<ChollaPoint*, ChollaPoint*>::iterator pt_iter = tmp_point_map.begin();
+    for( ; pt_iter!=tmp_point_map.end(); pt_iter++)
+      point_map.insert( std::pair<ChollaPoint*,ChollaPoint*>(pt_iter->first, pt_iter->second) );   
+  } 
   
   // create the evaluation tools on the new entities
   
@@ -3342,7 +3592,7 @@ CubitStatus ChollaEngine::detach_volumes()
     cholla_surfaces.append(smap_it->second);
   }
   
-  std::map<ChollaCurve *, ChollaCurve *>::iterator cmap_it;
+  std::multimap<ChollaCurve *, ChollaCurve *>::iterator cmap_it;
   for (cmap_it=curve_map.begin(); cmap_it != curve_map.end(); cmap_it++)
   {
     cholla_curves.append(cmap_it->second);
@@ -3353,20 +3603,20 @@ CubitStatus ChollaEngine::detach_volumes()
   for (int ii=0; ii<cholla_curves.size(); ii++)
   {
     ChollaCurve *cholla_curve = cholla_curves.get_and_step();
-    DLIList<ChollaPoint *>  cholla_points = cholla_curve->get_points();
+    DLIList<ChollaPoint *>  cholla_points = cholla_curve->get_points();    
     int periodic = 0;
     if (cholla_points.size() == 1)
       periodic = 1;
     else
       assert(cholla_points.size() == 2);  // assuming we have exactly two end points so far
     CubitPoint *start_point, *end_point;
-    cholla_curve->get_ends(start_point, end_point);
+    cholla_curve->get_ends(start_point, end_point);        
     int max_edges = cholla_curve->num_edges();
-    cholla_curve->clean_out_edges();  // edges will be added in build_curve_from_edges
+    cholla_curve->clean_out_edges();  // edges will be added in build_curve_from_edges 
     rv = cholla_curve->build_curve_from_edges( start_point, periodic, max_edges, NULL, cholla_curve );
     if (rv != CUBIT_SUCCESS)
       return rv;
-  }
+  } 
   
   // replace the facets on the existing eval tools on the curves and surfaces bounding the interface.
   // for simplicity, just replace them on all the existing eval tools on 
@@ -3396,6 +3646,7 @@ CubitStatus ChollaEngine::detach_volumes()
       seval->replace_facets(facets);
     }
   }
+ 
   
   // build the eval tools
       
@@ -3416,76 +3667,161 @@ CubitStatus ChollaEngine::detach_volumes()
 //Author:sjowen
 //Date:  09/18/09
 //=============================================================================
-CubitStatus ChollaEngine::detach_surface(ChollaSurface *chsurf_ptr,
-                                          std::map<ChollaSurface *, ChollaSurface *> &surf_map,
-                                          std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                                          std::map<ChollaPoint *, ChollaPoint *> &point_map)
+CubitStatus ChollaEngine::detach_surfaces(DLIList<ChollaSurface*> &chsurfs,
+                                          DLIList<ChollaCurve*> &chcurves,
+                                         ChollaVolume *vol_getting_new_surfs,
+                                         std::map<ChollaSurface *, ChollaSurface *> &surf_map,
+                                         std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                         std::map<ChollaPoint *, ChollaPoint *> &point_map)
 {
   CubitStatus rv = CUBIT_SUCCESS;
-  DLIList<ChollaVolume *> chvol_list;
   
   // detach the surface from its volumes
+
+  DLIList<ChollaCurve*> all_curves_in_surfs;
+  DLIList<ChollaPoint*> all_points_in_surfs;
+
+  std::multimap<ChollaCurve*, ChollaSurface*> orig_curve_to_new_surf_map;
   
-  chsurf_ptr->get_volumes(chvol_list);
-  ChollaVolume *chvol1_ptr = chvol_list.get_and_step();
-  assert(chvol1_ptr != NULL);
-  ChollaVolume *chvol2_ptr = chvol_list.get();
-  assert(chvol2_ptr != NULL);
-  assert(chvol1_ptr != chvol2_ptr);
-  
-  // create a copy of the non-manifold surface and attach it to volume 2
-  
-  ChollaSurface *newchsurf_ptr = new ChollaSurface( chsurf_ptr->get_block_id() );
-  chollaSurfaceList.append(newchsurf_ptr);
-  surf_map.insert(std::pair<ChollaSurface *, ChollaSurface *>(chsurf_ptr, newchsurf_ptr));
-  
-  chvol2_ptr->remove_surface(chsurf_ptr);
-  chsurf_ptr->remove_volume(chvol2_ptr);
-  chvol2_ptr->add_surface(newchsurf_ptr);
-  newchsurf_ptr->add_volume(chvol2_ptr);
-  
-  chsurf_ptr->set_merge_partner(newchsurf_ptr);
-  newchsurf_ptr->set_merge_partner(chsurf_ptr);
-  
-  // detach the curves
-  
-  DLIList<ChollaCurve *> chcurv_list;
-  chsurf_ptr->get_curves(chcurv_list);
-  for(int icurv = 0; icurv < chcurv_list.size(); icurv++)
+  for( int i=chsurfs.size(); i--; )
   {
-    ChollaCurve *chcurv_ptr = chcurv_list.get_and_step();
-    rv = detach_curve( chcurv_ptr, newchsurf_ptr, chvol2_ptr, curve_map );
-    if (rv != CUBIT_SUCCESS)
-      return rv;
-  }
-  
-  // detach the chollapoints
-  
-  DLIList<ChollaPoint *> chpt_list;
-  chsurf_ptr->get_vertices( chpt_list );
-  for (int ipt = 0; ipt < chpt_list.size(); ipt++)
-  {
-    ChollaPoint *chpt_ptr = chpt_list.get_and_step();
+    ChollaSurface *chsurf_ptr = chsurfs.get_and_step();
+    DLIList<ChollaVolume *> chvol_list;
+    chsurf_ptr->get_volumes(chvol_list);
+    ChollaVolume *chvol1_ptr = chvol_list.get_and_step();
+    ChollaVolume *chvol2_ptr = chvol_list.get();
+
+    if( chvol2_ptr != vol_getting_new_surfs )      
+    {
+      chvol1_ptr = chvol2_ptr;
+      chvol2_ptr = vol_getting_new_surfs;      
+    }
+
+    assert(chvol1_ptr != NULL);  
+    assert(chvol2_ptr != NULL);
+    assert(chvol1_ptr != chvol2_ptr);
     
-    rv = detach_point( chpt_ptr, chvol2_ptr, curve_map, point_map );
+    // create a copy of the non-manifold surface and attach it to volume 2
+
+    ChollaSurface *newchsurf_ptr = new ChollaSurface( chsurf_ptr->get_block_id() );
+    chollaSurfaceList.append(newchsurf_ptr);
+    surf_map.insert(std::pair<ChollaSurface *, ChollaSurface *>(chsurf_ptr, newchsurf_ptr));
+
+    chvol2_ptr->remove_surface(chsurf_ptr);
+    chsurf_ptr->remove_volume(chvol2_ptr);
+    chvol2_ptr->add_surface(newchsurf_ptr);
+    newchsurf_ptr->add_volume(chvol2_ptr);
+    
+    chsurf_ptr->set_merge_partner(newchsurf_ptr);
+    newchsurf_ptr->set_merge_partner(chsurf_ptr);
+
+    // detach the curves  
+    DLIList<ChollaCurve *> chcurv_list;
+    chsurf_ptr->get_curves(chcurv_list);    
+
+    for( int k=chcurv_list.size(); k--; )
+    {
+      ChollaCurve *chcurve = chcurv_list.get_and_step();
+      orig_curve_to_new_surf_map.insert( std::pair<ChollaCurve*, ChollaSurface*>( chcurve, newchsurf_ptr ) );
+    }
+
+    all_curves_in_surfs += chcurv_list;
+
+    DLIList<ChollaPoint*> chpt_list;
+    chsurf_ptr->get_vertices( chpt_list );
+    all_points_in_surfs += chpt_list;
+  }
+
+  all_curves_in_surfs.uniquify_unordered();  
+  
+  for(int icurv = 0; icurv < all_curves_in_surfs.size(); icurv++)
+  {    
+    ChollaCurve *chcurv_ptr = all_curves_in_surfs.get_and_step();
+
+    std::multimap<ChollaCurve*, ChollaSurface*>::iterator iter, upper_iter;
+    DLIList<ChollaSurface*> new_surfs;
+
+    iter = orig_curve_to_new_surf_map.find( chcurv_ptr );
+
+    assert( iter != orig_curve_to_new_surf_map.end() );
+
+    upper_iter = orig_curve_to_new_surf_map.upper_bound( iter->first );
+
+    for(; iter!=upper_iter; ++iter )
+      new_surfs.append( iter->second );
+
+    rv = detach_curve( chcurv_ptr, new_surfs, vol_getting_new_surfs, curve_map, point_map );
+    if (rv != CUBIT_SUCCESS)
+      return rv;  
+  }
+
+  for( int i=chcurves.size(); i--; )
+  {
+    DLIList<ChollaPoint*> tmp_pts = chcurves.get_and_step()->get_points();
+    all_points_in_surfs += tmp_pts;
+  }
+
+  rv = detach_curves( chcurves, vol_getting_new_surfs, curve_map, point_map );
+  if( rv != CUBIT_SUCCESS )
+    return rv;
+
+  //add the points in the cholla     
+  all_points_in_surfs.uniquify_unordered();
+  for (int ipt = 0; ipt < all_points_in_surfs.size(); ipt++)
+  {
+    ChollaPoint *chpt_ptr = all_points_in_surfs.get_and_step();
+    
+    rv = detach_point( chpt_ptr, vol_getting_new_surfs, point_map, curve_map );
     if (rv != CUBIT_SUCCESS)
       return rv;
-  }
-  
-  // create new facets for the new surface and detach vol 1 facets from vol 2 facets
-  
-  rv = detach_facets(chsurf_ptr, chvol2_ptr, surf_map, curve_map, point_map);
-  if (rv != CUBIT_SUCCESS)
-    return rv;
-  
-  // set the cubitpoints at the correct start/end locations on the cholla curves
-  
-  rv = set_curve_endpoints(chsurf_ptr, newchsurf_ptr, curve_map, point_map);
-  if (rv != CUBIT_SUCCESS)
-    return rv;
+  }   
   
   return rv;
 }
+
+CubitStatus ChollaEngine::detach_curves( DLIList<ChollaCurve*> &curves,
+                                         ChollaVolume *detaching_volume,                                         
+                                         std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                         std::map<ChollaPoint *, ChollaPoint *> &point_map )
+{
+  CubitStatus rv = CUBIT_SUCCESS;
+
+  DLIList<ChollaSurface*> tmp_surfs;
+  DLIList<ChollaPoint*> points_to_detach;
+  for( int i=curves.size(); i--; )
+  {    
+    ChollaCurve *tmp_curve = curves.get_and_step();    
+
+    //get the surfaces in 'detaching_volume'
+    tmp_surfs.clean_out();
+    tmp_surfs = tmp_curve->get_surfaces();
+    for( int k=0; k<tmp_surfs.size(); k++ )
+    {
+      if( !tmp_surfs[k]->is_in_volume( detaching_volume) )
+        tmp_surfs[k] = NULL;      
+    }
+    tmp_surfs.remove_all_with_value(NULL);
+
+    rv = detach_curve( tmp_curve, tmp_surfs, detaching_volume, curve_map, point_map );
+    if (rv != CUBIT_SUCCESS)
+      return rv;
+
+    DLIList<ChollaPoint*> tmp_pts = tmp_curve->get_points();
+    points_to_detach += tmp_pts;
+  }
+
+  //go through the map, setting up merge partners
+  std::map<ChollaCurve*, ChollaCurve*>::iterator iter = curve_map.begin();
+  for( ; iter != curve_map.end(); iter++ )
+  {
+    ChollaCurve *ch_curv = iter->first;
+    ChollaCurve *new_ch_curv = iter->second;
+
+    ch_curv->set_merge_partner( new_ch_curv );
+    new_ch_curv->set_merge_partner( ch_curv );
+  }
+  return rv;
+}                                          
 
 //=============================================================================
 //Function: detach_curve 
@@ -3495,33 +3831,40 @@ CubitStatus ChollaEngine::detach_surface(ChollaSurface *chsurf_ptr,
 //Date:  09/18/09
 //=============================================================================
 CubitStatus ChollaEngine::detach_curve(ChollaCurve *chcurv_ptr,
-                                       ChollaSurface *newchsurf_ptr,
+                                       DLIList<ChollaSurface*> &new_surfs,
                                        ChollaVolume *chvol2_ptr,
-                                       std::map<ChollaCurve *, ChollaCurve *> &curve_map)
-{
-  
-  // create a copy of the curve on the surface and add it to volume 2
-  
+                                       std::map<ChollaCurve*, ChollaCurve*> &curve_map,
+                                       std::map<ChollaPoint*, ChollaPoint*> &point_map )
+{   
+  // create a copy of the curve on the surface and add it to volume 2  
+
   ChollaCurve *newchcurv_ptr = new ChollaCurve( chcurv_ptr->get_block_id() );
   chollaCurveList.append( newchcurv_ptr );
   curve_map.insert(std::pair<ChollaCurve *, ChollaCurve *>(chcurv_ptr, newchcurv_ptr));
-  newchsurf_ptr->add_curve(newchcurv_ptr);
-  newchcurv_ptr->add_surface(newchsurf_ptr);
   
+  for( int i=new_surfs.size(); i--; )
+  {
+    ChollaSurface *newchsurf_ptr = new_surfs.get_and_step();
+    newchsurf_ptr->add_curve(newchcurv_ptr);
+    newchcurv_ptr->add_surface(newchsurf_ptr);    
+  }
+
   // any surfaces attached to this chcurv that are in vol2 are removed and the newchcurv is added
-  
   DLIList<ChollaSurface *> chcsurf_list = chcurv_ptr->get_surfaces();
   for (int icsurf = 0; icsurf < chcsurf_list.size(); icsurf++)
   {
     ChollaSurface *chcsurf_ptr = chcsurf_list.get_and_step();
-    if (chcsurf_ptr->is_in_volume(chvol2_ptr))
+
+    //if the adjacent surfaces are in both volumes, don't do anything
+    if(chcsurf_ptr->is_in_volume(chvol2_ptr) )      
     {
       chcurv_ptr->remove_surface(chcsurf_ptr);
       chcsurf_ptr->remove_curve(chcurv_ptr);
       newchcurv_ptr->add_surface(chcsurf_ptr);
-      chcsurf_ptr->add_curve(newchcurv_ptr);
-    }
-  }
+      chcsurf_ptr->add_curve_unique(newchcurv_ptr);
+    }  
+  } 
+
   return CUBIT_SUCCESS;
 }
 
@@ -3534,29 +3877,30 @@ CubitStatus ChollaEngine::detach_curve(ChollaCurve *chcurv_ptr,
 //=============================================================================
 CubitStatus ChollaEngine::detach_point(ChollaPoint *chpt_ptr,
                                        ChollaVolume *chvol2_ptr,
-                                       std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                                       std::map<ChollaPoint *, ChollaPoint *> &point_map)
-{
-  // create a copy of the chollapoint on the interface surface
+                                       std::map<ChollaPoint *, ChollaPoint *> &point_map,
+                                       std::map<ChollaCurve *, ChollaCurve *> &curve_map )                                       
+{ 
   
-  ChollaPoint *newchpt_ptr = new ChollaPoint ();
+  
+  ChollaPoint *newchpt_ptr = new ChollaPoint();
   chollaPointList.append( newchpt_ptr );
-  point_map.insert(std::pair<ChollaPoint *, ChollaPoint *>(chpt_ptr, newchpt_ptr));
-  
+  point_map.insert(std::pair<ChollaPoint*, ChollaPoint*>(chpt_ptr, newchpt_ptr));  
+     
+  //find the curves that it is in
   DLIList<ChollaCurve *> chptcurv_list = chpt_ptr->get_curves();
   for (int iptcurv = 0; iptcurv < chptcurv_list.size(); iptcurv++)
   {
     ChollaCurve *chptcurv_ptr = chptcurv_list.get_and_step();
-    
+
     // for curves that were copied (on the interface), add the new chollapoint to the new curve
-    
+
     std::map<ChollaCurve *, ChollaCurve *>::iterator cmap_it;
     cmap_it = curve_map.find(chptcurv_ptr);
     if (cmap_it != curve_map.end())
     {
-      ChollaCurve *newchcurv_ptr = cmap_it->second;
-      newchcurv_ptr->add_point(newchpt_ptr);
-      newchpt_ptr->add_curve(newchcurv_ptr);
+      ChollaCurve *new_chcurv_ptr = cmap_it->second;      
+      new_chcurv_ptr->add_point(newchpt_ptr);
+      newchpt_ptr->add_curve(new_chcurv_ptr);
     }
     else
     {
@@ -3571,6 +3915,7 @@ CubitStatus ChollaEngine::detach_point(ChollaPoint *chpt_ptr,
       }
     }
   }
+
   return CUBIT_SUCCESS;
 }
   
@@ -3583,7 +3928,9 @@ CubitStatus ChollaEngine::detach_point(ChollaPoint *chpt_ptr,
 //Author:sjowen
 //Date:  09/10/09
 //=============================================================================
-CubitStatus ChollaEngine::detach_facets(ChollaSurface *chsurf_ptr, ChollaVolume *chvol_ptr,
+CubitStatus ChollaEngine::detach_facets(DLIList<ChollaSurface*> &chsurfs,
+                                        DLIList<ChollaCurve*> &chcurves,
+                                        ChollaVolume *chvol,
                                         std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                         std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                         std::map<ChollaPoint *, ChollaPoint *> &point_map)
@@ -3594,12 +3941,12 @@ CubitStatus ChollaEngine::detach_facets(ChollaSurface *chsurf_ptr, ChollaVolume 
   std::vector<CubitPoint *> new_points;
   std::vector<CubitFacetEdge *> new_edges;
   
-  rv = copy_facets_at_interface( chsurf_ptr, new_points, new_edges, 
+  rv = copy_facets_at_interface( chsurfs, chcurves, new_points, new_edges,
                                  surf_map, curve_map, point_map );
   if (rv != CUBIT_SUCCESS)
     return rv;
   
-  rv = connect_facets_at_interface( chsurf_ptr, chvol_ptr, new_points, new_edges );
+  rv = connect_facets_at_interface( chsurfs, chcurves, chvol, new_points, new_edges );
   if (rv != CUBIT_SUCCESS)
     return rv;
   
@@ -3612,9 +3959,10 @@ CubitStatus ChollaEngine::detach_facets(ChollaSurface *chsurf_ptr, ChollaVolume 
 //Author:sjowen
 //Date:  09/18/09
 //=============================================================================
-CubitStatus ChollaEngine::copy_facets_at_interface(ChollaSurface *chsurf_ptr, 
+CubitStatus ChollaEngine::copy_facets_at_interface(DLIList<ChollaSurface*> &chsurfs,
+                                                   DLIList<ChollaCurve*> &chcurves,
                                                    std::vector<CubitPoint *> &new_points,
-                                                   std::vector<CubitFacetEdge *> &new_edges,
+                                                   std::vector<CubitFacetEdge *> &new_edges,                                                   
                                                    std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                                    std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                                    std::map<ChollaPoint *, ChollaPoint *> &point_map)
@@ -3626,7 +3974,18 @@ CubitStatus ChollaEngine::copy_facets_at_interface(ChollaSurface *chsurf_ptr,
   
   int ifacet;
   DLIList<FacetEntity *> facet_list;
-  chsurf_ptr->get_facets( facet_list );
+  for( int i=chsurfs.size(); i--; )
+  {
+    ChollaSurface *chsurf_ptr = chsurfs.get_and_step();
+    chsurf_ptr->get_facets( facet_list );
+  }
+
+  for( int i=chcurves.size(); i--; )
+  {
+    DLIList<FacetEntity*> tmp_facets = chcurves.get_and_step()->get_facet_list();
+    facet_list += tmp_facets;
+  }
+
   FacetDataUtil::mark_facets(facet_list, FACET_ENTITY_UNINITIALIZED);
   
   // create a copy of each of the facet entities on the surface.  The marked flag in the facet will
@@ -3653,27 +4012,106 @@ CubitStatus ChollaEngine::copy_facets_at_interface(ChollaSurface *chsurf_ptr,
   {
     FacetEntity *facet_ptr = facet_list.get_and_step();
     CubitFacet *cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
-    CubitFacetEdge *fedge, *newfedges[3];
-    CubitFacet *newcfacet_ptr;
-    for (int ii=0; ii<3; ii++)
+    if( cfacet_ptr )
     {
-      fedge = cfacet_ptr->edge(ii);
-      int idx = fedge->marked();
-      newfedges[ii] = new_edges[idx];
-    }
-    newcfacet_ptr = (CubitFacet *) new CubitFacetData(newfedges[0], newfedges[1], newfedges[2]);
-    new_facets.append( newcfacet_ptr );
-    FacetEntity *newfacet_ptr = dynamic_cast<FacetEntity *> (newcfacet_ptr);
-    set_new_facet_owners( 2, facet_ptr, newfacet_ptr, surf_map, curve_map, point_map );
+      CubitFacetEdge *fedge, *newfedges[3];
+      CubitFacet *newcfacet_ptr;
+      for (int ii=0; ii<3; ii++)
+      {
+        fedge = cfacet_ptr->edge(ii);
+        int idx = fedge->marked();
+        newfedges[ii] = new_edges[idx];
+      }
+      newcfacet_ptr = (CubitFacet *) new CubitFacetData(newfedges[0], newfedges[1], newfedges[2]);
+      new_facets.append( newcfacet_ptr );
+      FacetEntity *newfacet_ptr = dynamic_cast<FacetEntity *> (newcfacet_ptr);
+      set_new_facet_owners( 2, facet_ptr, newfacet_ptr, surf_map, curve_map, point_map );
+    } 
   }
   
   // make sure facets are oriented consistently on new volume
+  if( new_facets.size() )
+  {
+    CubitFacet *start_facet = new_facets.get(); 
+    CubitBoolean do_flip = CUBIT_TRUE;
+    int nfacets;
+    int mydebug = 0;
+    rv = check_facet_orientation(start_facet, do_flip, nfacets, mydebug );
+  }
   
-  CubitFacet *start_facet = new_facets.get(); 
-  CubitBoolean do_flip = CUBIT_TRUE;
-  int nfacets;
-  int mydebug = 0;
-  rv = check_facet_orientation(start_facet, do_flip, nfacets, mydebug );
+  return rv;
+}
+
+
+CubitStatus ChollaEngine::detach_facet_edges(DLIList<ChollaCurve*> &chcurves,
+                                             ChollaVolume *detaching_volume,                                             
+                                             std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                             std::map<ChollaPoint *, ChollaPoint *> &point_map )
+{  
+  
+  CubitStatus rv = CUBIT_SUCCESS;
+  
+  std::vector<CubitPoint *> new_points;
+  std::vector<CubitFacetEdge *> new_edges;
+  
+  rv = copy_facet_edges_at_interface( chcurves, new_points, new_edges, curve_map, point_map );
+  if (rv != CUBIT_SUCCESS)
+    return rv;
+
+  for (int i=chcurves.size(); i--; )
+  {
+    ChollaCurve *chcurv_ptr = chcurves.get_and_step();    
+    rv = connect_points_at_interface( chcurv_ptr, detaching_volume, new_points );
+    if (rv != CUBIT_SUCCESS)
+      return rv;
+    
+    rv = connect_edges_at_interface( chcurv_ptr, detaching_volume, new_edges );
+    if (rv != CUBIT_SUCCESS)
+      return rv;
+  }   
+  
+  return rv;
+}
+
+
+CubitStatus ChollaEngine::copy_facet_edges_at_interface(DLIList<ChollaCurve*> &chcurves,
+                                                   std::vector<CubitPoint *> &new_points,
+                                                   std::vector<CubitFacetEdge *> &new_edges,                                                                                                      
+                                                   std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                                   std::map<ChollaPoint *, ChollaPoint *> &point_map)
+
+{
+  CubitStatus rv = CUBIT_SUCCESS;
+  
+  // first set the marked flags on all facets entities to -1  
+  DLIList<FacetEntity *> facet_list;
+  for( int i=chcurves.size(); i--; )
+  {
+    ChollaCurve *chcurv_ptr = chcurves.get_and_step();
+    DLIList<FacetEntity*> tmp_facet_list = chcurv_ptr->get_facet_list();
+    facet_list += tmp_facet_list;
+  }
+
+  FacetDataUtil::mark_facets(facet_list, FACET_ENTITY_UNINITIALIZED);
+  
+  // create a copy of each of the facet entities on the surface.  The marked flag in the facet will
+  // keep track of the new entity created.  It will be a location in the new_points or new_edges
+  // array.  Once we are finished with creating points and edges, we can create the new facets
+  // given the references in the marked flags.
+  
+  // create new points
+
+  std::map<ChollaSurface *, ChollaSurface *> dummy_surf_map;
+  
+  rv = copy_points_at_interface(facet_list, new_points, dummy_surf_map, curve_map, point_map);
+  if (rv != CUBIT_SUCCESS)
+    return rv;
+  
+  // create new edges
+  
+  rv = copy_edges_at_interface(facet_list, new_points, new_edges, dummy_surf_map, curve_map, point_map);
+  if (rv != CUBIT_SUCCESS)
+    return rv;  
   
   return rv;
 }
@@ -3685,7 +4123,7 @@ CubitStatus ChollaEngine::copy_facets_at_interface(ChollaSurface *chsurf_ptr,
 //Date:  09/18/09
 //=============================================================================
 CubitStatus ChollaEngine::copy_points_at_interface(DLIList<FacetEntity *> &facet_list,
-                                                   std::vector<CubitPoint *> &new_points,
+                                                   std::vector<CubitPoint *> &new_points,                                                   
                                                    std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                                    std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                                    std::map<ChollaPoint *, ChollaPoint *> &point_map)
@@ -3693,25 +4131,46 @@ CubitStatus ChollaEngine::copy_points_at_interface(DLIList<FacetEntity *> &facet
   int iploc = 0;
   
   FacetEntity *fe_ptr, *newfe_ptr;
+  CubitPoint *point_ptr, *newpoint_ptr;
+
   for (int ifacet = 0; ifacet<facet_list.size(); ifacet++)
   {
     FacetEntity *facet_ptr = facet_list.get_and_step();
-    CubitFacet *cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
-    CubitPoint *point_ptr, *newpoint_ptr;
-    for (int ii=0; ii<3; ii++)
-    {
-      point_ptr = cfacet_ptr->point(ii);
-      if (point_ptr->marked() == FACET_ENTITY_UNINITIALIZED)
+    CubitFacet *cfacet_ptr = dynamic_cast<CubitFacet*>(facet_ptr);
+    if( cfacet_ptr )
+    {     
+      for (int ii=0; ii<3; ii++)
       {
-        newpoint_ptr = (CubitPoint *) new CubitPointData( point_ptr->x(), point_ptr->y(), point_ptr->z() );
-        new_points.push_back(newpoint_ptr);
-        point_ptr->marked(iploc++);
-        fe_ptr = dynamic_cast<FacetEntity *> (point_ptr);
-        newfe_ptr = dynamic_cast<FacetEntity *> (newpoint_ptr);
-        set_new_facet_owners(0, fe_ptr, newfe_ptr, surf_map, curve_map, point_map );
-      }   
+        point_ptr = cfacet_ptr->point(ii);        
+        if (point_ptr->marked() == FACET_ENTITY_UNINITIALIZED)
+        {
+          newpoint_ptr = (CubitPoint *) new CubitPointData( point_ptr->x(), point_ptr->y(), point_ptr->z() );
+          new_points.push_back(newpoint_ptr);
+          point_ptr->marked(iploc++);
+          fe_ptr = dynamic_cast<FacetEntity *> (point_ptr);
+          newfe_ptr = dynamic_cast<FacetEntity *> (newpoint_ptr);
+          set_new_facet_owners(0, fe_ptr, newfe_ptr, surf_map, curve_map, point_map );
+        }   
+      } 
     } 
-  } 
+    else
+    {
+      CubitFacetEdge *cfacet_edge_ptr = dynamic_cast<CubitFacetEdge*>(facet_ptr);      
+      for (int ii=0; ii<2; ii++)
+      {
+        point_ptr = cfacet_edge_ptr->point(ii);
+        if (point_ptr->marked() == FACET_ENTITY_UNINITIALIZED)
+        {
+          newpoint_ptr = (CubitPoint *) new CubitPointData( point_ptr->x(), point_ptr->y(), point_ptr->z() );
+          new_points.push_back(newpoint_ptr);
+          point_ptr->marked(iploc++);
+          fe_ptr = dynamic_cast<FacetEntity *> (point_ptr);
+          newfe_ptr = dynamic_cast<FacetEntity *> (newpoint_ptr);
+          set_new_facet_owners(0, fe_ptr, newfe_ptr, surf_map, curve_map, point_map );
+        }   
+      } 
+    }
+  }
   
   return CUBIT_SUCCESS;
 }
@@ -3724,20 +4183,42 @@ CubitStatus ChollaEngine::copy_points_at_interface(DLIList<FacetEntity *> &facet
 //=============================================================================
 CubitStatus ChollaEngine::copy_edges_at_interface(DLIList<FacetEntity *> &facet_list,
                                                   std::vector<CubitPoint *> &new_points,
-                                                  std::vector<CubitFacetEdge *> &new_edges,
+                                                  std::vector<CubitFacetEdge *> &new_edges,                                                  
                                                   std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                                   std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                                   std::map<ChollaPoint *, ChollaPoint *> &point_map)
 {
   int ieloc = 0;
+  CubitFacetEdge *edge_ptr, *newedge_ptr;
   for (int ifacet = 0; ifacet<facet_list.size(); ifacet++)
   {
     FacetEntity *facet_ptr = facet_list.get_and_step();
     CubitFacet *cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
-    CubitFacetEdge *edge_ptr, *newedge_ptr;
-    for (int ii=0; ii<3; ii++)
+    if( cfacet_ptr )
+    {      
+      for (int ii=0; ii<3; ii++)
+      {
+        edge_ptr = cfacet_ptr->edge(ii);
+        if (edge_ptr->marked() == FACET_ENTITY_UNINITIALIZED)
+        {
+          CubitPoint *p0 = edge_ptr->point( 0 );
+          CubitPoint *p1 = edge_ptr->point( 1 );
+          int idx0 = p0->marked();
+          int idx1 = p1->marked();
+          CubitPoint *newp0 = new_points[idx0];
+          CubitPoint *newp1 = new_points[idx1];
+          newedge_ptr = (CubitFacetEdge *) new CubitFacetEdgeData( newp0, newp1 );
+          new_edges.push_back(newedge_ptr);
+          edge_ptr->marked(ieloc++);
+          FacetEntity *fe_ptr = dynamic_cast<FacetEntity *> (edge_ptr);
+          FacetEntity *newfe_ptr = dynamic_cast<FacetEntity *> (newedge_ptr);
+          set_new_facet_owners( 1, fe_ptr, newfe_ptr, surf_map, curve_map, point_map );
+        }  
+      } 
+    }
+    else
     {
-      edge_ptr = cfacet_ptr->edge(ii);
+      CubitFacetEdge *edge_ptr = dynamic_cast<CubitFacetEdge*>(facet_ptr);
       if (edge_ptr->marked() == FACET_ENTITY_UNINITIALIZED)
       {
         CubitPoint *p0 = edge_ptr->point( 0 );
@@ -3752,8 +4233,8 @@ CubitStatus ChollaEngine::copy_edges_at_interface(DLIList<FacetEntity *> &facet_
         FacetEntity *fe_ptr = dynamic_cast<FacetEntity *> (edge_ptr);
         FacetEntity *newfe_ptr = dynamic_cast<FacetEntity *> (newedge_ptr);
         set_new_facet_owners( 1, fe_ptr, newfe_ptr, surf_map, curve_map, point_map );
-      }  
-    } 
+      }
+    }
   }
   return CUBIT_SUCCESS;
 }
@@ -3764,19 +4245,29 @@ CubitStatus ChollaEngine::copy_edges_at_interface(DLIList<FacetEntity *> &facet_
 //Author:sjowen
 //Date:  09/18/09
 //=============================================================================
-CubitStatus ChollaEngine::connect_facets_at_interface(ChollaSurface *chsurf_ptr, 
+CubitStatus ChollaEngine::connect_facets_at_interface(DLIList<ChollaSurface*> &chsurfs,
+                                                      DLIList<ChollaCurve*> &chcurves,
                                                       ChollaVolume *chvol_ptr,
                                                       std::vector<CubitPoint *> &new_points,
                                                       std::vector<CubitFacetEdge *> &new_edges)
 {
-  CubitStatus rv = CUBIT_SUCCESS;
-  
+  CubitStatus rv = CUBIT_SUCCESS;  
   DLIList<ChollaCurve *> chcurv_list;
-  chsurf_ptr->get_curves(chcurv_list);
+  
+  for( int i=chsurfs.size(); i--; )
+  {
+    ChollaSurface *tmp_surf = chsurfs.get_and_step();    
+    DLIList<ChollaCurve*> tmp_curves;
+    tmp_surf->get_curves( tmp_curves );
+    chcurv_list += tmp_curves;
+  }
+
+  chcurv_list += chcurves;
+  chcurv_list.uniquify_unordered();
+
   for (int icrv = 0; icrv < chcurv_list.size(); icrv++)
   {
-    ChollaCurve *chcurv_ptr = chcurv_list.get_and_step();
-    
+    ChollaCurve *chcurv_ptr = chcurv_list.get_and_step();    
     rv = connect_points_at_interface( chcurv_ptr, chvol_ptr, new_points );
     if (rv != CUBIT_SUCCESS)
       return rv;
@@ -3791,10 +4282,13 @@ CubitStatus ChollaEngine::connect_facets_at_interface(ChollaSurface *chsurf_ptr,
 
 //=============================================================================
 //Function: connect_points_at_interface 
-//Description: detach the facet points from original facets and reattach to new copy  
+//Description: find adjacent CubitFacetEdges on volume 2 that needs updating 
 //Notes: chcurv_ptr is a curve at the interface on the original volume
 //       chvol_ptr is the second volume (new (copied) entities belong to vol 2)
-//       new_points is a list of new points on vol 2
+//       This functions gets all edges attached to the original CubitPoints on the 
+//       original curve 'chcurv_ptr'.  If any edge is on volume 2 (the volume we are 
+//       splitting off) we need to update the edges on that volume to contain the
+//       the new CubitPoint.
 //Author:sjowen
 //Date:  09/18/09
 //=============================================================================
@@ -3856,6 +4350,12 @@ CubitStatus ChollaEngine::connect_points_at_interface(ChollaCurve *chcurv_ptr,
 //=============================================================================
 //Function: connect_edges_at_interface 
 //Description: detach the facet edges from original facets and reattach to new copy         
+//Notes:    chcurv_ptr is a curve at the interface on the original volume
+//       chvol_ptr is the second volume (new (copied) entities belong to vol 2)
+//       This functions gets all CubitFacets attached to any CubitFacetEdges on the  
+//       original curve 'chcurv_ptr'.  If any facet is on volume 2 (the volume we are 
+//       splitting off) we need to update the edges on that facet on the new volume
+//       to contain the new CubitFacetEdge.
 //Author:sjowen
 //Date:  09/18/09
 //=============================================================================
@@ -3898,7 +4398,7 @@ CubitStatus ChollaEngine::connect_edges_at_interface(ChollaCurve *chcurv_ptr,
 //Date:  09/14/09
 //=============================================================================
 CubitStatus ChollaEngine::set_new_facet_owners(int type, //0, 1, or 2 based on dimension of facet entity
-                                               FacetEntity *fe_ptr, FacetEntity *newfe_ptr, 
+                                               FacetEntity *fe_ptr, FacetEntity *newfe_ptr,                                                
                                                std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                                std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                                std::map<ChollaPoint *, ChollaPoint *> &point_map )
@@ -3915,14 +4415,14 @@ CubitStatus ChollaEngine::set_new_facet_owners(int type, //0, 1, or 2 based on d
   // the original facet entity is owned by one or more surfaces
   
   DLIList<ChollaSurface *> surf_list;
-  td_geom->get_cholla_surfs( surf_list );
+  td_geom->get_cholla_surfs( surf_list );  
   for (int jj=0; jj<surf_list.size(); jj++)
   {
     ChollaSurface *surf_ptr = surf_list.get_and_step();
     std::map<ChollaSurface *, ChollaSurface *>::iterator map_it;
     map_it = surf_map.find( surf_ptr );
     assert(map_it != surf_map.end());
-    ChollaSurface *newsurf_ptr = map_it->second;
+    ChollaSurface *newsurf_ptr = map_it->second;    
     TDGeomFacet *newtdgeom = TDGeomFacet::get_geom_facet( newfe_ptr );
     newtdgeom->add_cholla_surf( newsurf_ptr );
     
@@ -3940,18 +4440,19 @@ CubitStatus ChollaEngine::set_new_facet_owners(int type, //0, 1, or 2 based on d
   for (int jj=0; jj<curv_list.size(); jj++)
   {
     ChollaCurve *curv_ptr = curv_list.get_and_step();
-    std::map<ChollaCurve *, ChollaCurve *>::iterator map_it;
+    std::map<ChollaCurve *, ChollaCurve *>::iterator map_it, upper_iter;
     map_it = curve_map.find( curv_ptr );
-    assert(map_it != curve_map.end());
-    ChollaCurve *newcurv_ptr = map_it->second;
+    assert(map_it != curve_map.end());       
+    ChollaCurve *newcurv_ptr = NULL;
+    newcurv_ptr = map_it->second;
+    
     TDGeomFacet *newtdgeom = TDGeomFacet::get_geom_facet( newfe_ptr );
     newtdgeom->add_cholla_curve( newcurv_ptr );
     
     // add this facet entity to the cholla curve only if this is a facetedge
     
     if (type == 1)
-      newcurv_ptr->add_facet(newfe_ptr);
-      
+      newcurv_ptr->add_facet(newfe_ptr);      
   }
   
   // the original facet entity is owned by one or more points (vertices)
@@ -3961,10 +4462,12 @@ CubitStatus ChollaEngine::set_new_facet_owners(int type, //0, 1, or 2 based on d
   for (int jj=0; jj<point_list.size(); jj++)
   {
     ChollaPoint *point_ptr = point_list.get_and_step();
-    std::map<ChollaPoint *, ChollaPoint *>::iterator map_it;
+    std::map<ChollaPoint *, ChollaPoint *>::iterator map_it, upper_iter;
     map_it = point_map.find( point_ptr );
     assert(map_it != point_map.end());
-    ChollaPoint *newchpoint_ptr = map_it->second;
+    ChollaPoint *newchpoint_ptr = NULL;
+    newchpoint_ptr = map_it->second;
+  
     TDGeomFacet *newtdgeom = TDGeomFacet::get_geom_facet( newfe_ptr );
     newtdgeom->add_cholla_point( newchpoint_ptr );
     
@@ -4006,93 +4509,116 @@ CubitStatus ChollaEngine::verify_points_to_curves()
   return CUBIT_SUCCESS;
 }
 
-//=============================================================================
-//Function: set_curve_endpoints 
-//Description:   set the end points of the curves that are adjacent to the interface surface         
-//Author:sjowen
-//Date:  09/18/09
-//=============================================================================
-CubitStatus ChollaEngine::set_curve_endpoints(ChollaSurface *chsurf_ptr,
-                                              ChollaSurface *newchsurf_ptr,
-                                              std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                                              std::map<ChollaPoint *, ChollaPoint *> &point_map )
-{
+CubitStatus ChollaEngine::set_curve_endpoints(std::map<ChollaPoint *, ChollaPoint *> &point_map,
+                                              std::map<ChollaCurve *, ChollaCurve *> &curve_map )
+                                              
+{   
+  DLIList<ChollaPoint*> original_chpts;
+  DLIList<ChollaPoint*> new_chpts;
+  DLIList<ChollaCurve*> original_chcurves;
+  DLIList<ChollaCurve*> new_chcurves;  
 
-  // start with the curves on the interface surface.
-  // use the same orientation on the new curves as the original
-  
-  DLIList<ChollaPoint *> chpt_list;
-  chsurf_ptr->get_vertices( chpt_list );
-  for (int ipt = 0; ipt < chpt_list.size(); ipt++)
+  std::map<ChollaCurve*, ChollaCurve*>::iterator curv_iter = curve_map.begin();
+  for(; curv_iter!=curve_map.end(); curv_iter++ )
   {
-    ChollaPoint *chpt_ptr = chpt_list.get_and_step();
-    std::map<ChollaPoint *, ChollaPoint *>::iterator pmap_it;
-    pmap_it = point_map.find( chpt_ptr );
-    assert(pmap_it != point_map.end());
-    ChollaPoint *newchpt_ptr = pmap_it->second;
-    CubitPoint *newcp = dynamic_cast<CubitPoint *> (newchpt_ptr->get_facets());
-    DLIList<ChollaCurve *> chptcurv_list = chpt_ptr->get_curves();
-    for (int iptcurv = 0; iptcurv < chptcurv_list.size(); iptcurv++)
-    {
-      ChollaCurve *chptcurv_ptr = chptcurv_list.get_and_step();
-      std::map<ChollaCurve *, ChollaCurve *>::iterator cmap_it;
-      cmap_it = curve_map.find(chptcurv_ptr);
-      if (cmap_it == curve_map.end())
-        continue;  // only visit curves at the interface
-      
-      ChollaCurve *newchcurv_ptr = cmap_it->second;
-      CubitPoint *start, *end, *cp;
-      chptcurv_ptr->get_ends(start, end);
-      cp = dynamic_cast<CubitPoint *> (chpt_ptr->get_facets());
-      assert(cp != NULL);
-      assert(start!= NULL);
-      assert(end != NULL);
+    ChollaCurve *orig_curve = curv_iter->first;
+    ChollaCurve *new_curve = curv_iter->second;
 
-      if ( cp == start )
+    //curves
+    original_chcurves.append( orig_curve );
+    new_chcurves.append( new_curve );
+    
+    //points
+    DLIList<ChollaPoint*> tmp_pts = orig_curve->get_points();
+    original_chpts += tmp_pts;
+
+    tmp_pts.clean_out();
+    tmp_pts = new_curve->get_points();
+    new_chpts += tmp_pts;
+  }
+
+  original_chpts.uniquify_unordered();
+  original_chcurves.uniquify_unordered();
+  new_chpts.uniquify_unordered();
+  new_chcurves.uniquify_unordered();  
+  
+  std::map<ChollaPoint*,ChollaPoint*>::iterator pt_iter;
+  for( int i=original_chpts.size(); i--; )
+  {
+    ChollaPoint *orig_pt = original_chpts.get_and_step();
+
+    pt_iter = point_map.find( orig_pt );
+    assert( pt_iter != point_map.end() );
+
+    ChollaPoint *new_pt = pt_iter->second;    
+    
+    CubitPoint *new_cp = dynamic_cast<CubitPoint *>(new_pt->get_facets());
+    CubitPoint *orig_cp = dynamic_cast<CubitPoint *>(orig_pt->get_facets());
+
+    //get the curves attached to it that are in the original surface
+    DLIList<ChollaCurve*> adj_curves = orig_pt->get_curves();
+
+    for( int j=adj_curves.size(); j--; )
+    {
+      ChollaCurve *orig_curve = adj_curves.get_and_step();
+
+      curv_iter = curve_map.find( orig_curve );
+
+      //use the original curve's start/end pts as a guide to set the new curve's start/end pts
+      if( curv_iter != curve_map.end() )
       {
-        newchcurv_ptr->set_start(newcp);
-      }
-      else if ( cp == end )
-      {
-        newchcurv_ptr->set_end(newcp);
-      }
-      else
-      {
-        assert (1);
-      }
+        //if there is a corresponding new curve, get it
+        ChollaCurve *new_curve_in_new_surf = curv_iter->second;
+
+        CubitPoint *start, *end;
+        orig_curve->get_ends(start, end);        
+        assert(orig_cp != NULL);
+        assert(start!= NULL);
+        assert(end != NULL);
+
+        if ( orig_cp == start )
+        {
+          new_curve_in_new_surf->set_start(new_cp);
+        }        
+        if ( orig_cp == end )
+        {
+          new_curve_in_new_surf->set_end(new_cp);
+        }        
+      }   
     }
   }
-  
-  // get the rest of the curves on volume 2 that contain one of the points at the interface
-  
-  chpt_list.clean_out();
-  newchsurf_ptr->get_vertices( chpt_list );
-  for (int ipt = 0; ipt < chpt_list.size(); ipt++)
+
+  //for each new point
+  for( int i=new_chpts.size(); i--; )
   {
-    ChollaPoint *chpt_ptr = chpt_list.get_and_step();
-    DLIList<ChollaCurve *> chptcurv_list = chpt_ptr->get_curves();
-    for (int iptcurv = 0; iptcurv < chptcurv_list.size(); iptcurv++)
+    ChollaPoint *new_point = new_chpts.get_and_step();
+
+    DLIList<ChollaCurve*> curves_in_pt = new_point->get_curves();
+
+    for( int k=curves_in_pt.size(); k--; )
     {
-      ChollaCurve *chptcurv_ptr = chptcurv_list.get_and_step();
-      if (!chptcurv_ptr->is_in_surface(newchsurf_ptr))
+      ChollaCurve *curve_in_pt = curves_in_pt.get_and_step();
+
+      //get adjacent curves that are not new (not in 'new_curves')
+      if( !original_chcurves.is_in_list( curve_in_pt ) )
       {
-        DLIList<ChollaPoint *> chpts_on_curve = chptcurv_ptr->get_points();
+        DLIList<ChollaPoint *> chpts_on_curve = curve_in_pt->get_points();        
         
         // one point on the curve assumes a periodic curve.  set both ends the same
-        
+
         if (chpts_on_curve.size() == 1)
         {
           ChollaPoint *chpt_on_crv = chpts_on_curve.get();
           CubitPoint *cp = dynamic_cast<CubitPoint *> (chpt_on_crv->get_facets());
-          chptcurv_ptr->set_start(cp);
-          chptcurv_ptr->set_end(cp);
+          curve_in_pt->set_start(cp);
+          curve_in_pt->set_end(cp);
         }
-        
+
         // standard case. one point of curve is on the interface and one is not.
         // In this case, one of the points has been replaced with a new point.
         // so one of the end point pointers are out of date.  Determine which one
         // and then set it.
-        
+
         else if (chpts_on_curve.size() == 2)
         {
           ChollaPoint *chpt1_on_crv = chpts_on_curve.get_and_step();
@@ -4100,36 +4626,46 @@ CubitStatus ChollaEngine::set_curve_endpoints(ChollaSurface *chsurf_ptr,
           CubitPoint *cp1 = dynamic_cast<CubitPoint *> (chpt1_on_crv->get_facets());
           CubitPoint *cp2 = dynamic_cast<CubitPoint *> (chpt2_on_crv->get_facets());
           CubitPoint *curstart, *curend;
-          chptcurv_ptr->get_ends(curstart, curend);
+          curve_in_pt->get_ends(curstart, curend);
           assert(curstart != NULL);
           assert(curend != NULL);
-          assert(curstart != curend);
+
           if (curstart == cp1)
           {
-            chptcurv_ptr->set_end(cp2);
+            curve_in_pt->set_end(cp2);
           }
           else if (curstart == cp2)
           {
-            chptcurv_ptr->set_end(cp1);
+            curve_in_pt->set_end(cp1);
           }
           else if (curend == cp2)
           {
-            chptcurv_ptr->set_start(cp1);
+            curve_in_pt->set_start(cp1);
           }
           else if (curend == cp1)
           {
-            chptcurv_ptr->set_start(cp2);
+            curve_in_pt->set_start(cp2);
           }
           else
           {
-            assert(0);
+            //do this by proximity
+            double dist1 = curstart->coordinates().distance_between( cp1->coordinates() );
+            double dist2 = curstart->coordinates().distance_between( cp2->coordinates() );
+
+            if( dist1 < dist2 )
+              curve_in_pt->set_start( cp1 );
+            else if(dist2 < dist1 )
+              curve_in_pt->set_start( cp2 );
+            else
+              assert(0);
           }
         }
         else
           assert(0);
       }
-    }
+    } 
   }
   return CUBIT_SUCCESS;
 }
+
 // EOF

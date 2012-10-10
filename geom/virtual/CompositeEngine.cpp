@@ -195,7 +195,7 @@ void CompositeEngine::push_named_attributes_to_curves_and_points
       tb->get_children_virt(points);
       push_named_attributes_to_curves_and_points(points, name_in);
     }
-    else if(dynamic_cast<Point*>(tb))
+    else if(dynamic_cast<TBPoint*>(tb))
     {
       append_attrib( tb, &attrib );
     }
@@ -259,11 +259,11 @@ void CompositeEngine::push_named_attributes_to_curves_and_points
 
 void CompositeEngine::get_all_curves_and_points(DLIList<TopologyBridge*> &tb_list,
                                                 DLIList<Curve*> &curves,
-                                                DLIList<Point*> &points)
+                                                DLIList<TBPoint*> &points)
 {
   int i;
   Curve *crv;
-  Point *pt;
+  TBPoint *pt;
   for(i=tb_list.size(); i>0; i--)
   {
     TopologyBridge *tb = tb_list.get_and_step();
@@ -310,7 +310,7 @@ void CompositeEngine::get_all_curves_and_points(DLIList<TopologyBridge*> &tb_lis
       tb->get_children_virt(tmp_points);
       get_all_curves_and_points(tmp_points, curves, points);
     }
-    else if((pt = dynamic_cast<Point*>(tb)))
+    else if((pt = dynamic_cast<TBPoint*>(tb)))
     {
       points.append(pt);
     }
@@ -335,7 +335,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   }
 
   DLIList<Curve*> all_curves;
-  DLIList<Point*> all_points;
+  DLIList<TBPoint*> all_points;
   get_all_curves_and_points(all_bridges, all_curves, all_points);
   all_curves.uniquify_ordered();
   all_points.uniquify_ordered();
@@ -343,11 +343,11 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   double geom_factor = GeometryQueryTool::get_geometry_factor();
   double merge_tol = geom_factor*GEOMETRY_RESABS;
 
-  AbstractTree<Point*> *pt_tree = new RTree<Point*>(merge_tol);
+  AbstractTree<TBPoint*> *pt_tree = new RTree<TBPoint*>(merge_tol);
   AbstractTree<Curve*> *crv_tree = new RTree<Curve*>(merge_tol);
 
   DLIList<Curve*> all_curves_with_composite_att;
-  DLIList<Point*> all_points_with_composite_att;
+  DLIList<TBPoint*> all_points_with_composite_att;
   for(k=all_curves.size(); k>0; k--)
   {
     Curve *cur_curve = all_curves.get_and_step();
@@ -359,7 +359,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   }
   for(k=all_points.size(); k>0; k--)
   {
-    Point *cur_point = all_points.get_and_step();
+    TBPoint *cur_point = all_points.get_and_step();
     pt_tree->add(cur_point);
     DLIList<CubitSimpleAttrib*> list;
     cur_point->get_simple_attribute("COMPOSITE_GEOM",list);
@@ -370,25 +370,25 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   DLIList<CubitSimpleAttrib*> list;
   while(all_points_with_composite_att.size())
   {
-    DLIList<Point*> other_pts;
+    DLIList<TBPoint*> other_pts;
     DLIList<BodySM*> other_bodies;
     DLIList<double> other_distances;
 
     // For the given pt we will look for "coincident" pts (those within merge tol)
     // and categorize them as either having or not having a composite att.
-    Point *cur_pt = all_points_with_composite_att.extract();
+    TBPoint *cur_pt = all_points_with_composite_att.extract();
     pt_tree->remove(cur_pt);
 
     BodySM *cur_body = cur_pt->bodysm();
-    DLIList<Point*> coincident_pts_with_composite_att, coincident_pts_without_composite_att;
-    DLIList<Point*> close_pts;
+    DLIList<TBPoint*> coincident_pts_with_composite_att, coincident_pts_without_composite_att;
+    DLIList<TBPoint*> close_pts;
     CubitBox bbox = cur_pt->bounding_box();
     pt_tree->find(bbox, close_pts);
 
     // Only keep the closest pt from each body.
     for(j=close_pts.size(); j>0; j--)
     {
-      Point *other_pt = close_pts.get_and_step();
+      TBPoint *other_pt = close_pts.get_and_step();
       BodySM *other_body = other_pt->bodysm();
       // Don't keep anything that is in the same body as the current pt.
       if(other_body != cur_body)
@@ -422,7 +422,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
     // having a composite att.
     for(j=other_pts.size(); j>0; j--)
     {
-      Point *pt = other_pts.get_and_step();
+      TBPoint *pt = other_pts.get_and_step();
       list.clean_out();
       pt->get_simple_attribute("COMPOSITE_GEOM",list);
       if(list.size() > 0)
@@ -444,7 +444,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
       bool found = false;
       for(j=coincident_pts_without_composite_att.size(); j>0 && !found; j--)
       {
-        Point *tmp_pt = coincident_pts_without_composite_att.get_and_step();
+        TBPoint *tmp_pt = coincident_pts_without_composite_att.get_and_step();
         list.clean_out();
         tmp_pt->get_simple_attribute("IMPRINTER",list);
         if(list.size() > 0)
@@ -455,7 +455,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
         // Remove all composite atts.
         for(j=coincident_pts_with_composite_att.size(); j>0; j--)
         {
-          Point *tmp_pt = coincident_pts_with_composite_att.get_and_step();
+          TBPoint *tmp_pt = coincident_pts_with_composite_att.get_and_step();
           list.clean_out();
           tmp_pt->get_simple_attribute("COMPOSITE_GEOM",list);
           if(list.size() > 0)
@@ -473,7 +473,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
         found = false;
         for(j=coincident_pts_with_composite_att.size(); j>0 && !found; j--)
         {
-          Point *tmp_pt = coincident_pts_with_composite_att.get_and_step();
+          TBPoint *tmp_pt = coincident_pts_with_composite_att.get_and_step();
           list.clean_out();
           tmp_pt->get_simple_attribute("IMPRINTER",list);
           if(list.size() > 0)
@@ -484,7 +484,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
           // Now put a composite att on any point that doesn't have one.
           for(j=coincident_pts_without_composite_att.size(); j>0; j--)
           {
-            Point *tmp_pt = coincident_pts_without_composite_att.get_and_step();
+            TBPoint *tmp_pt = coincident_pts_without_composite_att.get_and_step();
             list.clean_out();
             tmp_pt->get_simple_attribute("ORIGINAL", list);
             if(list.size() == 0)
@@ -503,7 +503,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
 
     for(i=coincident_pts_with_composite_att.size(); i>0; i--)
     {
-      Point *pt = coincident_pts_with_composite_att.get_and_step();
+      TBPoint *pt = coincident_pts_with_composite_att.get_and_step();
       list.clean_out();
       pt->get_simple_attribute("IMPRINTER",list);
       if(list.size() > 0)
@@ -515,7 +515,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
     }
     for(i=coincident_pts_without_composite_att.size(); i>0; i--)
     {
-      Point *pt = coincident_pts_without_composite_att.get_and_step();
+      TBPoint *pt = coincident_pts_without_composite_att.get_and_step();
       list.clean_out();
       pt->get_simple_attribute("IMPRINTER",list);
       if(list.size() > 0)
@@ -702,7 +702,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   }
   for(i=all_points.size(); i>0; i--)
   {
-    Point *cur_point = all_points.get_and_step();
+    TBPoint *cur_point = all_points.get_and_step();
     list.clean_out();
     cur_point->get_simple_attribute("IMPRINTER",list);
     if(list.size() > 0)
@@ -784,8 +784,8 @@ void CompositeEngine::process_curves_after_imprint(Curve *att_cur,
   }
 }
 
-void CompositeEngine::process_points_after_imprint(Point *att_pt, 
-                                                   Point *other_pt,
+void CompositeEngine::process_points_after_imprint(TBPoint *att_pt, 
+                                                   TBPoint *other_pt,
                                                    DLIList<BodySM*> &new_sms)
 {
   int i;
@@ -947,25 +947,25 @@ CubitBoolean CompositeEngine::about_spatially_equal( Curve *curve_1, Curve *curv
   }
 
   //compare the start and end vertices to be spatially equal.
-  DLIList<Point*> curve_1_points(2), curve_2_points(2);
+  DLIList<TBPoint*> curve_1_points(2), curve_2_points(2);
   DLIList<TopologyBridge*> c1pts, c2pts;
   curve_1->get_children(c1pts, false, layer);
   curve_2->get_children(c2pts, false, layer);
-  CAST_LIST( c1pts, curve_1_points, Point );
-  CAST_LIST( c2pts, curve_2_points, Point );
+  CAST_LIST( c1pts, curve_1_points, TBPoint );
+  CAST_LIST( c2pts, curve_2_points, TBPoint );
 
   if( curve_1->bridge_sense() == CUBIT_REVERSED )
     curve_1_points.reverse();
   if( curve_2->bridge_sense() == CUBIT_REVERSED )
     curve_2_points.reverse();
 
-  Point* curve_1_start = curve_1_points.get(); 
+  TBPoint* curve_1_start = curve_1_points.get(); 
   curve_1_points.last();
-  Point* curve_1_end =  curve_1_points.get();
+  TBPoint* curve_1_end =  curve_1_points.get();
 
-  Point* curve_2_start = curve_2_points.get(); 
+  TBPoint* curve_2_start = curve_2_points.get(); 
   curve_2_points.last();
-  Point* curve_2_end =  curve_2_points.get();
+  TBPoint* curve_2_end =  curve_2_points.get();
 
   if (relative_sense == CUBIT_REVERSED)
     std::swap(curve_2_start, curve_2_end);
@@ -1002,13 +1002,13 @@ CubitBoolean CompositeEngine::about_spatially_equal( Curve *curve_1, Curve *curv
 // solid model topology.
 void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,  
                                       DLIList<Curve*> &curves, 
-                                      DLIList<Point*> &points)
+                                      DLIList<TBPoint*> &points)
 {
   clean_out_deactivated_geometry();
 
   int i, j, k, m, n, w;
   int something_changed = 1;
-  DLIList<Point*> already_deactivated_points;
+  DLIList<TBPoint*> already_deactivated_points;
   DLIList<Curve*> already_deactivated_curves;
   DLIList<Surface*> already_deactivated_surfs;
 
@@ -1016,7 +1016,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
   {
     something_changed = 0;
 
-    DLIList<Point*> deactivated_points;
+    DLIList<TBPoint*> deactivated_points;
     DLIList<Curve*> deactivated_curves;
     DLIList<Surface*> deactivated_surfs;
 
@@ -1076,7 +1076,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
         deactivated_curves.append_unique(c);
         already_deactivated_curves.append_unique(c);
 
-        DLIList<Point*> boundary_pts;
+        DLIList<TBPoint*> boundary_pts;
         c->points(boundary_pts);
         for (int e=boundary_pts.size(); e--; )
         {
@@ -1109,12 +1109,12 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
           c->get_children(end_pts, false, 0);
           for(m=end_pts.size(); m--;)
           {
-            Point *cur_p = dynamic_cast<Point*>(end_pts.get_and_step());
+            TBPoint *cur_p = dynamic_cast<TBPoint*>(end_pts.get_and_step());
             if(cur_p)
             {
               CompositePoint* cp = dynamic_cast<CompositePoint*>(cur_p->owner());
               if(cp)
-                cur_p = (Point*)cp;
+                cur_p = (TBPoint*)cp;
               TBOwner *own = cur_p->owner();
               HiddenEntitySet *hes = dynamic_cast<HiddenEntitySet*>(own);
               if(hes)
@@ -1126,7 +1126,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
                   already_deactivated_curves.append_unique(cc);
                   notify_deactivated(cc);
 
-                  DLIList<Point*> hidden_pts;
+                  DLIList<TBPoint*> hidden_pts;
                   cc->get_hidden_points(hidden_pts);
                   for (n=hidden_pts.size(); n--; )
                   {
@@ -1149,7 +1149,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
     {
       CompositeCurve *ccurve = dynamic_cast<CompositeCurve*>(deactivated_curves.get_and_step());
 
-      DLIList<Point*> boundary_pts;
+      DLIList<TBPoint*> boundary_pts;
       ccurve->points(boundary_pts);
       for (k=boundary_pts.size(); k--; )
       {
@@ -1162,7 +1162,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
       notify_deactivated(ccurve);
 
       int j;
-      DLIList<Point*> hidden;
+      DLIList<TBPoint*> hidden;
       ccurve->get_hidden_points(hidden);
       for (j=hidden.size(); j--; )
       {
@@ -1189,7 +1189,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
     // have a valence of more than two (real curves - hidden curves).
     for(i=points.size(); i>0; i--)
     {
-      Point *pt = points.get_and_step();
+      TBPoint *pt = points.get_and_step();
       CompositePoint *cp = dynamic_cast<CompositePoint*>(pt);
       if(cp)
         pt = cp->get_point();
@@ -1319,7 +1319,7 @@ void CompositeEngine::fix_up_query_results( DLIList<TopologyBridge*>& list,
 //-------------------------------------------------------------------------
 CompositeCurve* CompositeEngine::composite( Curve* keep_curve,
                                             Curve* dead_curve,
-                                            Point* keep_point,
+                                            TBPoint* keep_point,
                                             bool remove_partition )
 {
   if( keep_curve == dead_curve )
@@ -1379,7 +1379,7 @@ CompositeCurve* CompositeEngine::composite( Curve* keep_curve,
 //
 // Creation Date : 11/26/02
 //-------------------------------------------------------------------------
-CompositePoint* CompositeEngine::replace_point( Point* point )
+CompositePoint* CompositeEngine::replace_point( TBPoint* point )
 {
   assert( !dynamic_cast<CompositePoint*>(point) );
   return new CompositePoint( point );
@@ -1396,9 +1396,6 @@ CompositePoint* CompositeEngine::replace_point( Point* point )
 //-------------------------------------------------------------------------
 CompositeCurve* CompositeEngine::replace_curve( Curve* curve )
 {
-#ifdef BOYD17
-  DLIList<TopologyBridge*> points, coedges, loops;
-#endif
   DLIList<TopologyBridge*> points, coedges;
   //curve->get_children_virt( points );
   //fix_up_query_results(points);
@@ -1408,8 +1405,8 @@ CompositeCurve* CompositeEngine::replace_curve( Curve* curve )
     return 0;
     
   points.reset();
-  Point* start_pt = dynamic_cast<Point*>(points.get_and_step());
-  Point*   end_pt = dynamic_cast<Point*>(points.get_and_step());
+  TBPoint* start_pt = dynamic_cast<TBPoint*>(points.get_and_step());
+  TBPoint*   end_pt = dynamic_cast<TBPoint*>(points.get_and_step());
 
   CompositeCurve* composite = dynamic_cast<CompositeCurve*>(curve);
   
@@ -1641,11 +1638,11 @@ CompositeBody* CompositeEngine::replace_body( BodySM* body )
   return compbody;
 }
 
-Point* CompositeEngine::remove_composite( CompositePoint* composite )
+TBPoint* CompositeEngine::remove_composite( CompositePoint* composite )
 {
   assert( composite->next_curve() == 0 );
   assert( !dynamic_cast<HiddenEntitySet*>(composite->owner()) );
-  Point* result = composite->get_point();
+  TBPoint* result = composite->get_point();
   delete composite;
   return result;
 }
@@ -1953,7 +1950,7 @@ CompositeCurve* CompositeEngine::combine( CompositeCurve* keep,
 //
 // Creation Date : 02/27/04
 //-------------------------------------------------------------------------
-CubitStatus CompositeEngine::restore_point( Point* point )
+CubitStatus CompositeEngine::restore_point( TBPoint* point )
 {
   HiddenEntitySet* set;
   
@@ -2014,7 +2011,7 @@ CubitStatus CompositeEngine::restore_point( Point* point )
 //
 // Creation Date : 03/13/02
 //-------------------------------------------------------------------------
-CubitStatus CompositeEngine::restore_point_in_curve( Point* point )
+CubitStatus CompositeEngine::restore_point_in_curve( TBPoint* point )
 {
     // find CompositePoint
   CompositePoint* comppoint = dynamic_cast<CompositePoint*>(point);
@@ -2041,7 +2038,7 @@ CubitStatus CompositeEngine::restore_point_in_curve( Point* point )
     curve->get_children( points, true, COMPOSITE_LAYER );
     for( int j = points.size(); j--; )
     {
-      Point* pt = dynamic_cast<Point*>(points.get_and_step());
+      TBPoint* pt = dynamic_cast<TBPoint*>(points.get_and_step());
       assert( pt!= NULL );
       if( pt == comppoint )
       {
@@ -2145,8 +2142,8 @@ CubitStatus CompositeEngine::split( CompositeCurve* curve, int index,
     Curve* r_curve = new_curve->get_curve(j);
     children.clean_out();
     r_curve->get_children( children, true, COMPOSITE_LAYER );
-    Point* sp = dynamic_cast<Point*>(children.get_and_step() );
-    Point* ep = dynamic_cast<Point*>(children.get_and_step() );
+    TBPoint* sp = dynamic_cast<TBPoint*>(children.get_and_step() );
+    TBPoint* ep = dynamic_cast<TBPoint*>(children.get_and_step() );
     assert( sp && ep && sp != ep );
     if( old_hidden.restore( sp ) )
       new_curve->hidden_entities().hide( sp );
@@ -2676,9 +2673,6 @@ CompositeShell* CompositeEngine::split_shell( CompositeShell* shell_to_split )
   std::map<CompositeSurface*, int> marks;
 
     // Make sure all cosurface surface marks are cleared
-#ifdef BOYD17
-  DLIList<CompositeCoEdge*> coedge_list;
-#endif
   CompositeCoSurf* cosurf = 0;
   while( (cosurf = shell_to_split->next_co_surf( cosurf )) )
     marks[cosurf->get_surface()] = 0;
@@ -3752,10 +3746,6 @@ CubitStatus CompositeEngine::find_coedges( CompositeSurface* surface,
     return CUBIT_FAILURE;
   }
 
-#ifdef BOYD17
-  previous = prev_result;
-  next = next_result;
-#endif
   return CUBIT_SUCCESS;
 }
 
@@ -3875,9 +3865,6 @@ CompositeSurface* CompositeEngine::split_surface(
   DLIList<CoEdgeSM*> front_list;
   DLIList<TopologyBridge*> bridge_list, loop_list, coedge_list;
   DLIList<TopologyBridge*> hidden_loops_to_move;
-#ifdef BOYD17
-  DLIList<CompositeCoEdge*> compcoedges;
-#endif
   DLIList<Surface*> surfs_to_move;
   
     // Do advancing front across surfaces underlying composite surface
@@ -4043,11 +4030,11 @@ CompositeSurface* CompositeEngine::split_surface(
 
     // Move hidden points from old surface's hidden set to
     // new surface.
-  DLIList<Point*> hidden_points;
+  DLIList<TBPoint*> hidden_points;
   old_set->hidden_points( hidden_points );
   for( i = hidden_points.size(); i--; )
   {
-    Point* point = hidden_points.get_and_step();
+    TBPoint* point = hidden_points.get_and_step();
     CompositePoint* comp_pt = dynamic_cast<CompositePoint*>(point);
     assert(!!comp_pt);
     
@@ -4114,12 +4101,12 @@ CompositeSurface* CompositeEngine::split_surface(
 //
 // Creation Date : 
 //-------------------------------------------------------------------------
-CompositeCurve* CompositeEngine::remove_point( Point* dead_point,
+CompositeCurve* CompositeEngine::remove_point( TBPoint* dead_point,
                                                bool remove_partition,
                                                Curve* survivor )
 { 
   if( dynamic_cast<CompositePoint*>(dead_point->owner()) )
-    dead_point = dynamic_cast<Point*>(dead_point->owner());
+    dead_point = dynamic_cast<TBPoint*>(dead_point->owner());
  
   DLIList<TopologyBridge*> query_results;
   dead_point->get_parents_virt( query_results );
@@ -4134,17 +4121,17 @@ CompositeCurve* CompositeEngine::remove_point( Point* dead_point,
   curve1->get_children( query_results, COMPOSITE_LAYER );
   assert( query_results.size() == 2 && query_results.move_to( dead_point ) );
   query_results.move_to( dead_point );
-  Point* other1 = dynamic_cast<Point*>(query_results.step_and_get());
+  TBPoint* other1 = dynamic_cast<TBPoint*>(query_results.step_and_get());
   
   query_results.clean_out();
   curve2->get_children( query_results, COMPOSITE_LAYER );
   assert( query_results.size() == 2 && query_results.move_to( dead_point ) );
   query_results.move_to( dead_point );
-  Point* other2 = dynamic_cast<Point*>(query_results.step_and_get());
+  TBPoint* other2 = dynamic_cast<TBPoint*>(query_results.step_and_get());
   
     // If curves form a closed two-curve loop, we need to 
     // specify which point to keep.
-  Point* keep = other1 == other2 ? other1 : 0;
+  TBPoint* keep = other1 == other2 ? other1 : 0;
   if (survivor == curve2) std::swap(curve1, curve2);
   return composite( curve1, curve2, keep, remove_partition );
 }
@@ -4268,7 +4255,7 @@ CubitStatus CompositeEngine::remove_partition_curves( CompositeCurve* curve )
 //
 // Creation Date : 02/27/04
 //-------------------------------------------------------------------------
-CompositeCurve* CompositeEngine::restore_point_in_surface( Point* pt )
+CompositeCurve* CompositeEngine::restore_point_in_surface( TBPoint* pt )
 {
     // If real point is hidden by a composite surface, it should
     // have already been replaced by a composite point. Get the
@@ -4668,13 +4655,13 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
   DLIList<Lump*>    lumps,    temp_lumps;
   DLIList<Surface*> surfaces, temp_surfaces;
   DLIList<Curve*>   curves,   temp_curves;
-  DLIList<Point*>  points,   temp_points;
+  DLIList<TBPoint*>  points,   temp_points;
   
   CAST_LIST( imported_geom, bodies,   BodySM  );
   CAST_LIST( imported_geom, lumps,    Lump    );
   CAST_LIST( imported_geom, surfaces, Surface );
   CAST_LIST( imported_geom, curves,   Curve   );
-  CAST_LIST( imported_geom, points,   Point   );
+  CAST_LIST( imported_geom, points,   TBPoint   );
 
   i = bodies.size() + lumps.size() + surfaces.size() + curves.size() + points.size();
   if( i != imported_geom.size() )
@@ -4780,11 +4767,60 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
           assert(attrib->int_data_list()->size() == 1);
           int id = *(attrib->int_data_list()->get());
           ge->set_saved_id(id);
+          
+          DLIList<CubitString*> *cs_list = attrib->string_data_list();
+          DLIList<CubitString*> names;
+          
+          cs_list->reset();
+          cs_list->step();
+          for( int k=0; k<cs_list->size()-1; k++ )
+          {
+            CubitString *tmp_string = cs_list->get_and_step();            
+            names.append( tmp_string );
+          }
+          ge->set_saved_names( names );
+
           tb->remove_simple_attribute_virt(attrib);
         }
       }
     }
+
     // Need to do curves here too.
+    curves.reset();
+    for(i=curves.size(); i--;)
+    {
+      Curve *c = curves.get_and_step();
+      GeometryEntity *ge = dynamic_cast<GeometryEntity*>(c);
+      TopologyBridge *tb = dynamic_cast<TopologyBridge*>(c);
+      if(ge && tb)
+      {
+        DLIList<CubitSimpleAttrib*> list;
+        ge->get_simple_attribute("TOPOLOGY_BRIDGE_ID",list);
+        list.reset();
+        for(int j = list.size(); j--;)
+        {
+          CubitSimpleAttrib* attrib = list.get_and_step();
+          attrib->int_data_list()->reset();
+          assert(attrib->int_data_list()->size() == 1);
+          int id = *(attrib->int_data_list()->get());
+          ge->set_saved_id(id);
+          
+          DLIList<CubitString*> *cs_list = attrib->string_data_list();
+          DLIList<CubitString*> names;          
+
+          cs_list->reset();
+          cs_list->step();
+          for( int k=0; k<cs_list->size()-1; k++ )
+          {
+            CubitString *tmp_string = cs_list->get_and_step();            
+            names.append( tmp_string );
+          }
+          ge->set_saved_names( names );
+
+          tb->remove_simple_attribute_virt(attrib);
+        }
+      }
+    }
     
     // create composites top-down
     if( !create_composites( bodies   ) ) result = CUBIT_FAILURE;
@@ -4869,9 +4905,6 @@ void CompositeEngine::remove_attributes( DLIList<TopologyBridge*> &bridge_list )
   //remove attributes off of underlying/hidden entities
   DLIList<Curve*> curve_list, temp_curves;
   DLIList<Surface*> surface_list, temp_surfaces;
-#ifdef BOYD17
-  DLIList<Lump*> lump_list, temp_lumps;
-#endif
   DLIList<Lump*> lump_list;
   DLIList<BodySM*> body_list;
 
@@ -4937,7 +4970,7 @@ void CompositeEngine::remove_attributes( DLIList<TopologyBridge*> &bridge_list )
         strip_attributes( tmp_comp_curve->get_curve(j) );
 
         //remove attributes off underlying points too
-        DLIList<Point*> hidden_points;
+        DLIList<TBPoint*> hidden_points;
         tmp_comp_curve->get_hidden_points( hidden_points );
         for( k=hidden_points.size(); k--; )
           strip_attributes( hidden_points.get_and_step() );
@@ -4966,9 +4999,6 @@ void CompositeEngine::remove_attributes_from_unmodifed_virtual( DLIList<Topology
   //remove attributes off of underlying/hidden entities
   DLIList<Curve*> curve_list, temp_curves;
   DLIList<Surface*> surface_list, temp_surfaces;
-#ifdef BOYD17
-  DLIList<Lump*> lump_list, temp_lumps;
-#endif
   DLIList<Lump*> lump_list;
   DLIList<BodySM*> body_list;
 
@@ -5031,7 +5061,7 @@ void CompositeEngine::remove_attributes_from_unmodifed_virtual( DLIList<Topology
       //remove attributes off underlying points too
     }
     */
-    DLIList<Point*> hidden_points;
+    DLIList<TBPoint*> hidden_points;
     tmp_comp_curve->get_hidden_points( hidden_points );
     for( k=hidden_points.size(); k--; )
       strip_attributes( hidden_points.get_and_step() );
@@ -5204,7 +5234,7 @@ CubitStatus CompositeEngine::create_composites( DLIList<Curve*>& list )
 //
 // Creation Date : 06/18/02
 //-------------------------------------------------------------------------
-CubitStatus CompositeEngine::create_composites( DLIList<Point*>& list )
+CubitStatus CompositeEngine::create_composites( DLIList<TBPoint*>& list )
 {
   CubitStatus result = CUBIT_FAILURE;
   
@@ -5212,7 +5242,7 @@ CubitStatus CompositeEngine::create_composites( DLIList<Point*>& list )
   int i;
   for( i = list.size(); i--; )
   {
-    Point* point = list.get_and_step();
+    TBPoint* point = list.get_and_step();
     CompositePoint* cpoint;
     cpoint = dynamic_cast<CompositePoint*>(point->owner());
     if( cpoint )
@@ -5222,7 +5252,7 @@ CubitStatus CompositeEngine::create_composites( DLIList<Point*>& list )
     {
       point->remove_simple_attribute_virt( attrib );
 /*      
-      Point* stitch_partner = 0;
+      TBPoint* stitch_partner = 0;
       if( attrib->int_data_list()->size() )
       {
         assert(attrib->int_data_list()->size() == 1 );
@@ -5235,7 +5265,7 @@ CubitStatus CompositeEngine::create_composites( DLIList<Point*>& list )
           continue;
         }
         
-        stitch_partner = dynamic_cast<Point*>(bridge);
+        stitch_partner = dynamic_cast<TBPoint*>(bridge);
         assert( !!stitch_partner );
       }
 */      
@@ -5263,7 +5293,7 @@ CubitStatus CompositeEngine::create_composites( DLIList<Point*>& list )
     // Restore point curves
   for( i = list.size(); i--; )
   {
-    Point* point = list.get_and_step();
+    TBPoint* point = list.get_and_step();
     CompositePoint* cpoint;
     cpoint = dynamic_cast<CompositePoint*>(point->owner());
     if( cpoint )
@@ -5404,26 +5434,67 @@ CubitStatus CompositeEngine::export_geometry( DLIList<TopologyBridge*>& list )
    csurf_list.reset();
    for(i=csurf_list.size(); i--;)
    {
-      CompositeSurface *cs = csurf_list.get_and_step();
-      int number_surfs = cs->num_surfs();
-      for(int j=0; j<number_surfs; ++j)
-      {
-         Surface *s = cs->get_surface(j);
-         GeometryEntity *ge = dynamic_cast<GeometryEntity*>(s);
-         TopologyBridge *tb = dynamic_cast<TopologyBridge*>(s);
-         if(ge && tb)
-         {
-            CubitString name("TOPOLOGY_BRIDGE_ID");
-            DLIList<CubitString*> string_list;
-            string_list.append(&name);
-            CubitSimpleAttrib geom_attrib(&string_list, 0, 0);
-            int tb_id = ge->get_saved_id();
-            geom_attrib.int_data_list()->append(&tb_id);
-            append_attrib(tb, &geom_attrib);
-            geom_attrib.int_data_list()->clean_out();
+     CompositeSurface *cs = csurf_list.get_and_step();
+     int number_surfs = cs->num_surfs();
+     for(int j=0; j<number_surfs; ++j)
+     {
+       Surface *s = cs->get_surface(j);
+       GeometryEntity *ge = dynamic_cast<GeometryEntity*>(s);
+       TopologyBridge *tb = dynamic_cast<TopologyBridge*>(s);
+       if(ge && tb)
+       {
+         DLIList<CubitString*> string_list;
+         string_list.append( new CubitString("TOPOLOGY_BRIDGE_ID") );
+         
+         DLIList<int> int_list;
+         int_list.append( ge->get_saved_id() );
 
-         }
-      }
+         //save out the names
+         DLIList<CubitString*> names;
+         ge->get_saved_names( names );
+         for( int i=names.size(); i--; )               
+           string_list.append( new CubitString( names.get_and_step()->c_str() ) );                      
+
+         CubitSimpleAttrib geom_attrib( &string_list, 0, &int_list );
+         append_attrib(tb, &geom_attrib);
+
+         for( int i=names.size(); i--; )               
+           delete string_list.get_and_step();
+       }
+     }
+   }
+
+   ccurve_list.reset();
+   for(i=ccurve_list.size(); i--;)
+   {
+     CompositeCurve *cc = ccurve_list.get_and_step();
+     int number_curves = cc->num_curves();
+     for(int j=0; j<number_curves; ++j)
+     {
+       Curve *c = cc->get_curve(j);
+       GeometryEntity *ge = dynamic_cast<GeometryEntity*>(c);
+       TopologyBridge *tb = dynamic_cast<TopologyBridge*>(c);
+       if(ge && tb)
+       {
+         DLIList<CubitString*> string_list;
+         string_list.append( new CubitString("TOPOLOGY_BRIDGE_ID") );
+         
+         DLIList<int> int_list;
+         int_list.append( ge->get_saved_id() );
+
+         //save out the names
+         DLIList<CubitString*> names;
+         ge->get_saved_names( names );
+         for( int i=names.size(); i--; )               
+           string_list.append( new CubitString( names.get_and_step()->c_str() ) );                      
+
+         CubitSimpleAttrib geom_attrib( &string_list, 0, &int_list );
+         append_attrib(tb, &geom_attrib);
+
+         for( int i=names.size(); i--; )               
+           delete string_list.get_and_step();
+       }
+     }
    }
 
     for( i = ccurve_list.size(); i--; )
@@ -5503,7 +5574,7 @@ CubitStatus CompositeEngine::save( CompositePoint* point )
 
 CubitStatus CompositeEngine::save( CompositeCurve* curve  )
 {
-  DLIList<Point*> hidden_points;
+  DLIList<TBPoint*> hidden_points;
   DLIList<CubitString*> string_list;
 
   if (curve->num_curves() == 0) // point-curve
@@ -5531,7 +5602,7 @@ CubitStatus CompositeEngine::save( CompositeCurve* curve  )
   curve->get_hidden_points( hidden_points );
   for( i = hidden_points.size(); i--; )
   {
-    Point* point = hidden_points.get_and_step();
+    TBPoint* point = hidden_points.get_and_step();
     if( CompositePoint* cpoint = dynamic_cast<CompositePoint*>(point) )
       save(cpoint);
     
@@ -5696,7 +5767,7 @@ CubitStatus CompositeEngine::save( CompositeBody* )
 { return CUBIT_SUCCESS; }
 
 
-CompositePoint* CompositeEngine::stitch_points( Point* pt1, Point* pt2 )
+CompositePoint* CompositeEngine::stitch_points( TBPoint* pt1, TBPoint* pt2 )
 {
   CompositePoint* cp1 = dynamic_cast<CompositePoint*>(pt1);
   CompositePoint* cp2 = dynamic_cast<CompositePoint*>(pt2);
@@ -5840,58 +5911,15 @@ CompositeEngine::stitch_surfaces( Surface* /*surf1*/, Surface* /*surf2*/ )
 */
 }
 
-Point* CompositeEngine::insert_point(CompositeCurve* curve, double u)
+TBPoint* CompositeEngine::insert_point(CompositeCurve* curve, double u)
 {
-#if 0
-  int index;
-  double param;
-  if( ! curve->curve_param( u, param, index ) )
-    return 0;
-  Curve* rcurve = curve->get_curve(index);
-  
-  CubitVector position;
-  if( !rcurve->position_from_u(param,position) )
-    return 0;
-  
-  Point *start, *end, *result = 0;
-  DLIList<TopologyBridge*> pt_list;
-  rcurve->get_children_virt(pt_list);
-  assert(pt_list.size());
-  pt_list.reset();
-  start = dynamic_cast<Point*>(pt_list.get());
-  end = dynamic_cast<Point*>(pt_list.next());
-  assert( start && end );
-  
-  const double tolsqr = GEOMETRY_RESABS*GEOMETRY_RESABS;
-  if( (start->coordinates() - position).length_squared() < tolsqr )
-  {
-    result = start;
-  }
-  else if( (end->coordinates() - position).length_squared() < tolsqr )
-  {
-    result = end;
-  }
-  else
-  {
-    result = PartitionEngine::instance().insert_point(rcurve,param);
-    if( !result )
-      return 0;
-  }
-  
-  if ( ! restore_point_in_curve( result ) )
-    return 0;
-  
-  Point* comp = dynamic_cast<CompositePoint*>(result->owner());
-  return comp ? comp : result;
-#endif
-
   int i, index;
   double param;
-  Point *result = 0;
+  TBPoint *result = 0;
   CubitVector position;
-  DLIList<Point*> pts;
+  DLIList<TBPoint*> pts;
   double tolsqr = GEOMETRY_RESABS*GEOMETRY_RESABS;
-  Point *start, *end;
+  TBPoint *start, *end;
   DLIList<TopologyBridge*> pt_list;
   Curve *rcurve = 0;
 
@@ -5911,7 +5939,7 @@ Point* CompositeEngine::insert_point(CompositeCurve* curve, double u)
   curve->get_hidden_points(pts);
   for(i=pts.size(); i--;)
   {
-    Point *cur_pt = pts.get_and_step();
+    TBPoint *cur_pt = pts.get_and_step();
 
     // Don't use GEOMETRY_RESABS if we can get a
     // value from the solid modeling engine.
@@ -5920,7 +5948,7 @@ Point* CompositeEngine::insert_point(CompositeCurve* curve, double u)
     GeometryQueryEngine *gqe = NULL;
     if(cp)
     {
-      Point *real_pt = cp->get_point();
+      TBPoint *real_pt = cp->get_point();
       gqe = real_pt->get_geometry_query_engine();
     }
     else
@@ -5947,8 +5975,8 @@ Point* CompositeEngine::insert_point(CompositeCurve* curve, double u)
     rcurve->get_children_virt(pt_list);
     assert(pt_list.size());
     pt_list.reset();
-    start = dynamic_cast<Point*>(pt_list.get());
-    end = dynamic_cast<Point*>(pt_list.next());
+    start = dynamic_cast<TBPoint*>(pt_list.get());
+    end = dynamic_cast<TBPoint*>(pt_list.next());
     assert( start && end );
     
     if( (start->coordinates() - position).length_squared() < tolsqr )
@@ -5969,22 +5997,29 @@ Point* CompositeEngine::insert_point(CompositeCurve* curve, double u)
     }
   }
     
+  // Work with a real point here because functions called from
+  // restore_point_in_curve() may remove the composite all together
+  // leaving us with a stale CompositePoint pointer at this level.
+  CompositePoint *comp_pt = dynamic_cast<CompositePoint*>(result);
+  if(comp_pt)
+    result = comp_pt->get_point();
+
   // Finally, undo the composite.
   if ( ! restore_point_in_curve( result ) )
     return 0;
     
-  Point* comp = dynamic_cast<CompositePoint*>(result->owner());
+  TBPoint* comp = dynamic_cast<CompositePoint*>(result->owner());
   return comp ? comp : result;
 }
 
-Point* CompositeEngine::insert_point_curve( CompositeSurface* surf,
+TBPoint* CompositeEngine::insert_point_curve( CompositeSurface* surf,
                                             const CubitVector& pos )
 {
     // find closest surface
   int i = surf->closest_underlying_surface( pos );
   Surface *dummy_surf, *real_surf = surf->get_surface(i);
   
-  Point* pt = PartitionEngine::instance().insert_point_curve( real_surf, pos, dummy_surf );
+  TBPoint* pt = PartitionEngine::instance().insert_point_curve( real_surf, pos, dummy_surf );
   if ( !pt )
     return 0;
   
@@ -6028,7 +6063,7 @@ CubitStatus CompositeEngine::insert_curve( DLIList<Surface*>& surfaces,
   
   DLIList<Surface*> surfs_to_reverse;
   DLIList<Surface*> real_surfs;
-  DLIList<Point*> points;
+  DLIList<TBPoint*> points;
   surfaces.reset();
 
   for ( i = surfaces.size(); i--; )
@@ -6104,7 +6139,7 @@ CubitStatus CompositeEngine::insert_curve( DLIList<Surface*>& surfaces,
   new_curves.reset();
   Curve* prev_curve = new_curves.get();
   DLIList<TopologyBridge*> prev_pts(2), next_pts(2), pt_curves;
-  DLIList<Point*> dead_points;
+  DLIList<TBPoint*> dead_points;
   prev_curve->get_children( prev_pts, false, COMPOSITE_LAYER );
   for ( i = new_curves.size(); i--; )
   {
@@ -6112,7 +6147,7 @@ CubitStatus CompositeEngine::insert_curve( DLIList<Surface*>& surfaces,
     curve->get_children( next_pts, false, COMPOSITE_LAYER );
     while( prev_pts.size() )
     {
-      Point* point = dynamic_cast<Point*>(prev_pts.pop());
+      TBPoint* point = dynamic_cast<TBPoint*>(prev_pts.pop());
       if( !next_pts.move_to( point ) )
         continue;
       next_pts.extract();
@@ -6137,7 +6172,7 @@ CubitStatus CompositeEngine::insert_curve( DLIList<Surface*>& surfaces,
       
   while( dead_points.size() )
   {
-    Point* point = dead_points.pop();
+    TBPoint* point = dead_points.pop();
     if ( CompositePoint* comp = dynamic_cast<CompositePoint*>(point->owner()) )
       point = comp;
       
@@ -6473,9 +6508,6 @@ CubitStatus CompositeEngine::notify_transform( TopologyBridge* bridge,
 
   // if we get here, the transform was a reflection so we need to make sure all
   // loops and coedges get reversed
-#ifdef BOYD17
-  DLIList<TopologyBridge*> loops, tmp_loops, coedges, curves;
-#endif
   DLIList<TopologyBridge*> loops, tmp_loops, coedges;
   while (surfaces.size())
   {
@@ -6555,6 +6587,96 @@ CompositeBody* CompositeEngine::combine_bodies( BodySM* body1, BodySM* body2 )
 void CompositeEngine::get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
                                                             DLIList<TopologyBridge*> &tbs )
 {
-  //do nothing.
+  TBOwner* tb_owner = source_bridge->owner();
+  CompositeSurface *comp_surf = CAST_TO(tb_owner, CompositeSurface );
+  if( comp_surf )  
+  { 
+    if( comp_surf->bridge_manager() )
+    {
+      tbs.append( comp_surf );
+      return;
+    }
+  } 
+
+  CompositeCurve *comp_curve = CAST_TO(tb_owner, CompositeCurve );
+  if( comp_curve )  
+  { 
+    if( comp_curve->bridge_manager() )
+    {
+      tbs.append( comp_curve );
+      return;
+    }
+  } 
+
+  CompositePoint *comp_pt = CAST_TO(tb_owner, CompositePoint );
+  if( comp_pt )  
+  { 
+    if( comp_pt->bridge_manager() )
+    {
+      tbs.append( comp_pt );
+      return;
+    }
+  } 
+
+  HiddenEntitySet *hidden_ent_set = CAST_TO(tb_owner, HiddenEntitySet );
+  if( hidden_ent_set )
+  {
+    TBOwner *owner = hidden_ent_set->owner();
+    CompositeCurve *comp_curve = CAST_TO(owner, CompositeCurve );
+    if( comp_curve && comp_curve->bridge_manager() )
+    {
+      tbs.append( comp_curve );
+      return;
+    }
+
+    CompositeSurface *comp_surf = CAST_TO(owner, CompositeSurface );
+    if( comp_surf )
+      return;
+
+    assert(0);
+  }
+  else
+  {
+    CompositePoint *comp_pt = CAST_TO(tb_owner, CompositePoint);   
+
+    if( comp_pt )
+    {
+      TBOwner *other_owner = comp_pt->owner();
+
+      HiddenEntitySet *hidden_ent_set = CAST_TO(other_owner, HiddenEntitySet );
+      if( hidden_ent_set )
+      {
+        TBOwner *owner = hidden_ent_set->owner();
+        CompositeCurve *comp_curve = CAST_TO(owner, CompositeCurve );
+        if( comp_curve->bridge_manager() )
+        {
+          tbs.append( comp_curve );
+          return;
+        }        
+      }
+    }
+
+    CompositeCurve *comp_curve = CAST_TO(tb_owner, CompositeCurve);   
+
+    if( comp_curve )
+    {
+      TBOwner *other_owner = comp_curve->owner();
+
+      HiddenEntitySet *hidden_ent_set = CAST_TO(other_owner, HiddenEntitySet );
+      if( hidden_ent_set )
+      {
+        TBOwner *owner = hidden_ent_set->owner();
+        CompositeSurface *comp_surf = CAST_TO(owner, CompositeSurface );
+        if( comp_surf->bridge_manager() )
+        {
+          tbs.append( comp_surf );
+          return;
+        }        
+      }
+    }
+  }
+
+    return;
 }
+
 

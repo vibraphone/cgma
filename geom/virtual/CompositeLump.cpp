@@ -325,11 +325,11 @@ void CompositeLump::print_debug_info( const char* prefix, bool brief )
     int count = 0;
     while ((shell = next_shell(shell))  != NULL ) ++count;
     PRINT_INFO( "%sCompositeLump %p : %d shells, %d lumps.\n",
-                prefix, static_cast<void*>(this), count, num_lumps() );
+      prefix,this, count, num_lumps() );
     return;
   }
   
-  PRINT_INFO("%sCompositeLump %p:\n", prefix, static_cast<void*>(this) );
+  PRINT_INFO("%sCompositeLump %p:\n", prefix, this );
   
   char* new_prefix = new char[strlen(prefix)+3];
   strcpy( new_prefix, prefix );

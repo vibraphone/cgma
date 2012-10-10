@@ -152,7 +152,7 @@ RefVertex* PartitionTool::partition( RefEdge* edge_ptr,
   {
     Curve* curve_ptr = dynamic_cast<Curve*>(bridge_list.get_and_step());
     double u = curve_ptr->u_from_position( split_point );
-    Point* pt = PartitionEngine::instance().insert_point( curve_ptr, u );
+    TBPoint* pt = PartitionEngine::instance().insert_point( curve_ptr, u );
     if( !pt )
     {
         // try to back out any partitions we've already made.
@@ -186,7 +186,7 @@ RefVertex* PartitionTool::partition( RefEdge* edge_ptr,
   bool start_vtx[2];      // for the first curve, is new_vtx the start of that curve
   CubitSense senses[2];   // bridge sense for first curve in each refedge
     // For each of two curves adjacent to the first split point
-  Point* point = new_vertex->get_point_ptr();
+  TBPoint* point = new_vertex->get_point_ptr();
   point->get_parents(curve_bridges);
   assert(curve_bridges.size() == 2);
   curve_bridges.reset();
@@ -650,7 +650,7 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
                   {
                     if(curves.get() == other_curve)
                     {
-                      CompositeEngine::instance().remove_point(dynamic_cast<Point*>(pts.get()));
+                      CompositeEngine::instance().remove_point(dynamic_cast<TBPoint*>(pts.get()));
                       curves.remove(curves.get());
                       p = 0;
                     }
@@ -897,7 +897,9 @@ CubitStatus PartitionTool::insert_edge(
           vect_list.append(&closest);
           CubitStatus status = partition(the_edge, vect_list, temp_list);
           //need to debug later if this happens.
-          assert (CUBIT_SUCCESS == status);
+          //assert (CUBIT_SUCCESS == status);
+          if( CUBIT_FAILURE == status )
+             return status;
           edge_list.remove(the_edge);
           count ++;
           break;
@@ -941,7 +943,7 @@ CubitStatus PartitionTool::insert_edge(
   delete [] surface_sets;
 
   // Do not create a new body in the failure case
-  if (result == CUBIT_FAILURE)
+  if (CUBIT_FAILURE == result)
     return result;
   
   // get the list of all bodies involved in the partition operation
@@ -1002,7 +1004,7 @@ CubitStatus PartitionTool::make_point_curves( RefFace* face_ptr,
   int i, j;
   DLIList<TopologyBridge*> bridge_list;
   DLIList<Surface*> surface_list;
-  DLIList<Point*> new_points;
+  DLIList<TBPoint*> new_points;
   CubitStatus rval = CUBIT_SUCCESS;
   
     // Get list of surfaces from RefFace
@@ -1032,7 +1034,7 @@ CubitStatus PartitionTool::make_point_curves( RefFace* face_ptr,
     for (j = surface_list.size(); j--; )
     {
       Surface *new_surf, *old_surf = surface_list.step_and_get();
-      Point* new_pt = PartitionEngine::instance().
+      TBPoint* new_pt = PartitionEngine::instance().
                         insert_point_curve( old_surf, pos, new_surf );
         
       if (!new_pt)
@@ -1297,7 +1299,7 @@ CubitStatus PartitionTool::unpartitionAll( DLIList<RefEdge*>& partition_edges,
   {
     RefVertex* vtx = vertex_list.step_and_get();
     
-    Point* pt = vtx->get_point_ptr();
+    TBPoint* pt = vtx->get_point_ptr();
     CompositePoint* comp = dynamic_cast<CompositePoint*>(pt);
     if ( comp )
       pt = comp->get_point();
@@ -1695,9 +1697,6 @@ CubitStatus PartitionTool::partition( RefVolume* volume_ptr,
                                       CubitBoolean  )
 {
   Lump* lump = volume_ptr->get_lump_ptr();
-#ifdef BOYD17
-  DLIList<Surface*> surface_list;
-#endif
   
   Surface* result = PartitionEngine::instance().
       insert_surface( split_faces, lump );

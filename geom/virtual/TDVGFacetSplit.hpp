@@ -19,10 +19,6 @@ class TDVGFacetSplit : public ToolData
     CubitFacetData* split_from( ) const
       { return splitFrom; }
 
-#ifdef BOYD15
-    static CubitFacetData* get( ToolDataUser* user );
-    static void set( ToolDataUser* user, CubitFacetData* facet );
-#endif
     static void remove( ToolDataUser* user );
       
   private:

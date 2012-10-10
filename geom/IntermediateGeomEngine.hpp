@@ -7,7 +7,7 @@ class CubitTransformMatrix;
 class Body;
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
 class BodySM;
 class TBOwner;
 
@@ -15,9 +15,6 @@ class IntermediateGeomEngine
 {
 
 public:
-  
-  virtual ~IntermediateGeomEngine() {}
-
   virtual bool is_composite(TBOwner *bridge_owner) = 0;
   virtual bool is_composite(TopologyBridge *bridge ) = 0;
   virtual bool is_partition(TBOwner *bridge_owner) = 0;
@@ -45,7 +42,7 @@ public:
   
   virtual void remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges) = 0;
   virtual void remove_modified(DLIList<Surface*> &all_surfs,
-    DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts) = 0;
+    DLIList<Curve*> &all_curves, DLIList<TBPoint*> &all_pts) = 0;
   virtual CubitStatus notify_transform( TopologyBridge* entity,
                                         const CubitTransformMatrix& xform ) = 0;
 

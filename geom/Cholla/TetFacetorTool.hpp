@@ -32,7 +32,6 @@
 
 //#define DEBUG_TET_FACETOR
 
-#include "DLIList.hpp"
 #include "CubitBox.hpp"
 
 #ifdef DEBUG_TET_FACETOR
@@ -65,30 +64,30 @@ public:
   int finish();
     //- complete the tesselation - remove bounding box nodes
 
-  int get_tets( DLIList<TET *> &tet_list );
+  int get_tets( std::vector<TET *> &tet_list );
     //- retreive the current list of tets 
 
   TET *get_outside_tet();
     //- get one tet that is on the outside of the boundary
 
-  int get_interior_tets( DLIList<TET *> &tet_list );
+  int get_interior_tets( std::vector<TET *> &tet_list );
     //- get tets that are not connected to a bounding box node
 
-  int tesselate(DLIList<NODE *> &node_list, DLIList<TET *> &tet_list);
+  int tesselate(std::vector<NODE *> &node_list, std::vector<TET *> &tet_list);
     //- given a list of points, form a Delaunay tesselation.  Does
     //- initializion and finish (All-in-one function)
 
-  int read_data( const char *filename, DLIList<NODE *>&node_list );
+  int read_data( const char *filename, std::vector<NODE *>&node_list );
     //- read data from a file and create list of NODEs
 
   int circumsphere( TET *tet_ptr, CubitVector &center, double &radius2 );
     // get the circumsphere info for the tet
 
-  int natural_neighbor_tets( CubitVector &xx, DLIList<TET *> &neighbor_tet_list, 
+  int natural_neighbor_tets( CubitVector &xx, std::vector<TET *> &neighbor_tet_list, 
                              NODE *&duplicate_node );
     // get all tets whose circumsphere contain the point
 
-  int watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list );
+  int watson_insert( NODE *node_ptr, std::vector<TET *> &neighbor_tet_list );
     // insert using Bowyer-Watson algrithm
 
   double get_tol(){return csTol;}
@@ -98,7 +97,7 @@ public:
 
 private:
 
-  DLIList<TET *> tetList;
+  std::vector<TET *> tetList;
     // current set of tets in the set
 
   TET *lastTet;
@@ -119,7 +118,7 @@ private:
   int mDebug;
     // debug flag;
 
-  int init_box(DLIList<NODE *> &node_list);
+  int init_box(std::vector<NODE *> &node_list);
     // create the initial tets where all subsequent nodes will be inserted
 
   int create_bbox_tets();
@@ -131,7 +130,7 @@ private:
   int is_bbox(NODE *n);
     // return if this is a node on the bounding box;
 
-  int insert_nodes( DLIList<NODE *> &node_list );
+  int insert_nodes( std::vector<NODE *> &node_list );
     // insert nodes into existing tesselation
 
   int locate_point( CubitVector &xx, NODE *&exact_node, TET *&containing_tet );
@@ -144,7 +143,7 @@ private:
     // This is called only when locate_point fails
 
   CubitBoolean point_in_circumsphere( TET *adj_tet, CubitVector &xx, 
-                             DLIList<TET *> &neighbor_tet_list );
+                                     std::vector<TET *> &neighbor_tet_list );
     // recursive function, determines if the point is within the
     // circumsphere of the given tet and then recurses to its
     // neighbors if it is.  Add to the neighbor_tet_list as we go.
@@ -164,10 +163,7 @@ private:
 };
 
 #ifndef DEBUG_TET_FACETOR
-// Added by CAT for NT port
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "TetFacetorTool.cpp"
-#endif
+#include "TetFacetorTool.cpp"
 #endif
 
 

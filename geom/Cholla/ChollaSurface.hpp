@@ -70,6 +70,8 @@ public:
   
   void remove_facet( FacetEntity *facet )
   {surfaceElemList.remove( facet );}
+  
+  bool is_contain( FacetEntity *facet );
 
   DLIList<FacetEntity*> &get_facet_list()
     {return surfaceElemList;}

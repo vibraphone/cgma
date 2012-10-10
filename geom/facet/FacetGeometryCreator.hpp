@@ -42,16 +42,6 @@ public:
   ~FacetGeometryCreator();
   //- Destructor
 
-#ifdef BOYD14
-  CubitStatus create_geometry(CubitBoolean use_feature_angle,
-                              double angle,
-                              int interp_order,
-                              CubitBoolean smooth_non_manifold,
-                              CubitBoolean split_surfaces,
-                              DLIList<Surface *> &surface_list);
-    //- Creates the geometry infrastructure based on
-    //- the given mesh data.
-#endif
   void print_me();
    
 private:
@@ -70,11 +60,6 @@ private:
 
   void set_up_tool_datas( );
   void delete_tool_datas( );
-
-#ifdef BOYD14
-  int facet_dimension(FacetEntity *facet_ptr);
-    //- returns the dimension of the facet entity.
-#endif
 
   CubitStatus create_volume_boundaries( DLIList<FacetSurfaceMesh*> &facet_surface_sheets,
                                         CubitBoolean use_feature_angle,

@@ -19,7 +19,6 @@ TDGeomFacet::TDGeomFacet()
   hitFlag = 0;
   partnerEdgeList = NULL;
   partnerPointList = NULL;
-  onBoundaryFlag = 0;
 }
 
 TDGeomFacet::~TDGeomFacet()
@@ -232,7 +231,6 @@ void TDGeomFacet::reset_TD_as_new()
   hitFlag = 0;
   partnerEdgeList = NULL;
   partnerPointList = NULL;
-  onBoundaryFlag = 0;
   ChollaSurfaceList.clean_out();
   ChollaCurveList.clean_out();
   myPoints.clean_out();

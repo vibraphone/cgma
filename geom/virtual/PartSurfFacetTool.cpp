@@ -44,7 +44,7 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
         if (!curve)
         {
           PRINT_ERROR("Facet edge owned by non-curve %s %p\n",
-            typeid(*ent).name(), static_cast<void*>(ent));
+            typeid(*ent).name(), (void*)ent);
           GfxDebug::draw_line( edge->point(0)->coordinates(),
                                edge->point(1)->coordinates(),
                                CUBIT_RED );
@@ -74,8 +74,7 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
         if ( coedge_count != edge->num_adj_facets() )
         {
           PRINT_ERROR("Curve %p (RefEdge %d): Curve in %d partition surfaces "
-                      "has facet edge in %d facets.\n",
-                      static_cast<void*>(curve),
+                      "has facet edge in %d facets.\n", (void*)curve,
                       curve_owner ? curve_owner->id() : 0,
                       coedge_count, edge->num_adj_facets() );
           GfxDebug::draw_line( edge->point(0)->coordinates(),
@@ -87,7 +86,7 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
         {
           PRINT_ERROR("Curve %p (RefEdge %d): Curve used in %d coedges of "
                       "this surface exists in %d facets of this surface.\n", 
-                      static_cast<void*>(curve),
+                      (void*)curve,
                       curve_owner ? curve_owner->id() : 0,
                       curve_use_count, edge_use_count );
            GfxDebug::draw_line( edge->point(0)->coordinates(),
@@ -249,8 +248,7 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
       {
         PRINT_ERROR("Broken facet-edge chain at curve %p (RefEdge %d):\n"
                     "      start of segment (%f,%f,%f)->(%f,%f,%f)\n",
-                    static_cast<void*>(curve),
-                    curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
+                    curve, curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
                     dynamic_cast<RefEdge*>(curve->topology_entity())->id() : 0,
                     edge->point(0)->coordinates().x(), 
                     edge->point(0)->coordinates().y(),
@@ -266,23 +264,19 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
         {
           PRINT_ERROR("Edges at point %p (vertex %d) (%f,%f,%f) owned\n"
                       "      by the same curve: %p (RefEdge %d)\n",
-            static_cast<void*>(pt),
-            dynamic_cast<RefVertex*>(pt->topology_entity()) ?
+            pt, dynamic_cast<RefVertex*>(pt->topology_entity()) ?
             dynamic_cast<RefVertex*>(pt->topology_entity())->id() : 0,
             pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z(),
-            static_cast<void*>(curve),
-            curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
+            curve, curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
             dynamic_cast<RefEdge*>(curve->topology_entity())->id() : 0);
         } 
         else if (!curve->other_point(pt))
         {
           PRINT_ERROR("Edge owner curve %p (RefEdge %d) at point %p \n"
                       "      (vertex %d) (%f,%f,%f) doesn't match topology\n",
-            static_cast<void*>(curve),
-            curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
+            curve, curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
             dynamic_cast<RefEdge*>(curve->topology_entity())->id() : 0,
-            static_cast<void*>(pt),
-            dynamic_cast<RefVertex*>(pt->topology_entity()) ?
+            pt, dynamic_cast<RefVertex*>(pt->topology_entity()) ?
             dynamic_cast<RefVertex*>(pt->topology_entity())->id() : 0,
             pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z());
         }
@@ -290,11 +284,9 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
         {
           PRINT_ERROR("Edge owner curve %p (RefEdge %d) at point %p \n"
                       "      (vertex %d) (%f,%f,%f) doesn't match topology\n",
-            static_cast<void*>(prev_curve),
-            prev_curve && dynamic_cast<RefEdge*>(prev_curve->topology_entity())?
+            prev_curve, prev_curve && dynamic_cast<RefEdge*>(prev_curve->topology_entity())?
             dynamic_cast<RefEdge*>(prev_curve->topology_entity())->id() : 0,
-            static_cast<void*>(pt),
-            dynamic_cast<RefVertex*>(pt->topology_entity()) ?
+            pt, dynamic_cast<RefVertex*>(pt->topology_entity()) ?
             dynamic_cast<RefVertex*>(pt->topology_entity())->id() : 0,
             pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z());
         }
@@ -302,17 +294,15 @@ void PartSurfFacetTool::validate_facets( PartitionSurface* mySurface )
       else if (prev_curve != curve)
       {
         PRINT_ERROR("Missing point-owner at  transition between\n"
-                    "      curve %p (RefEdge %d) and curve %p (RefEdge %d):\n"
-                    "      at location (%f,%f,%f)\n",
-                    static_cast<void*>(curve),
-                    curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
-                    dynamic_cast<RefEdge*>(curve->topology_entity())->id() : 0,
-                    static_cast<void*>(prev_curve),
-                    prev_curve && dynamic_cast<RefEdge*>(prev_curve->topology_entity())?
-                    dynamic_cast<RefEdge*>(prev_curve->topology_entity())->id() : 0,
-                    shared->coordinates().x(), 
-                    shared->coordinates().y(),
-                    shared->coordinates().z() );
+                  "      curve %p (RefEdge %d) and curve %p (RefEdge %d):\n"
+                  "      at location (%f,%f,%f)\n",
+                  curve, curve && dynamic_cast<RefEdge*>(curve->topology_entity())?
+                  dynamic_cast<RefEdge*>(curve->topology_entity())->id() : 0,
+                  prev_curve, prev_curve && dynamic_cast<RefEdge*>(prev_curve->topology_entity())?
+                  dynamic_cast<RefEdge*>(prev_curve->topology_entity())->id() : 0,
+                  shared->coordinates().x(), 
+                  shared->coordinates().y(),
+                  shared->coordinates().z() );
       } 
       
       prev = edge;
@@ -528,7 +518,7 @@ static void draw_edges( DLIList<CubitFacetEdge*>& edges, int edge_color = 0,
     if (label_edges)
     {
       CubitVector mid = 0.5 * (start + end);
-      sprintf(buffer, "%p", static_cast<void*>(edge));
+      sprintf(buffer, "%p", edge);
       float x = (float)mid.x();
       float y = (float)mid.y();
       float z = (float)mid.z();
@@ -548,7 +538,7 @@ static void draw_edges( DLIList<CubitFacetEdge*>& edges, int edge_color = 0,
       }
       if (label_points)
       {
-          sprintf(buffer, "%p", static_cast<void*>(point));
+        sprintf(buffer, "%p", point);
         GfxDebug::draw_label( buffer, x, y, z, point_color );
       }
     }

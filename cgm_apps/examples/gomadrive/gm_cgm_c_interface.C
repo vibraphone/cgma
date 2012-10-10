@@ -66,7 +66,6 @@
 #include "VirtualGeometryEngine.hpp"
 #include "CubitObserver.hpp"
 #include "CubitMessage.hpp"
-#include "CubitCompat.hpp"
 
 #include <CastTo.hpp>
 #include <Body.hpp>
@@ -284,17 +283,19 @@ int cgm_geometry_read_SAT( char const* ACISSATFileName,
   //  printf( "   ACIS SAT File Name = %s\n", ACISSATFileName );
   
   // Read the Bodies from the SAT file
-//  FILE* file_ptr = fopen(ACISSATFileName, "r");
-//  if(!file_ptr)
-//    {
-//      PRINT_ERROR("Cannot open file %s\n",ACISSATFileName);
-//      return (-1);
-//    }
+  FILE* file_ptr = fopen(ACISSATFileName, "r");
+  if(!file_ptr)
+    {
+      PRINT_ERROR("Cannot open file %s\n",ACISSATFileName);
+      return (-1);
+    }
   
   int id;
   id = RefEntityFactory::instance()->num_ref_volumes();
   CubitStatus status =
-    CubitCompat_import_solid_model(  ACISSATFileName, "ACIS_SAT");
+    GeometryQueryTool::instance()->import_solid_model( file_ptr,
+						       ACISSATFileName,
+						       "ACIS_SAT");
   //#ifdef DEBUG
   int num_volumes = id;
   
@@ -483,7 +484,8 @@ int cgm_straight_edge_construct( GeometryType refEdgeType,
       const char* file_type = "ACIS_SAT";
       refEdgeName += ".sat";
       PRINT_INFO("Exporting %s\n",refEdgeName.c_str());
-      int status = CubitCompat_export_solid_model(entity_list,
+      int status = GeometryQueryTool::instance()->
+         export_solid_model(entity_list,
                             refEdgeName.c_str(),
                             file_type,
                             num_exp,
@@ -581,7 +583,8 @@ int cgm_quadratic_edge_construct( GeometryType refEdgeType,
       const char* file_type = "ACIS_SAT";
       refEdgeName += ".sat";
       PRINT_INFO("Exporting %s\n",refEdgeName.c_str());
-      int status = CubitCompat_export_solid_model(entity_list,
+      int status = GeometryQueryTool::instance()->
+         export_solid_model(entity_list,
                             refEdgeName.c_str(),
                             file_type,
                             num_exp,
@@ -674,7 +677,8 @@ int cgm_composite_edge_construct( char const* name,
       const char* file_type = "ACIS_SAT";
       refEdgeName += ".sat";
       PRINT_INFO("Exporting composite edge %s\n",refEdgeName.c_str());
-      int status = CubitCompat_export_solid_model(entity_list,
+      int status = GeometryQueryTool::instance()->
+         export_solid_model(entity_list,
                             refEdgeName.c_str(),
                             file_type,
                             num_exp,
@@ -925,7 +929,8 @@ int cgm_face_disk_construct( GeometryType refFaceType,
       const char* file_type = "ACIS_SAT";
       refFaceName += ".sat";
       PRINT_INFO("Exporting %s\n",refFaceName.c_str());
-      int status = CubitCompat_export_solid_model(entity_list,
+      int status = GeometryQueryTool::instance()->
+	export_solid_model(entity_list,
                      refFaceName.c_str(),
                      file_type,
                      num_exp,
@@ -1017,7 +1022,8 @@ int cgm_face_construct_by_edges( GeometryType refFaceType,
       const char* file_type = "ACIS_SAT";
       refFaceName += ".sat";
       PRINT_INFO("Exporting %s\n",refFaceName.c_str());
-      int status = CubitCompat_export_solid_model(entity_list,
+      int status = GeometryQueryTool::instance()->
+         export_solid_model(entity_list,
                             refFaceName.c_str(),
                             file_type,
                             num_exp,
@@ -2292,7 +2298,8 @@ int all_done_export_now(const char * name_of_export_file)
     }
        int num_exp = entity_list.size();
  const char* file_type = "ACIS_SAT";
-  int status = CubitCompat_export_solid_model(entity_list,
+  int status = GeometryQueryTool::instance()->
+     export_solid_model(entity_list,
                         name_of_export_file,
                         file_type,
                         num_exp,

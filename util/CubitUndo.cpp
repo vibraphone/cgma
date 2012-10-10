@@ -142,6 +142,11 @@ void CubitUndo::note_result_bodies( DLIList<Body*> &bodies_to_delete )
   if(!mInstance ) return;
   mInstance->p_note_result_bodies( bodies_to_delete );
 }
+void CubitUndo::note_result_boundary_conditions( RefEntity *owner_entity )
+{
+    if(!mInstance ) return;
+  mInstance->p_note_result_boundary_conditions( owner_entity );
+}
 
 void CubitUndo::note_result_entity( RefEntity *entity_to_delete ) 
 {

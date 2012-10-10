@@ -185,17 +185,6 @@ class FacetProjectTool
     //- the other.  Result is returned as fraction of the 
     //- direction vector (from the base point) for each line.
     
-#ifdef BOYD15
-  static
-  double closest_on_edge( const CubitVector& base,
-                          const CubitVector& direction,
-			  const CubitVector& from_position );
-    //- Find the closest point on a bounded edge with the same
-    //- length as the passed direction vector.  Returns fraction
-    //- of the direction vector at which the closest point to
-    //- the passed position occurs.
-#endif
-			  
   static
   double closest_on_line( const CubitVector& base,
                           const CubitVector& direction,

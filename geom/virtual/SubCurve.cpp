@@ -427,7 +427,10 @@ void SubCurve::fixup_periodic_param( double& param ) const
     param += period;
 }
 
-CubitStatus SubCurve::get_graphics( GMem& result )
+CubitStatus SubCurve::get_graphics( GMem& result,
+                            double angle_tolerance,
+                            double distance_tolerance,
+                            double max_edge_length )
 {
   if (POINT_CURVE_TYPE == this->geometry_type())
   {
@@ -437,7 +440,7 @@ CubitStatus SubCurve::get_graphics( GMem& result )
 
   int i;
   if( !real_curve()->get_geometry_query_engine()->
-    get_graphics( real_curve(), &result ) )
+    get_graphics( real_curve(), &result, angle_tolerance, distance_tolerance, max_edge_length ) )
     return CUBIT_FAILURE;
 
   if (0 == result.pointListCount)
@@ -547,4 +550,29 @@ CubitStatus SubCurve::save( CubitSimpleAttrib& attrib )
   get_save_topology(end_points);
 
   return sub_entity_set().save_geometry( id, 1, 0, 0, &end_points, 0, attrib );
+}
+
+CubitStatus SubCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for SubCurves.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus SubCurve::get_ellipse_params
+(
+  CubitVector &center_vec,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine ellipse parameters for SubCurves.\n");
+  return CUBIT_FAILURE;
 }

@@ -67,7 +67,7 @@ OCCLoop::~OCCLoop()
   disconnect_all_curves();
   if (myTopoDSWire)
   {
-    myTopoDSWire->Nullify();
+    myTopoDSWire->Nullify(); 
     delete (TopoDS_Wire*)myTopoDSWire;
     myTopoDSWire = NULL;
   }
@@ -77,8 +77,7 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
 {
    if(myTopoDSWire && loop.IsEqual(*myTopoDSWire))
      return;
-
-   if(myTopoDSWire &&!loop.IsSame(*myTopoDSWire))
+   if(myTopoDSWire && !loop.IsSame(*myTopoDSWire))
    {
      DLIList<OCCCoEdge*> coedges = this->coedges();
      for(int i = 0; i < coedges.size(); i++)
@@ -101,7 +100,6 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
          curve->remove_loop(this); 
      }
    }
-
    if(myTopoDSWire)
      myTopoDSWire->Nullify();
    *myTopoDSWire = loop;
@@ -319,7 +317,8 @@ CubitStatus OCCLoop::update_OCC_entity(TopoDS_Wire & old_loop,
     shapes.Assign(sp->DescendantShapes(edge));
     if(shapes.Extent() > 1)
     {
-      shape_edge = shapes.First(); 
+      shape_edge = shapes.First();
+     
       OCCQueryEngine::instance()->update_OCC_map(edge, shape_edge);
     } 
   }

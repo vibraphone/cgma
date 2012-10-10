@@ -96,13 +96,6 @@ public:
     //-      done at base class. The classes derived from DAGNode
     //-      must do that.
       
-#ifdef BOYD14
-  void remove_and_cleanout_deactivated_DAG_nodes() ;
-    //R void
-    //- This function removes the deactivated DAG nodes from the DAG
-    //- then calls the function cleanout_deactivated_DAG_nodes.
-#endif
-      
   void notify(ModelEntity* DAGNodePtr, CubitEventType event);
     //R void
     //I DAGNodePtr

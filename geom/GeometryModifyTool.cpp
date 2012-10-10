@@ -33,6 +33,7 @@
 #include "ModelQueryEngine.hpp"
 #include "CADefines.hpp"
 #include "GeomMeasureTool.hpp"
+#include "LocalToleranceTool.hpp"
 
 #include "RefEntity.hpp"
 #include "RefEntityFactory.hpp"
@@ -109,6 +110,33 @@ CubitBoolean GeometryModifyTool::oldNames = CUBIT_FALSE;
 CubitBoolean GeometryModifyTool::meshAutodelete = CUBIT_TRUE;
 CubitBoolean GeometryModifyTool::meshAutodeleteRemesh = CUBIT_FALSE;
 RefEntity* GeometryModifyTool::copyingEntity = NULL;
+
+CubitStatus prepare_surface_sweep(
+                              DLIList<BodySM*> &blank_bodies,
+                              DLIList<Surface*> &surfaces,
+                              const CubitVector& sweep_vector,
+                              bool sweep_perp,
+                              bool through_all,
+                              bool outward,
+                              bool up_to_next,
+                              Surface *stop_surf,
+                              Curve *curve_to_sweep_along,
+                              BodySM* &cutting_tool_ptr ,
+                              const CubitVector* point = NULL,
+                              double *angle = NULL);
+  // prepare for webcut with swept_surfaces. if point and angle is known,
+  // do surface sweep rotated; or if curve_to_sweep_along is known, do
+  // sweep along curve; then if sweep_perp is true, do perpendicular sweep
+  // of the surfaces; lastly do sweep along vector.
+
+CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
+                               double radius,
+                               const CubitVector &axis,
+                               const CubitVector &center,
+                               DLIList<BodySM*>& neighbor_imprint_list,
+                               DLIList<BodySM*>& results_list,
+                               ImprintType imprint_type = NO_IMPRINT );
+  //- webcuts a body using a cylinder given the input parameters.
 
 //-------------------------------------------------------------------------
 // Purpose       : Controls access and creation of the sole instance of this
@@ -369,6 +397,32 @@ Body* GeometryModifyTool::brick(double width, double depth, double height)
 
    return new_body;
 }
+
+#ifdef CGM_KCM  
+//-------------------------------------------------------------------------
+// Purpose       : Create breps from mesh entities.
+//
+// Special Notes : 
+//
+// Creator       : Brett Clark
+//
+// Creation Date : 12/21/2010
+//-------------------------------------------------------------------------
+CubitStatus GeometryModifyTool::mesh2brep(std::vector<double> &xvals,
+                        std::vector<double> &yvals,
+                        std::vector<double> &zvals,
+                        std::vector<unsigned int> &tri_connectivity,
+                        DLIList<BodySM*> &new_body_sms)
+{
+  if (0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  return gmeList.get()->mesh2brep(xvals, yvals, zvals, tri_connectivity, new_body_sms);
+}
+#endif
 
 //-------------------------------------------------------------------------
 // Purpose       : Creates a Body corresponding to a brick at given location,
@@ -859,6 +913,40 @@ Body* GeometryModifyTool::planar_sheet ( const CubitPlane& plane,
    return new_body;
 }
 
+Body* GeometryModifyTool::create_body( VolumeFacets& volume, std::map<FacetShapes*, RefEntity*>& entity_map,
+                                       const FacetPointSet& points, int interp_order)
+{
+  GeometryModifyEngine* engine = gmeList.get();
+  if (!engine->supports_facets())
+    return NULL;
+
+  Body* new_body = NULL;
+   
+  if( CubitUndo::get_undo_enabled() )
+     CubitUndo::save_state();
+
+  std::map<FacetShapes*, GeometryEntity*> geom_entity_map;
+  BodySM* body_sm = engine->create_body(volume, geom_entity_map, points, interp_order);
+  if(body_sm)
+  {
+    new_body = GeometryQueryTool::instance()->make_Body(body_sm);
+    // map information back to caller 
+    std::map<FacetShapes*, GeometryEntity*>::iterator geom_iter;
+    for (geom_iter = geom_entity_map.begin(); geom_iter != geom_entity_map.end(); geom_iter++)
+      entity_map[geom_iter->first] = dynamic_cast<RefEntity*>(geom_iter->second->topology_entity());
+  }
+ 
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( new_body )
+      CubitUndo::note_result_body( new_body );
+    else
+      CubitUndo::remove_last_undo();
+  }
+
+  return new_body;
+}
+
 RefVertex* GeometryModifyTool::make_RefVertex( RefVertex *vertex ) const
 {
   if ( vertex == NULL )
@@ -879,13 +967,13 @@ RefVertex* GeometryModifyTool::make_RefVertex( RefVertex *vertex ) const
   
   CubitVector point = vertex->coordinates();
 
-  // Call the default GeometryModifyEngine to create a new Point
-  Point* point_ptr = engine->make_Point(point);
+  // Call the default GeometryModifyEngine to create a new TBPoint
+  TBPoint* point_ptr = engine->make_Point(point);
   
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::save_state();
 
-  // Use the Point to create a RefVertex
+  // Use the TBPoint to create a RefVertex
   RefVertex* ref_vertex_ptr = RefEntityFactory::instance()->construct_RefVertex(point_ptr) ;
 
   if( CubitUndo::get_undo_enabled() )
@@ -937,15 +1025,15 @@ RefVertex* GeometryModifyTool::make_RefVertex(
       return NULL;
    }
 
-     // Call the default GeometryModifyEngine to create a new Point
-   Point* point_ptr = gmeList.get()->make_Point(point);
+     // Call the default GeometryModifyEngine to create a new TBPoint
+   TBPoint* point_ptr = gmeList.get()->make_Point(point);
 
      // If we get a NULL pointer, give a warning message and return
      // a NULL pointer.
    if ( point_ptr == NULL )
    {
       PRINT_WARNING("In GeometryModifyTool::make_RefVertex\n"
-                    "         Got a NULL pointer to a Point.\n"
+                    "         Got a NULL pointer to a TBPoint.\n"
                     "         Cannot make a RefVertex.\n") ;
       return (RefVertex *)NULL ;
    }
@@ -953,7 +1041,7 @@ RefVertex* GeometryModifyTool::make_RefVertex(
    if( CubitUndo::get_undo_enabled() )
      CubitUndo::save_state();
 
-     // Use the Point to create a RefVertex
+     // Use the TBPoint to create a RefVertex
    RefVertex* ref_vertex_ptr = RefEntityFactory::instance()->construct_RefVertex(point_ptr) ;
 
   if( CubitUndo::get_undo_enabled() )
@@ -1217,7 +1305,7 @@ CubitStatus GeometryModifyTool::prepare_for_topology_update( BodySM* old_bodysm 
   old_bodysms.append(old_bodysm);
 
   do_attribute_setup();
-  push_vg_attributes_before_modify( old_bodysms );
+  push_attributes_before_modify( old_bodysms );
 
   return CUBIT_SUCCESS;
 }
@@ -1264,7 +1352,7 @@ CubitStatus GeometryModifyTool::finish_topology_update( BodySM* new_bodysm,
   //*/
   /*
   //check to see if any curves have been orphaned inside virtual geometry
-  DLIList<Point*> point_list;
+  DLIList<TBPoint*> point_list;
   new_bodysm->points( point_list );
   CubitBoolean loop = CUBIT_TRUE;
   while( loop )
@@ -1272,7 +1360,7 @@ CubitStatus GeometryModifyTool::finish_topology_update( BodySM* new_bodysm,
     for(i=0; i< point_list.size(); i++)
       {
       //loop all the points and see if any will be on only one live curve
-      Point* curr_point = point_list.get_and_step();
+      TBPoint* curr_point = point_list.get_and_step();
       DLIList<Curve*> curves_on_point;
       DLIList<Curve*> curves_to_keep;
       curr_point->curves( curves_on_point );
@@ -1427,8 +1515,8 @@ CubitStatus GeometryModifyTool::finish_topology_update( BodySM* new_bodysm,
 GeometryModifyEngine*
 GeometryModifyTool::make_RefEdge_common( RefVertex* start_vertex,
                                          RefVertex* end_vertex,
-                                         Point*& start_point,
-                                         Point*& end_point,
+                                         TBPoint*& start_point,
+                                         TBPoint*& end_point,
                                          RefFace* ref_face,
                                          Surface** surface ) const
 {
@@ -1457,9 +1545,9 @@ GeometryModifyTool::make_RefEdge_common( RefVertex* start_vertex,
     if (ref_face)
       *surface = dynamic_cast<Surface*>(bridge_list.get_and_step());
     if (!new_start_point)
-      start_point = dynamic_cast<Point*>(bridge_list.get_and_step());
+      start_point = dynamic_cast<TBPoint*>(bridge_list.get_and_step());
     if (!new_end_point)
-      end_point = dynamic_cast<Point*>(bridge_list.get_and_step());
+      end_point = dynamic_cast<TBPoint*>(bridge_list.get_and_step());
   }
   else if (ref_face)
   {
@@ -1472,22 +1560,22 @@ GeometryModifyTool::make_RefEdge_common( RefVertex* start_vertex,
     *surface = dynamic_cast<Surface*>(bridge);
     GeometryQueryEngine* gqe = bridge->get_geometry_query_engine();
     if (!new_start_point)
-      start_point = dynamic_cast<Point*>( start_vertex->
+      start_point = dynamic_cast<TBPoint*>( start_vertex->
                                   bridge_manager()->topology_bridge( gqe ) );
     if (!new_end_point)
-      end_point = dynamic_cast<Point*>( end_vertex->
+      end_point = dynamic_cast<TBPoint*>( end_vertex->
                                   bridge_manager()->topology_bridge( gqe ) );
   }
   else if (!new_start_point && (gme = get_engine( start_vertex, &bridge )))
   {
-    start_point = dynamic_cast<Point*>(bridge);
+    start_point = dynamic_cast<TBPoint*>(bridge);
     if (!new_end_point)
-      end_point = dynamic_cast<Point*>( end_vertex->bridge_manager()->
+      end_point = dynamic_cast<TBPoint*>( end_vertex->bridge_manager()->
                     topology_bridge( bridge->get_geometry_query_engine() ) );
   }
   else if (!new_end_point && (gme = get_engine( end_vertex, &bridge )))
   {
-    end_point = dynamic_cast<Point*>(bridge);
+    end_point = dynamic_cast<TBPoint*>(bridge);
   }
   else
   {
@@ -1559,8 +1647,8 @@ RefEdge* GeometryModifyTool::make_RefEdge(RefVertex *ref_vertex_1,
    GeometryModifyEngine* GMEPtr = 0;
 
      // Extract the end Points to be used to make the RefEdge
-   Point* point_ptr1 = NULL;
-   Point* point_ptr2 = NULL;
+   TBPoint* point_ptr1 = NULL;
+   TBPoint* point_ptr2 = NULL;
    Surface* surface_ptr = NULL;
 
    // Look for a common GeometryModifyEngine
@@ -1633,6 +1721,74 @@ RefEdge* GeometryModifyTool::make_RefEdge(RefVertex *ref_vertex_1,
    return new_edge;
 }
 
+RefEdge* GeometryModifyTool::make_elliptical_RefEdge( RefVertex *vert1,
+                                                      RefVertex *vert2,
+                                                      CubitVector center_point,
+                                                      double start_angle,
+                                                      double end_angle,
+                                                      CubitSense sense) const 
+{
+  GeometryModifyEngine* GMEPtr = 0;
+
+  // Extract the Points to be used to make the RefEdge
+  TBPoint* point_ptr1 = NULL;
+  TBPoint* point_ptr2 = NULL;
+
+  // Look for a common geometric modeling engine to use
+  GMEPtr = make_RefEdge_common( vert1, vert2,
+                                point_ptr1, point_ptr2 );
+  if (!GMEPtr)
+    return 0;
+
+  // Make sure that we get back valid Points
+  assert ( point_ptr1 != NULL && point_ptr2 != NULL ) ;
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    //if endpoints are free vertices, need to save them out
+    DLIList<RefVertex*> verts_to_save;
+    verts_to_save.append( vert1 );
+    verts_to_save.append( vert2 );
+    bool save_only_if_free = true;
+    CubitUndo::save_state_with_cubit_file( verts_to_save, save_only_if_free );
+  }
+
+  // Request the GME to create a Curve using the Points
+  Curve* curve_ptr = GMEPtr->make_elliptical_Curve(point_ptr1,
+                                                   point_ptr2,
+                                                   center_point,
+                                                   start_angle,
+                                                   end_angle,
+                                                   sense);
+
+  // If we get a NULL pointer, give a warning message and return
+  // a NULL pointer.
+  if ( curve_ptr == NULL )
+  {
+    PRINT_WARNING("In GeometryModifyTool::make_RefEdge\n"
+                  "         Got a NULL pointer to a Curve.\n"
+                  "         Problems making RefEdge from RefVertex %d and %d\n",
+                  vert1->id(), vert2->id());
+    return (RefEdge *)NULL ;
+  }
+
+  // Complete the task of linking this new Curve into the rest of the
+  // geometry datastructures and return the new RefEdge.
+  RefEdge *new_edge = GeometryQueryTool::instance()->make_free_RefEdge( curve_ptr );
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( new_edge )
+      CubitUndo::note_result_entity( new_edge );
+  }
+  
+  return new_edge;
+}
+                                                      
+                                                            
+
+
+
+
 //-------------------------------------------------------------------------
 // Purpose       : This function takes RefEdge type information, two
 //                 RefVertices, and a list of positions in space (represented
@@ -1660,8 +1816,8 @@ RefEdge* GeometryModifyTool::make_RefEdge(GeometryType ref_edge_type,
    GeometryModifyEngine* GMEPtr = 0;
 
      // Extract the end Points to be used to make the RefEdge
-   Point* point_ptr1 = NULL;
-   Point* point_ptr2 = NULL;
+   TBPoint* point_ptr1 = NULL;
+   TBPoint* point_ptr2 = NULL;
    Surface* surface_ptr = NULL;
 
    // Look for a common GeometryModifyEngine
@@ -1731,14 +1887,13 @@ RefEdge* GeometryModifyTool::make_RefEdge(GeometryType ref_edge_type,
 RefEdge* GeometryModifyTool::make_RefEdge(GeometryType ref_edge_type,
                                     RefVertex *ref_vertex_1,
                                     RefVertex *ref_vertex_2,
-                                    CubitVector const* intermediate_point,
-                                    CubitSense sense) const
+                                    CubitVector const* intermediate_point ) const
 {
    GeometryModifyEngine* GMEPtr = 0;
 
      // Extract the Points to be used to make the RefEdge
-   Point* point_ptr1 = NULL;
-   Point* point_ptr2 = NULL;
+   TBPoint* point_ptr1 = NULL;
+   TBPoint* point_ptr2 = NULL;
 
     // Look for a common geometric modeling engine to use
   GMEPtr = make_RefEdge_common( ref_vertex_1, ref_vertex_2,
@@ -1763,8 +1918,7 @@ RefEdge* GeometryModifyTool::make_RefEdge(GeometryType ref_edge_type,
    Curve* curve_ptr = GMEPtr->make_Curve(ref_edge_type,
                                          point_ptr1,
                                          point_ptr2,
-                                         intermediate_point,
-                                         sense) ;
+                                         intermediate_point );
 
      // If we get a NULL pointer, give a warning message and return
      // a NULL pointer.
@@ -2237,9 +2391,6 @@ Body* GeometryModifyTool::copy_body ( Body* bodyPtr )
    }
 
    //this list will get all the TB's what we'll be copying
-#ifdef BOYD17
-   DLIList<TopologyBridge*> original_bridges;
-#endif
    DLIList<RefEntity*> tmp_list;
    tmp_list.append( bodyPtr );
    TopologyBridge *top_bridge;
@@ -2314,7 +2465,8 @@ CubitStatus GeometryModifyTool::okay_to_modify(
       strcmp(op, "REGULARIZE") &&
       strcmp(op, "SPLIT_SURFACE") &&
       strcmp(op, "REMOVE_TOPOLOGY") &&
-      strcmp(op, "SPLIT"))
+      strcmp(op, "SPLIT") &&
+      strcmp(op, "NON_UNIFORM_SCALE"))
     {
       if (contains_intermediate_geom(webcut_body_list))
       {
@@ -2372,7 +2524,6 @@ CubitStatus GeometryModifyTool::finish_webcut( DLIList<Body*>& webcut_body_list,
      DLIList<Body*> temp_results(result_list);
      status = MergeTool::instance()->merge_bodies( temp_results );
    }
-
    return status;
 }
 
@@ -2401,7 +2552,7 @@ CubitStatus GeometryModifyTool::finish_sm_op( DLIList<Body*>& input_bodies,
   int b;
   for (b = 0; b < input_bodies.size(); b++) {
 	  Body* body = input_bodies.get_and_step();
-	  body_premodify(body);
+	  body->notify_all_observers(MODEL_ENTITY_MODIFIED);
   }
 
     // Remove dead bodies
@@ -2582,7 +2733,7 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
     {
       bodies_sm_to_modify += neighbor_imprint_list;
 
-      push_vg_attributes_before_modify( bodies_sm_to_modify );
+      push_attributes_before_modify( bodies_sm_to_modify );
       //get all the child entities that have been merged
       get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
     }
@@ -2633,102 +2784,6 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
   return rval;
 }
 
-CubitStatus GeometryModifyTool::webcut_w_cylinder(
-                                        DLIList<BodySM*> &webcut_body_list,
-                                        double radius,
-                                        const CubitVector &axis,
-                                        const CubitVector &center,
-                                        DLIList<BodySM*>& neighbor_imprint_list,
-                                        DLIList<BodySM*>& results_list,
-                                        ImprintType imprint_type )
-{
-  GeometryModifyEngine* gme = 0;
-  gme = get_engine(webcut_body_list.get()); 
-  assert(gme);
-
-  double max_size =  0.;
-  //lets find the distance to the center for each body and take
-  //the max.
-  double curr;
-  CubitVector cent_bod;
-  CubitBox bounding_box;
-  BodySM *body_ptr;
-  bounding_box = webcut_body_list[0]->bounding_box();
-  cent_bod =  bounding_box.center();
-  cent_bod = cent_bod - center;
-  curr = cent_bod.length();
-  if ( curr > max_size )
-     max_size = curr;
-
-
-  for ( int ii = webcut_body_list.size()-1; ii > 0; ii-- )
-    {
-      body_ptr = webcut_body_list[ii];
-      bounding_box |= body_ptr->bounding_box();
-      cent_bod = body_ptr->bounding_box().center();
-      cent_bod = cent_bod - center;
-      curr = cent_bod.length();
-      if ( curr > max_size )
-        max_size = curr;
-    }
-
-  curr = bounding_box.diagonal().length();
-
-  if ( curr > max_size )
-     max_size = curr;
-
-  double height = 0.0;
-  if ( center.x() > max_size )
-    {
-      height = 500.0 * center.x();
-    }
-  else if ( center.y() > max_size )
-    {
-      height = 500.0 * center.y();
-    }
-  else if ( center.z() > max_size )
-    {
-      height = 500.0 * center.z();
-    }
-  else
-    {
-      height = 500.0 * max_size;
-    }
-
-  //lets make certain we have a valid height..
-  if ( height < GEOMETRY_RESABS )
-    {
-      height = 500.0;
-    }
-
-  BodySM *cutting_tool_ptr = gme->cylinder( height, radius, radius, radius );
-
-  if( cutting_tool_ptr == NULL )
-    return CUBIT_FAILURE;
-
-  //transform the cyclinder to cernter and axis
-  // The current frustum is centered on the z axis.
-  CubitVector axis2(0., 0., 1.0 );
-  //now find the normal to the current axis and axis we want to be
-  //at. This normal is where we will rotate about.
-  CubitVector normal_axis = axis2 * axis;
-  if ( normal_axis.length() > CUBIT_RESABS )
-    {
-       //angle in degrees.
-       double angle = normal_axis.vector_angle( axis2, axis );
-       gme->get_gqe()->rotate(cutting_tool_ptr, normal_axis, angle);
-    }
-  gme->get_gqe()->translate(cutting_tool_ptr, center);
-
-  CubitStatus stat = gme->webcut( webcut_body_list, cutting_tool_ptr, 
-              neighbor_imprint_list, results_list, imprint_type) ;
-
-  // Delete the BodySM that was created to be used as a tool
-  gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
-
-  return stat;
-}
-
 void GeometryModifyTool::do_attribute_setup(void)
 {
   //save attribute settings
@@ -2745,6 +2800,12 @@ void GeometryModifyTool::do_attribute_setup(void)
   CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_ENTITY_NAME, CUBIT_TRUE);
   CGMApp::instance()->attrib_manager()->set_auto_write_flag(CA_ENTITY_NAME, CUBIT_TRUE);
   CGMApp::instance()->attrib_manager()->set_auto_read_flag(CA_ENTITY_NAME, CUBIT_TRUE);
+
+  CGMApp::instance()->attrib_manager()->set_auto_update_flag(CA_MESH_OUTPUT_GROUP, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_MESH_OUTPUT_GROUP, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_write_flag(CA_MESH_OUTPUT_GROUP, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_read_flag(CA_MESH_OUTPUT_GROUP, CUBIT_TRUE);
+
 
   // enable update, actuate, write, read for composite attributes
   CGMApp::instance()->attrib_manager()->set_auto_update_flag(CA_COMPOSITE_VG, CUBIT_TRUE);
@@ -2767,12 +2828,13 @@ void GeometryModifyTool::do_attribute_setup(void)
 
 void GeometryModifyTool::do_attribute_cleanup(void)
 {
+
   CGMApp::instance()->restore_previous_attribute_states();
 }
 
-// Push the virtual geometry attributes down to the underlying solid model
-// topology.
-void GeometryModifyTool::push_vg_attributes_before_modify(DLIList<BodySM*> &old_sms)
+// Pushes virtual geometry and boundary condition
+//attributes down to the underlying solid model topology
+void GeometryModifyTool::push_attributes_before_modify(DLIList<BodySM*> &old_sms)
 {
   // Get all of the ref entities involved and push CA_ENTITY_ID attributes
   // on to them.  This will help us maintain ids on virtual that doesn't
@@ -2794,6 +2856,11 @@ void GeometryModifyTool::push_vg_attributes_before_modify(DLIList<BodySM*> &old_
   DLIList<RefEntity*> child_list, ref_ent_list;
   CAST_LIST_TO_PARENT(volume_list, ref_ent_list);
   RefEntity::get_all_child_ref_entities( ref_ent_list, child_list );  
+
+  //by including the volumes we can propagate the bcs on them
+  //across webcuts
+  child_list+=ref_ent_list;
+
 
   // Only push the id attributes if we are doing persistent ids.
   if(!get_new_ids())
@@ -2863,7 +2930,7 @@ CubitStatus GeometryModifyTool::webcut_across_translate(
   if (!preview)
   {
     do_attribute_setup();
-    push_vg_attributes_before_modify(webcut_sm_list);
+    push_attributes_before_modify(webcut_sm_list);
   }
 
   DLIList<BodySM*> neighbor_list;
@@ -2985,13 +3052,12 @@ CubitStatus GeometryModifyTool::webcut_with_curve_loop(
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
    }
   
-
    CubitStatus result_val = gme->webcut(
                      body_sm_list, cutting_tool_ptr,
                      neighbor_imprint_list,
@@ -3151,7 +3217,7 @@ CubitStatus GeometryModifyTool::webcut_with_body(
     DLIList<BodySM*> bodies_sm_to_modify;
     bodies_sm_to_modify += body_sm_list;
     bodies_sm_to_modify += neighbor_imprint_list;
-    push_vg_attributes_before_modify( bodies_sm_to_modify );
+    push_attributes_before_modify( bodies_sm_to_modify );
     bodies_to_modify += webcut_body_list;
     bodies_to_modify += neighboring_bodies;
     get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
@@ -3306,7 +3372,8 @@ CubitStatus GeometryModifyTool::align_body( Body *body_ptr,
                                             CubitVector &my_center,
                                             CubitVector &axis,
                                             CubitVector &target_center,
-                                            double &angle)
+                                            double &angle,
+                                            bool preview)
 {
      // Initialize angle to zero, so we are passing back a valid
      // value if we never need to rotate the body
@@ -3382,7 +3449,14 @@ CubitStatus GeometryModifyTool::align_body( Body *body_ptr,
       GeometryQueryTool::instance()->rotate( body_ptr, axis, angle );
    }
      //Now move the body to the location of the target_center.
-   GeometryQueryTool::instance()->translate( body_ptr, target_center );
+   GeometryQueryTool::instance()->translate( body_ptr, target_center, true, preview );
+
+   if (preview)
+   {  
+     if (axis.length() > CUBIT_RESABS )
+       GeometryQueryTool::instance()->rotate( body_ptr, axis, -angle );
+     GeometryQueryTool::instance()->translate( body_ptr, my_center );
+   }
 
      //That should do it.
    return CUBIT_SUCCESS;
@@ -3396,7 +3470,8 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
                                            CubitVector &my_center_2,
                                            CubitVector &axis_of_rot,
                                            double &angle,
-                                           double &angle_2)
+                                           double &angle_2,
+                                           bool preview)
 {
    DLIList<RefFace*> ref_face_list;
    DLIList<RefVertex*> ref_vertex_list;
@@ -3455,7 +3530,7 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
       }
 
       //translate body so surface's centroid is at 0,0,0
-      GeometryQueryTool::instance()->translate( body_ptr, -my_center_1 );
+      GeometryQueryTool::instance()->translate( body_ptr, -my_center_1, true, preview );
 
       //get axis of rotation
       CubitVector my_vector = my_face->normal_at( my_center_1, ref_vol );
@@ -3469,13 +3544,13 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
          //Now we have the angle and the axis to rotate about...
          angle = 180.0*angle/CUBIT_PI;
          //Now rotate the body about the axis.
-         GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, angle );
+         GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, angle, true, preview );
       }
       else  //is aligned already----flip 180 degrees
       {
         axis_of_rot = second_vector;
         angle = 180.0;
-        GeometryQueryTool::instance()->rotate( body_ptr, second_vector, angle );
+        GeometryQueryTool::instance()->rotate( body_ptr, second_vector, angle, true, preview );
       }
 
       if( CubitUndo::get_undo_enabled() )
@@ -3486,7 +3561,7 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
       }
 
       //translate body back
-      GeometryQueryTool::instance()->translate( body_ptr, my_center_1 );
+      GeometryQueryTool::instance()->translate( body_ptr, my_center_1, true, preview );
 
       //That should do it.
       return CUBIT_SUCCESS;
@@ -3548,7 +3623,7 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
 
      //Move the body so that the center of the vertex
      //is at the origin.
-     GeometryQueryTool::instance()->translate( body_ptr, -my_center_1 );
+     GeometryQueryTool::instance()->translate( body_ptr, -my_center_1, true, preview );
 
      my_center_2 = my_vertex_1->center_point();
      CubitVector temp_center_ver_2 = my_vertex_2->center_point();
@@ -3564,14 +3639,14 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
         //Now we have the angle and the axis to rotate about...
         angle = 180.0*angle/CUBIT_PI;
         //Now rotate the body about the axis.
-        GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, angle );
+        GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, angle, true, preview );
      }
      else if ( test_vec.normalize() > CUBIT_RESABS)
      {
         axis_of_rot = my_center_1 * target_vector;
         angle += 180.0;
         //Now rotate the body about the axis.
-        GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, 180.0 );
+        GeometryQueryTool::instance()->rotate( body_ptr, axis_of_rot, 180.0, true, preview );
      }
 
      CubitVector body_center = body_ptr->center_point();
@@ -3594,7 +3669,7 @@ CubitStatus GeometryModifyTool::align_body(Body *body_ptr,
         body_ptr->get_body_sm_ptr()->surfaces(bad_face_list);
         angle_2= 180.0;
         //Now rotate the body about the axis.
-        GeometryQueryTool::instance()->rotate( body_ptr, first_vector, angle_2 );
+        GeometryQueryTool::instance()->rotate( body_ptr, first_vector, angle_2, true, preview );
         if (bad_face_list.size() && body_ptr->is_sheet_body())
         {
            CubitStatus flip_result = gePtr1->flip_normals(bad_face_list);
@@ -3626,6 +3701,7 @@ CubitStatus GeometryModifyTool::sweep_setup(
                          GeometryModifyEngine*& output_engine,
                          CubitBoolean& changed_new_ids,
                          DLIList<GeometryEntity*>& output_geom_list,
+                         bool keep_old,
                          DLIList<RefEdge*>* input_edge_list,
                          DLIList<Curve*>* output_curve_list )
 {
@@ -3653,7 +3729,7 @@ CubitStatus GeometryModifyTool::sweep_setup(
   // Currently faces to be swept have to belong to different bodies.  It
   // doesn't work well to sweep multiple faces from the same body (also
   // current implementation in AGE crashes).
-  if( ref_face_list.size() )
+  if( ref_face_list.size() && false == keep_old )
   {
     int free_surf_cnt = 0; // Number of free surfaces being swept
     DLIList<Body*> body_list;
@@ -3678,9 +3754,41 @@ CubitStatus GeometryModifyTool::sweep_setup(
 
     if( body_list.size()+free_surf_cnt != ref_face_list.size() )
     {
-      PRINT_ERROR( "The surfaces to be swept cannot belong to the same volume\n" );
-      return CUBIT_FAILURE;
-    }
+      //if each is a sheet body, and every surface is in the list, 
+      //it is ok to sweep it
+
+      //PRINT_ERROR("The surfaces to be swept cannot belong to the same volume\n");
+      //return CUBIT_FAILURE;
+      
+      for( int k=body_list.size(); k--; )
+      {
+        Body *tmp_body = body_list.get_and_step();
+        DLIList<RefFace*> tmp_ref_faces;
+        tmp_body->ref_faces( tmp_ref_faces );
+
+        //all surfaces must be swept
+        if( tmp_body->is_sheet_body() )
+        {
+          tmp_ref_faces -= ref_face_list;
+          if( tmp_ref_faces.size() )
+          {
+            PRINT_ERROR( "When sweeping a sheet body, all surfaces must be specified\n");
+            return CUBIT_FAILURE;
+          }
+        }
+        else // only 1 surface can be swept
+        {
+          int num_surfaces_before = tmp_ref_faces.size();
+          tmp_ref_faces -= ref_face_list;
+
+          if( (num_surfaces_before - tmp_ref_faces.size() ) > 1 )
+          {
+            PRINT_ERROR( "The surfaces to be swept cannot belong to the same volume\n" );
+            return CUBIT_FAILURE;
+          }
+        }
+      }      
+    } 
 
     output_body_list = body_list;
   }
@@ -3775,7 +3883,7 @@ CubitStatus GeometryModifyTool::sweep_finish(
   {
     BodySM* bodysm = regen_list.get_and_step();
     Body* body = gqt->make_Body(bodysm);
-    output_body_list.append( body );
+    output_body_list.append_unique( body );
     PRINT_INFO("%s volume %d\n",
       new_body_list.is_in_list(bodysm) ? "Created swept" : "Updated",
       body->ref_volume()->id());
@@ -3795,10 +3903,13 @@ CubitStatus GeometryModifyTool::sweep_rotational(
                                         DLIList<RefEntity*>& ref_ent_list,
                                         const CubitVector& point,
                                         const CubitVector& sweep_axis,
-                                        double angle,
+                                        double angle,  
+                                        DLIList<Body*>& output_body_list,
+                                        CubitBoolean anchor_entity,
+                                        CubitBoolean keep_old,
                                         int steps,
                                         double draft_angle,
-                                        int draft_type,
+                                        int draft_type,                                        
                                         CubitBoolean switchside,
                                         CubitBoolean make_solid,
                                         CubitBoolean rigid)
@@ -3808,7 +3919,7 @@ CubitStatus GeometryModifyTool::sweep_rotational(
   GeometryModifyEngine* gePtr1 = 0;
   CubitBoolean change_newids;
   if (!sweep_setup("rotational", ref_ent_list, body_list, gePtr1,
-                   change_newids, geom_list))
+                   change_newids, geom_list, keep_old))
     return CUBIT_FAILURE;
 
   if( CubitUndo::get_undo_enabled())
@@ -3820,7 +3931,7 @@ CubitStatus GeometryModifyTool::sweep_rotational(
     CAST_LIST( ref_ent_list, face_list, RefFace );
 
     //Edges aren't consumed, so there's nothing to save out
-    if( edge_list.size() )
+    if( edge_list.size() || keep_old )
       CubitUndo::save_state();
     else
      //Faces will get consumed so you have to save out original entities
@@ -3838,8 +3949,13 @@ CubitStatus GeometryModifyTool::sweep_rotational(
                                                  draft_type,
                                                  switchside,
                                                  make_solid,
-                                                 rigid);
-  DLIList<Body*> output_body_list;
+                                                 rigid,
+                                                 anchor_entity,
+                                                 keep_old );
+
+  if( keep_old )
+    body_list.clean_out();
+
   if (!sweep_finish("rotational", body_list, result_list, output_body_list, change_newids))
     status = CUBIT_FAILURE;
 
@@ -3854,20 +3970,23 @@ CubitStatus GeometryModifyTool::sweep_rotational(
   return status;
 }
 
-CubitStatus GeometryModifyTool::sweep_translational(
-                                         DLIList<RefEntity*>& ref_ent_list,
-                                         const CubitVector& sweep_vector,
-                                         double draft_angle,
-                                         int draft_type,
-                                         CubitBoolean switchside,
-                                         CubitBoolean rigid)
+
+CubitStatus GeometryModifyTool::sweep_helical( DLIList<RefEntity*>& ref_ent_list,
+                                               CubitVector &location,
+                                               CubitVector &direction,
+                                               double &thread_distance,
+                                               double &angle,
+                                               bool right_handed,
+                                               CubitBoolean anchor_entity,
+                                               CubitBoolean keep_old,
+                                               DLIList<Body*>& output_body_list)
 {
   DLIList<Body*> body_list;
   DLIList<GeometryEntity*> geom_list;
   GeometryModifyEngine* gePtr1 = 0;
   CubitBoolean change_newids;
   if (!sweep_setup("translational", ref_ent_list, body_list, gePtr1,
-                   change_newids, geom_list))
+                   change_newids, geom_list, keep_old))
     return CUBIT_FAILURE;
 
   if( CubitUndo::get_undo_enabled())
@@ -3879,9 +3998,71 @@ CubitStatus GeometryModifyTool::sweep_translational(
     CAST_LIST( ref_ent_list, face_list, RefFace );
 
     //Edges aren't consumed, so there's nothing to save out
-    if( edge_list.size() )
+    if( edge_list.size() || keep_old )
       CubitUndo::save_state();
     else
+     //Faces will get consumed so you have to save out original entities
+      CubitUndo::save_state_with_cubit_file( face_list );
+  }
+
+  DLIList<BodySM*> result_list;
+  CubitStatus status = gePtr1->
+    sweep_helical( geom_list, result_list, location,
+                   direction, thread_distance, angle, right_handed, anchor_entity, keep_old );  
+
+  if( keep_old )
+    body_list.clean_out();
+
+  if (!sweep_finish("translational", body_list, result_list, output_body_list, change_newids))
+    status = CUBIT_FAILURE;
+
+  if( CubitUndo::get_undo_enabled())
+  {
+    if( status == CUBIT_FAILURE )
+      CubitUndo::remove_last_undo();
+    else
+      CubitUndo::note_result_bodies( output_body_list );
+  }
+
+  return status;
+
+
+
+
+
+}
+
+CubitStatus GeometryModifyTool::sweep_translational(
+                                         DLIList<RefEntity*>& ref_ent_list,
+                                         const CubitVector& sweep_vector,
+                                         double draft_angle,
+                                         int draft_type,
+                                         CubitBoolean switchside,
+                                         CubitBoolean rigid,
+                                         CubitBoolean anchor_entity,
+                                         CubitBoolean keep_old,
+                                         DLIList<Body*>& output_body_list)
+{
+  DLIList<Body*> body_list;
+  DLIList<GeometryEntity*> geom_list;
+  GeometryModifyEngine* gePtr1 = 0;
+  CubitBoolean change_newids;
+  if (!sweep_setup("translational", ref_ent_list, body_list, gePtr1,
+                   change_newids, geom_list, keep_old))
+    return CUBIT_FAILURE;
+
+  if( CubitUndo::get_undo_enabled())
+  {
+    DLIList<RefEdge*> edge_list;
+    DLIList<RefFace*> face_list;
+
+    CAST_LIST( ref_ent_list, edge_list, RefEdge );
+    CAST_LIST( ref_ent_list, face_list, RefFace );
+
+    //Edges aren't consumed, so there's nothing to save out
+    if( edge_list.size() || keep_old )
+      CubitUndo::save_state();
+    else 
      //Faces will get consumed so you have to save out original entities
       CubitUndo::save_state_with_cubit_file( face_list );
   }
@@ -3894,9 +4075,13 @@ CubitStatus GeometryModifyTool::sweep_translational(
                          draft_angle,
                          draft_type,
                          switchside,
-                         rigid);
+                         rigid,                         
+                         anchor_entity,
+                         keep_old);
 
-  DLIList<Body*> output_body_list;
+  if( keep_old )
+    body_list.clean_out();
+
   if (!sweep_finish("translational", body_list, result_list, output_body_list, change_newids))
     status = CUBIT_FAILURE;
 
@@ -4018,7 +4203,7 @@ CubitStatus GeometryModifyTool::sweep_curve_target(CubitPlane ref_plane,
 
 			GPoint *point_data = g_mem.point_list();
 
-			for (int jj=0; jj<= (num_points-1); jj++)
+			for (int jj=0; jj < (num_points-1); jj++)
 			{
 				//get first points vectors
 				CubitVector point_1;
@@ -4047,7 +4232,8 @@ CubitStatus GeometryModifyTool::sweep_curve_target(CubitPlane ref_plane,
 				//the and statement checks for if the first or last vertex of the edge
 				//which may be sitting on the surface, this is alright
 				//and should still be able to sweep
-				if (dot<0 && (jj+1!=num_points || jj==0))
+//				if (dot<0 && (jj+1!=num_points || jj==0))
+				if (dot<0 && (jj!=(num_points-2) || jj==0))
 				{
 					PRINT_ERROR( "The edge is traveling through the plane\n" );
 					PRINT_ERROR( "and thus forces the sweep direction to switch\n" );
@@ -4064,7 +4250,7 @@ CubitStatus GeometryModifyTool::sweep_curve_target(CubitPlane ref_plane,
 		CubitBoolean change_newids;
 
 		if (!sweep_setup("translational", ref_ent_list , body_list, gePtr1,
-			change_newids, geom_list))
+			change_newids, geom_list, false))
 			return CUBIT_FAILURE;
 
 		//below block is default settings to be fed into sweep_translational
@@ -4222,7 +4408,8 @@ CubitStatus GeometryModifyTool::sweep_surface_target(RefFace *face,
   }
 
   // Set up the sweep
-  if (!sweep_setup("target", ref_ent_list, body_list, gePtr1, change_newids, geom_list))
+  if (!sweep_setup("target", ref_ent_list, body_list, gePtr1, 
+                    change_newids, geom_list, false))
     return CUBIT_FAILURE;
 
   // Get the Surface * from the RefFace *
@@ -4263,9 +4450,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target(RefFace *face,
   direction *= length;
 
   DLIList<BodySM*> new_bodies;
-  DLIList<GeometryEntity*> src_ents;
-  src_ents.append( source_surf );
-  status = gePtr1->sweep_translational( src_ents, new_bodies, direction, 0, 0, false, false, 0, target_body->get_body_sm_ptr());
+  status = gePtr1->sweep_to_body(source_surf, target_body->get_body_sm_ptr(), direction, new_bodies );
 
   if (status != CUBIT_SUCCESS)
     return status;
@@ -4394,19 +4579,10 @@ CubitStatus GeometryModifyTool::sweep_curve_target(DLIList<RefEdge*>& edge_list,
   }
 
   // Call the geometry function
-  DLIList<GeometryEntity*> source_ents;
-  CAST_LIST_TO_PARENT(curve_list, source_ents);
-  status = get_gme()->sweep_translational(source_ents, new_bodies, dir, 0, 0, false, false, 0, target_body->get_body_sm_ptr());
+  status = get_gme()->sweep_to_body(curve_list, target_body->get_body_sm_ptr(), dir, new_bodies, unite);
+
   if (status != CUBIT_SUCCESS)
     return CUBIT_FAILURE;
-    
-  if (unite) {
-    DLIList<BodySM*> tmp_bodies(new_bodies);
-    new_bodies.clean_out();
-    status = get_gme()->unite( tmp_bodies, new_bodies );
-    if (status != CUBIT_SUCCESS)
-      return CUBIT_FAILURE;
-  }
 
   // Make all the new bodies
   for (int i = 0; i < new_bodies.size(); i++)
@@ -4420,7 +4596,7 @@ CubitStatus GeometryModifyTool::sweep_curve_target(DLIList<RefEdge*>& edge_list,
 
 //Author: Jonathan Bugman
 //Sept 10, 2006
-CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
+CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
                                     DLIList<RefEntity*>& ref_ent_list)
 {
 	DLIList<RefFace*> surface_list;
@@ -4560,7 +4736,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
 
 				GPoint *point_data = g_mem.point_list();
 
-				for (int jj=0; jj<= (num_points-1); jj++)
+				for (int jj=0; jj < (num_points-1); jj++)
 				{
 					//get first points vectors
 					CubitVector point_1;
@@ -4591,7 +4767,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
 					//the and statement checks for if the first or last vertex of the edge
 					//which may be sitting on the surface, this is alright
 					//and should still be able to sweep
-					if (dot<0 && (jj+1!=num_points || jj==0))
+					if (dot<0 && 0<jj && jj<(num_points-2))
 					{
 						PRINT_ERROR( "The surface is traveling through the plane\n" );
 						PRINT_ERROR( "and thus forces the sweep direction to switch\n" );
@@ -4608,7 +4784,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target( CubitPlane ref_plane,
 		CubitBoolean change_newids;
 
 		if (!sweep_setup("translational", ref_ent_list, body_list, gePtr1,
-			change_newids, geom_list))
+			change_newids, geom_list, false ))
 			return CUBIT_FAILURE;
 
     if( CubitUndo::get_undo_enabled())
@@ -4745,14 +4921,17 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
                                                      double draft_angle,
                                                      int draft_type,
                                                      CubitBoolean switchside,
-                                                     CubitBoolean rigid)
+                                                     CubitBoolean rigid,
+                                                     CubitBoolean anchor_entity,
+                                                     CubitBoolean keep_old,
+                                                     DLIList<Body*>& output_body_list)
 {
   DLIList<Body*> body_list;
   DLIList<GeometryEntity*> geom_list;
   GeometryModifyEngine* gePtr1 = 0;
   CubitBoolean change_newids;
   if (!sweep_setup("translational", ref_ent_list, body_list, gePtr1,
-                   change_newids, geom_list))
+                   change_newids, geom_list, keep_old))
     return CUBIT_FAILURE;
 
   if( CubitUndo::get_undo_enabled())
@@ -4764,7 +4943,7 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
     CAST_LIST( ref_ent_list, face_list, RefFace );
 
     //Edges aren't consumed, so there's nothing to save out
-    if( edge_list.size() )
+    if( edge_list.size() || keep_old )
       CubitUndo::save_state();
     else
      //Faces will get consumed so you have to save out original entities
@@ -4779,9 +4958,13 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
                          draft_angle,
                          draft_type,
                          switchside,
-                         rigid);
+                         rigid,
+                         anchor_entity, 
+                         keep_old );
 
-  DLIList<Body*> output_body_list;
+  if( keep_old )
+    body_list.clean_out();
+
   if (!sweep_finish("perpendicular", body_list, result_list, output_body_list, change_newids))
     status = CUBIT_FAILURE;
 
@@ -4797,6 +4980,9 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
 }
 CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_list,
                                                   DLIList<RefEdge*>& ref_edge_list,
+                                                  DLIList<Body*>& output_body_list,
+                                                  CubitBoolean anchor_entity,
+                                                  CubitBoolean keep_old,
                                                   double draft_angle,
                                                   int draft_type,
                                                   CubitBoolean rigid)
@@ -4813,6 +4999,7 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
                                     engine_ptr,
                                     changed_new_ids,
                                     geom_list,
+                                    keep_old,
                                     &ref_edge_list,
                                     &curve_list );
   if (status != CUBIT_SUCCESS)
@@ -4827,11 +5014,36 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
     CAST_LIST( ref_ent_list, face_list, RefFace );
 
     //Edges aren't consumed, so there's nothing to save out
-    if( edge_list.size() )
+    if( keep_old )
       CubitUndo::save_state();
     else
+    {
+      bool free_curves = false;
+      bool free_surfaces = false;
+      for( int i=edge_list.size(); i--; )
+      {
+        if( edge_list.get_and_step()->num_parent_ref_entities() == 0 )
+        {
+          free_curves = true;
+          break;
+        }
+      }
+      for( int i=face_list.size(); i--; )
+      {
+        if( face_list.get_and_step()->num_parent_ref_entities() == 0 )
+        {
+          free_surfaces = true;
+          break;
+        }
+      }
       //Faces will get consumed so you have to save out original entities
-      CubitUndo::save_state_with_cubit_file( face_list );
+      if( free_surfaces )
+        CubitUndo::save_state_with_cubit_file( face_list );
+      else if(free_curves )
+        CubitUndo::save_state_with_cubit_file( edge_list );
+      else
+        CubitUndo::save_state();
+    }
   }
 
   DLIList<BodySM*> result_list;
@@ -4840,9 +5052,13 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
                                           curve_list,
                                           draft_angle,
                                           draft_type,
-                                          rigid);
+                                          rigid,
+                                          anchor_entity,
+                                          keep_old);
 
-  DLIList<Body*> output_body_list;
+  if( keep_old )
+    body_list.clean_out();
+
   if (!sweep_finish("along_curve", body_list, result_list, output_body_list, changed_new_ids))
   status = CUBIT_FAILURE;
 
@@ -4879,14 +5095,6 @@ void GeometryModifyTool::initialize_settings() {
   SettingHandler::instance()->add_setting("old names",
             GeometryModifyTool::set_old_names,
             GeometryModifyTool::get_old_names);
-
-  SettingHandler::instance()->add_setting("Mesh Auto Delete",
-					  GeometryModifyTool::set_mesh_autodelete,
-					  GeometryModifyTool::get_mesh_autodelete);
-
-  SettingHandler::instance()->add_setting("Mesh Auto Delete Cache",
-					  GeometryModifyTool::set_mesh_autodelete_remesh,
-					  GeometryModifyTool::is_mesh_autodelete_remesh);
 }
 
 
@@ -4982,7 +5190,7 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
          sheet_axes[0] = axes[0];
          sheet_axes[1] = axes[1];
       }
-
+ 
       // Create the planar sheet to cut with
       // Get the corners of the sheet
       center.next_point( axes[0], width/2.0, p1 );
@@ -5037,13 +5245,13 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
        DLIList<BodySM*> bodies_to_modify;
        bodies_to_modify += engine_body_sms;
        bodies_to_modify += neighbor_imprint_list;
-       push_vg_attributes_before_modify( bodies_to_modify );
+       push_attributes_before_modify( bodies_to_modify );
        get_merged_curve_and_surface_ids( engine_bodies, merged_surface_ids, merged_curve_ids );
      }
 
-      // Create the brick to cut with
+       // Create the brick to cut with
       if (is_sheet_body)
-	cutting_tool_ptr = gme->planar_sheet(p1,p2,p3,p4);
+        cutting_tool_ptr = gme->planar_sheet(p1,p2,p3,p4);
       else
         cutting_tool_ptr = gme->brick( center, axes, extension );
       if( cutting_tool_ptr == NULL )
@@ -5156,7 +5364,7 @@ CubitStatus GeometryModifyTool::webcut_with_planar_sheet(
        DLIList<BodySM*> bodies_sms_to_modify;
        bodies_sms_to_modify += engine_body_sms;
        bodies_sms_to_modify += neighbor_imprint_list;
-       push_vg_attributes_before_modify( bodies_sms_to_modify );
+       push_attributes_before_modify( bodies_sms_to_modify );
        get_merged_curve_and_surface_ids( engine_bodies, merged_surface_ids, merged_curve_ids );
      }
 
@@ -5178,7 +5386,7 @@ CubitStatus GeometryModifyTool::webcut_with_planar_sheet(
         engine_body_sms, cutting_tool_ptr,
         neighbor_imprint_list,
         result_sm_list, imprint_type, preview );
- 
+
       // Delete the BodySM that was created to be used as a tool
       gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
@@ -5284,7 +5492,7 @@ CubitStatus GeometryModifyTool::webcut_with_plane(
       DLIList<BodySM*> bodies_sms_to_modify;
       bodies_sms_to_modify += engine_body_sms;
       bodies_sms_to_modify += neighbor_imprint_list;
-      push_vg_attributes_before_modify( bodies_sms_to_modify );
+      push_attributes_before_modify( bodies_sms_to_modify );
       get_merged_curve_and_surface_ids( engine_bodies, merged_surface_ids, merged_curve_ids );
     }
 
@@ -5416,7 +5624,7 @@ CubitStatus GeometryModifyTool::restore_vg_after_modify(DLIList<BodySM*> &new_sm
 
   DLIList<Surface*> all_surfs;
   DLIList<Curve*> all_curves;
-  DLIList<Point*> all_points;
+  DLIList<TBPoint*> all_points;
   if(tbs_to_check.size() > 0)
   {
     for(k=tbs_to_check.size(); k--;)
@@ -5432,7 +5640,7 @@ CubitStatus GeometryModifyTool::restore_vg_after_modify(DLIList<BodySM*> &new_sm
           all_curves.append(cur);
         else
         {
-          Point *pt = dynamic_cast<Point*>(tb);
+          TBPoint *pt = dynamic_cast<TBPoint*>(tb);
           if(pt)
             all_points.append(pt);
         }
@@ -5730,7 +5938,7 @@ GeometryModifyTool::unite_private( GeometryModifyEngine *gme_ptr,
   DLIList<BodySM*> body_sm_list(body_list.size());
   CAST_LIST(bridge_list, body_sm_list, BodySM);
 
-  push_vg_attributes_before_modify(body_sm_list);
+  push_attributes_before_modify(body_sm_list);
 
   DLIList<int> merged_surface_ids;
   DLIList<int> merged_curve_ids;
@@ -5831,7 +6039,7 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*> &bodies,
    DLIList<BodySM*> tmp_body_sm_list;
    body_sm_list.reset();
    tmp_body_sm_list.append(body_sm_list.get());
-   push_vg_attributes_before_modify(tmp_body_sm_list);
+   push_attributes_before_modify(tmp_body_sm_list);
 
    CubitStatus result = gme->chop( body_sm_list, intersect_bodies,
                           outside_bodies, leftovers_body, keep_old, nonreg );
@@ -5976,7 +6184,7 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
   {
     Surface* surf = faces_to_remove.get_and_step()->get_surface_ptr();
     if(surf)
-      surfs_to_remove.append(surf); 
+      surfs_to_remove.append(surf);
   }
 
 
@@ -5984,9 +6192,9 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
   DLIList<int> merged_curve_ids;
   get_merged_curve_and_surface_ids( bodies, merged_surface_ids, merged_curve_ids );
   do_attribute_setup();
-  
+ 
   // Push attributes down onto the bodies to be hollowed
-  push_vg_attributes_before_modify( body_sms );
+  push_attributes_before_modify( body_sms );
 
   CubitStatus result = gme->hollow( body_sms, surfs_to_remove, new_sms, depth);
 
@@ -6013,7 +6221,7 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
     bodysm->surfaces(surfs);
     DLIList<Curve*> curves;
     bodysm->curves(curves);
-    DLIList<Point*> points;
+    DLIList<TBPoint*> points;
     bodysm->points(points);
     to_check.append(bodysm);
     to_check.append(bodysm->lump());
@@ -6031,13 +6239,13 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
           entities_to_update.append(CAST_TO(t, RefEntity));
 
   }
-  
+
   restore_vg_after_modify( new_sms, bodies, gme );
   remove_pushed_attributes( new_sms, bodies );
 
   result = finish_sm_op(bodies, new_sms, new_bodies);
   fixup_merged_entities( merged_surface_ids, merged_curve_ids);
- 
+
   if (CUBIT_FAILURE == result) {
     if( CubitUndo::get_undo_enabled() )
       CubitUndo::remove_last_undo();
@@ -6051,7 +6259,7 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
   }
 
   do_attribute_cleanup();
-  return CUBIT_SUCCESS; 
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
@@ -6105,7 +6313,7 @@ CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
     bodysm->surfaces(surfs);
     DLIList<Curve*> curves;
     bodysm->curves(curves);
-    DLIList<Point*> points;
+    DLIList<TBPoint*> points;
     bodysm->points(points);
     to_check.append(bodysm);
     to_check.append(bodysm->lump());
@@ -6363,6 +6571,7 @@ CubitStatus GeometryModifyTool::subtract( DLIList<Body*>  &tool_body_list,
    if( keep_old == CUBIT_FALSE )
      get_merged_curve_and_surface_ids( from_bodies, merged_surface_ids, merged_curve_ids );
 
+
      // Do the subtract operation
    DLIList<BodySM*> new_sms;
    CubitStatus result = gme->subtract(tool_sms, from_sms, new_sms, imprint, keep_old );
@@ -6394,7 +6603,8 @@ CubitStatus GeometryModifyTool::subtract( DLIList<Body*>  &tool_body_list,
 
 CubitStatus GeometryModifyTool::intersect( DLIList<Body*> &from_bodies,
                                            DLIList<Body*> &new_bodies,
-                                           bool keep_old )
+                                           bool keep_old,
+                                           bool preview)
 {
   DLIList<Body*> tem_bodies = from_bodies;
   if (!okay_to_modify( tem_bodies, "INTERSECT" ))
@@ -6410,7 +6620,7 @@ CubitStatus GeometryModifyTool::intersect( DLIList<Body*> &from_bodies,
     return CUBIT_FAILURE;
   }
 
-  if( CubitUndo::get_undo_enabled() )
+  if( !preview && CubitUndo::get_undo_enabled() )
   {
     if( keep_old )
       CubitUndo::save_state();
@@ -6420,7 +6630,7 @@ CubitStatus GeometryModifyTool::intersect( DLIList<Body*> &from_bodies,
 
   DLIList<int> merged_surface_ids;
   DLIList<int> merged_curve_ids;
-  if( keep_old == CUBIT_FALSE )
+  if( !preview && (keep_old == CUBIT_FALSE) )
     get_merged_curve_and_surface_ids( from_bodies, merged_surface_ids, merged_curve_ids );
 
   GeometryModifyEngine* gme_ptr = get_engine(from_sm_list.get());
@@ -6450,47 +6660,53 @@ CubitStatus GeometryModifyTool::intersect( DLIList<Body*> &from_bodies,
       DLIList<BodySM*> new_sms;
 
       CubitStatus result =
-          engine->intersect(body1_copy, tmp_sm_list, new_sms, true );
+          engine->intersect(body1_copy, tmp_sm_list, new_sms, true, preview );
 
       //delete the copies
       gqe_ptr->delete_solid_model_entities( body1_copy );
       gqe_ptr->delete_solid_model_entities( body2_copy );
 
-      if ( result == CUBIT_FAILURE || new_sms.size() == 0 )
+      if (!preview)
       {
-        RefEntity* ref_ent1 = dynamic_cast<RefEntity*>(body1->topology_entity());
-        RefEntity* ref_ent2 = dynamic_cast<RefEntity*>(body2->topology_entity());
+        if ( result == CUBIT_FAILURE || new_sms.size() == 0 )
+        {
+          RefEntity* ref_ent1 = dynamic_cast<RefEntity*>(body1->topology_entity());
+          RefEntity* ref_ent2 = dynamic_cast<RefEntity*>(body2->topology_entity());
 
-        PRINT_WARNING("INTERSECTION of %s with %s failed\n",
-          ref_ent1->entity_name().c_str(),
-          ref_ent2->entity_name().c_str() );
-        continue;
+          PRINT_WARNING("INTERSECTION of %s with %s failed\n",
+            ref_ent1->entity_name().c_str(),
+            ref_ent2->entity_name().c_str() );
+          continue;
 
+        }
+
+        all_new_bodysms += new_sms;
       }
-
-      all_new_bodysms += new_sms;
     }
   }
 
-  //now make all the RefEntities
-  all_new_bodysms.reset();
-  for( i=all_new_bodysms.size(); i--; )
+  if (!preview)
   {
-    Body *new_body = GeometryQueryTool::instance()->make_Body(all_new_bodysms.get_and_step());
-    if( new_body )
-      new_bodies.append( new_body );
-  }
+    //now make all the RefEntities
+    all_new_bodysms.reset();
+    for( i=all_new_bodysms.size(); i--; )
+    {
+      Body *new_body = GeometryQueryTool::instance()->make_Body(all_new_bodysms.get_and_step());
+      if( new_body )
+        new_bodies.append( new_body );
+    }
 
-  if( CubitUndo::get_undo_enabled() )
-  {
-    if( all_new_bodysms.size() )
-      CubitUndo::note_result_bodies( new_bodies );
-    else
-      CubitUndo::remove_last_undo();
-  }
+    if( CubitUndo::get_undo_enabled() )
+    {
+      if( all_new_bodysms.size() )
+        CubitUndo::note_result_bodies( new_bodies );
+      else
+        CubitUndo::remove_last_undo();
+    }
 
-  if( keep_old == CUBIT_FALSE )
-    fixup_merged_entities( merged_surface_ids, merged_curve_ids);
+    if( keep_old == CUBIT_FALSE )
+      fixup_merged_entities( merged_surface_ids, merged_curve_ids);
+  }
 
   return CUBIT_SUCCESS;
 }
@@ -6500,7 +6716,8 @@ CubitStatus GeometryModifyTool::intersect( DLIList<Body*> &from_bodies,
 CubitStatus GeometryModifyTool::intersect( Body *tool_body_ptr,
                                            DLIList<Body*> &from_bodies,
                                            DLIList<Body*> &new_bodies,
-                                           bool keep_old )
+                                           bool keep_old,
+                                           bool preview)
 {
   if(tool_body_ptr == NULL )
     return CUBIT_FAILURE;
@@ -6534,7 +6751,7 @@ CubitStatus GeometryModifyTool::intersect( Body *tool_body_ptr,
     return CUBIT_FAILURE;
   }
 
-  if( CubitUndo::get_undo_enabled() )
+  if( !preview && CubitUndo::get_undo_enabled() )
   {
     if( keep_old )
       CubitUndo::save_state();
@@ -6549,31 +6766,35 @@ CubitStatus GeometryModifyTool::intersect( Body *tool_body_ptr,
 
   DLIList<int> merged_surface_ids;
   DLIList<int> merged_curve_ids;
-  if( keep_old == CUBIT_FALSE )
+  if( !preview && (keep_old == CUBIT_FALSE) )
     get_merged_curve_and_surface_ids( from_bodies, merged_surface_ids, merged_curve_ids );
 
      // Do the intersect operation
   DLIList<BodySM*> new_sms;
   CubitStatus result =
-      engine->intersect(tool_sm, from_sm_list, new_sms, keep_old );
-  CubitStatus result2 = finish_sm_op(tem_bodies, new_sms, new_bodies);
+      engine->intersect(tool_sm, from_sm_list, new_sms, keep_old, preview );
 
-  if( CubitUndo::get_undo_enabled() )
+  if (!preview)
   {
-    if( result == CUBIT_SUCCESS )
-      CubitUndo::note_result_bodies( new_bodies );
-    else
-      CubitUndo::remove_last_undo();
-  }
+    result = finish_sm_op(tem_bodies, new_sms, new_bodies);
 
-  if ( result == CUBIT_FAILURE || result2 == CUBIT_FAILURE)
-  {
-    PRINT_ERROR("Intersect FAILED\n" );
-    return CUBIT_FAILURE;
-  }
+    if( CubitUndo::get_undo_enabled() )
+    {
+      if( result == CUBIT_SUCCESS )
+        CubitUndo::note_result_bodies( new_bodies );
+      else
+        CubitUndo::remove_last_undo();
+    }
 
-  if( keep_old == CUBIT_FALSE )
-    fixup_merged_entities( merged_surface_ids, merged_curve_ids);
+    if ( result == CUBIT_FAILURE )
+    {
+      PRINT_ERROR("Intersect FAILED\n" );
+      return CUBIT_FAILURE;
+    }
+
+    if( keep_old == CUBIT_FALSE )
+      fixup_merged_entities( merged_surface_ids, merged_curve_ids);
+  }
 
   return CUBIT_SUCCESS;
 }
@@ -6631,7 +6852,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
       // Push virtual attributes down to solid model topology before
       // doing the imprint.
       do_attribute_setup();
-      push_vg_attributes_before_modify(from_sms);
+      push_attributes_before_modify(from_sms);
       // This must be done after pushing the vg atts because it uses them.
       DLIList<TopologyBridge*> tb_list;
       CAST_LIST(from_sms, tb_list, TopologyBridge);
@@ -6730,6 +6951,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
 }
 
 CubitStatus GeometryModifyTool::scale( Body *&body,
+                                      const CubitVector& point,
                                        const CubitVector& factors,
                                        bool check_to_transform,
                                        bool preview /*=false*/)
@@ -6738,6 +6960,11 @@ CubitStatus GeometryModifyTool::scale( Body *&body,
     if (!GeometryQueryTool::instance()->okay_to_transform( body ))
       return CUBIT_FAILURE;
 
+  DLIList<Body*> body_list;
+  body_list.append(body);
+  if (!okay_to_modify( body_list, "NON_UNIFORM_SCALE" ))
+    return CUBIT_FAILURE;
+
   if (preview)
   {
     GfxPreview::clear();
@@ -6745,50 +6972,88 @@ CubitStatus GeometryModifyTool::scale( Body *&body,
     body->ref_edges(edges);
     for (int i = 0; i < edges.size(); i++)
     {
-      GMem poly, prev;
+      GMem poly;
       edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
-      {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV.x(tempV.x()*factors.x());
-        tempV.y(tempV.y()*factors.y());
-        tempV.z(tempV.z()*factors.z());
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
-      }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+
+      CubitTransformMatrix pre_mat;
+      pre_mat.translate(-point);
+
+      CubitTransformMatrix scale_mat;
+      scale_mat.scale_about_origin(factors);
+
+      CubitTransformMatrix post_mat;
+      post_mat.translate(point);
+
+      poly.transform(pre_mat);
+      poly.transform(scale_mat);
+      poly.transform(post_mat);
+
+      GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
 
+  do_attribute_setup();
+
   BodySM* bodysm = body->get_body_sm_ptr();
+  DLIList<BodySM*> body_sm_list;
+  body_sm_list.append(bodysm);
+
+  push_attributes_before_modify(body_sm_list);
+
   GeometryModifyEngine* engine = get_engine( bodysm );
   CubitStatus result;
   if( !engine )
   {
     GeometryQueryEngine* tmp_engine = bodysm->get_geometry_query_engine();
+    result = tmp_engine->translate( bodysm, -point );
     result = tmp_engine->scale( bodysm, factors );
+    result = tmp_engine->translate( bodysm, point );
+
   }
   else
+  {
+    GeometryQueryEngine* tmp_engine = bodysm->get_geometry_query_engine();
+    result = tmp_engine->translate( bodysm, -point );
     result = engine->scale( bodysm, factors );
+    result = tmp_engine->translate( bodysm, point );
+  }
+
+  // The bodysm pointer may get changed depending on the underlying
+  // engine.  Make sure to put the most current pointer in the list
+  // for further processing.
+  body_sm_list.clean_out();
+  body_sm_list.append(bodysm);
+  // The old body will probably have stale data at this point
+  // so don't send it down for further processing.
+  body_list.clean_out();
+
+  restore_vg_after_modify( body_sm_list, body_list, engine );
+  remove_pushed_attributes( body_sm_list, body_list );
 
   //for non-uniform scaling, topology can change...need to update stuff
   if( factors.x() != factors.y() ||
       factors.y() != factors.z() ||
-      factors.z() != factors.z() )
+      factors.z() != factors.x() )
     body = GeometryQueryTool::instance()->make_Body(bodysm);
+
+  do_attribute_cleanup();
 
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.scale_about_origin( factors );
-    GeometryQueryTool::instance()->notify_intermediate_of_transform( body, xform );
+
+    CubitTransformMatrix pre_mat;
+    pre_mat.translate(-point);
+
+    CubitTransformMatrix scale_mat;
+    scale_mat.scale_about_origin(factors);
+
+    CubitTransformMatrix post_mat;
+    post_mat.translate(point);
+    GeometryQueryTool::instance()->notify_intermediate_of_transform( body, pre_mat );
+    GeometryQueryTool::instance()->notify_intermediate_of_transform( body, scale_mat );
+    GeometryQueryTool::instance()->notify_intermediate_of_transform( body, post_mat );
     GeometryQueryTool::instance()->notify_observers_of_transform( body );
   }
   else
@@ -7041,7 +7306,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     do_attribute_setup();
     // Push virtual attributes down to solid model topology before
     // doing the imprint.
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
     // Put "ORIGINAL" attributes on the bodies being imprinted and
     // the curves as these originally existed.
     DLIList<TopologyBridge*> tb_list;
@@ -7176,7 +7441,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
       body_sm_list.append_unique(body_list.get_and_step()->get_body_sm_ptr());
     // Push virtual attributes down to solid model topology before
     // doing the imprint.
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
     // Put "ORIGINAL" attributes on the bodies being imprinted and
     // the curves as these originally existed.
     DLIList<TopologyBridge*> tmp_tb_list;
@@ -7231,13 +7496,12 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
      else
        CubitUndo::remove_last_undo();
    }
- 
+
    if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
      return status;
  
    else
-     return CUBIT_FAILURE; 
-
+     return CUBIT_FAILURE;
 }
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
@@ -7363,7 +7627,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
     do_attribute_setup();
     for(i=old_body_list.size(); i--;)
       body_sm_list.append_unique(old_body_list.get_and_step()->get_body_sm_ptr());
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
  //   push_imprint_attributes_before_modify(body_sm_list);
     DLIList<TopologyBridge*> tmp_tb_list;
     CAST_LIST(new_surface_list, tmp_tb_list, TopologyBridge);
@@ -7422,7 +7686,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
      return status;
  
    else
-     return CUBIT_FAILURE; 
+     return CUBIT_FAILURE;
 }
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
@@ -7468,7 +7732,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     do_attribute_setup();
     // Push virtual attributes down to solid model topology before
     // doing the imprint.
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
     // Create temporary bridges for the vector positions.  We do
     // this so that we can put an IMPRINTER attribute on them
     // and use them later for deciding whether to keep composite
@@ -7476,7 +7740,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     for(i=vector_list.size(); i>0; i--)
     {
       CubitVector *vec = vector_list.get_and_step();
-      Point *pt = gePtr1->make_Point(*vec);
+      TBPoint *pt = gePtr1->make_Point(*vec);
       temporary_bridges.append(pt);
     }
     push_named_attributes_to_curves_and_points(temporary_bridges, "IMPRINTER");
@@ -7512,7 +7776,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     remove_pushed_attributes(new_sm_list, body_list);
   }
 
-  CubitStatus  status2 = finish_sm_op(body_list, new_sm_list, new_body_list);
+  CubitStatus status2 = finish_sm_op(body_list, new_sm_list, new_body_list);
 
   if(process_composites)
     do_attribute_cleanup();
@@ -7551,7 +7815,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
      return status;
  
    else
-     return CUBIT_FAILURE; 
+     return CUBIT_FAILURE;
 }
 CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
                                                DLIList<RefEdge*> &ref_edge_list_in,
@@ -7675,6 +7939,7 @@ GeometryModifyTool::imprint_projected_edges(DLIList<RefFace*> &ref_face_list,
    DLIList<Body*> body_list(query_output.size());
    CAST_LIST(query_output, body_list, Body);
    DLIList<BodySM*> new_sm_list;
+   DLIList<Curve*> kept_free_edges;
 
    if( CubitUndo::get_undo_enabled() )
    {
@@ -7685,17 +7950,38 @@ GeometryModifyTool::imprint_projected_edges(DLIList<RefFace*> &ref_face_list,
    }
 
    CubitStatus status = gme->imprint_projected_edges( surface_list, curve_list,
-                                                      new_sm_list, keep_old_body,keep_free_edges);
+                                                      new_sm_list, kept_free_edges, 
+                                                      keep_old_body, keep_free_edges);
 
    if (!finish_sm_op(body_list, new_sm_list, new_body_list))
      status = CUBIT_FAILURE;
+
+   DLIList<RefEdge*> kept_ref_edges;
+   if( keep_free_edges )
+   {
+     for( int i=kept_free_edges.size(); i--; )
+     {
+       RefEdge *tmp_edge = GeometryQueryTool::instance()->make_free_RefEdge( kept_free_edges.get_and_step());
+       if( tmp_edge )
+         kept_ref_edges.append(tmp_edge );
+     }
+   }
 
    if( CubitUndo::get_undo_enabled() )
    {
      if( status == CUBIT_FAILURE )
        CubitUndo::remove_last_undo();
      else
+     {      
        CubitUndo::note_result_bodies( new_body_list );
+       if( keep_free_edges )
+       {
+         DLIList<RefEntity*> ref_ents;
+         for( int i=kept_ref_edges.size(); i--; )
+           ref_ents.append( kept_ref_edges.get_and_step() );
+         CubitUndo::note_result_entities( ref_ents );
+       }
+     }
    }
 
    return status;
@@ -7837,7 +8123,7 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
@@ -7922,6 +8208,15 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
       return CUBIT_FAILURE;
    }
 
+   const char* modeler = 
+          ref_face_list.get()->get_geometry_query_engine()->modeler_type();
+   if (strncmp("virtual", modeler, 7) == 0)
+   {
+     PRINT_ERROR("Cannot extend virtual surfaces.\n"
+                 "Remove virtual layer before operation.\n");
+     return CUBIT_FAILURE;
+   }
+
    Surface* surf_ptr = 0;
    TopologyBridge* bridge = ref_face_list.get()->bridge_manager()->topology_bridge(gme->get_gqe());
    surf_ptr = dynamic_cast<Surface*>(bridge);
@@ -7978,17 +8273,15 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
    }
 
-   // FIXME: this was not implemented correctly in CGMA prior to merge with CGM 12.0
-   CubitStatus stat = CUBIT_FAILURE;
-   //CubitStatus stat = gme->webcut_with_extended_sheet( body_sm_list,
-   //  surf_list, neighbor_imprint_list, new_sms, num_cut, imprint_type,
-   //  preview );
+   CubitStatus stat = gme->webcut_with_extended_sheet( body_sm_list,
+     surf_list, neighbor_imprint_list, new_sms, num_cut, imprint_type,
+     preview );
 
    if (!preview)
    {
@@ -8084,7 +8377,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
@@ -8101,6 +8394,12 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
 
      // Delete the BodySM that was created to be used as a tool
      gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
+   }
+
+   else
+   {
+     PRINT_ERROR("Can't create a swept surface for webcut.\n");
+     return CUBIT_FAILURE;
    }
 
    // if not previewing do the rest of the creation
@@ -8199,17 +8498,16 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves_rotated(
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
    }
 
-
    //sweep the curves.
    DLIList<GeometryEntity*> ref_ent_list;
    for(int i = 0; i < curves_to_sweep.size(); i++)
-     ref_ent_list.append((GeometryEntity*)(curves_to_sweep.get_and_step())); 
+     ref_ent_list.append((GeometryEntity*)(curves_to_sweep.get_and_step()));
 
    DLIList<BodySM*> swept_bodies;
    CubitStatus stat = gme->sweep_rotational(ref_ent_list,swept_bodies,point,
@@ -8220,23 +8518,25 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves_rotated(
 
    //stitch faces together
    BodySM* cutting_tool_ptr = NULL;
-   stat = gme->stitch_surfs(swept_bodies, cutting_tool_ptr);
+   DLIList<BodySM*> cutting_tools;
+   stat = gme->stitch(swept_bodies, cutting_tools, CUBIT_FALSE, 1E-6);
 
-   if(stat == CUBIT_FAILURE)
+   if(cutting_tools.size() > 1 || cutting_tools.size() == 0)
      {
        //delete all swept faces
-       for(int i = 0; i < swept_bodies.size(); i++)
-         gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
+       for(int i = 0; i < cutting_tools.size(); i++)
+         gme->get_gqe()->delete_solid_model_entities(cutting_tools.get_and_step()) ;
        return stat;
      }
    else
    {
+     cutting_tool_ptr = cutting_tools.get();
      stat = gme->webcut( body_sm_list, cutting_tool_ptr, neighbor_imprint_list,
                          new_sms, imprint_type, preview);
-    
+
      // Delete the BodySM that was created to be used as a tool
      gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
-   }  
+   }
 
    if (!preview)
    {
@@ -8353,7 +8653,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
@@ -8397,24 +8697,26 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
 
    //stitch faces together
    BodySM* cutting_tool_ptr = NULL;
-   stat = gme->stitch_surfs(swept_bodies, cutting_tool_ptr);
+   DLIList<BodySM*> cutting_tools;
+   stat = gme->stitch(swept_bodies, cutting_tools, CUBIT_FALSE, 1E-6);
 
-   if(stat == CUBIT_FAILURE)
+   if(cutting_tools.size() > 1 || cutting_tools.size() == 0)
    {
        //delete all swept faces
-       for(int i = 0; i < swept_bodies.size(); i++)
-         gme->get_gqe()->delete_solid_model_entities(swept_bodies.get_and_step()) ;
-       return stat;
+       for(int i = 0; i < cutting_tools.size(); i++)
+         gme->get_gqe()->delete_solid_model_entities(cutting_tools.get_and_step()) ;
+       return CUBIT_FAILURE;
    }
-   else 
+   else
    {
+       cutting_tool_ptr = cutting_tools.get();
        stat = gme->webcut( body_sm_list, cutting_tool_ptr, neighbor_imprint_list,
                            new_sms, imprint_type, preview );
 
        // Delete the BodySM that was created to be used as a tool
        gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
    }
-   
+
    if (!preview)
    {
      restore_vg_after_modify(new_sms, bodies_to_modify, gme);
@@ -8546,7 +8848,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
      DLIList<BodySM*> bodies_sm_to_modify;
      bodies_sm_to_modify += body_sm_list;
      bodies_sm_to_modify += neighbor_imprint_list;
-     push_vg_attributes_before_modify( bodies_sm_to_modify );
+     push_attributes_before_modify( bodies_sm_to_modify );
      bodies_to_modify += webcut_body_list;
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
@@ -8564,7 +8866,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
       // Delete the BodySM that was created to be used as a tool
       gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
    }
-   
+
    if (!preview)
    {
      restore_vg_after_modify(new_sms, bodies_to_modify, gme);
@@ -8586,7 +8888,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
 }
 
 CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
-                                                  CubitVector &split_location )
+                                                  DLIList<CubitVector*> &split_locations )
 {
   TopologyBridge* bridge = 0;
   GeometryModifyEngine* gme_ptr = get_engine(ref_edge, &bridge);
@@ -8600,7 +8902,7 @@ CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
   }
 
   DLIList<Curve*> new_curves;
-  gme_ptr->split_free_curve( curve, split_location, new_curves );
+  gme_ptr->split_free_curve( curve, split_locations, new_curves );
  
   if (!new_curves.size())
   {
@@ -8622,7 +8924,6 @@ CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
 
   return CUBIT_SUCCESS;
 }
-
 
 //-------------------------------------------------------------------------
 // Purpose       : split a multiple volume body into several bodies
@@ -9014,9 +9315,9 @@ CubitStatus GeometryModifyTool::split_periodic(Body *body_ptr,
    body_sms.append(body_sm);
 
    do_attribute_setup();
-   push_vg_attributes_before_modify(body_sms);
+   push_attributes_before_modify(body_sms);
 
-   // Call the default GeometryModifyEngine to create a new Point
+   // Call the default GeometryModifyEngine to create a new TBPoint
    CubitStatus stat = gme->split_periodic( body_sm, new_sm );
 
    DLIList<BodySM*> new_bodysm_list;
@@ -9512,7 +9813,7 @@ GeometryModifyTool::regularize_refentity(RefEntity *old_entity_ptr, Body *&new_b
 
     DLIList<BodySM*> body_sm_list;
     geom_ptr->bodysms(body_sm_list);
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
 
     BodySM *new_body_sm = NULL;
     if (!gme->regularize_entity( geom_ptr, new_body_sm ))
@@ -9604,7 +9905,7 @@ CubitStatus GeometryModifyTool::regularize_body(Body *body_ptr,
    do_attribute_setup();
    DLIList<BodySM*> body_sm_list, new_bodysm_list;
    body_sm_list.append(body_sm);
-   push_vg_attributes_before_modify(body_sm_list);
+   push_attributes_before_modify(body_sm_list);
 
    CubitStatus stat = gme->regularize_body( body_sm, new_sm );
    if ( new_sm == NULL )
@@ -9614,7 +9915,7 @@ CubitStatus GeometryModifyTool::regularize_body(Body *body_ptr,
    }
 
    // remove mesh from modified body
-   body_premodify(body_ptr);
+   body_ptr->notify_all_observers(MODEL_ENTITY_MODIFIED);
 
    new_bodysm_list.append(new_sm);
    restore_vg_after_modify(new_bodysm_list, b_list, gme);
@@ -9715,7 +10016,7 @@ GeometryModifyTool::create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_
 
   // TODO: do I need a clear and a flush here? --KGM
   GeometryModifyTool::instance()->do_attribute_setup();
-  GeometryModifyTool::instance()->push_vg_attributes_before_modify(old_body_sm_list);
+  GeometryModifyTool::instance()->push_attributes_before_modify(old_body_sm_list);
 
   DLIList<BodySM*> new_bodies_sm;
   CubitStatus stat = gme->create_solid_bodies_from_surfs( surface_list, new_bodies_sm, keep_old, heal, sheet );
@@ -10011,11 +10312,61 @@ GeometryModifyTool::surface_intersection( RefFace *ref_face1,
   return CUBIT_SUCCESS;
 }
 
+
+RefEdge* 
+GeometryModifyTool::create_arc(const CubitVector& position,
+                               double radius,
+                               double start_angle,
+                               double end_angle,
+                               CubitVector plane,
+                               CubitBoolean preview)
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return NULL;
+  }
+
+  if( radius <= GEOMETRY_RESABS )
+  {
+    PRINT_ERROR("Values must be positive\n");
+    return NULL;
+  }
+
+  if(preview)
+  {
+    gmeList.get()->create_arc(position,radius,start_angle,end_angle, plane, preview);
+    return NULL;
+  }
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
+
+  Curve* curve = gmeList.get()->create_arc(position,radius,start_angle,end_angle, plane,preview);
+  if (!curve)
+  {
+    if( CubitUndo::get_undo_enabled() )
+      CubitUndo::remove_last_undo();
+    return 0;
+  }
+
+  RefEdge* result = GeometryQueryTool::instance()->make_free_RefEdge(curve);
+  PRINT_INFO("Created curve %d\n", result->id());
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::note_result_entity( result );
+  return result;
+}
+
+
+
+
 RefEdge*
 GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
                                       RefVertex* ref_vertex2,
                                       RefVertex* ref_vertex3,
-                                      CubitBoolean full )
+                                      CubitBoolean full,
+                                      CubitBoolean preview )
 {
   DLIList<TopologyEntity*> entity_list(3);
   DLIList<TopologyBridge*> bridge_list(3);
@@ -10029,6 +10380,16 @@ GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
     return 0;
   }
 
+  if(preview)
+  {
+    bridge_list.reset();
+    TBPoint* point0 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+    TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+    TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(2));
+    gme->create_arc_three( point0, point1, point2, full,preview );
+    return NULL;
+  }
+
   //if we can reuse vertices, we decide here
   bool need_new_start_point = false;
   bool need_new_end_point = false;
@@ -10038,7 +10399,7 @@ GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
     if (need_new_start_point)
     {
       bridge_list.reset();
-      Point *start_point = gme->make_Point( ref_vertex1->coordinates() );
+      TBPoint *start_point = gme->make_Point( ref_vertex1->coordinates() );
       bridge_list.change_to( start_point );
     }
   }
@@ -10050,14 +10411,14 @@ GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
     if (need_new_start_point)
     {
       bridge_list.reset();
-      Point *start_point = gme->make_Point( ref_vertex1->coordinates() );
+      TBPoint *start_point = gme->make_Point( ref_vertex1->coordinates() );
       bridge_list.change_to( start_point );
     }
     if (need_new_end_point)
     {
       bridge_list.reset();
       bridge_list.last();
-      Point *end_point = gme->make_Point( ref_vertex3->coordinates());
+      TBPoint *end_point = gme->make_Point( ref_vertex3->coordinates());
       bridge_list.change_to( end_point );
     }
   }
@@ -10077,10 +10438,10 @@ GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
   }
 
   bridge_list.reset();
-  Point* point0 = dynamic_cast<Point*>(bridge_list.next(0));
-  Point* point1 = dynamic_cast<Point*>(bridge_list.next(1));
-  Point* point2 = dynamic_cast<Point*>(bridge_list.next(2));
-  Curve* curve = gme->create_arc_three( point0, point1, point2, full );
+  TBPoint* point0 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+  TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+  TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(2));
+  Curve* curve = gme->create_arc_three( point0, point1, point2, full,preview );
   if (!curve)
   {
     if( CubitUndo::get_undo_enabled() )
@@ -10093,15 +10454,16 @@ GeometryModifyTool::create_arc_three( RefVertex* ref_vertex1,
 
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::note_result_entity( result );
-
   return result;
+
 }
 
 RefEdge*
 GeometryModifyTool::create_arc_three( RefEdge* ref_edge1,
                                       RefEdge* ref_edge2,
                                       RefEdge* ref_edge3,
-                                      CubitBoolean full )
+                                      CubitBoolean full,
+                                      CubitBoolean preview )
 {
   DLIList<TopologyEntity*> entity_list(3);
   DLIList<TopologyBridge*> bridge_list(3);
@@ -10119,7 +10481,7 @@ GeometryModifyTool::create_arc_three( RefEdge* ref_edge1,
   Curve* curve0 = dynamic_cast<Curve*>(bridge_list.next(0));
   Curve* curve1 = dynamic_cast<Curve*>(bridge_list.next(1));
   Curve* curve2 = dynamic_cast<Curve*>(bridge_list.next(2));
-  Curve* curve = gme->create_arc_three( curve0, curve1, curve2, full );
+  Curve* curve = gme->create_arc_three( curve0, curve1, curve2, full,preview );
   if (!curve)
     return 0;
 
@@ -10134,6 +10496,136 @@ GeometryModifyTool::create_arc_three( RefEdge* ref_edge1,
   PRINT_INFO("Created curve %d\n", result->id());
   return result;
 }
+RefEdge*
+GeometryModifyTool::create_arc_radius( RefVertex* ref_vertex1,
+                                            RefVertex* ref_vertex2,
+                                            const CubitVector &normal,
+                                            double radius,
+                                            CubitBoolean other_arc,
+                                            CubitBoolean full,
+                                            CubitBoolean preview)
+{
+  DLIList<TopologyEntity*> entity_list(2);
+  DLIList<TopologyBridge*> bridge_list(2);
+  entity_list.append(ref_vertex1);
+  entity_list.append(ref_vertex2);
+  GeometryModifyEngine* gme = common_modify_engine(entity_list, bridge_list);
+  if (!gme)
+  {
+    PRINT_ERROR("Vertices do not share a common modify engine.\n");
+    return 0;
+  }
+
+
+
+  CubitVector start = ref_vertex1->coordinates(); // Position on arc
+  CubitVector end = ref_vertex2->coordinates(); // Position on arc
+
+  CubitVector center_vec=end-start;
+
+  CubitVector perp_vec=normal*center_vec;
+  center_vec*=0.5;
+  double b=radius*radius-center_vec.length_squared();
+  if(b>=0)
+  {
+    b=sqrt(b);
+  }
+  else
+  {
+    PRINT_ERROR("Radius must be greater than half the distance between the end vertices.\n");
+    return 0;
+  }
+  if(other_arc)
+    b*=-1;
+
+
+  perp_vec.normalize();
+  perp_vec*=b;
+
+
+  center_vec=center_vec+perp_vec;
+
+  CubitVector center=start+center_vec;
+
+  if(preview)
+  {
+    bridge_list.reset();
+    TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+    TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+     gme->create_arc_radius(center,point1, point2,
+      normal, radius, full,preview );
+     return NULL;
+  }
+  else
+  {
+
+    //if we can reuse vertices, we decide here
+    bool need_new_start_point=false, need_new_end_point=false;
+    if( full )
+    {
+      need_new_start_point = ref_vertex1->get_parents() > 0;
+      if (need_new_start_point)
+      {
+        bridge_list.reset();
+        TBPoint *start_point = gme->make_Point( ref_vertex1->coordinates() );
+        bridge_list.change_to( start_point );
+      }
+    }
+    else
+    {
+      need_new_start_point = ref_vertex1->get_parents() > 0;
+      need_new_end_point = ref_vertex2->get_parents() > 0;
+
+      if (need_new_start_point)
+      {
+        bridge_list.reset();
+        TBPoint *start_point = gme->make_Point( ref_vertex1->coordinates() );
+        bridge_list.change_to( start_point );
+      }
+      if (need_new_end_point)
+      {
+        bridge_list.last();
+        TBPoint *end_point = gme->make_Point( ref_vertex2->coordinates());
+        bridge_list.change_to( end_point );
+      }
+    }
+
+    if( CubitUndo::get_undo_enabled() )
+    {
+      DLIList<RefVertex*> vertices_to_save;
+      if( !need_new_start_point )
+        vertices_to_save.append( ref_vertex1 );
+      if( !need_new_end_point )
+        vertices_to_save.append( ref_vertex2 );
+
+      if( vertices_to_save.size() )
+        CubitUndo::save_state_with_cubit_file( vertices_to_save, true );
+      else
+        CubitUndo::save_state();
+    }
+
+    bridge_list.reset();
+    TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+    TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+    Curve* curve = gme->create_arc_radius(center,point1, point2,
+      normal, radius, full,preview );
+    if (!curve)
+    {
+      if( CubitUndo::get_undo_enabled() )
+        CubitUndo::remove_last_undo();
+      return 0;
+    }
+
+    RefEdge* result = GeometryQueryTool::instance()->make_free_RefEdge(curve);
+    PRINT_INFO("Created curve %d\n", result->id());
+
+    if( CubitUndo::get_undo_enabled() )
+      CubitUndo::note_result_entity( result );
+
+    return result;
+  }
+  return 0;
+}
 
 RefEdge*
 GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
@@ -10141,7 +10633,8 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
                                             RefVertex* ref_vertex3,
                                             const CubitVector &normal,
                                             double radius,
-                                            CubitBoolean full )
+                                            CubitBoolean full,
+                                            CubitBoolean preview )
 {
   DLIList<TopologyEntity*> entity_list(3);
   DLIList<TopologyBridge*> bridge_list(3);
@@ -10155,8 +10648,19 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
     return 0;
   }
 
+  if(preview)
+  {
+    TBPoint* point0 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+    TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+    TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(2));
+    gme->create_arc_center_edge( point0, point1, point2,
+      normal, radius, full,preview );
+    return NULL;
+
+  }
+
   //if we can reuse vertices, we decide here
-  bool need_new_start_point, need_new_end_point = false;
+  bool need_new_start_point=false, need_new_end_point=false;
   if( full )
   {
     need_new_start_point = ref_vertex2->get_parents() > 0;
@@ -10164,7 +10668,7 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
     {
       bridge_list.reset();
       bridge_list.step(1);
-      Point *start_point = gme->make_Point( ref_vertex2->coordinates() );
+      TBPoint *start_point = gme->make_Point( ref_vertex2->coordinates() );
       bridge_list.change_to( start_point );
     }
   }
@@ -10177,13 +10681,13 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
     {
       bridge_list.reset();
       bridge_list.step();
-      Point *start_point = gme->make_Point( ref_vertex2->coordinates() );
+      TBPoint *start_point = gme->make_Point( ref_vertex2->coordinates() );
       bridge_list.change_to( start_point );
     }
     if (need_new_end_point)
     {
       bridge_list.last();
-      Point *end_point = gme->make_Point( ref_vertex3->coordinates());
+      TBPoint *end_point = gme->make_Point( ref_vertex3->coordinates());
       bridge_list.change_to( end_point );
     }
   }
@@ -10203,11 +10707,11 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
   }
 
   bridge_list.reset();
-  Point* point0 = dynamic_cast<Point*>(bridge_list.next(0));
-  Point* point1 = dynamic_cast<Point*>(bridge_list.next(1));
-  Point* point2 = dynamic_cast<Point*>(bridge_list.next(2));
+  TBPoint* point0 = dynamic_cast<TBPoint*>(bridge_list.next(0));
+  TBPoint* point1 = dynamic_cast<TBPoint*>(bridge_list.next(1));
+  TBPoint* point2 = dynamic_cast<TBPoint*>(bridge_list.next(2));
   Curve* curve = gme->create_arc_center_edge( point0, point1, point2,
-                                              normal, radius, full );
+    normal, radius, full );
   if (!curve)
   {
     if( CubitUndo::get_undo_enabled() )
@@ -10222,6 +10726,7 @@ GeometryModifyTool::create_arc_center_edge( RefVertex* ref_vertex1,
     CubitUndo::note_result_entity( result );
 
   return result;
+
 }
 
 CubitStatus
@@ -10508,7 +11013,7 @@ GeometryModifyEngine* GeometryModifyTool::common_modify_engine(
 //-------------------------------------------------------------------------
 GeometryModifyEngine*
 GeometryModifyTool::common_modify_engine( DLIList<RefVertex*>& vertex_list,
-                                          DLIList<Point*>& point_list,
+                                          DLIList<TBPoint*>& point_list,
                                           CubitBoolean allow_composites) const
 {
   const int size = vertex_list.size();
@@ -10519,7 +11024,7 @@ GeometryModifyTool::common_modify_engine( DLIList<RefVertex*>& vertex_list,
   CAST_LIST_TO_PARENT( vertex_list, topo_list );
   result = common_modify_engine( topo_list, geom_list, allow_composites );
 
-  CAST_LIST( geom_list, point_list, Point );
+  CAST_LIST( geom_list, point_list, TBPoint );
   return result;
 }
 
@@ -10924,11 +11429,6 @@ CubitStatus GeometryModifyTool::get_mid_plane( RefFace *ref_face1,
 
   if (midplane_body_sm)
   {
-#ifdef BOYD17
-    DLIList<Body*> bodies;
-    DLIList<Surface*> surfs;
-#endif
-
     Body *midplane_body;
 
     midplane_body = GeometryQueryTool::instance()->make_Body(midplane_body_sm);
@@ -11096,7 +11596,7 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
   }
 
   bool found_case = false;
-  CubitStatus ret = CUBIT_FAILURE;
+  CubitStatus ret;
   BodySM* midsurface_body_sm = NULL;
 
   // Plane to plane case
@@ -11126,7 +11626,7 @@ CubitStatus GeometryModifyTool::get_mid_surface( RefFace *ref_face1,
       PRINT_ERROR( "In GeometryModifyTool::get_mid_surface\n"
 		   "       Surfaces %d and %d do not have the same underlying geometry modeling engine.\n"
 		   "       For midsurface calculations, they must be the same\n",
-		   ref_face1->id(), ref_face2 );
+		   ref_face1->id(), ref_face2->id() );
       return CUBIT_FAILURE;
     }
 
@@ -11374,7 +11874,7 @@ GeometryModifyEngine*
 GeometryModifyTool::tweak_setup( DLIList<RefVertex*> &input_vertices,
                                  const char* name,
                                  DLIList<Body*> &output_bodies,
-                                 DLIList<Point*> &output_points )
+                                 DLIList<TBPoint*> &output_points )
 {
   if( input_vertices.size() == 0 )
   {
@@ -11505,7 +12005,7 @@ CubitStatus GeometryModifyTool::idealize_fillet_geometry(DLIList<RefEntity*> ide
     //check the radius of the arc and if it passes test add it to the list of curves to be tweaked removed
     DLIList <Curve*> master_curve_remove_list,possible_fillet_arcs,potential_fillet,internal_fillet, external_fillet, attached_curves;
     CubitVector fillet_center_point, intersection_pt,arc_mid,test_point;
-    DLIList <Point*> arc_vertices;
+    DLIList <TBPoint*> arc_vertices;
     for(y=0;y<idealize_loopSM_list.size();y++)
     {
         idealize_loopSM_list[y]->curves(possible_fillet_arcs);
@@ -12021,11 +12521,11 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
 
 	gme_ptr = tweak_setup(tweak_face,"doubler",old_body_list,tweak_surface);
     int z;
-	for(z=0;z<doubler_face.size();z++)
+	for(int z=0;z<doubler_face.size();z++)
 	{
 		doubler_surface.append(tweak_surface[z]);
 	}
-	for(z=0;z<tweak_face.size();z++)
+	for(int z = 0;z<tweak_face.size();z++)
     {
         target_surface.append(tweak_surface[z]);
     }
@@ -12735,7 +13235,7 @@ CubitStatus GeometryModifyTool::tweak_bend( DLIList<Body*> &bend_bodies,
     if (!preview)
     {
         //do_attribute_setup();
-        //push_vg_attributes_before_modify(bend_bodies_sm);
+        //push_attributes_before_modify(bend_bodies_sm);
     }
 
     CubitStatus result = engine->tweak_bend(
@@ -12804,7 +13304,7 @@ CubitStatus GeometryModifyTool::tweak_bend( DLIList<Body*> &bend_bodies,
             bodysm->surfaces(surfs);
             DLIList<Curve*> curves;
             bodysm->curves(curves);
-            DLIList<Point*> points;
+            DLIList<TBPoint*> points;
             bodysm->points(points);
             to_check.append(bodysm);
             to_check.append(bodysm->lump());
@@ -12999,6 +13499,77 @@ void GeometryModifyTool::propagate_over_narrow_face(RefFace *narrow_face,
               }
             }
           }
+        }
+      }
+    }
+  }
+}
+
+void GeometryModifyTool::push_tolerance_attribute(DLIList<Body*> &body_list)
+{
+  Body* local_body;
+  DLIList<RefEntity*> child_list;
+
+  //save attribute settings
+  CGMApp::instance()->save_current_attribute_states();
+
+  CGMApp::instance()->attrib_manager()->auto_flag(0);
+  CGMApp::instance()->attrib_manager()->set_auto_update_flag(CA_ENTITY_TOL, CUBIT_TRUE);
+
+  for (int i = body_list.size(); i--;)
+  {
+    child_list.clean_out();
+
+    local_body = body_list.get_and_step();
+    local_body->get_all_child_ref_entities( child_list);
+    child_list.append(local_body);
+    CubitAttribUser::auto_update_cubit_attrib( child_list );
+  }
+}
+
+void GeometryModifyTool::propagate_merge_tolerance(DLIList<Body*> &body_list)
+{
+  // For each body
+  //  get a list of all children that have a local tolerance
+  //  iterate over that list
+  //    for each entity, get a list of all of its children
+  //    if the parent's tolerance is > child tolerance && the child isn't in the owner_set list
+  //     then set the child's tolerance to the parent's tolerance
+
+  DLIList<RefEntity*> owner_set_tolerance_list;
+  DLIList<RefEntity*> entity_list;
+
+  double parent_tolerance = 0.0;
+
+  for (int i=body_list.size(); i--;)
+  {
+    Body* local_body = body_list.get_and_step();
+
+    // First, get all the children for this body. Save those that already have
+    // a local tolerance set
+    local_body->get_all_child_ref_entities(entity_list);
+    for (int i = entity_list.size(); i--;)
+    {
+      RefEntity* local_entity = entity_list.get_and_step();
+      if (local_entity->local_tolerance() > 0.0)
+        owner_set_tolerance_list.append(local_entity);
+    }
+
+    // for each entity in the owner_set list, get all of its children
+    for (int i = owner_set_tolerance_list.size(); i--;)
+    {
+      RefEntity* local_entity = owner_set_tolerance_list.get_and_step();
+      parent_tolerance = local_entity->local_tolerance();
+
+      entity_list.clean_out();
+      local_entity->get_all_child_ref_entities(entity_list);
+      for (int j = entity_list.size(); j--;)
+      {
+        RefEntity* child_entity = entity_list.get_and_step();
+        if (!owner_set_tolerance_list.is_in_list(child_entity))
+        {
+          if (child_entity->local_tolerance() < parent_tolerance)
+            child_entity->local_tolerance(parent_tolerance);
         }
       }
     }
@@ -13241,7 +13812,7 @@ CubitStatus GeometryModifyTool::remove_topology( DLIList<RefEdge*> &ref_edge_lis
     GeometryModifyEngine* gme = common_modify_engine(old_body_list, body_sm_list);
 
     if(preview == CUBIT_FALSE)
-      push_vg_attributes_before_modify(body_sm_list);
+      push_attributes_before_modify(body_sm_list);
 
     DLIList<BodySM*> new_bodysm_list;
     if(gme_ptr->remove_topology(curve_list, surf_list, backoff_distance, small_curve_size,
@@ -13310,7 +13881,7 @@ GeometryModifyTool::tweak_chamfer( DLIList<RefVertex*> &ref_vertex_list,
     return CUBIT_FAILURE;
   }
 
-  DLIList<Point*> point_list(ref_vertex_list.size());
+  DLIList<TBPoint*> point_list(ref_vertex_list.size());
   DLIList<Body*> old_body_list;
   GeometryModifyEngine* gme_ptr;
 
@@ -13586,7 +14157,7 @@ GeometryModifyTool::tweak_fillet( DLIList<RefVertex*> &ref_vertex_list,
                                   CubitBoolean keep_old_body,
                                   CubitBoolean preview )
 {
-  DLIList<Point*> point_list(ref_vertex_list.size());
+  DLIList<TBPoint*> point_list(ref_vertex_list.size());
   DLIList<Body*> old_body_list;
   GeometryModifyEngine* gme_ptr;
 
@@ -13679,7 +14250,7 @@ CubitStatus GeometryModifyTool::tweak_move( DLIList<RefFace*>& ref_face_list,
   if(!preview)
   {
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sms);
+    push_attributes_before_modify(body_sms);
   }
 
   // Do move
@@ -13730,7 +14301,7 @@ CubitStatus GeometryModifyTool::tweak_move( DLIList<RefFace*>& ref_face_list,
         if(ref_face && ref_face_list.is_in_list(ref_face))
         {
           // get neighbors
-          DLIList<Point*> neighbor_points;
+          DLIList<TBPoint*> neighbor_points;
           surfs.get()->points(neighbor_points);
           DLIList<Curve*> neighbor_curves;
           DLIList<Surface*> neighbor_surfaces;
@@ -14006,7 +14577,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefFace*> &ref_face_list,
     }
 
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sms);
+    push_attributes_before_modify(body_sms);
   }
 
   // Do offset
@@ -14104,7 +14675,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefFace*> &ref_face_list,
         if(ref_face && all_ref_face_list.is_in_list(ref_face))
         {
           // get neighbors
-          DLIList<Point*> neighbor_points;
+          DLIList<TBPoint*> neighbor_points;
           surfs.get()->points(neighbor_points);
           DLIList<Curve*> neighbor_curves;
           DLIList<Surface*> neighbor_surfaces;
@@ -14493,6 +15064,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
    //collect all neighboring surfaces to those in the list
    int i,j;
    DLIList<RefFace*> neighboring_surfaces;
+   DLIList<RefEdge*> merged_ref_edges_before;
    for( i=ref_face_list.size(); i--; )
    {
      RefFace *tmp_face = ref_face_list.get_and_step();
@@ -14500,6 +15072,22 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
      tmp_face->ref_edges( ref_edge_list );
      for( j=ref_edge_list.size(); j--; )
        ref_edge_list.get_and_step()->ref_faces( neighboring_surfaces );
+
+     DLIList<RefVertex*> tmp_verts;
+     tmp_face->ref_vertices( tmp_verts );
+     for( j=tmp_verts.size(); j--; )
+     {
+       RefVertex *tmp_vert = tmp_verts.get_and_step();
+       DLIList<RefEdge*> tmp_edges;
+       tmp_vert->ref_edges( tmp_edges );
+       int kk;
+       for( kk=tmp_edges.size(); kk--; )
+       {
+         RefEdge *tmp_edge = tmp_edges.get_and_step();
+         if( tmp_edge->is_merged() )
+           merged_ref_edges_before.append( tmp_edge);
+       }
+     }
    }
 
   //uniquify and add other surfaces
@@ -14532,7 +15120,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
    if(!preview)
    {
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sms);
+    push_attributes_before_modify(body_sms);
    }
 
    // Do remove
@@ -14571,7 +15159,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
      }
    }
 
-  // loop body sm list and find surfaces that need updating.
+  // for each new bodysm, find surfaces that need updating.
   // this is to account for some cases where the topology doesn't change, but the geometry does.
   DLIList<RefEntity*> entities_to_update;
   for(i=0; i<new_bodysm_list.size(); i++)
@@ -14590,7 +15178,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
         if( ref_face && neighboring_surfaces.is_in_list(ref_face) )
         {
           // get neighbors
-          DLIList<Point*> neighbor_points;
+          DLIList<TBPoint*> neighbor_points;
           surfs.get()->points(neighbor_points);
           DLIList<Curve*> neighbor_curves;
           DLIList<Surface*> neighbor_surfaces;
@@ -14619,8 +15207,8 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
             {
               if(TopologyEntity* t = m->topology_entity())
               {
-                entities_to_update.append(CAST_TO(t, RefEntity));
-                //RefEntity *ref_ent = CAST_TO(t, RefEntity );
+                RefEntity *ref_ent = CAST_TO(t, RefEntity );
+                entities_to_update.append(ref_ent);
               }
             }
           }
@@ -14657,6 +15245,41 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
     // Update graphics
   while (entities_to_update.size())
     entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+
+
+  //unmerge all curves attached to these vertices after
+  DLIList<RefEdge*> merged_ref_edges_after;
+  for( i=new_body_list.size(); i--; )
+  {
+    Body *new_body = new_body_list.get_and_step();
+    DLIList<RefVertex*> tmp_verts;
+    new_body->ref_vertices( tmp_verts);
+
+    for( j=tmp_verts.size(); j--; )
+    {
+      RefVertex *tmp_vert = tmp_verts.get_and_step();
+      DLIList<RefEdge*> tmp_edges;
+      if( tmp_vert->is_merged() )
+      {
+        tmp_vert->ref_edges( tmp_edges );
+        int k;
+        for( k=tmp_edges.size(); k--; )
+        {
+          RefEdge *tmp_edge = tmp_edges.get_and_step();
+          if( tmp_edge->is_merged() )
+            merged_ref_edges_after.append( tmp_edge );
+        }
+      }
+    }
+  }
+
+  merged_ref_edges_before.uniquify_unordered();
+  for( i=merged_ref_edges_before.size(); i--; )
+  {
+    RefEdge *tmp_edge = merged_ref_edges_before.get_and_step();
+    if( merged_ref_edges_after.is_in_list( tmp_edge ) )
+      MergeTool::instance()->unmerge( tmp_edge );
+  }
 
   return CUBIT_SUCCESS;
 }
@@ -14738,7 +15361,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefEdge*> &ref_edge_list,
         if( ref_edge && neighboring_curves.is_in_list(ref_edge) )
         {
           // get neighbors
-          DLIList<Point*> neighbor_points;
+          DLIList<TBPoint*> neighbor_points;
           curves.get()->points(neighbor_points);
           DLIList<Curve*> neighbor_curves;
           DLIList<Surface*> neighbor_surfaces;
@@ -14767,8 +15390,8 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefEdge*> &ref_edge_list,
             {
               if(TopologyEntity* t = m->topology_entity())
               {
-                entities_to_update.append(CAST_TO(t, RefEntity));
-                //RefEntity *ref_ent = CAST_TO(t, RefEntity );
+                RefEntity *ref_ent = CAST_TO(t, RefEntity );
+                entities_to_update.append(ref_ent);
               }
             }
           }
@@ -14856,7 +15479,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
   if(!preview)
   {
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sms);
+    push_attributes_before_modify(body_sms);
   }
 
   // Do tweak to target
@@ -14947,7 +15570,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
             target_face_list.is_in_list(ref_face)))
         {
           // get neighbors
-          DLIList<Point*> neighbor_points;
+          DLIList<TBPoint*> neighbor_points;
           surfs.get()->points(neighbor_points);
           DLIList<Curve*> neighbor_curves;
           DLIList<Surface*> neighbor_surfaces;
@@ -14959,11 +15582,6 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
           for(k=0; k<neighbor_points.size(); k++)
             neighbor_points.get_and_step()->curves(neighbor_curves);
 
-          //for (int i = 0; i < neighbor_points.size(); i++)
-          //{
-          //    int id = neighbor_points.get_and_step()->get_saved_id();
-          //    int temp = id;
-          //}
           CAST_LIST_TO_PARENT(neighbor_points, tmp);
           neighbors += tmp;
           neighbor_curves.uniquify_unordered();
@@ -15132,7 +15750,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
   if(!preview)
   {
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sms);
+    push_attributes_before_modify(body_sms);
   }
 
   // Do tweak to target
@@ -15493,7 +16111,7 @@ GeometryModifyTool::tweak_target( RefVertex *ref_vertex_ptr,
   DLIList<RefVertex*> ref_vertex_list(1);
   ref_vertex_list.append( ref_vertex_ptr );
   DLIList<Body*> old_body_list;
-  DLIList<Point*> point_list(1);
+  DLIList<TBPoint*> point_list(1);
   gme_ptr = tweak_setup( ref_vertex_list, "Tweaking", old_body_list, point_list );
   if( !gme_ptr )
     return CUBIT_FAILURE;
@@ -15601,7 +16219,7 @@ GeometryModifyTool::tweak_target( RefVertex *ref_vertex_ptr,
       CubitUndo::save_state_with_cubit_file( ref_vertex_list );
   }
 
-  Point *point_ptr = point_list.get();
+  TBPoint *point_ptr = point_list.get();
 
   // Do tweak to target
   BodySM *new_bodysm_ptr;
@@ -16068,24 +16686,26 @@ CubitStatus GeometryModifyTool::create_skin_surface( DLIList<RefEdge*>& ref_edge
     return CUBIT_FAILURE;
   }
 }
-
-
-CubitStatus GeometryModifyTool::loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
-                                                      RefFace *face2, const double &takeoff2,
+CubitStatus GeometryModifyTool::loft_surfaces_to_body(DLIList<RefFace*> &surfaces,
+                                                      DLIList<double> &takeoff_factor_list,
+                                                      DLIList<RefFace*> &takeoff_vector_surface_list,
+                                                      DLIList<CubitVector> &surface_takeoff_vector_list,
+                                                      DLIList<RefEdge*> &takeoff_vector_curve_list,
+                                                      DLIList<CubitVector> &curve_takeoff_vector_list,
+                                                      DLIList<RefEdge*> &guides,
+                                                      DLIList<RefVertex*> &match_vertices_list,
                                                       Body*& new_body,
-                                                      CubitBoolean arc_length_option, CubitBoolean twist_option,
-                                                      CubitBoolean align_direction, CubitBoolean perpendicular,
-                                                      CubitBoolean simplify_option)
+                                                      CubitBoolean global_guides,
+                                                      CubitBoolean closed,
+                                                      CubitBoolean show_matching_curves,
+                                                      CubitBoolean preview
+                                                      )
 {
-
-    DLIList<RefFace*> loft_faces;
-    loft_faces.append(face1);
-    loft_faces.append(face2);
     DLIList<Surface*> loft_surfaces;
 
     // Get engine and correspoding geom entities
     GeometryModifyEngine* result_ptr;
-    result_ptr = common_modify_engine( loft_faces, loft_surfaces );
+    result_ptr = common_modify_engine( surfaces, loft_surfaces );
     if (!result_ptr)
     {
         PRINT_ERROR("Loft surfaces on volumes containing surfaces from different\n"
@@ -16093,26 +16713,85 @@ CubitStatus GeometryModifyTool::loft_surfaces_to_body( RefFace *face1, const dou
         return CUBIT_FAILURE;
     }
 
-    if(2!=loft_surfaces.size())
-        return CUBIT_FAILURE;
 
-    loft_surfaces.reset();
+    DLIList<Curve*> loft_guide_curves;
+    // Get engine and correspoding geom entities
+    if(guides.size())
+    {
+      result_ptr = common_modify_engine( guides, loft_guide_curves );
+      if (!result_ptr)
+      {
+        PRINT_ERROR("Loft guide curves containing curves from different\n"
+          "       geometry engines is not allowed.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+
+
+
+    DLIList<TBPoint*> loft_matched_points;
+    // Get engine and correspoding geom entities
+    if(match_vertices_list.size())
+    {
+      result_ptr = common_modify_engine( match_vertices_list, loft_matched_points );
+      if (!result_ptr)
+      {
+        PRINT_ERROR("Loft matched vertices containing points from different\n"
+          "       geometry engines is not allowed.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+
+    DLIList<Surface*> loft_takeoff_surfaces;
+
+    if(takeoff_vector_surface_list.size())
+    {
+      // Get engine and correspoding geom entities
+      GeometryModifyEngine* result_ptr;
+      result_ptr = common_modify_engine( takeoff_vector_surface_list, loft_takeoff_surfaces );
+      if (!result_ptr)
+      {
+        PRINT_ERROR("Loft takeoff surfaces on volumes containing surfaces from different\n"
+          "       geometry engines is not allowed.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+
+    DLIList<Curve*> loft_takeoff_curves;
+
+    if(takeoff_vector_curve_list.size())
+    {
+      // Get engine and correspoding geom entities
+      GeometryModifyEngine* result_ptr;
+      result_ptr = common_modify_engine( takeoff_vector_curve_list, loft_takeoff_curves );
+      if (!result_ptr)
+      {
+        PRINT_ERROR("Loft takeoff surfaces on volumes containing surfaces from different\n"
+          "       geometry engines is not allowed.\n");
+        return CUBIT_FAILURE;
+      }
+    }
+
+
     BodySM* new_body_sm = 0;
 
     if( CubitUndo::get_undo_enabled() )
       CubitUndo::save_state();
 
     CubitStatus result = result_ptr->loft_surfaces_to_body(
-        loft_surfaces.get_and_step(),
-        takeoff1,
-        loft_surfaces.get_and_step(),
-        takeoff2,
+        loft_surfaces,
+        takeoff_factor_list,
+        loft_takeoff_surfaces,
+        surface_takeoff_vector_list,
+        loft_takeoff_curves,
+        curve_takeoff_vector_list,
+        loft_guide_curves,
+        loft_matched_points,
         new_body_sm,
-        arc_length_option,
-        twist_option,
-        align_direction,
-        perpendicular,
-        simplify_option);
+        global_guides,
+        closed,
+        show_matching_curves,
+        preview);
 
     if(result && new_body_sm)
     {
@@ -16129,13 +16808,162 @@ CubitStatus GeometryModifyTool::loft_surfaces_to_body( RefFace *face1, const dou
    return result;
 }
 
+
+//CubitStatus GeometryModifyTool::loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
+//                                                      RefFace *face2, const double &takeoff2,
+//                                                      DLIList<RefEdge*> &guides,
+//                                                      Body*& new_body,
+//                                                      CubitBoolean arc_length_option, CubitBoolean twist_option,
+//                                                      CubitBoolean align_direction, CubitBoolean perpendicular,
+//                                                      CubitBoolean simplify_option)
+//{
+//
+//    DLIList<RefFace*> loft_faces;
+//    loft_faces.append(face1);
+//    loft_faces.append(face2);
+//    DLIList<Surface*> loft_surfaces;
+//
+//    // Get engine and correspoding geom entities
+//    GeometryModifyEngine* result_ptr;
+//    result_ptr = common_modify_engine( loft_faces, loft_surfaces );
+//    if (!result_ptr)
+//    {
+//        PRINT_ERROR("Loft surfaces on volumes containing surfaces from different\n"
+//            "       geometry engines is not allowed.\n");
+//        return CUBIT_FAILURE;
+//    }
+//
+//    if(2!=loft_surfaces.size())
+//        return CUBIT_FAILURE;
+//
+//
+//
+//    DLIList<Curve*> loft_curves;
+//
+//    // Get engine and correspoding geom entities
+//    result_ptr = common_modify_engine( guides, loft_curves );
+//    if (!result_ptr)
+//    {
+//        PRINT_ERROR("Loft surfaces on volumes containing surfaces from different\n"
+//            "       geometry engines is not allowed.\n");
+//        return CUBIT_FAILURE;
+//    }
+//
+//
+//    std::vector<Curve*> guide_edges;
+//    for(int i=0;i<loft_curves.size();i++)
+//    {
+//      guide_edges.push_back(loft_curves[i]);
+//    }
+//
+//
+//
+//
+//    loft_surfaces.reset();
+//    BodySM* new_body_sm = 0;
+//
+//    if( CubitUndo::get_undo_enabled() )
+//      CubitUndo::save_state();
+//
+//    CubitStatus result = result_ptr->loft_surfaces_to_body(
+//        loft_surfaces.get_and_step(),
+//        takeoff1,
+//        loft_surfaces.get_and_step(),
+//        takeoff2,
+//        guide_edges,
+//        new_body_sm,
+//        arc_length_option,
+//        twist_option,
+//        align_direction,
+//        perpendicular,
+//        simplify_option);
+//
+//    if(result && new_body_sm)
+//    {
+//        new_body = GeometryQueryTool::instance()->make_Body(new_body_sm);
+//
+//        if( CubitUndo::get_undo_enabled() )
+//          CubitUndo::note_result_body(new_body);
+//    }
+//    else
+//    {
+//      if( CubitUndo::get_undo_enabled() )
+//        CubitUndo::remove_last_undo();
+//    }
+//   return result;
+//}
+//
+//
+
+//CubitStatus GeometryModifyTool::loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
+//                                                      RefFace *face2, const double &takeoff2,
+//                                                      Body*& new_body,
+//                                                      CubitBoolean arc_length_option, CubitBoolean twist_option,
+//                                                      CubitBoolean align_direction, CubitBoolean perpendicular,
+//                                                      CubitBoolean simplify_option)
+//{
+//
+//    DLIList<RefFace*> loft_faces;
+//    loft_faces.append(face1);
+//    loft_faces.append(face2);
+//    DLIList<Surface*> loft_surfaces;
+//
+//    // Get engine and correspoding geom entities
+//    GeometryModifyEngine* result_ptr;
+//    result_ptr = common_modify_engine( loft_faces, loft_surfaces );
+//    if (!result_ptr)
+//    {
+//        PRINT_ERROR("Loft surfaces on volumes containing surfaces from different\n"
+//            "       geometry engines is not allowed.\n");
+//        return CUBIT_FAILURE;
+//    }
+//
+//    if(2!=loft_surfaces.size())
+//        return CUBIT_FAILURE;
+//
+//    loft_surfaces.reset();
+//    BodySM* new_body_sm = 0;
+//
+//    if( CubitUndo::get_undo_enabled() )
+//      CubitUndo::save_state();
+//
+//
+//  CubitStatus result = result_ptr->loft_surfaces_to_body(
+//        loft_surfaces[0],
+//        takeoff1,
+//        loft_surfaces[1],
+//        takeoff2,
+//        new_body_sm,
+//        arc_length_option,
+//        twist_option,
+//        align_direction,
+//        perpendicular,
+//        simplify_option);
+//
+//
+//
+//    if(result && new_body_sm)
+//    {
+//        new_body = GeometryQueryTool::instance()->make_Body(new_body_sm);
+//
+//        if( CubitUndo::get_undo_enabled() )
+//          CubitUndo::note_result_body(new_body);
+//    }
+//    else
+//    {
+//      if( CubitUndo::get_undo_enabled() )
+//        CubitUndo::remove_last_undo();
+//    }
+//   return result;
+//}
+
 CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list, 
                                                 Body *&new_body )
 {
    //determine which vertices are free and which are not...
    //copy ones that are not
    vert_list.reset();
-   DLIList<Point*> points;
+   DLIList<TBPoint*> points;
    GeometryModifyEngine *GMEPtr = get_engine( vert_list.get()->get_point_ptr() );
 
    DLIList<RefVertex*> free_ref_vertices;
@@ -16147,7 +16975,7 @@ CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
      if( tmp_vert->num_parent_ref_entities() == 0 )
        free_ref_vertices.append( tmp_vert );
 
-     Point *tmp_point = tmp_vert->get_point_ptr();
+     TBPoint *tmp_point = tmp_vert->get_point_ptr();
      if( GMEPtr != get_engine( tmp_point ) )
      {
        PRINT_INFO("Vertices are not from same modeling engine.\n");
@@ -16160,19 +16988,29 @@ CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
      }
      else
      {
-       Point *new_point = GMEPtr->make_Point( tmp_vert->coordinates() );
+       TBPoint *new_point = GMEPtr->make_Point( tmp_vert->coordinates() );
        points.append( new_point );
      }
    }
+
+   if(CubitUndo::get_undo_enabled())
+   {
+     if( free_ref_vertices.size() )
+       CubitUndo::save_state_with_cubit_file( free_ref_vertices );
+     else
+       CubitUndo::save_state();
+   }
+
 
    BodySM* body_sm = NULL;
    CubitStatus stat = GMEPtr->create_surface( points, body_sm );
 
    if( stat == CUBIT_FAILURE )
+   {
+     if (CubitUndo::get_undo_enabled())
+       CubitUndo::remove_last_undo();
      return stat;
-
-   if (CubitUndo::get_undo_enabled())
-     CubitUndo::save_state();
+   }
 
    if( body_sm )
      new_body = GeometryQueryTool::instance()->make_Body(body_sm);
@@ -16488,7 +17326,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
         // Push virtual attributes down to solid model topology before
         // doing the imprint.
         do_attribute_setup();
-        push_vg_attributes_before_modify(body_sm_list);
+        push_attributes_before_modify(body_sm_list);
         // This must be done after pushing the vg atts because it uses them.
         push_imprint_attributes_before_modify(body_sm_list);
       }
@@ -16768,7 +17606,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
     do_attribute_setup();
     // Push virtual attributes down to solid model topology before
     // doing the imprint.
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
     DLIList<TopologyBridge*> tmp_tb_list;
     CAST_LIST(surf_list, tmp_tb_list, TopologyBridge);
     // Put "ORIGINAL" attributes on the bodies being imprinted and
@@ -16918,6 +17756,12 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::save_state_with_cubit_file( bodies );
 
+  // Propagate any merge tolerances on the bodies
+//  propagate_merge_tolerance(bodies);
+
+  // Push the tolerance attributes
+//  push_tolerance_attribute(bodies);
+
   body_sm_list.clean_out();
   DLIList<Body*> old_body_list;
   old_body_list += bodies;
@@ -16934,7 +17778,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
     // Push virtual attributes down to solid model topology before
     // doing the imprint.
     do_attribute_setup();
-    push_vg_attributes_before_modify(body_sm_list);
+    push_attributes_before_modify(body_sm_list);
     // This must be done after pushing the vg atts because it uses them.
     DLIList<TopologyBridge*> tb_list;
     CAST_LIST(body_sm_list, tb_list, TopologyBridge);
@@ -16942,6 +17786,23 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
     push_named_attributes_to_curves_and_points(tb_list, "ORIGINAL");
   }
 
+  if (DEBUG_FLAG(95))
+  {
+    PRINT_DEBUG_95( "Calculating local tolerances for tolerant imprinting.\n");
+
+//#ifndef _NDEBUG
+//    LocalToleranceTool::instance()->print_local_tolerances( body_sm_list );
+//#endif
+
+    // Calculate local tolerances at ref entities
+    LocalToleranceTool::instance()->calculate_local_tolerances( body_sm_list );
+    
+//#ifndef _NDEBUG
+//    LocalToleranceTool::instance()->print_local_tolerances( body_sm_list );
+//#endif
+  }
+
+  // Call tolerant imprint
   DLIList<BodySM*> new_body_list;
   DLIList<TopologyBridge*> new_tbs, att_tbs;
   CubitStatus result = gme->tolerant_imprint( body_sm_list, new_body_list, &new_tbs, &att_tbs );
@@ -16974,6 +17835,12 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
       remove_pushed_attributes(new_body_list, bodies);
     }
   }
+
+  // RANDY - HACK!!
+  //for (int i = new_body_list.size(); i--;)
+  //{
+  //  clean_up_from_copy_failure(new_body_list.get_and_step());
+  //}
 
   result = finish_sm_op( bodies, body_sm_list, new_bodies );
 
@@ -17156,7 +18023,7 @@ void GeometryModifyTool::fixup_merged_entities( DLIList<int> &merged_surface_ids
     //get start/end point of the curve
     edge_bridge_list.reset();
     Curve *curve_ptr = CAST_TO( edge_bridge_list.get(), Curve);
-    DLIList<Point*> tmp_points;
+    DLIList<TBPoint*> tmp_points;
     curve_ptr->points( tmp_points );
     CubitVector curve_start_point = tmp_points.get_and_step()->coordinates();
     CubitVector curve_end_point = tmp_points.get_and_step()->coordinates();
@@ -17408,10 +18275,10 @@ GfxDebug::flush();
             GeometryModifyEngine *gme = get_engine((TopologyBridge*)best_edge->get_curve_ptr());
             if(gme)
             {
-              Point *pt1 = gme->make_Point(old_pos_save);
-              Point *pt2 = gme->make_Point(new_pos);
+              TBPoint *pt1 = gme->make_Point(old_pos_save);
+              TBPoint *pt2 = gme->make_Point(new_pos);
               CubitVector const* pt3 = NULL;
-              Curve *crv = gme->make_Curve(STRAIGHT_CURVE_TYPE, pt1, pt2, pt3,CUBIT_FORWARD);
+              Curve *crv = gme->make_Curve(STRAIGHT_CURVE_TYPE, pt1, pt2, pt3 );
               if(crv)
               {
                 CubitVector pos1, pos2;
@@ -17577,49 +18444,495 @@ void GeometryModifyTool::subdivide_pie(CubitVector &dir1, CubitVector &dir2, int
   }
 }
 
-//-------------------------------------------------------------------------
-// traverse the body object and calls premodify function on each structure
-//-------------------------------------------------------------------------
-void GeometryModifyTool::body_premodify(Body* body) const
+CubitStatus GeometryModifyTool::create_rectangle_surface( double width, double height, CubitVector plane )
 {
-	// skip if the mesh autodelete is disabled
-	if (!get_mesh_autodelete()) { return; }
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
 
-	// volumes
-	DLIList<RefVolume*> temp_vols;
-	body->ref_volumes(temp_vols);
-	for (int v = 0; v < temp_vols.size(); v++) {
-		RefVolume* volume = temp_vols.get_and_step();
-		volume->geometry_premodify();
+  if( width <= GEOMETRY_RESABS || height <= GEOMETRY_RESABS )
+  {
+    PRINT_ERROR("Values must be positive\n");
+    return CUBIT_FAILURE;
+  }
 
-		// faces
-		DLIList<RefFace*> temp_faces;
-		volume->ref_faces(temp_faces);
-		for (int f = 0; f < temp_faces.size(); f++) {
-			RefFace* face_ptr = temp_faces.get_and_step();
-			face_ptr->geometry_premodify();
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
 
-			//edges
-			DLIList<RefEdge*> temp_edges;
-			face_ptr->ref_edges(temp_edges);
-			for (int e = 0; e < temp_edges.size(); e++) {
-				RefEdge* edge_ptr = temp_edges.get_and_step();
-				edge_ptr->geometry_premodify();
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = gmeList.get()->create_rectangle_surface(width, height, plane, sheet_body_sm );
 
-				// vertices
-				DLIList<RefVertex*> temp_vertices;
-				edge_ptr->ref_vertices(temp_vertices);
-				for (int vertices = 0; vertices < temp_vertices.size(); vertices++) {
-					RefVertex* vertex_ptr = temp_vertices.get_and_step();
-					vertex_ptr->geometry_premodify();
-				}
-			}
-		}
-	}
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1, 
+                                                              RefVertex *v2,
+                                                              RefVertex *v3 )
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  GeometryModifyEngine *GMEPtr = get_engine( v1->get_point_ptr() );
+
+  if( GMEPtr != get_engine( v2->get_point_ptr() ) )
+  {
+    PRINT_INFO("Vertices are not from same modeling engine.\n");
+    return CUBIT_FAILURE;
+  }
+  if( GMEPtr != get_engine( v3->get_point_ptr() ) )
+  {
+    PRINT_INFO("Vertices are not from same modeling engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  TBPoint *pt1, *pt2, *pt3; 
+
+  DLIList<RefVertex*> free_ref_vertices;
+  if( v1->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v1 );
+    pt1 = v1->get_point_ptr();
+  }
+  else
+    pt1 = GMEPtr->make_Point( v1->coordinates() );
+
+  if( v2->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v2 );
+    pt2 = v2->get_point_ptr();
+  }
+  else
+    pt2 = GMEPtr->make_Point( v2->coordinates() );
+
+  if( v3->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v3 );
+    pt3 = v3->get_point_ptr();
+  }
+  else
+    pt3 = GMEPtr->make_Point( v3->coordinates() );
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( free_ref_vertices.size() )
+      CubitUndo::save_state_with_cubit_file( free_ref_vertices, true );
+    else
+      CubitUndo::save_state();
+  }
+  
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = GMEPtr->create_parallelogram_surface(pt1, pt2, pt3, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_circle_surface( double radius, CubitVector plane )
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  if( radius <= GEOMETRY_RESABS )
+  {
+    PRINT_ERROR("Values must be positive\n");
+    return CUBIT_FAILURE;
+  }
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
+
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = gmeList.get()->create_circle_surface(radius, plane, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+  
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1, 
+                                                       RefVertex *v2,
+                                                       RefVertex *v3 )
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  GeometryModifyEngine *GMEPtr = get_engine( v1->get_point_ptr() );
+
+  if( GMEPtr != get_engine( v3->get_point_ptr() ) )
+  {
+    PRINT_INFO("Vertices are not from same modeling engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  TBPoint *pt1, *pt3; 
+
+  DLIList<RefVertex*> free_ref_vertices;
+  if( v1->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v1 );
+    pt1 = v1->get_point_ptr();
+  }
+  else
+    pt1 = GMEPtr->make_Point( v1->coordinates() );
+
+  if( v3->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v3 );
+    pt3 = v3->get_point_ptr();
+  }
+  else
+    pt3 = GMEPtr->make_Point( v3->coordinates() );
+
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( free_ref_vertices.size() )
+      CubitUndo::save_state_with_cubit_file( free_ref_vertices, true );
+    else
+      CubitUndo::save_state();
+  }
+  
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = GMEPtr->create_circle_surface(pt1, v2->coordinates(), pt3, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+  
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1, 
+                                                       RefVertex *v2,
+                                                       CubitVector center_point )
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  GeometryModifyEngine *GMEPtr = get_engine( v1->get_point_ptr() );
+
+  if( GMEPtr != get_engine( v2->get_point_ptr() ) )
+  {
+    PRINT_INFO("Vertices are not from same modeling engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  TBPoint *pt1, *pt2; 
+
+  DLIList<RefVertex*> free_ref_vertices;
+  if( v1->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v1 );
+    pt1 = v1->get_point_ptr();
+  }
+  else
+    pt1 = GMEPtr->make_Point( v1->coordinates() );
+
+  if( v2->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v2 );
+    pt2 = v2->get_point_ptr();
+  }
+  else
+    pt2 = GMEPtr->make_Point( v2->coordinates() );
+
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( free_ref_vertices.size() )
+      CubitUndo::save_state_with_cubit_file( free_ref_vertices, true );
+    else
+      CubitUndo::save_state();
+  }
+  
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = GMEPtr->create_circle_surface(pt1, pt2, center_point, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+  
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1, 
+                                                        RefVertex *v2,
+                                                        CubitVector center_point ) 
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  GeometryModifyEngine *GMEPtr = get_engine( v1->get_point_ptr() );
+
+  if( GMEPtr != get_engine( v2->get_point_ptr() ) )
+  {
+    PRINT_INFO("Vertices are not from same modeling engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  TBPoint *pt1, *pt2; 
+
+  DLIList<RefVertex*> free_ref_vertices;
+  if( v1->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v1 );
+    pt1 = v1->get_point_ptr();
+  }
+  else
+    pt1 = GMEPtr->make_Point( v1->coordinates() );
+
+  if( v2->num_parent_ref_entities() == 0 )
+  {
+    free_ref_vertices.append( v2 );
+    pt2 = v2->get_point_ptr();
+  }
+  else
+    pt2 = GMEPtr->make_Point( v2->coordinates() );
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( free_ref_vertices.size() )
+      CubitUndo::save_state_with_cubit_file( free_ref_vertices, true );
+    else
+      CubitUndo::save_state();
+  }
+  
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = GMEPtr->create_ellipse_surface(pt1, pt2, center_point, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+  
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_ellipse_surface( double major_radius, 
+                                                        double minor_radius,
+                                                        CubitVector plane )
+{
+  if(0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  if( major_radius <= GEOMETRY_RESABS || minor_radius <= GEOMETRY_RESABS )
+  {
+    PRINT_ERROR("Values must be positive\n");
+    return CUBIT_FAILURE;
+  }
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
+
+  BodySM *sheet_body_sm = NULL;
+  CubitStatus status = gmeList.get()->create_ellipse_surface(major_radius, minor_radius, plane, sheet_body_sm );
+
+  if( status == CUBIT_FAILURE )
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    return status;
+  }
+
+  Body *new_body = NULL; 
+  if( sheet_body_sm )
+    new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
+
+  if (new_body)
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::note_result_body(new_body);
+    status = CUBIT_SUCCESS;
+  }
+  else
+  {
+    if(CubitUndo::get_undo_enabled())
+      CubitUndo::remove_last_undo();
+    status = CUBIT_FAILURE;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::create_curve_helix( CubitVector &location,
+                                                    CubitVector &direction,
+                                                    CubitVector &start_point,
+                                                    double &thread_distance,
+                                                    double &angle,
+                                                    bool right_handed,
+                                                    RefEdge *&new_ref_edge_ptr)
+{
+  if (0 == gmeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+  
+  Curve *new_curve = gmeList.get()->create_curve_helix(location, direction, 
+                                                start_point, thread_distance,
+                                                angle, right_handed );
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
+
+  new_ref_edge_ptr = GeometryQueryTool::instance()->make_free_RefEdge(new_curve);
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::note_result_entity( new_ref_edge_ptr );
+
+  return CUBIT_SUCCESS;
 }
 
 
-CubitStatus GeometryModifyTool::prepare_surface_sweep(
+CubitStatus prepare_surface_sweep(
                               DLIList<BodySM*> &blank_bodies,
                               DLIList<Surface*> &surfaces,
                               const CubitVector& sweep_vector,
@@ -17630,10 +18943,11 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
                               Surface *stop_surf,
                               Curve *curve_to_sweep_along,
                               BodySM* &cutting_tool_ptr ,
-                              const CubitVector* point,
-                              double *angle)
+                              const CubitVector* point ,
+                              double *angle )
 {
-  GeometryModifyEngine* gme = get_engine(blank_bodies.get());
+  GeometryModifyEngine* gme = GeometryModifyTool::instance()->
+                                  get_engine(blank_bodies.get());
 
   if(surfaces.size() == 0 )
     return CUBIT_FAILURE;
@@ -17674,8 +18988,8 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
   if (point && angle) //sweep_surface_rotated
     stat = gme->sweep_rotational(ref_ent_list,swept_bodies,*point,
                            sweep_vector, *angle,0, 0.0,0,false,false,
-                           false,stop_surf, to_body);  
-	
+                           false,stop_surf, to_body);
+
   else
   {
     CubitVector tmp_sweep_vector = sweep_vector;
@@ -17688,7 +19002,7 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
       tmp_sweep_vector.normalize();
       tmp_sweep_vector*=(2*bounding_box.diagonal().length());
     }
-    
+
     //see if we're sweeping along a specified curve
     if( curve_to_sweep_along )
       {
@@ -17752,7 +19066,105 @@ CubitStatus GeometryModifyTool::prepare_surface_sweep(
          }
        return CUBIT_FAILURE;
     }
-  
+
     cutting_tool_ptr = newBodies.get();
     return stat;
 }
+
+CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
+                               double radius,
+                               const CubitVector &axis,
+                               const CubitVector &center,
+                               DLIList<BodySM*>& neighbor_imprint_list,
+                               DLIList<BodySM*>& results_list,
+                               ImprintType imprint_type )
+{
+  GeometryModifyEngine* gme = 0;
+  gme = GeometryModifyTool::instance()->
+                    get_engine(webcut_body_list.get());
+  assert(gme);
+
+  double max_size =  0.;
+  //lets find the distance to the center for each body and take
+  //the max.
+  double curr;
+  CubitVector cent_bod;
+  CubitBox bounding_box;
+  BodySM *body_ptr;
+  bounding_box = webcut_body_list[0]->bounding_box();
+  cent_bod =  bounding_box.center();
+  cent_bod = cent_bod - center;
+  curr = cent_bod.length();
+  if ( curr > max_size )
+     max_size = curr;
+
+
+  for ( int ii = webcut_body_list.size()-1; ii > 0; ii-- )
+    {
+      body_ptr = webcut_body_list[ii];
+      bounding_box |= body_ptr->bounding_box();
+      cent_bod = body_ptr->bounding_box().center();
+      cent_bod = cent_bod - center;
+      curr = cent_bod.length();
+      if ( curr > max_size )
+        max_size = curr;
+    }
+
+  curr = bounding_box.diagonal().length();
+
+  if ( curr > max_size )
+     max_size = curr;
+
+  double height = 0.0;
+  if ( center.x() > max_size )
+    {
+      height = 500.0 * center.x();
+    }
+  else if ( center.y() > max_size )
+    {
+      height = 500.0 * center.y();
+    }
+  else if ( center.z() > max_size )
+    {
+      height = 500.0 * center.z();
+    }
+  else
+    {
+      height = 500.0 * max_size;
+    }
+
+  //lets make certain we have a valid height..
+  if ( height < GEOMETRY_RESABS )
+    {
+      height = 500.0;
+    }
+
+  BodySM *cutting_tool_ptr = gme->cylinder( height, radius, radius, radius );
+
+  if( cutting_tool_ptr == NULL )
+    return CUBIT_FAILURE;
+
+  //transform the cyclinder to cernter and axis
+  // The current frustum is centered on the z axis.
+  CubitVector axis2(0., 0., 1.0 );
+  //now find the normal to the current axis and axis we want to be
+  //at. This normal is where we will rotate about.
+  CubitVector normal_axis = axis2 * axis;
+  if ( normal_axis.length() > CUBIT_RESABS )
+    {
+       //angle in degrees.
+       double angle = normal_axis.vector_angle( axis2, axis );
+       gme->get_gqe()->rotate(cutting_tool_ptr, normal_axis, angle);
+    }
+  gme->get_gqe()->translate(cutting_tool_ptr, center);
+
+  CubitStatus stat = gme->webcut( webcut_body_list, cutting_tool_ptr,
+              neighbor_imprint_list, results_list, imprint_type) ;
+
+  // Delete the BodySM that was created to be used as a tool
+  gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
+
+  return stat;
+}
+
+ 

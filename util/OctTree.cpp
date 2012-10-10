@@ -11,8 +11,6 @@
 // Creation Date : 01/30/02
 //-------------------------------------------------------------------------
 
-#if !defined(TEMPLATE_DEFS_INCLUDED) || defined(INCLUDED_FROM_OCT_TREE_HPP)
-
 #include "OctTree.hpp"
 #include "OctTreeCell.hpp"
 #include "DLIList.hpp"
@@ -508,4 +506,3 @@ void OctTree<X,E>::tree_size( OctTreeCell<X,E>* box, DLIList<int>& boxes, DLILis
   leaves.back();
 }
 
-#endif

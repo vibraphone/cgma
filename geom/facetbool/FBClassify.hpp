@@ -58,9 +58,6 @@ private:
 		           double x2, double y2);
   int *e0, *e1, *e2;
   int number_of_groups;
-#ifdef BOYD17 
-  std::vector<int> group_types;
-#endif
   int classify(int itri, int which);
   int classify_against_plane(int itri, int which);
 };

@@ -172,7 +172,7 @@ CubitBox& CubitBox::operator|=(const CubitVector& vector)
 }
 
 // Intersection of this and box
-inline CubitBox& CubitBox::operator&=(const CubitBox& box)
+CubitBox& CubitBox::operator&=(const CubitBox& box)
 {
   minimum_.x(CUBIT_MAX(minimum_.x(), box.minimum_.x()));
   minimum_.y(CUBIT_MAX(minimum_.y(), box.minimum_.y()));
@@ -204,7 +204,9 @@ CubitBox& CubitBox::operator*=(double scale)
 
 CubitBox& CubitBox::operator/=(double scale)
 {
-  assert(scale != 0.0);
+  if(scale == 0.0)
+    throw ("Cannot Divide by Zero");
+  //assert(scale != 0.0);
   *this *= 1/scale;
   return *this;
 }
@@ -434,6 +436,70 @@ int CubitBox::operator<=(const CubitVector& vect) const
           vect.z() >= maximum_.z() );
 }
 
+/*
+Ray-axis Aligned box intersection by
+KAY, T. L., AND KAJIYA, J. T.
+In Computer Graphics (SIGGRAPH '86 Proceedings) (Aug. 1986), D. C. Evans and R. J. Athay, Eds., vol. 20, pp. 269-278. 
+
+Determines if there is an intersection between a ray and box but doesn't calculate the intersection.
+
+*/
+bool CubitBox::intersect(const CubitVector& ray_origin, const CubitVector& ray_direction)
+{
+    double tNear=CUBIT_DBL_MIN;
+    double tFar=CUBIT_DBL_MAX;
+
+    for(int i=0;i<3;i++)
+    {
+        //X plane
+        if(fabs(ray_direction[i])<=CUBIT_DBL_MIN)
+        {
+            //Ray parallel to x plane
+            if(ray_origin[i]<this->minimum_[i] || ray_origin[i]>this->maximum_[i])
+            {
+                //Not between
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        double t1 = (this->minimum_[i] - ray_origin[i]) / ray_direction[i];
+        double t2 = (this->maximum_[i] - ray_origin[i]) / ray_direction[i];
+
+        if(t1>t2)
+        {
+            double temp=t1;
+            t1=t2;
+            t2=temp;
+        }
+        if(t1>tNear)
+        {
+            tNear=t1;
+        }
+
+        if(t2<tFar)
+        {
+            tFar=t2;
+        }
+
+        if(tNear>tFar)
+        {
+            return false;
+        }
+
+        if(tFar<0)
+        {
+            return false;
+        }
+
+    }
+
+    return true;
+}
+
 /* 
 Fast Ray-Box Intersection
 by Andrew Woo
@@ -449,69 +515,85 @@ from "Graphics Gems", Academic Press, 1990
 //double minB[NUMDIM], maxB[NUMDIM];		/*box */
 //double origin[NUMDIM], dir[NUMDIM];		/*ray */
 //double coord[NUMDIM];				/* hit point */
-bool CubitBox::intersect(const CubitVector* ray_origin, const CubitVector* ray_direction,
-                         CubitVector* intersection_pt)
+bool CubitBox::intersect
+(
+  const CubitVector* ray_origin,
+  const CubitVector* ray_direction,
+  CubitVector** intersection_pt)
 {
-	bool inside = true;
-	int quadrant[NUMDIM];
-	register int i;
-	int whichPlane;
-	double maxT[NUMDIM];
-	double candidatePlane[NUMDIM];
+  bool inside = true;
+  int quadrant[NUMDIM];
+  register int i;
+  int whichPlane;
+  double maxT[NUMDIM];
+  double candidatePlane[NUMDIM];
 
-	/* Find candidate planes; this loop can be avoided if
-   	rays cast all from the eye(assume perpsective view) */
-	for (i=0; i<NUMDIM; i++)
-		if((*ray_origin)[i] < (this->minimum())[i]) {
-			quadrant[i] = LEFT;
-			candidatePlane[i] = (this->minimum())[i];
-			inside = false;
-		}else if ( (*ray_origin)[i] > (this->maximum())[i]) {
-			quadrant[i] = RIGHT;
-			candidatePlane[i] = (this->maximum())[i];
-			inside = false;
-		}else	{
-			quadrant[i] = MIDDLE;
-		}
-
-	/* Ray origin inside bounding box */
-	if(inside)
+  /* Find candidate planes; this loop can be avoided if
+  rays cast all from the eye(assume perpsective view) */
+  for (i=0; i<NUMDIM; i++)
+  {
+    if((*ray_origin)[i] < (this->minimum())[i]) 
     {
-		intersection_pt = new CubitVector(*ray_origin);
-		return true;
-	}
-
-
-	/* Calculate T distances to candidate planes */
-	for (i = 0; i < NUMDIM; i++)
-		if (quadrant[i] != MIDDLE && (*ray_direction)[i] !=0.)
-			maxT[i] = ( candidatePlane[i]-(*ray_origin)[i]) / ((*ray_direction)[i]);
-		else
-			maxT[i] = -1.;
-
-	/* Get largest of the maxT's for final choice of intersection */
-	whichPlane = 0;
-	for (i = 1; i < NUMDIM; i++)
-		if (maxT[whichPlane] < maxT[i])
-			whichPlane = i;
-
-	/* Check final candidate actually inside box */
-	double intersection_coords[3];
-
-    if (maxT[whichPlane] < 0.)
-        return false;
-
-	for (i = 0; i < NUMDIM; i++)
-    {
-		if (whichPlane != i)
-        {
-			intersection_coords[i] = (*ray_origin)[i] + maxT[whichPlane] * (*ray_direction)[i];
-			if (intersection_coords[i] < (this->minimum())[i] || intersection_coords[i] > (this->maximum())[i])
-				return false;
-		}
-        else
-        	intersection_coords[i] = candidatePlane[i];
+      quadrant[i] = LEFT;
+      candidatePlane[i] = (this->minimum())[i];
+      inside = false;
     }
+    else if ( (*ray_origin)[i] > (this->maximum())[i]) 
+    {
+      quadrant[i] = RIGHT;
+      candidatePlane[i] = (this->maximum())[i];
+      inside = false;
+    }
+    else	
+    {
+      quadrant[i] = MIDDLE;
+    }
+  }
 
-	return true;  /* ray hits box */
+  /* Ray origin inside bounding box */
+  if(inside)
+  {
+    *intersection_pt = new CubitVector(*ray_origin);
+    return true;
+  }
+
+  /* Calculate T distances to candidate planes */
+  for (i = 0; i < NUMDIM; i++)
+  {
+    if (quadrant[i] != MIDDLE && (*ray_direction)[i] !=0.)
+      maxT[i] = ( candidatePlane[i]-(*ray_origin)[i]) / ((*ray_direction)[i]);
+    else
+      maxT[i] = -1.;
+  }
+
+  /* Get largest of the maxT's for final choice of intersection */
+  whichPlane = 0;
+  for (i = 1; i < NUMDIM; i++)
+  {
+    if (maxT[whichPlane] < maxT[i])
+      whichPlane = i;
+  }
+
+  /* Check final candidate actually inside box */
+  double intersection_coords[3];
+
+  if (maxT[whichPlane] < 0.)
+    return false;
+
+  for (i = 0; i < NUMDIM; i++)
+  {
+    if (whichPlane != i)
+    {
+      intersection_coords[i] = (*ray_origin)[i] + maxT[whichPlane] * (*ray_direction)[i];
+      if (intersection_coords[i] < (this->minimum())[i] ||
+          intersection_coords[i] > (this->maximum())[i])
+        return false;
+    }
+    else
+    {
+      intersection_coords[i] = candidatePlane[i];
+    }
+  }
+
+  return true;  /* ray hits box */
 }

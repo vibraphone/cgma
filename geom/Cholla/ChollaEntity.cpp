@@ -5,6 +5,7 @@
 //- Version: $Id: 
 
 #include "ChollaEntity.hpp"
+#include "CubitMessage.hpp"
 
 ChollaEntity::ChollaEntity()
 {

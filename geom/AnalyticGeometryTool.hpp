@@ -297,19 +297,6 @@ public:
    //! Default value is 1e-6.
    double set_epsilon( double new_epsilon );
 
-#ifdef BOYD14
-   //! Swap two double number memory locations.
-   void swap_dbl(double& dbl1,double& dbl2);
-
-   //! Find minimum array of double numbers.
-   //! Position in array is returned as well.
-   double min_array( const double *array, int len, int &pos );
-
-   //! Find maximum array of double numbers.
-   //! Position in array is returned as well.
-   double max_array( const double *array, int len, int &pos );
-#endif
-
    /*! Round value to either -1, 0, or 1 if within epsilon to
     to one of these.  Epsilon determined by get_epsilon/set_epsilon
     functions. */
@@ -332,12 +319,6 @@ public:
        Point in and point out can be the same memory address or different. */
    void transform_pnt( double m[4][4], double pin[3], double pout[3] );
 
-#ifdef BOYD14
-   //! Transform a point array.  Points can be transformed in place.
-   void transform_pnt_arr( double m[4][4], double pin_arr[][3], 
-                           size_t num_pnts, double pout_arr[][3] );
-#endif
-
    /*! This routine applies a transformation matrix to a specified vector
       and returns the new vector orientation.  Vector in and vector out can
       be the same memory address or different. */
@@ -348,17 +329,6 @@ public:
       be the same memory address or different. */
    void transform_vec( double m4[4][4], double vin[3], double vout[3] );
 
-#ifdef BOYD14
-   double transform_dist( double m3[3][3], double distance, double v[3] );
-   double transform_dist( double m4[4][4], double distance, double v[3] );
-   // Transforms a distance with given transform matrix
-   // The routine can accept the vector direction (in non-transformed system) 
-   // of the distance.  This is probably a very unusual case - meaning that,
-   // compared to the old system, the new system is not square (a different
-   // scale factor can apply to each component direction - ie., the distance
-   // 6 units covers in the x-direction may not equal the distance 6 units
-   // covers in the y-direction - a rectangular system!).
-#endif
    /*! Transforms a line using the given transformation mtx.  The mtx is typically
     built using add_origin_to_rotation_mtx. */
    void transform_line( double rot_mtx[4][4], double origin[3], double axis[3] );
@@ -421,14 +391,6 @@ public:
                        double sys_out[4][4] );
    //@}
 
-#ifdef BOYD14
-   double mtx_to_ratio( double m3[3][3] );
-   double mtx_to_ratio( double m4[4][4] );
-   // This function returns the ratio of a length in the second system to a 
-   // length in the first system.  Multiply the length in system 1 by this 
-   // ratio to get the length in system 2.
-#endif
-
    //! Find determinant of matrix.
    double det_mtx( double m[3][3] );
 
@@ -461,19 +423,6 @@ public:
                      double origin[3], double matrix[4][4] );
    //@}
 
-#ifdef BOYD14
-   //@{
-   //! Extract vectors from a matrix.  NULL can be input for any of the
-   //! arguments and the routine will not extract that vector.  NULL can
-   //! also be input for the matrix, in which case the function assumes
-   //! the identity matrix.
-   void mtx_to_vecs( double matrix[3][3], double xvec[3], double yvec[3], 
-                     double zvec[3] );
-   void mtx_to_vecs( double matrix[4][4], double xvec[3], double yvec[3], 
-                     double zvec[3], double origin[3] );
-   //@}
-#endif
-    
    //@{
    //! Prints matrix values, for debugging.
    void print_mtx( double mtx[3][3] );
@@ -496,27 +445,11 @@ public:
    //! Sets the value of pnt to x,y,z (inline function).
    void set_pnt( double pnt[3], double x, double y, double z );
 
-#ifdef BOYD14
-   //! Swaps two double[3] points with each other.
-   void swap_pnt(double pnt1[3],double pnt2[3]);
-#endif
-
    //! Compares two points to determine if they are equivalent.  The
    //! equivalence is based on epsilon (get_epsilon, set_epsilon).
    //! If the distance between them is less than epsilon, the points
    //! are considered equal.
    CubitBoolean pnt_eq( double pnt1[3],double pnt2[3] );
-
-#ifdef BOYD14
-   //! Compares two point arrays or portions of two point arrays to 
-   //! determine if they are equivalent within epsilon (get_epsilon,
-   //! set_epsilon).  Checking will stop when either of the array ends
-   //! is encountered or num_to_check is exceeded.  Note that he function
-   //! can return CUBIT_TRUE even if the arrays are of a different length.
-   CubitBoolean pnt_arr_eq( double **pnt_arr1, long num1, double **pnt_arr2,
-                           long num2, long start_pos1 = 0, long start_pos2 = 0,
-                           long num_to_check = -1 );
-#endif
 
    //! Function to mirror a point about a plane.  The mirror point
    //! is the same distance from the plane as the original, but on 
@@ -525,14 +458,6 @@ public:
    //! just copied.
    CubitStatus mirror_pnt( double pnt[3], double pln_orig[3], 
                            double pln_norm[3], double m_pnt[3]);
-#ifdef BOYD14
-   //! Mirrors an array of points about a plane.  If mirror_arr is
-   //! non-NULL, function assumes it was allocated to correct lenght.
-   //! If NULL, function allocates the array.
-   double ** mirror_pnt_arr( double **pnt_arr, long num_pnts, 
-                             double pln_orig[3], double pln_norm[3],
-                             double **mirror_arr );
-#endif
 
    //! Given start pnt, vec dir and length find next point in space.  The
    //! vector direction is first unitized then the following formula is used:
@@ -540,25 +465,6 @@ public:
    //! new_pnt can be the same as input point (overwrites old location).
    CubitStatus next_pnt( double str_pnt[3], double vec_dir[3], double len,
                          double new_pnt[3]);
-
-#ifdef BOYD14
-
-   //! This routine creates a point between two other points, at a specified
-   //! distance between the two given points.  The distance can be either
-   //! absolute (meaning an actual distance, ie. in mm), or a normalized distance
-   //! (ie., 50% or 0.5 between the other two points).  The reference point for
-   //! the distance is always the first point. 
-   //! - The normalized distance does not need to be between 0.0 & 1.0.  For example,
-   //! a 1.25 normalized distance would result in a point 25% beyond the second 
-   //! point (not actually "between" the two points).   
-   //! - The distances can also be negative.  For example, a -1.25 normalized
-   //! distance would result in a point 25% before the first point.  A -50.0
-   //! absolute distance would extend 50.0 from the first point in the opposite
-   //! direction of the second point.
-   CubitStatus pnt_between2pnts( double pnt1[3], double pnt2[3], 
-                                 AgtDistanceMethod dist_meth, double dist,
-                                 double out_pnt[3] );
-#endif
 
    //***************************************************************************
    // 3D Vectors
@@ -601,20 +507,6 @@ public:
    //! Multiples a vector by a constant (vec_out can equal vec).
    void mult_vecxconst( double constant, double vec[3], double vec_out[3] );
 
-#ifdef BOYD14
-   //! Adds two vectors (vec_out can equal vec_1 or vec_2)
-   void add_vec_vec( double vec_1[3], double vec_2[3], double vec_out[3]);
-
-   //! Subtracts two vectors (vec_out can equal vec_1 or vec_2).
-   void sub_vec_vec( double vec_1[3], double vec_2[3], double vec_out[3] );
-#endif
-
-#ifdef BOYD14
-   //! Rotate a vector about another vector a given angle.  v_out can equal
-   //! v1 (v_out replaces v1) or be a new vector.
-   void rotate_vec( double v1[3], double v2[3], double angle, double v_out[3] );
-#endif
-
    //! Multiples -1.0 by a vector (vout can equal vin).
    void reverse_vec( double vin[3],double vout[3] );
 
@@ -629,22 +521,6 @@ public:
    //! Determines distance between two points in space.
    double dist_pnt_pnt( double pnt1[3], double pnt2[3] );
 
-#ifdef BOYD14
-   //! Determines shortest distance between two infinite lines.  Optional
-   //! output also includes intersection points.  The num_ints will be zero
-   //! if the lines are parallel, one if they physically cross and two if
-   //! they are non-parallel and non-crossing.
-   double dist_ln_ln( double ln_1_orig[3], double ln_1_vec[3],
-                      double ln_2_orig[3], double ln_2_vec[3],
-                      unsigned short *num_ints = NULL, double int_pnt1[3] = NULL,
-                      double int_pnt2[3] = NULL );
-   //! This routine determines the shortest distance between a point and a
-   //! plane.  This is the perpendicular distance from the point to the plane.
-   //! Optionally you can find which side of the plane the point is on and 
-   //! the plane intersection with the point.
-   double dist_pnt_pln( double pnt[3], double pln_orig[3], double pln_norm[3], 
-                        AgtSide *side = NULL, double pln_int[3] = NULL );
-#endif
    //! This routine determines the shortest distance between two planes.  This 
    //! is the perpendicular distance between the two planes.  Note that if the
    //! two planes are not parallel, the returned distance is zero.  The routine
@@ -654,22 +530,6 @@ public:
                         double pln_2_orig[3], double pln_2_norm[3],
                         AgtSide *side = NULL, AgtOrientation *orien = NULL,
                         unsigned short *status = NULL );
-#ifdef BOYD14
-   //! This routine determines the shortest distance between a line and a plane.  
-   //! This is the perpendicular distance between the line and the plane.  Note 
-   //! that if the line is not parallel to the plane, the returned distance is 
-   //! zero.  You can also find which side of the plane the line is on and
-   //! the status (= 0 if line & plane not parallel).
-   double dist_ln_pln( double ln_orig[3], double ln_vec[3], double pln_orig[3],
-                       double pln_norm[3], AgtSide *side = NULL, 
-                       unsigned short *status = NULL );
-
-   //! This routine determines the shortest distance between a point and a line.  
-   //! This is the perpendicular distance between the point and the line.  You
-   //! can optionally get the intersection point of the point and line.
-   double dist_pnt_ln( double pnt[3], double ln_orig[3], double ln_vec[3],
-                       double int_pnt[3] = NULL );
-#endif
    
    //***************************************************************************
    // Intersections
@@ -708,15 +568,6 @@ public:
    CubitStatus int_pln_pln( double pln_1_orig[3], double pln_1_norm[3],
                             double pln_2_orig[3], double pln_2_norm[3],
                             double ln_orig[3], double ln_vec[3] );
-#ifdef BOYD14
-   //! This routine finds the intersection of three orthoganal planes.  This 
-   //! intersection is a point.  Returns CUBIT_FAILURE if no point intersection
-   //! exists.
-   CubitStatus int_pln_pln_pln( double pln_1_orig[3], double pln_1_norm[3],
-                                double pln_2_orig[3], double pln_2_norm[3],
-                                double pln_3_orig[3], double pln_3_norm[3],
-                                double int_pnt[3] );
-#endif
    
    //**************************************************************************
    // Comparison/Containment Tests
@@ -753,44 +604,6 @@ public:
    CubitBoolean is_ln_on_pln( double ln_orig[3], double ln_vec[3],
                               double pln_orig[3], double pln_norm[3] );
 
-
-#ifdef BOYD14
-   //! This routine checks to see if two rays converge or diverge towards each
-   //! other.  A ray is a line that is not infinite (consists of an origin and
-   //! a vector direction).  Rays are defined to converge if they intersect
-   //! within a common plane to each ray (ie., if the rays do not lie in a 
-   //! common plane, one of the rays is temporarily translated into the common
-   //! plane for checking).  If the rays are parallel, no one common plane exists,
-   //! so they are checked as-is.  See the following examples for a clearer 
-   //! picture of how this routine works.  Assume that the rays in the first row
-   //! are in planes that are parallel to this document but not in planes that are
-   //! necessarily coincident.  Assume that the rays in the second row are in the
-   //! same plane.  Note that rays may converge even if they are not in the same 
-   //! plane.
-   //!    
-   //!    Examples:
-   //!    
-   //!      *---->          <----*           <----*                      
-   //!              ^               ^             ^            ^
-   //!              |               |             |            |      
-   //!              |               |             |            |
-   //!              *               *             *            *---->
-   //!	    
-   //!      converge        diverge           converge        converge   
-   //!      
-   //!      
-   //!      *--->  *--->    *--->  <---*    *--->            *--->    
-   //!                                            <---*         *--->
-   //!        converge        converge        diverge         diverge 
-   CubitBoolean do_rays_converge( double ray_1_orig[3], double ray_1_vec[3],
-                                  double ray_2_orig[3], double ray_2_vec[3] );
-
-   //! This routine checks to see if two lines are colinear.  Two lines are 
-   //! considered colinear if they are parallel and the origin of one line is on 
-   //! the other line.
-   CubitBoolean is_ln_on_ln( double ln_orig1[3], double ln_vec1[3],
-                             double ln_orig2[3], double ln_vec2[3] );
-#endif
 
    //! This routine checks to see if two infinite planes are coincident.
    CubitBoolean is_pln_on_pln( double pln_orig1[3], double pln_norm1[3],
@@ -928,11 +741,6 @@ public:
    //! Finds minimum distance beween a triange and point in 3D (MAGIC)
    double MinPointTriangle (const Point3& p, const Triangle3& tri, double& s, double& t);
 
-#ifdef BOYD14
-   void Center( Triangle3& tri, double center[3] );
-   // Finds center position of given triangle
-#endif
-
    //! Finds normal vector of given triangle
    void Normal( Triangle3& tri, double normal[3] );
 
@@ -1017,9 +825,6 @@ private:
    double Sqrt (double x);
    double UnitRandom ();
    double Dot (const Point2& p, const Point2& q);
-#ifdef BOYD14
-   Point2 Perp (const Point2& p);
-#endif
    double Length (const Point2& p);
    CubitBoolean Unitize (Point2& p );
    double Dot (const Point3& p, const Point3& q);
@@ -1028,14 +833,6 @@ private:
    CubitBoolean Unitize (Point3& p );
    // Supporting code for triangle calculations
 
-#ifdef BOYD14
-// FILE: lin3lin3.cpp
-   double MinLineLine (const Line3& line0, const Line3& line1, double& s, double& t);
-   double MinLineRay (const Line3& line, const Line3& ray, double& s, double& t);
-   double MinLineLineSegment (const Line3& line, const Line3& seg, double& s, double& t);
-   double MinRayRay (const Line3& ray0, const Line3& ray1, double& s, double& t);
-   double MinRayLineSegment (const Line3& ray, const Line3& seg, double& s, double& t);
-#endif
    double MinLineSegmentLineSegment (const Line3& seg0, const Line3& seg1, double& s, double& t);
 
    //get intersection between bounding box and plane
@@ -1071,33 +868,6 @@ public:
         ~mgcEigen ();
 
         mgcEigen& Matrix (float** inmat);
-
-#ifdef BOYD14
-        // solve eigensystem
-        void EigenStuff2 ();  // uses TriDiagonal2
-        void EigenStuff3 ();  // uses TriDiagonal3
-        void EigenStuff4 ();  // uses TriDiagonal4
-        void EigenStuffN ();  // uses TriDiagonalN
-        void EigenStuff  ();  // uses switch statement
-#endif
-
-#ifdef BOYD14
-        // solve eigensystem, use decreasing sort on eigenvalues
-        void DecrSortEigenStuff2 ();
-        void DecrSortEigenStuff3 ();
-        void DecrSortEigenStuff4 ();
-        void DecrSortEigenStuffN ();
-        void DecrSortEigenStuff  ();
-#endif
-
-#ifdef BOYD14
-        // solve eigensystem, use increasing sort on eigenvalues
-        void IncrSortEigenStuff2 ();
-        void IncrSortEigenStuff3 ();
-        void IncrSortEigenStuff4 ();
-        void IncrSortEigenStuffN ();
-        void IncrSortEigenStuff  ();
-#endif
 
 private:
         int size;
@@ -1149,34 +919,7 @@ public:
         double Eigenvector (int row, int col) { return mat[row][col]; }
         const double** Eigenvector () { return (const double**) mat; }
 
-#ifdef BOYD14
-        // solve eigensystem
-        void EigenStuff2 ();  // uses TriDiagonal2
-#endif
         void EigenStuff3 ();  // uses TriDiagonal3
-#ifdef BOYD14
-        void EigenStuff4 ();  // uses TriDiagonal4
-        void EigenStuffN ();  // uses TriDiagonalN
-        void EigenStuff  ();  // uses switch statement
-#endif
-
-#ifdef BOYD14
-        // solve eigensystem, use decreasing sort on eigenvalues
-        void DecrSortEigenStuff2 ();
-        void DecrSortEigenStuff3 ();
-        void DecrSortEigenStuff4 ();
-        void DecrSortEigenStuffN ();
-        void DecrSortEigenStuff  ();
-#endif
-
-#ifdef BOYD14
-        // solve eigensystem, use increasing sort on eigenvalues
-        void IncrSortEigenStuff2 ();
-        void IncrSortEigenStuff3 ();
-        void IncrSortEigenStuff4 ();
-        void IncrSortEigenStuffN ();
-        void IncrSortEigenStuff  ();
-#endif
 
 private:
         int size;

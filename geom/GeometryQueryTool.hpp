@@ -12,6 +12,7 @@
  *
  */
 
+
 #ifndef GEOMETRYQUERYTOOL_HPP
 #define GEOMETRYQUERYTOOL_HPP
 
@@ -19,7 +20,7 @@
 #include <typeinfo>
 #include <list>
 #include <set>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 
@@ -28,7 +29,6 @@ using std::type_info;
 #include "GeometryQueryEngine.hpp"
 #include "IntermediateGeomEngine.hpp"
 #include "CGMHistory.hpp"
-#include "CubitCompat.h"
 
 class RefGroup;
 class Body;
@@ -64,7 +64,7 @@ class RefVolume ;
 class RefFace ;
 class RefEdge ;
 class RefVertex ;
-class Point;
+class TBPoint;
 class CubitEntity;
 class CoEdgeSM;
 
@@ -95,7 +95,7 @@ public :
 
   void ige_remove_modified(DLIList<Surface*> &all_surfs,
                                             DLIList<Curve*> &all_curves,
-                                            DLIList<Point*> &all_points);
+                                            DLIList<TBPoint*> &all_points);
 
   static GeometryQueryTool* instance( GeometryQueryEngine* gqePtr = NULL);
   /**<
@@ -366,21 +366,13 @@ public :
   //! that are of the same geometry engine. 
   CubitStatus export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                   const char* filename,
-#if CUBIT_12 != 2
-                                  const char * filetype,
-#else // CUBIT_12 == 2
                                   Model_File_Type filetype,
-#endif
                                   int &num_ents_exported,
                                   const CubitString &cubit_version,
-                                  const char* logfile_name = NULL );
+                                  ModelExportOptions &export_options );
 
-  CubitStatus export_solid_model(DLIList<RefEntity*>& ref_entity_list,
-				 char*& p_buffer,
-				 int& n_buffer_size,
-				 bool b_export_buffer);
-  /**<
-   * Import all or specified entities in a solid model file.
+  /*!
+    Import all or specified entities in a solid model file.
     *  \arg file_ptr
     *  A pointer to the file to read (can be NULL for IGES and STEP files).
     *  \arg file_type
@@ -410,28 +402,9 @@ public :
     */
   //! \brief Import a geometry file. 
   CubitStatus import_solid_model(const char* file_name,
-#if CUBIT_12 != 2
-                                 const char* file_type,
-#else // CUBIT_12 == 2
                                  Model_File_Type file_type,
-#endif
-#if CUBIT_12 == 0
-                                 const char* logfile_name = NULL,
-                                 CubitBoolean heal_step = CUBIT_TRUE,
-                                 CubitBoolean import_bodies = CUBIT_TRUE,
-                                 CubitBoolean import_surfaces = CUBIT_TRUE,
-                                 CubitBoolean import_curves = CUBIT_TRUE,
-                                 CubitBoolean import_vertices = CUBIT_TRUE,
-                                 CubitBoolean free_surfaces = CUBIT_TRUE,
-#else // CUBIT_12 == 1 || CUBIT_12 == 2
-                                 ModelImportOptions& import_options,
-#endif
-				 DLIList<RefEntity*> *imported_entities = NULL);
-
-    // import entities in a solid model buffer
-  CubitStatus import_solid_model(DLIList<RefEntity*> *imported_entities,
-				 const char* pBuffer,
-				 const int n_buffer_size);
+                                 ModelImportOptions &import_options,
+				 DLIList<RefEntity*> *imported_entities = NULL );
 
   /*!
    * Fire a ray at entities, passing back distances of hits and entities hit
@@ -538,13 +511,13 @@ public :
   Body* make_Body(BodySM *bodysm_ptr) const;
   RefFace* make_RefFace(Surface* surface_ptr ) const;
   RefEdge* make_RefEdge(Curve* curve_ptr) const;
-  RefVertex* make_RefVertex(Point* point_ptr) const;
+  RefVertex* make_RefVertex(TBPoint* point_ptr) const;
 
   static CubitSense relative_sense( Surface* surface1, Surface* surface2 );
 
   RefFace* make_free_RefFace(Surface *surface_ptr, bool is_free_surface) const;
   RefEdge* make_free_RefEdge(Curve *curve_ptr ) const;
-  RefVertex* make_free_RefVertex(Point *point_ptr) const;
+  RefVertex* make_free_RefVertex(TBPoint *point_ptr) const;
   /**<  These functions can be used to create free ref-entities
     *  from a geometry engine.  Just call populate_topology_
     *  bridges to create the sm_ptr of the desired type, then pass
@@ -690,6 +663,14 @@ public :
   CubitStatus get_intersections( RefEdge* ref_edge, RefFace* ref_face,
                                  DLIList<CubitVector*>& intersection_list,
                                  CubitBoolean bounded = CUBIT_FALSE );
+
+  //! Gets the intersection of a curve a plane.  The extended_percent
+  //! extends the plane by a percentage value.
+  CubitStatus get_intersections( RefEdge* ref_edge, CubitPlane plane,
+                                 DLIList<CubitVector*>& intersection_list,
+                                 CubitBoolean bounded = CUBIT_FALSE,
+                                 double extended_percent = 0.0);
+
 
   /*! Gets the extrema position along the first given direction. If there
     * is more than one extrema position, the other directions will be used
@@ -859,14 +840,14 @@ public :
   //! direction.
   CubitStatus rotate( Body* entity,
                       const CubitVector& point,
-                      const CubitVector& direction,
+                      const CubitVector& normal,
                       double degrees,
                       bool check_to_transform = true,
                       bool preview = false);
 
   CubitStatus rotate( DLIList<RefEntity*> &entities_to_transform,  
                       const CubitVector& point,
-                      const CubitVector& direction,
+                      const CubitVector& normal,
                       double degrees,
                       bool check_to_transform, 
                       DLIList<RefEntity*> &entities_transformed,
@@ -878,37 +859,46 @@ public :
                       double degrees,
                       bool check_to_transform = true,
                       bool preview = false);
+  CubitStatus rotate( BasicTopologyEntity* entity, 
+                      const CubitVector& point,
+                      const CubitVector& normal,
+                      double degrees,
+                      bool check_to_transform = true,
+                      bool preview = false);
 
   //! \brief Scale a Body.
-  CubitStatus scale( Body* entity, double factor, bool check_to_transform = true, bool preview = false);
+  CubitStatus scale( Body* entity,const CubitVector& point, double factor, bool check_to_transform = true, bool preview = false);
 
   //! \brief Scale a Body different factors in x, y, and z.
-  CubitStatus scale( Body* entity, const CubitVector& factors, bool check_to_transform = true, bool preview = false);
+  CubitStatus scale( Body* entity,const CubitVector& point, const CubitVector& factors, bool check_to_transform = true, bool preview = false);
 
   //! \brief Scale a BasicTopologyEntity. 
-  CubitStatus scale( BasicTopologyEntity* entity, double factor, bool check_to_transform = true, bool preview = false);
+  CubitStatus scale( BasicTopologyEntity* entity,const CubitVector& point, double factor, bool check_to_transform = true, bool preview = false);
 
   //! \brief Scale a BasicTopologyEntity different factors in x, y, and z.
-  CubitStatus scale( BasicTopologyEntity* entity, const CubitVector& factors,bool check_to_transform = true,
+  CubitStatus scale( BasicTopologyEntity* entity,const CubitVector& point, const CubitVector& factors,bool check_to_transform = true,
                      bool preview = false);
 
   void scale( DLIList<RefEntity*> &entities_to_transform, 
+              const CubitVector& point,
               double scale_x, double scale_y, double scale_z, 
               bool check_to_transform, 
               DLIList<RefEntity*> &entities_scaled,
               bool preview = false);
 
   //! \brief Reflect a list of bodies about a plane defined by an axis.
-  CubitStatus reflect( DLIList<Body*> bodies, const CubitVector& axis, bool preview = false );
+  CubitStatus reflect( DLIList<Body*> bodies,const CubitVector& point, const CubitVector& axis, bool preview = false );
 
   //! \brief Reflect a BasicTopologyEntity about a plane defined by an axis.
   CubitStatus reflect( BasicTopologyEntity* entity, 
+                       const CubitVector& point,
                        const CubitVector& axis,
                        bool check_to_transform = true,
                        bool preview = false);
 
   void reflect( DLIList<RefEntity*> &entities_to_transform,
-                            double x, double y, double z, 
+                            const CubitVector& point,
+                            const CubitVector& axis,
                             bool check_before_transforming,
                             DLIList<RefEntity*> &entities_transformed,
                             bool preview = false);
@@ -954,12 +944,40 @@ public :
   /*! \brief Variable needed when importing geometry that will be 
     merged-away with already existing geometry in the session */
   static CubitBoolean trackMergedAwayEnts;
+  static CubitBoolean importingSolidModel;
 
+  //Before calling import_solid_model, normally we want to clear out the 
+  //map in CAUniqueId, but not when we are importing a cub file.
+  static CubitBoolean clearUidMapBeforeImport; 
+
+  //variable defining scope of merge...if true, 
+  //merge entities you are importing with any entity (i.e.
+  //entities already in the cubit session), otherwise 
+  //only merge entities that are importing with other entities 
+  //that are importing 
+  static CubitBoolean mergeGloballyOnImport;
 
   static DLIList<int> uidsOfImportingEnts;
   static int entitiesMergedAway; 
 
   CGMHistory& history();
+
+  CubitStatus get_graphics( Body *body, 
+                            GMem *g_mem,
+                            std::vector<RefFace*> &face_to_facet_vector,
+                            std::vector<RefEntity*> &facet_point_ownership_vector,
+                            std::vector<std::pair<RefEntity*, std::pair<int,int> > > &facetedges_on_refedges,
+                            unsigned short normal_tolerance, 
+                            double distance_tolerance, 
+                            double max_edge_length );
+
+  CubitStatus get_graphics( RefFace *ref_face,
+                            GMem *gmem,
+                            std::vector<RefEntity*> &facet_point_ownership_vector,
+                            std::vector<std::pair< RefEntity*, std::pair<int,int> > > &facetedges_on_refedges,
+                            unsigned short normal_tolerance = 15, 
+                            double distance_tolerance = 0.0, 
+                            double max_edge_length = 0.0 );
 
 protected :
 

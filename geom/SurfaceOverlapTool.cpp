@@ -87,7 +87,6 @@ SurfaceOverlapTool::SurfaceOverlapTool()
 // Destructor
 SurfaceOverlapTool::~SurfaceOverlapTool()
 {
-   delete instance_;
 }
 
 CubitBoolean SurfaceOverlapTool::draw_overlapping_surface_pair( RefFace *ref_face_1,
@@ -123,7 +122,7 @@ SurfaceOverlapTool::find_overlapping_surfaces( DLIList<Body*> &body_list,
 
 
 CubitStatus
-SurfaceOverlapTool::find_overlapping_surfaces( DLIList<BodySM*> &body_list,
+SurfaceOverlapTool::find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &body_list,
                                               DLIList<Surface*> &surface_list1,
                                               DLIList<Surface*> &surface_list2,
                                               bool filter_slivers)
@@ -156,6 +155,7 @@ SurfaceOverlapTool::find_overlapping_surfaces( DLIList<BodySM*> &body_list,
   std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > a_tree_map;
 
   surface_list.reset();
+  bool valid_surf_pair_status;
   for( i=surface_list.size(); i--; )
   {
     Surface *surf1 = surface_list.get_and_step();
@@ -180,15 +180,19 @@ SurfaceOverlapTool::find_overlapping_surfaces( DLIList<BodySM*> &body_list,
       //don't check for overlapping surfaces within bodies
       if( surf1_body == surf2_body )
         continue;
-
-      if( check_overlap( surf1, surf2, 
+      
+      valid_surf_pair_status = false;
+      // check for overlap, boundary contact, int contact, penetration, etc.
+      if( check_surfs_for_imprinting( surf1, surf2, 
                          &surface_facet_map, 
                          &surface_to_area_map, 
                          &a_tree_map  ) == CUBIT_TRUE )
       {
         surface_list1.append( surf1 );
         surface_list2.append( surf2 );
+        valid_surf_pair_status = true;
       }
+
     }
   }
 
@@ -451,7 +455,7 @@ SurfaceOverlapTool::find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list,
   for( i=ref_face_list.size(); i--; )
   {
     // Cancel button pushed or cntrl-C
-    if (CubitMessage::instance()->Interrupt()) 
+    if (AppUtil::instance()->interrupt()) 
     {
       PRINT_INFO("Find overlap operation aborted.\n");
       goto done;
@@ -472,7 +476,7 @@ SurfaceOverlapTool::find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list,
     for( j=close_ref_faces.size(); j--; )
     {
       // Cancel button pushed or cntrl-C
-      if (CubitMessage::instance()->Interrupt()) 
+      if (AppUtil::instance()->interrupt()) 
       {
          PRINT_INFO("Find overlap operation aborted.\n");
          goto done;
@@ -591,34 +595,61 @@ done:
   return CUBIT_SUCCESS;
 }
 
-//Currently this function is only called when using tolerant imprinting.
-//It does not use the settings controlled by the user for this tool
 
-CubitBoolean
-SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
-              std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
-              std::map<Surface*, double > *area_map,
-              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map )
+double SurfaceOverlapTool::find_area_overlap( SurfaceOverlapFacet *facet1, SurfaceOverlapFacet *facet2, const double facet_compare_tol )
 {
-  if( surface1 == surface2 )
-    return CUBIT_FALSE;
-
-  //if surfaces are not splines and are not of the same type, 
-  //they won't overlap
-  if( (surface1->geometry_type() != SPLINE_SURFACE_TYPE  &&
-       surface2->geometry_type() != SPLINE_SURFACE_TYPE) &&
-      (surface1->geometry_type() != surface2->geometry_type() )) 
-    return CUBIT_FALSE;
-
-  int i, j;
-  AnalyticGeometryTool::instance();
+  double local_overlap_area = 0.0;
   double opp_low = 180.0 - angleMax;
   double opp_high = 180.0 - angleMin;
 
+  // Check angle between triangles, must be within criteria
+  double ang = facet1->angle( *facet2 ); 
+
+  // Allow overlap for angles close to 180 and 0 degrees
+
+  // normalType - 1=any, 2=opposite, 3=same
+  //ang>=180.0-angt || ang<angt
+  if( ((normalType==1 && ang>=opp_low && ang<=opp_high) ||
+      (normalType==1 && ang>=angleMin && ang<=angleMax) ||
+      (normalType==2 && ang>=opp_low && ang<=opp_high) ||
+      (normalType==3 && ang>=angleMin && ang<=angleMax)) && 
+      (normalType != 2 || !skipFacingSurfaces || !facet1->facing( *facet2 )))// check to make sure the surfaces are not facing 
+  {
+      // If triangle bounding boxes don't intersect - no overlap
+      if( facet1->bbox_overlap( facet_compare_tol, *facet2 ) )
+      {
+          // Check distance between triangles, must be within criteria
+          double dist = facet1->distance( *facet2 );
+          if( dist >= gapMin && dist <= facet_compare_tol )
+          {
+              // Check for projected overlap
+              // We want sum of area of ALL overlapping facets
+              local_overlap_area = facet1->projected_overlap( *facet2 );
+              return local_overlap_area;               
+          }
+      }
+   }
+   return local_overlap_area;
+}
+
+CubitBoolean SurfaceOverlapTool::extract_surf_facets( 
+                                                     Surface *surface1, 
+                                                     Surface *surface2, 
+                                                     std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
+                                                     const double tolerance,
+                                                     const double facet_tol,
+                                                     DLIList<SurfaceOverlapFacet*> *&facet_list1,
+                                                     DLIList<SurfaceOverlapFacet*> *&facet_list2                                                      
+                                                     )
+{
+  int i;
+  AnalyticGeometryTool::instance();
+  double opp_low = 180.0 - angleMax;
+  double opp_high = 180.0 - angleMin;
+  
+
   std::map<Surface*, DLIList<SurfaceOverlapFacet*>* >::iterator facet_iterator;
 
-  DLIList<SurfaceOverlapFacet*> *facet_list1 = NULL;
-  DLIList<SurfaceOverlapFacet*> *facet_list2 = NULL;
 
   //see if surface is in map...if not we have to create faceting for it.
   if( facet_map )
@@ -656,8 +687,8 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
 
     facet_list1 = new DLIList<SurfaceOverlapFacet*>;
     GMem surface_graphics;
-    surface1->get_geometry_query_engine()->get_graphics( surface1, &surface_graphics, 
-                                facetAngTol, facetAbsTol, min_edge_length );   
+    surface1->get_geometry_query_engine()->get_graphics( surface1, &surface_graphics,
+                                0, facet_tol, 0 );                               
 
     GPoint* plist = surface_graphics.point_list();
     int* facet_list = surface_graphics.facet_list();
@@ -678,7 +709,7 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
         p[1] = plist[facet_list[i++]];
         p[2] = plist[facet_list[i++]];
      
-        SurfaceOverlapFacet *facet = new SurfaceOverlapFacet( p );
+        SurfaceOverlapFacet *facet = new SurfaceOverlapFacet( p );        
         facet_list1->append( facet );
       }
     }
@@ -727,7 +758,7 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
     facet_list2 = new DLIList<SurfaceOverlapFacet*>;
     GMem surface_graphics;
     surface2->get_geometry_query_engine()->get_graphics( surface2, &surface_graphics, 
-                                facetAngTol, facetAbsTol, min_edge_length );
+                                          0, facet_tol, 0 );                                
 
     GPoint* plist = surface_graphics.point_list();
     int* facet_list = surface_graphics.facet_list();
@@ -748,7 +779,7 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
         p[1] = plist[facet_list[i++]];
         p[2] = plist[facet_list[i++]];
      
-        SurfaceOverlapFacet *facet = new SurfaceOverlapFacet( p );
+        SurfaceOverlapFacet *facet = new SurfaceOverlapFacet( p );            
         facet_list2->append( facet );
       }
     }
@@ -760,6 +791,20 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
   else
     facet_list2 = facet_iterator->second;
 
+  return CUBIT_TRUE;
+}
+
+CubitBoolean SurfaceOverlapTool::check_size_and_swap_surfs( 
+                                                    Surface *&tmp_surf1, 
+                                                    Surface *&tmp_surf2, 
+                                                    const double tolerance,
+                                                    const double facet_tol,
+                                                    DLIList<SurfaceOverlapFacet*> *&facet_list1, 
+                                                    DLIList<SurfaceOverlapFacet*> *&facet_list2, 
+                                                    std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *&a_tree_map,
+                                                    AbstractTree<SurfaceOverlapFacet*> *&a_tree2 )
+{
+  
   // Compare facets
   int num_tri1 = facet_list1->size();
   if( !num_tri1 )
@@ -774,22 +819,21 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
     PRINT_WARNING( "Unable to facet surface\n" );
     return CUBIT_FALSE;
   }
-  
-  Surface *tmp_surf1 = surface1;
-  Surface *tmp_surf2 = surface2;
-
+   
   // Compare least to most - possibly switch the lists
+  Surface *temp_surf;
   if( facet_list1->size() > facet_list2->size() )
   {
     DLIList<SurfaceOverlapFacet*> *temp_list = facet_list1;
     facet_list1 = facet_list2;
     facet_list2 = temp_list;
-    tmp_surf1 = surface2;
-    tmp_surf2 = surface1;
+    temp_surf = tmp_surf1;
+    tmp_surf1 = tmp_surf2;
+    tmp_surf2 = temp_surf;    
   }
 
   // Possibly use an AbstractTree for facet_list2
-  AbstractTree<SurfaceOverlapFacet*> *a_tree = NULL;
+  int i;
   if( facet_list2->size() > NO_FACETS_FOR_ABSTRACTTREE )
   { 
     std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* >::iterator iter1, iter2; 
@@ -822,20 +866,94 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
     iter2 = a_tree_map->find( tmp_surf2 ); 
     if( iter2 == a_tree_map->end() ) 
     {
-      a_tree = new RTree<SurfaceOverlapFacet*>( gapMax );
+      //a_tree = new RTree<SurfaceOverlapFacet*>( gapMax );
+      a_tree2 = new RTree<SurfaceOverlapFacet*>( tolerance+facet_tol );
 
       for( i=facet_list2->size(); i--; )
-        a_tree->add( facet_list2->get_and_step() ); 
+        a_tree2->add( facet_list2->get_and_step() ); 
       
-      a_tree_map->insert( std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>*>::value_type(
-                                tmp_surf2, a_tree ));
+      a_tree_map->insert( std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>*>::value_type( tmp_surf2, a_tree2 ));
     }
     else
-      a_tree = iter2->second;
+      a_tree2 = iter2->second;
+  }
+  return CUBIT_TRUE;
+}
+
+//Currently this function is only called when using tolerant imprinting.
+//It does not use the settings controlled by the user for this tool
+
+CubitBoolean SurfaceOverlapTool::check_surfs_for_imprinting( Surface *surface1, Surface *surface2,
+              std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
+              std::map<Surface*, double > *area_map,
+              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map )
+{
+  if( surface1 == surface2 )
+    return CUBIT_FALSE;
+
+  // Initialize toelrances
+  double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+  double facet_tol = tolerance*10;
+  //double facet_tol = 0.00025;
+  
+  // Extract graphics facets if not available in map
+  DLIList<SurfaceOverlapFacet*> *facet_list1 = NULL;
+  DLIList<SurfaceOverlapFacet*> *facet_list2 = NULL;
+  extract_surf_facets( surface1, surface2, facet_map, tolerance, facet_tol, facet_list1, facet_list2 ); 
+
+  // Swap first and second surfaces/facets to set smaller surface as first
+  Surface *tmp_surf1 = surface1;
+  Surface *tmp_surf2 = surface2;
+  AbstractTree<SurfaceOverlapFacet*> *a_tree2 = NULL;
+  if( CUBIT_FALSE == check_size_and_swap_surfs( tmp_surf1, tmp_surf2, tolerance, facet_tol, facet_list1, facet_list2, a_tree_map, a_tree2 ) )
+  { 
+    return CUBIT_FALSE;
   }
 
-  double area = 0;
+  // Calculate the tolerances for dist and area overlap comparision
+  double facet_compare_tol = facet_tol+tolerance; // tolerance used in evaluating dist betwen facets
+  double overlap_tolerance = tolerance * tolerance; // tolerance used in overlaping facets
+  //calculate_tolerances_for_surf_intersection( tmp_surf1, tmp_surf2, facet_list1, facet_list2, area_map, facet_compare_tol, overlap_tolerance );
+ 
+  // Check 1: check for boundary contact (boundary entities (curves & verts) of one surface touches other surface ) 
+  if( check_boundary_contact( facet_list1, facet_list2, a_tree2, facet_compare_tol, overlap_tolerance ) )
+  {
+    return CUBIT_TRUE;
+  }
 
+  //if surfaces are not splines and are not of the same type, they won't overlap
+  if( (surface1->geometry_type() != SPLINE_SURFACE_TYPE  &&
+       surface2->geometry_type() != SPLINE_SURFACE_TYPE) &&
+      (surface1->geometry_type() != surface2->geometry_type() )) 
+    return CUBIT_FALSE;
+
+  // Check 2: check for overlap between surfaces
+  if( check_overlap( facet_list1, facet_list2, a_tree2, facet_compare_tol, overlap_tolerance ) )
+  {
+    return CUBIT_TRUE;
+  }
+
+
+
+
+  // Check 3: check for interior contact (interior of surface touches interior of other surface )
+
+  // Check 4: check for peneration ( one surface penetrates other surface )
+
+  return CUBIT_FALSE;
+}
+
+CubitBoolean SurfaceOverlapTool::calculate_tolerances_for_surf_intersection( 
+                                                                            Surface *tmp_surf1, 
+                                                                            Surface *tmp_surf2, 
+                                                                            DLIList<SurfaceOverlapFacet*> *facet_list1, 
+                                                                            DLIList<SurfaceOverlapFacet*> *facet_list2, 
+                                                                            std::map<Surface*, double > *area_map, 
+                                                                            double &facet_compare_tol, 
+                                                                            double &overlap_tolerance )
+{
+
+  
   //set ovelap tolerance to one thousandth of the smaller area.
   double face1_area, face2_area;
   if( area_map )
@@ -891,11 +1009,10 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
       sample_deviation = true;
   }
 
-  double tmp_overlapTolerance; 
   if( face1_area < face2_area )
-    tmp_overlapTolerance = face1_area * 0.001;
+    overlap_tolerance = face1_area * 0.001;
   else
-    tmp_overlapTolerance = face2_area * 0.001;
+    overlap_tolerance = face2_area * 0.001;
 
 
   //If you're comparing overlap between a large surface and a very small one, 
@@ -904,7 +1021,7 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
   //take the mid point of the smallest edge on the facet, thinking the smallest 
   //edge is approximating high curvature so it would deviate the most and thus
   //provide the safest tolerance.
-  double facet_compare_tol = 0;
+  int i;
   if( sample_deviation )
   {
     DLIList<SurfaceOverlapFacet*> *tmp_facet_list = NULL;
@@ -954,6 +1071,86 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
   if( tolerance > facet_compare_tol )
     facet_compare_tol = tolerance;
 
+  return CUBIT_TRUE;
+}
+
+CubitBoolean SurfaceOverlapTool::check_overlap(  
+  DLIList<SurfaceOverlapFacet*> *facet_list1, 
+  DLIList<SurfaceOverlapFacet*> *facet_list2, 
+  AbstractTree<SurfaceOverlapFacet*> *a_tree, 
+  const double facet_tol, 
+  const double tolerance )
+{
+  int i, j;
+  double area = 0;
+  facet_list1->reset();
+  double overlap_tol = tolerance * tolerance;
+
+  for( i=facet_list1->size(); i--; )
+  {
+    SurfaceOverlapFacet *facet1 = facet_list1->get_and_step();
+    
+    CubitBox facet1_bbox = facet1->bounding_box();
+    DLIList<SurfaceOverlapFacet*> close_facets;
+    if( a_tree )
+    {
+      a_tree->find( facet1_bbox, close_facets );
+      facet_list2 = &close_facets;
+    }
+
+    double facet1_perimeter = facet1->perimeter();
+    
+    facet_list2->reset();
+    for( j=facet_list2->size(); j--; )
+    {
+      SurfaceOverlapFacet *facet2 = facet_list2->get_and_step();       
+      
+      // Check angle between triangles, must be within criteria
+      double ang = facet1->angle( *facet2 );               
+      
+      //rough estimate...must be less than half of 45
+      if( fabs( 180-ang) < 23.5 || ang < 23.5 )       
+      {
+        //make sure midpoint and one other point are within facet_tol+tolerance of plane 
+        //defined by larger facet
+        bool within_parallel_tol = false;
+
+        if( facet1_perimeter > facet2->perimeter() )        
+          within_parallel_tol = facet1->facet_points_within_tol( facet2, (facet_tol+tolerance) );       
+        else
+          within_parallel_tol = facet2->facet_points_within_tol( facet1, (facet_tol+tolerance) );
+        
+        if( within_parallel_tol )
+        {
+          // Check distance between triangles, must be within criteria
+          double dist = facet1->distance( *facet2 );
+          if( dist <= facet_tol+tolerance )
+          {
+            // Check for projected overlap
+            // We want sum of area of ALL overlapping facets
+            area += facet1->projected_overlap( *facet2 );
+            if( area > overlap_tol )                  
+            {
+              return CUBIT_TRUE;
+            }                
+          }
+        }
+      }
+    }
+  }
+
+  return CUBIT_FALSE;
+}
+
+CubitBoolean SurfaceOverlapTool::check_boundary_contact( 
+  DLIList<SurfaceOverlapFacet*> *facet_list1, 
+  DLIList<SurfaceOverlapFacet*> *facet_list2, 
+  AbstractTree<SurfaceOverlapFacet*> *a_tree, 
+  const double facet_compare_tol, 
+  const double tmp_overlap_tol )
+{
+  int i, j;
+  double area = 0;
   facet_list1->reset();
   for( i=facet_list1->size(); i--; )
   {
@@ -971,42 +1168,24 @@ SurfaceOverlapTool::check_overlap( Surface *surface1, Surface *surface2,
     for( j=facet_list2->size(); j--; )
     {
       SurfaceOverlapFacet *facet2 = facet_list2->get_and_step();
-      
-      // Check angle between triangles, must be within criteria
-      double ang = facet1->angle( *facet2 ); 
-      
-      // Allow overlap for angles close to 180 and 0 degrees
-      
-      // normalType - 1=any, 2=opposite, 3=same
-      //ang>=180.0-angt || ang<angt
-      if( ((normalType==1 && ang>=opp_low && ang<=opp_high) ||
-          (normalType==1 && ang>=angleMin && ang<=angleMax) ||
-          (normalType==2 && ang>=opp_low && ang<=opp_high) ||
-          (normalType==3 && ang>=angleMin && ang<=angleMax)) && 
-          (normalType != 2 || !skipFacingSurfaces || !facet1->facing( *facet2 )))// check to make sure the surfaces are not facing 
-      {
-          // If triangle bounding boxes don't intersect - no overlap
-          if( facet1->bbox_overlap( facet_compare_tol, *facet2 ) )
-          {
-              // Check distance between triangles, must be within criteria
-              double dist = facet1->distance( *facet2 );
-              if( dist >= gapMin && dist <= facet_compare_tol )
-              {
-                  // Check for projected overlap
-                  // We want sum of area of ALL overlapping facets
-                  area += facet1->projected_overlap( *facet2 );
-                  if( area > tmp_overlapTolerance )
-                  {
-                      return CUBIT_TRUE;
-                  }                
-              }
-          }
-      }
+           
+     // Check boundary contact
+     // If triangle bounding boxes don't intersect - no overlap
+     if( facet1->bbox_overlap( facet_compare_tol, *facet2 ) )
+     {
+        // Check distance between triangles, must be within criteria
+        double dist = facet1->distance( *facet2 );
+        if( dist >= gapMin && dist <= facet_compare_tol )
+        {
+           return CUBIT_TRUE;
+        }
+      }   
     }
   }
 
   return CUBIT_FALSE;
 }
+
 
 CubitBoolean 
 SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
@@ -1026,7 +1205,7 @@ SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
   for( i=num_tri1; i--; )
   {
     // Cancel button pushed or cntrl-C
-    if (CubitMessage::instance()->Interrupt()) 
+    if (AppUtil::instance()->interrupt()) 
     {
       PRINT_INFO("Find overlap operation aborted.\n");
       abort = CUBIT_TRUE;
@@ -1046,7 +1225,7 @@ SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
     for( j=facet_list2->size(); j--; )
     {
       // Cancel button pushed or cntrl-C
-      if (CubitMessage::instance()->Interrupt()) 
+      if (AppUtil::instance()->interrupt()) 
       {
         PRINT_INFO("Find overlap operation aborted.\n");
         abort = CUBIT_TRUE;
@@ -1073,6 +1252,7 @@ SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
         {
           // Check distance between triangles, must be within criteria
           double dist = facet1->distance( *facet2 );
+
           if( dist >= gapMin && dist <= gapMax )
           {
             // Check for projected overlap
@@ -1090,7 +1270,7 @@ SurfaceOverlapTool::check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
   }  
   if( draw_overlap == CUBIT_TRUE ) 
   {
-    PRINT_INFO("Total overlapping area = %f\n", area );
+    PRINT_INFO("Total overlapping area = %lf\n", area );
 
     if( area > 0.0 )
       return CUBIT_TRUE;
@@ -1119,11 +1299,15 @@ SurfaceOverlapTool::check_overlap( RefFace *ref_face_ptr1, RefFace *ref_face_ptr
 
   //if surfaces are not splines and are not of the same type, 
   //they won't overlap
+  /*
+  I am commenting this out because it filters out some cases we need to find with 
+  this overlap check.
   if( (ref_face_ptr1->get_surface_ptr()->geometry_type() != SPLINE_SURFACE_TYPE  &&
        ref_face_ptr2->get_surface_ptr()->geometry_type() != SPLINE_SURFACE_TYPE) &&
       (ref_face_ptr1->get_surface_ptr()->geometry_type() != 
        ref_face_ptr2->get_surface_ptr()->geometry_type() )) 
     return CUBIT_FALSE;
+    */
  
   AnalyticGeometryTool::instance();
   abort = CUBIT_FALSE;
@@ -1953,348 +2137,339 @@ CubitBoolean SurfaceOverlapTool::check_overlap( Curve *curve1, Curve *curve2,
 
   double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
 
+  double facet_tol = tolerance*10;
+
   std::map<Curve*, DLIList<CurveOverlapFacet*>* >::iterator facet_iterator;
 
   CubitBox curve_box1 = curve1->bounding_box(); 
   CubitBox curve_box2 = curve2->bounding_box();
 
-  //do bounding boxes overlap
-  if( curve_box1.overlap( tolerance, curve_box2 ) )
+  DLIList<CurveOverlapFacet*> *facet_list1 = NULL;
+  DLIList<CurveOverlapFacet*> *facet_list2 = NULL;
+
+  //see if curve is in map...if not we have to create faceting for it.
+  if( facet_map )
+    facet_iterator = facet_map->find( curve1 );
+
+  if( facet_map == NULL || facet_iterator == facet_map->end() )
   {
-    //curves must overlap at least by 100th of the smaller curve's length
-    double min_overlap = 0.0;
-    double curve1_length = curve1->measure();
-    double curve2_length = curve2->measure();
+    facet_list1 = new DLIList<CurveOverlapFacet*>;
 
-/*
-    if( curve1_length < curve2_length )
-      min_overlap = curve1->measure() * 0.01;
-    else 
-      min_overlap = curve2->measure() * 0.01;
-      */
+    GMem curve_graphics;
+    curve1->get_geometry_query_engine()->get_graphics( curve1, 
+      &curve_graphics, 0, facet_tol );
 
-    min_overlap = tolerance;
+    GPoint *points = curve_graphics.point_list();
+    int num_points = curve_graphics.pointListCount;
 
-    DLIList<CurveOverlapFacet*> *facet_list1 = NULL;
-    DLIList<CurveOverlapFacet*> *facet_list2 = NULL;
-
-    //see if curve is in map...if not we have to create faceting for it.
-    if( facet_map )
-      facet_iterator = facet_map->find( curve1 );
-
-    if( facet_map == NULL || facet_iterator == facet_map->end() )
-    {
-      facet_list1 = new DLIList<CurveOverlapFacet*>;
-
-      GMem curve_graphics;
-      curve1->get_geometry_query_engine()->get_graphics( curve1, 
-        &curve_graphics, 0.0 );
-
-      GPoint *points = curve_graphics.point_list();
-      int num_points = curve_graphics.pointListCount;
-
-      int kk;
-      for( kk=0; kk<num_points-1; kk++ )
-      {
-        //create a new CurveOverlapFacets
-        GPoint gpoints[2];
-        gpoints[0] = points[kk];
-        gpoints[1] = points[kk + 1];
-
-        CurveOverlapFacet *tmp_facet = new CurveOverlapFacet( gpoints ); 
-        facet_list1->append( tmp_facet );
-      }
-      
-      if( facet_map )
-        facet_map->insert( std::map<Curve*, 
-          DLIList<CurveOverlapFacet*>*>::value_type( curve1, facet_list1 )); 
-      
-    }
-    else
-      facet_list1 = (*facet_iterator).second;
-
-    //see if edge is in map...if not we have to create facet for it.
-    if( facet_map )
-      facet_iterator = facet_map->find( curve2 );
-
-    if( facet_map == NULL || facet_iterator == facet_map->end() )
-    {
-      facet_list2 = new DLIList<CurveOverlapFacet*>;
-
-      GMem curve_graphics;
-      curve2->get_geometry_query_engine()->get_graphics( curve2, 
-        &curve_graphics, 0.0 );
-
-      GPoint *points = curve_graphics.point_list();
-      int num_points = curve_graphics.pointListCount;
-
-      int kk;
-      for( kk=0; kk<num_points-1; kk++ )
-      {
-        //create a new CurveOverlapFacets
-        GPoint gpoints[2];
-        gpoints[0] = points[kk];
-        gpoints[1] = points[kk + 1];
-
-        CurveOverlapFacet *tmp_facet = new CurveOverlapFacet( gpoints ); 
-        facet_list2->append( tmp_facet );
-      }
-      
-      if( facet_map )
-        facet_map->insert( std::map<Curve*, 
-          DLIList<CurveOverlapFacet*>*>::value_type( curve2, facet_list2 )); 
-    }
-    else
-      facet_list2 = (*facet_iterator).second;
-    
-    //compare smaller list to larger list...want list1 to be smaller
-    if( facet_list1->size() > facet_list2->size() )
-    {
-      DLIList<CurveOverlapFacet*> *tmp_list = facet_list1;
-      facet_list1 = facet_list2;
-      facet_list2 = tmp_list;
-      Curve *tmp_curve = curve1;
-      curve1 = curve2;
-      curve2 = tmp_curve;
-    }
-    
-    CubitVector curv1_start_pt;
-    CubitVector curv2_start_pt;
-    CubitVector curv1_end_pt;
-    CubitVector curv2_end_pt;
-    
-    facet_list1->reset();
-    facet_list2->reset();
-    //get start/end facet points on curves
-    if( body_point_imprint_map )
-    {
-      curv1_start_pt = facet_list1->get()->start_point();
-      curv2_start_pt = facet_list2->get()->start_point();
-      facet_list1->last();
-      facet_list2->last();
-      curv1_end_pt = facet_list1->get()->end_point();
-      curv2_end_pt = facet_list2->get()->end_point();
-    }
-    
-    facet_list1->reset();
-    facet_list2->reset();
     int kk;
-    double total_overlap = 0.0;
-    bool overlap = false;
-    //now determine if enough curve facets overlap
-
-    int list_size1 = facet_list1->size();
-    for( kk=list_size1; kk--; )
+    for( kk=0; kk<num_points-1; kk++ )
     {
-      CurveOverlapFacet *curr_facet = facet_list1->get_and_step();
-      if( curr_facet->length() < GEOMETRY_RESABS )
-        continue;
+      //create a new CurveOverlapFacets
+      GPoint gpoints[2];
+      gpoints[0] = points[kk];
+      gpoints[1] = points[kk + 1];
 
-      //if 'curr_facet' is the first or last facet in curve1,
-      //check to see if the start/end point is on curve2, and not coincident
-      //with the start/end point of curve2.  If so, it's a case where you need
-      //to imprint this start/end point onto the body of curve2.
-      if( body_point_imprint_map )
-      {
-        if( kk == list_size1-1 ) //first facet in curve1
-        {
-          CubitVector closest_point;
-          curve2->closest_point_trimmed( curr_facet->start_point(), closest_point );
-          if( curv2_start_pt.distance_between( curr_facet->start_point() ) > tolerance &&  
-                curv2_end_pt.distance_between( curr_facet->start_point() ) > tolerance &&  
-               closest_point.distance_between( curr_facet->start_point() ) < tolerance )
-          {
-            BodySM *tmp_body_sm = curve2->bodysm();
-            body_point_imprint_map->insert( std::multimap<BodySM*, 
-                                            CubitVector>::value_type(
-                                            tmp_body_sm, closest_point)); 
-          }
-        }
-        if( kk == 0 ) //last facet in curve1 
-        {
-          CubitVector closest_point;
-          curve2->closest_point_trimmed( curr_facet->end_point(), closest_point );
-          if( curv2_start_pt.distance_between( curr_facet->end_point() ) > tolerance &&  
-                curv2_end_pt.distance_between( curr_facet->end_point() ) > tolerance &&  
-               closest_point.distance_between( curr_facet->end_point() ) < tolerance ) 
-          {
-            //insert into vertex-volume imprint map
-            BodySM *tmp_body_sm = curve2->bodysm();
-            body_point_imprint_map->insert( std::multimap<BodySM*, 
-                                            CubitVector>::value_type(
-                                            tmp_body_sm, closest_point)); 
-          }
-        }
-      } 
-
-      //do bounding boxes of facets overlap?
-      int jj;
-      int list_size2 = facet_list2->size();
-      for( jj=list_size2; jj--; )
-      {
-        CurveOverlapFacet *other_facet = facet_list2->get_and_step();
-
-        if( curr_facet->bbox_overlap( tolerance, other_facet ) )
-        {
-          double distance_between_facets = curr_facet->facet_to_facet_distance( other_facet );
-          if( distance_between_facets < tolerance )
-          {
-            if( other_facet->length() < GEOMETRY_RESABS ) 
-              continue;
-
-            //if 'other_facet' is the first or last facet in curve1,
-            //check to see if the start/end point is on curve1, and not coincident
-            //with the start/end point of curve1.  If so, it's a case where you need
-            //to imprint this start/end point onto the body of curve1.
-            if( body_point_imprint_map  )
-            {
-              if( jj == list_size2-1 ) //first facet in curve1
-              {
-                CubitVector closest_point;
-                curve1->closest_point_trimmed( other_facet->start_point(), closest_point );
-                
-                if( curv1_start_pt.distance_between( other_facet->start_point() ) > tolerance &&  
-                      curv1_end_pt.distance_between( other_facet->start_point() ) > tolerance &&  
-                     closest_point.distance_between( other_facet->start_point() ) < tolerance )
-                {
-                  //insert into vertex-volume imprint map
-                  BodySM *tmp_body_sm = curve1->bodysm();
-                  body_point_imprint_map->insert( std::multimap<BodySM*, 
-                                                  CubitVector>::value_type(
-                                                  tmp_body_sm, closest_point )); 
-                }
-              }
-              if( jj == 0 ) //last facet in curve1 
-              {
-                CubitVector closest_point;
-                curve1->closest_point_trimmed( other_facet->end_point(), closest_point );
-                if( curv1_start_pt.distance_between( other_facet->end_point() ) > tolerance &&  
-                      curv1_end_pt.distance_between( other_facet->end_point() ) > tolerance &&  
-                     closest_point.distance_between( other_facet->end_point() ) < tolerance )
-                {
-                  //insert into vertex-volume imprint map
-                  BodySM *tmp_body_sm = curve1->bodysm();
-                  body_point_imprint_map->insert( std::multimap<BodySM*, 
-                                                  CubitVector>::value_type(
-                                                  tmp_body_sm, closest_point )); 
-                }
-              }
-            }
-
-            //get the long and short facet edge
-            double curr_facet_length = curr_facet->length();
-            double other_facet_length = other_facet->length();
-            CurveOverlapFacet *long_facet = ( curr_facet_length > other_facet_length ?
-                                             curr_facet : other_facet );
-            CurveOverlapFacet *short_facet = curr_facet;
-            if( long_facet == curr_facet )
-              short_facet = other_facet;
-
-            //make sure both endpoints of the smaller facet edge lie within a radius
-            //or merge tolerance to an infinite line defined by longer facet edge
-            CubitVector direction = long_facet->end_point() - long_facet->start_point();
-            double dist1 = short_facet->start_point().distance_from_infinite_line(
-                                          long_facet->start_point(), direction );
-            double dist2 = short_facet->end_point().distance_from_infinite_line(
-                                          long_facet->start_point(), direction );
-
-            if( dist1 <= tolerance && dist2 <= tolerance )
-            {
-              double overlap_tolerance = 
-                curr_facet->length() < other_facet->length() ? curr_facet->length():
-                other_facet->length();
-              overlap_tolerance *= 0.01;
-              
-              //how much of the facet overlaps?
-              double tmp_overlap = curr_facet->distance_overlapping( other_facet ) ;
-              if( tmp_overlap > overlap_tolerance )
-                total_overlap += tmp_overlap;
-
-              if( total_overlap > min_overlap )
-              {
-                overlap = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-      if( overlap == true )
-        break;
-    } 
-
-    if( facet_map == NULL )
-    {
-      //clean up facets and list
-      for( kk=facet_list1->size(); kk--; )
-        delete facet_list1->get_and_step();
-      for( kk=facet_list2->size(); kk--; )
-        delete facet_list2->get_and_step();
-
-      delete facet_list1; 
-      delete facet_list2; 
+      CurveOverlapFacet *tmp_facet = new CurveOverlapFacet( gpoints ); 
+      facet_list1->append( tmp_facet );
     }
 
-    if( overlap == false )
-      return CUBIT_FALSE;
+    if( facet_map )
+      facet_map->insert( std::map<Curve*, 
+      DLIList<CurveOverlapFacet*>*>::value_type( curve1, facet_list1 )); 
 
-    if( curve1_type == SPLINE_CURVE_TYPE  || 
-        curve2_type == SPLINE_CURVE_TYPE ) 
-    {
-      //measure between the 2 curves
-      double dist_between_curves = 0;
-      CubitVector point_on_curve1, point_on_curve2;
-      GeometryQueryTool::instance()->entity_entity_distance(curve1, curve2,
-        point_on_curve1, point_on_curve2, dist_between_curves);
-
-      if( dist_between_curves > tolerance )
-          return CUBIT_FALSE;
-
-      //the curvature at the same spot on the curve could be almost the same
-      //if curvature's at midpoint are not the same, they don't overlap
-      CubitVector curvature1, curvature2;
-      CubitVector tangent, closest_location;
-      curve1->closest_point( point_on_curve1, closest_location, &tangent, &curvature1 ); 
-      curve2->closest_point( point_on_curve2, closest_location, &tangent, &curvature2 ); 
-
-      double rad1 = curvature1.length();
-      double rad2 = curvature2.length();
-        
-      //if curvatures are more than 10% off 
-      double curvature_diff = fabs( rad1 - rad2 );
-
-      if( rad1 > GEOMETRY_RESABS || rad2 > GEOMETRY_RESABS ) 
-      {
-        if( curvature_diff/( (fabs(rad1) + fabs(rad2))/2 ) > 0.1 )
-          return CUBIT_FALSE;
-      }
-    }
-    else if( curve1_type == ARC_CURVE_TYPE && 
-             curve2_type == ARC_CURVE_TYPE ) 
-    {
-      //if both curves are arcs, make sure radii are almost the same
-      CubitVector mid_point1, mid_point2;
-      curve1->mid_point( mid_point1 );
-      curve2->mid_point( mid_point2 );
-      
-      CubitVector dummy_vec;
-      CubitVector curvature1;
-      CubitVector curvature2;
-      curve1->closest_point( mid_point1, dummy_vec, NULL, &curvature1 );
-      curve2->closest_point( mid_point2, dummy_vec, NULL, &curvature2 );
-      
-      double rad1 = 1/curvature1.length();
-      double rad2 = 1/curvature2.length();
-
-      //if( fabs( rad1 - rad2 ) > 0.001 )
-      if( fabs( rad1 - rad2 ) > tolerance )
-        return CUBIT_FALSE; 
-    }
-    else
-      return CUBIT_TRUE;
   }
   else
+    facet_list1 = (*facet_iterator).second;
+
+  //see if edge is in map...if not we have to create facet for it.
+  if( facet_map )
+    facet_iterator = facet_map->find( curve2 );
+
+  if( facet_map == NULL || facet_iterator == facet_map->end() )
+  {
+    facet_list2 = new DLIList<CurveOverlapFacet*>;
+
+    GMem curve_graphics;
+    curve2->get_geometry_query_engine()->get_graphics( curve2, 
+      &curve_graphics, 0, facet_tol );    
+
+    GPoint *points = curve_graphics.point_list();
+    int num_points = curve_graphics.pointListCount;
+
+    int kk;
+    for( kk=0; kk<num_points-1; kk++ )
+    {
+      //create a new CurveOverlapFacets
+      GPoint gpoints[2];
+      gpoints[0] = points[kk];
+      gpoints[1] = points[kk + 1];
+
+      CurveOverlapFacet *tmp_facet = new CurveOverlapFacet( gpoints ); 
+      facet_list2->append( tmp_facet );
+    }
+
+    if( facet_map )
+      facet_map->insert( std::map<Curve*, 
+      DLIList<CurveOverlapFacet*>*>::value_type( curve2, facet_list2 )); 
+  }
+  else
+    facet_list2 = (*facet_iterator).second;
+
+  //compare smaller list to larger list...want list1 to be smaller
+  if( facet_list1->size() > facet_list2->size() )
+  {
+    DLIList<CurveOverlapFacet*> *tmp_list = facet_list1;
+    facet_list1 = facet_list2;
+    facet_list2 = tmp_list;
+    Curve *tmp_curve = curve1;
+    curve1 = curve2;
+    curve2 = tmp_curve;
+  }
+
+  CubitVector curv1_start_pt;
+  CubitVector curv2_start_pt;
+  CubitVector curv1_end_pt;
+  CubitVector curv2_end_pt;
+
+  facet_list1->reset();
+  facet_list2->reset();
+  //get start/end facet points on curves
+  if( body_point_imprint_map )
+  {
+    curv1_start_pt = facet_list1->get()->start_point();
+    curv2_start_pt = facet_list2->get()->start_point();
+    facet_list1->last();
+    facet_list2->last();
+    curv1_end_pt = facet_list1->get()->end_point();
+    curv2_end_pt = facet_list2->get()->end_point();
+  }
+
+  facet_list1->reset();
+  facet_list2->reset();
+  int kk;
+  double total_overlap = 0.0;
+  bool overlap = false;
+  //now determine if enough curve facets overlap
+
+  int list_size1 = facet_list1->size();
+  for( kk=list_size1; kk--; )
+  {
+    CurveOverlapFacet *curr_facet = facet_list1->get_and_step();
+    if( curr_facet->length() < GEOMETRY_RESABS )
+      continue;
+
+    //if 'curr_facet' is the first or last facet in curve1,
+    //check to see if the start/end point is on curve2, and not coincident
+    //with the start/end point of curve2.  If so, it's a case where you need
+    //to imprint this start/end point onto the body of curve2.
+    if( body_point_imprint_map )
+    {
+      if( kk == list_size1-1 ) //first facet in curve1
+      {
+        CubitVector closest_point;
+        curve2->closest_point_trimmed( curr_facet->start_point(), closest_point );
+        if( curv2_start_pt.distance_between( curr_facet->start_point() ) > tolerance &&  
+            curv2_end_pt.distance_between( curr_facet->start_point() ) > tolerance &&  
+            closest_point.distance_between( curr_facet->start_point() ) < tolerance )
+        {
+          BodySM *tmp_body_sm = curve2->bodysm();
+          body_point_imprint_map->insert( std::multimap<BodySM*, 
+            CubitVector>::value_type(
+            tmp_body_sm, closest_point)); 
+        }
+      }
+      if( kk == 0 ) //last facet in curve1 
+      {
+        CubitVector closest_point;
+        curve2->closest_point_trimmed( curr_facet->end_point(), closest_point );
+        if( curv2_start_pt.distance_between( curr_facet->end_point() ) > tolerance &&  
+            curv2_end_pt.distance_between( curr_facet->end_point() ) > tolerance &&  
+            closest_point.distance_between( curr_facet->end_point() ) < tolerance ) 
+        {
+          //insert into vertex-volume imprint map
+          BodySM *tmp_body_sm = curve2->bodysm();
+          body_point_imprint_map->insert( std::multimap<BodySM*, 
+            CubitVector>::value_type(
+            tmp_body_sm, closest_point)); 
+        }
+      }
+    } 
+
+    //do bounding boxes of facets overlap?
+    int jj;
+    int list_size2 = facet_list2->size();
+    for( jj=list_size2; jj--; )
+    {
+      CurveOverlapFacet *other_facet = facet_list2->get_and_step();
+
+      if( curr_facet->bbox_overlap( tolerance, other_facet ) )
+      {
+        double distance_between_facets = curr_facet->facet_to_facet_distance( other_facet );
+        if( distance_between_facets < tolerance+facet_tol )
+        {
+          if( other_facet->length() < GEOMETRY_RESABS ) 
+            continue;
+
+          //if 'other_facet' is the first or last facet in curve1,
+          //check to see if the start/end point is on curve1, and not coincident
+          //with the start/end point of curve1.  If so, it's a case where you need
+          //to imprint this start/end point onto the body of curve1.
+          if( body_point_imprint_map  )
+          {
+            if( jj == list_size2-1 ) //first facet in curve1
+            {
+              CubitVector closest_point;
+              curve1->closest_point_trimmed( other_facet->start_point(), closest_point );
+
+              if( curv1_start_pt.distance_between( other_facet->start_point() ) > tolerance &&  
+                  curv1_end_pt.distance_between( other_facet->start_point() ) > tolerance &&  
+                  closest_point.distance_between( other_facet->start_point() ) < tolerance )
+              {
+                //insert into vertex-volume imprint map
+                BodySM *tmp_body_sm = curve1->bodysm();
+                body_point_imprint_map->insert( std::multimap<BodySM*, 
+                  CubitVector>::value_type(
+                  tmp_body_sm, closest_point )); 
+              }
+            }
+            if( jj == 0 ) //last facet in curve1 
+            {
+              CubitVector closest_point;
+              curve1->closest_point_trimmed( other_facet->end_point(), closest_point );
+              if( curv1_start_pt.distance_between( other_facet->end_point() ) > tolerance &&  
+                  curv1_end_pt.distance_between( other_facet->end_point() ) > tolerance &&  
+                  closest_point.distance_between( other_facet->end_point() ) < tolerance )
+              {
+                //insert into vertex-volume imprint map
+                BodySM *tmp_body_sm = curve1->bodysm();
+                body_point_imprint_map->insert( std::multimap<BodySM*, 
+                  CubitVector>::value_type(
+                  tmp_body_sm, closest_point )); 
+              }
+            }
+          }
+
+          //get the long and short facet edge
+          double curr_facet_length = curr_facet->length();
+          double other_facet_length = other_facet->length();
+          CurveOverlapFacet *long_facet = ( curr_facet_length > other_facet_length ?
+                                             curr_facet : other_facet );
+          CurveOverlapFacet *short_facet = curr_facet;
+          if( long_facet == curr_facet )
+              short_facet = other_facet;
+                
+          //make sure both endpoints or one endpoint and the midpoint 
+          // of the smaller facet edge lie within a radius
+          //of merge tolerance + facet tolerance to an infinite line defined 
+          // by longer facet edge
+          CubitVector direction = long_facet->end_point() - long_facet->start_point();
+          double dist1 = short_facet->start_point().distance_from_infinite_line(
+            long_facet->start_point(), direction );
+          double dist2 = short_facet->end_point().distance_from_infinite_line(
+            long_facet->start_point(), direction );
+
+          if( dist2 > tolerance+facet_tol && dist1 > tolerance+facet_tol )
+            continue;
+
+          CubitVector facet_mid_point = (short_facet->end_point() + short_facet->start_point()) * 0.5;
+
+          double dist_to_midpoint = facet_mid_point.distance_from_infinite_line(
+            long_facet->start_point(), direction );               
+      
+          if( dist_to_midpoint <= tolerance+facet_tol && (dist2 <= tolerance+facet_tol || dist1 <= tolerance+facet_tol ))
+          {              
+            double overlap_tolerance = 
+              curr_facet->length() < other_facet->length() ? curr_facet->length():
+              other_facet->length();
+            overlap_tolerance *= 0.01;
+
+            //how much of the facet overlaps?
+            double tmp_overlap = curr_facet->distance_overlapping( other_facet ) ;
+            if( tmp_overlap > overlap_tolerance )
+              total_overlap += tmp_overlap;
+
+            if( total_overlap > tolerance )
+            {
+              overlap = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if( overlap == true )
+      break;
+  } 
+
+  if( facet_map == NULL )
+  {
+    //clean up facets and list
+    for( kk=facet_list1->size(); kk--; )
+      delete facet_list1->get_and_step();
+    for( kk=facet_list2->size(); kk--; )
+      delete facet_list2->get_and_step();
+
+    delete facet_list1; 
+    delete facet_list2; 
+  }
+
+  if( overlap == false )
     return CUBIT_FALSE;
+
+  if( curve1_type == SPLINE_CURVE_TYPE  || 
+      curve2_type == SPLINE_CURVE_TYPE ) 
+  {
+    //measure between the 2 curves
+    double dist_between_curves = 0;
+    CubitVector point_on_curve1, point_on_curve2;
+    GeometryQueryTool::instance()->entity_entity_distance(curve1, curve2,
+      point_on_curve1, point_on_curve2, dist_between_curves);
+
+    if( dist_between_curves > tolerance )
+        return CUBIT_FALSE;
+
+    //the curvature at the same spot on the curve could be almost the same
+    //if curvatures at midpoint are not the same, they don't overlap
+    CubitVector curvature1, curvature2;
+    CubitVector tangent, closest_location;
+    curve1->closest_point( point_on_curve1, closest_location, &tangent, &curvature1 ); 
+    curve2->closest_point( point_on_curve2, closest_location, &tangent, &curvature2 ); 
+
+    double rad1 = curvature1.length();
+    double rad2 = curvature2.length();
+      
+    //if curvatures are more than 10% off 
+    double curvature_diff = fabs( rad1 - rad2 );
+
+    if( rad1 > GEOMETRY_RESABS || rad2 > GEOMETRY_RESABS ) 
+    {
+      if( curvature_diff/( (fabs(rad1) + fabs(rad2))/2 ) > 0.1 )
+        return CUBIT_FALSE;
+    }
+  }
+  else if( curve1_type == ARC_CURVE_TYPE && 
+           curve2_type == ARC_CURVE_TYPE ) 
+  {
+    //if both curves are arcs, make sure radii are almost the same
+    CubitVector mid_point1, mid_point2;
+    curve1->mid_point( mid_point1 );
+    curve2->mid_point( mid_point2 );
+    
+    CubitVector dummy_vec;
+    CubitVector curvature1;
+    CubitVector curvature2;
+    curve1->closest_point( mid_point1, dummy_vec, NULL, &curvature1 );
+    curve2->closest_point( mid_point2, dummy_vec, NULL, &curvature2 );
+    
+    double rad1 = 1/curvature1.length();
+    double rad2 = 1/curvature2.length();
+
+    if( fabs( rad1 - rad2 ) > tolerance )
+      return CUBIT_FALSE; 
+  }
+  else
+    return CUBIT_TRUE;
   
   return CUBIT_TRUE;
 }

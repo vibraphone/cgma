@@ -434,11 +434,11 @@ void constructQuadNormals( double angle, int numQuad, int numEdge,
     {
       int kk;
       for(kk=0; kk<3; kk++);
-      fprintf(fp, "(%d) %.6f %.6f %.6f\n", edge_ptr->id(), v0.x(), v0.y(), v0.z()); 
-      fprintf(fp, "    %.6f %.6f %.6f\n", control_points[0].x(), control_points[0].y(), control_points[0].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", control_points[1].x(), control_points[1].y(), control_points[1].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", control_points[2].x(), control_points[2].y(), control_points[2].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", v1.x(), v1.y(), v1.z()); 
+      fprintf(fp, "(%d) %.6lf %.6lf %.6lf\n", edge_ptr->id(), v0.x(), v0.y(), v0.z()); 
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", control_points[0].x(), control_points[0].y(), control_points[0].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", control_points[1].x(), control_points[1].y(), control_points[1].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", control_points[2].x(), control_points[2].y(), control_points[2].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", v1.x(), v1.y(), v1.z()); 
     }
     index = 6 * ii; 
     t0 = control_points[0] - v0;
@@ -890,11 +890,11 @@ void evalBezierFaceFromNorms( int numFace, int numEdge, int numVert,
     {
       int kk;
       for(kk=0; kk<3; kk++);
-      fprintf(fp, "(%d) %.6f %.6f %.6f\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", P1.x(), P1.y(), P1.z()); 
+      fprintf(fp, "(%d) %.6lf %.6lf %.6lf\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", P1.x(), P1.y(), P1.z()); 
     }
     edge_ptr->control_points( Pi, 4 );
   }
@@ -1558,46 +1558,46 @@ void importMesh(const char *fileName, int *includeResults,
   // read the header info
 
   char version[128];
-  fgets(version, 128, fp);
+  char* s = fgets(version, 128, fp);
   assert(strcmp(version, "Cholla version 1.0\n") == 0);  // don't recognize file
   char filetime[128];
-  fgets(filetime, 128, fp); 
+  s = fgets(filetime, 128, fp); 
   
   char line[256];
   int num_tri;
   int num_quad;
   int num_edge;
   int num_vert;
-  fgets(line,256,fp);
+  s = fgets(line,256,fp);
   sscanf(line, "%d %d %d %d %d\n", &num_tri, &num_quad, &num_edge, &num_vert, includeResults); 
   *numTri = num_tri;
   *numQuad = num_quad;
   *numEdge = num_edge;
   *numVert = num_vert;
-  fscanf(fp, "%lf\n", angle);
+  int nread = fscanf(fp, "%lf\n", angle);
 
   // triEdge
 
   *triEdge = new int [num_tri*3];
   int *tri_edge = *triEdge;
   char array_name[128];
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "triEdge") == 0);  // check start of array
   int ii;
   for(ii=0; ii<num_tri; ii++)
   {
-    fscanf(fp, "%d %d %d\n", &tri_edge[ii*3], &tri_edge[ii*3+1], &tri_edge[ii*3+2]);
+    nread = fscanf(fp, "%d %d %d\n", &tri_edge[ii*3], &tri_edge[ii*3+1], &tri_edge[ii*3+2]);
   }
 
   // quadEdge
 
   *quadEdge = new int [num_quad*4];
   int *quad_edge = *quadEdge;
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "quadEdge") == 0);  // check start of array
   for(ii=0; ii<num_quad; ii++)
   {
-    fscanf(fp, "%d %d %d %d\n", &quad_edge[ii*4], &quad_edge[ii*4+1], 
+    nread = fscanf(fp, "%d %d %d %d\n", &quad_edge[ii*4], &quad_edge[ii*4+1], 
                                 &quad_edge[ii*4+2], &quad_edge[ii*4+3]);
   }
 
@@ -1605,22 +1605,22 @@ void importMesh(const char *fileName, int *includeResults,
 
   *edgeVert = new int [2*num_edge];
   int *edge_vert = *edgeVert;
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "edgeVert") == 0);  // check start of array
   for (ii=0; ii<num_edge; ii++)
   {
-    fscanf(fp, "%d %d\n", &edge_vert[ii*2], &edge_vert[ii*2+1]);
+    nread = fscanf(fp, "%d %d\n", &edge_vert[ii*2], &edge_vert[ii*2+1]);
   }
 
   // vert
 
   *vert = new double [3*num_vert];
   double *my_vert = *vert;
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "vert") == 0);  // check start of array
   for (ii=0; ii<num_vert; ii++)
   {
-    fscanf(fp, "%lf %lf %lf\n", &my_vert[ii*3], &my_vert[ii*3+1], &my_vert[ii*3+2]);
+    nread = fscanf(fp, "%lf %lf %lf\n", &my_vert[ii*3], &my_vert[ii*3+1], &my_vert[ii*3+2]);
   }
 
   *edgeCtrlPts = new double [3*num_edge*NUM_EDGE_CPTS];
@@ -1636,33 +1636,33 @@ void importMesh(const char *fileName, int *includeResults,
   {
      // edge control points
     
-    fscanf(fp, "%s\n", array_name);
+    nread = fscanf(fp, "%s\n", array_name);
     assert(strcmp(array_name, "edgeCtrlPts") == 0);  // check start of array
     for(ii=0; ii<num_edge*NUM_EDGE_CPTS; ii++)
     {
-      fscanf(fp, "%lf %lf %lf\n", &edge_ctrl_pts[ii*3], 
+      nread = fscanf(fp, "%lf %lf %lf\n", &edge_ctrl_pts[ii*3], 
                                   &edge_ctrl_pts[ii*3+1], 
                                   &edge_ctrl_pts[ii*3+2]);
     }
 
      // triangle control points
     
-    fscanf(fp, "%s\n", array_name);
+    nread = fscanf(fp, "%s\n", array_name);
     assert(strcmp(array_name, "triCtrlPts") == 0);  // check start of array
     for(ii=0; ii<num_tri*NUM_TRI_CPTS; ii++)
     {
-      fscanf(fp, "%lf %lf %lf\n", &tri_ctrl_pts[ii*3], 
+      nread = fscanf(fp, "%lf %lf %lf\n", &tri_ctrl_pts[ii*3], 
                                   &tri_ctrl_pts[ii*3+1], 
                                   &tri_ctrl_pts[ii*3+2]);
     }
 
     // quad control points
     
-    fscanf(fp, "%s\n", array_name);
+    nread = fscanf(fp, "%s\n", array_name);
     assert(strcmp(array_name, "quadCtrlPts") == 0);  // check start of array
     for(ii=0; ii<num_quad*NUM_QUAD_CPTS; ii++)
     {
-      fscanf(fp, "%lf %lf %lf\n", &quad_ctrl_pts[ii*3], 
+      nread = fscanf(fp, "%lf %lf %lf\n", &quad_ctrl_pts[ii*3], 
                                   &quad_ctrl_pts[ii*3+1], 
                                   &quad_ctrl_pts[ii*3+2]);
     }
@@ -1688,11 +1688,11 @@ void importResults(const char *fileName, int *numEdge, int *numTri,
   // read the header info
 
   char version[128];
-  fgets(version, 128, fp);
+  char* s = fgets(version, 128, fp);
   assert(strcmp(version, "Cholla version 1.0 Results\n") == 0);  // don't recognize file
   char filetime[128];
-  fgets(filetime, 128, fp);
-  fscanf(fp, "%d %d %d\n", numEdge, numTri, numQuad);
+  s = fgets(filetime, 128, fp);
+  int nread = fscanf(fp, "%d %d %d\n", numEdge, numTri, numQuad);
   int num_edge = *numEdge;
   int num_tri = *numTri;
   int num_quad = *numQuad;
@@ -1711,33 +1711,33 @@ void importResults(const char *fileName, int *numEdge, int *numTri,
   
   int ii;
   char array_name[128];
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "edgeCtrlPts") == 0);  // check start of array
   for(ii=0; ii<num_edge*NUM_EDGE_CPTS; ii++)
   {
-    fscanf(fp, "%lf %lf %lf\n", &edge_ctrl_pts[ii*3], 
+    nread = fscanf(fp, "%lf %lf %lf\n", &edge_ctrl_pts[ii*3], 
                                 &edge_ctrl_pts[ii*3+1], 
                                 &edge_ctrl_pts[ii*3+2]);
   }
 
    // triangle control points
   
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "triCtrlPts") == 0);  // check start of array
   for(ii=0; ii<num_tri*NUM_TRI_CPTS; ii++)
   {
-    fscanf(fp, "%lf %lf %lf\n", &tri_ctrl_pts[ii*3], 
+    nread = fscanf(fp, "%lf %lf %lf\n", &tri_ctrl_pts[ii*3], 
                                 &tri_ctrl_pts[ii*3+1], 
                                 &tri_ctrl_pts[ii*3+2]);
   }
 
   // quad control points
   
-  fscanf(fp, "%s\n", array_name);
+  nread = fscanf(fp, "%s\n", array_name);
   assert(strcmp(array_name, "quadCtrlPts") == 0);  // check start of array
   for(ii=0; ii<num_tri*NUM_QUAD_CPTS; ii++)
   {
-    fscanf(fp, "%lf %lf %lf\n", &quad_ctrl_pts[ii*3], 
+    nread = fscanf(fp, "%lf %lf %lf\n", &quad_ctrl_pts[ii*3], 
                                 &quad_ctrl_pts[ii*3+1], 
                                 &quad_ctrl_pts[ii*3+2]);
   }
@@ -1755,20 +1755,20 @@ void importResults(const char *fileName, int *numEdge, int *numTri,
 static void time_stamp( FILE *fp )
 {
   struct tm *newtime;
-  char* am_pm = "AM";
+  bool am = true;
   time_t long_time;
 
   time( &long_time );                /* Get time as long integer. */
   newtime = localtime( &long_time ); /* Convert to local time. */
 
   if( newtime->tm_hour > 12 )        /* Set up extension. */
-          strcpy( am_pm, "PM" );
+    am = false;
   if( newtime->tm_hour > 12 )        /* Convert from 24-hour */
           newtime->tm_hour -= 12;    /*   to 12-hour clock.  */
   if( newtime->tm_hour == 0 )        /*Set hour to 12 if midnight. */
           newtime->tm_hour = 12;
 
-  fprintf( fp, "%.19s %s\n", asctime( newtime ), am_pm );
+  fprintf( fp, "%.19s %s\n", asctime( newtime ), am ? "AM" : "PM" );
 }
 
 //===========================================================================
@@ -1901,11 +1901,11 @@ int *triEdge, *quadEdge;
     {
       int kk;
       for(kk=0; kk<3; kk++);
-      fprintf(fp, "(%d) %.6f %.6f %.6f\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
-      fprintf(fp, "    %.6f %.6f %.6f\n", P1.x(), P1.y(), P1.z()); 
+      fprintf(fp, "(%d) %.6lf %.6lf %.6lf\n", edge_ptr->id(), P0.x(), P0.y(), P0.z()); 
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[0].x(), Pi[0].y(), Pi[0].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[1].x(), Pi[1].y(), Pi[1].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", Pi[2].x(), Pi[2].y(), Pi[2].z());
+      fprintf(fp, "    %.6lf %.6lf %.6lf\n", P1.x(), P1.y(), P1.z()); 
     }
     edge_ptr->control_points( Pi, 4 );
   } 

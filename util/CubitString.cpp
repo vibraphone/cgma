@@ -3,7 +3,7 @@
 
 #include "CubitString.hpp"
 
-#ifdef NT
+#ifdef WIN32
 #pragma warning ( 4 : 4291 4244 4305 4018 4786)
 #endif
 
@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 class CubitStringRep
 {
@@ -160,7 +161,7 @@ CubitString::CubitString(const double f, const unsigned int max_length, const un
   char *si = new char[ 2*max_length + 32 ];
   if (sig_digits)
   {
-    sprintf(format_string, "%%.%df", sig_digits);
+    sprintf(format_string, "%%.%de", sig_digits);
     sprintf(si, format_string, f);
   }
   else
@@ -208,7 +209,9 @@ CubitString& CubitString::operator=(const CubitString& s)
 
 char CubitString::get_at(size_t pos) const
 {
-    //assert(pos < strlen(rep->chars));
+  //assert(pos < strlen(rep->chars));
+  if(pos<0 || pos>strlen(rep->chars))
+    throw std::invalid_argument("Position must be between 0 and the length of string");
   return rep->chars[pos];
 }
 
@@ -278,7 +281,9 @@ CubitString& CubitString::operator+=(const char *c)
 
 size_t CubitString::find(const CubitString& s, size_t pos) const
 {
-  assert(pos < length());
+  //assert(pos < length());
+  if(pos > length())
+    throw std::invalid_argument("Positions is greater than length");
   char *p = strstr(rep->chars,s.c_str());
   if (p)
     return pos + (p - rep->chars);
@@ -370,7 +375,9 @@ std::ostream & operator<<(std::ostream& os, const CubitString& s)
 
 void CubitString::put_at(size_t pos, char c)
 {
-  assert(pos < length());
+  //assert(pos < length());
+  if(pos < 0 || pos >= length())
+    throw std::invalid_argument("Index out of Bounds");
   if (rep->chars[pos] != c)
   {
     if (pos < length())
@@ -445,7 +452,7 @@ void CubitString::to_upper()
   to_upper(p);
 }
 
-void CubitString::tokenize( char *delimiter, std::vector<CubitString> &strings )
+void CubitString::tokenize( const char *delimiter, std::vector<CubitString> &strings )
 {
   char* tmp_word;
   tmp_word = strtok( rep->chars, delimiter );

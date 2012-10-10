@@ -16,6 +16,7 @@ class Curve;
 class FacetEntity;
 class ChollaCurve;
 class ChollaSurface;
+class ChollaVolume;
 
 class ChollaPoint : public ChollaEntity
 {
@@ -82,6 +83,12 @@ public:
   
   CubitBoolean is_in_curve( ChollaCurve *chcurve );
     // return whether this point is in the given curve
+
+  CubitBoolean is_in_surface( ChollaSurface *cholla_surf );
+    // return whether this point is in the given surface
+
+  CubitBoolean is_in_volume( ChollaVolume *cholla_vol );
+    // return whether this point is in the given volume
   
   CubitStatus verify_curves();
     //- verify that all curves at this point have this point as an adjacency

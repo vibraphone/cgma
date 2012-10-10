@@ -36,9 +36,6 @@ private:
   int hitFlag;
     //- Used for looping.
 
-  int onBoundaryFlag;
-    //- Is the element on the boundary, TRUE or FALSE.
-
   DLIList<ChollaSurface*> ChollaSurfaceList;
     //- list of surfaces this element is on.
 
@@ -80,9 +77,6 @@ public:
 
   void set_hit_flag(int flag)
     {hitFlag = flag;}
-  
-  int on_boundary(){return onBoundaryFlag;}
-  void on_boundary( int status ){ onBoundaryFlag = status; }
   
   void add_cholla_owner(ChollaEntity *cholla_entity);
 

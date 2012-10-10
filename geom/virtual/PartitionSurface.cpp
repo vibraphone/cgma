@@ -93,20 +93,18 @@ void PartitionSurface::print_debug_info( const char* prefix ,
                                          bool print_sub_entity_set ) const
 {
   if( !prefix ) prefix = "";
-  PRINT_INFO("%sPartitionSurface %p\n", prefix,
-    static_cast<const void*>(this) );
+  PRINT_INFO("%sPartitionSurface %p\n", prefix, this );
   PartitionLoop* loop = 0;
   while( (loop = next_loop(loop)) )
   {
-    PRINT_INFO("%s  Loop %p:\n", prefix, static_cast<void*>(loop) );
+    PRINT_INFO("%s  Loop %p:\n", prefix, loop );
     PartitionCoEdge* coedge = loop->first_coedge();
     do
     {
       PRINT_INFO("%s    CoEdge %p %s -> Curve %p\n",
-        prefix, static_cast<void*>(coedge),
-        coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
-          coedge->sense() == CUBIT_REVERSED ? "REVERSE" : "UNKNOWN",
-        static_cast<void*>(coedge->get_curve()) );
+        prefix, coedge, coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
+                        coedge->sense() == CUBIT_REVERSED ? "REVERSE" :
+                        "UNKNOWN", coedge->get_curve() );
       coedge = loop->next_coedge(coedge);
     } while( coedge != loop->first_coedge() );
   }
@@ -118,21 +116,15 @@ void PartitionSurface::print_debug_info( const char* prefix ,
 } 
 
 PartitionSurface::PartitionSurface()
-  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
+  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
 {}
 
 PartitionSurface::PartitionSurface( PartitionLump* lump )
-  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
+  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
 {
   lump->sub_entity_set().add_lower_order( this );
 }
 
-PartitionSurface::PartitionSurface( PartitionSurface* split_from )
-  : geometry_sense(CUBIT_FORWARD), firstLoop(0), firstCoSurf(0)
-{
-  split_from->sub_entity_set().add_lower_order( this );
-}
-  
 PartitionSurface::~PartitionSurface()
 {
   while( firstLoop )
@@ -900,6 +892,12 @@ void PartitionSurface::reverse_sense()
     surf_facets.get_and_step()->flip();
 }
 
+PartitionSurface::PartitionSurface( PartitionSurface* split_from )
+  : firstLoop(0), firstCoSurf(0), geometry_sense(CUBIT_FORWARD)
+{
+  split_from->sub_entity_set().add_lower_order( this );
+}
+  
 PartitionSurface* PartitionSurface::copy()
 {
   return new PartitionSurface(this);
@@ -976,11 +974,9 @@ void PartitionSurface::notify_split( FacetEntity* old_tri, FacetEntity* new_tri 
   if ( dynamic_cast<CubitFacetEdge*>(old_tri) )
     return;
   
-  CubitFacetData* new_ptr = dynamic_cast<CubitFacetData*>(new_tri);
-#ifndef NDEBUG
   CubitFacetData* old_ptr = dynamic_cast<CubitFacetData*>(old_tri);
+  CubitFacetData* new_ptr = dynamic_cast<CubitFacetData*>(new_tri);
   assert(old_ptr && new_ptr && facetList.is_in_list(old_ptr));
-#endif
   TDVGFacetOwner::set(new_ptr,this);
   facetList.append(new_ptr);
 }
@@ -1650,3 +1646,72 @@ void PartitionSurface::notify_destroyed( CubitFacetData* facet )
   facetList.extract();
 }
 
+
+CubitStatus PartitionSurface::evaluate( double u, double v,
+                                        CubitVector *position,                                   
+                                        CubitVector *normal,
+                                        CubitVector *curvature1,
+                                        CubitVector *curvature2 )
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartitionSurface::get_projected_distance_on_surface( CubitVector *pos1,
+                                                                 CubitVector *pos2, 
+                                                                 double &distance )
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartitionSurface::get_sphere_params
+(
+  CubitVector &center,
+  double &radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine sphere parameters for PartitionSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartitionSurface::get_cone_params
+(
+   CubitVector &center,
+   CubitVector &normal,
+   CubitVector &major_axis,
+   double &radius_ratio,
+   double &sine_angle,
+   double &cos_angle
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine cone parameters for PartitionSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartitionSurface::get_torus_params
+(
+  CubitVector &center,
+  CubitVector &normal,
+  double &major_radius,
+  double &minor_radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine torus parameters for PartitionSurface.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartitionSurface::get_nurb_params
+(
+  bool &rational,
+  int &degree_u,
+  int &degree_v,
+  int &num_cntrl_pts_u,
+  int &num_cntrl_pts_v,
+  DLIList<CubitVector> &cntrl_pts,
+  DLIList<double> &cntrl_pt_weights,
+  DLIList<double> &u_knots,
+  DLIList<double> &v_knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine nurbs parameters for PartitionSurface.\n");
+  return CUBIT_FAILURE;
+}

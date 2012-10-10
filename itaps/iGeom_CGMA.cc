@@ -226,6 +226,10 @@ static inline void box_min_max( double dir,
                                 double pt,
                                 double& tmin,
                                 double& tmax );
+static bool
+iBase_intersect_ray_box( const CubitBox& box,
+                         const CubitVector& point,
+                         const CubitVector& direction );
 
 static CubitStatus
 iGeom_fire_ray( const CubitVector& point,
@@ -284,6 +288,20 @@ static
 void append_all_ibase_type( int ibase_type, 
                             DLIList<RefEntity*>& target_list,
                             int* err );
+
+static
+CubitStatus iGeom_get_graphics(RefFace* face, 
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               unsigned short normal_tolerance = 15,
+                               double distance_tolerance = 0,
+                               double longest_edge = 0) ;
+
+static
+CubitStatus iGeom_get_graphics(RefEdge* edge,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double tolerance = 0.0 ) ;
 
 static CubitStatus init_cgm( const std::string& engine )
 {
@@ -5776,8 +5794,10 @@ iGeom_sweepEntAboutAxis( iGeom_Instance instance,
 
   double radian_angle = angle * DEG_TO_RAD;
   
+  DLIList<Body*> new_bodies;
   CubitStatus result = gmt->sweep_rotational(ents, origin, direction,
-                                             radian_angle);
+                                             radian_angle, new_bodies,
+                                             CUBIT_FALSE, CUBIT_FALSE);
   if (CUBIT_FAILURE == result) {
       // destroy entity we copied before
     gqt->delete_RefEntity(new_ent);
@@ -5787,7 +5807,7 @@ iGeom_sweepEntAboutAxis( iGeom_Instance instance,
   else {
       // HACK to get last entity created, because cgm doesn't return
       // body created by sweep
-    RefEntity *new_body = RefEntityFactory::instance()->get_last_body();
+    RefEntity *new_body = new_bodies.get();
     *geom_entity2 = reinterpret_cast<iBase_EntityHandle>(new_body);
 
       // now we know it's succeeded, delete original body
@@ -6074,18 +6094,22 @@ iGeom_rotateEnt( iGeom_Instance instance,
 ITAPS_API void
 iGeom_reflectEnt( iGeom_Instance instance,
                   /*inout*/ iBase_EntityHandle geom_entity,
+                  /*in*/ double point_x,
+                  /*in*/ double point_y,
+                  /*in*/ double point_z,
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
                   /*in*/ double plane_normal_z,
                   int* err )
 {
   CubitVector this_plane(plane_normal_x, plane_normal_y, plane_normal_z);
+  CubitVector point(point_x, point_y, point_z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   DLIList<Body*> bods;
   bods.append(this_bod);
   CubitStatus result;
   if (NULL != this_bod) {
-    result = gqt->reflect(bods, this_plane);
+    result = gqt->reflect(bods, point , this_plane);
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to reflect body.");
     }
@@ -6095,7 +6119,7 @@ iGeom_reflectEnt( iGeom_Instance instance,
   
   BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
   if (NULL != this_bte) {
-    result = gqt->reflect(this_bte, this_plane);
+    result = gqt->reflect(this_bte, point, this_plane);
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to reflect entity.");
     }
@@ -6109,16 +6133,20 @@ iGeom_reflectEnt( iGeom_Instance instance,
 ITAPS_API void
 iGeom_scaleEnt( iGeom_Instance instance,
                 /*inout*/ iBase_EntityHandle geom_entity,
+                /*in*/ double point_x,
+                /*in*/ double point_y,
+                /*in*/ double point_z,
                 /*in*/ double scale_x,
                 /*in*/ double scale_y,
                 /*in*/ double scale_z,
                 int* err )
 {
   CubitVector factor(scale_x, scale_y, scale_z);
+  CubitVector point(point_x, point_y, point_z);
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   CubitStatus result;
   if (NULL != this_bod) {
-    result = gqt->scale(this_bod, factor);
+    result = gqt->scale(this_bod, point, factor);
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to scale body.");
     }
@@ -6132,7 +6160,7 @@ iGeom_scaleEnt( iGeom_Instance instance,
     // there is no body, it's a free entity and we can move it anyway
   Body *this_body = this_bte->body();
   if (NULL == this_body && NULL != this_bte) {
-    result = gqt->scale(this_bte, factor);
+    result = gqt->scale(this_bte, point, factor);
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to scale entity.");
     }
@@ -6148,7 +6176,7 @@ iGeom_scaleEnt( iGeom_Instance instance,
     }
     if (num_sibs == 1) {
         // ok to scale the body instead
-      result = gqt->scale(this_body, factor);
+      result = gqt->scale(this_body, point, factor);
       if (CUBIT_SUCCESS != result) {
         ERROR(iBase_FAILURE, "Failed to scale body even only one entity of that"
                            " dimension in the body.");
@@ -6566,6 +6594,7 @@ iGeom_load_cub_geometry(const char *name, int* err)
   }
   
   long endpos = ftell(cubfile);
+  
   result = fseek(cubfile, 0, 0 /*SEEK_SET*/);
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed reading cub file header.");
@@ -6582,6 +6611,7 @@ iGeom_load_cub_geometry(const char *name, int* err)
   
     // get the model header
   result = fseek(cubfile, 4, 0 /*SEEK_SET*/);
+  result = fseek(cubfile, 4, 0);
   if (result) {
     ERROR(iBase_FAILURE, "Seek failed reading after cub file header.");
   }
@@ -6594,7 +6624,7 @@ iGeom_load_cub_geometry(const char *name, int* err)
   int model_table_offset = header[3];
 
     // get the model table
-  int model_entries[42], model_offset[6],
+  int model_entries[42], model_offset[6], 
     model_length[6], model_type[6];
   //if (num_models > 6) {
   //  ERROR(iBase_INVALID_ARGUMENT, "Too many models in .cub file.");
@@ -6899,6 +6929,30 @@ static inline void box_min_max( double dir,
     tmax = (min - pt) / dir;
   }
 }
+
+static bool
+iBase_intersect_ray_box( const CubitBox& box,
+                         const CubitVector& point,
+                         const CubitVector& direction )
+{
+  double txmin, txmax, tymin, tymax, tzmin, tzmax;
+  box_min_max( direction.x(), box.minimum().x(), box.maximum().x(), point.x(), txmin, txmax );
+  box_min_max( direction.y(), box.minimum().y(), box.maximum().y(), point.y(), tymin, tymax );
+  if (txmin > tymax || tymin > txmax)
+    return false;
+  
+  if (tymin > txmin)
+    txmin = tymin;
+  if (tymax < txmax)
+    txmax = tymax;
+  
+  box_min_max( direction.z(), box.minimum().z(), box.maximum().z(), point.z(), tzmin, tzmax );
+  if (txmin > txmax || tzmin > txmax)
+    return false;
+  
+  return true;
+}
+
 
 static CubitStatus
 iGeom_fire_ray( const CubitVector& point,

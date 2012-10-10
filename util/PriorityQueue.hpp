@@ -26,10 +26,7 @@ private:
   CompareFunc lessThanFunc;
 };
 
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "PriorityQueue.cpp"
-#endif
-
+#include "PriorityQueue.cpp"
 
 #endif
 

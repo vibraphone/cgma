@@ -76,6 +76,9 @@ private:
   MemoryManager(const MemoryManager&);
     //- do not allow default constructor (must assign objectSize)
   
+  static void process_mem_usage(unsigned long &vm_usage, unsigned long &resident_set);
+  static void process_file_io(unsigned long &read, unsigned long &write );
+
 public:
   
   MemoryManager(const char* name, size_t size, int mem_size = 0,
@@ -113,11 +116,6 @@ public:
   
   void   operator_delete(void *deadObject, size_t size);
     //- generic operator delete
-
-#ifdef BOYD15
-  static int total_allocated_memory();
-  //- returns total memory allocated for all memory managers
-#endif
 
   static void show_object_memory(const char* s);
   static void show_all_object_memory();

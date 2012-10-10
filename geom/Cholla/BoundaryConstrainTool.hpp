@@ -72,26 +72,7 @@ public:
     //- n0_ptr and n1_ptr. Assumes 2D (x-y-0)
 };
 
-#if defined(TEMPLATE_DEFS_INCLUDED)
 #include "BoundaryConstrainTool.cpp"
-#endif
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

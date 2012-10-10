@@ -9,7 +9,7 @@
 //
 // Creation Date : 06/16/03
 //-------------------------------------------------------------------------
-#ifndef NT
+#ifndef WIN32
 #  include <unistd.h>
 #endif
 #include <cstring>
@@ -82,7 +82,7 @@ bool TtyProgressTool::update()
   if ( !AppUtil::instance()->get_terminal_size(height, width) )
     width = 80;
 
-#ifdef NT
+#ifdef WIN32
     // Windows cmd.exe wraps the line when the last character
     // of the line is output, rather than the first character
     // after the end of the line.  Stop one short so to avoid
@@ -109,7 +109,7 @@ bool TtyProgressTool::update()
   if ( !lineBuffer || (bufferEnd - lineBuffer - 1 < width) )
   {
     delete [] lineBuffer;
-#ifdef NT
+#ifdef WIN32
     lineBuffer = new char [width+2];
     lineBuffer[width+1] = '\r';
 #else
@@ -247,6 +247,10 @@ void TtyProgressTool::end()
 
     // clear internal data  
   clear_all();
+}
+
+void TtyProgressTool::check_interrupt()
+{
 }
 
 void TtyProgressTool::display( int new_count, int new_percent )

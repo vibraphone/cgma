@@ -13,7 +13,7 @@
 class RefEntity;
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 
@@ -122,11 +122,6 @@ public:
   //CubitStatus make_simple_attrib (CubitSimpleAttrib**,
   //                                CubitAttrib*);
 
-#ifdef BOYD14
-  //int cubit_attrib_list_length ();
-#endif
-  
-
   CubitStatus actuate_cubit_attrib (int attrib_type);
 
 private:
@@ -174,10 +169,6 @@ public:
 
   void find_cubit_attrib_type (int, DLIList<CubitAttrib*>&) const;
   
-#ifdef BOYD14
-  //CubitBoolean cubit_attrib_exists (int type);
-#endif
-
 private:
   CubitStatus remove_cubit_attrib (DLIList<CubitAttrib*>);
 
@@ -198,14 +189,7 @@ public:
     // returns number of cubit attributes
 
   void set_updated_flag(CubitBoolean flag);
-#ifdef BOYD14
-  //void set_actuated_flag(CubitBoolean flag);
-#endif
   void set_written_flag(CubitBoolean flag);
-#ifdef BOYD14
-  //void set_delete_flag(CubitBoolean flag);
-    //- sets the given flags for all CAs on this CAU
-#endif
 
   //void print_attribs();
     //- finds and prints all CA's on this entity

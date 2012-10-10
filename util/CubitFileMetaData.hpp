@@ -69,45 +69,6 @@ public:
         ConstCharPtr xpachrName, const double* xpadblValue,
         UnsignedInt32 xintNumValues);
     
-#ifdef BOYD15
-    UnsignedInt32 GetMetaDataByID(
-        UnsignedInt32 xintOwner, UnsignedInt32& xintNumFound,
-        const ConstCharPtr*& xpapachrName, const UnsignedInt32*& xpaintValue);
-    UnsignedInt32 GetMetaDataByID(
-        UnsignedInt32 xintOwner, UnsignedInt32& xintNumFound,
-        const ConstCharPtr*& xpapachrName, const ConstCharPtr*& xpapachrValue);
-    UnsignedInt32 GetMetaDataByID(
-        UnsignedInt32 xintOwner, UnsignedInt32& xintNumFound,
-        const ConstCharPtr*& xpapachrName, const double*& xpadblValue);
-    UnsignedInt32 GetMetaDataByID(
-        UnsignedInt32 xintOwner, UnsignedInt32& xintNumFound,
-        const ConstCharPtr*& xpapachrName, const ConstUnsignedInt32Ptr*& xpapaintValue,
-        const UnsignedInt32*& xpaintNumValues);
-    UnsignedInt32 GetMetaDataByID(
-        UnsignedInt32 xintOwner, UnsignedInt32& xintNumFound,
-        const ConstCharPtr*& xpapachrName, const ConstDoublePtr*& xpapadblValue,
-        const UnsignedInt32*& xpaintNumValues);
-
-    UnsignedInt32 GetMetaDataByName(
-        const char* xpachrName, UnsignedInt32& xintNumFound,
-        const UnsignedInt32*& xpaintOwner, const UnsignedInt32*& xpaintValue);
-    UnsignedInt32 GetMetaDataByName(
-        const char* xpachrName, UnsignedInt32& xintNumFound,
-        const UnsignedInt32*& xpaintOwner, const ConstCharPtr*& xpapachrValue);
-    UnsignedInt32 GetMetaDataByName(
-        const char* xpachrName, UnsignedInt32& xintNumFound,
-        const UnsignedInt32*& xpaintOwner, const double*& xpadblValue);
-    UnsignedInt32 GetMetaDataByName(
-        const char* xpachrName, UnsignedInt32& xintNumFound,
-        const UnsignedInt32*& xpaintOwner, const ConstUnsignedInt32Ptr*& xpapaintValue,
-        const UnsignedInt32*& xpaintNumValues);
-    UnsignedInt32 GetMetaDataByName(
-        const char* xpachrName, UnsignedInt32& xintNumFound,
-        const UnsignedInt32*& xpaintOwner, const ConstDoublePtr*& xpapadblValue,
-        const UnsignedInt32*& xpaintNumValues);
-
-    UnsignedInt32 ClearValue(UnsignedInt32 xintOwner, ConstCharPtr xpachrName);
-#endif
     UnsignedInt32 ClearMetaDataForID(UnsignedInt32 xintOwner);
 
     UnsignedInt32 GetMetaDataAll(UnsignedInt32& xintNumFound,

@@ -1,7 +1,10 @@
+# Don't require GNU-standard files (Changelog, README, etc.)
+AUTOMAKE_OPTIONS = foreign
+
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
-SUBDIRS = . Cholla facetbool facet virtual
+SUBDIRS = . Cholla facet facetbool virtual
 if build_ACIS
   SUBDIRS += ACIS
 endif
@@ -12,19 +15,18 @@ if build_OCC
   SUBDIRS += OCC
 endif
 
-AM_CPPFLAGS += -I$(top_srcdir)/util -I.
-
-compat_sources = CubitCompat.cpp
+# Override default defines with the ones we want from the configure script
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
+AM_CPPFLAGS = -I$(top_srcdir)/util -I.
 
 # The name of the library to build
-noinst_LTLIBRARIES = libcubit_geom.la
+lib_LTLIBRARIES = libcubit_geom.la
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
 
 # The non-template sources
-if BUILD_CGM
-libcubit_geom_la_SOURCES = $(compat_sources) \
+libcubit_geom_la_SOURCES = \
     AllocMemManagersGeom.cpp \
     AnalyticGeometryTool.cpp \
     AutoMidsurfaceTool.cpp \
@@ -38,6 +40,8 @@ libcubit_geom_la_SOURCES = $(compat_sources) \
     CAEntityColor.cpp \
     CAEntityId.cpp \
     CAEntityName.cpp \
+    CAEntityTol.cpp \
+    CAEntitySense.cpp \
     CAGroup.cpp \
     CAMergePartner.cpp \
     CAMergeStatus.cpp \
@@ -51,6 +55,7 @@ libcubit_geom_la_SOURCES = $(compat_sources) \
     CoEdgeSM.cpp \
     CoFace.cpp \
     CollectionEntity.cpp \
+    CubitCompat.cpp \
     CoVertex.cpp \
     CoVolume.cpp \
     CubitAttrib.cpp \
@@ -79,6 +84,7 @@ libcubit_geom_la_SOURCES = $(compat_sources) \
     GfxPreview.cpp \
     GroupingEntity.cpp \
     GSaveOpen.cpp \
+    LocalToleranceTool.cpp \
     Loop.cpp \
     LoopSM.cpp \
     Lump.cpp \
@@ -92,7 +98,6 @@ libcubit_geom_la_SOURCES = $(compat_sources) \
     ModelQueryEngine.cpp \
     OffsetSplitTool.cpp \
     OldUnmergeCode.cpp \
-    PeriodicParamTool.cpp \
     Point.cpp \
     PointSM.cpp \
     RefCollection.cpp \
@@ -121,9 +126,6 @@ libcubit_geom_la_SOURCES = $(compat_sources) \
     TDUniqueId.cpp \
     TopologyBridge.cpp \
     TopologyEntity.cpp 
-else
-libcubit_geom_la_SOURCES = $(compat_sources) 
-endif
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
@@ -141,6 +143,8 @@ libcubit_geom_la_include_HEADERS = \
   CAEntityColor.hpp \
   CAEntityId.hpp \
   CAEntityName.hpp \
+  CAEntityTol.hpp \
+  CAEntitySense.cpp \
   CAGroup.hpp \
   CAMergePartner.hpp \
   CAMergeStatus.hpp \
@@ -148,7 +152,6 @@ libcubit_geom_la_include_HEADERS = \
   CAUniqueId.hpp \
   CGMApp.hpp \
   CGMEngineDynamicLoader.hpp \
-  CGMHistory.hpp \
   Chain.hpp \
   CoEdge.hpp \
   CoEdgeSM.hpp \
@@ -160,8 +163,8 @@ libcubit_geom_la_include_HEADERS = \
   CubitAttrib.hpp \
   CubitAttribManager.hpp \
   CubitAttribUser.hpp \
-  CubitCompat.h \
   CubitCompat.hpp \
+  CubitCompat.h \
   CubitEvaluator.hpp \
   CubitGeomConfigure.h \
   CubitPolygon.hpp \
@@ -191,6 +194,7 @@ libcubit_geom_la_include_HEADERS = \
   GfxPreview.hpp \
   GroupingEntity.hpp \
   IntermediateGeomEngine.hpp \
+  LocalToleranceTool.hpp \
   Loop.hpp \
   LoopSM.hpp \
   Lump.hpp \
@@ -204,7 +208,6 @@ libcubit_geom_la_include_HEADERS = \
   ModelQueryEngine.hpp \
   OffsetSplitTool.hpp \
   OldUnmergeCode.hpp \
-  PeriodicParamTool.hpp \
   Point.hpp \
   PointSM.hpp \
   RefCollection.hpp \
@@ -237,6 +240,7 @@ libcubit_geom_la_include_HEADERS = \
   TDUniqueId.hpp \
   TopologyBridge.hpp \
   TopologyEntity.hpp \
-  UnMergeEvent.hpp 
+  UnMergeEvent.hpp \
+  CGMHistory.hpp
 
 

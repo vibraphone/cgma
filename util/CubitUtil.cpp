@@ -25,7 +25,7 @@
 using std::ifstream;
 
 
-#ifdef NT
+#ifdef WIN32
 #include "Windows.h"
 #else
 #include <unistd.h>
@@ -233,7 +233,7 @@ void CubitUtil::process_entity_ids( int method,
     if( comma )
     {
       if( method )
-        PRINT_INFO( sep_string );
+        PRINT_INFO("%s", sep_string );
       else
         ret_str += sep_string;
       if( fp )
@@ -424,7 +424,7 @@ void CubitUtil::process_entity_ids( int method,
   if (post_string) {
     
     if( method )
-      PRINT_INFO( post_string );
+      PRINT_INFO( "%s", post_string );
     else
       ret_str += post_string;
     if( fp )
@@ -659,7 +659,7 @@ char* CubitUtil::util_strdup(const char *s1)
   strcpy(ret_char, s1);
   return ret_char;
 #else
-#ifdef NT
+#ifdef WIN32
   return _strdup(s1);
 #else   
   return strdup(s1);
@@ -669,7 +669,7 @@ char* CubitUtil::util_strdup(const char *s1)
 
 void CubitUtil::cubit_sleep(int duration_in_seconds)
 {
-#ifdef NT
+#ifdef WIN32
   ::Sleep(duration_in_seconds*1000);
 #else
   sleep(duration_in_seconds);
@@ -707,6 +707,7 @@ int CubitUtil::find_available_file_name(char* buffer)
   
     //Search for next available number with two digits.
 
+  //  TODO  Use file_exist() method instead
   for(int i=0; i<10; ++i) 
   {
     *ten_ptr = (char)(i + '0');
@@ -811,3 +812,49 @@ int CubitUtil::find_available_file_name(char* buffer)
   }
   return num_files;
 }
+
+CubitBoolean
+CubitUtil::file_exist(
+  const char* buffer)
+{
+  CubitBoolean file_exists = CUBIT_FALSE;
+   
+  ifstream test_stream(buffer);
+  
+  if ( test_stream)
+     file_exists = CUBIT_TRUE;
+  
+  test_stream.close();
+  
+  return file_exists;
+  
+}  //  file_exist()
+
+CubitBoolean
+CubitUtil::file_exist(
+  const CubitString& buffer)
+{
+  return file_exist( buffer.c_str() );
+}
+
+CubitString CubitUtil::getenv(const CubitString& var)
+{
+  CubitString value;
+  char* c_value = ::getenv(var.c_str());
+  if(c_value)
+  {
+    value = c_value;
+  }
+  return value;
+}
+
+void CubitUtil::setenv(const CubitString& var, const CubitString& value)
+{
+#ifdef WIN32
+  ::SetEnvironmentVariableA(var.c_str(), value.c_str());
+#else
+  ::setenv(var.c_str(), value.c_str(), 1);
+#endif
+}
+
+

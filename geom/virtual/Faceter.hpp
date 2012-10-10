@@ -43,13 +43,6 @@ class Faceter
     //- Facets the surface and returns the list of facets that
     //- approximate the surface.
 
-#ifdef BOYD15
-  static void make_gmem( DLIList<CubitFacet*>& facets, 
-                         DLIList<CubitPoint*>& points,
-                         GMem* gmem );
-    //- creates a gmem object from a list of facets and points
-#endif
-  
   protected:
 
   private:

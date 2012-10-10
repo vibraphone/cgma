@@ -44,7 +44,7 @@ class RefVolume;
 class RefEdge;
 class RefFace;
 class RefVertex;
-class Point;
+class TBPoint;
 class Curve;
 class GMem;
 template <class X> class DLIList;
@@ -88,29 +88,6 @@ public:
     //- conversion between virtaul geometry and real
     //- geometry.
   
-#ifdef BOYD15
-  static CubitBoolean test_and_round( double min, double max,
-                                      double& value, double epsilon );
-    //R CubitBoolean
-    //R- CUBIT_TRUE/CUBIT_FALSE
-    //I min/max
-    //I- The range for which to test value
-    //I value
-    //I- The value to test
-    //O value
-    //O- The possible adjustment made to value
-    //I epsilon
-    //I- The allowable distance outside the range
-    //- This method is used by various VirtualEntities to
-    //- compensate for rounding errors in conversions.  The
-    //- method returns CUBIT_TRUE if the passed value is within
-    //- the inclusive range specified by min and max.  If the
-    //- passed value is outside of the range, but within epsilon
-    //- of min or max, the value will be set to min or max, and
-    //- CUBIT_TRUE will be returned.  Otherwise CUBIT_FALSE will
-    //- be returned.
-#endif
-  
   inline static VirtualQueryEngine* instance();
     //R CompositeModelingeEngine
     //R- A pointer to the single instance of this class
@@ -141,6 +118,14 @@ const char * modeler_type()
   virtual CubitString get_engine_version_string();
 
   virtual bool is_intermediate_engine() {return TRUE;}
+
+  virtual CubitStatus get_graphics( Surface* surface_ptr,
+                                    GMem *gmem,
+                                    std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                                    std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                                    unsigned short normal_tolerance, 
+                                    double distance_tolerance, 
+                                    double max_edge_length ) const;
   
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                            GMem* gMem,
@@ -164,8 +149,10 @@ const char * modeler_type()
     //- all goes well, CUBIT_Success is retuned.
   
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    GMem* gMem = NULL,
-                                    double tolerance = 0.0 ) const;
+                                    GMem* gMem, 
+                                    double angle_tolerance=0,
+                                    double distance_tolerance=0,
+                                    double max_edge_length=0 ) const;
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
     //I ref_edge_ptr
@@ -242,6 +229,9 @@ const char * modeler_type()
     //I visible
     //I- Return only entities visible in the model.
     //- Get any virtual geometry of the passed entity or its children.
+
+  virtual CubitStatus get_visible_entities( TopologyBridge *hidden_tb, 
+                                            DLIList<TopologyBridge*> &real_tbs );
   
   virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point);
    //R TopologyBridge*
@@ -251,9 +241,6 @@ const char * modeler_type()
   CubitBoolean virtuals_created() const;
     //- returns CUBIT_TRUE if there are virtual entities in the model
   
-#ifdef BOYD15
-  static CubitBoolean is_real( TopologyEntity* entity );
-#endif
   static CubitBoolean has_virtual( TopologyEntity* entity);
   
   static CubitBoolean is_virtual(TopologyEntity *entity,
@@ -316,54 +303,39 @@ protected:
 //**** Display related methods
   
   CubitStatus get_composite_curve_facetting( CompositeCurve* ccurve_ptr,
-                                             GMem* gMem ) const;
+                                             GMem* gMem, 
+                                             double angle_tolerance=0,
+                                             double distance_tolerance=0,
+                                             double max_edge_length=0 ) const;
+
   CubitStatus get_partition_curve_facetting( PartitionCurve* pcurve_ptr,
-                                             GMem* gMem ) const;
+                                             GMem* gMem,
+                                             double angle_tolerance=0,
+                                             double distance_tolerance=0,
+                                             double max_edge_length=0 ) const;
   
   CubitStatus get_composite_surface_facetting( CompositeSurface* surf_ptr,
                                                GMem* gMem,
+                                               std::vector<TopologyBridge*> *vertex_edge_to_point_vector,
+                                               std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > *facet_edges_on_curves,
                                                unsigned short normal_tol,
                                                double absolute_tol,
                                                double longest_edge ) const;
 
   CubitStatus get_partition_surface_facetting( PartitionSurface* surf_ptr,
                                                GMem* gMem,
+                                               std::vector<TopologyBridge*> *vertex_edge_to_point_vector,
+                                               std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > *facet_edges_on_curves,
                                                unsigned short normal_tol,
                                                double absolute_tol,
                                                double longest_edge ) const;
   
-#ifdef BOYD15
-  CubitVector gmem_to_vector( GMem* gmem_ptr, int point_index ) const;
-  void vector_to_gmem( CubitVector vect, GMem* gmem_ptr, 
-                       int point_index ) const;
-    //R CubitVector
-    //R- The corresponding CubitVector
-    //I vect
-    //I- The corresponding CubitVector
-    //I gmem_ptr
-    //I- A pointer to a GMem object
-    //I point_index
-    //I- The index of a point in the GPoints list of the GMem object.
-    //- These methods convert a GMem object's GPoint to a 
-    //- CubitVector, and vise versa.
-  
-//	CubitStatus get_virtual_curve_facetting( ParasiteCurve* vcurve_ptr,
-//						 int& num_steps,
-//						 GMem* gMem ) const;
-    //- Type-specific methods for generating display information.	
-#endif
-
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
                                           const char* file_name,
-                                          const char* file_type,
+                                          Model_File_Type file_type,
                                           const CubitString &cubit_version,
-                                          const char* logfile_name = NULL );
+                                          ModelExportOptions &export_options );
 
-  virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
-					  char*& p_buffer,
-					  int& n_buffer_size,
-					  bool b_export_buffer);
-  
   virtual CubitStatus save_temp_geom_file(DLIList<TopologyBridge*>& bridge_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
@@ -372,34 +344,23 @@ protected:
 
   virtual CubitStatus import_temp_geom_file(FILE* file_ptr, 
                                  const char* file_name,
-                                 const char* file_type,
+                                 Model_File_Type file_type,
                                  DLIList<TopologyBridge*> &bridge_list);
 
   virtual CubitStatus import_solid_model(
                              const char* file_name,
-                             const char* file_type,
+                             Model_File_Type file_type,
                              DLIList<TopologyBridge*>& imported_entities,
-                             CubitBoolean print_results = CUBIT_TRUE,
-                             const char* logfile_name = NULL,
-                             CubitBoolean heal_step = CUBIT_TRUE,
-                             CubitBoolean import_bodies = CUBIT_TRUE,
-                             CubitBoolean import_surfaces = CUBIT_TRUE,
-                             CubitBoolean import_curves = CUBIT_TRUE,
-                             CubitBoolean import_vertices = CUBIT_TRUE,
-                             CubitBoolean free_surfaces = CUBIT_TRUE );
-
-  virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
-					 const char* pBuffer,
-					 const int n_buffer_size);
+                             ModelImportOptions &import_options ); 
 
   virtual void delete_solid_model_entities(DLIList<BodySM*>&) const;
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const;
-  virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const;
+  virtual CubitStatus delete_solid_model_entities( TBPoint* point_ptr ) const;
 
-  virtual CubitStatus fire_ray( const CubitVector &origin,
-                                const CubitVector &direction,
+  virtual CubitStatus fire_ray( CubitVector &origin,
+                                CubitVector &direction,
                                 DLIList<TopologyBridge*> &at_entity_list,
                                 DLIList<double> &ray_params,
                                 int max_hits,

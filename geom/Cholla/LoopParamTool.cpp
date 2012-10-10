@@ -221,17 +221,14 @@ CubitStatus LoopParamTool::new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> 
         if ( indxr[l] != indxc[l] )
           for ( k = 1; k <= 3; k++ )
             SWAP( aa[k][indxr[l]], aa[k][indxc[l]] )
-              }
+      }
     }
 		
 		
       // Power Method to get the Eigen Vector corresponding to the smallest Eigen value
-    double x[4];
+    double x[4] = {0.0, 1.0, 1.1, 1.2};
     double dd[4];
     double zz[4];
-    x[1] = 1.0;
-    for ( i = 2; i <= 3; i++ )
-      x[i] = x[i-1] + 0.1;
     int t = 0;
     double diff1 = 0.0, diff2 = 0.0;
     int flag;
@@ -243,12 +240,19 @@ CubitStatus LoopParamTool::new_space_LoopParam( DLIList<DLIList<CubitPoint *>*> 
       {
         dd[i] = 0.0;
         for ( j = 1; j <= 3; j++ )
+        {
           dd[i] = dd[i] + aa[i][j]  * x[j];
+
+          if (dd[i] > EPSILON_LOWER && dd[i] < EPSILON_UPPER) dd[i] = 0.0;
+        }
       }
       t = t+1;
       largest_dd = dd[1] > dd[2] ? ( dd[1] > dd[3] ? dd[1] : dd[3] ) : ( dd[2] > dd[3] ? dd[2] : dd[3] );
       for ( i = 1; i <= 3; i++ )
+      {
         zz[i] = dd[i]/largest_dd;
+        if (zz[i] > EPSILON_LOWER && zz[i] < EPSILON_UPPER) zz[i] = 0.0;
+      }
       for ( i = 1; i <= 3; i++ )
       {
         diff1 =  fabs(x[i] - zz[i]);

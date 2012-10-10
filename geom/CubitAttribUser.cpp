@@ -366,7 +366,8 @@ void CubitAttribUser::merge_owner(RefEntity *deletable_entity)
     for (i = ca_list.size(); i > 0; i--) {
       CubitAttrib *ca_ptr = ca_list.get_and_step();
       if (ca_ptr->int_attrib_type() != CA_ENTITY_NAME &&
-          ca_ptr->int_attrib_type() != CA_ASSEMBLY_DATA)
+          ca_ptr->int_attrib_type() != CA_ASSEMBLY_DATA &&
+          ca_ptr->int_attrib_type() != CA_MESH_OUTPUT_GROUP)
       {
         remove_cubit_attrib(ca_ptr);
         delete ca_ptr;
@@ -654,6 +655,7 @@ CubitStatus CubitAttribUser::auto_update_cubit_attrib ()
     // now, update all attributes present on this entity
   CubitStatus update_status = CUBIT_SUCCESS;
   DLIList<CubitAttrib*> attrib_list;
+  DLIList<CubitAttrib*> attribs_to_delete;
   CubitAttrib *attrib;
   get_cubit_attrib_list(attrib_list);
   attrib_list.reset();
@@ -676,6 +678,9 @@ CubitStatus CubitAttribUser::auto_update_cubit_attrib ()
                      attrib->attrib_owner()->id());
       update_status = attrib->update();
 
+      if( attrib->delete_attrib() )
+        attribs_to_delete.append( attrib );
+
       PRINT_DEBUG_90("%s\n",
                      (attrib->delete_attrib() == CUBIT_FALSE ? "NO" : "YES"));
 
@@ -687,6 +692,11 @@ CubitStatus CubitAttribUser::auto_update_cubit_attrib ()
         attrib->has_written(CUBIT_FALSE);
     }
   }
+  
+  
+  //remove any attribs that don't need to be there
+  remove_cubit_attrib( attribs_to_delete ); 
+
 /*
   RefEntity* re_ptr;
   re_ptr = CAST_TO(this, RefEntity);

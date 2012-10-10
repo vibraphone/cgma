@@ -9,6 +9,7 @@
 #include "PartitionEngine.hpp"
 #include "GeometryEntity.hpp"
 #include "PartitionBody.hpp"
+#include "PartitionSurface.hpp"
 
 
 const char* const PARTITION_DATA_ATTRIB_NAME = "PARTITION_ATTRIB";
@@ -328,19 +329,23 @@ bool SubEntitySet::has_multiple_sub_entities() const
 
 void SubEntitySet::print_debug_info( const char* prefix ) const
 {
-  if( !prefix ) prefix = "";
-  
+  if( !prefix ) prefix = "";  
+
   PRINT_INFO("%sSubEntitySet for %s %p\n", prefix, 
     myEntity ? fix_type_name(typeid(*myEntity).name()) : "TopologyBridge", 
-    static_cast<void*>(myEntity) );
+    myEntity );
 
   PRINT_INFO("%s  SubEntities:\n", prefix );
   PartitionEntity* ent = subEntityHead;
+  
   while( ent )
   {
+    PartitionSurface *partition_surf = dynamic_cast<PartitionSurface*>(ent);
+    if( partition_surf )
+      PRINT_INFO("%p is a partition surface\n", partition_surf );
+
     PRINT_INFO("%s    %s %d (%p)\n", prefix, 
-      fix_type_name(typeid(*ent).name()), ent->entitySetId,
-      static_cast<void*>(ent) );
+      fix_type_name(typeid(*ent).name()), ent->entitySetId, ent );
     ent = ent->entitySetNext;
   }
 
@@ -349,12 +354,11 @@ void SubEntitySet::print_debug_info( const char* prefix ) const
   while( ent )
   {
     PRINT_INFO("%s    %s %d (%p)\n", prefix, 
-      fix_type_name(typeid(*ent).name()), ent->entitySetId,
-      static_cast<void*>(ent) );
+      fix_type_name(typeid(*ent).name()), ent->entitySetId, ent );
     ent = ent->entitySetNext;
   }
   
-  PRINT_INFO("%s  Body: %p\n",prefix, static_cast<void*>(bodyPtr) );
+  PRINT_INFO("%s  Body: %p\n",prefix,  bodyPtr );
 }
 
 bool SubEntitySet::is_attribute( CubitSimpleAttrib* csa, int id ) const

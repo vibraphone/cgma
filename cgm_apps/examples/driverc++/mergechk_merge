@@ -1,2 +1,0 @@
-#!/bin/sh
-./mergechk $srcdir/merge.sat

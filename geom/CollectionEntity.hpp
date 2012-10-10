@@ -19,7 +19,7 @@
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <assert.h>
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 // ********** END STANDARD INCLUDES        **********

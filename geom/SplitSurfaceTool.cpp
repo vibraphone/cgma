@@ -44,14 +44,6 @@
 #include "GMem.hpp"
 #include "SettingHandler.hpp"
 
-#ifdef CUBIT_GUI
-#ifndef NO_USAGE_TRACKING
-#include "GUIInterface.h"
-// #include "stdafx.h"
-// #include "UsageTrackingTool.h"
-#endif
-#endif
-
 CubitBoolean SplitSurfaceTool::parametricFlg = CUBIT_FALSE;
 double SplitSurfaceTool::splitTolerance = 1.0;
 CubitBoolean SplitSurfaceTool::autoDetectTriangles = CUBIT_TRUE;
@@ -690,13 +682,6 @@ SplitSurfaceTool::split_surfaces( DLIList<RefFace*> &ref_face_list,
                            just_curves_flg, curve_lists_list );
 
   free_curves_lists( curve_lists_list );
-
-#ifdef CUBIT_GUI
-#ifndef NO_USAGE_TRACKING
-  if(!preview_flg)
-      GUIInterface::instance()->log_split_surface_op();//UsageTrackingTool::instance()->LogSplitSurfaceOp();
-#endif
-#endif // CUBIT_GUI
 
   return status;
 }
@@ -5321,8 +5306,8 @@ SplitSurfaceTool::smooth_interior_coords( RefFace *ref_face_ptr,
     CubitVector *start_pnt = spline_points.get_and_back();
     CubitVector *end_pnt = spline_points.get();
 
-    Point *start_Point = gme->make_Point( *start_pnt );
-    Point *end_Point = gme->make_Point( *end_pnt );
+    TBPoint *start_Point = gme->make_Point( *start_pnt );
+    TBPoint *end_Point = gme->make_Point( *end_pnt );
     if( start_Point == NULL || end_Point == NULL )
     {
       PRINT_WARNING( "Unable to adjust split positions - split may be inaccurate\n" );
@@ -5737,10 +5722,6 @@ SplitSurfaceTool::draw_preview( DLIList<Curve*> &curve_list, int color )
   Curve *curve_ptr;
   curve_list.reset();
 
-
-  // clear any old previews first
-  GfxPreview::clear();
-
   for( i=curve_list.size(); i--; )
   {
     curve_ptr = curve_list.get_and_step();
@@ -5758,9 +5739,6 @@ SplitSurfaceTool::draw_preview( Curve *curve_ptr, CubitBoolean flush,
 {
   CubitStatus result;
   GMem g_mem;
-
-  // clear any old previews first
-  GfxPreview::clear();
   
   // get the graphics 
   result = curve_ptr->get_geometry_query_engine()->
@@ -5846,8 +5824,8 @@ SplitSurfaceTool::create_curve( DLIList<CubitVector*> &vec_list,
                              tolerance==resabs ? resabs : 0.5*tolerance  ) )
   {
     // Create a straight line on the surface
-    Point *start_Point = gme->make_Point( *start_pnt );
-    Point *end_Point = gme->make_Point( *end_pnt );
+    TBPoint *start_Point = gme->make_Point( *start_pnt );
+    TBPoint *end_Point = gme->make_Point( *end_pnt );
     if( start_Point == NULL || end_Point == NULL )
     {
       if( start_Point ) start_Point->get_geometry_query_engine()->delete_solid_model_entities(start_Point);
@@ -5907,8 +5885,8 @@ SplitSurfaceTool::create_curve( DLIList<CubitVector*> &vec_list,
     // statement is not true - the gme->make_Curve function would not 
     // actually create the curve on the surface - it only projects the 
     // points to the surface then makes a free spline - this is puzzling.
-    Point *start_Point = gme->make_Point( *start_pnt );
-    Point *end_Point = gme->make_Point( *end_pnt );
+    TBPoint *start_Point = gme->make_Point( *start_pnt );
+    TBPoint *end_Point = gme->make_Point( *end_pnt );
     if( start_Point == NULL || end_Point == NULL )
     {
       while( spline_points.size() ) delete spline_points.pop();
@@ -5916,7 +5894,11 @@ SplitSurfaceTool::create_curve( DLIList<CubitVector*> &vec_list,
       if( end_Point ) end_Point->get_geometry_query_engine()->delete_solid_model_entities(end_Point);
       return NULL;
     }
-    curve_ptr = gme->make_Curve( SPLINE_CURVE_TYPE, start_Point, end_Point, 
+
+    if( spline_points.size() == 2 )
+      curve_ptr = gme->make_Curve( STRAIGHT_CURVE_TYPE, start_Point, end_Point, NULL );
+    else
+      curve_ptr = gme->make_Curve( SPLINE_CURVE_TYPE, start_Point, end_Point, 
                                  spline_points );
 
     if( curve_ptr == NULL )
@@ -6291,9 +6273,9 @@ SplitSurfaceTool::create_arc_two( GeometryModifyEngine *gme,
   if( denom < GEOMETRY_RESABS )
     return 0;
 
-  Point *start_Point = gme->make_Point( start_pnt );
-  Point *end_Point = gme->make_Point( end_pnt );
-  Point *mid_Point = gme->make_Point( mid_pnt );
+  TBPoint *start_Point = gme->make_Point( start_pnt );
+  TBPoint *end_Point = gme->make_Point( end_pnt );
+  TBPoint *mid_Point = gme->make_Point( mid_pnt );
   if( start_Point == NULL || mid_Point == NULL || end_Point == NULL )
   {
     if( start_Point ) start_Point->get_geometry_query_engine()->delete_solid_model_entities(start_Point);
@@ -6349,9 +6331,9 @@ SplitSurfaceTool::create_arc_three( GeometryModifyEngine *gme,
                                     CubitVector &end_pnt,
                                     double resabs )
 {
-  Point *start_Point = gme->make_Point( start_pnt );
-  Point *end_Point = gme->make_Point( end_pnt );
-  Point *mid_Point = gme->make_Point( mid_pnt );
+  TBPoint *start_Point = gme->make_Point( start_pnt );
+  TBPoint *end_Point = gme->make_Point( end_pnt );
+  TBPoint *mid_Point = gme->make_Point( mid_pnt );
   if( start_Point == NULL || mid_Point == NULL || end_Point == NULL )
   {
     if( start_Point ) start_Point->get_geometry_query_engine()->delete_solid_model_entities(start_Point);
@@ -6423,9 +6405,9 @@ SplitSurfaceTool::check_if_arc( GeometryModifyEngine *gme,
   
   // Create an actual arc and do some comparisons
 
-  Point *start_Point = gme->make_Point( start_pnt );
-  Point *end_Point = gme->make_Point( end_pnt );
-  Point *mid_Point = gme->make_Point( mid_pnt );
+  TBPoint *start_Point = gme->make_Point( start_pnt );
+  TBPoint *end_Point = gme->make_Point( end_pnt );
+  TBPoint *mid_Point = gme->make_Point( mid_pnt );
   if( start_Point == NULL || mid_Point == NULL || end_Point == NULL )
   {
     if( start_Point ) start_Point->get_geometry_query_engine()->delete_solid_model_entities(start_Point);
@@ -7002,8 +6984,8 @@ SplitSurfaceTool::split_surfaces_extend( DLIList<RefFace*> &ref_face_list,
         }
 
         // Create a straight line on the surface
-        Point *start_Point = gme->make_Point( start_loc );
-        Point *end_Point = gme->make_Point( end_loc );
+        TBPoint *start_Point = gme->make_Point( start_loc );
+        TBPoint *end_Point = gme->make_Point( end_loc );
         if( start_Point == NULL || end_Point == NULL )
         {
           PRINT_ERROR("Unable to create points for curve on surface %d\n",

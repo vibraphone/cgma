@@ -13,6 +13,7 @@
 #include "CubitBox.hpp"
 #include "RTree.hpp"
 #include "ImprintBoundaryTool.hpp"
+#include "AppUtil.hpp"
 
 CubitBoolean VirtualImprintTool::useRealIntersection = CUBIT_FALSE;
 
@@ -91,7 +92,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(DLIList <RefFace*> &input_faces,
     for ( jj = ref_faces_close.size(); jj > 0; jj-- )
     {
         //check for interrupt.
-      if ( CubitMessage::instance()->Interrupt() )
+      if ( AppUtil::instance()->interrupt() )
       {
         break;
       }
@@ -126,7 +127,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(DLIList <RefFace*> &input_faces,
       }
     }
       //check for interrupt.
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //just break out and still clean up marks and stuff...
       break;
@@ -204,7 +205,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(RefVolume *ref_volume1,
     while( faces1_stack.size() && (curr_ref_face = faces1_stack.pop()) != NULL &&
            ref_faces_close.size() > 0 )
     {
-      if ( CubitMessage::instance()->Interrupt() )
+      if ( AppUtil::instance()->interrupt() )
       {
           //just break out and still clean up marks and stuff...
         break;
@@ -217,7 +218,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(RefVolume *ref_volume1,
         if ( stat != CUBIT_SUCCESS )
           return stat;
           //check for interrupt.
-        if ( CubitMessage::instance()->Interrupt() )
+        if ( AppUtil::instance()->interrupt() )
         {
             //just break out and still clean up marks and stuff...
           break;
@@ -248,7 +249,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(RefVolume *ref_volume1,
       tmp_faces1.clean_out();
       tmp_faces2.clean_out();
     }
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //just break out and still clean up marks and stuff...
       break;
@@ -273,7 +274,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(DLIList <RefVolume*> &input_vols
   RefVolume *curr_volume, *canidate_volume;
   while ( vols_stack.size() > 0 )
   {
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //just break out and still clean up marks and stuff...
       break;
@@ -294,7 +295,7 @@ CubitStatus VirtualImprintTool::virtual_imprint(DLIList <RefVolume*> &input_vols
     }
     for ( jj = ref_vols_close.size(); jj > 0; jj-- )
     {
-      if ( CubitMessage::instance()->Interrupt() )
+      if ( AppUtil::instance()->interrupt() )
       {
           //just break out and still clean up marks and stuff...
         break;

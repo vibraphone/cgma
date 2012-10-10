@@ -1098,7 +1098,7 @@ bool transforms_test(iGeom_Instance geom)
   }
   
     // now reflect through y plane; should recover original bb
-  iGeom_reflectEnt( geom, brick, 0.0, 1.0, 0.0, &err );
+  iGeom_reflectEnt( geom, brick, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, &err );
   CHECK( "Problems reflecting brick for transforms test." );
   
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );
@@ -1189,7 +1189,6 @@ static int get_entities( iGeom_Instance geom, int entity_type,
   return iBase_SUCCESS;
 }
 
-/*
 static int check_firmness( iGeom_Instance geom,
                            const std::vector<iBase_EntityHandle>& entities,
                            const std::vector<int>& ids,
@@ -1223,7 +1222,6 @@ static int check_firmness( iGeom_Instance geom,
   
   return iBase_SUCCESS;
 }
-*/
 
 static int count_num_with_tag( iGeom_Instance geom,
                                const std::vector<iBase_EntityHandle>& ents,

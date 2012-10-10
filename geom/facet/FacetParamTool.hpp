@@ -40,17 +40,6 @@ public:
 
   CubitStatus exhaustive_locate_point_in_uv(FacetSurface *surf, const CubitVector &the_point, CubitFacet *&tri_ptr); 
 
-#ifdef BOYD14
-  CubitStatus export_facets(int numn, int numf, double *points, int *facets);
-  // - debug function for testing inputs to roadkill
-
-  int flatten();
-      //accessor function to the parameterization algorithms
-
-  double* get_uvs_sizing(double& ratio, double*& sizings);
-      //after calling flatten, returns an array of the u,v parameters, accessing
-      //d_flat_mesh
-#endif
 private:
 
 	Surface *refSurf;

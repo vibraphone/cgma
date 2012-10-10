@@ -11,7 +11,7 @@ class CubitBox;
 #include <vector>
 #include "CubitDefines.h"
 #include "DLIList.hpp"
-#include "FBStructs.hpp"
+#include "../facetbool/FBStructs.hpp"
 
 class FacetboolInterface {
 

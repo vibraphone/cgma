@@ -49,10 +49,6 @@ public:
 
   /** Remove small edges */
   
-#ifdef BOYD15
-  static void do_facet_cleanup(DLIList<CubitFacetData*>& facets);  
-#endif
-  
   /** Misc. static utility functions */
 
   static CubitStatus split_edge( CubitFacetEdge*    edge_to_split,
@@ -184,14 +180,6 @@ public:
 
 private:
  
-#ifdef BOYD15
-  static CubitStatus safe_move_point( CubitPoint* point,
-                                      const CubitVector& new_pos,
-                                      PartitionCurve* owning_curve );
-  //- Call notify_moving_point for all surfaces adjacent to the
-  //- passed curve.
-#endif
-
   static void edge_facets( CubitFacetEdge* edge,
                            const DLIList<CubitFacet*>& input_facets,
                            DLIList<CubitFacet*>& output_list );

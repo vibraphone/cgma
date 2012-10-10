@@ -84,20 +84,11 @@ template <class Y> class KDDTreeNode
     //- Get the discriminator for the depth below this node
     DIMENSION next_disc () const;
 
-#ifdef BOYD15
-    //- Get the center point of this node
-    CubitVector get_center () const;
-#endif
-
     //- The KD_COMPARE function as defined by Samet
     DIRECTION compare (KDDTreeNode<Y> *Q) const;
     DIRECTION compare_with_equality (KDDTreeNode<Y> *Q) const;
 };
 
-#ifdef TEMPLATE_DEFS_INCLUDED
-#  define INCLUDED_FROM_KDD_TREE_NODE_HEADER
-#  include "KDDTreeNode.cpp"
-#  undef INCLUDED_FROM_KDD_TREE_NODE_HEADER
-#endif
+#include "KDDTreeNode.cpp"
 
 #endif

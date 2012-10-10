@@ -50,7 +50,7 @@ public :
                                           bool filter_slivers = false);
 
    //! From the specified bodies, find surfaces that overlap. 
-   CubitStatus find_overlapping_surfaces( DLIList<BodySM*> &body_list,
+   CubitStatus find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &body_list,
                                           DLIList<Surface*> &surface_list1,
                                           DLIList<Surface*> &surface_list2,
                                           bool filter_slivers = false );
@@ -109,6 +109,9 @@ public :
 					std::multimap<RefEdge*, RefEdge*> &overlapping_edge_map,
                     double maxgap = -1);
 
+  //! Checks to if two facets overlap
+  CubitBoolean check_overlap( SurfaceOverlapFacet *facet1, SurfaceOverlapFacet *facet2, const double facet_compare_tol );
+
    //! Checks to see if two curves overlap.  Reuses graphic facets.
    CubitBoolean check_overlap( RefEdge *edge1, RefEdge *edge2, 
                std::map<RefEdge*, DLIList<CurveOverlapFacet*>* > *facet_map, 
@@ -125,6 +128,53 @@ public :
    CubitBoolean check_overlap( Curve *curve1, Curve *curve2, 
                std::map<Curve*, DLIList<CurveOverlapFacet*>* > *facet_map, 
                std::multimap<BodySM*, CubitVector > *body_point_imprint_map = NULL );
+
+   //! Checks for boundary contact between surfaces
+   CubitBoolean check_boundary_contact(  
+                                DLIList<SurfaceOverlapFacet*> *facet_list1, 
+                                DLIList<SurfaceOverlapFacet*> *facet_list2, 
+                                AbstractTree<SurfaceOverlapFacet*> *a_tree, 
+                                const double facet_compare_tol, 
+                                const double tmp_overlap_tol );
+
+   
+  // swap surfaces and facets to keep the smaller surface first
+  CubitBoolean check_size_and_swap_surfs( 
+                                Surface *&tmp_surf1, 
+                                Surface *&tmp_surf2, 
+                                const double tolerance,
+                                const double facet_tol,
+                                DLIList<SurfaceOverlapFacet*> *&facet_list1, 
+                                DLIList<SurfaceOverlapFacet*> *&facet_list2, 
+                                std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *&a_tree_map,
+                                AbstractTree<SurfaceOverlapFacet*> *&a_tree2 );
+
+  // extract facets if not already available 
+   CubitBoolean extract_surf_facets( 
+                               Surface *surface1, 
+                               Surface *surface2, 
+                               std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
+                               const double tolerance,
+                               const double facet_tol,
+                               DLIList<SurfaceOverlapFacet*> *&facet_list1,
+                               DLIList<SurfaceOverlapFacet*> *&facet_list2 );
+
+   //! Determine tolerance for checking intersection between surfaces
+   CubitBoolean calculate_tolerances_for_surf_intersection( 
+                                Surface *tmp_surf1, 
+                                Surface *tmp_surf2, 
+                                DLIList<SurfaceOverlapFacet*> *facet_list1, 
+                                DLIList<SurfaceOverlapFacet*> *facet_list2, 
+                                std::map<Surface*, double > *area_map, 
+                                double &facet_compare_tol, 
+                                double &overlap_tolerance );
+
+   //! Checks for overlap betwen facet_lists of two surfaces
+   CubitBoolean check_overlap(  DLIList<SurfaceOverlapFacet*> *facet_list1, 
+                                DLIList<SurfaceOverlapFacet*> *facet_list2, 
+                                AbstractTree<SurfaceOverlapFacet*> *a_tree, 
+                                const double facet_tol, 
+                                const double tolerance );   
 
    //! Checks to see the two groups of facets overlap. 
    CubitBoolean check_overlap( DLIList<SurfaceOverlapFacet*> *facet_list1,
@@ -206,6 +256,7 @@ public :
    void set_skip_facing_surfaces( CubitBoolean setting );
    static SurfaceOverlapTool* instance();
      // Returns a static pointer to unique instance of this class.
+   static void delete_instance() { if(instance_) delete instance_; };
    
    ~SurfaceOverlapTool();
      //- Destructor.
@@ -213,6 +264,7 @@ public :
 protected :
    
 private :
+
 
 
   CubitStatus find_overlapping_surfaces( DLIList<RefFace*> &ref_face_list,
@@ -226,13 +278,16 @@ private :
   // pair_list is a list of all the surfaces that were found that overlap.
   // If prog_step == -1 it does not step the progress bar. 
 
-   CubitBoolean check_overlap( Surface *surface1,
+  double find_area_overlap( SurfaceOverlapFacet *facet1, SurfaceOverlapFacet *facet2, const double facet_compare_tol );
+
+  
+  CubitBoolean check_surfs_for_imprinting( Surface *surface1,
                                Surface *surface2,
               std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
               std::map<Surface*, double > *area_map,
               std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map ); 
 
-                               
+                                
    //CubitStatus draw_facets( GMem* gMem, int color = 2 );
    //void draw_triangle( Triangle3 &T, int color = 2 );
 

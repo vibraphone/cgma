@@ -39,6 +39,7 @@ namespace NCubitFile {
 
 class CMetaData;
 class CFEModel;
+class CSimModel;
 
 typedef unsigned int UnsignedInt32;  // This must always be a 32 bit integer!!!
 typedef const char* ConstCharPtr;
@@ -62,6 +63,8 @@ struct SGroupData {
 };
 typedef SGroupData SBlockData;
 typedef SGroupData SNodeSetData;
+typedef SGroupData SBCSetData;
+typedef SGroupData SConstraintData;
 
 // first edition of sideset data
 struct SSideSetData_10 {
@@ -83,6 +86,13 @@ struct SSideSetData_11 {
                                             //                            {num_wrt} {type,id} ...
 };
 
+struct SMaterialData {
+    UnsignedInt32 mintMemberType;
+    UnsignedInt32 mintMemberRows; //i.e. rows
+    UnsignedInt32 mintMemberColumns;
+    double* mpadblMemberData;
+};
+
 class CUBIT_UTIL_EXPORT CCubitFile  
 {
 public:
@@ -98,13 +108,17 @@ public:
     enum EMetaDataOwnerType {
         eModelMetaData,
         eGeomMetaData, eNodeMetaData, eElemMetaData, eGroupMetaData,
-        eBlockMetaData, eNodeSetMetaData, eSideSetMetaData
+        eBlockMetaData, eNodeSetMetaData, eSideSetMetaData,
+        eBCSetMetaData, eMaterialMetaData, eConstraintMetaData
     };
     enum EModelType {
-      eFEModel, eACISText, eACISBinary, eAssemblyModel
+      eFEModel, eACISText, eACISBinary, eAssemblyModel, eSimModel
     };
     enum ESideSetSenseSize {
         eSideSetSenseNone, eSideSetSenseByte, eSideSetSenseInt32
+    };
+    enum EConstraintType {
+        eConstraintDistributing, eConstraintKinematic, eConstraintRigidBody
     };
 
     CCubitFile();
@@ -233,6 +247,80 @@ public:
     
     UnsignedInt32 EndReadFEModel();
 
+    // Simulation Model functions
+    UnsignedInt32 BeginWriteSimModel(HModel xintGeomModel,
+                                     UnsignedInt32 xintBCCount,
+                                     UnsignedInt32 xintICCount,
+                                     UnsignedInt32 xintBCSetCount,
+                                     UnsignedInt32 xintMaterialCount,
+                                     UnsignedInt32 xintAmplitudeCount,
+                                     UnsignedInt32 xintConstraintCount
+                                     );
+    UnsignedInt32 WriteBCSet(UnsignedInt32 xintIndex,
+                             UnsignedInt32 xintBCSetID,
+                             UnsignedInt32 xintBCSetUniqueID,
+                             UnsignedInt32 xintBCSetAnalysisType,
+                             UnsignedInt32 xintRestraintTypesCount,
+                             UnsignedInt32 xintLoadTypesCount,
+                             UnsignedInt32 xintContactPairTypesCount,
+                             SBCSetData* xpaBCSetRestraintData,
+                             SBCSetData* xpaBCSetLoadData,
+                             SBCSetData* xpaBCSetContactPairData
+                             );
+    UnsignedInt32 WriteMaterial(UnsignedInt32 xintIndex,
+                                UnsignedInt32 xintMaterialID,
+                                UnsignedInt32 xintMaterialUniqueID,
+                                UnsignedInt32 xintPropertiesCount,
+                                SMaterialData* xpaMaterialData
+                                );
+    UnsignedInt32 WriteConstraint(UnsignedInt32 xintIndex,
+                                UnsignedInt32 xintConstraintID,
+                                UnsignedInt32 xintConstraintUniqueID,
+                                UnsignedInt32 xintConstraintType,
+                                UnsignedInt32 xintIndependentTypeCount,
+                                SConstraintData* xpaIndependentData,
+                                UnsignedInt32 xintDependentTypeCount,
+                                SConstraintData* xpaDependentData
+                                );
+    UnsignedInt32 EndWriteSimModel();
+
+    UnsignedInt32 BeginReadSimModel(HModel xintGeomModel,
+                                    UnsignedInt32& xintBCCount,
+                                    UnsignedInt32& xintICCount,
+                                    UnsignedInt32& xintBCSetCount,
+                                    UnsignedInt32& xintMaterialCount,
+                                    UnsignedInt32& xintAmplitudeCount,
+                                    UnsignedInt32& xintConstraintCount
+                                    );
+    UnsignedInt32 ReadBCSet(UnsignedInt32 xintIndex,
+                            UnsignedInt32& xintBCSetID,
+                            UnsignedInt32& xintBCSetUniqueID,
+                            UnsignedInt32& xintBCSetAnalysisType,
+                            UnsignedInt32& xintRestraintTypesCount,
+                            UnsignedInt32& xintLoadTypesCount,
+                            UnsignedInt32& xintContactPairTypesCount,
+                            SBCSetData*& xpaBCSetRestraintData,
+                            SBCSetData*& xpaBCSetLoadData,
+                            SBCSetData*& xpaBCSetContactPairData
+                            );
+    UnsignedInt32 ReadMaterial(UnsignedInt32 xintIndex,
+                               UnsignedInt32& xintMaterialID,
+                               UnsignedInt32& xintMaterialUniqueID,
+                               UnsignedInt32& xintPropertiesCount,
+                               SMaterialData*& xpaMaterialData
+                               );
+    UnsignedInt32 ReadConstraint(UnsignedInt32 xintIndex,
+                               UnsignedInt32& xintConstraintID,
+                               UnsignedInt32& xintConstraintUniqueID,
+                               UnsignedInt32& xintConstraintType,
+                               UnsignedInt32& xintIndependentTypeCount,
+                               SConstraintData*& xpaIndependentData,
+                               UnsignedInt32& xintDependentTypeCount,
+                               SConstraintData*& xpaDependentData
+                               );
+    UnsignedInt32 EndReadSimModel();
+
+
     UnsignedInt32 GetReadMetaData(EMetaDataOwnerType xeType,
         CMetaData*& xpMetaData);
     UnsignedInt32 GetWriteMetaData(EMetaDataOwnerType xeType,
@@ -284,17 +372,16 @@ EErrorCode meErrorState;
     void FreeAll();
 
     UnsignedInt32 mintFEModelIndex;
+    UnsignedInt32 mintSimModelIndex;
     CFEModel* mpReadFEModel;
     CFEModel* mpWriteFEModel;
+    CSimModel* mpReadSimModel;
+    CSimModel* mpWriteSimModel;
     CMetaData* mpMetaData;
     struct {
         UnsignedInt32 mintNumModels;
         SModelData* mpaModelData;
     } mModelBuff;
-    char buff[16];// used to pad for the difference between sizeof(CCubitFile)
-                  //   and actual size of object from cubit library
-                  // it seems that we have headers from 12.0, and library
-                  //           is 12.2 
 };
 
 } // namespace NCubitFile

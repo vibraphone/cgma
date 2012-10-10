@@ -55,11 +55,6 @@ public:
   ~KDTree();
   void box_kdtree_intersect(FSBoundingBox& bbox, int *count, int *indexlist) const;
   int makeKDTree(int npoly, const FSBOXVECTOR& boxlist);
-#ifdef BOYD15
-  void RayKdtreeIntersect(double xc, double yc, double zc,
-                          double alpha, double beta, double gamma,
-                          int *npfound, int *pfound);
-#endif
 
 private:
 
@@ -80,9 +75,6 @@ private:
     x = y;
     y = temp;
   }   
-#ifdef BOYD17 
-  double rayxstart, rayystart, rayzstart, rayxend, rayyend, rayzend, dx, dy, dz;
-#endif
   double rayxstart, rayystart, rayzstart, dx, dy, dz;
   bool rayintersectsbox(FSBoundingBox *box);
   inline double MAXX(double a, double b) {

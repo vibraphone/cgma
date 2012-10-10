@@ -19,7 +19,7 @@
 #include "CubitString.hpp"
 #include "CubitUtilConfigure.h"
 
-#ifndef NT
+#ifndef WIN32
 #include <sys/resource.h>
 #endif
 
@@ -50,8 +50,15 @@ public:
   // Signal handing code.  The signal handler provided by
   // AppUtil sets the flag cubit_intr to CUBIT_TRUE when
   // an interrupt (SIGINT) is detected.  See the comments
-  // with the declaration of cubit_intr in CubitDefines.h
+  // with the declaration of cubit_intr in AppUtil.cpp
   // for more information.
+
+  // returns whether the interupt flag has been set
+  CubitBoolean interrupt();
+  void set_interrupt(CubitBoolean);
+
+  // clears the interrupt flag
+  void clear_interrupt();
   
   static CubitBoolean catch_interrupt() { return catching_sigint_; }
   //- Check if the signal handler provided in AppUtil
@@ -84,7 +91,6 @@ public:
    // pass in a pointer to a progress tool  - the lifetime of the tool will be
    // controlled by AppUtil
 
-  void set_cubit_dir(const CubitString path);
   CubitString get_cubit_dir();
     // get/set the cubit dir variable
 
@@ -109,14 +115,11 @@ private:
    AppUtil();
 };
 
+// returns the directory where cubit binaries reside, 
+// or more correctly, the path of the library/executable that contains this AppUtil code.
 inline CubitString AppUtil::get_cubit_dir() 
 {
   return cubitDir;
-}
-
-inline void AppUtil::set_cubit_dir(const CubitString input) 
-{
-  cubitDir = input;
 }
 
 #endif

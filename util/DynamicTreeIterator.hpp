@@ -3,6 +3,7 @@
 #define DYNAMIC_TREE_ITERATOR_HPP
 
 #include <functional>
+#include <algorithm>
 #include "CubitDefines.h"
 #include "DynamicDLIIterator.hpp"
 

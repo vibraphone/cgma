@@ -198,7 +198,7 @@ SubCurve* PartitionEngine::replace_curve( Curve* curve )
   start_pt = dynamic_cast<PartitionPoint*>(bridge);
   if( ! start_pt ) 
   {
-    start_pt = replace_point( dynamic_cast<Point*>(bridge) );
+    start_pt = replace_point( dynamic_cast<TBPoint*>(bridge) );
     if( ! start_pt )
       return 0;
     new_start = true;
@@ -213,7 +213,7 @@ SubCurve* PartitionEngine::replace_curve( Curve* curve )
     end_pt = dynamic_cast<PartitionPoint*>(bridge);
     if( !end_pt )
     {
-      end_pt = replace_point( dynamic_cast<Point*>(bridge) );
+      end_pt = replace_point( dynamic_cast<TBPoint*>(bridge) );
       new_end = true;
       if( !end_pt )
       {
@@ -471,7 +471,7 @@ PartitionLump* PartitionEngine::replace_lump( Lump* lump )
 //
 // Creation Date : 02/23/03
 //-------------------------------------------------------------------------
-PartitionPoint* PartitionEngine::replace_point( Point* point )
+PartitionPoint* PartitionEngine::replace_point( TBPoint* point )
 {
   PartitionPoint* result = dynamic_cast<PartitionPoint*>(point);
   if( !result )
@@ -499,12 +499,12 @@ PartitionPoint* PartitionEngine::replace_point( Point* point )
 //
 // Creation Date : 02/23/03
 //-------------------------------------------------------------------------
-Point* PartitionEngine::restore_point( PartitionPoint* point )
+TBPoint* PartitionEngine::restore_point( PartitionPoint* point )
 {
   if( point->num_curves() )
     return 0;
   
-  Point* result = point->real_point();
+  TBPoint* result = point->real_point();
   if( result )
   {
     point->sub_entity_set().unwrap_attributes();
@@ -796,7 +796,7 @@ CubitStatus PartitionEngine::destroy_shell( PartitionShell* shell )
 //
 // Creation Date : 02/23/03
 //-------------------------------------------------------------------------
-Point* PartitionEngine::insert_point( Curve* curve, double u )
+TBPoint* PartitionEngine::insert_point( Curve* curve, double u )
 {
   PartitionCurve* pcurve = dynamic_cast<PartitionCurve*>(curve);
   bool replaced_curve = false;
@@ -935,7 +935,7 @@ Curve* PartitionEngine::remove_point( PartitionPoint* point,
 
 /*  
   TopologyBridge* real = point->partitioned_entity();
-  if( dynamic_cast<Point*>(real) )
+  if( dynamic_cast<TBPoint*>(real) )
   {
     Curve* curve1 = dynamic_cast<Curve*>(curve_bridges.get());
     Curve* curve2 = dynamic_cast<Curve*>(curve_bridges.next());
@@ -947,7 +947,7 @@ Curve* PartitionEngine::remove_point( PartitionPoint* point,
     if( !pc2 )
       pc2 = replace_curve( curve2 );
     
-    CompositeEngine::instance()->remove_point( dynamic_cast<Point*>(real) );
+    CompositeEngine::instance()->remove_point( dynamic_cast<TBPoint*>(real) );
     bool reverse = ( pc1->start_point() == pc2->start_point() ||
                      pc2->end_point() == pc2->end_point() );
     if( pc1->partitioned_entity() == 0 )
@@ -1364,7 +1364,7 @@ CubitStatus PartitionEngine::find_coedges( PartitionSurface* surface,
     }
   }
   
-    // Point is at end of a sipe/hardline
+    // TBPoint is at end of a sipe/hardline
   if ( point_coedges.size() == 0 )
   {
     previous = next = 0;
@@ -1991,7 +1991,7 @@ PartitionSurface* PartitionEngine::split_surface( PartitionSurface* surface,
       else // this is a hardpoint there is a curve with no facets (length)
            // and the start and end points are the same
       {
-        Point* hardpoint = curve->start_point()->real_point();
+        TBPoint* hardpoint = curve->start_point()->real_point();
         if (hardpoint && curve->start_point() == curve->end_point() )
         {
           CubitVector hardpoint_coord = hardpoint->coordinates(); 
@@ -2239,7 +2239,7 @@ CubitStatus PartitionEngine::insert_curve( DLIList<PartitionSurface*>& surface_l
       }
 /*      
       double u = curve->u_from_position(closest);
-      Point* point = insert_point( curve, u );
+      TBPoint* point = insert_point( curve, u );
       if (!point)
       {
         PRINT_ERROR("Error splitting curve.  Aborting.\n");
@@ -3102,9 +3102,6 @@ CubitStatus PartitionEngine::project_to_surface(
       DLIList<CubitFacetEdgeData*> new_edges;
       if (edge_lists[j].size()) // check for replacements
       {
-#ifdef BOYD17
-        DLIList<CubitFacetEdgeData*> old_edge_list;
-#endif
         std::vector<CubitFacetEdgeData*>::iterator eitor = edge_lists[j].begin();
         old_edge = *eitor++;
 
@@ -3258,13 +3255,13 @@ CubitStatus PartitionEngine::project_to_surface(
 //
 // Creation Date : 02/23/03
 //-------------------------------------------------------------------------
-Point* PartitionEngine::insert_point_curve( Surface* surf,
+TBPoint* PartitionEngine::insert_point_curve( Surface* surf,
                                             const CubitVector& position,
                                             Surface *&partitioned_surf )
 {
   if ( CompositeSurface* csurf = dynamic_cast<CompositeSurface*>(surf) )
   { 
-    Point* result = 
+    TBPoint* result = 
       CompositeEngine::instance().insert_point_curve(csurf, position); 
     partitioned_surf = csurf;
     return result;
@@ -3296,7 +3293,7 @@ Point* PartitionEngine::insert_point_curve( Surface* surf,
   PartitionCurve* curve = result->next_curve(0);
   if (replaced_surface && !dynamic_cast<PartPTCurve*>(curve))
   {
-    Point* real = result->real_point();
+    TBPoint* real = result->real_point();
     partitioned_surf = restore_surface( dynamic_cast<SubSurface*>(psurf) );
     if (real)
     {
@@ -3483,7 +3480,7 @@ Lump* PartitionEngine::insert_surface( Surface* surface, Lump* lump)
     }
   }
   while( all_points.size() )
-    coords.append( new CubitVector( dynamic_cast<Point*>(all_points.pop())->coordinates() ) );
+    coords.append( new CubitVector( dynamic_cast<TBPoint*>(all_points.pop())->coordinates() ) );
   
   PartitionLumpImprint tool( partlump );
   DLIList<PartitionEntity*> new_entities;
@@ -3804,9 +3801,6 @@ static void draw_cosurface( PartitionCoSurf* cosurf, int color, bool flush = tru
 PartitionShell* PartitionEngine::split_shell( PartitionShell* shell_to_split )
 {
     // Make sure all cosurface surface marks are cleared
-#ifdef BOYD17
-  DLIList<PartitionCoEdge*> coedge_list;
-#endif
   PartitionCoSurf* cosurf = 0;
   while( (cosurf = shell_to_split->next_co_surface( cosurf )) )
   {
@@ -4721,7 +4715,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       return CUBIT_SUCCESS;
 
     PRINT_DEBUG_86("Reading partition geometry on %s %p\n", 
-      fix_type_name( typeid(*surf).name() ), static_cast<void*>(surf) );
+      fix_type_name( typeid(*surf).name() ), surf );
       
       // Find max ID
     attribs.reset();
@@ -4768,7 +4762,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       new_geom.append(new_pt);
       delete attrib;
       PRINT_DEBUG_86("  Created Point %p (%d in subset) at (%f,%f,%f)\n", 
-        static_cast<void*>(new_pt), new_pt->sub_entity_set().get_id(new_pt), 
+        new_pt, new_pt->sub_entity_set().get_id(new_pt), 
         new_pt->coordinates().x(), new_pt->coordinates().y(), 
         new_pt->coordinates().z() );
       if (DEBUG_FLAG(86))
@@ -4806,9 +4800,9 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
         new_geom.append( pt_curve );
         PRINT_DEBUG_86("  Created point-curve %p (%d in subset) with\n"
                        "    point %p (%d in subset) at (%f,%f,%f)\n", 
-          static_cast<void*>(pt_curve),
+          pt_curve, 
           pt_curve->sub_entity_set().get_id(pt_curve), 
-          static_cast<void*>(pt_curve->start_point()),
+          pt_curve->start_point(),
           pt_curve->start_point()->sub_entity_set().get_id(pt_curve->start_point()),
           pt_curve->start_point()->coordinates().x(),
           pt_curve->start_point()->coordinates().y(), 
@@ -4836,15 +4830,15 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       PRINT_DEBUG_86("  Created polyline curve %p (%d in subset) with %d segments.\n"
                      "    start point %p (%d in subset) at (%f,%f,%f)\n" 
                      "      end point %p (%d in subset) at (%f,%f,%f)\n", 
-          static_cast<void*>(new_curve), 
+          new_curve, 
           new_curve->sub_entity_set().get_id(new_curve),
           new_curve->point_count() - 1, 
-          static_cast<void*>(new_curve->start_point()),
+          new_curve->start_point(),
           new_curve->start_point()->sub_entity_set().get_id(new_curve->start_point()),
           new_curve->start_point()->coordinates().x(),
           new_curve->start_point()->coordinates().y(), 
           new_curve->start_point()->coordinates().z(),
-          static_cast<void*>(new_curve->end_point()),
+          new_curve->end_point(),
           new_curve->end_point()->sub_entity_set().get_id(new_curve->end_point()),
           new_curve->end_point()->coordinates().x(),
           new_curve->end_point()->coordinates().y(), 
@@ -5047,8 +5041,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
 
           ent = entity_from_id( set_id, ent_id, first_surf->sub_entity_set() );
           PartitionCurve* curve = dynamic_cast<PartitionCurve*>(ent);
-          PRINT_DEBUG_86(" %p,%d,%d%c", static_cast<void*>(curve), set_id,
-            ent_id*sense, loop?',':'\n');
+          PRINT_DEBUG_86(" %p,%d,%d%c", curve, set_id, ent_id*sense, loop?',':'\n');
           if(!curve)
           {
             PRINT_ERROR("Nonexistant curve specified in saved connectivity.\n");
@@ -6108,7 +6101,7 @@ CubitStatus PartitionEngine::notify_transform_internal( TopologyBridge* ent,
   int i;
   DLIList<Surface*> surfaces;
   DLIList<Curve*> curves;
-  DLIList<Point*> points;
+  DLIList<TBPoint*> points;
   
   if (PartitionBody* body = dynamic_cast<PartitionBody*>(ent))
   {
@@ -6141,7 +6134,7 @@ CubitStatus PartitionEngine::notify_transform_internal( TopologyBridge* ent,
       surfaces.append( surf );
     else if(Curve* curv = dynamic_cast<Curve*>(ent))
       curves.append( curv );
-    else if(Point* point = dynamic_cast<Point*>(ent))
+    else if(TBPoint* point = dynamic_cast<TBPoint*>(ent))
       points.append( point );
 
     if (surfaces.size())
@@ -6171,7 +6164,7 @@ CubitStatus PartitionEngine::notify_transform_internal( TopologyBridge* ent,
       {
         curves.get_and_step()->get_children( tmp_points, true, layer() );
         while (tmp_points.size())
-          points.append( dynamic_cast<Point*>(tmp_points.pop()) );
+          points.append( dynamic_cast<TBPoint*>(tmp_points.pop()) );
       }
       points.uniquify_unordered();
     }
@@ -6190,9 +6183,6 @@ CubitStatus PartitionEngine::notify_transform_internal( TopologyBridge* ent,
     }
   }
 
-#ifdef BOYD17
-  DLIList<TopologyBridge*> coedges;
-#endif
   while (curves.size())
   {
     PartitionCurve* curv = dynamic_cast<PartitionCurve*>(curves.pop());
@@ -6284,7 +6274,7 @@ void PartitionEngine::clean_out_deactivated_geometry()
 {
 }
 void PartitionEngine::remove_modified(DLIList<Surface*> &all_surfs,
-    DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts)
+    DLIList<Curve*> &all_curves, DLIList<TBPoint*> &all_pts)
 {
 }
 
@@ -6297,17 +6287,39 @@ void PartitionEngine::get_tbs_with_bridge_manager_as_owner( TopologyBridge *sour
 
   DLIList<PartitionEntity*> entity_list;
   set->get_sub_entities( entity_list );
-  DLIList<TopologyBridge*> temp_list;
-  CAST_LIST( entity_list, temp_list, TopologyBridge );
-
-  int i;
-  for( i=temp_list.size(); i--; )
-  {
-    if( temp_list.get()->bridge_manager() )
-      tbs.append( temp_list.get() );
-    temp_list.step();
-  }
+  DLIList<TopologyBridge*> tb_list;
+  CAST_LIST( entity_list, tb_list, TopologyBridge );
   
+  bool at_top = false;
+
+  while( tb_list.size() )
+  {
+    TopologyBridge *tb = tb_list.pop();
+    if( tb->bridge_manager() )    
+      tbs.append( tb );          
+    else
+    {  
+      TBOwner *owner = tb->owner();
+      TopologyBridge *tmp_tb = CAST_TO( owner, TopologyBridge );
+      if( tmp_tb )
+        tb_list.append( tmp_tb );
+      else
+      {
+        CompositePoint *comp_pt = CAST_TO( tb, CompositePoint );
+        if( comp_pt )
+          CompositeEngine::instance().get_tbs_with_bridge_manager_as_owner( tb, tb_list );
+        else
+        {
+          CompositeCurve *comp_curve = CAST_TO( tb, CompositeCurve );
+          if( comp_curve )
+            CompositeEngine::instance().get_tbs_with_bridge_manager_as_owner( tb, tb_list );
+        }
+      }
+    }    
+  }
+
+  tbs.uniquify_unordered();
+
   return;
 }
   

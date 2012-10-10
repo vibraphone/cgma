@@ -118,8 +118,8 @@ public:
   virtual CubitStatus get_offset_intersections(Curve* ref_edge_ptr, Surface* ref_face_ptr, DLIList<CubitVector*> &intersection_list, double offset = 0.0, bool ext_surf = true );
   virtual CubitStatus surface_intersection( Surface *surface1_ptr, Surface *surface2_ptr, DLIList<Curve*> &inter_graph, const double tol) const;
   virtual CubitStatus get_mid_plane( const CubitVector &point_1, const CubitVector &point_2, const CubitVector &point_3, BodySM *body_to_trim_to, BodySM *&midplane_body ) const;
-  //virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, double left_offset, DLIList<BodySM*> &new_bodysm_list, double right_offset = -1.0, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
-  //virtual CubitStatus tweak_chamfer( DLIList<Point*> &point_list, double offset1, DLIList<BodySM*> &new_bodysm_list, Curve *edge1 = NULL, double offset2 = -1.0, Curve *edge2 = NULL, double offset3 = -1.0, Curve *edge3 = NULL, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
+  virtual CubitStatus tweak_chamfer( DLIList<Curve*> &curve_list, double left_offset, DLIList<BodySM*> &new_bodysm_list, double right_offset = -1.0, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
+  virtual CubitStatus tweak_chamfer( DLIList<Point*> &point_list, double offset1, DLIList<BodySM*> &new_bodysm_list, Curve *edge1 = NULL, double offset2 = -1.0, Curve *edge2 = NULL, double offset3 = -1.0, Curve *edge3 = NULL, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
   virtual CubitStatus tweak_fillet( DLIList<Curve*> &curve_list, double radius, DLIList<BodySM*> &new_bodysm_list, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
   virtual CubitStatus tweak_fillet( Curve *curve_ptr, double start_radius, double end_radius, BodySM *&new_body_ptr, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
   virtual CubitStatus tweak_fillet( DLIList<Point*> &point_list, double radius, DLIList<BodySM*> &new_bodysm_list, CubitBoolean keep_old_body = CUBIT_FALSE, CubitBoolean preview = CUBIT_FALSE ) const;
@@ -148,139 +148,7 @@ public:
   virtual CubitStatus get_spheric_mid_surface(Surface*, Surface*, BodySM*, BodySM*&) const;
   virtual CubitStatus get_conic_mid_surface(Surface*, Surface*, BodySM*, BodySM*&) const;
   virtual CubitStatus get_toric_mid_surface(Surface*, Surface*, BodySM*, BodySM*&) const;
-  virtual CubitStatus stitch_surfs(DLIList<BodySM*> &surf_bodies,
-				   BodySM *& stitched_Body )const;
-  virtual CubitStatus subtract(DLIList<BodySM*> &tool_body_list,
-			       DLIList<BodySM*> &from_bodies,
-			       DLIList<BodySM*> &new_bodies,
-			       bool imprint = false, 
-			       bool keep_old = false) const;
-  virtual CubitStatus imprint(DLIList<BodySM*> &from_body_list,
-			      DLIList<BodySM*> &new_from_body_list,
-			      bool keep_old,
-			      DLIList<TopologyBridge*> *new_tbs = NULL,
-			      DLIList<TopologyBridge*> *att_tbs = NULL) const;
-  virtual CubitStatus imprint(DLIList<BodySM*> &body_list,
-			      DLIList<CubitVector*> &vector_list,
-			      DLIList<BodySM*>& new_body_list,
-			      bool keep_old_body,
-			      DLIList<TopologyBridge*> *new_tbs = NULL,
-			      DLIList<TopologyBridge*> *att_tbs = NULL ) const;
-  virtual CubitStatus tolerant_imprint(DLIList<BodySM*> &bodies_in,
-				       DLIList<BodySM*> &new_bodies,
-				       DLIList<TopologyBridge*> *new_tbs = NULL,
-				       DLIList<TopologyBridge*> *att_tbs = NULL ) const;
-  virtual CubitStatus hollow(DLIList<BodySM*>& bodies,
-			     DLIList<Surface*>& surfs_to_remove,
-			     DLIList<BodySM*>& new_bodies,
-			     double depth) const;
-  virtual CubitStatus  sweep_translational(DLIList<GeometryEntity*>& ref_ent_list,
-					   DLIList<BodySM*>& result_body_list,
-					   const CubitVector& sweep_vector,
-					   double draft_angle,
-					   int draft_type,
-					   bool switchside,
-					   bool rigid,
-					   Surface* stop_surf = NULL,
-					   BodySM*  stop_body = NULL) const;
-  virtual CubitStatus  sweep_perpendicular(DLIList<GeometryEntity*>& ref_ent_list,
-					   DLIList<BodySM*>& result_body_list,
-					   double distance,
-					   double draft_angle,
-					   int draft_type,
-					   bool switchside,
-					   bool rigid,
-					   Surface* stop_surf = NULL,
-					   BodySM*  stop_body = NULL ) const;
-  virtual CubitStatus  sweep_rotational(DLIList<GeometryEntity*>& ref_ent_list,
-					DLIList<BodySM*>& result_body_list,
-					const CubitVector& point,
-					const CubitVector& direction,
-					double angle,
-					int steps = 0,
-					double draft_angle = 0.0,
-					int draft_type = 0,
-					bool switchside = false,
-					bool make_solid = false,
-					bool rigid = false,
-					Surface *stop_surf = NULL,
-					BodySM*  stop_body = NULL ) const;
-  virtual CubitStatus sweep_along_curve(DLIList<GeometryEntity*>& ref_ent_list,
-					DLIList<BodySM*>& result_body_list,
-					DLIList<Curve*>& ref_edge_list,
-					double draft_angle = 0.0,
-					int draft_type = 0,
-					bool rigid = false,
-					Surface *stop_surf = NULL,
-					BodySM*  stop_body = NULL  ) const;
-  virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list, 
-			     const CubitVector &v1,
-			     const CubitVector &v2,
-			     const CubitVector &v3,
-			     DLIList<BodySM*>& results_list,
-			     bool imprint = false             
-			     );
-  virtual CubitStatus webcut(DLIList<BodySM*>& webcut_body_list, 
-			     BodySM const* tool_body,
-			     DLIList<BodySM*>& results_list,
-			     bool imprint = false
-			     );
-  virtual CubitStatus create_solid_bodies_from_surfs(DLIList<Surface*> &ref_face_list, 
-						     DLIList<BodySM*> &new_bodies,
-						     bool keep_old = false,
-						     bool heal = true) const;
-  virtual CubitStatus get_mid_plane(const CubitVector &point_1,
-				    const CubitVector &point_2,
-				    const CubitVector &point_3,
-				    BodySM *body_to_trim_to,
-				    DLIList<BodySM*>& midplane_bodies ) const;
-  virtual CubitStatus get_spheric_mid_surface(Surface *surface_ptr1,
-					      Surface *surface_ptr2,
-					      BodySM *body_to_trim_to,
-					      DLIList<BodySM*>& midsurface_bodies ) const;
-  virtual CubitStatus get_conic_mid_surface(Surface *surface_ptr1,
-					    Surface *surface_ptr2,
-					    BodySM *body_to_trim_to,
-					    DLIList<BodySM*>& midsurface_bodies ) const;
-  
-  virtual CubitStatus get_toric_mid_surface(Surface *surface_ptr1,
-					    Surface *surface_ptr2,
-					    BodySM *body_to_trim_to,
-					    DLIList<BodySM*>& midsurface_bodies ) const;
-  virtual CubitStatus tweak_fillet(DLIList<Curve*> &curve_list, 
-				   double radius,
-				   DLIList<BodySM*> &new_bodysm_list,
-				   CubitBoolean keep_old_body = CUBIT_FALSE,
-				   CubitBoolean preview = CUBIT_FALSE );
-  virtual CubitStatus tweak_fillet(Curve *curve_ptr, 
-				   double start_radius,
-				   double end_radius,
-				   BodySM *&new_bodysm_ptr,
-				   CubitBoolean keep_old_body = CUBIT_FALSE,
-				   CubitBoolean preview = CUBIT_FALSE );
-  virtual CubitStatus tweak_fillet(DLIList<Point*> &point_list, 
-				   double radius,
-				   DLIList<BodySM*> &new_bodysm_list,
-				   CubitBoolean keep_old_body = CUBIT_FALSE,
-				   CubitBoolean preview = CUBIT_FALSE );
-  virtual CubitStatus tweak_chamfer(DLIList<Curve*> &curve_list, 
-				    double left_offset,
-				    DLIList<BodySM*> &new_bodysm_list,
-				    double right_offset = -1.0,
-				    CubitBoolean keep_old_body = CUBIT_FALSE,
-				    CubitBoolean preview = CUBIT_FALSE );
-  virtual CubitStatus tweak_chamfer(DLIList<Point*> &point_list, 
-				    double offset1, 
-				    DLIList<BodySM*> &new_bodysm_list,
-				    Curve *edge1 = NULL,
-				    double offset2 = -1.0,
-				    Curve *edge2 = NULL,
-				    double offset3 = -1.0,
-				    Curve *edge3 = NULL,
-				    CubitBoolean keep_old_body = CUBIT_FALSE,
-				    CubitBoolean preview = CUBIT_FALSE );
-  virtual CubitStatus remove_curve_slivers(BodySM *bodies, double lengthlimit ) const;
-  
+
 protected:
 
 private:

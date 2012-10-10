@@ -35,6 +35,11 @@ public:
 
    static CubitStatus get_current_working_directory( char *wd );
    // Get current working directory (send in char[PATH_MAX])
+  
+   static CubitStatus add_name_to_path( char *path, const char *directory );
+  
+   static CubitStatus create_directory( char *wd );
+   // Create a directory
 
    static CubitStatus get_full_path_str( const char *part, 
                                          CubitString &full_path );
@@ -71,6 +76,9 @@ public:
    // and the first backup number found.  Handles cases like file.cub.3.4, etc.. 
    // (user started from a backup file).
    // Returns -1 if failure.
+  
+  static CubitString get_file_extension(const CubitString& file, bool remove_version = false /* remove .1, .2, ...*/ );
+  static CubitString get_file_extension(const char* file, bool remove_version = false );
 
 private:
   static CubitBoolean all_chars_are( char ch, const char *str );
@@ -101,11 +109,6 @@ public:
 
    static int match(const char *re, const char *text);
    // Match text against re (regular expression) (wildcard).
-  
-#ifdef BOYD15
-   static int matchi( const char *reg,  const char *txt);
-   // Same except case insensitive
-#endif
   
 private:
 

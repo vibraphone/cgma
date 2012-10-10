@@ -52,7 +52,7 @@
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-FacetPoint::FacetPoint( CubitVector &location, DLIList<Curve*> &curves )
+FacetPoint::FacetPoint( const CubitVector &location, DLIList<Curve*> &curves )
 {
   myPoint = (CubitPoint *) new CubitPointData( location );
   myCurves += curves;

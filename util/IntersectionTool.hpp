@@ -89,28 +89,6 @@ protected:
   double mTolerance;
   double mToleranceSquared;
 
-#ifdef BOYD15
-  CubitBoolean does_intersect_2D(const double start1[3], 
-                                 const double end1[3],
-                                 const double start2[3], 
-                                 const double end2[3]);
-
-  CubitBoolean does_intersect_3D(const double start1[3], 
-                                 const double end1[3],
-                                 const double start2[3], 
-                                 const double end2[3]);
-
-  CubitBoolean does_intersect_tri(const double start1[3], 
-                                  const double end1[3],
-                                  const double tri1[3], 
-                                  const double tri2[3], 
-                                  const double tri3[3]);
-  
-  CubitBoolean point_line_test(const double point[3], 
-                               const double start[3], 
-                               const double end[3], double &t);
-#endif
-
   CubitBoolean ray_tri_test(const double start[3], const double dir[3],
                             const double tri1[3], const double tri2[3], 
                             const double tri3[3],

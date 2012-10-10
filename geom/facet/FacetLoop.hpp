@@ -104,20 +104,10 @@ public :
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-#ifdef BOYD14
-  void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#endif
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
-#ifdef BOYD14
-  void get_surfaces( DLIList<FacetSurface*>& surfaces );
-  void get_loops   ( DLIList<FacetLoop   *>& loops    );
-#endif
   void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
   void get_curves  ( DLIList<FacetCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<FacetPoint  *>& points   );
-#endif
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );

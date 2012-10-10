@@ -51,6 +51,8 @@
 class CUBIT_GEOM_EXPORT RefVolume : public BasicTopologyEntity
 {
 public :
+  
+  typedef RefFace ChildType;
 
   friend class RefEntityFactory;
     //- the factory is allowed to call the (private) constructors

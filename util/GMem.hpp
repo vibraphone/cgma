@@ -5,6 +5,8 @@
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
 
+class CubitTransformMatrix;
+
 //- A point in 3D space.
 struct GPoint
 {
@@ -49,9 +51,6 @@ public:
      // These are high-level functions that don't require you
      // to know exactly what the internals are
    void allocate_tri(int num_tri);
-#ifdef BOYD15
-   void allocate_more_tri(int num_tri);
-#endif
    void allocate_polylines(int num_lines);
    void allocate_more_polylines(int num_lines);
    void clean_out();
@@ -92,6 +91,9 @@ public:
      // Copy constructor and operator=
    GMem(const GMem& from);
    GMem& operator=(const GMem& from);
+
+     // transformation functions - transform the display data
+   void transform(CubitTransformMatrix &transform);
 };
 
 #endif

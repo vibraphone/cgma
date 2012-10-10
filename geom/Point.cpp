@@ -36,7 +36,7 @@
 // Creation Date : 08/02/96
 //-------------------------------------------------------------------------
 
-Point::Point()
+TBPoint::TBPoint()
 {}
 
 //-------------------------------------------------------------------------
@@ -49,7 +49,7 @@ Point::Point()
 // Creation Date : 09/05/96
 //-------------------------------------------------------------------------
 
-Point::~Point()
+TBPoint::~TBPoint()
 {}
 
 //-------------------------------------------------------------------------
@@ -62,7 +62,7 @@ Point::~Point()
 //
 // Creation Date : 06/14/01
 //-------------------------------------------------------------------------
-const type_info& Point::topology_entity_type_info() const
+const type_info& TBPoint::topology_entity_type_info() const
 { return typeid(RefVertex); }
 
 //-------------------------------------------------------------------------
@@ -74,7 +74,7 @@ const type_info& Point::topology_entity_type_info() const
 //
 // Creation Date : 03/08/02
 //-------------------------------------------------------------------------
-CubitBox Point::bounding_box() const
+CubitBox TBPoint::bounding_box() const
   { return CubitBox(coordinates()); }
 
 // ********** END PUBLIC FUNCTIONS         **********

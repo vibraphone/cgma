@@ -58,11 +58,6 @@ public:
   int num_children();
   //- Number of child tree nodes
 
-#ifdef BOYD15
-  int depth();
-  //- path length from this to root (i.e. root is at depth 0);
-#endif
-
   void parent_item( Tree *parent_set );
   Tree *parent_item();
   //- get/set parent  

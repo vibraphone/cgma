@@ -39,7 +39,8 @@ CompositeGeom::CompositeGeom( int size )
   : entityList(size), 
     currentIndex(0),
     firstIndex(-1),
-    needToUpdate( true ),
+    needToUpdateMeasure( true ),
+    needToUpdateBbox( true ),
     listHead(0)
 {
     // initialization above both allocated space for size
@@ -288,8 +289,8 @@ CubitBox CompositeGeom::bounding_box()
     return CubitBox();
   }
   
-  if( needToUpdate )
-    update_data();
+  if( needToUpdateBbox )
+    update_data_bbox();
     
   CubitBox box( entityList[0].bbox );
   for( int i = 1; i < entityList.size(); i++ )
@@ -311,8 +312,8 @@ double CompositeGeom::measure()
   if( entityList.size() == 0 )
     return 0.0;
   
-  if( needToUpdate )
-    update_data();
+  if( needToUpdateMeasure )
+    update_data_measure();
 
   return entityList[entityList.size()-1].measure;
 }
@@ -326,14 +327,31 @@ double CompositeGeom::measure()
 //
 // Creation Date : 12/19/01
 //-------------------------------------------------------------------------
-void CompositeGeom::update_data()
+void CompositeGeom::update_data_measure()
 {
-  needToUpdate = false;
+  needToUpdateMeasure = false;
   double sum = 0.0;
   for( int i = 0; i < entityList.size(); i++ )
   {
     sum += entityList[i].entity->measure();
     entityList[i].measure = sum;
+  }
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Update cached data for each entity
+//
+// Special Notes : 
+//
+// Creator       : Jason Kraftcheck
+//
+// Creation Date : 12/19/01
+//-------------------------------------------------------------------------
+void CompositeGeom::update_data_bbox()
+{
+  needToUpdateBbox = false;
+  for( int i = 0; i < entityList.size(); i++ )
+  {
     entityList[i].bbox    = entityList[i].entity->bounding_box();
   }
 }
@@ -354,7 +372,7 @@ int CompositeGeom::closest_box( const CubitVector& position )
 {
   if( entityList.size() <= 0 ) return -1;
   
-  if( needToUpdate ) update_data();
+  if( needToUpdateBbox ) update_data_bbox();
   
   int min_index = 0;
   double min_dist = entityList[0].dist_sqr 
@@ -711,13 +729,14 @@ void CompositeGeom::get_attributes( const char* name,
 //-------------------------------------------------------------------------
 void CompositeGeom::print_debug_info( const char* line_prefix )
 {
-  if( needToUpdate )
-    update_data();
+  if( needToUpdateBbox )
+    update_data_bbox();
+  if( needToUpdateMeasure )
+    update_data_measure();
   if( line_prefix == 0 )
     line_prefix = "";
   
-  PRINT_INFO("%sCompositeGeom @ %p : \n", line_prefix,
-    static_cast<void*>(this) );
+  PRINT_INFO("%sCompositeGeom @ %p : \n", line_prefix, this );
   for( int i = 0; i < entityList.size(); i++ )
   {
     GeometryEntity* ptr = entityList[i].entity;
@@ -732,7 +751,7 @@ void CompositeGeom::print_debug_info( const char* line_prefix )
     /*
     PRINT_INFO("%s  %15s %p %7s\n", line_prefix, 
       ptr ? fix_type_name(typeid(*ptr).name()) : "GeometryEntity",
-      static_cast<void*>(ptr),
+      ptr, 
       entityList[i].sense == CUBIT_FORWARD ? "Forward" :
       entityList[i].sense == CUBIT_REVERSED ? "Reverse" :
       "Unknown");

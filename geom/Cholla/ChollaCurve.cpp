@@ -33,6 +33,7 @@ ChollaCurve::ChollaCurve( int block_id )
   endPoint = NULL;
   blockID = block_id;
   myLength = MYLENGTH_UNINITIALIZED;
+  myMergePartner = NULL;
 }
 
 //===============================================================================
@@ -96,12 +97,12 @@ CubitStatus ChollaCurve::get_ends( CubitVector &start, CubitVector &end )
 //Date: 12/4/00
 //=============================================================================
 CubitStatus ChollaCurve::get_ends( CubitPoint *&start_ptr, CubitPoint *&end_ptr )
-{
-  if (startPoint && endPoint)
+{  
+  if (startPoint && endPoint )
   {
     start_ptr = startPoint;
     end_ptr = endPoint;
-  }
+  } 
   else
   {
     CubitStatus stat = determine_ends();
@@ -384,6 +385,112 @@ CubitStatus ChollaCurve::build_curve_from_edges( CubitPoint *start_point,
   return CUBIT_SUCCESS;
 }
 
+CubitStatus ChollaCurve::order_edges()
+{
+  int i;
+  bool periodic = false;
+  if (NULL == startPoint)
+  {
+    DLIList<ChollaPoint *>  cholla_points = get_points();
+    periodic = (cholla_points.size() == 1);
+
+    ChollaPoint *chpt = cholla_points.get();
+    CubitPoint *start_point = dynamic_cast<CubitPoint *> (chpt->get_facets());
+
+    this->set_start( start_point );
+    if (NULL == start_point)
+      return CUBIT_FAILURE;
+    start_point->set_as_feature();
+
+    if (periodic)
+    {
+      this->set_end(start_point);
+    }
+    else
+    {
+      chpt = cholla_points.step_and_get();
+      CubitPoint *end_point = dynamic_cast<CubitPoint *> (chpt->get_facets());
+      if (NULL == end_point)
+        return CUBIT_FAILURE;
+      this->set_end(end_point);
+      end_point->set_as_feature();
+    }
+  }
+
+  assert(startPoint);  
+  assert(endPoint);
+
+  if (curveEdgeList.size() > 1)
+  {    
+    DLIList<CubitFacetEdge*> edges_ordered;
+    CAST_LIST(curveEdgeList, edges_ordered, CubitFacetEdge);
+    
+    CubitStatus stat = CubitFacetEdge::order_edge_list(edges_ordered, startPoint, endPoint);
+
+    if (CUBIT_FAILURE == stat)
+      return CUBIT_FAILURE;
+
+    // store the edges in the correct order
+    clean_out_edges();    
+
+    edges_ordered.reset();
+    for (i=0; i< edges_ordered.size(); i++)
+    {      
+      this->add_facet(edges_ordered.get_and_step());     
+    }    
+  }
+
+  
+  // make sure all the edges are oriented correctly
+  DLIList<FacetEntity *> flist = this->get_facet_list();
+  flist.reset();
+  DLIList<CubitFacetEdge *> elist;
+  CAST_LIST( flist, elist, CubitFacetEdge );
+  elist.reset();
+  CubitPoint *cur_pt = startPoint, *tmp_pt;
+  for ( i = elist.size(); i > 0; i-- ) 
+  {
+    CubitFacetEdge *edge_ptr = elist.get_and_step();
+    CubitPoint *point0_ptr = edge_ptr->point(0);
+    CubitPoint *point1_ptr = edge_ptr->point(1);
+    if (point0_ptr != cur_pt)
+    {
+      assert( cur_pt == point1_ptr );
+      edge_ptr->flip();
+      tmp_pt = point0_ptr;
+      point0_ptr = point1_ptr;
+      point1_ptr = tmp_pt;
+      assert( point0_ptr == edge_ptr->point(0) &&
+             point1_ptr == edge_ptr->point(1) );
+    }
+    cur_pt = point1_ptr;
+  }
+  
+  int mydebug = 0;
+  if (mydebug)
+  {
+    int i;
+    DLIList<FacetEntity *> flist = this->get_facet_list();
+    flist.reset();
+    DLIList<CubitFacetEdge *> elist;
+    CAST_LIST( flist, elist, CubitFacetEdge );
+    elist.reset();
+    for ( i = elist.size(); i > 0; i-- ) {  
+      CubitFacetEdge *edge = elist.get_and_step();
+      CubitVector pt0_v = edge->point(0)->coordinates();
+      CubitVector pt1_v = edge->point(1)->coordinates();
+      GfxDebug::draw_point(pt0_v, CUBIT_GREEN );
+      GfxDebug::draw_point(pt1_v, CUBIT_RED );
+      GfxDebug::draw_line( pt0_v, pt1_v, CUBIT_YELLOW );
+      GfxDebug::flush();
+      int view = 0;
+      if (view)
+        dview();
+    }
+  }
+  return CUBIT_SUCCESS;
+}
+
 //=============================================================================
 //Function: length
 //Description: 
@@ -420,40 +527,25 @@ bool ChollaCurve::adj_facet_edges( CubitPoint *node_ptr, CubitFacetEdge *&adj_ed
   // initialize adj_edge1 and adj_edge2
   adj_edge1 = adj_edge2 = NULL;
 
-  DLIList<CubitFacetEdge*> edge_list;
-  node_ptr->edges( edge_list );
-  int jj, kk;
-  for (jj=0; jj<edge_list.size(); jj++)
-  {
-    CubitFacetEdge *node_edge_ptr = edge_list.get_and_step();
-    TDGeomFacet *td_gm_edge = TDGeomFacet::get_geom_facet(node_edge_ptr);
-    if (td_gm_edge != NULL)
-    {
-      DLIList<ChollaCurve*> fcurve_list;
-      td_gm_edge->get_cholla_curves( fcurve_list );
-      if (fcurve_list.size() > 0)
-      { // match the curve to the edge to find the next edge
-        for (kk=0; kk<fcurve_list.size(); kk++)
-        {
-          ChollaCurve *fcm_ptr = fcurve_list.get_and_step();
-          if (fcm_ptr == this)
-          {
-            if( NULL == adj_edge1 )
-              adj_edge1 = node_edge_ptr;
-            else 
-              if( NULL == adj_edge2 )
-                adj_edge2 = node_edge_ptr;
-              else
-                assert( false ); // More than two adj_edges can't be incident on a curve
-          }
-        }
-      }
-    }    
-  }
-  if( NULL == adj_edge1 )
+  DLIList<CubitFacetEdge*> node_edge_list;
+  node_ptr->edges( node_edge_list );
+
+  DLIList<CubitFacetEdge*> curve_edge_list; 
+  CAST_LIST(curveEdgeList, curve_edge_list, CubitFacetEdge);
+
+  curve_edge_list.intersect(node_edge_list);
+  assert(curve_edge_list.size() < 3);
+
+  if (0 == curve_edge_list.size())
     return false;
-  else
-    return true;
+
+  curve_edge_list.reset();
+  adj_edge1 = curve_edge_list.get();
+
+  if (curve_edge_list.size() > 1)
+    adj_edge2 = curve_edge_list.next();
+
+  return true;
 }
 
 //=============================================================================
@@ -600,6 +692,86 @@ CubitStatus ChollaCurve::determine_ends( )
   return CUBIT_SUCCESS;
 }
 
+
+CubitStatus ChollaCurve::build_curve_facet_eval_tool( void )
+{ 
+  //debug this function as point list is not valid
+
+  if( this->get_eval_tool() )
+  {
+    assert(false); //WARNING: Curve facet eval tool already exist!
+  }
+
+  CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool();
+
+  // Step 1: Initialize facet_edge_list and point_list
+  CubitStatus stat;
+  DLIList<CubitPoint *> point_list;
+  int i;
+  // insert start point of every facet_edge
+  curveEdgeList.reset();
+  for( i = 0; i < curveEdgeList.size(); i++ )
+  {
+    point_list.append( CAST_TO( curveEdgeList.get_and_step(), CubitFacetEdge )->point(0) );
+  }
+  // insert end point of last facet_edge
+  curveEdgeList.step( curveEdgeList.size() - 1 );
+  point_list.append( CAST_TO( curveEdgeList.get(), CubitFacetEdge )->point(1) );
+
+  DLIList<CubitFacetEdge *> edge_list;
+  CAST_LIST( curveEdgeList, edge_list, CubitFacetEdge );
+  stat = curv_eval_tool_ptr->initialize( edge_list, point_list );
+  if( stat != CUBIT_SUCCESS )
+  {
+    return stat;
+  }
+  
+ /*
+ // Step 2: find sense of curve_facet_eval_tool  /// this is done internally in next Step in initialize()
+  if( this->startPoint )
+  {
+    stat = curv_eval_tool_ptr->find_curv_sense( this->startPoint );
+    if( stat != CUBIT_SUCCESS )
+    {
+      return stat;
+    }  
+  }
+*/
+  // Step 2: Initialize adj_surface_facet_eval_tool with orientation_wrt_surface
+  if( surfaceList.size() )
+  {
+    CubitSense orientation_wrt_surface;
+    if( CUBIT_SUCCESS == ChollaEngine::determine_curve_orientation( surfaceList.get(), this, orientation_wrt_surface ) )
+    {
+      if( this->startPoint && this->endPoint )
+      {
+        stat = curv_eval_tool_ptr->initialize( surfaceList.get()->get_eval_tool(),
+                      this->startPoint,
+                      this->endPoint,
+                      orientation_wrt_surface);
+      }
+    }
+    else
+    {
+      assert(false);
+    }
+
+    if( stat != CUBIT_SUCCESS )
+    {
+      assert( false );
+      return stat;
+    }      
+  }
+  else
+  {
+    assert(false); //WARNING: No adjacent cholla surface available
+  }
+
+  // Step 4: assign the new curv_eval_tool to cholla_curve
+ assign_eval_tool( curv_eval_tool_ptr );
+
+  return stat;
+}
 
 //=============================================================================
 //Function:  feature_angle (PRIVATE)
@@ -791,85 +963,22 @@ CubitStatus ChollaCurve::replace_facet( FacetEntity *remove_edge, FacetEntity *r
   return CUBIT_SUCCESS;
 }
 
-CubitStatus ChollaCurve::build_curve_facet_eval_tool( void )
-{ 
-  //debug this function as point list is not valid
-
-  if( this->get_eval_tool() )
-  {
-    assert(false); //WARNING: Curve facet eval tool already exist!
-  }
-
-  CurveFacetEvalTool *curv_eval_tool_ptr = new CurveFacetEvalTool();
-
-  // Step 1: Initialize facet_edge_list and point_list
-  CubitStatus stat;
-  DLIList<CubitPoint *> point_list;
-  int i;
-  // insert start point of every facet_edge
-  curveEdgeList.reset();
-  for( i = 0; i < curveEdgeList.size(); i++ )
-  {
-    point_list.append( CAST_TO( curveEdgeList.get_and_step(), CubitFacetEdge )->point(0) );
-  }
-  // insert end point of last facet_edge
-  curveEdgeList.step( curveEdgeList.size() - 1 );
-  point_list.append( CAST_TO( curveEdgeList.get(), CubitFacetEdge )->point(1) );
-
-  DLIList<CubitFacetEdge *> edge_list;
-  CAST_LIST( curveEdgeList, edge_list, CubitFacetEdge );
-  stat = curv_eval_tool_ptr->initialize( edge_list, point_list );
-  if( stat != CUBIT_SUCCESS )
-  {
-    return stat;
-  }
-  
- /*
- // Step 2: find sense of curve_facet_eval_tool  /// this is done internally in next Step in initialize()
-  if( this->startPoint )
-  {
-    stat = curv_eval_tool_ptr->find_curv_sense( this->startPoint );
-    if( stat != CUBIT_SUCCESS )
-    {
-      return stat;
-    }  
-  }
-*/
-  // Step 2: Initialize adj_surface_facet_eval_tool with orientation_wrt_surface
-  if( surfaceList.size() )
-  {
-    CubitSense orientation_wrt_surface;
-    if( CUBIT_SUCCESS == ChollaEngine::determine_curve_orientation( surfaceList.get(), this, orientation_wrt_surface ) )
-    {
-      if( this->startPoint && this->endPoint )
-      {
-        stat = curv_eval_tool_ptr->initialize( surfaceList.get()->get_eval_tool(),
-                      this->startPoint,
-                      this->endPoint,
-                      orientation_wrt_surface);
-      }
-    }
-    else
-    {
-      assert(false);
-    }
-
-    if( stat != CUBIT_SUCCESS )
-    {
-      assert( false );
-      return stat;
-    }      
-  }
-  else
-  {
-    assert(false); //WARNING: No adjacent cholla surface available
-  }
-
-  // Step 4: assign the new curv_eval_tool to cholla_curve
- assign_eval_tool( curv_eval_tool_ptr );
-
-  return stat;
+CubitStatus ChollaCurve::insert_facet( FacetEntity *old_edge, FacetEntity *new_edge )
+{
+  curveEdgeList.move_to( old_edge );
+  curveEdgeList.insert( new_edge );
+    
+  return CUBIT_SUCCESS;
 }
+
+CubitStatus ChollaCurve::is_contain( FacetEntity *edge )
+{
+  if( curveEdgeList.is_in_list( edge ) )
+    return CUBIT_SUCCESS;
+  else
+    return CUBIT_FAILURE;
+}
+
 
 //=============================================================================
 //Function:  is_in_volume (PUBLIC)
@@ -981,6 +1090,22 @@ CubitStatus ChollaCurve::verify_points()
       return CUBIT_FAILURE;
   }
   return CUBIT_SUCCESS;
+}
+
+int ChollaCurve::num_volumes()
+{
+
+  DLIList<ChollaVolume *> chvol_list;
+  for (int i=0; i<surfaceList.size(); i++)
+  {
+    ChollaSurface *chsurf_ptr = surfaceList.get_and_step();  
+    DLIList<ChollaVolume*> tmp_vols;
+    chsurf_ptr->get_volumes(tmp_vols);
+    chvol_list += tmp_vols;
+  }
+
+  chvol_list.uniquify_unordered();
+  return chvol_list.size();
 }
 
 //EOF

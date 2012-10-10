@@ -30,6 +30,11 @@ CubitPlane::CubitPlane() : normal_(0.0, 0.0, 0.0)
 CubitPlane::CubitPlane(const CubitVector &Normal, const double D) :
   normal_(Normal)
 {
+  // make sure that Normal is not (0,0,0) causing a division by 0
+  if(normal_.length()==0)
+    throw std::invalid_argument ("Normal Length must not be 0");
+  //assert(!normal_.length()==0);
+
   double length = normal_.length();
   d_ = D / length;
   normal_ /= length;
@@ -57,7 +62,8 @@ CubitPlane::CubitPlane(DLIList<CubitVector*> &positions)
 // Newells method for determining approximate plane equation.
 // Plane equation is of the form:
 // 0 = plane_D +plane_normal.x()*X + plane_normal.y()*Y + plane_normal.z()*Z
-
+  if(positions.size() < 3)
+    throw std::invalid_argument("Must have 3 or more Points");
   CubitVector vector_diff;
   CubitVector vector_sum;
   CubitVector ref_point = CubitVector (0.0, 0.0, 0.0);
@@ -79,6 +85,10 @@ CubitPlane::CubitPlane(DLIList<CubitVector*> &positions)
     normal_ += tmp_vector;
   }
   double divisor = positions.size() * normal_.length();
+//  if (divisor < .000000001)
+//  {
+//    PRINT_ERROR("Colinear basis vector in CubitPlane constructor");
+//  }
   d_ = (ref_point % normal_) / divisor;
   normal_.normalize();
   normal_ *= -1.0;
@@ -108,13 +118,18 @@ int CubitPlane::mk_plane_with_points( const CubitVector& V0,
     // vectors will yield a null vector (one whose length is zero).
   normal_ = vector01 * vector02;
   
-  if (normal_.length() < CUBIT_RESABS)
+  if(normal_.length() <= CUBIT_RESABS)
+  {
+    throw std::invalid_argument ("Length of the Normal must be greater than 1.0E-12");
+  }
+  // assert(normal_.length() > CUBIT_RESABS);
+  /*if (normal_.length() < CUBIT_RESABS)
   {
     PRINT_ERROR("Points are collinear.\n"
                 "       Cannot create a CubitPlane object.\n");
     d_ = 0.0;
     return CUBIT_FAILURE;
-  }
+  }*/
   
   normal_.normalize();
   

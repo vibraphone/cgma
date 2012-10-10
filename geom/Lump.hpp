@@ -38,6 +38,8 @@ class CUBIT_GEOM_EXPORT Lump : public GeometryEntity
 
       virtual ~Lump() ;
       //- The destructor
+
+      typedef Surface ChildType;
   
       virtual const type_info& topology_entity_type_info() const;
 
@@ -47,10 +49,10 @@ class CUBIT_GEOM_EXPORT Lump : public GeometryEntity
       //R- The enumerated type of the geometric representation
 
    virtual CubitStatus mass_properties( CubitVector &centroid, double &volume ) = 0;
-   virtual CubitStatus mass_properties( CubitVector /*principal_axes*/[3], 
-                                        CubitVector &/*principal_moments*/,
-                                        CubitVector &/*centroid*/, 
-                                        double &/*volume*/ ) {return CUBIT_FAILURE;}
+   virtual CubitStatus mass_properties( CubitVector principal_axes[3], 
+                                        CubitVector &principal_moments,
+                                        CubitVector &centroid, 
+                                        double &volume ) {return CUBIT_FAILURE;}
 
    protected: 
 

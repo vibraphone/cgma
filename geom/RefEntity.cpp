@@ -68,7 +68,8 @@ RefEntity::RefEntity()
   autoMergeStatus      = AUTO_MERGE_AUTO | AUTO_MERGE_ON;
   markedFlag           = CUBIT_FALSE;
   listFlag             = CUBIT_FALSE;
-  mColor = CUBIT_DEFAULT_COLOR;
+  mColor               = CUBIT_DEFAULT_COLOR;
+  localTolerance       = 0.0;
 
   CGMHistory::Event evt(CGMHistory::ENTITY_CREATED, this);
   GeometryQueryTool::instance()->history().add_event(evt);
@@ -133,7 +134,7 @@ int RefEntity::num_names() const
   DLIList<CubitString*> names;
   
   // Get the name(s) associated with this RefEntity.
-  RefEntityName::instance()->get_refentity_name(this, names, CUBIT_TRUE);
+  RefEntityName::instance()->get_refentity_name(this, names);
   return names.size();
 }
   
@@ -367,10 +368,6 @@ void RefEntity::get_all_child_ref_entities( DLIList<RefEntity*>& input_list,
   target_type = get_child_ref_entity_type( target_type );
   while (target_type.is_valid())
   {
-#ifdef BOYD17 
-    ModelQueryEngine::BeginQuery lock;
-#endif
-    
     input_list.reset();
     for (i = input_list.size(); i--; )
     {
@@ -998,9 +995,6 @@ int RefEntity::num_parent_ref_entities()
   DagType parent_type = get_parent_ref_entity_type();
   
   DLIList<ModelEntity*> tempList ;
-#ifdef BOYD17 
-  DLIList<RefEntity*> tmp_ref_list ;
-#endif
   
     // Now retrieve the appropriate type of parent entities of this one,
     // if the parent_type is a valid type

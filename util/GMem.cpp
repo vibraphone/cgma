@@ -3,6 +3,7 @@
 #include "CubitVector.hpp"
 #include "DLIList.hpp"
 #include "OctTree.hpp"
+#include "CubitTransformMatrix.hpp"
 
 GMem::GMem()
 {
@@ -264,4 +265,18 @@ void GMem::consolidate_many_points( double tolerance )
 
   delete [] index_map;
   pointsConsolidated = CUBIT_TRUE;
+}
+
+void GMem::transform(CubitTransformMatrix &transform)
+{
+  int i=0;
+  CubitVector temp_point;
+  for (i=0; i<this->pointListCount; i++)
+  {
+    temp_point.set(pointList[i].x, pointList[i].y, pointList[i].z);
+    temp_point = transform * temp_point;
+    pointList[i].x = (float)temp_point.x();
+    pointList[i].y = (float)temp_point.y();
+    pointList[i].z = (float)temp_point.z();
+  }
 }

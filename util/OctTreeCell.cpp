@@ -11,8 +11,6 @@
 // Creation Date : 01/30/02
 //-------------------------------------------------------------------------
 
-#if !defined(TEMPLATE_DEFS_INCLUDED) || defined(INCLUDED_FROM_OCT_TREE_CELL_HPP)
-
 #include "OctTreeCell.hpp"
 #include "CubitVector.hpp"
 
@@ -196,5 +194,3 @@ void OctTreeCell<X,E>::node_locations( CubitVector& box_min,
   }
 }
 
-
-#endif

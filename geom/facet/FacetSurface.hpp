@@ -430,6 +430,11 @@ public :
     //- Returns volume for Lump, area for Surface, length for Curve and 
     //- 1.0 for Point
 
+  
+  virtual CubitStatus get_projected_distance_on_surface( CubitVector *pos1,
+                                                         CubitVector *pos2, 
+                                                         double &distance );
+
   void update_measurement();
     //Make sure we don't retain an out-dated measurement.
   
@@ -451,15 +456,9 @@ public :
   void get_bodies  ( DLIList<FacetBody   *>& bodies   );
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
-#ifdef BOYD14
-  void get_surfaces( DLIList<FacetSurface*>& surfaces );
-#endif
   void get_loops   ( DLIList<FacetLoop   *>& loops    );
   void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
   void get_curves  ( DLIList<FacetCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<FacetPoint  *>& points   );
-#endif
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
@@ -498,6 +497,85 @@ public :
   CubitBoolean is_flat(); 
   CubitBoolean is_spherical();
   CubitBoolean is_conical();
+
+  virtual CubitStatus get_nurb_params( bool &rational,
+                                       int &degree_u,
+                                       int &degree_v,
+                                       int &num_cntrl_pts_u,
+                                       int &num_cntrl_pts_v,
+                                       DLIList<CubitVector> &cntrl_pts,
+                                       DLIList<double> &weights,
+                                       DLIList<double> &u_knots,
+                                       DLIList<double> &v_knots ) const;
+  //- Only valid for nurbs surfaces
+  //O rational
+  //O-   True if the nurb is rational
+  //O degree_u
+  //O-   The degree of the nurb in the u direction
+  //O degree_v
+  //O-   The degree of the nurb in the v direction
+  //O num_cntrl_pts_u
+  //O-   Number of control points in the u direction
+  //O num_cntrl_pts_v
+  //O-   Number of control points in the v direction
+  //O cntrl_pts
+  //O-   The control points stored as
+  //O-           cntrl_pts[0                ] = pt[u=0][v=0]
+  //O-           cntrl_pts[1                ] = pt[u=1][v=0]
+  //O-               ...
+  //O-           cntrl_pts[num_cntrl_pts_u-1] = pt[u=?][v=0]
+  //O-           cntrl_pts[num_cntrl_pts_u  ] = pt[u=0][v=1]
+  //O-               ...
+  //O weights
+  //O-   If rational, weights for each control point, stored in the same
+  //O-   order as the control points.  No weights are returned if
+  //O-   rational == false
+  //O u_knots
+  //O-   knot vector in the u direction
+  //O v_knots
+  //O-   knot vector in the v direction
+
+  virtual CubitStatus get_sphere_params( CubitVector &center,
+                                         double &radius ) const;
+    //- Only valid for spherical surfaces
+    //O center
+    //O- The center of the sphere
+    //O radius
+    //O- The radius of the sphere
+
+  virtual CubitStatus get_cone_params( CubitVector &center,
+                                       CubitVector &normal,
+                                       CubitVector &major_axis,
+                                       double &radius_ratio,
+                                       double &sine_angle,
+                                       double &cos_angle ) const;
+    //- Only valid for conical surfaces.  Cylinders are a special case of conicals.
+    //O center
+    //O- 
+    //O normal
+    //O- 
+    //O major_axis
+    //O- 
+    //O radius_ratio
+    //O- 
+    //O sine_angle
+    //O- 
+    //O cos_angle
+    //O- 
+
+  virtual CubitStatus get_torus_params( CubitVector &center,
+                                        CubitVector &normal,
+                                        double &major_radius,
+                                        double &minor_radius ) const;
+    //- Only valid for torus surfaces.
+    //O center
+    //O- 
+    //O normal
+    //O- 
+    //O major_radius
+    //O- 
+    //O minor_radius
+    //O- 
 
   const CubitEvaluatorData *evaluator_data();
   void add_transformation( CubitTransformMatrix &tfmat );

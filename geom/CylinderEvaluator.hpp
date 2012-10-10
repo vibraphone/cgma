@@ -42,9 +42,6 @@ private:
 
 protected: 
 
-#ifdef BOYD14
-    CubitVector base_transformed() const;
-#endif
     CubitVector base() const;
 
 public :

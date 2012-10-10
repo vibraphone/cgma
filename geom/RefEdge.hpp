@@ -35,6 +35,8 @@ class GMem;
 class CUBIT_GEOM_EXPORT RefEdge : public BasicTopologyEntity
 {
 public :
+
+  typedef RefVertex ChildType;
    
 // ********** BEGIN STATIC FUNCTION DECLARATIONS     **********
 // ********** END STATIC FUNCTION DECLARATIONS     **********
@@ -535,7 +537,9 @@ public :
     //- heal the edge.
 //=========  Code End by SRS of Cat,  3/3/99 2:28:31 PM  =========
 
-  CubitStatus get_graphics( GMem& polyline, double tolerance = 0.0 );
+  CubitStatus get_graphics( GMem& polyline, double angle_tolerance=0, 
+                                            double distance_tolerance=0,
+                                            double max_edge_length=0 );
     
   void reverse_tangent();
 

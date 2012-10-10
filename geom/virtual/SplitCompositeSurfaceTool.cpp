@@ -125,9 +125,9 @@ void SplitCompositeSurfaceTool::get_additional_split_points(Surface *surf,
             hidden_curve = cc->get_curve(0);
           GeometryModifyEngine *gme = GeometryModifyTool::instance()->
             get_engine(hidden_curve);
-          Point *pt1 = gme->make_Point(*cur_vec);
-          Point *pt2 = gme->make_Point(*last_vec);
-          Curve *tmp_crv = gme->make_Curve(STRAIGHT_CURVE_TYPE, pt1, pt2, NULL, CUBIT_FORWARD);
+          TBPoint *pt1 = gme->make_Point(*cur_vec);
+          TBPoint *pt2 = gme->make_Point(*last_vec);
+          Curve *tmp_crv = gme->make_Curve(STRAIGHT_CURVE_TYPE, pt1, pt2, NULL);
           if(tmp_crv)
           {
             double arc_length = tmp_crv->get_arc_length();

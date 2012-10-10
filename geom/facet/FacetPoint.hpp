@@ -43,7 +43,7 @@ class FacetCurve;
 
 // ********** END FORWARD DECLARATIONS     **********
 
-class FacetPoint : public Point
+class FacetPoint : public TBPoint
 {
 private:
 
@@ -56,7 +56,7 @@ private:
 
 public :
   
-  FacetPoint(CubitVector &location, DLIList<Curve*> &curves );
+  FacetPoint(const CubitVector &location, DLIList<Curve*> &curves );
     //I- CubitVector &location
     //I- location of point (creates a CubiPoint).
     //I- DLIList<Curve*> curves
@@ -75,11 +75,6 @@ public :
   virtual ~FacetPoint();
     //- The destructor
 
-#ifdef BOYD14
-  FacetPoint *copy();
-    // make a new copy of this point and return it
-#endif
-      
   virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
     //R void
     //I 
@@ -136,16 +131,11 @@ public :
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-#ifdef BOYD14
-  CubitStatus move( CubitVector &delta );
-    //- Move the first vertex's point by the delta.
-#endif
-
   void add_curve( Curve* curv_ptr )
     { myCurves.append_unique( curv_ptr ); }
     // associate this point with a curve
 
-  CubitPoint *get_cubit_point()
+  CubitPoint *get_cubit_point() const
     { return myPoint; }
     // return the CubitPoint associated with this facet point
 
@@ -158,18 +148,12 @@ public :
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#endif
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
   void get_surfaces( DLIList<FacetSurface*>& surfaces );
   void get_loops   ( DLIList<FacetLoop   *>& loops    );
   void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
   void get_curves  ( DLIList<FacetCurve  *>& curves   );
-#ifdef BOYD14
-  void get_points  ( DLIList<FacetPoint  *>& points   );
-#endif
   
   CubitStatus disconnect_curve( FacetCurve* curve );
   

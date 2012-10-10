@@ -26,7 +26,7 @@
 // ********** BEGIN FORWARD DECLARATIONS   **********
 class TopologyEntity;
 class OCCAttrib;
-class Point;
+class TBPoint;
 
 class OCCBody;
 class OCCLump;
@@ -49,7 +49,7 @@ public :
 
   void set_myMarked( CubitBoolean marked) {myMarked = marked;}
 
-  void add_loop(OCCLoop* loop) ;   
+  void add_loop(OCCLoop* loop);    
   DLIList<OCCLoop*> loops() {return myLoopList;}
   void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}
   void clean_loops(){myLoopList.clean_out();}
@@ -308,6 +308,29 @@ public :
   virtual void get_parents_virt( DLIList<TopologyBridge*>& parents );
   virtual void get_children_virt( DLIList<TopologyBridge*>& children );
 
+  //R CubitStatus
+  //O- true or false if spline is rational or not.
+  //O- the degree of this spline
+  //O- the control points
+  //O- If rational, weight for each control point
+  //O- the knots
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots
+                                       ) const;
+
+  //R CubitStatus
+  //O- center - ellipse center point
+  //O- normal - normal of the plane of the ellipse
+  //O- major_axis - major axis of the ellipse
+  //O- radius_ratio - ratio of the length of the major to minor axis.
+  virtual CubitStatus get_ellipse_params( CubitVector &center,
+                                          CubitVector &normal,
+                                          CubitVector &major_axis,
+                                          double &radius_ratio ) const;
+
   void get_points(DLIList<OCCPoint*>& point_list);
     //- Gets the list of points describing this curve.
 
@@ -320,7 +343,7 @@ public :
                           BRepAlgoAPI_BooleanOperation *op = NULL );
  
   Curve* project_curve(Surface* face_ptr,
-                       DLIList<Point*>&  normal_proj_points,
+                       DLIList<TBPoint*>&  normal_proj_points,
                        CubitBoolean closed,
                        const CubitVector* third_point);
 protected: 

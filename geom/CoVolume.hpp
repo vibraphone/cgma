@@ -73,13 +73,6 @@ class CUBIT_GEOM_EXPORT CoVolume : public SenseEntity
       //- This function returns a pointer to the RefVolume which
       //- the current CoVolume is associated with.
       
-#ifdef BOYD14
-      Body* get_body_ptr();
-      //R Body*
-      //R- A pointer to the Body which the current sense 
-      //R- entity is associated with.
-#endif
-
    protected: 
 
    private:

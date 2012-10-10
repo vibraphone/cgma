@@ -292,8 +292,7 @@ void CompositeLoop::print_debug_info( const char* line_prefix )
   strcpy( new_prefix, line_prefix );
   strcat( new_prefix, "  " );
   
-  PRINT_INFO("%sCompositeLoop @ %p : \n", line_prefix,
-    static_cast<void*>(this) );
+  PRINT_INFO("%sCompositeLoop @ %p : \n", line_prefix, this );
   CompositeCoEdge* coedge = first_coedge();
   if( !coedge )
     PRINT_INFO("%s  No CoEdges!!\n", line_prefix);

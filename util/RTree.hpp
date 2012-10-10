@@ -105,9 +105,8 @@ public:
     //- Function to use with the priority queue for sorting.
   
 };
-#if defined(TEMPLATE_DEFS_INCLUDED)
- #include "RTree.cpp"
-#endif
+
+#include "RTree.cpp"
 
 #endif
 

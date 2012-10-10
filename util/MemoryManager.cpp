@@ -17,9 +17,10 @@
 #include "AppUtil.hpp"
 #include <cassert>
 #include <cstring>
-#ifndef NT
+#ifndef WIN32
 #include <unistd.h>
 #endif
+
 
 MemoryManager* MemoryManager::memoryManagerListHead = NULL;
 
@@ -38,14 +39,10 @@ MemoryManager::MemoryManager(const MemoryManager&) : useNew(false)
 
 MemoryManager::MemoryManager(const char* name, size_t size, int mem_size,
                              int static_flag)
-#ifndef NDEBUG
-  : useNew(getenv("CUBIT_DISABLE_MEMORY_MANAGERS") != NULL)
-#else
-  : useNew(false)
-#endif
+  : useNew(true)
 {
     // allocate space for name and copy into buffer
-  if (name)
+  if (name) 
   {
     objectName = new char[strlen(name) + 1];
     strcpy(objectName, name);
@@ -226,17 +223,17 @@ void MemoryManager::show_object_memory(const char* name)
       int f_obj = mem_manager->get_free_objects();
       int u_obj = a_obj - f_obj;
 
-      PRINT_INFO("  Object Size: %d     Allocation Increment: %d\n\n",
+      PRINT_INFO("  Object Size: %zu     Allocation Increment: %d\n\n",
 		 mem_manager->objectSize, mem_manager->memAllocatnSize);
       PRINT_INFO("  Allocated Objects: %d  (bytes) %d\n", a_obj,
-		 a_obj * mem_manager->objectSize);
+		 a_obj * (int)(mem_manager->objectSize));
       if (a_obj)
       {
         PRINT_INFO("       Free Objects: %d  (bytes) %d (%d%%)\n", f_obj,
-	  	   f_obj * mem_manager->objectSize,
+	  	   f_obj * (int)(mem_manager->objectSize),
 		   (100*f_obj)/a_obj);
         PRINT_INFO("       Used Objects: %d  (bytes) %d (%d%%)\n", u_obj,
-		   u_obj * mem_manager->objectSize,
+		   u_obj * (int)(mem_manager->objectSize),
 		   (100*u_obj)/a_obj);
       }
     }
@@ -258,6 +255,117 @@ void MemoryManager::show_object_memory(const char* name)
 // show allocation for all memory manager objects
 void MemoryManager::show_all_object_memory()
 {
+
+#if defined(MACOSX)
+	
+  pid_t PID = getpid();
+  char command1[60];
+  unsigned long rss, vm;
+
+  FILE *pipe;
+  char buf[1024];
+  
+  //get size of real memory
+  sprintf(command1,"ps -o rss -p %d | grep -v RSS",PID);
+  pipe = popen(command1, "r");
+  if (pipe) 
+  {
+    fgets(buf, 1024, pipe);
+    rss = strtoul(buf, NULL, 0);
+    pclose(pipe);
+  }
+
+  //get size of virtual memory
+  sprintf(command1,"ps -o vsz -p %d | grep -v VSZ",PID);
+  pipe = popen(command1, "r");
+  if (pipe) 
+  {
+    fgets(buf, 1024, pipe);
+    vm = strtoul(buf, NULL, 0);
+    pclose(pipe);
+  }
+
+  PRINT_INFO("Total memory = %u\n", vm );
+  PRINT_INFO("Resident memory = %u\n", rss );
+
+
+/*
+  struct rusage my_rusage;
+  int ret_val = getrusage( RUSAGE_CHILDREN, &my_rusage ); 
+
+  if( ret_val == 0 )
+  {
+    PRINT_INFO("It was a success\n");
+    PRINT_INFO("Memory size = %d\n", my_rusage.ru_maxrss );
+    PRINT_INFO("Unshared data size = %d\n", my_rusage.ru_idrss);
+    PRINT_INFO("Integeral unshared data size = %d\n", my_rusage.ru_isrss);
+    PRINT_INFO("more values: %d %d %d %d %d %d %d %d %d %d %d \n",
+		my_rusage.ru_ixrss, my_rusage.ru_minflt, my_rusage.ru_majflt, my_rusage.ru_nswap, 
+                my_rusage.ru_inblock, my_rusage.ru_oublock, my_rusage.ru_msgsnd, my_rusage.ru_msgrcv, 
+                my_rusage.ru_nsignals, my_rusage.ru_nvcsw, my_rusage.ru_nivcsw ); 
+  }
+  else
+    PRINT_INFO("It was a failure\n");
+ */  
+
+ 
+/* 
+  int i, mib[4];
+  size_t len;
+  struct kinfo_proc kp;
+
+  len = 4;
+  sysctlnametomib("kern.proc.pid", mib, &len);
+  len = sizeof(kp);
+  int pid = getpid();
+  mib[3] = pid;
+  if (sysctl(mib, 4, &kp, &len, NULL, 0) == -1)
+  {
+    perror("sysctl");
+    PRINT_INFO("Got problems\n");
+  }
+  else if (len > 0)
+  {
+    PRINT_INFO("The call was successful!!!\n");
+  }
+*/
+
+/*
+  int i, mib[4];
+  size_t len;
+  struct kinfo_proc kp;
+ 
+  len = 4; 
+  sysctlnametomib("kern.proc.pid", mib, &len);
+
+  for (i = 0; i < 100; i++) 
+  {         
+    mib[3] = i;         
+    len = sizeof(kp);         
+    if (sysctl(mib, 4, &kp, &len, NULL, 0) == -1)
+      perror("sysctl");         
+    else if (len > 0)   
+      PRINT_INFO("Call was successful!\n"); 
+  }
+*/ 
+
+#endif
+
+
+#if defined(CUBIT_LINUX)
+  unsigned long vm, rss;
+  process_mem_usage( vm, rss );
+
+  unsigned long read, write;
+  process_file_io( read, write );
+
+  PRINT_INFO("Total memory = %lu\n", vm );
+  PRINT_INFO("Resident memory = %lu\n", rss );
+  PRINT_INFO("Bytes read = %lu\n", read );
+  PRINT_INFO("Bytes written = %lu\n", write );
+#endif
+
+  /*
   long int a_obj_byte_total = 0;
   long int f_obj_byte_total = 0;
   long int u_obj_byte_total = 0;
@@ -349,14 +457,14 @@ void MemoryManager::show_all_object_memory()
   }
 
 #ifndef JANUS
-#ifndef NT
+#ifndef WIN32
   struct rusage r_usage;
   AppUtil::instance()->apputil_getrusage(r_usage);
   PRINT_INFO("       (System reports %ld%c used, incl. executable)\n", 
               r_usage.ru_maxrss*getpagesize()/divisor, sizechar);
 #else
   PRINT_INFO("\n");
-#endif // NT
+#endif // WIN32
 #endif // JANUS
 
   // print DLList non-Pool allocation information
@@ -364,6 +472,10 @@ void MemoryManager::show_all_object_memory()
 	       "Maximum non-pool ArrayBasedContainer memory allocated = %u%c\n",
              ArrayBasedContainer::current_allocated_memory()/divisor, sizechar, 
              ArrayBasedContainer::maximum_allocated_memory()/divisor, sizechar);
+*/
+
+
+
 #if 0
   // print HOOPS memory usage
   long allocated = 0;
@@ -442,17 +554,16 @@ int MemoryManager::compress_all_object_memory()
 // generic operator new call
 void* MemoryManager::operator_new(size_t size)
 {
-#ifndef NDEBUG
+
   if (useNew) return malloc(size);
-#endif
 
   // send requests of "wrong" size to ::new
   
   try
-  {
+  { 
     if (size != objectSize) return ::new char[size];
   }
-  catch(...)
+  catch(...) 
   {
     return (void*) NULL;
   }
@@ -501,13 +612,11 @@ void* MemoryManager::operator_new(size_t size)
 // generic operator delete call
 void MemoryManager::operator_delete(void *deadObject, size_t size)
 {
-#ifndef NDEBUG
   if (useNew) 
   {
     free(deadObject);
     return;
   }
-#endif
 
   // requests of "wrong" size to ::delete
 
@@ -814,3 +923,85 @@ int MemoryManager::compress_memory()
     return 0;
   }
 }
+
+
+void MemoryManager::process_mem_usage(unsigned long &vm_usage, unsigned long &resident_set)
+{
+
+#if defined(CUBIT_LINUX)
+  using std::ios_base;
+  using std::ifstream;
+  using std::string;
+
+  vm_usage     = 0;
+  resident_set = 0;
+
+  // 'file' stat seems to give the most reliable results
+  //
+  ifstream stat_stream("/proc/self/stat",ios_base::in);
+  
+  // dummy vars for leading entries in stat that we don't care about
+  //
+  string pid, comm, state, ppid, pgrp, session, tty_nr;
+  string tpgid, flags, minflt, cminflt, majflt, cmajflt;
+  string utime, stime, cutime, cstime, priority, nice;
+  string O, itrealvalue, starttime;
+  
+  // the two fields we want...virtual memory size and resident memory size
+  //
+  unsigned long vsize;
+  long rss;
+  
+  stat_stream >> pid >> comm >> state >> ppid >> pgrp >> session >> tty_nr
+              >> tpgid >> flags >> minflt >> cminflt >> majflt >> cmajflt
+              >> utime >> stime >> cutime >> cstime >> priority >> nice
+              >> O >> itrealvalue >> starttime >> vsize >> rss; // don't care about the rest
+              
+  long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
+  vm_usage     = vsize / 1024;
+  resident_set = rss * page_size_kb;
+#endif
+}
+  
+ 
+void MemoryManager::process_file_io(unsigned long &read, unsigned long &write )
+{
+#if defined(CUBIT_LINUX)
+  using std::ios_base;
+  using std::ifstream;
+  using std::string;
+
+  read = 0;
+  write = 0;
+
+  // 'file' stat seems to give the most reliable results
+  //
+  ifstream stat_stream("/proc/self/io",ios_base::in);
+  
+  // dummy vars for leading entries in stat that we don't care about
+  //
+  string char1, char2;
+
+  //----------------------Getting two numbers out of this file 
+  // I/O counter: chars read
+  //The number of bytes which this task has caused to be read from storage. This
+  //is simply the sum of bytes which this process passed to read() and pread().
+  //It includes things like tty IO and it is unaffected by whether or not actual
+  //physical disk IO was required (the read might have been satisfied from
+  //pagecache)
+  
+  // I/O counter: chars written
+  //The number of bytes which this task has caused, or shall cause to be written
+  //to disk. Similar caveats apply here as with rchar.
+  
+  unsigned long tmp_read, tmp_write;
+  
+  stat_stream >> char1 >> tmp_read >> char2 >> tmp_write; //don't care about the rest 
+  
+  read = tmp_read;
+  write = tmp_write;
+#endif
+}
+
+
+

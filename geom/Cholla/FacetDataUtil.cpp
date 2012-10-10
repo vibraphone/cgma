@@ -1270,7 +1270,7 @@ CubitStatus FacetDataUtil::write_facets( const char *file_name, DLIList<CubitFac
   {
     pt = point_list.get_and_step();
     pt->set_id(ii);
-    fprintf(fp, "%d %f %f %f\n", ii, pt->x(), pt->y(), pt->z() );
+    fprintf(fp, "%d %lf %lf %lf\n", ii, pt->x(), pt->y(), pt->z() );
   }
 
   CubitFacet *facet;
@@ -1499,6 +1499,7 @@ CubitStatus FacetDataUtil::stitch_facets(
                                   npmerge, nemerge, nnomerge );
     if (rv != CUBIT_SUCCESS)
       return rv;
+
     if (nnomerge == 0)
     {
       is_water_tight = CUBIT_TRUE;
@@ -1573,7 +1574,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
     // note that this won't merge internal facets
 
     DLIList<CubitFacetEdge *>shell_boundary_edges;
-    FacetDataUtil::get_boundary_edges(*shell_ptr, shell_boundary_edges);
+    FacetDataUtil::get_boundary_edges(*shell_ptr, shell_boundary_edges);    
 
     // mark each of the edges with a shell id so we know when to merge shells
     // and add them to the kdtree for fast spatial searching
@@ -1589,11 +1590,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
     }
     for(jj=0; jj<shell_ptr->size(); jj++)
       shell_ptr->get_and_step()->marked( edge_shell_id );
-  }
-  if (mydebug)
-  {
-    dview();
-  }
+  }  
 
   // find points in merge_point_list that are colinear with edges in boundary_edges
 
@@ -1609,7 +1606,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
   {
     pt = merge_point_list.get_and_step();
     if (pt->marked() < 0)  // has already been merged
-      continue;
+      continue;   
 
     // find the closest edges in the rtree
 
@@ -1619,6 +1616,43 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
     ptbox.reset( ptmin, ptmax );
     close_edges.clean_out();
     r_tree.find(ptbox, close_edges);
+
+
+    //remove any close edges that already share the merge point
+    DLIList<CubitFacetEdge*> adj_edges;
+    for (jj=close_edges.size(); jj--; )
+    {
+      close_edge = close_edges.get();
+
+      if (close_edge->point(0) == pt || close_edge->point(1) == pt)
+      {
+        close_edges.change_to( NULL );
+        adj_edges.append( close_edge );
+      }
+
+      close_edges.step();
+    }
+    close_edges.remove_all_with_value( NULL );
+
+    if( close_edges.size() == 0 && adj_edges.size() > 0 )
+    {
+      //use a coareser tolerance to get some edges
+      //one tenth the average length of attached edges
+      double temp_tol = 0;
+      for( int i=adj_edges.size(); i--; )
+        temp_tol += adj_edges.get_and_step()->length();
+
+      temp_tol /= adj_edges.size();
+      temp_tol *= 0.1;      
+
+      //bump up tolerance to get more edges
+      ptmin.set( coord.x() - temp_tol, coord.y() - temp_tol, coord.z() - temp_tol );
+      ptmax.set( coord.x() + temp_tol, coord.y() + temp_tol, coord.z() + temp_tol );
+      ptbox.reset( ptmin, ptmax );
+      close_edges.clean_out();
+      r_tree.find(ptbox, close_edges);
+    }
+        
 
     // We did find something - go try to merge
 
@@ -1633,7 +1667,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
 
       if (close_edge->point(0) == pt || close_edge->point(1) == pt)
         continue;
-
+    
       // check to see if the edge is within tolerance of the merge point
 
       CubitVector loc_on_edge;
@@ -1780,7 +1814,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
       new_pt->marked( -new_pt->marked() );
       pt->marked( -pt->marked() );
     } // close_edges
-
+   
     if (!was_merged)
     {
       nnomerge++;
@@ -1800,7 +1834,7 @@ CubitStatus FacetDataUtil::merge_colinear_vertices(
           CubitVector loc_on_edge;
           CubitBoolean is_on_edge;
           double dist = edge->dist_to_edge(pt->coordinates(), loc_on_edge, is_on_edge);
-          PRINT_INFO("edge %d dist = %f is_on_edge = %d\n", edge->id(), dist, is_on_edge);
+          PRINT_INFO("edge %d dist = %lf is_on_edge = %d\n", edge->id(), dist, is_on_edge);
         }
         dview();
         pt = pt;
@@ -1883,7 +1917,7 @@ CubitStatus FacetDataUtil::merge_points(
              }
           }
           if (dedge->merge_edges( dother_edge ) == CUBIT_SUCCESS)
-          {   
+          {            
             nemerge++;
             edge_merged = true;
             dedge->set_as_feature();
@@ -1894,6 +1928,22 @@ CubitStatus FacetDataUtil::merge_points(
   } while (edge_merged);
   return CUBIT_SUCCESS;
 }
+
+
+CubitStatus FacetDataUtil::merge_coincident_vertices( DLIList<CubitPoint*> &points )
+{
+  points.reset();
+  CubitPoint *surviving_point = points.pop();
+  while( points.size() )
+  {    
+    int nemerge = 0;
+    merge_points( surviving_point, points.pop(), nemerge );   
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+
 
 //=============================================================================
 //Function:  merge_coincident_vertices (PRIVATE)
@@ -1952,6 +2002,7 @@ CubitStatus FacetDataUtil::merge_coincident_vertices(
   CubitPoint *close_pt = NULL;
   CubitFacet *facet;
   DLIList<CubitPoint*>adj_pt_list;
+
   for(ii=0; ii<boundary_points.size(); ii++)
   {
     pt = boundary_points.get_and_step();
@@ -2100,7 +2151,7 @@ CubitStatus FacetDataUtil::merge_coincident_vertices(
       delete pt;
     }
   }
-
+  
   if (mydebug)
   {
     CubitFacetEdge *edge;
@@ -2123,7 +2174,7 @@ CubitStatus FacetDataUtil::merge_coincident_vertices(
           assert(np == na);
           if (myfacet_list.size() != 2)
           {
-            dedraw( edge );
+            dedraw( edge );      
           }
         }
       }
@@ -2576,20 +2627,59 @@ void FacetDataUtil::mark_facets( DLIList<FacetEntity *> &facet_list, int mark_va
 {
   int ifacet;
   FacetEntity *facet_ptr;
-  CubitFacet *cfacet_ptr;
-  for (ifacet = 0; ifacet<facet_list.size(); ifacet++)
+  for (ifacet = 0; ifacet<facet_list.size(); ifacet++ )
   {
     facet_ptr = facet_list.get_and_step();
-    cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
-    cfacet_ptr->marked(mark_value);
-    for (int ii=0; ii<3; ii++)
+    CubitFacet *cfacet_ptr = dynamic_cast<CubitFacet *> (facet_ptr);
+    if( cfacet_ptr )
     {
-      cfacet_ptr->point(ii)->marked(mark_value);
-      cfacet_ptr->edge(ii)->marked(mark_value);
+      cfacet_ptr->marked(mark_value);
+      for (int ii=0; ii<3; ii++)
+      {
+        cfacet_ptr->point(ii)->marked(mark_value);
+        cfacet_ptr->edge(ii)->marked(mark_value);
+      }
     }
-  }
-  
+    else
+    {
+      CubitFacetEdge *edge_ptr = dynamic_cast<CubitFacetEdge*>(facet_ptr);
+      if( edge_ptr )
+      {
+        edge_ptr->marked(mark_value);
+        for (int ii=0; ii<2; ii++)        
+          edge_ptr->point(ii)->marked(mark_value);                  
+      }
+    }
+  }  
 }
 
-//EOF
+//==================================================================================
+// Description: identifies all the facets that contain given two cubit points
+//
+//
+// Notes:  
+// Author: william roshan quadros
+// Date: 3/30/2011
+//===================================================================================
+CubitStatus FacetDataUtil::find_facet( DLIList<CubitFacet *> temp_split_facets, CubitPoint *pnt0, CubitPoint *pnt1, DLIList<CubitFacet *>  &select_facets )
+{
+  int i;
+  CubitFacet *ptr_facet;
+  for( i = 0; i < temp_split_facets.size(); i++ )
+  {
+    ptr_facet = temp_split_facets.get_and_step();
+
+    if( ptr_facet->contains( pnt0 ) && ptr_facet->contains( pnt1 ) )
+    {
+      select_facets.append( ptr_facet);
+    }
+  }
+
+  if( select_facets.size() )
+    return CUBIT_SUCCESS;
+  else
+    return CUBIT_FAILURE;
+}
+
+
 

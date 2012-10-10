@@ -66,6 +66,7 @@ CubitStatus CubitAttrib::actuate_list(DLIList<RefEntity*> entity_list)
     ref_ent->actuate_cubit_attrib(CA_BODIES);
     ref_ent->actuate_cubit_attrib ( CA_ENTITY_ID );
     ref_ent->actuate_cubit_attrib(CA_ENTITY_COLOR);
+    ref_ent->actuate_cubit_attrib(CA_ENTITY_TOL);
 //#ifdef CAT
     ref_ent->actuate_cubit_attrib(CA_VERTEX_FORCE);
     ref_ent->actuate_cubit_attrib(CA_SURFACE_FORCE);

@@ -53,9 +53,6 @@ public:
   CubitStatus add( PartitionCoSurf* cosurf );
   CubitStatus remove( PartitionCoSurf* cosurf );
   
-#ifdef BOYD15
-  int num_co_surfaces() const;
-#endif
   PartitionCoSurf* next_co_surface( const PartitionCoSurf* prev = 0 ) const;
   PartitionCoSurf* find_first( const PartitionShell* shell ) const;
     // Get the first CoSurface connecting this surface w/ the passed shell
@@ -69,10 +66,6 @@ public:
     // Get the first CoSurface w/ the passed shell and sense
   
   void get_points( DLIList<PartitionPoint*>& list ) const;
-  
-#ifdef BOYD15
-  void get_manifold_curves( DLIList<PartitionCurve*>& result_list );
-#endif
   
   virtual CubitStatus save( CubitSimpleAttrib& attrib );
   
@@ -91,6 +84,16 @@ public:
       double &u, double &v,
       CubitVector* closest_location = NULL,
       CubitVector* unit_normal = NULL );
+
+  virtual CubitStatus evaluate( double u, double v,
+                                CubitVector *position,                                   
+                                CubitVector *normal,
+                                CubitVector *curvature1,
+                                CubitVector *curvature2 );
+
+  virtual CubitStatus get_projected_distance_on_surface( CubitVector *pos1,
+                                                         CubitVector *pos2, 
+                                                         double &distance );
 
   virtual CubitStatus closest_point( CubitVector const& pos, 
                              CubitVector* close = 0, CubitVector* norm = 0,
@@ -111,6 +114,85 @@ public:
   virtual CubitBoolean is_singular_in_V( double v_param );
   virtual CubitBoolean is_closed_in_U();
   virtual CubitBoolean is_closed_in_V();
+
+  virtual CubitStatus get_sphere_params( CubitVector &center,
+                                         double &radius ) const;
+    //- Only valid for spherical surfaces
+    //O center
+    //O- The center of the sphere
+    //O radius
+    //O- The radius of the sphere
+
+  virtual CubitStatus get_cone_params( CubitVector &center,
+                                       CubitVector &normal,
+                                       CubitVector &major_axis,
+                                       double &radius_ratio,
+                                       double &sine_angle,
+                                       double &cos_angle ) const;
+    //- Only valid for conical surfaces.  Cylinders are a special case of conicals.
+    //O center
+    //O- 
+    //O normal
+    //O- 
+    //O major_axis
+    //O- 
+    //O radius_ratio
+    //O- 
+    //O sine_angle
+    //O- 
+    //O cos_angle
+    //O- 
+
+    virtual CubitStatus get_torus_params( CubitVector &center,
+                                        CubitVector &normal,
+                                        double &major_radius,
+                                        double &minor_radius ) const;
+    //- Only valid for torus surfaces.
+    //O center
+    //O- 
+    //O normal
+    //O- 
+    //O major_radius
+    //O- 
+    //O minor_radius
+    //O- 
+
+  virtual CubitStatus get_nurb_params( bool &rational,
+                                       int &degree_u,
+                                       int &degree_v,
+                                       int &num_cntrl_pts_u,
+                                       int &num_cntrl_pts_v,
+                                       DLIList<CubitVector> &cntrl_pts,
+                                       DLIList<double> &weights,
+                                       DLIList<double> &u_knots,
+                                       DLIList<double> &v_knots ) const;
+  //- Only valid for nurbs surfaces
+  //O rational
+  //O-   True if the nurb is rational
+  //O degree_u
+  //O-   The degree of the nurb in the u direction
+  //O degree_v
+  //O-   The degree of the nurb in the v direction
+  //O num_cntrl_pts_u
+  //O-   Number of control points in the u direction
+  //O num_cntrl_pts_v
+  //O-   Number of control points in the v direction
+  //O cntrl_pts
+  //O-   The control points stored as
+  //O-           cntrl_pts[0                ] = pt[u=0][v=0]
+  //O-           cntrl_pts[1                ] = pt[u=1][v=0]
+  //O-               ...
+  //O-           cntrl_pts[num_cntrl_pts_u-1] = pt[u=?][v=0]
+  //O-           cntrl_pts[num_cntrl_pts_u  ] = pt[u=0][v=1]
+  //O-               ...
+  //O weights
+  //O-   If rational, weights for each control point, stored in the same
+  //O-   order as the control points.  No weights are returned if
+  //O-   rational == false
+  //O u_knots
+  //O-   knot vector in the u direction
+  //O v_knots
+  //O-   knot vector in the v direction
 
   virtual CubitStatus uv_derivitives( double u, double v,
                               CubitVector &du, CubitVector &dv );

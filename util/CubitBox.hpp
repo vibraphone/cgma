@@ -81,8 +81,15 @@ public:
     //- If tolerance is 0, use && or || operator.
   
   bool intersect(const CubitVector* ray_origin, const CubitVector* ray_direction,
-      CubitVector* intersection_pt = NULL);
+      CubitVector** intersection_pt = NULL);
     //- Check if ray intersects box
+
+
+  bool intersect(const CubitVector& ray_origin, const CubitVector& ray_direction);
+    //- Check if ray intersects box but doesn't calculate an intersection point.
+
+
+
 
     //- Heading: Operators
 
@@ -146,17 +153,6 @@ public:
   friend CUBIT_UTIL_EXPORT CubitBox operator+(const CubitBox& lhs, const CubitVector& rhs);
   friend CUBIT_UTIL_EXPORT CubitBox operator-(const CubitBox& lhs, const CubitVector& rhs);
   
-#ifdef BOYD15
-  double distance( const CubitVector& position ) const;
-    //R double
-    //R- The shortest distance from the passed position to the
-    //R- box, if the point is outside the box.  Zero if the
-    //R- passed position is within the box or on its boundary.
-    //I position
-    //I- A position from which to evaluate the shortest distance
-    //I- to the box.
-#endif
-	
 	double distance_squared( const CubitVector& position ) const;
   
   CubitVector closest_point( const CubitVector& position ) const;
@@ -166,17 +162,6 @@ public:
     //R- the box.
     //I- A position from which to evaluate the closest point
     //I- on the box.
-  
-#ifdef BOYD15
-  CubitBoolean within_2_dim( CubitBox& box ) const;
-    //R CubitBoolean
-    //R- CUBIT_TRUE/CUBIT_FALSE
-    //I box
-    //I- The box to test this relative to.
-    //- This method tests if this box is within the passed box
-    //- in at least two dimensions (i.e. within the projection of
-    //- box on the xz-plane, the xy-plane, or the yz-plane.)
-#endif
   
 private:
   

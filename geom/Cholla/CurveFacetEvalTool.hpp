@@ -114,7 +114,8 @@ public:
 
   // Called immediately after the constructor to initialize the data.
   CubitStatus initialize( DLIList<CubitFacetEdge*> &edge_list,
-                          DLIList<CubitPoint*> &point_list );
+                          DLIList<CubitPoint*> &point_list,
+                          FacetEvalTool* surf_eval = NULL);
   CubitStatus initialize( FacetEvalTool *surf_eval_tool,
                           CubitPoint *start_point,
                           CubitPoint *end_point,
@@ -156,6 +157,8 @@ public:
   CubitBoolean replace_point( CubitPoint *del_pnt, CubitPoint *keep_pnt );
 
   CubitBoolean replace_facets( DLIList< CubitFacetEdge *> &curv_edges );
+
+  void remove_facets( DLIList<CubitFacetEdge*> &facet_edges);
 
   CubitStatus position_from_fraction( double fraction, // between 0 and 1
                                       CubitVector &location_on_curve );

@@ -5,6 +5,8 @@
 
 #include <math.h>
 #include "CubitVector.hpp"
+#include <string>
+#include <stdexcept>
 
 // Define PI and TWO_PI
 #undef PI
@@ -19,9 +21,12 @@ const double TWO_PI = 2.0 * PI;
 CubitVector &CubitVector::length(const double new_length)
 {
   double length = this->length();
-  xVal *= new_length / length;
-  yVal *= new_length / length;
-  zVal *= new_length / length;
+  if(length > 1e-6)
+  {
+    xVal *= new_length / length;
+    yVal *= new_length / length;
+    zVal *= new_length / length;
+  }
   return *this;
 }
 
@@ -85,8 +90,10 @@ double CubitVector::interior_angle(const CubitVector &otherVector) const
     cosAngle = (*this % otherVector)/(len1 * len2);
   else
   {
-    assert(len1 > 0);
-    assert(len2 > 0);
+   if(len1<=0||len2<=0)
+      throw std::invalid_argument ("Length of 'this' or parameter must be > 0");
+   // assert(len1 > 0);
+   // assert(len2 > 0);
   }
   
   if ((cosAngle > 1.0) && (cosAngle < 1.0001))
@@ -103,7 +110,9 @@ double CubitVector::interior_angle(const CubitVector &otherVector) const
     angleRad = acos(cosAngle);
   else
   {
-    assert(cosAngle < 1.0001 && cosAngle > -1.0001);
+    if(cosAngle > -1.0001 && cosAngle < 1.0001)
+      throw std::invalid_argument ("cosAngle must be between -1.0001 and 1.0001");
+    // assert(cosAngle < 1.0001 && cosAngle > -1.0001);
   }
   
   return( (angleRad * 180.) / PI );
@@ -147,7 +156,10 @@ void CubitVector::blow_out(double gamma, double rmin)
     // in between, linearly interpolate
   xy_to_rtheta();
 //  r() = sqrt( (2. - r()) * r() ) * gamma  + r() * (1-gamma);
-  assert(gamma > 0.0);
+  if(gamma <= 0.0)
+  {
+    throw std::invalid_argument( "Gamma must be greater than zero" );
+  }
     // the following limits should really be roundoff-based
   if (r() > rmin*1.001 && r() < 1.001) {
     r() = rmin + pow(r(), gamma) * (1.0 - rmin);
@@ -233,6 +245,17 @@ double CubitVector::vector_angle_quick(const CubitVector& vec1,
   {
     angle += TWO_PI;
   }
+  
+  // Sometimes angle was slightly less than zero, 
+  // but adding TWO_PI puts us at exactly TWO_PI.
+  // More likely on optimized builds.
+  // "volatile" is to remove false precision 
+  // maintained within the scope of this function
+  if((*(volatile double*)&angle) >= TWO_PI)
+  {
+    angle -= TWO_PI;
+  }
+
   return angle;
 }
 
@@ -264,11 +287,6 @@ CubitVector vectorRotate(const double angle,
   yAxis *= y;
   return CubitVector(xAxis + yAxis);
 }
-
-#ifdef __APPLE__
-// optimization issues on mac osx.
-#pragma optimization_level 0
-#endif
 
 double CubitVector::vector_angle(const CubitVector &vector1,
                                  const CubitVector &vector2) const
@@ -356,12 +374,19 @@ double CubitVector::vector_angle(const CubitVector &vector1,
   {
     angle += TWO_PI;
   }
+
+  // Sometimes angle was slightly less than zero, 
+  // but adding TWO_PI puts us at exactly TWO_PI.
+  // More likely on optimized builds.
+  // "volatile" is to remove false precision 
+  // maintained within the scope of this function
+  if((*(volatile double*)&angle) >= TWO_PI)
+  {
+    angle -= TWO_PI;
+  }
+
   return angle;
 }
-
-#ifdef __APPLE__
-#pragma optimization_level reset
-#endif
 
 CubitBoolean CubitVector::within_tolerance( const CubitVector &vectorPtr2,
                                             double tolerance) const
@@ -508,11 +533,14 @@ void CubitVector::next_point( const CubitVector &direction,
 //- Project this vector onto the plane specified by the input plane normal
 void CubitVector::project_to_plane( const CubitVector &planenormal )
 {
-    // Cross the vector with the normal to get a vector on the plane
-    CubitVector planevec = planenormal * (*this);
+  CubitVector tmp = planenormal;
+  tmp.normalize();
 
-    // Cross the vector on the plane with the normal to get the 
-    // projection of the vector on the plane
-    *this = planevec * planenormal;
+  // Cross the vector with the normal to get a vector on the plane
+  CubitVector planevec = tmp * (*this);
+
+  // Cross the vector on the plane with the normal to get the 
+  // projection of the vector on the plane
+  *this = planevec * tmp;
 }
 

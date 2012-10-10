@@ -19,6 +19,7 @@
 #include "CubitObserver.hpp"
 #include "CubitDefines.h"
 #include "GeometryDefines.h"
+#include "CubitCompat.h"
 #include "CubitGeomConfigure.h"
 
 class CubitString;
@@ -34,7 +35,107 @@ class BodySM;
 class Lump; 
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
+
+enum Model_File_Type {
+  MFT_NOT_DEFINED = 0,
+  ACIS_TYPE,
+  ACIS_SAT_TYPE,
+  ACIS_SAB_TYPE,
+  ACIS_DEBUG_TYPE,
+  IGES_TYPE,
+  CATIA_TYPE,
+  STEP_TYPE,
+  PROE_TYPE,
+  GRANITE_TYPE,
+  GRANITE_G_TYPE,
+  GRANITE_SAT_TYPE,
+  GRANITE_PROE_PART_TYPE,
+  GRANITE_PROE_ASM_TYPE,
+  GRANITE_NEUTRAL_TYPE,
+  NCGM_TYPE,
+  CATIA_NCGM_TYPE,
+  CATPART_TYPE,
+  CATPRODUCT_TYPE,
+  FACET_TYPE, 
+  SOLIDWORKS_TYPE,
+  OCC_TYPE
+};
+
+
+extern const char*
+get_MFT_string(Model_File_Type);
+
+inline const char*
+get_MFT_string(Model_File_Type type)
+{
+  switch (type)
+  {
+    case MFT_NOT_DEFINED :
+      return "Model File Type NOT DEFINED";
+    case ACIS_TYPE :
+      return "ACIS";
+    case ACIS_SAT_TYPE :
+      return "ACIS_SAT";
+    case ACIS_SAB_TYPE :
+      return "ACIS_SAB";
+    case ACIS_DEBUG_TYPE :
+      return "ACIS_DEBUG";
+    case IGES_TYPE :
+      return "IGES";
+    case CATIA_TYPE :
+      return "CATIA";
+    case STEP_TYPE :
+      return "STEP";
+    case PROE_TYPE :
+      return "PROE";
+    case GRANITE_TYPE :
+      return "GRANITE";
+    case GRANITE_G_TYPE :
+      return "GRANITE_G";
+    case GRANITE_SAT_TYPE :
+      return "GRANITE_SAT";
+    case GRANITE_PROE_PART_TYPE :
+      return "GRANITE_PROE_PART";
+    case GRANITE_PROE_ASM_TYPE :
+      return "GRANITE_PROE_ASM";
+    case GRANITE_NEUTRAL_TYPE :
+      return "GRANITE_NEUTRAL";
+    case NCGM_TYPE :
+      return "NCGM";
+    case CATIA_NCGM_TYPE :
+      return "CATIA_NCGM";
+    case CATPART_TYPE :
+      return "CATPART";
+    case CATPRODUCT_TYPE :
+      return "CATPRODUCT";
+    case FACET_TYPE :
+      return "FACET";
+    case SOLIDWORKS_TYPE :
+      return "SOLIDWORKS";
+    default :
+      PRINT_ERROR("Model_File_Type index %i is not handled properly in get_MFT_string()\n", type);
+  }
+  
+  return "";
+}  //  get_MFT_string()
+
+
+static const char* const ACIS_SAT = ".sat";
+static const char* const ACIS_SAB = ".sab";
+static const char* const GRANITE_G = ".g";
+static const char* const GRANITE_PROE_PART = ".prt";
+static const char* const GRANITE_PROE_ASM = ".asm";
+static const char* const GRANITE_PROE_NEUTRAL = ".neu";
+static const char* const STEP_IMPORT_DEFAULT_LOG  = "step_import.log";
+static const char* const IGES_IMPORT_DEFAULT_LOG = "iges_import.log";
+static const char* const CATIA_IMPORT_DEFAULT_LOG = "catia_import.log";
+static const char* const ACIS_SAT_IMPORT_DEFAULT_LOG = "sat_import.log";
+static const char* const GRANITE_EXPORT_DEFAULT_LOG = "granite_export.log";
+static const char* const STEP_EXPORT_DEFAULT_LOG = "step_export.log";
+static const char* const IGES_EXPORT_DEFAULT_LOG = "iges_export.log";
+static const char* const STEP_IGES_TRANSLATOR = "step_iges_translator";
+static const char* const TRANSLATOR_DIR =  "/translator/";
 
 class CUBIT_GEOM_EXPORT GeometryQueryEngine
 {
@@ -72,16 +173,9 @@ public:
       virtual CubitStatus export_solid_model(
                                    DLIList<TopologyBridge*>& bridge_list,
                                    const char* file_name,
-                                   const char* file_type,
+                                   Model_File_Type file_type,
                                    const CubitString &cubit_version,
-                                   const char* logfile_name = NULL ) = 0;
-
-      virtual CubitStatus export_solid_model(
-                                   DLIList<TopologyBridge*>& bridge_list,
-				   char*& p_buffer,
-				   int& n_buffer_size,
-				   bool b_export_buffer) = 0;
-
+                                   ModelExportOptions &export_options ) = 0;
     
      //! Saves out a temporary geometry file.  Entities in list must all be 
      //! of same modeling engine.
@@ -98,7 +192,7 @@ public:
      virtual CubitStatus import_temp_geom_file(
                                  FILE* file_ptr,
                                  const char* file_name,
-                                 const char* file_type,
+                                 Model_File_Type file_type,
                                  DLIList<TopologyBridge*> &bridge_list  ) = 0;
 
      //!R CubitStatus
@@ -128,26 +222,9 @@ public:
      //!- CUBIT_SUCCESS if everything goes well.
      virtual CubitStatus import_solid_model(
                                 const char* file_name,
-                                const char* file_type,
+                                Model_File_Type file_type,
                                 DLIList<TopologyBridge*>& imported_entities,
-                                bool print_results = true,
-                                const char* logfile_name = NULL,
-                                bool heal_step = true,
-                                bool import_bodies = true,
-                                bool import_surfaces = true,
-                                bool import_curves = true,
-                                bool import_vertices = true,
-                                bool free_surfaces = true
-					                      ) = 0;
-
-     virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
-					    const char* pBuffer,
-					    const int n_buffer_size) = 0;
-       
-     //O imported_entities
-     //O- List of top-level entities read from file
-     //I print_results
-     //I- If false, fail silently (don't write error messages to stdout or stderr)
+                                ModelImportOptions &import_options ) = 0;
 
       virtual CubitStatus get_underlying_curves(Curve * curve_ptr,
                                  DLIList<TopologyBridge*>& curve_list)  ;
@@ -213,15 +290,15 @@ public:
       virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const = 0;
       virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const = 0;
       virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const = 0;
-      virtual CubitStatus delete_solid_model_entities( Point* point_ptr ) const = 0;
+      virtual CubitStatus delete_solid_model_entities( TBPoint* point_ptr ) const = 0;
       //- Deletes the solid model entities associcated with the input
       //- free-floating RefEntity. If the input RefEntity is not free-floating,
       //- then its underlying ACIS ENTITYs are not deleted and CUBIT_FAILURE
       //- is returned.
       //- Returns CUBIT_SUCCESS if all went well, otherwise, CUBIT_FAILURE.
 
-  virtual CubitStatus fire_ray( const CubitVector &origin,
-                                const CubitVector &direction,
+  virtual CubitStatus fire_ray( CubitVector &origin,
+                                CubitVector &direction,
                                 DLIList<TopologyBridge*> &at_entity_list,
                                 DLIList<double> &ray_params,
                                 int max_hits = 0,
@@ -256,8 +333,8 @@ public:
     //O vector showning transform.
     //O-Computes the transform from the transformed body.
 
-  virtual int curve_is_on_ignored_surface(Curve */*curve*/,
-                    Surface */*surf*/) { return 0; }
+  virtual int curve_is_on_ignored_surface(Curve *curve,
+                    Surface *surf) { return 0; }
 
   virtual const char* modeler_type() = 0;
   virtual int get_major_version() = 0;
@@ -283,11 +360,27 @@ public:
   virtual CubitStatus set_str_option( const char* opt_name, const char* val ) = 0;
    //- Set solid modeler options
 
+  virtual CubitStatus get_graphics( BodySM *bodysm, GMem* g_mem,
+                                    std::vector<Surface*> &surface_to_facets_vector,
+                                    std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                                    std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                                    unsigned short normal_tolerance, 
+                                    double distance_tolerance, double max_edge_length ) const;
+  
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                     GMem* gMem,
                                     unsigned short normal_tolerance=15,
                                     double distance_tolerance=0,
                                     double longest_edge = 0 ) const = 0;
+
+  virtual CubitStatus get_graphics( Surface* surface_ptr,
+                            GMem *gmem,
+                            std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                            std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                            unsigned short normal_tolerance = 15, 
+                            double distance_tolerance = 0.0, 
+                            double max_edge_length = 0.0 ) const;
+
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
     //I ref_face_ptr
@@ -300,8 +393,10 @@ public:
     //- all goes well, CUBIT_Success is retuned.
 
   virtual CubitStatus get_graphics( Curve* curve_ptr,
-                                    GMem* gMem = NULL,
-                                    double tolerance = 0.0 ) const = 0;
+                                    GMem* gMem,
+                                    double angle_tolerance=0,
+                                    double distance_tolerance=0,
+                                    double max_edge_length=0 ) const = 0;
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
     //I ref_edge_ptr
@@ -322,21 +417,23 @@ public:
   virtual CubitStatus rotate   ( BodySM* body, const CubitVector& axis, double angle ) = 0;
   virtual CubitStatus scale    ( BodySM* body, double factor ) = 0;
   virtual CubitStatus scale    ( BodySM* body, const CubitVector& factors ) = 0;
-  virtual CubitStatus reflect  ( BodySM* body, const CubitVector& axis) = 0;
+  virtual CubitStatus reflect  ( BodySM* body, const CubitVector& axis ) = 0;
   virtual CubitStatus restore_transform( BodySM* body ) = 0;
 
   virtual CubitStatus translate( GeometryEntity* ent, const CubitVector& offset ) = 0;
   virtual CubitStatus rotate   ( GeometryEntity* ent, const CubitVector& axis, double degrees ) = 0;
   virtual CubitStatus scale    ( GeometryEntity* ent, double factor ) = 0;
   virtual CubitStatus scale    ( GeometryEntity* ent, const CubitVector& factors ) = 0;
-  virtual CubitStatus reflect  ( GeometryEntity* ent, const CubitVector& axis) = 0;
+  virtual CubitStatus reflect  ( GeometryEntity* ent, const CubitVector& axis ) = 0;
 
   virtual CubitBoolean bodies_overlap (BodySM *body_ptr_1,
                                        BodySM *body_ptr_2 ) const = 0;
 
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const = 0; 
 
-  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* /*hidden_tb*/, CubitVector* /*point*/){return NULL;};
+  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point){return NULL;};
+
+  virtual CubitStatus get_visible_entities( TopologyBridge *hidden_tb, DLIList<TopologyBridge*> &real_tbs );
 
    protected:
 

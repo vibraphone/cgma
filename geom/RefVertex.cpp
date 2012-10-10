@@ -44,7 +44,7 @@
 //
 // Creation Date : 07/11/96
 //-------------------------------------------------------------------------
-RefVertex::RefVertex(Point* pointPtr)
+RefVertex::RefVertex(TBPoint* pointPtr)
 {
    // Set the GeometryEntity pointer
    if (pointPtr != NULL)
@@ -53,8 +53,8 @@ RefVertex::RefVertex(Point* pointPtr)
    }
    else
    {
-      PRINT_ERROR("In the RefVertex(Point*) constructor\n");
-      PRINT_ERROR("       Input Point pointer is NULL\n");
+      PRINT_ERROR("In the RefVertex(TBPoint*) constructor\n");
+      PRINT_ERROR("       Input TBPoint pointer is NULL\n");
       assert(CUBIT_FALSE);
    }
    
@@ -84,14 +84,14 @@ RefVertex::~RefVertex()
 //
 // Creation Date : 08/02/96
 //-------------------------------------------------------------------------
-Point* RefVertex::get_point_ptr() 
+TBPoint* RefVertex::get_point_ptr() 
 {
-  return CAST_TO(get_geometry_entity_ptr(), Point) ;
+  return CAST_TO(get_geometry_entity_ptr(), TBPoint) ;
 }
 
-const Point* RefVertex::get_point_ptr() const 
+const TBPoint* RefVertex::get_point_ptr() const 
 {
-  return CAST_TO(get_geometry_entity_ptr(), Point) ;
+  return CAST_TO(get_geometry_entity_ptr(), TBPoint) ;
 }
 
 
@@ -106,7 +106,7 @@ const Point* RefVertex::get_point_ptr() const
 //-------------------------------------------------------------------------
 CubitVector RefVertex::coordinates() const
 {
-  const Point* point_ptr = get_point_ptr();
+  const TBPoint* point_ptr = get_point_ptr();
   
   if (point_ptr != NULL)
   {

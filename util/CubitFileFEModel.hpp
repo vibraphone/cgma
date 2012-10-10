@@ -283,26 +283,26 @@ private:
         UnsignedInt32* mpaintMemberWRTEntities;
         double* mpadblDistribution;
     } mSideSetBuff_11;
-};
 
-template <class TBuffer>
-TBuffer* AdjustBuffer(UnsignedInt32 xintRequiredSize,
-                      UnsignedInt32& xintActualSize, TBuffer*& xpaBuffer)
-{
-    if(!xintRequiredSize)  return NULL;  // Nothing requested, return nothing.
+    template <class TBuffer>
+    TBuffer* AdjustBuffer(UnsignedInt32 xintRequiredSize,
+        UnsignedInt32& xintActualSize, TBuffer*& xpaBuffer)
+    {
+        if(!xintRequiredSize)  return NULL;  // Nothing requested, return nothing.
 
-    if(xintActualSize < xintRequiredSize) {
-        if(xpaBuffer)
-            delete [] xpaBuffer;
-        xintActualSize = xintRequiredSize;
-        xpaBuffer = new TBuffer[xintActualSize];
-        if(!xpaBuffer) {
-            xintActualSize = 0;
-            throw CCubitFile::eMemoryError;
+        if(xintActualSize < xintRequiredSize) {
+            if(xpaBuffer)
+                delete [] xpaBuffer;
+            xintActualSize = xintRequiredSize;
+            xpaBuffer = new TBuffer[xintActualSize];
+            if(!xpaBuffer) {
+                xintActualSize = 0;
+                throw CCubitFile::eMemoryError;
+            }
         }
+        return xpaBuffer;
     }
-    return xpaBuffer;
-}
+};
 
 } // namespace NCubitFile
 

@@ -79,7 +79,7 @@ class CompositeGeom
     int closest_box( const CubitVector& position );
     
     void update_cached_data()
-      { needToUpdate = true; }
+      { needToUpdateBbox = true; needToUpdateMeasure = true; }
     
     void add_attribute( CubitSimpleAttrib* csa );
     void rem_attribute( CubitSimpleAttrib* csa );
@@ -102,13 +102,15 @@ class CompositeGeom
     CompositeGeom& operator=(const CompositeGeom&);
     CompositeGeom(const CompositeGeom&);
   
-    void update_data();
+    void update_data_bbox();
+    void update_data_measure();
     
     VGArray<CompositeEntry> entityList;
     int currentIndex;
     int firstIndex;
     
-    bool needToUpdate;
+    bool needToUpdateBbox;
+    bool needToUpdateMeasure;
     
     CompositeAttrib* listHead;
 };
@@ -126,8 +128,8 @@ inline CubitSense CompositeGeom::sense( int index ) const
 
 inline double CompositeGeom::measure( int index ) 
 { 
-  if( needToUpdate ) 
-    update_data();
+  if( needToUpdateMeasure ) 
+    update_data_measure();
   return entityList[index].measure;
 }
     

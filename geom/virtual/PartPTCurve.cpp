@@ -67,7 +67,10 @@ CubitStatus PartPTCurve::combine( PartitionCurve* curve )
   return CUBIT_FAILURE;
 }
 
-CubitStatus PartPTCurve::get_graphics( GMem& result )
+CubitStatus PartPTCurve::get_graphics( GMem& result, 
+                                    double /*angle_tolerance*/,
+                                    double /*distance_tolerance*/,
+                                    double /*max_edge_length*/) 
 {
   result.pointListCount = 0;
   return CUBIT_SUCCESS;
@@ -180,4 +183,29 @@ CubitStatus PartPTCurve::save( CubitSimpleAttrib& attrib )
   get_save_topology(end_points);
 
   return sub_entity_set().save_geometry( id, 1, 0, 0, &end_points, 0, attrib );
+}
+
+CubitStatus PartPTCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for PartPTCurves.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus PartPTCurve::get_ellipse_params
+(
+  CubitVector &center_vec,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine ellipse parameters for PartPTCurves.\n");
+  return CUBIT_FAILURE;
 }

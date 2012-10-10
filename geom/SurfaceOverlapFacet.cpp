@@ -44,12 +44,61 @@ SurfaceOverlapFacet::~SurfaceOverlapFacet()
 {
 }
 
-double
-SurfaceOverlapFacet::distance( SurfaceOverlapFacet &other_facet )
+double SurfaceOverlapFacet::distance( SurfaceOverlapFacet &other_facet )
 {
   double s, t2, u, v;
   return agt->MinTriangleTriangle( t, other_facet.t, s, t2, u, v );
 }
+
+double SurfaceOverlapFacet::perimeter()
+{
+  CubitVector pt0( t.b.x, t.b.y, t.b.z );
+  CubitVector pt1( t.b.x + t.e0.x,
+                   t.b.y + t.e0.y,
+                   t.b.z + t.e0.z );
+  CubitVector pt2( t.b.x + t.e1.x,
+                   t.b.y + t.e1.y,
+                   t.b.z + t.e1.z ); 
+
+  double total_dist = pt0.distance_between(pt1);
+  total_dist += pt1.distance_between( pt2 );
+  total_dist += pt2.distance_between( pt0 );
+
+  return total_dist;
+}
+
+bool SurfaceOverlapFacet::facet_points_within_tol( SurfaceOverlapFacet *other_face, double tolerance )
+{
+  CubitVector tmp_pt( t.b.x, t.b.y, t.b.z );
+  if( this->distance_from_position( tmp_pt ) > tolerance )
+    return false;
+
+  tmp_pt.set( t.b.x + t.e0.x,
+              t.b.y + t.e0.y,
+              t.b.z + t.e0.z );
+
+  if( this->distance_from_position( tmp_pt ) > tolerance )
+    return false;
+
+  tmp_pt.set( t.b.x + t.e1.x,
+              t.b.y + t.e1.y,
+              t.b.z + t.e1.z );
+
+  if( this->distance_from_position( tmp_pt ) > tolerance )
+    return false;
+
+  return true;
+}
+
+double SurfaceOverlapFacet::distance_from_position( CubitVector &position )
+{
+  double s,t;  
+  Point3 tmp_point;
+  tmp_point.x = position.x();
+  tmp_point.y = position.y();
+  tmp_point.z = position.z();
+  return agt->MinPointTriangle( tmp_point, this->t, s, t );
+} 
 
 CubitBoolean
 SurfaceOverlapFacet::facing( SurfaceOverlapFacet &other_facet )

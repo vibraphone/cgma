@@ -31,15 +31,6 @@ class CUBIT_UTIL_EXPORT CubitUtil
 {
 public:
   
-#ifdef BOYD15
-  static void swap_byte_order( void* bytes, size_t count, size_t width );
-    //- Do byte swapping (endian conversion.)
-    //- Exampe:
-    //-   int array[100];
-    //-    ...
-    //-   swap_byte_order( array, 100, sizeof(int) );
-#endif
-  
    static void convert_string_to_lowercase (char *string);
    static int  strcmp_case_insensitive     (const char *s1, const char *s2);
    static int  strncmp_case_insensitive    (const char *s1, const char *s2,
@@ -112,6 +103,13 @@ public:
     //filename
   static int find_available_file_name(char* buffer);
   
+  static CubitBoolean file_exist(const char* buffer);
+  static CubitBoolean file_exist(const CubitString& buffer);
+
+  // get an environment variable
+  static CubitString getenv(const CubitString& str);
+  static void setenv(const CubitString& var, const CubitString& value);
+  
 private:
   CubitUtil(){}
 
@@ -134,7 +132,7 @@ inline CubitSense CubitUtil::opposite_sense( CubitSense sense )
            sense == CUBIT_REVERSED );
    if ( sense == CUBIT_UNKNOWN ) return CUBIT_UNKNOWN;
    else {
-      CubitSense opp_sense = static_cast<CubitSense>(1 - sense);
+      CubitSense opp_sense = (CubitSense) (1 - sense);
       return opp_sense;
    }
 }

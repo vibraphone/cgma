@@ -229,6 +229,10 @@ public:
   static int intersect_intervals( double u0, double u1,
                                   double v0, double v1,
                                   double w[2] );
+  static CubitStatus order_edge_list(DLIList<CubitFacetEdge*> &edge_list,
+                                     CubitPoint *start_point,
+                                     CubitPoint *&end_point);
+  static CubitPoint *find_start_point_for_edge_list(DLIList<CubitFacetEdge*> edge_list);
 
   double angle_between_facets();
 

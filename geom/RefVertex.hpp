@@ -5,7 +5,7 @@
 
 class RefVolume;
 class RefFace;
-class Point;
+class TBPoint;
 
 class CUBIT_GEOM_EXPORT RefVertex : public BasicTopologyEntity
 {
@@ -30,12 +30,12 @@ public :
   DagType dag_type() const { return DagType::ref_vertex_type(); }
   const type_info& entity_type_info() const { return typeid(RefVertex); }
   
-  Point* get_point_ptr() ;
-  Point const* get_point_ptr() const ;
-    //R Point*
-    //R- A pointer to the Point to which the current 
+  TBPoint* get_point_ptr() ;
+  TBPoint const* get_point_ptr() const ;
+    //R TBPoint*
+    //R- A pointer to the TBPoint to which the current 
     //R- vertex points. 
-    //- This function returns a pointer to the Point
+    //- This function returns a pointer to the TBPoint
     //- which the current vertex points to.
 
   CubitVector coordinates () const;
@@ -88,18 +88,13 @@ public :
 
 protected :
 
-  RefVertex(Point* pointPtr) ;
-    //- Contructor: Sets up a reference vertex from a Point
+  RefVertex(TBPoint* pointPtr) ;
+    //- Contructor: Sets up a reference vertex from a TBPoint
 
 private :
 
   void initialize();
     //- Initializes all member data
-
-#ifdef BOYD17 
-  int refVertexNbFlag;
-    //- various flags and identifiers
-#endif
 
   RefVertex( const RefVertex& );
   void operator=( const RefVertex& );

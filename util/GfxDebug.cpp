@@ -333,12 +333,13 @@ void GfxDebug::draw_pyramids(DLIList<CubitPyramid*>* entities, int color)
   if(!mInstance) return;
   mInstance->p_draw_pyramids(entities, color);
 }
+*/
 void GfxDebug::draw_wedges(DLIList<CubitWedge*>* entities, int color)
 {
   if(!mInstance) return;
   mInstance->p_draw_wedges(entities, color);
 }
-*/
+
 void GfxDebug::draw_mesh_entity(MeshEntity* entity, int color)
 {
   if(!mInstance) return;
@@ -380,13 +381,12 @@ void GfxDebug::draw_pyramid(CubitPyramid* entity, int color)
   if(!mInstance) return;
   mInstance->p_draw_pyramid(entity, color);
 }
-/*
+
 void GfxDebug::draw_wedge(CubitWedge* entity, int color)
 {
   if(!mInstance) return;
   mInstance->p_draw_wedge(entity, color);
 }
-*/
 
 void GfxDebug::highlight_node(CubitNode* entity)
 {
@@ -430,13 +430,11 @@ void GfxDebug::highlight_pyramid(CubitPyramid* entity)
   mInstance->p_highlight_pyramid(entity);
 }
 
-/*
 void GfxDebug::highlight_wedge(CubitWedge* entity)
 {
   if(!mInstance) return;
   mInstance->p_highlight_wedge(entity);
 }
-*/
 
 
 // Facet Drawing Functions

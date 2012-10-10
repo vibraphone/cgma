@@ -56,3 +56,7 @@ void StubProgressTool::step()
 void StubProgressTool::percent( double )
 {
 }
+
+void StubProgressTool::check_interrupt()
+{
+}

@@ -127,8 +127,5 @@ private:
   static double radius(TRI* tri_ptr);  
 };
 
-// Added by CAT for NT port
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "FacetorUtil.cpp"
-#endif
+#include "FacetorUtil.cpp"
 #endif

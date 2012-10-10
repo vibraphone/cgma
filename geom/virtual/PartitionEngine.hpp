@@ -20,7 +20,7 @@
 #include "DLIList.hpp"
 
 class TopologyBridge;
-class Point;
+class TBPoint;
 class Curve;
 class Surface;
 class Lump;
@@ -122,7 +122,7 @@ public:
    * @param u     The location at which to split the curve.
    * @return      The new point created at the split location.
    */
-  Point* insert_point( Curve* curve, double u );
+  TBPoint* insert_point( Curve* curve, double u );
   
   /** Undo curve partitioning or point-curve creation.
    * 
@@ -168,7 +168,7 @@ public:
    * @return         The point created (and owned by the point-curve).  The
    *                 point curve will be the only parent curve of this point.
    */
-  Point* insert_point_curve( Surface* surf,
+  TBPoint* insert_point_curve( Surface* surf,
                              const CubitVector& position,
                              Surface *&partitioned_surf );
 
@@ -295,7 +295,7 @@ public:
   void remove_attributes( DLIList<TopologyBridge*> &bridge_list );
     //remove Composite attributes off of topology bridges
   virtual void remove_modified(DLIList<Surface*> &all_surfs,
-    DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts);
+    DLIList<Curve*> &all_curves, DLIList<TBPoint*> &all_pts);
     
   void get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
                                                DLIList<TopologyBridge*> &tbs );
@@ -516,9 +516,9 @@ private:
   Curve* restore_curve( SubCurve* curve );
   
   /** Replicate topology in partition layer */
-  PartitionPoint* replace_point( Point* point );
+  PartitionPoint* replace_point( TBPoint* point );
   /** Remove partition layer topolgy and restore real topology */
-  Point* restore_point( PartitionPoint* point );
+  TBPoint* restore_point( PartitionPoint* point );
   
   /** Split a surface
    * 

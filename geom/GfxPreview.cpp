@@ -8,6 +8,7 @@
 #include "GeometryQueryEngine.hpp"
 #include "Point.hpp"
 #include <assert.h>
+#include "DrawingToolDefines.h"
 
 GfxPreview* GfxPreview::mInstance = 0;
 
@@ -74,10 +75,10 @@ void GfxPreview::draw_ref_face_edges(RefFace* entity, int color)
   mInstance->p_draw_ref_face_edges(entity, color);
 }
 
-void GfxPreview::draw_ref_volume(RefVolume* entity, int color)
+void GfxPreview::draw_ref_volume(RefVolume* entity, int color, int mode)
 {
   if(!mInstance) return;
-  mInstance->p_draw_ref_volume(entity, color);
+  mInstance->p_draw_ref_volume(entity, color, mode);
 }
 
 void GfxPreview::draw_ref_volume_edges(RefVolume* entity, int color)
@@ -86,10 +87,10 @@ void GfxPreview::draw_ref_volume_edges(RefVolume* entity, int color)
   mInstance->p_draw_ref_volume_edges(entity, color);
 }
 
-void GfxPreview::draw_ref_body(Body* entity, int color)
+void GfxPreview::draw_ref_body(Body* entity, int color, int mode)
 {
   if(!mInstance) return;
-  mInstance->p_draw_ref_body(entity, color);
+  mInstance->p_draw_ref_body(entity, color, mode);
 }
 
 // Generic Primitive Drawing Functions
@@ -145,11 +146,11 @@ void GfxPreview::draw_polyline(const GPoint* points, int num_points, int color)
 // the total number of data points in the face_list such that
 // num_face_points = number of points + number of polygons
 void GfxPreview::draw_polygons(int num_points, const float* xyzs, int num_face_points, 
-                               const int* face_list, int color )
+                               const int* face_list, int color, int mode )
 {
   if (!mInstance) 
     return;
-  mInstance->p_draw_polygons( num_points, xyzs, num_face_points, face_list, color);
+  mInstance->p_draw_polygons( num_points, xyzs, num_face_points, face_list, color, mode);
 }
 
 // draw a polyline with a number of points of a color
@@ -204,7 +205,7 @@ void GfxPreview:: draw_cylinder(const CubitVector& axis, const CubitVector& orig
   mInstance->p_draw_cylinder(axis, origin, bounding_box, radius, color);
 }
 
-void GfxPreview::draw_point(Point *pt, int color)
+void GfxPreview::draw_point(TBPoint *pt, int color)
 {
   CubitVector v = pt->coordinates();
   draw_point(v, color);
@@ -228,11 +229,11 @@ void GfxPreview::draw_curve(Curve *curve, int color)
     draw_line(p1.x(), p1.y(), p1.z(), p2.x(), p2.y(), p2.z(), color);
   }
   flush();
-  DLIList<Point*> pts;
+  DLIList<TBPoint*> pts;
   curve->points(pts);
   for(i=pts.size(); i>0; i--)
   {
-    Point *cur_pt = pts.get_and_step();
+    TBPoint *cur_pt = pts.get_and_step();
     draw_point(cur_pt, color);
   }
 }
@@ -287,7 +288,7 @@ void GfxPreview::draw_surface_facets_shaded(Surface *surf, int color)
   const float* xyzs = reinterpret_cast<const float*>(g_mem.point_list());
   GfxPreview::draw_polygons(g_mem.pointListCount, xyzs, 
                             g_mem.fListCount, g_mem.facet_list(),
-                            color);
+                            color, CUBIT_SMOOTH_SHADING);
   flush();
 }
 

@@ -71,9 +71,7 @@ public:
 //   //- destroy all memory allocted to this object*/
 };
 
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "TDDelaunay.cpp"
-#endif
+#include "TDDelaunay.cpp"
 
 #endif // TD_DELAUNAY_HPP
 

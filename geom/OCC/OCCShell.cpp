@@ -283,8 +283,9 @@ CubitStatus OCCShell::update_OCC_entity(TopoDS_Shell& old_shell,
     if(shapes.Extent() == 1)
       shape = shapes.First();
     else if(shapes.Extent() > 1)
+    {
       shape = shapes.First() ;
-    
+    }
     else 
       shape.Nullify();
     if(shapes.Extent() > 0 || (op && op->IsDeleted(face)))

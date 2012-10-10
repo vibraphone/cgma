@@ -1,13 +1,15 @@
-AM_CPPFLAGS += -I$(top_srcdir)/util \
-               -I$(top_srcdir)/geom \
-               -I$(top_srcdir)/geom/facet \
-               -I$(top_srcdir)/geom/Cholla
+# Don't require GNU-standard files (Changelog, README, etc.)
+AUTOMAKE_OPTIONS = foreign
+
+# Override default defines with the ones we want from the configure script
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
+AM_CPPFLAGS = -I$(top_srcdir)/util \
+           -I$(top_srcdir)/geom \
+           -I$(top_srcdir)/geom/facet \
+           -I$(top_srcdir)/geom/Cholla
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_virtual.la
-endif
+lib_LTLIBRARIES = libcubit_virtual.la
 
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
@@ -58,7 +60,6 @@ libcubit_virtual_la_SOURCES = \
     PartSurfFacetTool.cpp \
     PST_Data.cpp \
     SegmentedCurve.cpp \
-    SplitCompositeSurfaceTool.cpp \
     SubCurve.cpp \
     SubEntitySet.cpp \
     SubSurface.cpp \
@@ -114,7 +115,6 @@ libcubit_virtual_la_include_HEADERS = \
     PartitionSurface.hpp \
     PartitionTool.hpp \
     SegmentedCurve.hpp \
-    SplitCompositeSurfaceTool.hpp \
     SplitSurfaceVirtual.hpp \
     SubCurve.hpp \
     SubEntitySet.hpp \

@@ -87,10 +87,6 @@ class PST_Point : public CubitVector, public PST_Entity
     
     PST_Edge* common( PST_Point* pt );
     
-#ifdef BOYD15
-    int edges( DLIList<PST_Edge*>* list = 0 );
-#endif
-    
     int faces( DLIList<PST_Face*>* list = 0 );
     
     //PST_Face* boundary_face();
@@ -234,16 +230,6 @@ class PST_Edge : public PST_Entity
       //- passed point already exists in a face, null is
       //- returned.
                                      
-#ifdef BOYD15
-    static PST_Edge* join_faces( PST_CoEdge* prev_on_first_face,
-                                 PST_CoEdge* prev_on_second_face );
-      //- Join two faces by creating a non-manifold "bridge" edge
-      //- between them.  If the coedges are part of the same face,
-      //- or the desired edge already exists, null is returned.
-      //- The edge is created between the ends of the passed
-      //- coedges.
-#endif
-
     PST_Edge* split( PST_Point* point );
       //- Split an existing edge.  Creates a new edge in the 
       //- same face(s) as the existing edge.  Returns null
@@ -284,23 +270,6 @@ class PST_Edge : public PST_Entity
       // the line containing this edge to the passed line.
       // Use position(..) function above to get coordinates.
       
-#ifdef BOYD15
-    void closest_on_edges( PST_Edge* other_edge,
-                           double& t_this,
-                           double& t_other );
-      // Find the pair of positions, one on this
-      // bounded edge and one on the passed edge,
-      // that are closest to each other.  
-      //
-      // If edges are parallel, it is possible for
-      // a range of points on each edge to be
-      // equidistant from the other edge.  In such
-      // a case, this method will return the point
-      // in that range closest to the start of 
-      // this edge.
-#endif
-    
-    
     PST_Point* other( PST_Point* pt )
       { return PST_OTHER(pt,start_,end_); }
     
@@ -410,10 +379,6 @@ class PST_Face : public PST_Entity
       { return plane().normal(); }
       
       
-#ifdef BOYD15
-    double area( CubitVector* area_center = 0 );
-#endif
-
     double bounding_length();
     
     PST_CoEdge* first_coedge()
@@ -427,10 +392,6 @@ class PST_Face : public PST_Entity
       
     bool two_edges( PST_Point* point, PST_Edge*& edge1, PST_Edge*& edge2 );
   
-#ifdef BOYD15
-    int coedge_count();
-#endif
-    
     bool modified()
       { return modified_; }
     

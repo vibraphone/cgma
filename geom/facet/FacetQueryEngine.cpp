@@ -114,6 +114,17 @@ FacetQueryEngine::~FacetQueryEngine()
   instance_ = NULL;
 }
 
+void FacetQueryEngine::delete_instance()
+{
+  if( NULL != instance_ )
+  {
+    delete instance_;
+    instance_ = NULL;
+  }
+}
+
+
+
 //================================================================================
 // Description:  can_delete_bodies
 // Author     : sjowen
@@ -178,11 +189,11 @@ const type_info& FacetQueryEngine::entity_type_info() const
 // Author     :
 // Date       :
 //================================================================================
-Point* FacetQueryEngine::make_Point( GeometryType ,
+TBPoint* FacetQueryEngine::make_Point( GeometryType ,
                                         CubitVector const& ) const
 {
   PRINT_ERROR("Option not supported for mesh based geometry.\n");
-  return (Point*) NULL;
+  return (TBPoint*) NULL;
 }
 
 //================================================================================
@@ -201,8 +212,8 @@ Curve* FacetQueryEngine::make_Curve(Curve *) const
 // Author     :
 // Date       :
 //================================================================================
-Curve* FacetQueryEngine::make_Curve( Point const* ,
-                                        Point const* ,
+Curve* FacetQueryEngine::make_Curve( TBPoint const* ,
+                                        TBPoint const* ,
                                         RefFace* ,
                                         CubitVector * ) const
 {
@@ -216,8 +227,8 @@ Curve* FacetQueryEngine::make_Curve( Point const* ,
 // Date       :
 //================================================================================
 Curve* FacetQueryEngine::make_Curve( GeometryType ,
-                                        Point const* ,
-                                        Point const* ,
+                                        TBPoint const* ,
+                                        TBPoint const* ,
                                         DLIList<CubitVector*>& ,
                                         RefFace*  ) const
 {
@@ -231,8 +242,8 @@ Curve* FacetQueryEngine::make_Curve( GeometryType ,
 // Date       :
 //================================================================================
 Curve* FacetQueryEngine::make_Curve( GeometryType ,
-                                        Point const* ,
-                                        Point const* ,
+                                        TBPoint const* ,
+                                        TBPoint const* ,
                                         CubitVector const* ,
                                         CubitSense ) const
 {
@@ -481,7 +492,9 @@ CubitStatus FacetQueryEngine::get_graphics( Surface* surface_ptr,
 //================================================================================
 CubitStatus FacetQueryEngine::get_graphics( Curve* curve_ptr,
                                             GMem* gMem,
-                                            double /*tolerance*/ ) const
+                                            double /*angle_tolerance*/,
+                                            double /*distance_tolerance*/,
+                                            double /*max_edge_length*/ ) const
 {
   //  get the FacetCurve.
   FacetCurve *facet_curv_ptr = CAST_TO(curve_ptr,FacetCurve);
@@ -673,8 +686,10 @@ CubitStatus FacetQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref
   CubitString temp_filename(file_name);
   temp_filename += ".mbg";
 
-  if( export_solid_model( ref_entity_list, temp_filename.c_str(), "FACET",
-                          cubit_version ) == CUBIT_FAILURE )
+  ModelExportOptions export_options;
+
+  if( export_solid_model( ref_entity_list, temp_filename.c_str(), FACET_TYPE,
+                          cubit_version, export_options ) == CUBIT_FAILURE )
   {
     PRINT_ERROR( "Error occured while trying to save temporary MESH_BASED_GEOMETRY file\n");
     return CUBIT_FAILURE;
@@ -700,11 +715,11 @@ CubitStatus FacetQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref
 
 CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
                                                      const char* file_name,
-                                                     const char* file_type,
+                                                     Model_File_Type file_type,
                                                      const CubitString &,
-                                                     const char*)
+                                                     ModelExportOptions & )                                                     
 {
-  if( strcmp( file_type, "FACET" ) )
+  if(  file_type != FACET_TYPE )
     return CUBIT_SUCCESS;
 
   DLIList<FacetBody*>    facet_bodies;
@@ -847,14 +862,6 @@ CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_
   return CUBIT_SUCCESS;
 }
 
-CubitStatus FacetQueryEngine::export_solid_model( DLIList<TopologyBridge*>& bridge_list,
-						  char*& p_buffer,
-						  int& n_buffer_size,
-						  bool b_export_buffer)
-{
-  return CUBIT_FAILURE;
-}
-
 CubitStatus
 FacetQueryEngine::gather_all_facet_entities( DLIList<FacetBody*> &facet_bodies,
                                              DLIList<FacetLump*> &facet_lumps,
@@ -973,7 +980,7 @@ FacetQueryEngine::write_topology( FILE *file_ptr,
   for( i=0; i<facet_curves.size(); i++)
   {
     FacetCurve *curr_curve = facet_curves.get_and_step();
-    Point *s_point, *e_point;
+    TBPoint *s_point, *e_point;
     s_point = curr_curve->start_point();
     e_point = curr_curve->end_point();
 
@@ -1730,28 +1737,19 @@ FacetQueryEngine::restore_topology( FILE *file_ptr,
 CubitStatus
 FacetQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                         const char* /*file_name*/,
-                                        const char* file_type,
+                                        Model_File_Type file_type,
                                         DLIList<TopologyBridge*> &bridge_list )
 {
-  //make sure that file_type == "FACET"
-  if( !strcmp( file_type,"FACET") )
-    return import_solid_model( file_ptr, file_type, bridge_list );
+  if( file_type == FACET_TYPE )
+    return import_solid_model( file_ptr, bridge_list ); 
   else
     return CUBIT_FAILURE;
 }
 
-CubitStatus FacetQueryEngine::import_solid_model(
-                                                 const char* file_name ,
-                                                 const char* file_type,
-                                                 DLIList<TopologyBridge*> &imported_entities,
-                                                 CubitBoolean print_results,
-                                                 const char* logfile_name,
-                                                 CubitBoolean heal_step,
-                                                 CubitBoolean import_bodies,
-                                                 CubitBoolean import_surfaces,
-                                                 CubitBoolean import_curves,
-                                                 CubitBoolean import_vertices,
-                                                 CubitBoolean free_surfaces)
+CubitStatus FacetQueryEngine::import_solid_model( const char* file_name ,
+                                                  Model_File_Type file_type,
+                                                  DLIList<TopologyBridge*> &imported_entities,
+                                                  ModelImportOptions &import_options )
 {
   errno = 0;
   FILE *file_ptr = fopen(file_name, "rb");
@@ -1761,24 +1759,14 @@ CubitStatus FacetQueryEngine::import_solid_model(
     return CUBIT_FAILURE;
   }
 
-  CubitStatus status = import_solid_model(file_ptr, file_type, imported_entities, print_results,
-                            logfile_name, heal_step, import_bodies, import_surfaces,
-                            import_curves, import_vertices, free_surfaces);
+  CubitStatus status = import_solid_model(file_ptr, imported_entities );
+  
   fclose(file_ptr);
   return status;
 }
 
 CubitStatus FacetQueryEngine::import_solid_model(FILE *file_ptr,
-                                                 const char* /*file_type*/,
-                                                 DLIList<TopologyBridge*> &imported_entities,
-                                                 CubitBoolean ,
-                                                 const char* ,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean,
-                                                 CubitBoolean )
+                                                 DLIList<TopologyBridge*> &imported_entities )
 
 {
   CubitPoint **points_array = NULL;
@@ -1796,13 +1784,13 @@ CubitStatus FacetQueryEngine::import_solid_model(FILE *file_ptr,
     PRINT_ERROR("Trouble reading in file type for MBG\n");
     return CUBIT_FAILURE;
   }
-  
+
   if( strncmp( fileType, "MESH_BASED_GEOMETRY", 19 ) )
   {
     PRINT_ERROR("Not MESH_BASED_GEOMETRY file type\n");
     return CUBIT_FAILURE;
   }
-  
+
   // read in the endian value
   NCubitFile::CIOWrapper file_reader(file_ptr, 19, 0);
 
@@ -1844,12 +1832,6 @@ CubitStatus FacetQueryEngine::import_solid_model(FILE *file_ptr,
   return CUBIT_SUCCESS;
 }
 
-CubitStatus FacetQueryEngine::import_solid_model(DLIList<TopologyBridge*> &imported_entities,
-						 const char* pBuffer,
-						 const int n_buffer_size)
-{
-  return CUBIT_FAILURE;
-}
 
 //===============================================================================
 // Function   : restore_facets
@@ -2298,7 +2280,7 @@ FacetQueryEngine::delete_solid_model_entities( Curve* curve ) const
 // Creation Date : 09/29/03
 //-------------------------------------------------------------------------
 CubitStatus
-FacetQueryEngine::delete_solid_model_entities( Point* point ) const
+FacetQueryEngine::delete_solid_model_entities( TBPoint* point ) const
 {
   FacetPoint* fpoint = dynamic_cast<FacetPoint*>(point);
   if (!fpoint || fpoint->has_parent_curve())
@@ -2308,8 +2290,8 @@ FacetQueryEngine::delete_solid_model_entities( Point* point ) const
   return CUBIT_SUCCESS;
 }
 
-CubitStatus FacetQueryEngine::fire_ray( const CubitVector &origin,
-                                        const CubitVector &direction,
+CubitStatus FacetQueryEngine::fire_ray( CubitVector &origin,
+                                        CubitVector &direction,
                                         DLIList<TopologyBridge*> &at_entity_list,
                                         DLIList<double> &ray_params,
                                         int max_hits,

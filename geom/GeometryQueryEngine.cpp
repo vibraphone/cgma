@@ -1,7 +1,5 @@
 #include "GeometryQueryEngine.hpp"
 #include "CubitString.hpp"
-
-
 #include "Surface.hpp"
 #include "Curve.hpp"
 
@@ -43,3 +41,31 @@ CubitStatus GeometryQueryEngine::get_underlying_surfaces(Surface * surf_ptr,
 CubitStatus GeometryQueryEngine::get_underlying_bridges(TopologyBridge* bridge_ptr,
                                  DLIList<TopologyBridge*>& bridge_list)
 { return CUBIT_SUCCESS; }
+
+
+CubitStatus GeometryQueryEngine::get_graphics( BodySM *bodysm, GMem* g_mem,
+                         std::vector<Surface*> &surface_to_facets_vector,
+                         std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                         std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                         unsigned short normal_tolerance, 
+                         double distance_tolerance, double max_edge_length ) const
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus GeometryQueryEngine::get_graphics( Surface* surface_ptr,
+                                               GMem *gmem,
+                                               std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                                               std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                                               unsigned short normal_tolerance, 
+                                               double distance_tolerance, 
+                                               double max_edge_length ) const
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus GeometryQueryEngine::get_visible_entities( TopologyBridge *hidden_tb, 
+                                                      DLIList<TopologyBridge*> &real_tbs )
+{
+  return CUBIT_FAILURE;
+}

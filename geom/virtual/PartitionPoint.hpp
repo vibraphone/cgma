@@ -7,7 +7,7 @@
 class CubitPointData;
 class PartitionCurve;
 
-class PartitionPoint : public Point, public PartitionEntity
+class PartitionPoint : public TBPoint, public PartitionEntity
 {
 
 friend class PartitionCurve;
@@ -16,7 +16,7 @@ public:
 
   PartitionPoint( const CubitVector& position, PartitionEntity* owner );
   PartitionPoint( CubitSimpleAttrib& attrib, PartitionEntity* owner );
-  PartitionPoint( Point* real_point );
+  PartitionPoint( TBPoint* real_point );
   
   ~PartitionPoint();
   
@@ -24,7 +24,7 @@ public:
   virtual CubitBox bounding_box() const;
   virtual CubitStatus move_to_geometry( CubitVector& );
  
-  Point* real_point() const;
+  TBPoint* real_point() const;
   
   CubitStatus move( CubitVector& delta );
   

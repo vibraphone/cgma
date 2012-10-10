@@ -10,6 +10,9 @@
 #include "TopologyEntity.hpp"
 #include "CastTo.hpp"
 #include "GeometryModifyTool.hpp"
+#include "GeometryQueryTool.hpp"
+#include "GSaveOpen.hpp"
+#include "CAUniqueId.hpp"
 
 #include <stdio.h>
 #include <time.h>
@@ -41,7 +44,7 @@ int TDUniqueId::generate_unique_id()
       {
         found = ((*found_value).first == result);
         if (found)
-          PRINT_ERROR("Duplicate UID found - very unusual!\n");
+          DIAGNOSTIC("Duplicate UID found - very unusual!\n");
       }
     }
     while (found);
@@ -118,9 +121,26 @@ int TDUniqueId::find_td_unique_id(const int temp_id,
                                   const RefEntity *related_entity)
 {
   td_list.clean_out();
+
+  int unique_id = temp_id;
+
+  //if we are not doing an undo and importing and merging within a file...
+  if( !GSaveOpen::performingUndo && 
+       GeometryQueryTool::importingSolidModel &&
+      !GeometryQueryTool::mergeGloballyOnImport)
+  {
+    //see if the old id maps to a new id...if so, use the new id
+    UIDMap old_uid_to_new_uid_map = CAUniqueId::get_old_to_new_uid_map();
+    
+    UIDMap::iterator iter;
+    iter = old_uid_to_new_uid_map.find( unique_id );
+    
+    if( iter != old_uid_to_new_uid_map.end() )
+      unique_id = (*iter).second;
+  }
   
   std::pair<TDUIDList::iterator, TDUIDList::iterator> 
-    bounds_pair = unique_id_list().equal_range(temp_id);
+    bounds_pair = unique_id_list().equal_range(unique_id);
 
   TDUIDList::iterator
     it = bounds_pair.first, upper = bounds_pair.second;
@@ -128,8 +148,8 @@ int TDUniqueId::find_td_unique_id(const int temp_id,
   if(it == unique_id_list().end())
     return 0;
 
-  if ((*it).first == temp_id) {
-      // the lower bound key is equal to temp_id, so this id is in the list
+  if ((*it).first == unique_id ) {
+      // the lower bound key is equal to unique_id, so this id is in the list
 
       // look for duplicate id's, return one that's directly related
       // get all td's with that id
@@ -211,7 +231,7 @@ void TDUniqueId::clear_copy_map()
 
   //clear out the map 
   if (mapForCopying.empty()) return;
-    mapForCopying.erase(mapForCopying.begin(), mapForCopying.end());
+    mapForCopying.clear();
 
 }
  

@@ -577,9 +577,6 @@ CubitStatus FacetGeometryCreator::create_curve_boundaries(
   // Determine which point it is a part of.
   // Create a new FacetPointMesh for each point
 
-#ifdef BOYD17 
-  int mydebug = 0;
-#endif 
   int ii, kk;
   for ( ii = facet_curve_list.size(); ii > 0; ii-- )
   {
@@ -777,9 +774,6 @@ CubitStatus FacetGeometryCreator::build_point_geometry(
 {
   CubitStatus stat = CUBIT_SUCCESS;
   int kk;
-#ifdef BOYD17 
-  int mydebug = 0;
-#endif
   for ( kk = facet_point_list.size(); kk > 0; kk-- )
   {
     FacetPointMesh *fpm_ptr = facet_point_list.get_and_step();
@@ -1223,9 +1217,6 @@ void FacetGeometryCreator::print_me()
     {
       FacetCurveMesh *fcm_ptr = fcm_list.get_and_step();
       fprintf(fp, "   Curve %d\n", fcm_ptr->get_id() );
-#ifdef BOYD17 
-      CubitVector start, end;
-#endif
       DLIList<FacetPointMesh *> fpm_list = fcm_ptr->get_points();
       for (kk=0; kk<fpm_list.size(); kk++)
       {

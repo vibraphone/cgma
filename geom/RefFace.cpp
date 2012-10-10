@@ -589,11 +589,14 @@ CubitBoolean RefFace::about_spatially_equal(
      if (ref_edge_list_1.size())
      {
        int i;
-       CubitBox edge_box = ref_edge_list_1.step_and_get()->bounding_box();
+       // Call 'unmerged_bounding_box' here so that we get the aggregate bounding box
+       // of all of the Topology Bridges of curves that are already merged.  If we don't
+       // do this we may not expand the bounding boxes sufficiently to get correct results.
+       CubitBox edge_box = ref_edge_list_1.step_and_get()->unmerged_bounding_box();
        for (i = ref_edge_list_1.size(); i > 1; i--)
-        edge_box |= ref_edge_list_1.step_and_get()->bounding_box();
+        edge_box |= ref_edge_list_1.step_and_get()->unmerged_bounding_box();
        for (i = ref_edge_list_2.size(); i > 0; i--)
-        edge_box |= ref_edge_list_2.step_and_get()->bounding_box();
+        edge_box |= ref_edge_list_2.step_and_get()->unmerged_bounding_box();
        box_1 |= edge_box;
        box_2 |= edge_box;
      }
@@ -1363,4 +1366,45 @@ CubitBoolean RefFace::is_closed_in_V()
 {
   Surface* surface_ptr = get_surface_ptr();
   return surface_ptr->is_closed_in_V();
+}
+
+CubitStatus RefFace::evaluate( double u, double v,
+                              CubitVector *position,
+                              CubitVector *normal,
+                              CubitVector *curvature1,
+                              CubitVector *curvature2 )
+{
+  if( NULL == position && NULL == normal &&
+      NULL == curvature1 && NULL == curvature2 )
+      return CUBIT_FAILURE;
+
+  Surface* surf_ptr = get_surface_ptr();
+  if (!surf_ptr)
+  {
+    PRINT_ERROR("RefFace %d is invalid -- no attached Surface.\n",id());
+    return CUBIT_FAILURE;
+  }
+  
+  return surf_ptr->evaluate(u, v, position, normal, curvature1, curvature2 );
+}
+
+
+CubitStatus RefFace::get_projected_distance_on_surface( CubitVector *pos1,
+                                                        CubitVector *pos2, 
+                                                        double &distance )
+{
+  if( pos1 == pos2 )
+    return CUBIT_FAILURE;
+
+  if( NULL == pos1 || NULL == pos2 )
+    return CUBIT_FAILURE;
+
+  Surface* surf_ptr = get_surface_ptr();
+  if (!surf_ptr)
+  {
+    PRINT_ERROR("RefFace %d is invalid -- no attached Surface.\n",id());
+    return CUBIT_FAILURE;
+  }
+  
+  return surf_ptr->get_projected_distance_on_surface( pos1, pos2, distance );
 }

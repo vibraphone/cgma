@@ -51,13 +51,6 @@ public:
     void shrink(int k);
     //- itemCount -= k;  Doesn't change array elements.
        
-#ifdef BOYD15
-    int set_increment(int increment);
-    //- Change the list growth increment (specified in the constructor) 
-    //- to {increment}. The previous setting of the growth increment is
-    //- returned.
-#endif
-
     ArrayBasedContainer& operator=(const ArrayBasedContainer&);
     //- Create a copy of a list.
     
@@ -72,14 +65,6 @@ public:
 
     static unsigned int current_allocated_memory();
     static unsigned int maximum_allocated_memory();
-
-#ifdef BOYD15
-  void copy_to(void **other_array);
-    //- copy this list's listArray into other_array
-
-  void copy_from(void **other_array, const int size);
-    //- copy other_array into listArray
-#endif
 
 protected:
 

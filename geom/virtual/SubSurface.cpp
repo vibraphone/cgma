@@ -428,3 +428,70 @@ CubitStatus SubSurface::save( CubitSimpleAttrib& attrib )
   return sub_entity_set().save_geometry( id, 2, 0, 0, &curves, 0, attrib );
 }
 
+
+CubitStatus SubSurface::evaluate( double u, double v,
+                                  CubitVector *position,                                   
+                                  CubitVector *unit_normal,
+                                  CubitVector *curvature1,
+                                  CubitVector *curvature2 )
+{
+  CubitStatus ret = partitioned_surface()->evaluate(u, v, position, unit_normal, curvature1, curvature2 ); 
+
+  if(unit_normal && geometry_sense == CUBIT_REVERSED)
+    *unit_normal = -(*unit_normal);
+
+  return ret;
+}
+
+CubitStatus SubSurface::get_sphere_params
+(
+  CubitVector &center,
+  double &radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine sphere parameters for a SubSurface.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus SubSurface::get_cone_params
+(
+   CubitVector &center,
+   CubitVector &normal,
+   CubitVector &major_axis,
+   double &radius_ratio,
+   double &sine_angle,
+   double &cos_angle
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine cone parameters for SubSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus SubSurface::get_torus_params
+(
+  CubitVector &center,
+  CubitVector &normal,
+  double &major_radius,
+  double &minor_radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine torus parameters for SubSurface.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus SubSurface::get_nurb_params
+(
+  bool &rational,
+  int &degree_u,
+  int &degree_v,
+  int &num_cntrl_pts_u,
+  int &num_cntrl_pts_v,
+  DLIList<CubitVector> &cntrl_pts,
+  DLIList<double> &cntrl_pt_weights,
+  DLIList<double> &u_knots,
+  DLIList<double> &v_knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine nurbs parameters for SubSurface.\n");
+  return CUBIT_FAILURE;
+}

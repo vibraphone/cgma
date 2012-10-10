@@ -5,7 +5,7 @@
 #include "CubitFileUtil.hpp"
 #include "CubitString.hpp"
 
-#ifdef NT
+#ifdef WIN32
   #include <direct.h>
   #include <io.h>
   #include <sys/types.h>
@@ -24,7 +24,7 @@
 #endif
 
 
-#ifdef NT
+#ifdef WIN32
 static const char* DIR_SEP_STR = "\\";
 static const char DIR_SEP_CHAR = '\\';
 #else
@@ -38,7 +38,7 @@ static const char DIR_SEP_CHAR = '/';
 CubitStatus
 CubitFileUtil::get_current_working_directory( char *wd )
 {
-#ifdef NT
+#ifdef WIN32
   if( _getcwd( wd, PATH_MAX ) == NULL )
 #else
   if( getcwd( wd, PATH_MAX ) == NULL )
@@ -57,7 +57,7 @@ CubitFileUtil::get_current_working_directory( char *wd )
       wd[wd_len+1] = '\0';
     }
 
-#ifdef NT
+#ifdef WIN32
     // Make sure format is compatible with full path format
     CubitString full_path_str;
     if( get_full_path_str( wd, full_path_str ) == CUBIT_SUCCESS )
@@ -66,6 +66,42 @@ CubitFileUtil::get_current_working_directory( char *wd )
 
     return CUBIT_SUCCESS;
   }
+}
+
+CubitStatus
+CubitFileUtil::add_name_to_path( char *path, const char *directory )
+{
+  // Add a slash at the end of the path, if not already there
+  int path_len = strlen(path);
+  if( path[path_len-1] != DIR_SEP_CHAR )
+  {
+    path[path_len] = DIR_SEP_CHAR;
+    path[path_len+1] = '\0';
+  }
+  // append the name to the end of the path
+  strcat(path, directory);
+      
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus
+CubitFileUtil::create_directory( char *wd )
+{
+  // Create the directory
+#ifdef WIN32
+  if (mkdir(wd) == -1) 
+  {  
+    PRINT_WARNING( "Unable to create new directory\n" );
+    return CUBIT_FAILURE;
+  }
+#else    
+  if (mkdir(wd, 0777) == -1) 
+  {  
+    PRINT_WARNING( "Unable to create new directory\n" );
+    return CUBIT_FAILURE;
+  }
+#endif    
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus
@@ -78,7 +114,7 @@ CubitFileUtil::get_full_path_str( const char *part,
   strcpy( my_part, part );
   make_path_platform_compatible( my_part );
 
-#ifdef NT
+#ifdef WIN32
   if( _fullpath( full, my_part, PATH_MAX ) != NULL )
   
     full_path_str = full;
@@ -141,7 +177,7 @@ CubitFileUtil::get_full_path_str( const char *part,
 void 
 CubitFileUtil::make_path_platform_compatible( char *path )
 {
-#ifdef NT
+#ifdef WIN32
   // Replace '/' with '\\'
   for( char* path_ptr = path; *path_ptr; path_ptr++ )
     if( *path_ptr == '/' )
@@ -200,6 +236,49 @@ CubitFileUtil::split_path( const char *path, char *dirpart, char *filepart )
   return;
 }
 
+
+CubitString
+CubitFileUtil::get_file_extension(
+  const CubitString& file,
+  bool remove_version /* remove .1, .2, ...*/ )
+{
+  size_t dot_pos = file.find_last('.');
+  size_t dot_pos2 = 0;
+
+  if ( dot_pos == MAX_POS )
+    return "";
+
+  if(remove_version)
+  {
+	  dot_pos2 = file.find_last('.',dot_pos);
+	  if ( dot_pos2 == MAX_POS )
+		  remove_version = false;
+	  else if(!is_int_number( file.substr(dot_pos+1).c_str() ))
+		  remove_version = false;
+  }
+
+  CubitString extension;
+  if(!remove_version)
+	  extension = file.substr(dot_pos);
+  else
+	  extension = file.substr(dot_pos2,dot_pos-dot_pos2);
+  
+  for ( size_t i = 0; i < extension.length(); i++ )
+    extension.put_at(i, tolower( extension.get_at(i) ) );
+    
+  return extension;
+  
+}  //  get_file_extension()
+                     
+CubitString
+CubitFileUtil::get_file_extension(
+  const char* file,
+  bool remove_version /* remove .1, .2, ...*/ )
+{
+  CubitString f(file);
+  return get_file_extension(f,remove_version);
+}
+
 CubitStatus
 CubitFileUtil::get_files( const char *path,
                           char *dirname,
@@ -228,7 +307,7 @@ CubitFileUtil::get_files( const char *path,
 
   strcpy( dirname, dpart );
   
-#ifdef NT
+#ifdef WIN32
   
   // If path points to a directory, add "\*" to the path, to get all the 
   // files in the directory.
@@ -469,7 +548,7 @@ CubitFileUtil::get_next_backup_filenumber( const char *p_basename,
     strcpy( fname, fname_str->c_str() );
     delete fname_str;
 
-    // Continue if nothing after dot.  Also, I noticed the NT will match 
+    // Continue if nothing after dot.  Also, I noticed the WIN32 will match 
     // file.cub against wildcard file.cub.*
     if( strlen( fname ) <= base_len+1 )
       continue;

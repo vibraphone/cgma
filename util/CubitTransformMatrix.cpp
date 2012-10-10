@@ -98,7 +98,9 @@ CubitTransformMatrix& CubitTransformMatrix::rotate(double degrees,
 
 CubitTransformMatrix& CubitTransformMatrix::rotate(double degrees, char axis)
 {
-  assert (axis == 'x' || axis == 'y' || axis == 'z');
+  if(axis != 'x' && axis != 'y' && axis != 'z')
+    throw std::invalid_argument("Invalid Axis: must be X, Y, or Z");
+  //assert (axis == 'x' || axis == 'y' || axis == 'z');
   
     // Convert to Radians, Get the sine and cosine
   double angle = degrees * CUBIT_PI/180.;
@@ -280,6 +282,7 @@ CubitVector CubitTransformMatrix::operator* (const CubitVector& point) const
 
 
   // point * matrix
+CUBIT_UTIL_EXPORT
 CubitVector operator* (const CubitVector& point,
                        const CubitTransformMatrix& matrix)
 {

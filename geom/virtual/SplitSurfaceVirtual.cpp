@@ -36,11 +36,6 @@ SplitSurfaceVirtual::split_surface_virtual( RefFace *ref_face_ptr,
   CubitStatus err  = sst.calculate_split_curves( ref_face_ptr, locations, 
                                              vec_lists, curve_list );
 
-#ifdef BOYD17
-  // Get the underlying surface (what if it is virtual does this still work?)
-  Surface *old_surf = ref_face_ptr->get_surface_ptr();
-#endif
-
   GMem gmem;
   int  num_points;
   DLIList<CubitVector*> segments;

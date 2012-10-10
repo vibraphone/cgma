@@ -108,9 +108,6 @@ public:
     { point_list.append( this ); }
 
   void compute_avg_normal();
-#ifdef BOYD15
-  CubitStatus merge_points( CubitPoint *other_point );
-#endif
 
     //-Functions just for imprint point data.
   void owner(RefEntity* my_owner)
@@ -133,9 +130,6 @@ public:
   PointType get_point_type()
     {return myPointType;}
   CubitStatus set_matching_point(ImprintPointData *other);
-#ifdef BOYD15
-  void force_matching_point(ImprintPointData *other);
-#endif
   ImprintPointData* get_matching_point()
     {return matchingPoint;}
   void set_start_partition()

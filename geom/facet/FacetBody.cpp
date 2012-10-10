@@ -99,10 +99,10 @@ BodySM* FacetBody::copy()
   int ii;
   DLIList<FacetPoint*> point_list;
   get_points(point_list);
-  DLIList<Point*> copy_points;
+  DLIList<TBPoint*> copy_points;
   point_list.reset();
-  Point *point_ptr;
-  Point *point_copy; 
+  TBPoint *point_ptr;
+  TBPoint *point_copy; 
   for(ii=0; ii<point_list.size(); ii++)
   {
     point_ptr = point_list.get_and_step();
@@ -128,8 +128,8 @@ BodySM* FacetBody::copy()
   Curve *curve_ptr, *curve_copy;
   Curve *curvsm_copy = NULL;
   FacetCurve *fcurve;
-  Point *ptsm_ptr;
-  Point *start_ptr, *end_ptr, *copy_start = NULL, *copy_end = NULL;
+  TBPoint *ptsm_ptr;
+  TBPoint *start_ptr, *end_ptr, *copy_start = NULL, *copy_end = NULL;
   for (ii=0; ii<curve_list.size(); ii++)
   {
     curve_ptr = curve_list.get_and_step();
@@ -146,7 +146,7 @@ BodySM* FacetBody::copy()
     for (jj=0; jj<point_list.size() && (!found0 || !found1); jj++)
     {
       point_ptr = point_list.get_and_step();
-      ptsm_ptr = CAST_TO(point_ptr, Point);
+      ptsm_ptr = CAST_TO(point_ptr, TBPoint);
       point_copy = copy_points.get_and_step();
       if (ptsm_ptr == start_ptr)
       {
@@ -665,9 +665,6 @@ CubitStatus FacetBody::transform( CubitTransformMatrix &tfmat,
   Surface *surf;
   FacetSurface *fsurf;
   FacetEvalTool *ftool;
-#ifdef BOYD17 
-  CubitBox box;
-#endif
   //CubitVector min, max;
 
   // go through all the surfaces and collect the list of all points.
@@ -709,7 +706,7 @@ CubitStatus FacetBody::transform( CubitTransformMatrix &tfmat,
   // check the vertices - make sure they are transformed
 
   FacetPoint *fpt;
-  Point *pt;
+  TBPoint *pt;
   DLIList<FacetPoint*>gpoint_list;
   get_points(gpoint_list);
   for (ii=0; ii<gpoint_list.size(); ii++)

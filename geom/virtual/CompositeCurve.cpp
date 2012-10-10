@@ -32,8 +32,14 @@
 // Creation Date : 12/19/01
 //-------------------------------------------------------------------------
 CompositeCurve::CompositeCurve( Curve* curve )
-  : HadBridgeRemoved(0), hiddenSet(0), firstCoEdge(0), startPoint(0), 
-    endPoint(0), startNext(0), endNext(0), stitchNext(0)
+  : hiddenSet(0), 
+    firstCoEdge(0),
+    startPoint(0), 
+    endPoint(0), 
+    startNext(0), 
+    endNext(0),
+    stitchNext(0),
+    HadBridgeRemoved(0)
 {
   compGeom = new CompositeGeom(1);
   compGeom->append( curve, CUBIT_FORWARD );
@@ -43,8 +49,15 @@ CompositeCurve::CompositeCurve( Curve* curve )
 }
 
 CompositeCurve::CompositeCurve( CompositeGeom* geometry )
-  : HadBridgeRemoved(0), compGeom(geometry), hiddenSet(0), firstCoEdge(0),
-    startPoint(0), endPoint(0), startNext(0), endNext(0), stitchNext(0)
+  : compGeom( geometry ),
+    hiddenSet( 0 ),
+    firstCoEdge( 0 ),
+    startPoint( 0 ),
+    endPoint( 0 ),
+    startNext( 0 ),
+    endNext( 0 ),
+    stitchNext(0),
+    HadBridgeRemoved(0)
 {
   for( int i = 0; i < compGeom->num_entities(); i++ )
   {
@@ -64,8 +77,14 @@ CompositeCurve::CompositeCurve( CompositeGeom* geometry )
 // Creation Date : 02/27/04
 //-------------------------------------------------------------------------
 CompositeCurve::CompositeCurve( CompositePoint* point )
-  : HadBridgeRemoved(0), hiddenSet(0), firstCoEdge(0), startPoint(0), 
-    endPoint(0), startNext(0), endNext(0), stitchNext(0)
+  : hiddenSet(0), 
+    firstCoEdge(0),
+    startPoint(0), 
+    endPoint(0), 
+    startNext(0), 
+    endNext(0),
+    stitchNext(0),
+    HadBridgeRemoved(0)
 {
   compGeom = new CompositeGeom(1);
   //compGeom->append( point, CUBIT_FORWARD );
@@ -1030,7 +1049,7 @@ void CompositeCurve::read_attributes()
 }
 
 
-void CompositeCurve::get_hidden_points( DLIList<Point*>& points )
+void CompositeCurve::get_hidden_points( DLIList<TBPoint*>& points )
 {
   if( hiddenSet )
   {
@@ -1055,12 +1074,10 @@ void CompositeCurve::print_debug_info( const char* prefix,
     else
       PRINT_INFO(": %d curves.\n", num_curves() );
 #else
-    PRINT_INFO("%sCompositeCurve %p : points (%p,%p) ", prefix,
-      static_cast<const void*>(this), static_cast<void*>(startPoint),
-      static_cast<void*>(endPoint) );
+    PRINT_INFO("%sCompositeCurve %p : points (%p,%p) ", prefix, this,
+      startPoint, endPoint );
     if ( num_curves() == 1 )
-      PRINT_INFO(": %s %p\n", fix_type_name(typeid(*get_curve(0)).name()), 
-        static_cast<void*>(get_curve(0)));
+      PRINT_INFO(": %s %p\n", fix_type_name(typeid(*get_curve(0)).name()), get_curve(0));
     else
       PRINT_INFO(": %d curves.\n", num_curves() );
 #endif
@@ -1074,7 +1091,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
 #ifdef TOPOLOGY_BRIDGE_IDS
   PRINT_INFO("%sCompositeCurve %d\n", prefix, get_id() );
 #else
-  PRINT_INFO("%sCompositeCurve %p\n", prefix, static_cast<const void*>(this) );
+  PRINT_INFO("%sCompositeCurve %p\n", prefix, this );
 #endif
   compGeom->print_debug_info( new_prefix );
   if( hiddenSet ) hiddenSet->print_debug_info( new_prefix );
@@ -1105,7 +1122,7 @@ void CompositeCurve::print_debug_info( const char* prefix,
     PRINT_INFO("%s  %s on Surface %p\n", prefix, 
       coedge->sense() == CUBIT_FORWARD ? "FORWARD" :
       coedge->sense() == CUBIT_REVERSED ? "REVERSE" : "UNKNOWN",
-      static_cast<void*>(surf_ptr) );
+      surf_ptr );
 #endif
 
     if (!coedge->get_loop())
@@ -1293,22 +1310,20 @@ void CompositeCurve::notify_split( TopologyBridge* new_bridge,
   DLIList<TopologyBridge*> bridges;
   old_curve->get_children(bridges,true,old_curve->layer());
   bridges.reset();
-  Point* old_start = dynamic_cast<Point*>(bridges.get());
-  Point* old_end   = dynamic_cast<Point*>(bridges.next());
+  TBPoint* old_start = dynamic_cast<TBPoint*>(bridges.get());
+  TBPoint* old_end   = dynamic_cast<TBPoint*>(bridges.next());
   bridges.clean_out();
   new_curve->get_children(bridges,true,new_curve->layer());
-  Point* new_start = dynamic_cast<Point*>(bridges.get());
-  Point* new_end   = dynamic_cast<Point*>(bridges.next());
+  TBPoint* new_start = dynamic_cast<TBPoint*>(bridges.get());
+  TBPoint* new_end   = dynamic_cast<TBPoint*>(bridges.next());
   bridges.clean_out();
 
   
     // find new point
   bool sp = (new_start == old_start || new_start == old_end);
-#ifndef NDEBUG
   bool ep = (new_end   == old_start || new_end   == old_end);
   assert( ep != sp ); // one must be true and one must be false
-#endif
-  Point* new_pt = sp ? new_start : new_end;
+  TBPoint* new_pt = sp ? new_start : new_end;
   
     // find relative sense of curves
   int old_index = index_of(old_curve);
@@ -1387,6 +1402,31 @@ void CompositeCurve::notify_split( TopologyBridge* new_bridge,
     CubitStatus s = coedge->insert_coedge(insert_index, new_coedge);
     assert(s);
   }
+}
+
+CubitStatus CompositeCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for CompositeCurves.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus CompositeCurve::get_ellipse_params
+(
+  CubitVector &center_vec,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine ellipse parameters for CompositeCurves.\n");
+  return CUBIT_FAILURE;
 }
 
 /*

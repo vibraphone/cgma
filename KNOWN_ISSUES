@@ -12,7 +12,8 @@ ID   Severity  Summary/Details
 
 178 major     Unite function doesn't unite smoothly connected surfaces.
 
-179 major     mcnp2cad test suite lat1-7 not working, needs debugging.
+179 major     mcnp2cad test suite lat1-3, lat5, lat1,norot not working, 
+              `needs debugging.
 
 180 major     There are lots new functions or added functions to exsisting 
               functions requirements to port OCC to cubit12. 
@@ -25,3 +26,10 @@ ID   Severity  Summary/Details
 
 185 major     mcnp2cad/tests/INP-torus test case fails on imprinting 2 spline 
               surfaces.
+
+247 major     Uniting of two shapes failed in Opencascade
+ 
+251 major     imprint mesh bug by Boyd Tidwell
+
+265 major     step file read crash
+

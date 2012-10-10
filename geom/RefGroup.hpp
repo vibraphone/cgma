@@ -60,12 +60,14 @@ public:
   DagType dag_type() const
     { return DagType::invalid_type(); }
 
-  virtual CubitStatus add_ref_entity(RefEntity *ref_entity);
-  virtual CubitStatus add_ref_entity(DLIList<RefEntity*>& entity_list);
+  virtual CubitStatus add_ref_entity(RefEntity *ref_entity, bool emit_event = false);
+  virtual CubitStatus add_ref_entity(DLIList<RefEntity*>& entity_list, bool emit_event = false);
   virtual CubitStatus remove_ref_entity(RefEntity *ref_entity,
-                                        const CubitBoolean from_observable = CUBIT_FALSE);
+                                        const CubitBoolean from_observable = CUBIT_FALSE, 
+                                        bool emit_event = false);
   virtual CubitStatus remove_ref_entity(DLIList<RefEntity*>& entity_list,
-                                        const CubitBoolean from_observable = CUBIT_FALSE);
+                                        const CubitBoolean from_observable = CUBIT_FALSE, 
+                                        bool emit_event = false);
   
     //- add or remove one or more ref entities to/from this group
 

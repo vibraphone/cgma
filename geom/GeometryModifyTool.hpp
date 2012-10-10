@@ -12,10 +12,11 @@
  *
  */
 
-#ifndef GEOMETRYMODIFYTOOL_HPP
+#ifndef GEOMETRYMODIFYTOOL_HPP 
 #define GEOMETRYMODIFYTOOL_HPP
 
 #include <stdio.h>
+#include <map>
 
 #include "CubitDefines.h"
 #include "GeometryDefines.h"
@@ -23,12 +24,13 @@
 #include "CubitVector.hpp"
 #include "DLIList.hpp"
 #include "CubitGeomConfigure.h"
+#include "FacetShapeDefs.hpp"
 
 class CoEdgeSM;
 class LoopSM;
 class CubitPlane;
 class Surface;
-class Lump;
+class Lump; 
 class Curve;
 class Body;
 class RefVertex;
@@ -36,6 +38,7 @@ class RefEdge;
 class RefFace;
 class RefVolume;
 class RefVertex;
+class RefFace;
 class RefVolume;
 template <class X> class DLIList;
 class Loop;
@@ -54,7 +57,7 @@ class TopologyEntity;
 class BodySM;
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
 class GeometryEntity;
 
 
@@ -188,9 +191,20 @@ public :
                       int extension_type = 0,
                       double extension = 0.0 );
 
-  
+  /*!  Creates a facet body based on facet information
+    *  {volume} - topological and facet information of the volume and 
+    *             underlying entities
+    *  {points} - a vector of doubles representing points used by
+    *             the facets
+    *  Returns the new Body or NULL
+    */
+  //! \brief Creates a volume from facet data. 
+  Body* create_body( VolumeFacets& volume, std::map<FacetShapes*, RefEntity*>& entity_map,
+                     const FacetPointSet& points, int interp_order);
+
   //! \brief Scale a body non-uniformly. (x,y,z directions) 
   CubitStatus scale ( Body *&entity, 
+                      const CubitVector& point,
                       const CubitVector& factors, 
                       bool check_to_transform = true,
                       bool preview = false);
@@ -230,7 +244,8 @@ public :
                           CubitVector &my_center,
                           CubitVector &axis,
                           CubitVector &target_center,
-                          double &angle );
+                          double &angle,
+                          bool preview);
 
   //! \brief Aligns a surface or vertex of the body with a plane defined an axis defined by 2 points.
   CubitStatus align_body( Body *body_ptr,
@@ -241,7 +256,8 @@ public :
                           CubitVector &my_center_2,
                           CubitVector &axis_of_rot,
                           double &angle,
-                          double &angle_2 );
+                          double &angle_2,
+                          bool preview );
 
   
   /*!  This function accepts two bodies in the first list.  The second body
@@ -262,7 +278,7 @@ public :
                       DLIList<Body*>& new_bodies,
                       double depth);
 
-  //! \brief Thickens a sheet body (surface) into a solid body.  Can do both directions.                       
+  //! \brief Thickens a sheet body (surface) into a solid body.  Can do both directions. 
   CubitStatus thicken( DLIList<Body*>& bodies,
                        DLIList<Body*>& new_bodies,
                        double depth,
@@ -304,12 +320,14 @@ public :
   CubitStatus intersect( Body *tool_body_ptr, 
                          DLIList<Body*> &from_bodies,
                          DLIList<Body*> &new_bodies,
-                         bool keep_old = false );
+                         bool keep_old = false,
+                         bool preview = false );
 
   //! \brief Boolean intersect.
   CubitStatus intersect( DLIList<Body*> &from_bodies,
                          DLIList<Body*> &new_bodies,
-                         bool keep_old = false );
+                         bool keep_old = false,
+                         bool preview = false);
 
   /*!  Cuts the given bodies with the points defining a plane.
     *  This is mainly used for vis purposes to section a body with
@@ -339,6 +357,15 @@ public :
                                 CubitVector &pos,
                                 double &step_size,
                                 int num_subdivisions);
+
+#ifdef CGM_KCM  
+  //! \brief Convert mesh entities to ACIS geometry.
+  CubitStatus mesh2brep(std::vector<double> &xvals,
+                        std::vector<double> &yvals,
+                        std::vector<double> &zvals,
+                        std::vector<unsigned int> &tri_connectivity,
+                        DLIList<BodySM*> &new_body_sms);
+#endif
 
   //! \brief Beta function.
   void march_path(CubitVector &start_pos,
@@ -945,7 +972,7 @@ public :
   CubitStatus test_regularize_refentity( RefEntity *old_entity_ptr);
 
   CubitStatus split_free_curve( RefEdge *ref_edge,
-                                CubitVector &split_location );
+                                DLIList<CubitVector*> &split_locations );
 
   //! \brief Separates multi-volume bodies into single-volume bodies.
   CubitStatus split_body( Body *body_ptr,
@@ -990,16 +1017,6 @@ public :
   static CubitBoolean get_old_names() { return oldNames; }
   //! \brief Sets old names flag.
   static void set_old_names(CubitBoolean flag) { oldNames = flag; }
-
-  //! \brief Gets mesh autodelete flag. 
-  static CubitBoolean get_mesh_autodelete() {return meshAutodelete;}
-  //! \brief Sets mesh autodelete flag. 
-  static void set_mesh_autodelete(CubitBoolean flag) {meshAutodelete = flag;}
-
-  //! \brief Gets mesh autodelete-remesh flag. 
-  static CubitBoolean is_mesh_autodelete_remesh() {return meshAutodeleteRemesh;}
-  //! \brief Sets mesh autodelete-remesh flag. 
-  static void set_mesh_autodelete_remesh(CubitBoolean flag) {meshAutodeleteRemesh = flag;}
 
   //! \brief Initializes all the settings in GeometryModifyTool to defaults
   static void initialize_settings();
@@ -1162,8 +1179,15 @@ public :
   RefEdge* make_RefEdge(GeometryType ref_edge_type,
                         RefVertex *ref_vertex_1,
                         RefVertex *ref_vertex_2,
-                        CubitVector const* intermediate_point = NULL,
-                        CubitSense sense = CUBIT_FORWARD) const ;
+                        CubitVector const* intermediate_point = NULL ) const;
+
+  RefEdge* make_elliptical_RefEdge( RefVertex *vert1,
+                                    RefVertex *vert2,
+                                    CubitVector center_point,
+                                    double start_angle,
+                                    double end_angle,
+                                    CubitSense sense) const;
+
 
   //! \brief Create a surface from an existing one. 
   RefFace* make_RefFace(RefFace *from_ref_face,
@@ -1217,23 +1241,19 @@ public :
                         RefFace *ref_face_ptr = NULL,
                         bool check_edges = true ) const ;
 
-  RefVolume* make_RefVolume(DLIList<RefFace*>& ref_face_list) const ;
-  /**<  \return  RefVlume*
-    *  \return - A pointer to a newly created RefVlume
-    *  \arg ref_volume_type
-    *  The type of the RefVolume
-    *  \arg ref_face_list
-    *  The RefFaces to use to create the RefVolume.
+  /*!  \return  Body*
+    *  \return - A pointer to a newly created Body
+    *  \arg ref_volume_list
+    *  The RefVolumes to use to create the Body
     *
-    *  This function takes a type information and a list of
-    *  RefFaces to create a RefVolume. The underlying representation
-    *  of the RefVolume is determined by the GeometryQueryEngine of
-    *  the RefFaces. All the RefFaces in the list must be
-    *  associated with the same GeometryQueryEngine. The return
-    *  value can be a NULL pointer, if the RefVolume cannot be succesfully
-    *  made for some reason.
+    *  This function takes a list of RefVolumes to create a Body. The
+    *  underlying representation of the Body is determined by the
+    *  GeometryQueryEngine of the RefVolumes. All the RefVolumes
+    *  in the list must be associated with the same
+    *  GeometryQueryEngine. The return value can be a NULL
+    *  pointer, if the RefFace cannot be succesfully made for some
+    *  reason.
     */
-
   //! \brief Creates a body from a list of volumes. 
   Body* make_Body(DLIList<RefVolume*>& ref_volume_list) const ;
 
@@ -1276,7 +1296,20 @@ public :
                                   double draft_angle,
                                   int draft_type,
                                   CubitBoolean switchside,
-                                  CubitBoolean rigid);
+                                  CubitBoolean rigid,
+                                  CubitBoolean anchor_entity,
+                                  CubitBoolean keep_old,
+                                  DLIList<Body*>& output_body_list);
+
+  CubitStatus sweep_helical( DLIList<RefEntity*>& ref_ent_list,
+                             CubitVector &location,
+                             CubitVector &direction,
+                             double &thread_distance,
+                             double &angle,
+                             bool right_handed,
+                             CubitBoolean anchor_entity,
+                             CubitBoolean keep_old,
+                             DLIList<Body*>& output_body_list); 
 
    CubitStatus sweep_curve_target(CubitPlane ref_plane,
 						 DLIList<RefEntity*>& ref_ent_list);
@@ -1291,8 +1324,8 @@ public :
    CubitStatus sweep_surface_target(RefFace *face,
                                     Body *target_body,
                                     CubitVector distance,
-                                    CubitPlane stop_plane,
-                                    double magnitude = 0.0);
+                                    CubitPlane stop_plane,                                    
+                                    double magnitude = 0.0 );                                    
 
    CubitStatus sweep_surface_target(CubitPlane ref_plane,
 						DLIList<RefEntity*>& ref_ent_list);
@@ -1302,23 +1335,32 @@ public :
                                   double draft_angle,
                                   int draft_type,
                                   CubitBoolean switchside,
-                                  CubitBoolean rigid);
+                                  CubitBoolean rigid,
+                                  CubitBoolean anchor_entity,
+                                  CubitBoolean keep_old,
+                                  DLIList<Body*>& output_body_list);
 
   //! \brief Creates bodies by sweeping surfaces or curves about an axis. 
   CubitStatus sweep_rotational(DLIList<RefEntity*>& ref_ent_list,
                                const CubitVector& point,
                                const CubitVector& direction,
                                double angle,
+                               DLIList<Body*>& output_body_list,
+                               CubitBoolean anchor_entity,
+                               CubitBoolean keep_old,
                                int steps = 0,
                                double draft_angle = 0.0,
-                               int draft_type = 0,
+                               int draft_type = 0,                               
                                CubitBoolean switchside = CUBIT_FALSE,
                                CubitBoolean make_solid = CUBIT_FALSE,
-                               CubitBoolean rigid = CUBIT_FALSE);
+                               CubitBoolean rigid = CUBIT_FALSE );
 
   //! \brief Creates bodies by sweeping surfaces or curves along a curve. 
   CubitStatus sweep_along_curve(DLIList<RefEntity*>& ref_ent_list,
                                 DLIList<RefEdge*>& ref_edge_list,
+                                DLIList<Body*>& output_body_list,
+                                CubitBoolean anchor_entity,
+                                CubitBoolean keep_old,
                                 double draft_angle = 0.0,
                                 int draft_type = 0,
                                 CubitBoolean rigid = CUBIT_FALSE);
@@ -1615,20 +1657,79 @@ public :
                                    Body*& new_body,
                                    DLIList<RefEdge*>& guides);
   
-  //! \brief Create a solid body by lofting between two surfaces.
-  CubitStatus loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
-				     RefFace *face2, const double &takeoff2,
-                                     Body*& new_body,
-                                     CubitBoolean arc_length_option,
-                                     CubitBoolean twist_option,
-                                     CubitBoolean align_direction,
-                                     CubitBoolean perpendicular,
-                                     CubitBoolean simplify_option);
+  ////! \brief Create a solid body by lofting between two surfaces.
+  //CubitStatus loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
+		//		     RefFace *face2, const double &takeoff2,
+  //                                   Body*& new_body,
+  //                                   CubitBoolean arc_length_option,
+  //                                   CubitBoolean twist_option,
+  //                                   CubitBoolean align_direction,
+  //                                   CubitBoolean perpendicular,
+  //                                   CubitBoolean simplify_option);
+
+
+
+
+
+  ////! \brief Create a solid body by lofting between two surfaces.
+  //CubitStatus loft_surfaces_to_body( RefFace *face1, const double &takeoff1,
+  //                                   RefFace *face2, const double &takeoff2,
+  //                                   DLIList<RefEdge*> &guides,
+  //                                   Body*& new_body,
+  //                                   CubitBoolean arc_length_option,
+  //                                   CubitBoolean twist_option,
+  //                                   CubitBoolean align_direction,
+  //                                   CubitBoolean perpendicular,
+  //                                   CubitBoolean simplify_option);
+
+
+  CubitStatus loft_surfaces_to_body(DLIList<RefFace*> &surfaces,
+                                    DLIList<double> &takeoff_factor_list,
+                                    DLIList<RefFace*> &takeoff_vector_surface_list,
+                                    DLIList<CubitVector> &surface_takeoff_vector_list,
+                                    DLIList<RefEdge*> &takeoff_vector_curve_list,
+                                    DLIList<CubitVector> &curve_takeoff_vector_list,
+                                    DLIList<RefEdge*> &guides,
+                                    DLIList<RefVertex*> &match_vertices_list,
+                                    Body*& new_body,
+                                    CubitBoolean global_guides,
+                                    CubitBoolean closed,
+                                    CubitBoolean show_matching_curves,
+                                    CubitBoolean preview
+                                    );
+
+
+
+
 
   CubitStatus create_surface_curve(DLIList<RefEntity*> curve_entity,
-									DLIList<RefEntity*> target_entity,
-									CubitVector sweep_direction = CubitVector (0,0,0),
-									CubitBoolean distance_flag = CUBIT_FALSE);
+                                   DLIList<RefEntity*> target_entity,
+				   CubitVector sweep_direction = CubitVector (0,0,0),
+				   CubitBoolean distance_flag = CUBIT_FALSE);
+
+  CubitStatus create_rectangle_surface( double width, double height, CubitVector plane );
+
+  CubitStatus create_parallelogram_surface( RefVertex *v1, 
+                                            RefVertex *v2,
+                                            RefVertex *v3 );
+
+  CubitStatus create_circle_surface( double radius, CubitVector plane ); 
+
+  CubitStatus create_circle_surface( RefVertex *v1, 
+                                     RefVertex *v2,
+                                     RefVertex *v3 );
+
+  CubitStatus create_circle_surface( RefVertex *v1, 
+                                     RefVertex *v2,
+                                     CubitVector center_point ); 
+
+  CubitStatus create_ellipse_surface( RefVertex *v1, 
+                                      RefVertex *v2,
+                                      CubitVector center_point ); 
+
+  CubitStatus create_ellipse_surface( double major_radius, 
+                                      double minor_radius,
+                                      CubitVector plane );
 
   CubitStatus idealize_hole_slot_geometry(DLIList<RefEntity*> idealize_entity,
                                      DLIList<RefEntity*> exclude_entity,
@@ -1693,17 +1794,33 @@ public :
                                     RefFace *ref_face2,
                                     DLIList<RefEdge*> &ref_edge_list );
 
+  RefEdge* create_arc(const CubitVector& position,
+                               double radius,
+                               double start_angle,
+                               double end_angle,
+                               CubitVector plane,
+                               CubitBoolean preview = CUBIT_FALSE);
+
+  RefEdge* create_arc_radius( RefVertex* ref_vertex1,
+                                   RefVertex* ref_vertex2,
+                                   const CubitVector &normal,
+                                   double radius,
+                                   CubitBoolean other_arc = CUBIT_FALSE ,
+                                   CubitBoolean full = CUBIT_FALSE,
+                                   CubitBoolean preview = CUBIT_FALSE);
   //! \brief Create an arc curve from three points.
   RefEdge* create_arc_three( RefVertex* ref_vertex1,
                              RefVertex* ref_vertex2,
                              RefVertex* ref_vertex3,
-                             CubitBoolean full = CUBIT_FALSE );
+                             CubitBoolean full = CUBIT_FALSE,
+                             CubitBoolean preview = CUBIT_FALSE );
 
   //! \brief Create an arc curve tangent to three curves.
   RefEdge* create_arc_three( RefEdge* ref_edge1,
                              RefEdge* ref_edge2,
                              RefEdge* ref_edge3,
-                             CubitBoolean full = CUBIT_FALSE );
+                             CubitBoolean full = CUBIT_FALSE,
+                             CubitBoolean preview = CUBIT_FALSE );
   
   /*! \brief Create an arc curve from two points and a center point. 
       If full option is specified, a full circle is created.*/
@@ -1713,11 +1830,21 @@ public :
                                    RefVertex* ref_vertex3,
                                    const CubitVector &normal,
                                    double radius = CUBIT_DBL_MAX,
-                                   CubitBoolean full = CUBIT_FALSE );
+                                   CubitBoolean full = CUBIT_FALSE,
+                                   CubitBoolean preview = CUBIT_FALSE );
 
   //! \brief  Create a curve that is a combination of the specified curves.
   CubitStatus create_curve_combine( DLIList<RefEdge*>& ref_edge_list,
                                     RefEdge *&new_ref_edge_ptr );
+
+
+  CubitStatus create_curve_helix( CubitVector &location,
+                                  CubitVector &direction,
+                                  CubitVector &start_point,
+                                  double &thread_distance,
+                                  double &angle,
+                                  bool right_handed,
+                                  RefEdge *&new_ref_edge_ptr);
 
 
   //! \brief Sets sepAfterWebcut variable.
@@ -1833,8 +1960,8 @@ protected :
 
   GeometryModifyEngine* make_RefEdge_common ( RefVertex* start_vertex,
                                               RefVertex* end_vertex,
-                                              Point*& start_point,
-                                              Point*& end_point,
+                                              TBPoint*& start_point,
+                                              TBPoint*& end_point,
                                               RefFace* ref_face = 0,
                                               Surface** surface = 0) const;
     //- Common code for misc. make_RefEdge functions.
@@ -1860,7 +1987,7 @@ protected :
                                               DLIList<Curve*>& curves,
                                               CubitBoolean allow_composites = CUBIT_FALSE ) const;
   GeometryModifyEngine* common_modify_engine( DLIList<RefVertex*>& vertices,
-                                              DLIList<Point*>& points,
+                                              DLIList<TBPoint*>& points,
                                               CubitBoolean allow_composites = CUBIT_FALSE ) const;
 
   GeometryModifyEngine* common_modify_engine( DLIList<TopologyEntity*>& topology_list,
@@ -1931,7 +2058,7 @@ protected:
   GeometryModifyEngine* tweak_setup( DLIList<RefVertex*> &input_vertices,
                                      const char* name,
                                      DLIList<Body*> &output_bodies,
-                                     DLIList<Point*> &output_points );
+                                     DLIList<TBPoint*> &output_points );
 
   CubitStatus sweep_setup ( const char* sweep_function_name,
                             DLIList<RefEntity*>& entity_list,
@@ -1939,6 +2066,7 @@ protected:
                             GeometryModifyEngine*& engine,
                             CubitBoolean& changed_new_ids,
                             DLIList<GeometryEntity*>& geom_list,
+                            bool keep_old,
                             DLIList<RefEdge*>* edge_list = 0,
                             DLIList<Curve*>* curve_list = 0 );
     //- Common setup code for sweep functions
@@ -1960,9 +2088,9 @@ protected:
     //O curve_list
     //O- Curves corresponding to edges in edge_list.
 
-//  CubitStatus imprint_singly( DLIList<Body*>& body_list,
-//                              DLIList<Body*>& new_bodies,
-//                              CubitBoolean keep_old );
+  CubitStatus imprint_singly( DLIList<Body*>& body_list,
+                              DLIList<Body*>& new_bodies,
+                              CubitBoolean keep_old );
     //- Implementation of imprint(..) when group_imprint is false.
 
   void remove_dead_entity_names( RefEntity* entity ) const;
@@ -1971,10 +2099,6 @@ protected:
 
   Body* update_body( Body* body ) const;
     //- Destroy or update modified body, as appropriate.
-
-  void body_premodify(Body* body) const;
-    //- traverse the body object and calls premodify function on each structure
-
 
 private :
 
@@ -2038,49 +2162,16 @@ private :
   void fixup_merged_entities( DLIList<int> &merged_surface_ids,
                               DLIList<int> &merged_curve_ids ) const;
 
-  CubitStatus webcut_w_cylinder(
-                                DLIList<BodySM*> &webcut_body_list,
-                                double radius,
-                                const CubitVector &axis,
-                                const CubitVector &center,
-                                DLIList<BodySM*>& neighbor_imprint_list,
-                                DLIList<BodySM*>& results_list,
-                                ImprintType imprint_type = NO_IMPRINT) ;
-  //- webcuts a body using a cylinder given the input parameters.
-
-  CubitStatus prepare_surface_sweep(
-                              DLIList<BodySM*> &blank_bodies,
-                              DLIList<Surface*> &surfaces,
-                              const CubitVector& sweep_vector,
-                              bool sweep_perp,
-                              bool through_all,
-                              bool outward,
-                              bool up_to_next,
-                              Surface *stop_surf,
-                              Curve *curve_to_sweep_along,
-                              BodySM* &cutting_tool_ptr ,
-                              const CubitVector* point = NULL,
-                              double *angle = NULL);
-  // prepare for webcut with swept_surfaces. if point and angle is known,
-  // do surface sweep rotated; or if curve_to_sweep_along is known, do
-  // sweep along curve; then if sweep_perp is true, do perpendicular sweep
-  // of the surfaces; lastly do sweep along vector.
   bool contains_intermediate_geom(DLIList<Body*>& list) const;
   bool contains_intermediate_geom(DLIList<TopologyBridge*>& list) const;
   bool contains_composites(DLIList<TopologyBridge*>& bridge_list ) const;
   bool contains_partitions(DLIList<TopologyBridge*>& bridge_list ) const;
   bool contains_partitions( DLIList<Body*>& list ) const;
   bool contains_composites( DLIList<Body*>& list ) const;
-#ifdef BOYD14
-  bool contains_intermediate_geometry(DLIList<Body*>& body_list) const;
-  /**< Check if the passed entities or any of their child entities
-    * are virtual.
-    */
-#endif
 
   void do_attribute_setup(void);
   void do_attribute_cleanup(void);
-  void push_vg_attributes_before_modify(DLIList<BodySM*> &old_sms);
+  void push_attributes_before_modify(DLIList<BodySM*> &old_sms);
   CubitStatus restore_vg_after_modify(DLIList<BodySM*> &new_sms,
                                       DLIList<Body*> &old_bodies,
                                       GeometryModifyEngine *gme);
@@ -2109,8 +2200,14 @@ private :
                                    DLIList<RefFace*> &narrow_faces,
                                    double small_edge_length);
 
+  void propagate_merge_tolerance(DLIList<Body*> &body_list);
+  void push_tolerance_attribute(DLIList<Body*> &body_list);
+
   static CubitStatus prepare_for_copy( RefEntity *ref_ents,
                                        TopologyBridge *&top_bridge );
+
+  CubitStatus prepare_bc_for_webcut();
+  CubitStatus finish_bc_webcut();
 
   static CubitStatus finish_copy( TopologyBridge *&new_bridge,
                                   TopologyBridge *old_bridge );

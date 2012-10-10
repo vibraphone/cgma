@@ -237,7 +237,7 @@ void TopologyBridge::loopsms( DLIList<LoopSM*>& loops, bool unique )
   }
   else
   {
-    if( dynamic_cast<Curve*>(this) || dynamic_cast<Point*>(this) )
+    if( dynamic_cast<Curve*>(this) || dynamic_cast<TBPoint*>(this) )
       get_parents( related );
     else
       get_children( related );
@@ -277,7 +277,7 @@ void TopologyBridge::coedgesms( DLIList<CoEdgeSM*>& coedges, bool unique )
   }
   else
   {
-    if( dynamic_cast<Point*>(this) )
+    if( dynamic_cast<TBPoint*>(this) )
       get_parents( related );
     else
       get_children( related );
@@ -385,7 +385,7 @@ void TopologyBridge::curves( DLIList<Curve*>& curves, bool unique )
   {
     curves.append(this_curve);
   }
-  else if( dynamic_cast<Point*>(this) )
+  else if( dynamic_cast<TBPoint*>(this) )
   {
     get_parents( related );
     related.reset();
@@ -412,11 +412,11 @@ void TopologyBridge::curves( DLIList<Curve*>& curves, bool unique )
   }
 }  
 
-void TopologyBridge::points( DLIList<Point*>& points, bool unique )
+void TopologyBridge::points( DLIList<TBPoint*>& points, bool unique )
 {
   DLIList<TopologyBridge*> children;
   
-  Point* this_point = dynamic_cast<Point*>(this);
+  TBPoint* this_point = dynamic_cast<TBPoint*>(this);
   if( this_point )
   {
     points.append(this_point);
@@ -426,7 +426,7 @@ void TopologyBridge::points( DLIList<Point*>& points, bool unique )
     get_children( children );
     children.reset();
     for (int i = children.size(); i--; )
-      points.append( dynamic_cast<Point*>(children.get_and_step()) );
+      points.append( dynamic_cast<TBPoint*>(children.get_and_step()) );
   }
   else
   {
@@ -452,9 +452,9 @@ void TopologyBridge::get_related(const type_info& other_type,
   DLIList<LoopSM*> loopsms_list;
   DLIList<Curve*> curves_list;
   DLIList<CoEdgeSM*> coedgesms_list;
-  DLIList<Point*> points_list;
+  DLIList<TBPoint*> points_list;
 
-  if( other_type == typeid(Point) )
+  if( other_type == typeid(TBPoint) )
   {
     points(points_list);
     CAST_LIST_TO_PARENT( points_list, temp_topo_list );
@@ -522,7 +522,7 @@ const type_info& TopologyBridge::generic_entity_type_info()
   else if (CAST_TO(this, LoopSM)) return typeid(LoopSM);
   else if (CAST_TO(this, Curve)) return typeid(Curve);
   else if (CAST_TO(this, CoEdgeSM)) return typeid(CoEdgeSM);
-  else if (CAST_TO(this, Point)) return typeid(Point);
+  else if (CAST_TO(this, TBPoint)) return typeid(TBPoint);
   else return typeid(InvalidEntity);
 }
 

@@ -21,11 +21,6 @@ class CUBIT_UTIL_EXPORT CubitContainer
     CubitContainer(int num_items);
     virtual ~CubitContainer();
    
-#ifdef BOYD15
-    int number_items() const;
-    //- returns the number of items in the container
-#endif
-
   protected:
 
     int numberItems;

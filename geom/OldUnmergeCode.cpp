@@ -85,15 +85,15 @@ CubitStatus OldUnmergeCode::unmerge_all()
   GeometryQueryTool::instance()->ref_edges( edge_list );
   GeometryQueryTool::instance()->ref_vertices( vtx_list );
   
-  for( i = face_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = face_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(face_list.get_and_step(),CUBIT_FALSE) )
       result = CUBIT_FAILURE;
  
-  for( i = edge_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = edge_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(edge_list.get_and_step(),CUBIT_FALSE) ) 
       result = CUBIT_FAILURE;
   
-  for( i = vtx_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = vtx_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(vtx_list.get_and_step()) )
       result = CUBIT_FAILURE;
   
@@ -119,7 +119,7 @@ CubitStatus OldUnmergeCode::unmerge( DLIList<RefEntity*> &entity_list,
   
   CubitBoolean top = start_unmerge();
   
-  for( int i = entity_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( int i = entity_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     unmerge( entity_list.get_and_step(), descend );
   
   end_unmerge(top);
@@ -168,7 +168,7 @@ CubitStatus OldUnmergeCode::unmerge( Body* body_ptr )
   CubitStatus result = CUBIT_SUCCESS;
   DLIList<RefVolume*> vol_list;
   body_ptr->ref_volumes(vol_list);
-  for( int i = vol_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( int i = vol_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( !unmerge(vol_list.get_and_step()) )
       result = CUBIT_FAILURE;
   end_unmerge(top);
@@ -184,15 +184,12 @@ CubitStatus OldUnmergeCode::unmerge( RefVolume* vol_ptr )
   CubitStatus result = CUBIT_SUCCESS;
   DLIList<RefFace*> face_list, new_faces;
   DLIList<RefEdge*> edge_list, new_edges;
-#ifdef BOYD17 
-  DLIList<RefVertex*> vtx_list, new_vertices;
-#endif
   DLIList<RefVertex*> vtx_list;
   vol_ptr->ref_faces(face_list);
   vol_ptr->ref_edges(edge_list);
   vol_ptr->ref_vertices(vtx_list);
   face_list.reset();
-  while( face_list.size() && !CubitMessage::instance()->Interrupt() )
+  while( face_list.size() && !AppUtil::instance()->interrupt() )
   {
     RefFace* old_face = face_list.extract();
     RefFace* new_face = unmerge(old_face,vol_ptr);
@@ -202,7 +199,7 @@ CubitStatus OldUnmergeCode::unmerge( RefVolume* vol_ptr )
       result = CUBIT_FAILURE;
   }
   
-  while( edge_list.size() && !CubitMessage::instance()->Interrupt() )
+  while( edge_list.size() && !AppUtil::instance()->interrupt() )
   {
     RefEdge* old_edge = edge_list.extract();
     face_list.clean_out();
@@ -223,7 +220,7 @@ CubitStatus OldUnmergeCode::unmerge( RefVolume* vol_ptr )
   }
   
   
-  while( vtx_list.size() && !CubitMessage::instance()->Interrupt() )
+  while( vtx_list.size() && !AppUtil::instance()->interrupt() )
   {
     RefVertex* old_vtx = vtx_list.extract();
     edge_list.clean_out();
@@ -466,7 +463,7 @@ CubitStatus OldUnmergeCode::unmerge( RefVertex* vtx_ptr )
   else
   {
     DLIList<TopologyBridge*> bridge_list;
-    DLIList<Point*> point_list;
+    DLIList<TBPoint*> point_list;
     vtx_ptr->bridge_manager()->get_bridge_list( bridge_list );
     
     //Try top remove each bridge
@@ -481,7 +478,7 @@ CubitStatus OldUnmergeCode::unmerge( RefVertex* vtx_ptr )
       
       TopologyBridge* bridge_ptr = bridge_list.get_and_step();
       point_list.clean_out();
-      point_list.append( CAST_TO(bridge_ptr,Point) );
+      point_list.append( CAST_TO(bridge_ptr,TBPoint) );
       RefVertex* new_vtx = split_out_Points(point_list);
       if( new_vtx )
       {
@@ -776,11 +773,11 @@ RefVertex* OldUnmergeCode::unmerge( RefVertex* vtx_ptr, RefEdge* edge_ptr )
   assert(curve_ptr != 0);
 
   //Find points in vtx_ptr associated with curve_ptr.
-  DLIList<Point*> curve_points, point_list;
+  DLIList<TBPoint*> curve_points, point_list;
   curve_ptr->points(curve_points);
   for( i = curve_points.size(); i > 0; i-- )
   {
-    Point* point_ptr = curve_points.get_and_step();
+    TBPoint* point_ptr = curve_points.get_and_step();
     if( point_ptr->topology_entity() == vtx_ptr )
       point_list.append(point_ptr);
   }
@@ -796,7 +793,7 @@ RefVertex* OldUnmergeCode::unmerge( RefVertex* vtx_ptr, RefEdge* edge_ptr )
   // Find any links from parent to old entity, and move them
   // to the new, unmerged entity.
   DLIList<RefEdge*> edge_list; 
-  DLIList<Point*> curve_pts;
+  DLIList<TBPoint*> curve_pts;
   DLIList<CoVertex*> cvtx_to_change;
   
   vtx_ptr->ref_edges( edge_list );
@@ -946,9 +943,6 @@ Loop* OldUnmergeCode::split_out_Loop( LoopSM* loopsm, RefFace* /*new_entity*/, C
   Loop* new_loop = new Loop( loopsm );
   DLIList<TopologyBridge*> tb_list;
   DLIList<CoEdge*> coedges;
-#ifdef BOYD17 
-  DLIList<Surface*> coesm_surfs;
-#endif
   old_loop->ordered_co_edges( coedges );
   if( !reverse ) coedges.reverse();
   
@@ -1002,7 +996,7 @@ Loop* OldUnmergeCode::split_out_Loop( LoopSM* loopsm, RefFace* /*new_entity*/, C
 //
 // Creation Date : 03/26/01
 //-------------------------------------------------------------------------
-void OldUnmergeCode::find_curves( Point* point_ptr, DLIList<Curve*>& result_set )
+void OldUnmergeCode::find_curves( TBPoint* point_ptr, DLIList<Curve*>& result_set )
 {
   //Do normal TB query for real geometry
   point_ptr->curves(result_set);
@@ -1012,7 +1006,7 @@ void OldUnmergeCode::find_curves( Point* point_ptr, DLIList<Curve*>& result_set 
   if( vtx_ptr )
   {
     DLIList<RefEdge*> vtx_edges;
-    DLIList<Point*> curve_pts;
+    DLIList<TBPoint*> curve_pts;
     DLIList<TopologyBridge*> edge_bridges;
     vtx_ptr->ref_edges(vtx_edges);
     for( int i = vtx_edges.size(); i > 0; i-- )
@@ -1161,7 +1155,7 @@ RefEdge* OldUnmergeCode::split_out_Curves( DLIList<Curve*>& curve_list, CubitBoo
 }
 
 //-------------------------------------------------------------------------
-// Purpose       : Unmerge a Point from its Vertex and make new Vertex
+// Purpose       : Unmerge a TBPoint from its Vertex and make new Vertex
 //
 // Special Notes : 
 //
@@ -1169,7 +1163,7 @@ RefEdge* OldUnmergeCode::split_out_Curves( DLIList<Curve*>& curve_list, CubitBoo
 //
 // Creation Date : 01/18/01
 //-------------------------------------------------------------------------
-RefVertex* OldUnmergeCode::split_out_Points( DLIList<Point*>& point_list )
+RefVertex* OldUnmergeCode::split_out_Points( DLIList<TBPoint*>& point_list )
 {
   int i;
   
@@ -1200,7 +1194,7 @@ RefVertex* OldUnmergeCode::split_out_Points( DLIList<Point*>& point_list )
     assert(old_entity != 0);
     for( i = point_list.size(); i > 0; i-- )
     {
-      Point* ptr = point_list.get_and_step();
+      TBPoint* ptr = point_list.get_and_step();
       te_ptr->bridge_manager()->remove_bridge( ptr );
       remove_CAEntityId_attrib( ptr );
     }
@@ -1344,7 +1338,7 @@ void OldUnmergeCode::cleanup_unmerge()
     new_unmerged.step();
   }
   
-  if( CubitMessage::instance()->Interrupt() ) PRINT_WARNING("Unmerge aborted.\n");
+  if( AppUtil::instance()->interrupt() ) PRINT_WARNING("Unmerge aborted.\n");
   if( face_count ) PRINT_INFO("%4d surfaces unmerged.\n",face_count);
   if( edge_count ) PRINT_INFO("%4d  curves  unmerged.\n",edge_count);
   if( vtx_count )  PRINT_INFO("%4d vertices unmerged.\n",vtx_count);

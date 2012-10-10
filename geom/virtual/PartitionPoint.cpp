@@ -15,7 +15,7 @@ PartitionPoint::PartitionPoint( const CubitVector& position,
   owner->sub_entity_set().add_lower_order( this );
 }
   
-PartitionPoint::PartitionPoint( Point* real_point )
+PartitionPoint::PartitionPoint( TBPoint* real_point )
   : firstCurve(0), curveCount(0), 
     myPosition( real_point->coordinates() ), 
     facetPoint(0)
@@ -119,9 +119,9 @@ void PartitionPoint::get_children_virt( DLIList<TopologyBridge*>& )
 {
 }
 
-Point* PartitionPoint::real_point() const
+TBPoint* PartitionPoint::real_point() const
 {
-  return dynamic_cast<Point*>(sub_entity_set().get_entity());
+  return dynamic_cast<TBPoint*>(sub_entity_set().get_entity());
 }
 
 GeometryQueryEngine* PartitionPoint::get_geometry_query_engine() const
@@ -138,7 +138,7 @@ void PartitionPoint::print_debug_info( const char* prefix,
   strcat( new_prefix, "  ");
   CubitVector p = coordinates();
   PRINT_INFO("%sPartitionPoint %p at (%f,%f,%f)\n", 
-    prefix, static_cast<const void*>(this), p.x(), p.y(), p.z() );
+    prefix, this, p.x(), p.y(), p.z() );
   DLIList<Curve*> curve_list;
   const_cast<PartitionPoint*>(this)->TopologyBridge::curves( curve_list );
   PRINT_INFO("%s  %d Curves (%d PartitionCurves).\n", prefix, 
@@ -147,8 +147,8 @@ void PartitionPoint::print_debug_info( const char* prefix,
   if ( facet_point() ) {
     p = facet_point()->coordinates();
     PRINT_INFO("%s  CubitPoint %p at [%f,%f,%f] (%f)\n", prefix,
-      static_cast<void*>(facet_point()), p.x(), p.y(), p.z(), 
-      (coordinates() - facet_point()->coordinates()).length());
+            facet_point(), p.x(), p.y(), p.z(), 
+            (coordinates() - facet_point()->coordinates()).length());
   }
   
   if( ent_set )
@@ -219,7 +219,7 @@ CubitStatus PartitionPoint::move_to_geometry( CubitVector& pos )
 
 void PartitionPoint::transform( const CubitTransformMatrix& xform )
 {
-  if( Point* point = dynamic_cast<Point*>(partitioned_entity()) )
+  if( TBPoint* point = dynamic_cast<TBPoint*>(partitioned_entity()) )
     myPosition = point->coordinates();
   else
     myPosition = xform * myPosition;

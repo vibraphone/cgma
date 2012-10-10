@@ -888,11 +888,9 @@ std::vector<int> curveindex;
     points.clear(); //  clear out the points vector since we are through with it.
 
     FacetModifyEngine *fme = FacetModifyEngine::instance();
-    double feature_angle;
     int interp_order;
     CubitBoolean smooth_non_manifold, split_surfaces;
     BodySM *body_ptr;
-    feature_angle = 135.0;
     interp_order = 0;
     smooth_non_manifold = CUBIT_TRUE;
     split_surfaces = CUBIT_FALSE;
@@ -902,7 +900,7 @@ std::vector<int> curveindex;
 
         status = fme->build_cholla_surfaces( facet_list,
                                              point_list,
-                                             feature_angle,
+                                             -1.0,
                                              interp_order,
                                              smooth_non_manifold,
                                              split_surfaces,
@@ -912,7 +910,7 @@ std::vector<int> curveindex;
 
         status = fme->finish_facet_Body( cholla_ptr,
                                          NULL,
-                                         feature_angle, interp_order,
+                                         -1.0, interp_order,
                                          body_ptr);
         if( status == CUBIT_FAILURE )
           return status;

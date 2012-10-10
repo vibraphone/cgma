@@ -40,6 +40,12 @@ public:
   double projected_overlap( SurfaceOverlapFacet &other_facet, 
                             CubitBoolean draw_overlap = CUBIT_FALSE );
 
+  double distance_from_position( CubitVector &position );
+
+  bool facet_points_within_tol( SurfaceOverlapFacet *other_face, double tolerance );
+
+  double perimeter();
+
   bool bbox_overlap( double tol, SurfaceOverlapFacet &other_facet ) 
   { return boundingBox.overlap( tol, other_facet.boundingBox ); }
 

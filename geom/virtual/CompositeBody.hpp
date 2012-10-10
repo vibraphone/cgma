@@ -27,9 +27,6 @@ class CompositeBody: public BodySM, public TBOwner
     CompositeBody();
     ~CompositeBody();
     
-#ifdef BOYD15
-    int num_lumps() const;
-#endif
     CompositeLump* next_lump( CompositeLump* after_this = 0 ) const;
     
     CubitStatus add( CompositeLump* lump );

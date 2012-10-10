@@ -35,12 +35,12 @@ void CompositeCoSurf::print_debug_info( const char* prefix, bool brief )
   const char* sense = mySense == CUBIT_FORWARD ? "Forward" :
                       mySense == CUBIT_REVERSED ? "Reverse" : "UNKNOWN";
                       
-  PRINT_INFO("%sCompCoSurf %p %s ", prefix, static_cast<void*>(this), sense );
+  PRINT_INFO("%sCompCoSurf %p %s ", prefix, this, sense );
    
   if( !mySurface )
     PRINT_INFO("NULL SURFACE\n");
   else if( brief )
-    PRINT_INFO("surface %p\n", static_cast<void*>(mySurface) );
+    PRINT_INFO("surface %p\n", mySurface );
   else
     { PRINT_INFO("\n  ");  mySurface->print_debug_info(prefix, true); }
 }

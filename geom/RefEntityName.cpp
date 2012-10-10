@@ -122,6 +122,7 @@ void RefEntityName::remove_refentity_name(RefEntity *entity,
       attrib->has_updated(CUBIT_FALSE);
       attrib->update();
       entity->remove_cubit_attrib( attrib );
+      delete attrib;
     }
   }
 

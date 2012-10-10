@@ -288,8 +288,8 @@ void SettingHandler::restore_settings(const char* filename)
   //Read the first 2 lines of the file, we know they are not settings
   //so just get rid of them
   char junk[100];
-  fgets(junk, 100, file);
-  fgets(junk, 100, file);
+  char* s = fgets(junk, 100, file);
+  s = fgets(junk, 100, file);
 
   char name[51]; //Allocate 50 bytes for the characters and 1 for a null termination
   char new_name[50]; //A string that will hold the setting name without excess white space
@@ -305,7 +305,7 @@ void SettingHandler::restore_settings(const char* filename)
   while (!feof(file)) {
 
   //Get the setting name.  This will be in the first 50 characters of a line
-  fgets(name, 51, file);
+  s = fgets(name, 51, file);
 
   //Create a CubitString for the setting name without all the white space
   int i;
@@ -326,7 +326,7 @@ void SettingHandler::restore_settings(const char* filename)
   temp = mSettingsList.find(cubit_name);
   
     //Read in the rest of the line no matter what
-  fgets(value, 120, file);
+  s = fgets(value, 120, file);
     
   if (temp == mSettingsList.end()) {
     std::cerr << "Setting " << cubit_name.c_str() << " was not found." << std::endl;  

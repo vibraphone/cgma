@@ -69,7 +69,8 @@
 #include "TetFacetorTool.hpp"
 #include "TDDelaunay.hpp"
 #include "TDInterpNode.hpp"
-
+#include <vector>
+#include <algorithm>
 
 //-------------------------------------------------------------------------
 // Function:    TetFacetorTool
@@ -133,7 +134,7 @@ finish()
 // Date:        1/22/2004
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-get_tets(DLIList<TET*> &tet_list)
+get_tets(std::vector<TET*> &tet_list)
 {
   tet_list += tetList;
   return tet_list.size();
@@ -149,7 +150,7 @@ TET_FACETOR_TOOL__T
 get_outside_tet()
 {
   NODE *node = boxNodes[0];
-  DLIList<TET *> *tet_list_ptr = node->tet_list();
+  std::vector<TET *> *tet_list_ptr = node->tet_list();
   assert(tet_list_ptr != NULL && tet_list_ptr->size() > 0);
   tet_list_ptr->reset();
   return tet_list_ptr->get();
@@ -162,9 +163,9 @@ get_outside_tet()
 // Date:        1/22/2004
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-get_interior_tets(DLIList<TET*> &tet_list)
+get_interior_tets(std::vector<TET*> &tet_list)
 {
-  int ii, jj;
+  size_t ii, jj;
   TET *tet_ptr;
   NODE *nodes[4];
   int found = 0;
@@ -181,7 +182,7 @@ get_interior_tets(DLIList<TET*> &tet_list)
       }
     }
     if (!found)
-      tet_list.append(tet_ptr);
+      tet_list.push_back(tet_ptr);
   }
 
   return tet_list.size();
@@ -195,7 +196,7 @@ get_interior_tets(DLIList<TET*> &tet_list)
 // Date:        8/2/2003
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-tesselate(DLIList<NODE *> &node_list, DLIList<TET *> &tet_list)
+tesselate(std::vector<NODE *> &node_list, std::vector<TET *> &tet_list)
 {
   int stat;
 
@@ -221,7 +222,10 @@ tesselate(DLIList<NODE *> &node_list, DLIList<TET *> &tet_list)
   // copy the local list to the tet_list argument to pass back
   if (stat == CUBIT_SUCCESS)
   { 
-    tet_list += tetList;
+    for (unsigned int ii=0; ii<tetList.size(); ii++)
+    {
+      tet_list.push_back(tetList[ii]);
+    }
   }
 
   return stat;
@@ -234,7 +238,7 @@ tesselate(DLIList<NODE *> &node_list, DLIList<TET *> &tet_list)
 // Date:        8/2/2003
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-init_box(DLIList<NODE *> &node_list)
+init_box(std::vector<NODE *> &node_list)
 {
   CubitVector minbox(CUBIT_DBL_MAX, CUBIT_DBL_MAX, CUBIT_DBL_MAX);
   CubitVector maxbox(-CUBIT_DBL_MAX, -CUBIT_DBL_MAX, -CUBIT_DBL_MAX);
@@ -243,10 +247,10 @@ init_box(DLIList<NODE *> &node_list)
 
   CubitVector coor;
   NODE *node_ptr;
-  int ii;
+  unsigned int ii;
   for (ii=0; ii<node_list.size(); ii++)
   {
-    node_ptr = node_list.get_and_step();
+    node_ptr = node_list[ii];
     coor = node_ptr->coordinates();
 
     if (coor.x() > maxbox.x()) maxbox.x( coor.x() );
@@ -343,7 +347,7 @@ create_bbox_tets()
     new_tet = new SUBTET( tet_nodes );
     for (jj=0; jj<4; jj++)
       tet_nodes[jj]->add_tet(new_tet);
-    tetList.append( new_tet );
+    tetList.push_back( new_tet );
   }
 
 
@@ -362,13 +366,13 @@ remove_bbox_tets()
   int stat = CUBIT_SUCCESS;
   int found;
   TET *tet_ptr;
-  int ii, jj, kk;
+  unsigned int ii, jj, kk;
 
   NODE *nodes[4];
   for (ii=0; ii<tetList.size(); ii++)
   {
     found = 0;
-    tet_ptr = tetList.get();  
+    tet_ptr = tetList[ii];  
     tet_ptr->tet_nodes(nodes[0], nodes[1], nodes[2], nodes[3]);
     for(jj=0; jj<4 && !found; jj++)
     {
@@ -377,13 +381,13 @@ remove_bbox_tets()
         found = 1;
         for(kk=0; kk<4; kk++)
           nodes[kk]->remove_tet(tet_ptr);
-        tetList.change_to(NULL);
+        tetList[ii] = NULL;
         delete tet_ptr;
       }
     }
-    tetList.step();
   }
-  tetList.remove_all_with_value(NULL);
+  tet_ptr = NULL;
+  tetList.erase(std::remove(tetList.begin(), tetList.end(), tet_ptr), tetList.end());
 
   for (ii=0; ii<8; ii++)
   {
@@ -417,14 +421,14 @@ is_bbox(NODE *n)
 // Date:        8/2/2003
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-insert_nodes( DLIList<NODE *> &node_list )
+insert_nodes( std::vector<NODE *> &node_list )
 {
-  int ii;
+  unsigned int ii;
   NODE *node_ptr;
   int num_failed = 0;
   for (ii=0; ii<node_list.size(); ii++)
   {
-    node_ptr = node_list.get_and_step();
+    node_ptr = node_list[ii];
     if(insert_one_node( node_ptr ) == CUBIT_FAILURE)
     {
       num_failed++;
@@ -438,7 +442,7 @@ insert_nodes( DLIList<NODE *> &node_list )
     num_failed = 0;
     for (ii=0; ii<node_list.size(); ii++)
     {
-      node_ptr = node_list.get_and_step();
+      node_ptr = node_list[ii];
       if (node_ptr->number_tets() == 0)
       {
         if(insert_one_node( node_ptr ) == CUBIT_FAILURE)
@@ -467,7 +471,7 @@ insert_one_node( NODE *node_ptr )
   // Get all tets whose circumsphere contain the point
 
   CubitVector xx = node_ptr->coordinates();
-  DLIList<TET *> neighbor_tet_list;
+  std::vector<TET *> neighbor_tet_list;
   NODE *duplicate_node = NULL;
   int stat = natural_neighbor_tets( xx, neighbor_tet_list, duplicate_node );
   if (stat != CUBIT_SUCCESS)
@@ -499,7 +503,7 @@ insert_one_node( NODE *node_ptr )
 // Date:        8/4/2003
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-natural_neighbor_tets( CubitVector &xx, DLIList<TET *> &neighbor_tet_list, 
+natural_neighbor_tets( CubitVector &xx, std::vector<TET *> &neighbor_tet_list, 
                        NODE *&exact_node )
 {
   // Determine the tet where the point is located.  If its at a node
@@ -515,7 +519,7 @@ natural_neighbor_tets( CubitVector &xx, DLIList<TET *> &neighbor_tet_list,
   // Put the tet that contains the point as the first one on the list 
   // and mark it as visited
 
-  neighbor_tet_list.append( containing_tet );
+  neighbor_tet_list.push_back( containing_tet );
   set_tet_visited( containing_tet, ++tetVisited );
 
   // Recursively search, (starting with the tet the point is in)
@@ -555,35 +559,35 @@ natural_neighbor_tets( CubitVector &xx, DLIList<TET *> &neighbor_tet_list,
 // Date:        8/4/2003
 //-------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
+watson_insert( NODE *node_ptr, std::vector<TET *> &neighbor_tet_list )
 {
   TET *tet_ptr;
-  int ii,jj;
+  unsigned int ii,jj;
 
   // mark all the tets in the list
 
   tetVisited++;
   for (ii=0; ii<neighbor_tet_list.size(); ii++)
-    set_tet_visited(neighbor_tet_list.get_and_step(), tetVisited);
+    set_tet_visited(neighbor_tet_list[ii], tetVisited);
 
   // Go through the neighbor tets and find the faces that are not 
   // adjacent to any other tet in the neighbor list.  These faces
   // will serve as base facets for new tets
 
-  DLIList<TET *> new_tet_list;
+  std::vector<TET *> new_tet_list;
   CubitVector cc;
   double radsq;
   TET *adj_tet = NULL, *new_tet = NULL;
-  DLIList<NODE *> cavity_nodes;
+  std::vector<NODE *> cavity_nodes;
   NODE *nodes[4];
-  int itet, iface;
-  int ntet = 0;
+  size_t itet, iface;
+  size_t ntet = 0;
   NODE *na, *nb, *nc, *nd;
 
   // form the list of boundary faces of the cavity
   for (itet=0; itet<neighbor_tet_list.size(); itet++) 
   {
-    tet_ptr = neighbor_tet_list.get_and_step();
+    tet_ptr = neighbor_tet_list[itet];
     tet_ptr->tet_nodes(na, nb, nc, nd);
     for (iface=0; iface<4; iface++) 
     {  
@@ -599,24 +603,24 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
         switch(iface)
         {
           case 0:
-            cavity_nodes.append(nb);
-            cavity_nodes.append(nd);
-            cavity_nodes.append(nc);
+            cavity_nodes.push_back(nb);
+            cavity_nodes.push_back(nd);
+            cavity_nodes.push_back(nc);
             break;
           case 1:
-            cavity_nodes.append(na);
-            cavity_nodes.append(nc);
-            cavity_nodes.append(nd);
+            cavity_nodes.push_back(na);
+            cavity_nodes.push_back(nc);
+            cavity_nodes.push_back(nd);
             break;
           case 2:
-            cavity_nodes.append(na);
-            cavity_nodes.append(nd);
-            cavity_nodes.append(nb);
+            cavity_nodes.push_back(na);
+            cavity_nodes.push_back(nd);
+            cavity_nodes.push_back(nb);
             break;
           case 3:
-            cavity_nodes.append(na);
-            cavity_nodes.append(nb);
-            cavity_nodes.append(nc);
+            cavity_nodes.push_back(na);
+            cavity_nodes.push_back(nb);
+            cavity_nodes.push_back(nc);
             break;
         }
         ntet++;
@@ -624,15 +628,14 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
     }
   }
 
-  cavity_nodes.reset();
   for (itet=0; itet<ntet; itet++)
   {
 
     // form a new tet with this face and the node
         
-    nodes[0] = cavity_nodes.get_and_step();
-    nodes[1] = cavity_nodes.get_and_step();
-    nodes[2] = cavity_nodes.get_and_step();
+    nodes[0] = cavity_nodes[itet*3];
+    nodes[1] = cavity_nodes[itet*3+1];
+    nodes[2] = cavity_nodes[itet*3+2];
     nodes[3] = node_ptr;
 
     // check volume of this new tet - if its less than zero then the cavity is 
@@ -647,7 +650,7 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
     {
       for (ii=0; ii<new_tet_list.size(); ii++)
       {
-        tet_ptr = new_tet_list.get_and_step(); 
+        tet_ptr = new_tet_list[ii]; 
         tet_ptr->tet_nodes(nodes[0], nodes[1], nodes[2], nodes[3]);
         for(jj=0; jj<4; jj++)
           nodes[jj]->remove_tet(tet_ptr);
@@ -658,7 +661,7 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
     new_tet = new SUBTET(nodes);
     for (ii=0; ii<4; ii++)
       nodes[ii]->add_tet(new_tet);
-    new_tet_list.append(new_tet);
+    new_tet_list.push_back(new_tet);
 
     // define the circumsphere.  If it fails, then fail this
     // insertion, delete any tets already created and return now.
@@ -667,7 +670,7 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
     {
       for (ii=0; ii<new_tet_list.size(); ii++)
       {
-        tet_ptr = new_tet_list.get_and_step(); 
+        tet_ptr = new_tet_list[ii]; 
         tet_ptr->tet_nodes(nodes[0], nodes[1], nodes[2], nodes[3]);
         for(jj=0; jj<4; jj++)
           nodes[jj]->remove_tet(tet_ptr);
@@ -687,16 +690,19 @@ watson_insert( NODE *node_ptr, DLIList<TET *> &neighbor_tet_list )
 
   for (itet=0; itet<neighbor_tet_list.size(); itet++) 
   {
-    tet_ptr = neighbor_tet_list.get_and_step();
+    tet_ptr = neighbor_tet_list[itet];
     tet_ptr->tet_nodes(nodes[0], nodes[1], nodes[2], nodes[3]);
     for(jj=0; jj<4; jj++)
       nodes[jj]->remove_tet(tet_ptr);
-    tetList.move_to_nearby(tet_ptr);
-    tetList.extract();
+    tetList.erase(std::find(tetList.begin(), tetList.end(), tet_ptr));
+    
     delete tet_ptr;
   }
 
-  tetList += new_tet_list;
+  for (ii=0; ii<new_tet_list.size(); ii++)
+  {
+    tetList.push_back( new_tet_list[ii] );
+  }
   return CUBIT_SUCCESS;
 }
 
@@ -720,7 +726,7 @@ locate_point( CubitVector &xx,
   TET *cur_tet = lastTet;
   if (cur_tet == NULL)
   {
-    cur_tet = tetList.get();
+    cur_tet = tetList[0];
   }
 
   // keep track of the tets we visit by marking as we go - 
@@ -874,9 +880,9 @@ exhaustive_locate_point( CubitVector &xx,
   CubitVector A, B, C, D;
   double volcoord_A, volcoord_B, volcoord_C, volcoord_D, vol;
   CubitBoolean found = CUBIT_FALSE;
-  for (int ii=0; ii<tetList.size() && !found; ii++)
+  for (size_t ii=0; ii<tetList.size() && !found; ii++)
   {
-    cur_tet = tetList.get_and_step();
+    cur_tet = tetList[ii];
 
     // Don't chak tets we have already chaked.  tetVisited should be 
     // current (was set in locate_point)
@@ -974,7 +980,7 @@ exhaustive_locate_point( CubitVector &xx,
 TET_FACETOR_TOOL__B 
 point_in_circumsphere( TET *tet_ptr, 
                        CubitVector &xx, 
-                       DLIList<TET *> &neighbor_tet_list )
+                      std::vector<TET *> &neighbor_tet_list )
 {
   // The circumsphere of the face has been previously stored with the
   // face.  Determine distance squared from center of circle to point
@@ -1007,7 +1013,7 @@ point_in_circumsphere( TET *tet_ptr,
   {
     // add it to the list and go check its neighbors
 
-    neighbor_tet_list.append(tet_ptr);
+    neighbor_tet_list.push_back(tet_ptr);
 
     int iface;
     TET *adj_tet = NULL;
@@ -1132,7 +1138,7 @@ tet_volume( const CubitVector &a, const CubitVector &b,
 // Date:8/13/2003
 //------------------------------------------------------------------------------
 TET_FACETOR_TOOL__I
-read_data( const char *filename, DLIList<NODE *>&node_list )
+read_data( const char *filename, std::vector<NODE *>&node_list )
 {
   // open the file
 
@@ -1191,7 +1197,7 @@ read_data( const char *filename, DLIList<NODE *>&node_list )
     }  
     CubitVector pt( xx, yy, zz );
     new_node = (NODE *) new NODE( pt );
-    node_list.append( new_node );
+    node_list.push_back( new_node );
 
     if (n==4)
     {

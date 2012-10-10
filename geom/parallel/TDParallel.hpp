@@ -1,6 +1,9 @@
 //- Class: TDParallel
 //- Description: This tool data generates local and non-local bodies 
 //-              which the entity is part of
+//- Author: Hong-Jun Kim
+//- Checked By: Tim Tautges
+//- Version:
 
 #ifndef TD_PARALLEL
 #define TD_PARALLEL
@@ -9,6 +12,9 @@
 #include "MemoryManager.hpp"
 #include "CubitDefines.h"
 #include "DLIList.hpp"
+#ifdef PARALLEL
+#include "CGMMemFile.hpp"
+#endif
 
 template <class X> class DLIList;
 class ToolDataUser;
@@ -18,150 +24,131 @@ class TDParallel : public ToolData
 {
 private:
 
-  // bodies sharing this entity
-  DLIList<int> m_sharedBodyList;
+  DLIList<int> bodyUniqueIdList;
+  DLIList<int> bodyToProcList;
+  DLIList<int> localList;
+  DLIList<int> nonLocalList;
+  DLIList<int> sharedIdList;
 
-  // for body to processor mapping
-  DLIList<int> m_bodyToProcList;
-
-  // bodies sharing this entity in the same processor
-  DLIList<int> m_localBodyList;
-
-  // bodies sharing this entity in the remote processor
-  DLIList<int> m_nonLocalBodyList;
-
-  // processors sharing this entity
-  // if this entity is surface, the first processor will mesh it
-  DLIList<int> m_sharedProcList;
-
-  DLIList<int> m_ghostProcList;
-
-  // back pointer to the owning entity
   ToolDataUser *ownerEntity;
+    //- back pointer to the owning entity
 
-  // unique id
-  int m_uniqueId;
+  int procId;
+  //- processor id which takes in charge of meshing this entity
 
-  // if it is interface entity shared by processors
-  int m_interface;
+  int counterProcId;
+  //- processor id by which this entity is shared
+
+  int mergeId;
+  //- unique id merged
+
+  int uniqueId;
+  //- unique id
 
 public:
   
-  TDParallel(ToolDataUser *owner = NULL, DLIList<int> *shared_bodies = NULL,
-	     DLIList<int> *shared_procs = NULL, DLIList<int> *ghost_procs = NULL,
-             int unique_id = -1, int interface = 0);
+  TDParallel(ToolDataUser *owner = NULL, DLIList<int> *id_list = NULL,
+	     DLIList<int> *shared_list = NULL, int id = -1,
+	     int counter_id = -1, int merge_id = -1, int unique_id = -1);
   
   virtual ~TDParallel();
     //-constructor and destructor
 
   static int is_parallel(const ToolData* td);
   
-  DLIList<int>* get_shared_body_list();
-  CubitStatus set_shared_body_list();
+  DLIList<int>* body_unique_id_list();
+    //- return bodyUniqueIdList;
 
-  DLIList<int>* get_shared_proc_list();
-  void set_shared_proc_list(DLIList<int> list);
+  DLIList<int>* shared_id_list();
 
-  DLIList<int>* get_ghost_proc_list();
+  DLIList<int>* local_body_list();
 
-  DLIList<int>* get_local_body_list();
-  DLIList<int>* get_non_local_body_list();
+  DLIList<int>* non_local_body_list();
+
+  void set_local_non_local_list();
 
   ToolDataUser *owner_entity() {return ownerEntity;};
 
   void owner_entity(ToolDataUser *owner) {ownerEntity = owner;};
+    //- get/set functions for ownerEntity
   
-  //- get/set functions for ownerEntity
-  unsigned int get_charge_proc();
-  void set_charge_proc(unsigned int proc);
+  CubitStatus set_body_list();
+
+  int get_proc_id();
+
+  void set_proc_id(int id);
   
-  unsigned int get_counter_proc();
-  void set_counter_proc(unsigned int proc);
+  int get_counter_proc_id();
 
-  unsigned int get_unique_id();
-  void set_unique_id(unsigned int id);
+  void set_counter_proc_id(int id);
 
-  int is_interface();
+  int get_merge_id();
 
-  unsigned int get_n_shared_procs();
+  void set_merge_id(int id);
 
-  void add_shared_proc(unsigned int proc);
+  int get_unique_id();
 
-  void add_ghost_proc(unsigned int proc);
+  void set_unique_id(int id);
 
-  bool is_shared_proc(unsigned int proc);
+  void set_shared_list(DLIList<int> list);
+
+  int get_n_shared_list();
+
+  void add_shared_id(int id);
+
+  bool is_shared(int id);
 };
 
-inline int TDParallel::is_interface() {
-  return m_interface;
+inline DLIList<int>* TDParallel::local_body_list() {
+  return &localList;
 }
 
-inline DLIList<int>* TDParallel::get_local_body_list() {
-  return &m_localBodyList;
+inline DLIList<int>* TDParallel::non_local_body_list() {
+  return &nonLocalList;
 }
 
-inline DLIList<int>* TDParallel::get_non_local_body_list() {
-  return &m_nonLocalBodyList;
+inline DLIList<int>* TDParallel::shared_id_list() {
+  return &sharedIdList;
 }
 
-inline DLIList<int>* TDParallel::get_shared_proc_list() {
-  return &m_sharedProcList;
+inline int TDParallel::get_proc_id() {
+  return procId;
 }
 
-inline DLIList<int>* TDParallel::get_ghost_proc_list() {
-  return &m_ghostProcList;
+inline void TDParallel::set_proc_id(int id) {
+  procId = id;
 }
 
-inline unsigned int TDParallel::get_charge_proc()
-{
-  return m_sharedProcList[0];
+inline int TDParallel::get_counter_proc_id() {
+  return counterProcId;
 }
 
-inline void TDParallel::set_charge_proc(unsigned int proc)
-{
-  m_sharedProcList.insert_first(proc);
+inline void TDParallel::set_counter_proc_id(int id) {
+  counterProcId = id;
 }
 
-inline unsigned int TDParallel::get_counter_proc()
-{
-  return m_sharedProcList[1];
+inline int TDParallel::get_merge_id() {
+  return mergeId;
 }
 
-inline void TDParallel::set_counter_proc(unsigned int proc)
-{
-  m_sharedProcList.append(proc);
+inline void TDParallel::set_merge_id(int id) {
+  mergeId = id;
 }
 
-inline unsigned int TDParallel::get_unique_id()
-{
-  return m_uniqueId;
+inline int TDParallel::get_unique_id() {
+  return uniqueId;
 }
 
-inline void TDParallel::set_unique_id(unsigned int id)
-{
-   m_uniqueId = id;
+inline void TDParallel::set_unique_id(int id) {
+  uniqueId = id;
 }
 
-inline unsigned int TDParallel::get_n_shared_procs()
-{
-  return m_sharedProcList.size();
+inline int TDParallel::get_n_shared_list() {
+  return sharedIdList.size();
 }
 
-inline void TDParallel::add_shared_proc(unsigned int proc)
-{
-  m_sharedProcList.append_unique(proc);
-}
-
-inline void TDParallel::add_ghost_proc(unsigned int proc)
-{
-  if (proc != get_charge_proc()) {
-    m_ghostProcList.append_unique(proc);
-  }
-}
-
-inline bool TDParallel::is_shared_proc(unsigned int p)
-{
-  return m_sharedProcList.is_in_list(p);
+inline void TDParallel::add_shared_id(int id) {
+  sharedIdList.append_unique(id);
 }
 
 #endif 

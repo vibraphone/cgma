@@ -433,6 +433,31 @@ CubitStatus CubitFacet::closest_point_trimmed( const CubitVector &mypoint,
     next_edge_p2 = NULL;
     return CUBIT_SUCCESS;
   }
+  else if( close_p1 && close_p2 && !close_p3 )
+  {
+    if( w1.length_squared() < w2.length_squared() )
+      closest_point = p1; 
+    else
+      closest_point = p2;
+    return CUBIT_SUCCESS;
+  }
+  else if( close_p2 && close_p3 && !close_p1 )
+  {
+    if( w2.length_squared() < w3.length_squared() )
+      closest_point = p2; 
+    else
+      closest_point = p3;
+    return CUBIT_SUCCESS;
+  }
+  else if( close_p1 && close_p3 && !close_p2 )
+  {
+    if( w1.length_squared() < w3.length_squared() )
+      closest_point = p1; 
+    else
+      closest_point = p3;
+    return CUBIT_SUCCESS;
+  }
+
   PRINT_ERROR("Problems finding the closest point to a facet.\n");
   return CUBIT_FAILURE;
 }
@@ -1109,6 +1134,39 @@ double CubitFacet::area(  )
   return area;
 }
 
+double CubitFacet::aspect_ratio()
+{
+  static const double normal_coeff = sqrt( 3. ) / 6.;
+
+  // three vectors for each side 
+  CubitVector a = point(1)->coordinates() - point(0)->coordinates();
+  CubitVector b = point(2)->coordinates() - point(1)->coordinates();
+  CubitVector c = point(0)->coordinates() - point(2)->coordinates();
+    
+  double a1 = a.length();
+  double b1 = b.length();
+  double c1 = c.length();
+ 
+  double hm = a1 > b1 ? a1 : b1;
+  hm = hm > c1 ? hm : c1;
+
+  CubitVector ab = a * b;
+  double denominator = ab.length();
+
+  if( denominator < CUBIT_DBL_MIN ) 
+    return (double)CUBIT_DBL_MAX;
+  else
+  {
+    double aspect_ratio;
+    aspect_ratio = normal_coeff * hm * (a1 + b1 + c1) / denominator;
+    
+    if( aspect_ratio > 0 )
+      return (double) CUBIT_MIN( aspect_ratio, CUBIT_DBL_MAX );
+    return (double) CUBIT_MAX( aspect_ratio, -CUBIT_DBL_MAX );
+  }
+}
+
+
 //======================================================================
 // Function: init_patch (PUBLIC)
 // Description: computes the interior control points for the facet and
@@ -1185,3 +1243,25 @@ CubitVector CubitFacet::update_normal( void )
    this->update_plane();
    return normal();
 }
+
+ void CubitFacet::unlink_from_children( void )
+{
+    
+    this->point(0)->remove_facet(this);
+    this->point(1)->remove_facet(this);
+    this->point(2)->remove_facet(this);
+    this->edge(0)->remove_facet(this);
+    this->edge(1)->remove_facet(this);
+    this->edge(2)->remove_facet(this);    
+  
+}
+
+ CubitFacetEdge* CubitFacet::shared_edge( CubitFacet *cubit_facet )
+ {
+   for( int i=0; i<3; i++ )
+     for( int j=0; j<3; j++ )
+       if( edge(i) == cubit_facet->edge(j) )
+         return edge(i);       
+
+   return NULL;
+ }

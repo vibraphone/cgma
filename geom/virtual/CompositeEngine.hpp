@@ -10,7 +10,7 @@
 #include "VGDefines.h"
 #include "TopologyBridge.hpp"
 
-class Point;
+class TBPoint;
 class Curve;
 class Surface;
 class Lump;
@@ -41,7 +41,7 @@ class CompositeEngine : public IntermediateGeomEngine
 	public:
     void get_all_curves_and_points(DLIList<TopologyBridge*> &tb_list,
                                    DLIList<Curve*> &curves,
-                                   DLIList<Point*> &points);
+                                   DLIList<TBPoint*> &points);
     bool is_composite(TBOwner *bridge_owner);
     bool is_composite(TopologyBridge *bridge);
     bool is_partition(TBOwner *bridge_owner);
@@ -86,19 +86,19 @@ class CompositeEngine : public IntermediateGeomEngine
 		
     CompositeCurve* composite( Curve* survivor, 
                                Curve* dead,
-                               Point* keep_point = 0,
+                               TBPoint* keep_point = 0,
                                bool remove_partitions = false );
       //- Combine two curves.  The curves share both end vertices,
       //- the retained vertex can be specified in keep_point.
       
-    CompositePoint* stitch_points( Point* point1, Point* point2 );
+    CompositePoint* stitch_points( TBPoint* point1, TBPoint* point2 );
     CompositeCurve* stitch_curves( Curve* curve1, Curve* curve2 );
     CompositeSurface* stitch_surfaces( Surface* surf, Surface* surf2 );
     
-    CompositeCurve* remove_point( Point* dead_point,
+    CompositeCurve* remove_point( TBPoint* dead_point,
                                   bool remove_partitions = false,
                                   Curve* survivor = 0 );
-      //- Create a composite curve by removing the specified Point.
+      //- Create a composite curve by removing the specified TBPoint.
                                     
                                     
     CompositeSurface* remove_curve( Curve* dead_curve,
@@ -122,9 +122,9 @@ class CompositeEngine : public IntermediateGeomEngine
       //- as permissible by common child topology and 
       //- existing real Bodies.
     
-    CubitStatus restore_point( Point* point );
+    CubitStatus restore_point( TBPoint* point );
       //- Split a composite curve by restoring the
-      //- passed, previously removed Point.
+      //- passed, previously removed TBPoint.
     
     CubitStatus restore_curve( Curve* curve );
       //- Split a composite surface by restoring the
@@ -147,7 +147,7 @@ class CompositeEngine : public IntermediateGeomEngine
       //- Caller is responsible for freeing the returned, heap-allocated
       //- CubitSimpleAttrib object.
       
-    CompositePoint* replace_point( Point* dead_point );
+    CompositePoint* replace_point( TBPoint* dead_point );
     CompositeCurve* replace_curve( Curve* dead_curve );
     CompositeSurface* replace_surface( Surface* surface );
     CompositeLump* replace_lump( Lump* lump );
@@ -157,10 +157,10 @@ class CompositeEngine : public IntermediateGeomEngine
       
       /**************** To be called by PartitionEngine *****************/
       
-    Point* insert_point(CompositeCurve* curve, double u);
+    TBPoint* insert_point(CompositeCurve* curve, double u);
       //- Partition a composite curve.
       
-    Point* insert_point_curve( CompositeSurface* surface,
+    TBPoint* insert_point_curve( CompositeSurface* surface,
                                const CubitVector& position );
     
     CubitStatus insert_curve( DLIList<Surface*>& surfaces,
@@ -175,11 +175,11 @@ class CompositeEngine : public IntermediateGeomEngine
     void notify_deactivated (CompositePoint* point);
     void clean_out_deactivated_geometry();
 
-    CubitStatus restore_point_in_curve( Point* point );
+    CubitStatus restore_point_in_curve( TBPoint* point );
       //- Restore a point hidden by a curve, splitting the
       //- curve.
       
-    CompositeCurve* restore_point_in_surface( Point* point );
+    CompositeCurve* restore_point_in_surface( TBPoint* point );
       //- Restore a point hidden by a surface, creating a 
       //- point-curve.
 
@@ -210,7 +210,7 @@ class CompositeEngine : public IntermediateGeomEngine
     void remove_attributes( DLIList<TopologyBridge*> &bridge_list );
       //remove Composite attributes off of topology bridges
     virtual void remove_modified(DLIList<Surface*> &all_surfs,
-      DLIList<Curve*> &all_curves, DLIList<Point*> &all_pts);
+      DLIList<Curve*> &all_curves, DLIList<TBPoint*> &all_pts);
 
     void get_tbs_with_bridge_manager_as_owner( TopologyBridge *source_bridge, 
                                                DLIList<TopologyBridge*> &tbs );
@@ -218,7 +218,7 @@ class CompositeEngine : public IntermediateGeomEngine
     
   protected:
 	
-    Point* remove_composite( CompositePoint* point );
+    TBPoint* remove_composite( CompositePoint* point );
     Curve* remove_composite( CompositeCurve* composite );
     Surface* remove_composite( CompositeSurface* composite );
     Lump* remove_composite( CompositeLump* composite );
@@ -248,7 +248,7 @@ class CompositeEngine : public IntermediateGeomEngine
     CubitStatus create_composites( DLIList<BodySM*>& );
     CubitStatus create_composites( DLIList<Surface*>& );
     CubitStatus create_composites( DLIList<Curve*>& );
-    CubitStatus create_composites( DLIList<Point*>& );
+    CubitStatus create_composites( DLIList<TBPoint*>& );
       //- Methods called by import(..) to re-create
       //- composites from saved attributes.
       
@@ -291,13 +291,9 @@ class CompositeEngine : public IntermediateGeomEngine
     void process_curves_after_imprint(Curve *att_bridge, 
                                                    Curve *other_bridge,
                                                    DLIList<BodySM*> &new_sms);
-    void process_points_after_imprint(Point *att_bridge, 
-                                                   Point *other_bridge,
+    void process_points_after_imprint(TBPoint *att_bridge, 
+                                                   TBPoint *other_bridge,
                                                    DLIList<BodySM*> &new_sms);
-    
-#ifdef BOYD17
-    std::map<int,GeometryEntity*> stitchMap;
-#endif
     
     DLIList<TopologyBridge*> deactivatedList;
 };

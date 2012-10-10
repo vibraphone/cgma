@@ -1,4 +1,3 @@
-#if !defined(TEMPLATE_DEFS_INCLUDED) || defined(INCLUDED_FROM_VG_LOOP_TOOL_HPP)
 
 #include "VGLoopTool.hpp"
 #include "GMem.hpp"
@@ -1243,4 +1242,3 @@ closest_surface_coedge( SURFACE* surface, const CubitVector& from_pt,
   return CUBIT_SUCCESS;
 }  
 */
-#endif

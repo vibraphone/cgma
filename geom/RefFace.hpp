@@ -78,6 +78,8 @@ class CUBIT_GEOM_EXPORT RefFace : public BasicTopologyEntity
 {
 public :
   
+  typedef RefEdge ChildType;
+  
   friend class RefEntityFactory;
     //- the factory is allowed to call the (private) constructors
 
@@ -319,6 +321,13 @@ public :
     //- new point are computed and returned. If the input RefVolume pointer
     //- is not NULL, it is used when computing the curvatures.
   
+  //Given a u and v, evaluate position and/or normal and/or curvature
+  CubitStatus evaluate( double u, double v,
+                        CubitVector *position,
+                        CubitVector *normal,
+                        CubitVector *curvature1,
+                        CubitVector *curvature2 );
+
   CubitVector position_from_u_v (double u, double v);
     //- Return a CubitVector (representing a position vector corresponding 
     //- to the input point in {u,v} space
@@ -497,6 +506,10 @@ public :
                             double distance_tolerance = 0.0,
                             double longest_edge = 0.0 );
 
+  CubitStatus get_projected_distance_on_surface( CubitVector *pos1,
+                                                 CubitVector *pos2, 
+                                                 double &distance );
+
 protected :
 
   RefFace(Surface* surfacePtr) ;
@@ -512,15 +525,8 @@ private:
   void initialize ();
     //- initialization method
   
-#ifdef BOYD17 
-  CubitBoolean amParametric;
-#endif
   double maxPositionDeviation;
   
-#ifdef BOYD17 
-  int faceEdgeCount;
-  int refFaceClone;
-#endif
   int hardPointColor;
 
 };

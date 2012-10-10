@@ -35,7 +35,7 @@ const Object PriorityQueue<Object>::top() const
   {
     PRINT_ERROR("Empty priority queue had top request.\n");
     assert(!empty());
-    return static_cast<Object>(0);
+	return (Object)0;
   }
   return theItems[1];
 }

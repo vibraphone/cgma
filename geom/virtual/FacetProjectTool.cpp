@@ -861,10 +861,6 @@ CubitStatus FacetProjectTool::project( PST_Point* &start, PST_Point* &end )
   PST_Face* closest_face;
   PST_Point* point;
   PST_Point* start_point = start;
-#ifdef BOYD17
-  DLIList<PST_Face*> face_list;
-  DLIList<PST_Edge*> boundary_edges;
-#endif
   CubitStatus stat;
   
   const double TOL_SQR = GEOMETRY_RESABS*GEOMETRY_RESABS;

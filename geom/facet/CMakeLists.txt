@@ -29,6 +29,6 @@ ENDIF(WIN32)
 INCLUDE_DIRECTORIES(${cubit_geom_SOURCE_DIR}/facetbool
                     ${cubit_geom_SOURCE_DIR}/Cholla)
 
-ADD_LIBRARY(cubit_facet ${FACET_SRCS} ${FACET_HEADERS})
+ADD_LIBRARY(cubit_facet STATIC ${FACET_SRCS} ${FACET_HEADERS})
 
 

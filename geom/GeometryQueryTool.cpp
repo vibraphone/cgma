@@ -1,5 +1,4 @@
 
-
 #include <assert.h>
 #include <stdlib.h>
 #include <math.h>
@@ -15,6 +14,7 @@
 #include "AnalyticGeometryTool.hpp"
 #include "MergeTool.hpp"
 #include "GeometryQueryEngine.hpp"
+#include "GeometryModifyEngine.hpp" // for creation of temporary construction entities
 #include "DAG.hpp"
 #include "TBOwnerSet.hpp"
 
@@ -52,7 +52,7 @@
 #include "CubitPlane.hpp"
 
 #include "DLIList.hpp"
-
+#include "GSaveOpen.hpp"
 
 #include "DRefFaceArray.hpp"
 #include "DRefEdgeArray.hpp"
@@ -69,6 +69,7 @@
 #include "CAMergePartner.hpp"
 #include "CAActuateSet.hpp"
 #include "CADeferredAttrib.hpp"
+#include "CAUniqueId.hpp"
 
 #include "SettingHandler.hpp"
 #include "ModelQueryEngine.hpp"
@@ -85,11 +86,14 @@ double GeometryQueryTool::geometryToleranceFactor = DEFAULT_GEOM_FACTOR;
 GeometryQueryTool* GeometryQueryTool::instance_ = 0;
 CubitBoolean GeometryQueryTool::useFacetBBox = CUBIT_FALSE;
 CubitBoolean GeometryQueryTool::trackMergedAwayEnts = CUBIT_FALSE;
+CubitBoolean GeometryQueryTool::importingSolidModel = CUBIT_FALSE;
+CubitBoolean GeometryQueryTool::mergeGloballyOnImport = CUBIT_TRUE;
+CubitBoolean GeometryQueryTool::clearUidMapBeforeImport = CUBIT_TRUE; 
 DLIList<int> GeometryQueryTool::uidsOfImportingEnts;
 int GeometryQueryTool::entitiesMergedAway = 0;
 
-const int GeometryQueryTool::CGM_MAJOR_VERSION = 10;
-const int GeometryQueryTool::CGM_MINOR_VERSION = 2;
+const int GeometryQueryTool::CGM_MAJOR_VERSION = 13;
+const int GeometryQueryTool::CGM_MINOR_VERSION = 1;
 
 #ifndef CAT
   // Keep checking bounding box and use internal surf check for Sandia
@@ -330,11 +334,11 @@ CubitStatus GeometryQueryTool::save_temp_geom_files(DLIList<RefEntity*> &ref_ent
 //-------------------------------------------------------------------------
 
 CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entity_list,
-                                             char const* filename,
-                                             char const* filetype,
-                                             int &num_ents_exported,
-                                             const CubitString &cubit_version,
-                                             const char* logfile_name )
+  char const* filename,
+  Model_File_Type filetype,
+  int &num_ents_exported,
+  const CubitString &cubit_version,
+  ModelExportOptions &export_options )
 {
   if (0 == gqeList.size())
   {
@@ -439,7 +443,7 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
 
   int num_ents_before = bridge_list.size();
   temp_result = gqeList.get()->export_solid_model(bridge_list, filename, filetype,
-                                        cubit_version, logfile_name );
+                                        cubit_version, export_options );
   if (temp_result == CUBIT_SUCCESS )
     result = temp_result;
 
@@ -478,155 +482,6 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
   CubitAttribUser::clear_all_simple_attrib(child_list);
 
   num_ents_exported = num_input_entities - bridge_list.size();
-  gqeList.reset();
-  return result;
-}
-
-// export entities to buffer
-CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entity_list,
-						  char*& p_buffer,
-						  int& n_buffer_size,
-						  bool b_export_buffer)
-{
-  if (0 == gqeList.size())
-  {
-    PRINT_WARNING("No active geometry engine.\n");
-    return CUBIT_FAILURE;
-  }
-
-  int i;
-
-  if (ref_entity_list.size() == 0) {
-    // All bodies are to be exported
-    RefEntityFactory::instance()->ref_entity_list("Body",
-                                                  ref_entity_list);
-    
-    // add free ref entities
-    get_free_ref_entities(ref_entity_list);
-  }
-  
-  // Get TopologyBridges from RefEntities.
-  DLIList<TopologyBridge*> bridge_list(ref_entity_list.size()),
-    parent_bridges, ref_ent_bridges;
-  ref_entity_list.reset();
-  for( i = ref_entity_list.size(); i--; ) {
-    ref_ent_bridges.clean_out();
-    TopologyEntity* topo_ptr = dynamic_cast<TopologyEntity*>(ref_entity_list.get_and_step());
-    if( topo_ptr )
-      topo_ptr->bridge_manager()->get_bridge_list( ref_ent_bridges );
-    bridge_list += ref_ent_bridges;
-  }
-
-  // Get all child RefEntities
-  DLIList<RefEntity*> child_list;
-  RefEntity::get_all_child_ref_entities( ref_entity_list, child_list );
-
-  // Scan for free-but-merged entities in child list.
-  child_list.reset();
-  for (i = child_list.size(); i--; )
-  {
-    ref_ent_bridges.clean_out();
-    TopologyEntity* topo_ptr = dynamic_cast<TopologyEntity*>(child_list.get_and_step());
-    assert(!!topo_ptr);
-    topo_ptr->bridge_manager()->get_bridge_list( ref_ent_bridges );
-    ref_ent_bridges.reset();
-    for (int j = ref_ent_bridges.size(); j--; )
-    {
-      TopologyBridge* bridge = ref_ent_bridges.get_and_step();
-      parent_bridges.clean_out();
-      bridge->get_parents(parent_bridges);
-      if (parent_bridges.size() == 0)
-        bridge_list.append_unique(bridge);
-    }
-  }
-
-  // Merge lists so we have one big list of every
-  // RefEntity to be saved.
-  for(i = ref_entity_list.size(); i--; )
-    ref_entity_list.get_and_step()->marked(1);
-  
-  for(i = child_list.size(); i--; )
-    child_list.get_and_step()->marked(0);
-  for(i = ref_entity_list.size(); i--; )
-  {
-    RefEntity* ent = ref_entity_list.get_and_step();
-    if( ent->marked() )
-    {
-      ent->marked(0);
-      child_list.append(ent);
-    }
-  }
-
-  // Make a copy of the bridge list to be used below in
-  // removing the virtual geometry attributes.  We can't
-  // use the original bridge list because it gets emptied.
-  DLIList<TopologyBridge*> copy_of_bridge_list = bridge_list;
-
-  /*int num_input_entities =*/ bridge_list.size();
-
-    // now call auto update on this combined list; this will update both visible
-    // and hidden entities; the combined list should be used here, but only the
-    // export list should be exported (some of the hidden entities might be directly
-    // related to other entities on the export list, and we want to avoid exporting
-    // those entities twice)
-  CubitAttribUser::auto_update_cubit_attrib(child_list);
-
-    // Save virtual.
-  IGESet::reverse_iterator itor;
-  for (itor = igeSet.rbegin(); itor != igeSet.rend(); ++itor)
-    (*itor)->export_geometry(bridge_list);
-
-  CubitStatus result = CUBIT_SUCCESS, temp_result;
-
-  if( !bridge_list.size() )
-  {
-    return CUBIT_SUCCESS;
-  }
-  //   GeometryQueryEngine* gqe = NULL;
-  //we're just going to mess with MBG stuff right now
-  gqeList.reset();
-  
-  int num_ents_before = bridge_list.size();
-  temp_result = gqeList.get()->export_solid_model(bridge_list, p_buffer,
-						  n_buffer_size, b_export_buffer);
-  if (temp_result == CUBIT_SUCCESS )
-    result = temp_result;
-
-  //if all geometry wasn't exported, warn user and print out
-  //what wasn't
-  if( bridge_list.size() != 0 )
-  {
-    if( bridge_list.size() == num_ents_before )
-      PRINT_ERROR("No geometry exported.  Must set geometry engine to another type.\n");
-    else
-      PRINT_WARNING("Not all geometry could be handled for save.\n");
-
-    PRINT_INFO("Set the geometry engine appropriately to export the following geometry:\n");
-    int k;
-    for(k=bridge_list.size(); k--; )
-    {
-      TopologyEntity *te = bridge_list.get()->topology_entity();
-      if( te )
-      {
-        RefEntity *ref_ent = CAST_TO( te, RefEntity );
-        if( ref_ent )
-        {
-          GeometryQueryEngine *gqe = bridge_list.get()->get_geometry_query_engine();
-          PRINT_INFO("%s is of Geometry Engine type %s\n",
-          ref_ent->entity_name().c_str(), gqe->modeler_type() );
-        }
-      }
-      bridge_list.step();
-    }
-  }
-
-    // clean off attributes off of underyling virtual geometry
-  for (itor = igeSet.rbegin(); itor != igeSet.rend(); ++itor)
-    (*itor)->remove_attributes(copy_of_bridge_list);
-
-  CubitAttribUser::clear_all_simple_attrib(child_list);
-
-  //num_ents_exported = num_input_entities - bridge_list.size();
   gqeList.reset();
   return result;
 }
@@ -938,6 +793,7 @@ CubitStatus GeometryQueryTool::fire_ray( CubitVector &origin,
 
 	return CUBIT_SUCCESS;
 }
+
 //-------------------------------------------------------------------------
 // Purpose       : Reads in geometry and creates the necessary Reference
 //                 entities associated with the input geometry. Has ability
@@ -956,23 +812,26 @@ CubitStatus GeometryQueryTool::fire_ray( CubitVector &origin,
 //
 // Creation Date : 03/17/99
 //-------------------------------------------------------------------------
-CubitStatus GeometryQueryTool::import_solid_model(
-						  const char* file_name,
-						  const char* file_type,
-						  const char* logfile_name,
-						  CubitBoolean heal_step,
-						  CubitBoolean import_bodies,
-						  CubitBoolean import_surfaces,
-						  CubitBoolean import_curves,
-						  CubitBoolean import_vertices,
-						  CubitBoolean free_surfaces,
-						  DLIList<RefEntity*> *imported_entities)
+CubitStatus GeometryQueryTool::import_solid_model( const char* file_name,
+  Model_File_Type file_type,
+  ModelImportOptions &import_options,
+  DLIList<RefEntity*> *imported_entities )
 {
   if (0 == gqeList.size())
   {
     PRINT_WARNING("No active geometry engine.\n");
     return CUBIT_FAILURE;
   }
+
+  importingSolidModel = CUBIT_TRUE;
+  uidsOfImportingEnts.clean_out();
+  mergeGloballyOnImport = import_options.merge_globally;
+ 
+ if( clearUidMapBeforeImport )
+    CAUniqueId::clear_out_old_to_new_map();
+
+  if( GSaveOpen::performingUndo )
+    mergeGloballyOnImport = CUBIT_TRUE;
 
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::save_state();
@@ -984,18 +843,17 @@ CubitStatus GeometryQueryTool::import_solid_model(
   gqeList.reset();
   DLIList<TopologyBridge*> bridge_list;
 
-  CubitStatus status = CUBIT_SUCCESS;
-  for(int i = 0; i < gqeList.size(); i++)
-  {
-    status = gqeList.get_and_step()->import_solid_model( file_name,
-      file_type, bridge_list, CUBIT_TRUE,logfile_name, heal_step, import_bodies,
-      import_surfaces, import_curves, import_vertices, free_surfaces );
+  import_options.print_results = CUBIT_TRUE;
 
-    if( bridge_list.size() > 0 )
-      break;
-  }
-  if(bridge_list.size() == 0)
+  CubitStatus status = gqeList.get()->import_solid_model( file_name,
+      file_type, bridge_list, import_options );
+      
+  if( bridge_list.size() == 0 )
+  {
+    importingSolidModel = CUBIT_FALSE;
+    mergeGloballyOnImport = CUBIT_FALSE; 
     return status;
+  }
 
   for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
     (*itor)->import_geometry(bridge_list);
@@ -1024,70 +882,8 @@ CubitStatus GeometryQueryTool::import_solid_model(
     // report attribs imported
 //  CubitAttrib::report_attrib_importeds();
 
-    // now return
-  return status;
-}
-
-// import entities to buffer
-CubitStatus GeometryQueryTool::import_solid_model(DLIList<RefEntity*> *imported_entities,
-						  const char* pBuffer,
-						  const int n_buffer_size)
-{
-  if (0 == gqeList.size())
-  {
-    PRINT_WARNING("No active geometry engine.\n");
-    return CUBIT_FAILURE;
-  }
-  
-  if( CubitUndo::get_undo_enabled() )
-    CubitUndo::save_state();
-
-    // reset the attribImporteds flags to facilitate attribute reporting
-//  CubitAttrib::clear_attrib_importeds();
-
-    // Use the default MQE to import a list of ToplogyBridges from the file.
-  gqeList.reset();
-  DLIList<TopologyBridge*> bridge_list;
-  
-  CubitStatus status = CUBIT_SUCCESS;
-  for(int i = 0; i < gqeList.size(); i++)
-  {
-    status = gqeList.get_and_step()->import_solid_model( bridge_list, pBuffer, n_buffer_size );
-
-    if( bridge_list.size() > 0 )
-      break;
-  }
-  if(bridge_list.size() == 0)
-    return status;
-
-  for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
-    (*itor)->import_geometry(bridge_list);
-
-  bridge_list.reset();
-  DLIList<RefEntity*> tmp_ent_list;
-  status = construct_refentities(bridge_list, &tmp_ent_list);
-
-  if( imported_entities )
-    (*imported_entities) += tmp_ent_list;
-
-  if( CubitUndo::get_undo_enabled() )
-  {
-    if( tmp_ent_list.size() && status == CUBIT_SUCCESS )
-      CubitUndo::note_result_entities( tmp_ent_list );
-    else
-      CubitUndo::remove_last_undo();
-  }
-  
-  //clear out all attributes that were set to actuate
-//  DLIList<RefEntity*> all_ents;
-//  RefEntity::get_all_child_ref_entities( tmp_ent_list, all_ents );
-//  all_ents += tmp_ent_list;
-//  CubitAttribUser::clear_all_simple_attrib_set_to_actuate( all_ents );
-
-    // report attribs imported
-//  CubitAttrib::report_attrib_importeds();
-   
-      
+  importingSolidModel = CUBIT_FALSE;
+  mergeGloballyOnImport = CUBIT_FALSE; 
     // now return
   return status;
 }
@@ -1120,12 +916,12 @@ CubitStatus GeometryQueryTool::construct_refentities(DLIList<TopologyBridge*> &b
   }
 
 
-  while( bridge_list.size() && !CubitMessage::instance()->Interrupt() )
+  while( bridge_list.size() && !AppUtil::instance()->interrupt() )
   {
     BodySM* bodysm_ptr;
     Surface* surface_ptr;
     Curve* curve_ptr;
-    Point* point_ptr;
+    TBPoint* point_ptr;
     TopologyBridge* bridge_ptr = bridge_list.pop();
     if( (bodysm_ptr = dynamic_cast<BodySM*>(bridge_ptr) ) != NULL )
     {
@@ -1167,7 +963,7 @@ CubitStatus GeometryQueryTool::construct_refentities(DLIList<TopologyBridge*> &b
         status = CUBIT_FAILURE;
       }
     }
-    else if( (point_ptr = dynamic_cast<Point*>(bridge_ptr) ) != NULL )
+    else if( (point_ptr = dynamic_cast<TBPoint*>(bridge_ptr) ) != NULL )
     {
       RefVertex* vtx_ptr = make_free_RefVertex( point_ptr );
       if( vtx_ptr )
@@ -1196,7 +992,7 @@ CubitStatus GeometryQueryTool::construct_refentities(DLIList<TopologyBridge*> &b
 
     // If the above loop was interrupted, bridge_list will not be
     // empty.  Free any bridges we did not make topology for.
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
     PRINT_WARNING("Aborted construction of %d entities.\n", bridge_list.size());
   }
@@ -1207,14 +1003,14 @@ CubitStatus GeometryQueryTool::construct_refentities(DLIList<TopologyBridge*> &b
     BodySM* body_ptr;
     Surface* surface_ptr;
     Curve* curve_ptr;
-    Point* point_ptr;
+    TBPoint* point_ptr;
     if( (body_ptr = dynamic_cast<BodySM*>(bridge_ptr) ) != NULL )
       gqe->delete_solid_model_entities( body_ptr );
     else if( (surface_ptr = dynamic_cast<Surface*>(bridge_ptr) ) != NULL )
       gqe->delete_solid_model_entities( surface_ptr );
     else if( (curve_ptr = dynamic_cast<Curve*>(bridge_ptr) ) != NULL )
       gqe->delete_solid_model_entities( curve_ptr );
-    else if( (point_ptr = dynamic_cast<Point*>(bridge_ptr) ) != NULL )
+    else if( (point_ptr = dynamic_cast<TBPoint*>(bridge_ptr) ) != NULL )
       gqe->delete_solid_model_entities( point_ptr );
   }
 
@@ -1824,11 +1620,11 @@ RefFace* GeometryQueryTool::make_RefFace( Surface* surface_ptr ) const
 
       // if the first bridge in the old refface is now reversed,
       // flip the refface.
-    //if (face->get_surface_ptr()->bridge_sense() == CUBIT_REVERSED)
-    //{
-    //  face->bridge_manager()->reverse_bridge_senses();
-    //  face->reverse_topology();
-    //}
+    if (face->get_surface_ptr()->bridge_sense() == CUBIT_REVERSED)
+    {
+      face->bridge_manager()->reverse_bridge_senses();
+      face->reverse_topology();
+    }
 
       // construct new refface for unmerged surface.
     face = RefEntityFactory::instance()->construct_RefFace(surface_ptr);
@@ -2002,9 +1798,6 @@ RefFace* GeometryQueryTool::make_RefFace( Surface* surface_ptr ) const
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, face);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
-
-  if (merged)
-    MergeTool::instance()->set_merge_occurance(CUBIT_TRUE);
 
   return face;
 }
@@ -2259,9 +2052,8 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
   bool reversed = (CUBIT_REVERSED == curve_ptr->bridge_sense());
   bool merged = edge->bridge_manager()->number_of_bridges() > 1;
 
-
     // Construct RefVertices
-  DLIList<Point*> points(2);
+  DLIList<TBPoint*> points(2);
   curve_ptr->points( points );
   if( reversed )
     points.reverse();
@@ -2271,6 +2063,7 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
     PRINT_ERROR("Invalid SolidModel topology encountered in "
                 "GeometryQueryTool::make_RefEdge.  Curve %d "
                 "has %d vertices.\n", edge->id(), points.size() );
+    assert( points.size() == 1 || points.size() == 2 );
     if( points.size() == 0 )
       return edge;
   }
@@ -2315,8 +2108,8 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
     {
       points.reverse();
       points.reset();
-      Point *point1 = points.get_and_step();
-      Point *point2 = points.get_and_step();
+      TBPoint *point1 = points.get_and_step();
+      TBPoint *point2 = points.get_and_step();
       if( point1->topology_entity() == start_vertex &&
           point2->topology_entity() == end_vertex )
       {
@@ -2442,9 +2235,6 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
 
-  if (merged)
-    MergeTool::instance()->set_merge_occurance(CUBIT_TRUE);
-
   return edge;
 }
 
@@ -2475,6 +2265,18 @@ RefEntity *GeometryQueryTool::check_mergeable_refentity(GeometryEntity *bridge) 
       // (and return it)
     csa_ptr->int_data_list()->reset();
     int merge_id = *(csa_ptr->int_data_list()->get());
+
+    if( importingSolidModel && CUBIT_FALSE == GSaveOpen::performingUndo && 
+        !mergeGloballyOnImport )
+    {
+      //if the merge id isn't already on some other entity already imported,
+      //this entity doesn't have anybody to merge with...return NULL
+      if( !uidsOfImportingEnts.is_in_list( merge_id) )
+      {
+        GeometryQueryTool::uidsOfImportingEnts.append( merge_id );
+        return NULL;
+      }
+    }
 
     bool unique_append = false;
     if( GeometryQueryTool::trackMergedAwayEnts )
@@ -2547,7 +2349,7 @@ RefEntity *GeometryQueryTool::check_mergeable_refentity(GeometryEntity *bridge) 
             TopologyBridge *tmp_bridge = bridge_list.get_and_step();
             tmp_bridge->reverse_bridge_sense();
           }
-        }
+        } 
 
         //add this bridge as the primary bridge
         te->bridge_manager()->add_bridge_as_representation(bridge);
@@ -2616,7 +2418,7 @@ CubitSense GeometryQueryTool::relative_sense( Surface* surf1, Surface* surf2 )
   return normal1 % normal2 < 0 ? CUBIT_REVERSED : CUBIT_FORWARD;
 }
 
-RefVertex* GeometryQueryTool::make_RefVertex(Point* point) const
+RefVertex* GeometryQueryTool::make_RefVertex(TBPoint* point) const
 {
      // first, handle making the new RefVertex's; check for
      // existing chain afterwards
@@ -2625,7 +2427,8 @@ RefVertex* GeometryQueryTool::make_RefVertex(Point* point) const
      // First check to make sure we haven't already created a RefVertex
      // from this point
    TopologyEntity* topo = point->topology_entity();
-   vertex = CAST_TO(topo, RefVertex) ;
+   vertex = CAST_TO(topo, RefVertex);
+  
    if ( vertex == NULL)
    {
      assert( topo == NULL );
@@ -2633,13 +2436,12 @@ RefVertex* GeometryQueryTool::make_RefVertex(Point* point) const
      if (re_ptr != NULL)
      {
        vertex = dynamic_cast<RefVertex*>(re_ptr);
-       MergeTool::instance()->set_merge_occurance(CUBIT_TRUE);
      }
    }
-
+ 
    if (vertex == NULL)
    {
-       // Create a RefVertex from this Point.
+       // Create a RefVertex from this TBPoint.
      vertex = RefEntityFactory::instance()->construct_RefVertex(point);
    }
    assert(vertex != NULL);
@@ -2720,7 +2522,7 @@ RefEdge* GeometryQueryTool::make_free_RefEdge(Curve *curve_ptr ) const
 //
 // Creation Date : 3/27/99
 //-------------------------------------------------------------------------
-RefVertex* GeometryQueryTool::make_free_RefVertex(Point *point_ptr ) const
+RefVertex* GeometryQueryTool::make_free_RefVertex(TBPoint *point_ptr ) const
 {
    RefVertex* ref_vertex_ptr = make_RefVertex( point_ptr );
    if( !ref_vertex_ptr )
@@ -2815,7 +2617,7 @@ CubitStatus GeometryQueryTool::delete_single_Body( Body* body_ptr )
       tmp_entity->bodies( body_list );
       //if 2 bodies own it, get body that is not "body_ptr"
       //for later graphics regeneration
-      if( body_list.size() == 2 )
+      if( body_list.size() > 1 )
       {
         if( body_list.get() != body_ptr )
           merged_children.append( ref_ent );
@@ -3025,7 +2827,7 @@ CubitStatus GeometryQueryTool::delete_RefVertex( RefVertex* ref_vertex )
   while( bridge_list.size() )
   {
     TopologyBridge* bridge = bridge_list.pop();
-    Point* point = dynamic_cast<Point*>(bridge);
+    TBPoint* point = dynamic_cast<TBPoint*>(bridge);
     if (!point)
     {
       PRINT_ERROR("RefVertex %d is invalid -- attached TopologyBridge "
@@ -3878,6 +3680,38 @@ GeometryQueryTool::get_intersections( RefEdge* ref_edge, RefFace* ref_face,
   return gqe->get_intersections( curve, surf, intersection_list, bounded );
 }
 
+CubitStatus
+GeometryQueryTool::get_intersections( RefEdge* ref_edge, CubitPlane plane,
+                                      DLIList<CubitVector*>& intersection_list,
+                                      CubitBoolean bounded, double extended_percent )
+{
+  CubitBox box = ref_edge->bounding_box();
+
+  // create a Surface from the plane
+  CubitVector p1, p2, p3, p4;
+  AnalyticGeometryTool::instance()->min_pln_box_int_corners(plane, box, 1, extended_percent, p1, p2, p3, p4, true );
+
+  TopologyBridge* bridge = 0;
+  GeometryModifyEngine* gme = GeometryModifyTool::instance()->get_engine( ref_edge, &bridge );
+  BodySM* sheet = gme->planar_sheet(p1, p2, p3, p4);
+  if (!sheet)
+  {
+    PRINT_INFO("%s", "Unable to test for planar intersections\n");
+    return CUBIT_FAILURE;
+  }
+
+  DLIList<Surface*> surfaces;
+  sheet->surfaces( surfaces );
+
+  Curve* curve = ref_edge->get_curve_ptr();
+  GeometryQueryEngine* gqe = ref_edge->get_geometry_query_engine();
+  CubitStatus status = gqe->get_intersections( curve, surfaces[0], intersection_list, bounded );
+
+  gqe->delete_solid_model_entities(sheet);
+
+  return status;
+}
+
 //===============================================================================
 // Function   : entity_extrema
 // Member Type: PUBLIC
@@ -4260,7 +4094,7 @@ CubitBox GeometryQueryTool::model_bounding_box()
     i = free_entity_list.size()-1;
   }
 
-  while( i-- )
+  for ( ; i>0 ; i-- )
     result |= free_entity_list.get_and_step()->bounding_box();
 
   return result;
@@ -5030,8 +4864,8 @@ void GeometryQueryTool::get_connected_free_ref_entities(
   if ( !entity )
     return;
 
-    // cases are different enough, just do something totally different
-  if ( !merge_option )
+   // cases are different enough, just do something totally different
+  if ( !merge_option  )
   {
       // get top level entities
     TopologyEntity *source_entity = CAST_TO(entity, TopologyEntity);
@@ -5066,7 +4900,7 @@ void GeometryQueryTool::get_connected_free_ref_entities(
 
     // merge_option == 1
   DLIList <TopologyEntity*> source_list;
-  DLIList <RefVertex*> source_vertex_list;
+  DLIList <RefEntity*> source_entity_list;
 
   int i;
 
@@ -5080,19 +4914,39 @@ void GeometryQueryTool::get_connected_free_ref_entities(
   do
   {
       // get vertices (bottom level ref entities)
-    source_vertex_list.clean_out();
+    source_entity_list.clean_out();
     for (i = source_list.size(); i--; )
-    {
+    { 
       TopologyEntity *source_entity = source_list.get_and_step();
-      source_entity->ref_vertices( source_vertex_list );
+      DLIList<RefVertex*> local_vert_list;
+      source_entity->ref_vertices( local_vert_list );
+      if(local_vert_list.size() == 0)
+      {
+        DLIList<RefEdge*> local_edge_list;
+        source_entity->ref_edges(local_edge_list);
+        if(local_edge_list.size() == 0)
+        {
+          DLIList<RefFace*> local_face_list;
+          source_entity->ref_faces(local_face_list);
+          if(local_face_list.size() > 0)
+            CAST_LIST( local_face_list, source_entity_list, RefEntity);
+        }
+        else
+        {
+          CAST_LIST( local_edge_list, source_entity_list, RefEntity);
+        }
+      }
+      else
+      {
+        CAST_LIST( local_vert_list, source_entity_list, RefEntity);
+      }
     }
     source_list.clean_out();
 
       // get top level entities
-    for ( i = source_vertex_list.size(); i--; )
+    for ( i = source_entity_list.size(); i--; )
     {
-      RefVertex *source_entity = source_vertex_list.get_and_step();
-
+      RefEntity *source_entity = source_entity_list.get_and_step();
         // get all upwards related ref entities
       entity_list.clean_out();
         // get the bodies, too!
@@ -5108,7 +4962,6 @@ void GeometryQueryTool::get_connected_free_ref_entities(
         RefEntity *ref_entity = entity_list.get_and_step();
         if ( !ref_entity->marked() )
         {
-          int is_body = NULL != CAST_TO( ref_entity, Body );
           bridge_list.clean_out();
           topo_entity = CAST_TO( ref_entity, TopologyEntity );
           topo_entity->bridge_manager()->get_bridge_list(bridge_list);
@@ -5116,7 +4969,9 @@ void GeometryQueryTool::get_connected_free_ref_entities(
           for ( k = bridge_list.size(); k--; )
           {
             TopologyBridge* bridge = bridge_list.get_and_step();
-            if ( !bridge->bodysm() || is_body )
+            DLIList<TopologyBridge*> parents;
+            bridge->get_parents( parents );            
+            if( parents.size() == 0 )
             {
               ref_entity->marked( 1 );
               topo_entity = CAST_TO( ref_entity, TopologyEntity );
@@ -5556,7 +5411,7 @@ void GeometryQueryTool::translate( DLIList<RefEntity*> &entities_to_transform,
       {
           TopologyBridge *bridge = free_ents.get_and_step();
           Curve *curve= CAST_TO( bridge, Curve );
-          Point *point = CAST_TO( bridge, Point );
+          TBPoint *point = CAST_TO( bridge, TBPoint );
 
           if( curve || point )
           {
@@ -5571,7 +5426,7 @@ void GeometryQueryTool::translate( DLIList<RefEntity*> &entities_to_transform,
   RefFace *tmp_face;
   RefEdge *tmp_curve;
   RefVertex *tmp_vertex;
-  CubitStatus result = CUBIT_FAILURE;
+  CubitStatus result;
 
   for(i = entities_to_transform.size(); i > 0; i--)
   {
@@ -5624,27 +5479,55 @@ CubitStatus GeometryQueryTool::translate( Body* body,
     if (!okay_to_transform( body ))
      return CUBIT_FAILURE;
 
+  CubitTransformMatrix xform;
+  xform.translate( delta );
+
   if (preview)
   {
     DLIList<RefEdge*> edges;
     body->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
+    if( edges.size() )
     {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
+      for (int i = 0; i < edges.size(); i++)
       {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV += delta;
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(xform);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      body->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(xform);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+        
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
@@ -5655,8 +5538,6 @@ CubitStatus GeometryQueryTool::translate( Body* body,
   CubitStatus result = engine->translate( bodysm, delta );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.translate( delta );
     notify_intermediate_of_transform( body, xform );
     notify_observers_of_transform( body );
   }
@@ -5685,7 +5566,7 @@ CubitStatus GeometryQueryTool::rotate( DLIList<RefEntity*> &entities_to_transfor
       {
           TopologyBridge *bridge = free_ents.get_and_step();
           Curve *curve= CAST_TO( bridge, Curve );
-          Point *tmp_point = CAST_TO( bridge, Point );
+          TBPoint *tmp_point = CAST_TO( bridge, TBPoint );
 
           if( curve || tmp_point )
           {
@@ -5702,8 +5583,9 @@ CubitStatus GeometryQueryTool::rotate( DLIList<RefEntity*> &entities_to_transfor
   Body *tmp_body;
   RefFace *tmp_face;
   RefEdge *tmp_curve;
+  RefVertex *tmp_vertex;
   RefEntity *tmp_ent;
-  CubitStatus result = CUBIT_SUCCESS;
+  CubitStatus result;
   for(i=entities_to_transform.size(); i > 0; i--)
   {
     tmp_ent = entities_to_transform.get_and_step();
@@ -5718,12 +5600,16 @@ CubitStatus GeometryQueryTool::rotate( DLIList<RefEntity*> &entities_to_transfor
         if (!preview)
             continue;
         
-        result = rotate( tmp_face, direction, angle,
+        result = rotate( tmp_face,point, direction, angle,
                        check_before_transforming, preview);
     }
     //curve
     else if( (tmp_curve = CAST_TO( tmp_ent, RefEdge ) ) != NULL )
-      result = rotate( tmp_curve, direction, angle,
+      result = rotate( tmp_curve,point, direction, angle,
+                       check_before_transforming, preview);
+    //vertex
+    else if( (tmp_vertex = CAST_TO( tmp_ent, RefVertex ) ) != NULL )
+      result = rotate( tmp_vertex,point, direction, angle,
                        check_before_transforming, preview);
 
     if( result == CUBIT_SUCCESS )
@@ -5743,48 +5629,74 @@ CubitStatus GeometryQueryTool::rotate( Body* body,
     if (!okay_to_transform( body ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix xform;
+  xform.rotate( angle, axis );
+
+  //if (preview)
+  //{
+  //  DLIList<RefEdge*> edges;
+  //  body->ref_edges(edges);
+  //  for (int j = 0; j < edges.size(); j++)
+  //  {
+  //    GMem poly;
+  //    edges[j]->get_graphics(poly);
+  //    poly.transform(xform);
+  //    GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+  //  }
+  //  GfxPreview::flush();
+  //  return CUBIT_SUCCESS;
+  //}
   if (preview)
   {
     DLIList<RefEdge*> edges;
     body->ref_edges(edges);
-    for (int j = 0; j < edges.size(); j++)
+    if( edges.size() )
     {
-      GMem poly, prev;
-      edges[j]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int k = 0; k < poly.point_list_size(); k++)
+      for (int i = 0; i < edges.size(); i++)
       {
-        CubitVector q;
-        CubitVector tempAxis = axis;
-        CubitVector p(poly.point_list()[k].x, poly.point_list()[k].y, poly.point_list()[k].z);
-        double costheta = cos(angle*3.14159265358979323846/180);
-        double sintheta = sin(angle*3.14159265358979323846/180);
-        tempAxis.normalize();
-
-        q.x() += (costheta + (1 - costheta) * tempAxis.x() * tempAxis.x()) * p.x();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.y() - tempAxis.z() * sintheta) * p.y();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.z() + tempAxis.y() * sintheta) * p.z();
-
-        q.y() += ((1 - costheta) * tempAxis.x() * tempAxis.y() + tempAxis.z() * sintheta) * p.x();
-        q.y() += (costheta + (1 - costheta) * tempAxis.y() * tempAxis.y()) * p.y();
-        q.y() += ((1 - costheta) * tempAxis.y() * tempAxis.z() - tempAxis.x() * sintheta) * p.z();
-
-        q.z() += ((1 - costheta) * tempAxis.x() * tempAxis.z() - tempAxis.y() * sintheta) * p.x();
-        q.z() += ((1 - costheta) * tempAxis.y() * tempAxis.z() + tempAxis.x() * sintheta) * p.y();
-        q.z() += (costheta + (1 - costheta) * tempAxis.z() * tempAxis.z()) * p.z();
-
-        prev_points[k].x = q.x();
-        prev_points[k].y = q.y();
-        prev_points[k].z = q.z();
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(xform);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      body->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(xform);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+        
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
+
 
   BodySM* bodysm = body->get_body_sm_ptr();
   GeometryQueryEngine* engine = bodysm->get_geometry_query_engine();
@@ -5792,8 +5704,6 @@ CubitStatus GeometryQueryTool::rotate( Body* body,
 
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.rotate( angle, axis );
     notify_intermediate_of_transform( body, xform );
     notify_observers_of_transform( body );
   }
@@ -5815,72 +5725,115 @@ CubitStatus GeometryQueryTool::rotate( Body* body,
     if (!okay_to_transform( body ))
       return CUBIT_FAILURE;
 
+  //if (preview)
+  //{
+  //  CubitTransformMatrix prev_xform;
+  //  prev_xform.translate(-point);
+
+  //  CubitTransformMatrix rot_mat;
+  //  rot_mat.rotate( degrees, direction );
+
+  //  CubitTransformMatrix mov_mat;
+  //  mov_mat.translate( point );
+
+  //  DLIList<RefEdge*> edges;
+  //  body->ref_edges(edges);
+  //  for (int j = 0; j < edges.size(); j++)
+  //  {
+  //    GMem poly;
+  //    edges[j]->get_graphics(poly);
+  //    poly.transform(prev_xform);
+  //    poly.transform(rot_mat);
+  //    poly.transform(mov_mat);
+  //    GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+  //  }
+  //  GfxPreview::flush();
+  //  return CUBIT_SUCCESS;
+  //}
+
+    CubitTransformMatrix prev_xform;
+    prev_xform.translate(-point);
+
+    CubitTransformMatrix rot_mat;
+    rot_mat.rotate( degrees, direction );
+
+    CubitTransformMatrix mov_mat;
+    mov_mat.translate( point );
+
   if (preview)
   {
-    // define the axis
-    CubitVector axis(direction);
-    
     DLIList<RefEdge*> edges;
     body->ref_edges(edges);
-    for (int j = 0; j < edges.size(); j++)
+    if( edges.size() )
     {
-      GMem poly, prev;
-      edges[j]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int k = 0; k < poly.point_list_size(); k++)
+      for (int i = 0; i < edges.size(); i++)
       {
-        CubitVector q;
-
-        // first translate to the rotation axis
-        CubitVector p(poly.point_list()[k].x, poly.point_list()[k].y, poly.point_list()[k].z);
-        p -= point;
-
-        CubitVector tempAxis = axis;
-        double costheta = cos(degrees*3.14159265358979323846/180);
-        double sintheta = sin(degrees*3.14159265358979323846/180);
-        tempAxis.normalize();
-
-        q.x() += (costheta + (1 - costheta) * tempAxis.x() * tempAxis.x()) * p.x();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.y() - tempAxis.z() * sintheta) * p.y();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.z() + tempAxis.y() * sintheta) * p.z();
-
-        q.y() += ((1 - costheta) * tempAxis.x() * tempAxis.y() + tempAxis.z() * sintheta) * p.x();
-        q.y() += (costheta + (1 - costheta) * tempAxis.y() * tempAxis.y()) * p.y();
-        q.y() += ((1 - costheta) * tempAxis.y() * tempAxis.z() - tempAxis.x() * sintheta) * p.z();
-
-        q.z() += ((1 - costheta) * tempAxis.x() * tempAxis.z() - tempAxis.y() * sintheta) * p.x();
-        q.z() += ((1 - costheta) * tempAxis.y() * tempAxis.z() + tempAxis.x() * sintheta) * p.y();
-        q.z() += (costheta + (1 - costheta) * tempAxis.z() * tempAxis.z()) * p.z();
-
-        // move back into position
-        q += point;
-        
-        prev_points[k].x = q.x();
-        prev_points[k].y = q.y();
-        prev_points[k].z = q.z();
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(prev_xform);
+        poly.transform(rot_mat);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      body->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(prev_xform);
+        poly.transform(rot_mat);
+        poly.transform(mov_mat);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+        
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
 
+
+
   BodySM* bodysm = body->get_body_sm_ptr();
   GeometryQueryEngine* engine = bodysm->get_geometry_query_engine();
-  CubitTransformMatrix xform;
   CubitStatus result;
 
     // Move to origin
   result = engine->translate( bodysm, -point );
 
-    // If failed, nothing changed yet, so just return.
-  if (!result)
-    return CUBIT_FAILURE;
-
-  xform.translate( -point );
+  if (result)
+  {
+    CubitTransformMatrix xform;
+    xform.translate( -point );
+    notify_intermediate_of_transform( body, xform );
+  }
+  else
+  {
+    return result;
+  }
 
     // Rotate about direction vector
   result = engine->rotate( bodysm, direction, degrees );
@@ -5888,34 +5841,36 @@ CubitStatus GeometryQueryTool::rotate( Body* body,
   {
     CubitTransformMatrix rot_mat;
     rot_mat.rotate( degrees, direction );
-    xform = xform * rot_mat;
-  }
-
-    // Try to move back, even if rotate failed.
-    // Thus hopefully, if the rotate failed, the geometry is
-    // unchanged.
-  if (CUBIT_SUCCESS == engine->translate( bodysm, point ))
-  {
-    CubitTransformMatrix mov_mat;
-    mov_mat.translate( point );
-    xform = xform * mov_mat;
+    notify_intermediate_of_transform( body, rot_mat );
   }
   else
   {
-    result = CUBIT_FAILURE;
+    return result;
   }
 
-  notify_intermediate_of_transform( body, xform );
+  result= engine->translate( bodysm, point );
+  if (result)
+  {
+    CubitTransformMatrix xform;
+    xform.translate( point );
+    notify_intermediate_of_transform( body, xform );
+  }
+  else
+  {
+    return result;
+  }
+
   notify_observers_of_transform( body );
 
   return result;
 }
 
 void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform, 
-                                      double scale_x, double scale_y, double scale_z, 
-                                      bool check_before_transforming, 
-                                      DLIList<RefEntity*> &entities_scaled,
-                                      bool preview /*= false*/)
+                              const CubitVector& point,
+                              double scale_x, double scale_y, double scale_z, 
+                              bool check_before_transforming, 
+                              DLIList<RefEntity*> &entities_scaled,
+                              bool preview /*= false*/)
 {
   CubitVector factors(scale_x, scale_y, scale_z);
 
@@ -5929,24 +5884,27 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
       {
           TopologyBridge *bridge = free_ents.get_and_step();
           Curve *curve= CAST_TO( bridge, Curve );
-          Point *point = CAST_TO( bridge, Point );
+          TBPoint *tbpoint = CAST_TO( bridge, TBPoint );
 
-          if( curve || point )
+          if( curve || tbpoint )
           {
               GeometryEntity *geom = CAST_TO( bridge, GeometryEntity );
               GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-              engine->scale( geom, factors );
+              CubitStatus result = engine->translate( geom, -point );
+               result = engine->scale( geom, factors );
+               result = engine->translate( geom, point );
           }
       }
   }
   
-  CubitStatus result = CUBIT_FAILURE;
+  CubitStatus result;
   for(i=entities_to_transform.size(); i--; )
   {
     RefEntity *tmp_ent = entities_to_transform.get_and_step();
     Body *tmp_body;
     RefFace* tmp_face;
     RefEdge *tmp_curve;
+    RefVertex *tmp_vertex;
     if( ( tmp_body = CAST_TO( tmp_ent, Body ) ) != NULL )
     {
       //non-uniform scaling
@@ -5955,12 +5913,12 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
           scale_y != scale_z )
       {
         // use GMT version for non-uniform scaling b/c it updates topology if it changes
-        result = GeometryModifyTool::instance()->scale(tmp_body, factors, 
+        result = GeometryModifyTool::instance()->scale(tmp_body,point, factors, 
                                                   check_before_transforming, preview);
         tmp_ent = tmp_body;
       }
       else
-        result = scale( tmp_body, CubitVector(scale_x, scale_y, scale_z),
+        result = scale( tmp_body,point, CubitVector(scale_x, scale_y, scale_z),
                  check_before_transforming, preview);
     }
     else if( ( tmp_face = CAST_TO( tmp_ent, RefFace ) ) != NULL )
@@ -5968,15 +5926,19 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
      // only allow scaling of RefFaces if preview is on
      if (!preview)
          continue;
-     result = scale( tmp_face, CubitVector(scale_x, scale_y, scale_z),
+     result = scale( tmp_face,point, CubitVector(scale_x, scale_y, scale_z),
                 check_before_transforming, preview);
     }
     else if( ( tmp_curve = CAST_TO( tmp_ent, RefEdge ) ) != NULL )
     {
-     result = scale( tmp_curve, CubitVector(scale_x, scale_y, scale_z),
+     result = scale( tmp_curve,point, CubitVector(scale_x, scale_y, scale_z),
                 check_before_transforming, preview);
     }
-
+    else if( ( tmp_vertex = CAST_TO( tmp_ent, RefVertex ) ) != NULL )
+    {
+     result = scale( tmp_vertex,point, CubitVector(scale_x, scale_y, scale_z),
+                check_before_transforming, preview);
+    }
     if(result)
       entities_scaled.append( tmp_ent );
   } 
@@ -5984,55 +5946,134 @@ void GeometryQueryTool::scale( DLIList<RefEntity*> &entities_to_transform,
 }
 
 
-CubitStatus GeometryQueryTool::scale( Body* body, double factor, bool check_to_transform, bool preview )
+CubitStatus GeometryQueryTool::scale( Body* body,const CubitVector& point, double factor, bool check_to_transform, bool preview )
 {
   if( check_to_transform )
     if (!okay_to_transform( body ))
       return CUBIT_FAILURE;
 
-  if (preview)
+  CubitTransformMatrix pre_form;
+  pre_form.translate( -point );
+
+  CubitTransformMatrix xform;
+  xform.scale_about_origin( factor );
+
+  CubitTransformMatrix post_form;
+  post_form.translate( point );
+
+ if (preview)
   {
     DLIList<RefEdge*> edges;
     body->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
+    if( edges.size() )
     {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
+      for (int i = 0; i < edges.size(); i++)
       {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV *= factor;
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(pre_form);
+        poly.transform(xform);
+        poly.transform(post_form);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      body->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(pre_form);
+        poly.transform(xform);
+        poly.transform(post_form);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+        
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
 
+
+
+  //if (preview)
+  //{
+  //  DLIList<RefEdge*> edges;
+  //  body->ref_edges(edges);
+  //  for (int i = 0; i < edges.size(); i++)
+  //  {
+  //    GMem poly;
+  //    edges[i]->get_graphics(poly);
+  //    poly.transform(pre_form);
+  //    poly.transform(xform);
+  //    poly.transform(post_form);
+  //    GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+  //  }
+  //  GfxPreview::flush();
+  //  return CUBIT_SUCCESS;
+  //}
+
   BodySM* bodysm = body->get_body_sm_ptr();
   GeometryQueryEngine* engine = bodysm->get_geometry_query_engine();
-  CubitStatus result = engine->scale( bodysm, factor );
+  CubitStatus result = engine->translate( bodysm, -point );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.scale_about_origin( factor );
-    notify_intermediate_of_transform( body, xform );
-    notify_observers_of_transform( body );
+    notify_intermediate_of_transform( body, pre_form );
   }
   else
     PRINT_ERROR("Scale of %s (%s %d) failed.\n",
       body->entity_name().c_str(), body->class_name(), body->id() );
+
+
+  result = engine->scale( bodysm, factor );
+  if (result)
+  {
+    notify_intermediate_of_transform( body, xform );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      body->entity_name().c_str(), body->class_name(), body->id() );
+
+  result = engine->translate( bodysm, point );
+  if (result)
+  {
+    notify_intermediate_of_transform( body, post_form );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      body->entity_name().c_str(), body->class_name(), body->id() );
+
+    notify_observers_of_transform( body );
+
+
+
   return result;
 }
 
 CubitStatus GeometryQueryTool::scale( Body *body,
+                                     const CubitVector& point,
                                       const CubitVector& factors,
                                       bool check_to_transform,
                                       bool preview )
@@ -6041,59 +6082,114 @@ CubitStatus GeometryQueryTool::scale( Body *body,
     if (!okay_to_transform( body ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix pre_form;
+  pre_form.translate( -point );
+
+  CubitTransformMatrix xform;
+  xform.scale_about_origin( factors );
+
+  CubitTransformMatrix post_form;
+  post_form.translate( point );
+
   if (preview)
   {
     DLIList<RefEdge*> edges;
     body->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
+    if( edges.size() )
     {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
+      for (int i = 0; i < edges.size(); i++)
       {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV.x(tempV.x()*factors.x());
-        tempV.y(tempV.y()*factors.y());
-        tempV.z(tempV.z()*factors.z());
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(pre_form);
+        poly.transform(xform);
+        poly.transform(post_form);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
     }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      body->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(pre_form);
+        poly.transform(xform);
+        poly.transform(post_form);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
+    }
+
     GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
 
   BodySM* bodysm = body->get_body_sm_ptr();
   GeometryQueryEngine* engine = bodysm->get_geometry_query_engine();
-  CubitStatus result = engine->scale( bodysm, factors );
+
+  CubitStatus result = engine->translate( bodysm, -point );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.scale_about_origin( factors );
-    notify_intermediate_of_transform( body, xform );
-    notify_observers_of_transform( body );
+    notify_intermediate_of_transform( body, pre_form );
   }
   else
     PRINT_ERROR("Scale of %s (%s %d) failed.\n",
       body->entity_name().c_str(), body->class_name(), body->id() );
 
+
+  result = engine->scale( bodysm, factors );
+  if (result)
+  {
+    notify_intermediate_of_transform( body, xform );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      body->entity_name().c_str(), body->class_name(), body->id() );
+
+  result = engine->translate( bodysm, point );
+  if (result)
+  {
+    notify_intermediate_of_transform( body, post_form );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      body->entity_name().c_str(), body->class_name(), body->id() );
+
+    notify_observers_of_transform( body );
+
   return result;
 }
 
 void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
-                            double x, double y, double z, 
+                                const CubitVector& point,
+                                const CubitVector& normal,
                             bool check_before_transforming,
                             DLIList<RefEntity*> &entities_transformed,
                             bool preview /*= false*/)
 {
-  CubitVector axis( x,y,z);
-
   //reflect free, merged-away entities
   DLIList<TopologyBridge*> free_ents; 
   get_merged_away_free_entities( entities_to_transform, free_ents );
@@ -6105,13 +6201,16 @@ void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
       {
           TopologyBridge *bridge = free_ents.get_and_step();
           Curve *curve= CAST_TO( bridge, Curve );
-          Point *tmp_point = CAST_TO( bridge, Point );
+          TBPoint *tmp_point = CAST_TO( bridge, TBPoint );
 
           if( curve || tmp_point )
           {
               GeometryEntity *geom = CAST_TO( bridge, GeometryEntity );
               GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-              engine->reflect( geom, axis ); 
+              CubitStatus result = engine->translate( geom, -point ); 
+              result = engine->reflect( geom, normal ); 
+              result = engine->translate( geom, point ); 
+
           }
       }
   }
@@ -6119,17 +6218,19 @@ void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
   DLIList<Body*> body_list;
   DLIList<RefEdge*> curve_list;
   DLIList<RefFace*> face_list;
+  DLIList<RefVertex*> vertex_list;
   CubitStatus result;
   CAST_LIST(entities_to_transform, body_list, Body);
   if( body_list.size() != entities_to_transform.size() )
   {
     CAST_LIST(entities_to_transform, curve_list, RefEdge);
     CAST_LIST(entities_to_transform, face_list, RefFace);
+    CAST_LIST(entities_to_transform, vertex_list, RefVertex);
   }
 
   if( body_list.size() )
   {
-    result = GeometryQueryTool::instance()->reflect( body_list, CubitVector( x, y, z ), preview );
+    result = GeometryQueryTool::instance()->reflect( body_list,point,normal, preview );
     if ( result ) 
     {
       while(body_list.size())
@@ -6146,7 +6247,7 @@ void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
           continue;
 
       RefFace *tmp_face = face_list.get_and_step();
-      result = reflect( tmp_face, axis, 
+      result = reflect( tmp_face, point,normal, 
                         check_before_transforming, preview );
       if ( result ) 
         entities_transformed.append( tmp_face ); 
@@ -6158,10 +6259,22 @@ void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
     for(i = curve_list.size(); i > 0; i--)
     {
       RefEdge *tmp_edge = curve_list.get_and_step();
-      result = reflect( tmp_edge, axis, 
+      result = reflect( tmp_edge, point,normal, 
                         check_before_transforming, preview );
       if ( result ) 
         entities_transformed.append( tmp_edge ); 
+    }
+  }
+  if( vertex_list.size() )
+  {
+    int i;
+    for(i = vertex_list.size(); i > 0; i--)
+    {
+      RefVertex *tmp_vertex = vertex_list.get_and_step();
+      result = reflect( tmp_vertex,point, normal, 
+                        check_before_transforming, preview );
+      if ( result ) 
+        entities_transformed.append( tmp_vertex ); 
     }
   }
 
@@ -6170,41 +6283,75 @@ void GeometryQueryTool::reflect( DLIList<RefEntity*> &entities_to_transform,
 
 
 CubitStatus GeometryQueryTool::reflect( DLIList<Body*> bodies,
-                                        const CubitVector& axis,
+                                        const CubitVector& point,
+                                        const CubitVector& normal,
                                         bool preview)
 {
   Body *tmp_body;
   CubitStatus result = CUBIT_FAILURE;
 
+  CubitTransformMatrix prev_xform;
+  prev_xform.translate(-point);
+
+  CubitTransformMatrix ref_mat;
+  ref_mat.reflect(normal );
+
+  CubitTransformMatrix mov_mat;
+  mov_mat.translate( point );
   if (preview)
   {
     for (int i = 0; i < bodies.size(); i++)
     {
-      DLIList<RefEdge*> edges;
-      bodies[i]->ref_edges(edges);
-      for (int j = 0; j < edges.size(); j++)
+    DLIList<RefEdge*> edges;
+    bodies[i]->ref_edges(edges);
+    if( edges.size() )
+    {
+      for (int i = 0; i < edges.size(); i++)
       {
-        GMem poly, prev;
-        edges[j]->get_graphics(poly);
-        GPoint *prev_points = NULL;
-        prev_points = new GPoint[poly.point_list_size()];
-        for (int k = 0; k < poly.point_list_size(); k++)
-        {
-          CubitVector tempAxis = axis;
-          CubitVector tempV(poly.point_list()[k].x, poly.point_list()[k].y, poly.point_list()[k].z);
-          CubitVector b = tempV - CubitVector(0,0,0);
-          double dist = (tempAxis % b) / tempAxis.length();
-          tempAxis.length(dist);
-          CubitVector refl = tempV - tempAxis;
-          refl = refl - tempV + refl;
-          prev_points[k].x = refl.x();
-          prev_points[k].y = refl.y();
-          prev_points[k].z = refl.z();
-        }
-        GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-        delete [] prev_points;
-        prev_points = NULL;
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(prev_xform);
+        poly.transform(ref_mat);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
       }
+    }
+    else
+    {
+      //just draw the surfaces
+      DLIList<RefFace*> faces;
+      bodies[i]->ref_faces( faces );
+      for( int i=0; i<faces.size(); i-- )
+      {
+        GMem poly;
+        faces.get_and_step()->get_graphics( poly );
+        poly.transform(prev_xform);
+        poly.transform(ref_mat);
+        poly.transform(mov_mat);
+
+        int* facet_list = poly.facet_list();
+        GPoint* plist = poly.point_list();
+
+        GPoint p[3];
+        for (i = 0; i < poly.fListCount; )
+        {
+          int sides = facet_list[i++];
+          if (sides != 3)
+          {
+            i += sides;
+            continue;
+          }
+          else
+          {
+            p[0] = plist[facet_list[i++]];
+            p[1] = plist[facet_list[i++]];
+            p[2] = plist[facet_list[i++]];
+            GfxPreview::draw_polygon(p, 3, CUBIT_BLUE, CUBIT_BLUE, false);
+          }
+        }
+      }
+    }
+
       GfxPreview::flush();
     }
     return CUBIT_SUCCESS;
@@ -6216,8 +6363,44 @@ CubitStatus GeometryQueryTool::reflect( DLIList<Body*> bodies,
     tmp_body = bodies.get_and_step();
     BodySM* bodysm = tmp_body->get_body_sm_ptr();
     GeometryQueryEngine* engine = bodysm->get_geometry_query_engine();
-    result = engine->reflect( bodysm, axis );
-    if( !result )
+
+    // Move to origin
+    result = engine->translate( bodysm, -point );
+    if (result)
+    {
+      CubitTransformMatrix xform;
+      xform.translate( -point );
+      notify_intermediate_of_transform( tmp_body, xform );
+    }
+    else
+    {
+      PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
+        tmp_body->entity_name().c_str(), tmp_body->class_name(), tmp_body->id() );
+      return result;
+    }
+
+    result = engine->reflect( bodysm, normal );
+    if (result)
+    {
+      CubitTransformMatrix xform;
+      xform.reflect( normal);
+      notify_intermediate_of_transform( tmp_body, xform );
+    }
+    else
+    {
+      PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
+        tmp_body->entity_name().c_str(), tmp_body->class_name(), tmp_body->id() );
+      return result;
+    }
+
+   result = engine->translate( bodysm, point );
+    if (result)
+    {
+      CubitTransformMatrix xform;
+      xform.translate( point );
+      notify_intermediate_of_transform( tmp_body, xform );
+    }
+    else
     {
       PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
         tmp_body->entity_name().c_str(), tmp_body->class_name(), tmp_body->id() );
@@ -6225,14 +6408,7 @@ CubitStatus GeometryQueryTool::reflect( DLIList<Body*> bodies,
     }
   }
 
-  //update all the RefEntity-side stuff
-  for( i=bodies.size(); i--;)
-  {
-    tmp_body = bodies.get_and_step();
-    CubitTransformMatrix xform;
-    xform.reflect( axis );
-    notify_intermediate_of_transform( tmp_body, xform );
-  }
+
 
   for( i=bodies.size(); i--;)
   {
@@ -6295,37 +6471,43 @@ CubitStatus GeometryQueryTool::translate( BasicTopologyEntity* bte,
     if (!okay_to_transform( bte ))
      return CUBIT_FAILURE;
 
+  CubitTransformMatrix xform;
+  xform.translate(delta);
+
   if (preview)
   {
-    DLIList<RefEdge*> edges;
-    bte->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
-    {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
-      {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV += delta;
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
-      }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
-    }
-    if (edges.size() == 0)
+    if(bte->dimension()==0)
     {
       DLIList<RefVertex*> points;
       bte->ref_vertices(points);
       for (int i = 0; i < points.size(); i++)
       {
         CubitVector temp(points[i]->center_point());
-        temp += delta;
+        temp = xform*temp;
         GfxPreview::draw_point(temp, CUBIT_BLUE);
+      }
+    }
+    else
+    {
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
+      for (int i = 0; i < edges.size(); i++)
+      {
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(xform);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
+      if (edges.size() == 0)
+      {
+        DLIList<RefVertex*> points;
+        bte->ref_vertices(points);
+        for (int i = 0; i < points.size(); i++)
+        {
+          CubitVector temp(points[i]->center_point());
+          temp=xform*temp;
+          GfxPreview::draw_point(temp, CUBIT_BLUE);
+        }
       }
     }
     GfxPreview::flush();
@@ -6337,14 +6519,135 @@ CubitStatus GeometryQueryTool::translate( BasicTopologyEntity* bte,
   CubitStatus result = engine->translate( geom, delta );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.translate( delta );
     notify_intermediate_of_transform( bte, xform );
     notify_observers_of_transform( bte );
   }
   else
     PRINT_ERROR("Translate of %s (%s %d) failed.\n",
       bte->entity_name().c_str(), bte->class_name(), bte->id() );
+  return result;
+}
+CubitStatus GeometryQueryTool::rotate( BasicTopologyEntity* bte,
+                                       const CubitVector& point,
+                                       const CubitVector& direction,
+                                       double angle,
+                                       bool check_to_transform,
+                                       bool preview )
+{
+  if( check_to_transform )
+    if (!okay_to_transform( bte ))
+      return CUBIT_FAILURE;
+
+    CubitTransformMatrix prev_xform;
+    prev_xform.translate(-point);
+
+    CubitTransformMatrix rot_mat;
+    rot_mat.rotate( angle, direction );
+
+    CubitTransformMatrix mov_mat;
+    mov_mat.translate( point );
+
+
+  if (preview)
+  {
+
+    if(bte->dimension()==0)
+    {
+      DLIList<RefVertex*> points;
+      bte->ref_vertices(points);
+      for (int i = 0; i < points.size(); i++)
+      {
+        CubitVector temp(points[i]->center_point());
+        temp = prev_xform*temp;
+        temp = rot_mat*temp;
+        temp = mov_mat*temp;
+        GfxPreview::draw_point(temp, CUBIT_BLUE);
+      }
+    }
+    else
+    {
+
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
+
+      for (int j = 0; j < edges.size(); j++)
+      {
+        GMem poly;
+        edges[j]->get_graphics(poly);
+        poly.transform(prev_xform);
+        poly.transform(rot_mat);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
+      if (edges.size() == 0)
+      {
+        DLIList<RefVertex*> points;
+        bte->ref_vertices(points);
+        for (int i = 0; i < points.size(); i++)
+        {
+          CubitVector p(points[i]->center_point());
+          p = prev_xform*p;
+          p = rot_mat*p;
+          p = mov_mat*p;
+          GfxPreview::draw_point(p, CUBIT_BLUE);
+        }
+      }
+    }
+
+    GfxPreview::flush();
+    return CUBIT_SUCCESS;
+  }
+
+  GeometryEntity* geom = bte->get_geometry_entity_ptr();
+  GeometryQueryEngine* engine = geom->get_geometry_query_engine();
+  CubitStatus result;
+  // Move to origin
+  result = engine->translate( geom, -point );
+  if (result)
+  {
+    CubitTransformMatrix xform;
+    xform.translate( -point );
+    notify_intermediate_of_transform( bte, xform );
+  }
+  else
+  {
+    PRINT_ERROR("Rotate of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
+
+
+  result = engine->rotate( geom, direction, angle );
+  if (result)
+  {
+    CubitTransformMatrix rot_mat;
+    rot_mat.rotate( angle, direction );
+    notify_intermediate_of_transform( bte, rot_mat );
+  }
+  else
+  {
+    PRINT_ERROR("Rotate of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
+  result=engine->translate( geom, point );
+
+  if (result)
+  {
+    CubitTransformMatrix mov_mat;
+    mov_mat.translate( point );
+    notify_intermediate_of_transform( bte, mov_mat );
+  }
+  else
+  {
+    PRINT_ERROR("Rotate of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
+
+  notify_observers_of_transform( bte );
+
+
   return result;
 }
 
@@ -6358,73 +6661,45 @@ CubitStatus GeometryQueryTool::rotate( BasicTopologyEntity* bte,
     if (!okay_to_transform( bte ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix xform;
+  xform.rotate( angle, axis );
+
   if (preview)
   {
-    DLIList<RefEdge*> edges;
-    bte->ref_edges(edges);
-
-    for (int j = 0; j < edges.size(); j++)
-    {
-      GMem poly, prev;
-      edges[j]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int k = 0; k < poly.point_list_size(); k++)
-      {
-        CubitVector q;
-        CubitVector tempAxis = axis;
-        CubitVector p(poly.point_list()[k].x, poly.point_list()[k].y, poly.point_list()[k].z);
-        double costheta = cos(angle*3.14159265358979323846/180);
-        double sintheta = sin(angle*3.14159265358979323846/180);
-        tempAxis.normalize();
-
-        q.x() += (costheta + (1 - costheta) * tempAxis.x() * tempAxis.x()) * p.x();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.y() - tempAxis.z() * sintheta) * p.y();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.z() + tempAxis.y() * sintheta) * p.z();
-
-        q.y() += ((1 - costheta) * tempAxis.x() * tempAxis.y() + tempAxis.z() * sintheta) * p.x();
-        q.y() += (costheta + (1 - costheta) * tempAxis.y() * tempAxis.y()) * p.y();
-        q.y() += ((1 - costheta) * tempAxis.y() * tempAxis.z() - tempAxis.x() * sintheta) * p.z();
-
-        q.z() += ((1 - costheta) * tempAxis.x() * tempAxis.z() - tempAxis.y() * sintheta) * p.x();
-        q.z() += ((1 - costheta) * tempAxis.y() * tempAxis.z() + tempAxis.x() * sintheta) * p.y();
-        q.z() += (costheta + (1 - costheta) * tempAxis.z() * tempAxis.z()) * p.z();
-
-        prev_points[k].x = q.x();
-        prev_points[k].y = q.y();
-        prev_points[k].z = q.z();
-      }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
-    }
-    if (edges.size() == 0)
+    if(bte->dimension()==0)
     {
       DLIList<RefVertex*> points;
       bte->ref_vertices(points);
       for (int i = 0; i < points.size(); i++)
       {
-        CubitVector tempAxis = axis;
-        CubitVector p(points[i]->center_point());
-        double costheta = cos(angle*3.14159265358979323846/180);
-        double sintheta = sin(angle*3.14159265358979323846/180);
-        tempAxis.normalize();
+        CubitVector temp(points[i]->center_point());
+        temp = xform*temp;
+        GfxPreview::draw_point(temp, CUBIT_BLUE);
+      }
+    }
+    else
+    {
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
 
-        CubitVector q;
-        
-        q.x() += (costheta + (1 - costheta) * tempAxis.x() * tempAxis.x()) * p.x();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.y() - tempAxis.z() * sintheta) * p.y();
-        q.x() += ((1 - costheta) * tempAxis.x() * tempAxis.z() + tempAxis.y() * sintheta) * p.z();
-
-        q.y() += ((1 - costheta) * tempAxis.x() * tempAxis.y() + tempAxis.z() * sintheta) * p.x();
-        q.y() += (costheta + (1 - costheta) * tempAxis.y() * tempAxis.y()) * p.y();
-        q.y() += ((1 - costheta) * tempAxis.y() * tempAxis.z() - tempAxis.x() * sintheta) * p.z();
-
-        q.z() += ((1 - costheta) * tempAxis.x() * tempAxis.z() - tempAxis.y() * sintheta) * p.x();
-        q.z() += ((1 - costheta) * tempAxis.y() * tempAxis.z() + tempAxis.x() * sintheta) * p.y();
-        q.z() += (costheta + (1 - costheta) * tempAxis.z() * tempAxis.z()) * p.z();
-
-        GfxPreview::draw_point(q, CUBIT_BLUE);
+      for (int j = 0; j < edges.size(); j++)
+      {
+        GMem poly;
+        edges[j]->get_graphics(poly);
+        poly.transform(xform);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
+      if (edges.size() == 0)
+      {
+        DLIList<RefVertex*> points;
+        bte->ref_vertices(points);
+        for (int i = 0; i < points.size(); i++)
+        {
+          CubitVector tempAxis = axis;
+          CubitVector p(points[i]->center_point());
+          CubitVector q =xform*p;
+          GfxPreview::draw_point(q, CUBIT_BLUE);
+        }
       }
     }
 
@@ -6437,8 +6712,6 @@ CubitStatus GeometryQueryTool::rotate( BasicTopologyEntity* bte,
   CubitStatus result = engine->rotate( geom, axis, angle );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.rotate( angle, axis );
     notify_intermediate_of_transform( bte, xform );
     notify_observers_of_transform( bte );
   }
@@ -6448,34 +6721,53 @@ CubitStatus GeometryQueryTool::rotate( BasicTopologyEntity* bte,
   return result;
 }
 
-CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte, double factor,
+CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte,const CubitVector& point, double factor,
                                       bool check_to_transform, bool preview )
 {
   if( check_to_transform )
     if (!okay_to_transform( bte ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix prev_xform;
+  prev_xform.translate(-point);
+
+  CubitTransformMatrix xform;
+  xform.scale_about_origin( factor );
+
+  CubitTransformMatrix mov_mat;
+  mov_mat.translate( point );
+
+
   if (preview)
   {
-    DLIList<RefEdge*> edges;
-    bte->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
+
+    if(bte->dimension()==0)
     {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
+      DLIList<RefVertex*> points;
+      bte->ref_vertices(points);
+      for (int i = 0; i < points.size(); i++)
       {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV *= factor;
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
+        CubitVector temp(points[i]->center_point());
+        temp = prev_xform*temp;
+        temp = xform*temp;
+        temp = mov_mat*temp;
+        GfxPreview::draw_point(temp, CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
+      for (int i = 0; i < edges.size(); i++)
+      {
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(prev_xform);
+        poly.transform(xform);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
@@ -6483,22 +6775,51 @@ CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte, double factor,
 
   GeometryEntity* geom = bte->get_geometry_entity_ptr();
   GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-  CubitStatus result = engine->scale( geom, factor );
+  CubitStatus result = engine->translate( geom, -point );
+  if (result)
+  {
+    CubitTransformMatrix prev_xform;
+    prev_xform.translate(-point);
+    notify_intermediate_of_transform( bte, prev_xform );
+  }
+  else
+  {
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
+
+  result = engine->scale( geom, factor );
   if (result)
   {
     CubitTransformMatrix xform;
     xform.scale_about_origin( factor );
     notify_intermediate_of_transform( bte, xform );
+  }
+  else
+  {
+    PRINT_ERROR("Scvale of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
+  result = engine->translate( geom, point );
+  if (result)
+  {
+    CubitTransformMatrix mov_mat;
+    mov_mat.translate( point );
+
+    notify_intermediate_of_transform( bte, prev_xform );
     notify_observers_of_transform( bte );
   }
   else
     PRINT_ERROR("Scale of %s (%s %d) failed.\n",
-      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    bte->entity_name().c_str(), bte->class_name(), bte->id() );
   return result;
 }
 
 
 CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte,
+                                     const CubitVector& point,
                                       const CubitVector& factors,
                                       bool check_to_transform,
                                       bool preview )
@@ -6507,29 +6828,45 @@ CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte,
     if (!okay_to_transform( bte ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix prev_xform;
+  prev_xform.translate(-point);
+
+  CubitTransformMatrix xform;
+  xform.scale_about_origin( factors );
+
+  CubitTransformMatrix mov_mat;
+  mov_mat.translate( point );
+
+
   if (preview)
   {
-    DLIList<RefEdge*> edges;
-    bte->ref_edges(edges);
-    for (int i = 0; i < edges.size(); i++)
+    if(bte->dimension()==0)
     {
-      GMem poly, prev;
-      edges[i]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int j = 0; j < poly.point_list_size(); j++)
+      DLIList<RefVertex*> points;
+      bte->ref_vertices(points);
+      for (int i = 0; i < points.size(); i++)
       {
-        CubitVector tempV(poly.point_list()[j].x, poly.point_list()[j].y, poly.point_list()[j].z);
-        tempV.x(tempV.x()*factors.x());
-        tempV.y(tempV.y()*factors.y());
-        tempV.z(tempV.z()*factors.z());
-        prev_points[j].x = tempV.x();
-        prev_points[j].y = tempV.y();
-        prev_points[j].z = tempV.z();
+        CubitVector temp(points[i]->center_point());
+        temp = prev_xform*temp;
+        temp = xform*temp;
+        temp = mov_mat*temp;
+        GfxPreview::draw_point(temp, CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
+      for (int i = 0; i < edges.size(); i++)
+      {
+        GMem poly;
+        edges[i]->get_graphics(poly);
+        poly.transform(prev_xform);
+        poly.transform(xform);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
@@ -6537,22 +6874,43 @@ CubitStatus GeometryQueryTool::scale( BasicTopologyEntity* bte,
 
   GeometryEntity* geom = bte->get_geometry_entity_ptr();
   GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-  CubitStatus result = engine->scale( geom, factors );
+  CubitStatus result = engine->translate( geom, -point );
   if (result)
   {
-    CubitTransformMatrix xform;
-    xform.scale_about_origin( factors );
+    notify_intermediate_of_transform( bte, prev_xform );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+
+  result = engine->scale( geom, factors );
+  if (result)
+  {
     notify_intermediate_of_transform( bte, xform );
+  }
+  else
+    PRINT_ERROR("Scale of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+
+
+  result = engine->translate( geom, point );
+  if (result)
+  {
+    notify_intermediate_of_transform( bte, mov_mat );
     notify_observers_of_transform( bte );
   }
   else
     PRINT_ERROR("Scale of %s (%s %d) failed.\n",
       bte->entity_name().c_str(), bte->class_name(), bte->id() );
+
+
+
   return result;
 }
 
 CubitStatus GeometryQueryTool::reflect( BasicTopologyEntity* bte,
-                                        const CubitVector& axis,
+                                        const CubitVector& point,
+                                        const CubitVector& normal,
                                         bool check_to_transform,
                                         bool preview )
 {
@@ -6560,32 +6918,43 @@ CubitStatus GeometryQueryTool::reflect( BasicTopologyEntity* bte,
     if (!okay_to_transform( bte ))
       return CUBIT_FAILURE;
 
+  CubitTransformMatrix prev_xform;
+  prev_xform.translate(-point);
+
+  CubitTransformMatrix ref_mat;
+  ref_mat.reflect(normal );
+
+  CubitTransformMatrix mov_mat;
+  mov_mat.translate( point );
   if (preview)
   {
-    DLIList<RefEdge*> edges;
-    bte->ref_edges(edges);
-    for (int j = 0; j < edges.size(); j++)
+    if(bte->dimension()==0)
     {
-      GMem poly, prev;
-      edges[j]->get_graphics(poly);
-      GPoint *prev_points = NULL;
-      prev_points = new GPoint[poly.point_list_size()];
-      for (int k = 0; k < poly.point_list_size(); k++)
+      DLIList<RefVertex*> points;
+      bte->ref_vertices(points);
+      for (int i = 0; i < points.size(); i++)
       {
-        CubitVector tempAxis = axis;
-        CubitVector tempV(poly.point_list()[k].x, poly.point_list()[k].y, poly.point_list()[k].z);
-        CubitVector b = tempV - CubitVector(0,0,0);
-        double dist = (tempAxis % b) / tempAxis.length();
-        tempAxis.length(dist);
-        CubitVector refl = tempV - tempAxis;
-        refl = refl - tempV + refl;
-        prev_points[k].x = refl.x();
-        prev_points[k].y = refl.y();
-        prev_points[k].z = refl.z();
+        CubitVector temp(points[i]->center_point());
+        temp = prev_xform*temp;
+        temp = ref_mat*temp;
+        temp = mov_mat*temp;
+        GfxPreview::draw_point(temp, CUBIT_BLUE);
       }
-      GfxPreview::draw_polyline(prev_points, poly.point_list_size(), CUBIT_BLUE);
-      delete [] prev_points;
-      prev_points = NULL;
+    }
+    else
+    {
+
+      DLIList<RefEdge*> edges;
+      bte->ref_edges(edges);
+      for (int j = 0; j < edges.size(); j++)
+      {
+        GMem poly;
+        edges[j]->get_graphics(poly);
+        poly.transform(prev_xform);   
+        poly.transform(ref_mat);
+        poly.transform(mov_mat);
+        GfxPreview::draw_polyline(poly.point_list(), poly.point_list_size(), CUBIT_BLUE);
+      }
     }
     GfxPreview::flush();
     return CUBIT_SUCCESS;
@@ -6593,29 +6962,59 @@ CubitStatus GeometryQueryTool::reflect( BasicTopologyEntity* bte,
 
   GeometryEntity* geom = bte->get_geometry_entity_ptr();
   GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-  CubitStatus result = engine->reflect( geom, axis );
+  CubitStatus result;
+
+  // Move to origin
+  result = engine->translate( geom, -point );
   if (result)
   {
     CubitTransformMatrix xform;
-    xform.reflect( axis );
+    xform.translate( -point );
     notify_intermediate_of_transform( bte, xform );
+  }
+  else
+  {
+    PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
 
-    if (RefFace* face = dynamic_cast<RefFace*>(bte))
-      make_RefFace( face->get_surface_ptr() );
+  result = engine->reflect( geom, normal );
+  if (result)
+  {
+    CubitTransformMatrix xform;
+    xform.reflect( normal);
+    notify_intermediate_of_transform( bte, xform );
+  }
+  else
+  {
+    PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
+      bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
+  }
 
+  result = engine->translate( geom, point );
+  if (result)
+  {
+    CubitTransformMatrix xform;
+    xform.translate( point );
+    notify_intermediate_of_transform( bte, xform );
     notify_observers_of_transform( bte );
   }
   else
   {
     PRINT_ERROR("Reflect of %s (%s %d) failed.\n",
       bte->entity_name().c_str(), bte->class_name(), bte->id() );
+    return result;
   }
+
+
   return result;
 }
 
 void GeometryQueryTool::ige_remove_modified(DLIList<Surface*> &all_surfs,
                                             DLIList<Curve*> &all_curves,
-                                            DLIList<Point*> &all_points)
+                                            DLIList<TBPoint*> &all_points)
 {
   IGESet::iterator itor;
 
@@ -6715,12 +7114,10 @@ double GeometryQueryTool::estimate_merge_tolerance(DLIList<RefVolume*> &vol_list
 
   DLIList<double> local_merge_tols;
   DLIList<int> local_num_proximities;
-  //bool accurate = accurate_in;
   bool report = report_in;
   double lo_val = 0.0;
   double hi_val = get_geometry_factor()*GEOMETRY_RESABS*10.0;  // 10 * merge tol -- arbitrary
   int num_calculations = num_calculations_in;
-  //bool return_calculations = return_calculations_in;
 
   if(lo_val_in != -1.0)
     lo_val = lo_val_in;
@@ -6797,7 +7194,7 @@ double GeometryQueryTool::estimate_merge_tolerance(DLIList<RefVolume*> &vol_list
     if(num_total > 2)
     {
       int num_triplets = num_total - 2;
-      int h, min_index(0), min_diff(0);
+      int h, min_index, min_diff;
       DLIList<int> diffs;
       for(h=0; h<num_triplets; h++)
       {
@@ -7018,4 +7415,289 @@ void GeometryQueryTool::get_merged_away_free_entities( DLIList<RefEntity*> &ref_
 }
 
 
+CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
+                                             GMem *gmem,
+                                             std::vector<RefEntity*> &ref_vertex_edge_to_point_vector,
+                                             std::vector<std::pair< RefEntity*, std::pair<int,int> > > &facetedges_on_refedges,
+                                             unsigned short normal_tolerance, 
+                                             double distance_tolerance, 
+                                             double max_edge_length )
+{
+  Surface* surf_ptr = ref_face->get_surface_ptr();
+  if (!surf_ptr)
+  {
+    PRINT_ERROR("RefFace %d is invalid -- no attached Surface.\n",ref_face->id());
+    return CUBIT_FAILURE;
+  }
+   
+  std::vector<TopologyBridge*> vertex_edge_to_point_vector;
+  std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
+
+  surf_ptr->get_geometry_query_engine()->
+    get_graphics(surf_ptr, gmem, vertex_edge_to_point_vector, facetedges_on_curve,
+    normal_tolerance, distance_tolerance, max_edge_length );
+
+  ref_vertex_edge_to_point_vector.resize( vertex_edge_to_point_vector.size(), NULL );
+  RefEntity *ref_ent = NULL;
+  int size = vertex_edge_to_point_vector.size();
+  for( int i=0; i<size; i++ )
+  {    
+    TopologyBridge *tb = vertex_edge_to_point_vector[i];     
+    if( NULL == tb )
+      continue;
+    
+    if( tb->topology_entity() )
+    {
+      ref_ent = CAST_TO( tb->topology_entity(), RefEntity ); 
+      ref_vertex_edge_to_point_vector[i] = ref_ent;
+    }
+    else
+      assert(0);
+  }
+
+  size = facetedges_on_curve.size();
+  for( int i=0; i<size; i++ )
+  {    
+    std::pair<TopologyBridge*, std::pair<int,int> > tmp_pair = facetedges_on_curve[i];
+    TopologyBridge *tb = tmp_pair.first;
+    
+    if( tb->topology_entity() )
+    {
+      ref_ent = CAST_TO( tb->topology_entity(), RefEntity ); 
+      facetedges_on_refedges.push_back( std::make_pair( ref_ent, tmp_pair.second ) ); 
+    }
+    else
+    {
+      assert(0);
+    }
+  }
+  return CUBIT_SUCCESS;  
+}
+
+
+CubitStatus GeometryQueryTool::get_graphics( Body *body, 
+                                             GMem *g_mem,
+                                             std::vector<RefFace*> &ref_face_to_facet_vector,
+                                             std::vector<RefEntity*> &facet_point_ownership_vector,
+                                             std::vector<std::pair< RefEntity*, std::pair<int,int> > > &facetedges_on_refedges,
+                                             unsigned short normal_tolerance, 
+                                             double distance_tolerance, 
+                                             double max_edge_length )
+{
+  //get all the RefFaces from 
+  DLIList<RefFace*> all_ref_faces; 
+  body->ref_faces( all_ref_faces );    
+
+  BodySM *body_sm = NULL;
+
+  //get the underlying body in partition bodies
+  if( GeometryQueryTool::instance()->is_intermediate_geometry( body ) )
+  {      
+    DLIList<TopologyBridge*> partition_body(1);
+    body->get_body_sm_ptr()->get_geometry_query_engine()->get_underlying_bridges( body->get_body_sm_ptr(), partition_body );
+    if( partition_body.size() == 1 )
+      body_sm = static_cast<BodySM*>(partition_body.get());
+  }
+  else  
+    body_sm = body->get_body_sm_ptr();        
+
+  //make sure everything belongs to the same GQE  
+  GeometryQueryEngine* gqe = body_sm->get_geometry_query_engine();  
+  
+  //get the graphics
+  std::vector<Surface*> surfaces_to_facet_vector;
+  std::vector<TopologyBridge*> tmp_facet_point_ownership_vector;
+  std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
+  gqe->get_graphics( body_sm, g_mem, surfaces_to_facet_vector, tmp_facet_point_ownership_vector,
+    facetedges_on_curve, normal_tolerance, distance_tolerance, max_edge_length );
+
+  //map Surfaces to MRefFaces
+  Surface *current_surf = NULL;
+  RefFace *current_ref_face = NULL;
+  bool ignore_facets = false;
+
+  int i;
+  int size = surfaces_to_facet_vector.size();
+  for( i=0; i<size; i++ )
+  {    
+    Surface *tmp_surf = surfaces_to_facet_vector[i];     
+    
+    if( tmp_surf != current_surf )
+    {
+      ignore_facets = false;
+      current_surf = tmp_surf;
+
+      if( tmp_surf->topology_entity() )
+      {
+        current_ref_face = CAST_TO( tmp_surf->topology_entity(), RefFace ); 
+        if( current_ref_face )        
+          ref_face_to_facet_vector.push_back( current_ref_face );
+      }
+      else
+      {
+        int times_through = 0;
+        for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
+        {          
+          times_through++;
+          DLIList<TopologyBridge*> bridge_list;
+          (*itor)->get_tbs_with_bridge_manager_as_owner(tmp_surf, bridge_list);
+          if( bridge_list.size() == 0 )
+          {
+            if( times_through == 2 )
+              assert(0);
+            continue;
+          }
+
+          if( bridge_list.size() == 1 )
+          {
+            current_ref_face = CAST_TO( bridge_list.get()->topology_entity(), RefFace );
+            if( current_ref_face )
+              ref_face_to_facet_vector.push_back( current_ref_face );              
+            else 
+            {
+              PRINT_INFO("Having trouble finding the top-level RefFace\n");
+              assert(0);
+            }  
+            break;
+          }
+          else if( bridge_list.size() > 1 ) // it is a partition...we'll ignore the facets
+          {             
+            ref_face_to_facet_vector.push_back( NULL );
+            ignore_facets = true;
+            break;
+          }
+        }     
+      }
+    }
+    else
+    {   
+      if( ignore_facets )
+        ref_face_to_facet_vector.push_back( NULL );
+      else
+        ref_face_to_facet_vector.push_back( current_ref_face );
+    }
+  }
+  
+  facet_point_ownership_vector.resize( tmp_facet_point_ownership_vector.size(), NULL );
+  RefEntity *ref_ent = NULL;
+  size = tmp_facet_point_ownership_vector.size();
+  for( i=0; i<size; i++ )
+  {    
+    TopologyBridge *tb = tmp_facet_point_ownership_vector[i];     
+    if( NULL == tb )
+      continue;
+    
+    if( tb->topology_entity() )
+    {
+      ref_ent = CAST_TO( tb->topology_entity(), RefEntity ); 
+      facet_point_ownership_vector[i] = ref_ent;
+    }
+    else
+    {
+      int times_through = 0;
+      for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
+      {          
+        times_through++;
+        DLIList<TopologyBridge*> bridge_list;
+        (*itor)->get_tbs_with_bridge_manager_as_owner(tb, bridge_list);
+        if( bridge_list.size() == 0 )
+        {
+          if( times_through == 2 )
+            assert(0);
+          continue;
+        }
+
+        //composites
+        if( bridge_list.size() == 1 )
+        {
+          ref_ent = CAST_TO( bridge_list.get()->topology_entity(), RefEntity );
+          if( ref_ent )
+            facet_point_ownership_vector[i] = ref_ent;
+          else 
+          {
+            PRINT_INFO("Having trouble finding the top-level RefEdge or RefVertex\n");
+            assert(0);
+          }  
+          break;
+        }
+        else if( bridge_list.size() > 1 ) // it is a partition...we'll ignore the facets
+        {             
+          facet_point_ownership_vector[i] = NULL;
+          ignore_facets = true;
+          break;
+        }
+      }     
+    }
+  }
+ 
+  size = facetedges_on_curve.size();
+  for( i=0; i<size; i++ )
+  {    
+    std::pair<TopologyBridge*, std::pair<int,int> > tmp_pair = facetedges_on_curve[i];
+    TopologyBridge *tb = tmp_pair.first;
+    
+    if( tb->topology_entity() )
+    {
+      ref_ent = CAST_TO( tb->topology_entity(), RefEntity ); 
+      facetedges_on_refedges.push_back( std::make_pair( ref_ent, tmp_pair.second ) ); 
+    }
+    else
+    {
+      int times_through = 0;
+      for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
+      {          
+        times_through++;
+        DLIList<TopologyBridge*> bridge_list;
+        (*itor)->get_tbs_with_bridge_manager_as_owner(tb, bridge_list);
+        if( bridge_list.size() == 0 )
+        {
+          //if( times_through == 2 )
+          //  assert(0);
+          continue;
+        }
+
+        //composites
+        if( bridge_list.size() == 1 )
+        {
+          ref_ent = CAST_TO( bridge_list.get()->topology_entity(), RefEntity );
+          if( ref_ent )
+            facetedges_on_refedges.push_back( std::make_pair( ref_ent, tmp_pair.second ) ); 
+          else 
+          {
+            PRINT_INFO("Having trouble finding the top-level RefEdge or RefVertex\n");
+            assert(0);
+          }  
+          break;
+        }
+        else if( bridge_list.size() > 1 ) // it is a partition...we'll ignore the facets
+        {                  
+          break;
+        }
+      }     
+    }
+  }
+
+
+  bool debug = false;
+
+  if( debug )
+  {
+    GfxDebug::clear();
+    GPoint *pt_list = g_mem->point_list();
+    for( int i=facet_point_ownership_vector.size(); i--; )
+    {
+      RefEntity *ref_ent = facet_point_ownership_vector[i];
+      GfxDebug::draw_ref_entity( ref_ent, 4 );
+
+      if( ref_ent )
+      { 
+        GfxDebug::draw_point(pt_list[i].x, pt_list[i].y, pt_list[i].z, 3 );
+        GfxDebug::flush();
+        GfxDebug::mouse_xforms();
+      }
+    }
+  }
+
+  return CUBIT_SUCCESS;
+}
 

@@ -85,7 +85,7 @@ int
 CubitEntity::color() const
 { 
     // assert (0); 
-  return 0;
+  return -1;
 }
 
 

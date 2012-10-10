@@ -226,6 +226,10 @@ public:
   virtual CubitBox bounding_box();
     //- Returns the bounding box of this entity
    
+  virtual CubitBox unmerged_bounding_box();
+    //- Returns the bounding box of all of the bridges in this entity if
+    //- it is a merged entity
+
   CubitStatus set_geometry_entity_ptr(GeometryEntity* geometryEntityPtr) ;
     //R CubitStatus
     //R- CUBIT_SUCCESS/FAILURE

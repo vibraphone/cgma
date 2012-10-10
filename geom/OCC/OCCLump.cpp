@@ -82,7 +82,7 @@ OCCLump::~OCCLump()
   if (myTopoDSSolid)
   {
     myTopoDSSolid->Nullify();
-    delete (TopoDS_Solid*)myTopoDSSolid;
+    delete myTopoDSSolid;
   }
 }
 
@@ -391,7 +391,7 @@ CubitStatus OCCLump::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
         shape = it.Value();
         OCCQueryEngine::instance()->copy_attributes(*get_TopoDS_Solid(), 
                                                     shape);
-      } 
+      }
       shape = shapes.First();
     }
     else if (shapes.Extent() == 1)
@@ -432,9 +432,9 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   //set the Shells
   TopTools_IndexedMapOfShape M;
   TopoDS_Shape shape, shape2;
-  CubitBoolean isCompound = CUBIT_FALSE;
   TopExp::MapShapes(new_shape, TopAbs_SOLID,M);
   TopoDS_Solid new_solid;
+  CubitBoolean isCompound = CUBIT_FALSE;
   if(M.Extent() > 1 )
     isCompound = CUBIT_TRUE;
 
@@ -513,6 +513,6 @@ CubitStatus OCCLump::update_OCC_entity(TopoDS_Solid& old_solid,
   if(!new_solid.IsNull() && !old_solid.IsSame(new_solid))
     OCCQueryEngine::instance()->update_OCC_map(old_solid, new_solid);
   else if(isCompound)
-    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_shape);
+    OCCQueryEngine::instance()->update_OCC_map(old_solid, new_shape);  
   return CUBIT_SUCCESS;
 }

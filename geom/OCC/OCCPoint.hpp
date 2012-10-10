@@ -32,7 +32,7 @@ class BRepAlgoAPI_BooleanOperation;
 class OCCCurve;
 // ********** END FORWARD DECLARATIONS     **********
 
-class OCCPoint : public Point
+class OCCPoint : public TBPoint
 {
 private:
 
@@ -67,6 +67,7 @@ public :
   void clear_curves() {myCurveList.clean_out();}
   DLIList<OCCCurve * > my_curve_list() {return myCurveList;}
   int num_curves() {return myCurveList.size();}
+
 
   void set_myMarked(CubitBoolean marked) {myMarked = marked;}
 

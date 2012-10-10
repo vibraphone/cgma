@@ -35,6 +35,7 @@ class CubitFacet;
 class GMem;
 class ChollaEntity;
 class FacetEvalTool;
+class ChollaMesh;
 
 class ChollaEngine
 {
@@ -142,8 +143,9 @@ public:
                                                   CubitSense & orientation );
 
   static CubitStatus get_facets(GMem& gmem, DLIList<CubitFacet*> &facet_list, 
-                                DLIList<CubitPoint*> &dl_point_list);
-
+                                DLIList<CubitPoint*> &dl_point_list,
+                                bool insert_null_facets = false);
+  
     //set the ChollaEngine to actually flip facets, or to just set a flag
     // when facets need to be reoriented
   void set_flip_flag(CubitBoolean flip){ doFlip = flip; }
@@ -182,10 +184,19 @@ public:
   //! From the facet surface list, create geometric surface,
   //! loops and coedges for each surface in the list
   CubitStatus build_surface_and_curve_eval_tools( DLIList<ChollaSurface*> &cholla_surface_list,
-                                                 int interp_order, double min_dot, bool new_curve_eval_tool = false );
-  
+                                                 int interp_order, double min_dot);
+
+  CubitStatus rebuild_surface_and_curve_eval_tools(DLIList<ChollaSurface*> &cholla_surface_list,
+                                                   int interp_order, double min_dot);
+
   // verify the connectivity between points and curves
   CubitStatus verify_points_to_curves();
+
+  //calls private build_eval_tools function
+  CubitStatus build_eval_tools();  
+
+  // merges two points 
+  CubitStatus merge_two_points( ChollaPoint *point_to_keep, ChollaPoint *point_to_del );
    
 private:
 
@@ -315,51 +326,74 @@ private:
                                       double mindot );
     //! set the normals on two points so they are the same
   static CubitStatus merge_normals( CubitPoint *pt0, CubitPoint *pt1);
-
-  // merges two points 
-  CubitStatus merge_two_points( ChollaPoint *point_to_keep, ChollaPoint *point_to_del );
+ 
   
   // given a non-manifold surface in a cholla model, create a copy and update child entities
-  CubitStatus detach_surface(ChollaSurface *chsurf_ptr,
-                              std::map<ChollaSurface *, ChollaSurface *> &surf_map,
-                              std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                              std::map<ChollaPoint *, ChollaPoint *> &point_map);
-  CubitStatus detach_curve(ChollaCurve *chcurv_ptr,
-                           ChollaSurface *newchsurf_ptr,
-                           ChollaVolume *chvol2_ptr,
-                           std::map<ChollaCurve *, ChollaCurve *> &curve_map);
-  CubitStatus detach_point(ChollaPoint *chpt_ptr,
-                           ChollaVolume *chvol2_ptr,
-                           std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                           std::map<ChollaPoint *, ChollaPoint *> &point_map);
-  
-  
-  // Create independent manifold volumes from the non-manifold set
-  CubitStatus detach_facets(ChollaSurface *chsurf_ptr, ChollaVolume *chvol_ptr,
+  CubitStatus detach_surfaces(DLIList<ChollaSurface*> &chsurfs,
+                              DLIList<ChollaCurve*> &chcurves,
+                             ChollaVolume *detaching_volume,
                              std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                              std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                              std::map<ChollaPoint *, ChollaPoint *> &point_map);
+
+  CubitStatus detach_curves( DLIList<ChollaCurve*> &curves,
+                             ChollaVolume *detaching_volume,                                         
+                             std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                             std::map<ChollaPoint *, ChollaPoint *> &point_map );
   
-  CubitStatus copy_facets_at_interface(ChollaSurface *chsurf_ptr, 
+  CubitStatus detach_curve(ChollaCurve *chcurv_ptr,
+                           DLIList<ChollaSurface*> &new_surfs,        
+                           ChollaVolume *chvol2_ptr,
+                           std::map<ChollaCurve*, ChollaCurve*> &curve_map,
+                           std::map<ChollaPoint*, ChollaPoint*> &point_map );
+
+  CubitStatus detach_point(ChollaPoint *chpt_ptr,
+                           ChollaVolume *chvol2_ptr,
+                           std::map<ChollaPoint*, ChollaPoint*> &point_map,
+                           std::map<ChollaCurve*, ChollaCurve*> &curve_map );                           
+    
+  // Create independent manifold volumes from the non-manifold set
+  CubitStatus detach_facets( DLIList<ChollaSurface*> &chsurfs, 
+                             DLIList<ChollaCurve*> &chcurves,
+                             ChollaVolume *chvol,
+                             std::map<ChollaSurface *, ChollaSurface *> &surf_map,
+                             std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                             std::map<ChollaPoint *, ChollaPoint *> &point_map);
+    
+  CubitStatus detach_facet_edges(DLIList<ChollaCurve*> &chcurves,
+                                 ChollaVolume *detaching_volume,                                             
+                                 std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                 std::map<ChollaPoint *, ChollaPoint *> &point_map);
+
+  CubitStatus copy_facets_at_interface(DLIList<ChollaSurface*> &chsurfs, 
+                                       DLIList<ChollaCurve*> &chcurves,
                                        std::vector<CubitPoint *> &new_points,
-                                       std::vector<CubitFacetEdge *> &new_edges,
+                                       std::vector<CubitFacetEdge *> &new_edges,                                       
                                        std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                        std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                        std::map<ChollaPoint *, ChollaPoint *> &point_map);
+
+  CubitStatus copy_facet_edges_at_interface(DLIList<ChollaCurve*> &chcurves,
+                                            std::vector<CubitPoint *> &new_points,
+                                            std::vector<CubitFacetEdge *> &new_edges,                                                                                                      
+                                            std::map<ChollaCurve *, ChollaCurve *> &curve_map,
+                                            std::map<ChollaPoint *, ChollaPoint *> &point_map);
+
   CubitStatus copy_points_at_interface(DLIList<FacetEntity *> &facet_list,
-                                       std::vector<CubitPoint *> &new_points,
+                                       std::vector<CubitPoint *> &new_points,                                       
                                        std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                        std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                        std::map<ChollaPoint *, ChollaPoint *> &point_map);
   CubitStatus copy_edges_at_interface(DLIList<FacetEntity *> &facet_list,
                                       std::vector<CubitPoint *> &new_points,
-                                      std::vector<CubitFacetEdge *> &new_edges,
+                                      std::vector<CubitFacetEdge *> &new_edges,                                      
                                       std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                       std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                       std::map<ChollaPoint *, ChollaPoint *> &point_map);
   
   // detach the facets from original points and edges and reattach to new copy
-  CubitStatus connect_facets_at_interface(ChollaSurface *chsurf_ptr, 
+  CubitStatus connect_facets_at_interface(DLIList<ChollaSurface*> &chsurfs,  
+                                          DLIList<ChollaCurve*> &churves,
                                           ChollaVolume *chvol_ptr,
                                           std::vector<CubitPoint *> &new_points,
                                           std::vector<CubitFacetEdge *> &new_edges);
@@ -372,16 +406,14 @@ private:
   
   // update the ownenrship of the new detached facet entity based uponthe map set up in detach_volumes
   CubitStatus set_new_facet_owners(int type, //0, 1, or 2 based on dimension of facet entity
-                                   FacetEntity *fe_ptr, FacetEntity *newfe_ptr, 
+                                   FacetEntity *fe_ptr, FacetEntity *newfe_ptr,                                    
                                    std::map<ChollaSurface *, ChollaSurface *> &surf_map,
                                    std::map<ChollaCurve *, ChollaCurve *> &curve_map,
                                    std::map<ChollaPoint *, ChollaPoint *> &point_map );
   
-  // set the end points of the curves that are adjacent to the interface surface
-  CubitStatus set_curve_endpoints(ChollaSurface *chsurf_ptr,
-                                  ChollaSurface *newchsurf_ptr,
-                                  std::map<ChollaCurve *, ChollaCurve *> &curve_map,
-                                  std::map<ChollaPoint *, ChollaPoint *> &point_map );
+  // set the end points of the curves that are adjacent to the interface surface  
+  CubitStatus set_curve_endpoints(std::map<ChollaPoint*, ChollaPoint*> &point_map,
+                                  std::map<ChollaCurve*, ChollaCurve*> &curve_map );
 
 };
 

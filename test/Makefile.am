@@ -22,7 +22,7 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file attribute_to_buffer AngleCalc_occ  CreateGeometry_occ GraphicsData_occ modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug
+  TESTS += attribute_to_file  AngleCalc_occ  CreateGeometry_occ GraphicsData_occ modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug section
 endif 
 
 check_PROGRAMS = $(TESTS)
@@ -45,6 +45,7 @@ loft_SOURCES = loft.cpp
 modify_SOURCES = modify.cpp
 imprint_bug_SOURCES = imprint_bug.cpp
 subtract_SOURCES = subtract.cpp
+section_SOURCES = section.cpp
 sheet_SOURCES  = sheet.cpp
 r_w_SOURCES    = r_w.cpp
 test_occ_SOURCES = test_occ.cpp
@@ -53,8 +54,6 @@ operation_SOURCES = operation.cpp
 init_SOURCES = init.cpp
 attribute_to_file_SOURCES = attribute_to_file.cpp
 attribute_to_file_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
-attribute_to_buffer_SOURCES = attribute_to_buffer.cpp
-attribute_to_buffer_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
 
 brick_sources = brick.cpp
 brick_acis_SOURCES = $(brick_sources)

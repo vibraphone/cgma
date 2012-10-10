@@ -22,10 +22,6 @@ class CUBIT_UTIL_EXPORT CubitStack: public CubitContainer
     CubitStack(int increment);
     virtual ~CubitStack();
    
-#ifdef BOYD15
-    void reset();
-#endif
-
   protected:
 
     void  base_push(void* data);

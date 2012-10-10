@@ -1,7 +1,8 @@
 
 PROJECT(cubit_util)
 
-INCLUDE(${cubit_util_SOURCE_DIR}/UseUtil.cmake)
+# User option to build with concurrent execution support.
+OPTION(BUILD_WITH_CONCURRENT_SUPPORT "Build Cubit with concurrent execution support" OFF)
 
 SET(UTIL_SRCS
     AllocMemManagersList.cpp
@@ -19,12 +20,16 @@ SET(UTIL_SRCS
     CubitFileFEModel.cpp
     CubitFileIOWrapper.cpp
     CubitFileMetaData.cpp
+    CubitFileSimModel.cpp
     CubitFileUtil.cpp
+    CubitInstrumentation.cpp
     CubitMatrix.cpp
     CubitMessage.cpp
     CubitObservable.cpp
     CubitObserver.cpp
     CubitPlane.cpp
+    CubitProcess.cpp
+    CubitSparseMatrix.cpp
     CubitStack.cpp
     CubitString.cpp
     CubitTransformMatrix.cpp
@@ -75,12 +80,17 @@ SET(UTIL_HDRS
     CubitFileFEModel.hpp
     CubitFileIOWrapper.hpp
     CubitFileMetaData.hpp
+    CubitFileSimModel.hpp
     CubitFileUtil.hpp
+    CubitInstrumentation.hpp
+    CubitLoops.hpp
     CubitMatrix.hpp
     CubitMessage.hpp
     CubitObservable.hpp
     CubitObserver.hpp
     CubitPlane.hpp
+    CubitProcess.hpp
+    CubitSparseMatrix.hpp
     CubitStack.hpp
     CubitString.hpp
     CubitTransformMatrix.hpp
@@ -91,10 +101,12 @@ SET(UTIL_HDRS
     DLIList.hpp
     DLList.hpp
     DynamicArray.hpp
+    FacetShapeDefs.hpp
     GetLongOpt.hpp
     GfxDebug.hpp
     GlobalCommandFeedback.hpp
     GMem.hpp
+    IdHasher.hpp
     IntersectionTool.hpp
     MemoryBlock.hpp
     MemoryManager.hpp
@@ -114,34 +126,30 @@ SET(UTIL_HDRS
     ToolDataUser.hpp
     Tree.hpp
     TtyProgressTool.hpp
+    VariableArray.hpp
     CubitEventDefines.h
     ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
   )
 
-IF(TEMPLATE_DEFS_INCLUDED)
-SET(TEMPLATE_SRCS
-    DLIList.cpp
-    KDDTree.cpp
-    KDDTreeNode.cpp
-    OctTreeCell.cpp
-    OctTree.cpp
-    PriorityQueue.cpp
-    RTree.cpp
-    RTreeNode.cpp
-    RStarTree.cpp
-    RStarTreeNode.cpp
-    )
-ENDIF(TEMPLATE_DEFS_INCLUDED)
+IF(BUILD_WITH_CONCURRENT_SUPPORT)
+  SET(UTIL_SRCS
+      ${UTIL_SRCS}
+      CubitConcurrentApi.cpp
+      CubitQtConcurrentApi.cpp
+      )
+  SET(UTIL_HDRS
+      ${UTIL_HDRS}
+      CubitConcurrentApi.h
+      CubitQtConcurrentApi.h
+      )
+  FIND_PACKAGE(Qt4 REQUIRED QtCore)
+  INCLUDE(${QT_USE_FILE})
+ENDIF(BUILD_WITH_CONCURRENT_SUPPORT)
 
-ADD_DEFINITIONS(${CUBIT_UTIL_DEFINES})
 
 INCLUDE_DIRECTORIES(${cubit_util_BINARY_DIR})
 
-OPTION(CUBIT_UTIL_BUILD_SHARED_LIBS "Build Cubit_Util as shared library" OFF)
-IF(BUILD_SHARED_LIBS)
-  SET(CUBIT_UTIL_BUILD_SHARED_LIBS ON CACHE BOOL "Build Cubit_Util as shared library" FORCE)
-ENDIF(BUILD_SHARED_LIBS)
-
+SET(CUBIT_UTIL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 CONFIGURE_FILE(${cubit_util_SOURCE_DIR}/CubitUtilConfigure.h.in
                ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
                @ONLY)
@@ -150,12 +158,7 @@ IF(NOT CUBIT_UTIL_NAME)
   SET(CUBIT_UTIL_NAME cubit_util)
 ENDIF(NOT CUBIT_UTIL_NAME)
 
-IF(CUBIT_UTIL_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(${CUBIT_UTIL_NAME} SHARED ${UTIL_SRCS} ${UTIL_HDRS} ${TEMPLATE_SRCS})
-ELSE(CUBIT_UTIL_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(${CUBIT_UTIL_NAME} ${UTIL_SRCS} ${UTIL_HDRS} ${TEMPLATE_SRCS})
-ENDIF(CUBIT_UTIL_BUILD_SHARED_LIBS)
-
+ADD_LIBRARY(${CUBIT_UTIL_NAME} ${UTIL_SRCS} ${UTIL_HDRS})
 TARGET_LINK_LIBRARIES(${CUBIT_UTIL_NAME} ${CMAKE_DL_LIBS})
 
 IF(CUBIT_LIBRARY_PROPERTIES)
@@ -163,6 +166,9 @@ IF(CUBIT_LIBRARY_PROPERTIES)
                         PROPERTIES ${CUBIT_LIBRARY_PROPERTIES})
 ENDIF(CUBIT_LIBRARY_PROPERTIES)
 
+IF(BUILD_WITH_CONCURRENT_SUPPORT)
+  TARGET_LINK_LIBRARIES(${CUBIT_UTIL_NAME} ${QT_LIBRARIES})
+ENDIF(BUILD_WITH_CONCURRENT_SUPPORT)
 
 IF(NOT CMAKE_INSTALL_BINARY_DIR)
   SET(CMAKE_INSTALL_BINARY_DIR bin)
@@ -173,11 +179,11 @@ IF(NOT CMAKE_INSTALL_INCLUDE_DIR)
 ENDIF(NOT CMAKE_INSTALL_INCLUDE_DIR)
 
 IF(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
-  IF(CUBIT_UTIL_BUILD_SHARED_LIBS)
+  IF(BUILD_SHARED_LIBS)
     INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
             LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime)
-  ENDIF(CUBIT_UTIL_BUILD_SHARED_LIBS)
+  ENDIF(BUILD_SHARED_LIBS)
 ELSE(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
 INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime

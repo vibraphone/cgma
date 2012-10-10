@@ -73,11 +73,7 @@ template <class T> class VGArray
     int size_;
 };
 
-#ifdef TEMPLATE_DEFS_INCLUDED
-#  define INCLUDED_FROM_VG_ARRAY_HPP
-#  include "VGArray.cpp"
-#  undef INCLUDED_FROM_VG_ARRAY_HPP
-#endif
+#include "VGArray.cpp"
 
 template <class T> inline
 int VGArray<T>::size() const

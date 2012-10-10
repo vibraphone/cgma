@@ -18,37 +18,45 @@ IF(CGM_ACIS)
 SUBDIRS(ACIS)
 ENDIF(CGM_ACIS)
 
+#turn CGM_KCM on by default on windows systems
+if(CMAKE_SYSTEM MATCHES "Windows")
+  OPTION(CGM_KCM "Build and use the KCM modeler capabilities" ON)
+else()
+  OPTION(CGM_KCM "Build and use the KCM modeler capabilities" OFF)
+endif()
 
 OPTION(CGM_SMLIB "Build CGM with SMLIB support" OFF)
 IF(CGM_SMLIB)
 SUBDIRS(smlib)
 ENDIF(CGM_SMLIB)
 
-
 # build cgm with granite support, default to off
-OPTION(CGM_GRANITE "Build CGM with Granite support" OFF)
+IF(CAT_BUILD)
+  OPTION(CGM_GRANITE "Build CGM with Granite support" ON)
+ELSE(CAT_BUILD)
+  OPTION(CGM_GRANITE "Build CGM with Granite support" OFF)
+ENDIF(CAT_BUILD)
+
 IF(CGM_GRANITE)
   SUBDIRS(granite)
-ENDIF(CGM_GRANITE)
+ENDIF(CGM_GRANITE) 
 
-# build cgm with OpenCASCADE support, default to on
-OPTION(CGM_OCC "Build CGM with OpenCASCADE support" ON)
-IF(CGM_OCC)
-  SUBDIRS(OCC)
-ENDIF(CGM_OCC)
 OPTION(CGM_CATIA "Build CGM with CATIA support" OFF)
 IF(CGM_CATIA)
-  SET(CGM_ACIS OFF CACHE BOOL "ACIS not supported with CATIA" FORCE)
-  SET(FEATURE_OPTION OFF CACHE BOOL "Feature option not allowed with CATIA" FORCE)
-  SET(TOLERANT_TRI OFF CACHE BOOL "Geometry-tolerant meshing option not allowed with CATIA" FORCE)
-  SET(ACIS_IGES OFF CACHE BOOL "ACIS_IGES not allowed with CATIA" FORCE)
-  SET(ACIS_STEP OFF CACHE BOOL "ACIS_STEP not allowed with CATIA" FORCE)
-  SET(CUBIT_GEOM_BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
-  SET(CUBIT_UTIL_BUILD_SHARED_LIBS ON CACHE BOOL "UTIL_LIBS need to be shared when CATIA is used" FORCE)
-
+  #SET(CGM_ACIS OFF CACHE BOOL "ACIS not supported with CATIA" FORCE)
+  #SET(FEATURE_OPTION OFF CACHE BOOL "Feature option not allowed with CATIA" FORCE)
+  #SET(TOLERANT_TRI OFF CACHE BOOL "Geometry-tolerant meshing option not allowed with CATIA" FORCE)
+  #SET(ACIS_IGES OFF CACHE BOOL "ACIS_IGES not allowed with CATIA" FORCE)
+  #SET(ACIS_STEP OFF CACHE BOOL "ACIS_STEP not allowed with CATIA" FORCE)
+  SET(BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
+  SUBDIRS(catia)
 ENDIF(CGM_CATIA)
 
-INCLUDE(${cubit_geom_SOURCE_DIR}/../util/UseUtil.cmake)
+CONFIGURE_FILE(CGMConfigure.h.in "${CMAKE_CURRENT_BINARY_DIR}/CGMConfigure.h")
+
+#x3d directory
+FIND_PATH(X3D_DIR "" DOC "X3D directory.")
+
 
 SET(GEOM_SRCS
     AnalyticGeometryTool.cpp
@@ -59,10 +67,12 @@ SET(GEOM_SRCS
     BoundingBoxTool.cpp
     BridgeManager.cpp
     CAActuateSet.cpp
-    CADeferredAttrib.cpp
+    CAEntitySense.cpp
+    CADeferredAttrib.cpp    
     CAEntityColor.cpp
     CAEntityId.cpp
     CAEntityName.cpp
+    CAEntityTol.cpp
     CAGroup.cpp
     CAMergePartner.cpp
     CAMergeStatus.cpp
@@ -102,6 +112,7 @@ SET(GEOM_SRCS
     GfxPreview.cpp
     GroupingEntity.cpp
     GSaveOpen.cpp
+    LocalToleranceTool.cpp
     Loop.cpp
     LoopSM.cpp
     Lump.cpp
@@ -145,16 +156,13 @@ SET(GEOM_SRCS
     TopologyEntity.cpp
     )
 
+IF(CAT_BUILD)
+  SET(GEOM_SRCS ${GEOM_SRCS} CAProWeld.cpp TDProWeld.cpp)
+ENDIF(CAT_BUILD)
+
 SET(EXTRA_GEOM_SRCS
     AllocMemManagersGeom.cpp
     )
-
-
-IF(TEMPLATE_DEFS_INCLUDED)
-SET(TEMPLATE_SRCS
-    BoundaryConstrainTool.cpp
-    )
-ENDIF(TEMPLATE_DEFS_INCLUDED)
 
 IF(WIN32)
   FOREACH(var ${GEOM_SRCS})
@@ -172,28 +180,12 @@ SET(THIS_INCLUDES
 
 SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${THIS_INCLUDES}")
 
-OPTION(CUBIT_GEOM_BUILD_SHARED_LIBS "Build cubit_geom as a shared library" OFF)
-
-IF(BUILD_SHARED_LIBS)
-  SET(CUBIT_GEOM_BUILD_SHARED_LIBS ON CACHE BOOL "Build cubit_geom as shared library" FORCE)
-ENDIF(BUILD_SHARED_LIBS)
-
-IF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-  # util must be shared if geom is.
-  SET(CUBIT_UTIL_BUILD_SHARED_LIBS ON CACHE BOOL "Build cubit util as a shared library" FORCE)
-ENDIF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-
-
+SET(CUBIT_GEOM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
                ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
                @ONLY)
 
-IF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(cubit_geom SHARED ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS} ${TEMPLATE_SRCS})
-ELSE(CUBIT_GEOM_BUILD_SHARED_LIBS)
-  ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS} ${TEMPLATE_SRCS})
-ENDIF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-
+ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS})
 TARGET_LINK_LIBRARIES(cubit_geom cubit_util)
 
 IF(CUBIT_LIBRARY_PROPERTIES)
@@ -203,12 +195,12 @@ ENDIF(CUBIT_LIBRARY_PROPERTIES)
 
 SET(CMAKE_INSTALL_BINARY_DIR "bin" CACHE PATH "Install directory for binaries")
 
-IF(CUBIT_GEOM_BUILD_SHARED_LIBS)
-  INSTALL(TARGETS cubit_geom
+IF(BUILD_SHARED_LIBS)
+  INSTALL(TARGETS cubit_geom  ${CUBIT_GEOM_EXPORT_GROUP}
           RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
           LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
           )
-ENDIF(CUBIT_GEOM_BUILD_SHARED_LIBS)
+ENDIF(BUILD_SHARED_LIBS)
 
 IF(BUILD_TESTING)
   #ADD_SUBDIRECTORY(testing)

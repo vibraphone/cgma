@@ -214,28 +214,6 @@ public:
   //O- A list of faces freed by this operation.
   //- Undo a partitioning operation.
 
-#ifdef BOYD15
-  RefEdge* unpartition( DLIList<RefEdge*>& partition_edges );
-  //R RefEdge*
-  //R- The RefEdge restored to the model.
-  //I partition_list
-  //I- Pointers to RefEdges with PartitionCurve geometry.
-  //O free_vertices
-  //O- A list of freed vertices.
-  //- Undo a partitioning operation.
-#endif
-
-#ifdef BOYD15
-  RefFace* unpartition( DLIList<RefFace*>& partition_faces );
-  //R RefFace*
-  //R- The RefFace restored to the model.
-  //I partition_list
-  //I- Pointers to RefFaces with PartitionSurface geometry.
-  //O free_edges
-  //O- The edges removed from the face topology by this operation.
-  //- Undo a partitioning operation.
-#endif
-
   RefVolume* unpartition( DLIList<RefVolume*>& partition_volumes );
 
 

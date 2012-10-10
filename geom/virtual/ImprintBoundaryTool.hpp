@@ -128,14 +128,6 @@ private:
                                 SegLoopList &boundary_line_loops,
                                 RefFace *ref_face,
                                 const CubitBoolean boundary_1);
-#ifdef BOYD15
-  CubitStatus imprint_segments_old( SegLoopList &boundary_line_loops_1,
-                                    SegLoopList &boundary_line_loops_2,
-                                    PointLoopList &boundary_loops_1,
-                                    PointLoopList &boundary_loops_2);
-    //- Does the imprinting of the segments through looping through the lists
-#endif
-
   CubitStatus imprint_segments( SegLoopList &boundary_line_loops_1,
                                 SegLoopList &boundary_line_loops_2,
                                 PointLoopList &boundary_loops_1,
@@ -365,11 +357,6 @@ private:
     //- the correct point type for each point given the two points
     //- meet at an L condition.
   
-#ifdef BOYD15
-  CubitBoolean on_segment(ImprintPointData *point,
-                          ImprintLineSegment *line );
-    //- Determines if the point is within myTolerance of the line segment.
-#endif
   CubitBoolean on_interior_segment(ImprintPointData *point,
                           ImprintLineSegment *line );
     //- Determines if the point is within myTolerance of the line segment.
@@ -482,23 +469,6 @@ private:
   CubitBoolean resolve_match_conflict_other(ImprintPointData *this_point,
                                            ImprintPointData *other,
                                            CubitBoolean this_is_1 );
-#ifdef BOYD15
-  CubitBoolean matches_with(ImprintPointData *this_point,
-                            ImprintPointData *other, double tol, CubitBoolean this_is_1);
-  LoopEnum handle_special_match(ImprintPointData *imp_point_0,
-                                ImprintPointData *imp_point_1,
-                                ImprintPointData *imp_point_2,
-                                ImprintPointData *imp_point_3,
-                                ImprintLineSegment *seg_1,
-                                ImprintLineSegment *seg_2,
-                                MatchType type_0,
-                                MatchType type_1,
-                                MatchType type_2,
-                                MatchType type_3,
-                                IntersectResult &int_result,
-                                ImprintLineSegment **new_segments );
-#endif
-
   CubitStatus match_points( ImprintLineSegment *seg_1,
                             ImprintLineSegment *seg_2,
                             MatchType &type_0,

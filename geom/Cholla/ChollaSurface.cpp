@@ -818,6 +818,13 @@ void ChollaSurface::get_vertices( DLIList<ChollaPoint *> &chpt_list )
   chpt_list.uniquify_unordered();
 }
 
+bool ChollaSurface::is_contain( FacetEntity *facet )
+{
+  if( surfaceElemList.is_in_list( facet ) )
+    return true;
+  else
+    return false;
+}
 
 //EOF
 

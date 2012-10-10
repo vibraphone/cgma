@@ -34,6 +34,9 @@ public:
   
   virtual void percent( double p );
   
+  virtual void check_interrupt();
+  // callback to allow the progress tool to check for interrupt
+
   void clear_all();  // clear all object data (inverse of start(..)).
   
 private:

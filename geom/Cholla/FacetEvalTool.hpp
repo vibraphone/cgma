@@ -67,9 +67,29 @@ private:
     //- computed from feature angle
   int output_id;
 
+  bool have_data_to_calculate_bbox(void);
+
   void set_up_grid_search(double geom_factor);
-  CubitStatus facets_from_search_grid( CubitVector &this_point,
-                                       DLIList<CubitFacet *> &facet_list );
+    //!@{
+    //! \brief get the closest facets using an expanding tolerance
+    //! 
+    //! \param this_point The point near which we want to find facets
+    //! \param facet_list The list of facets near the point
+    //! \param tol_used The highest tolerance at which the search was performed
+    //!
+  void facets_from_search_grid( CubitVector &this_point,
+                                DLIList<CubitFacet *> &facet_list,
+                                double &tol_used );
+    //!@{
+    //! \brief get the closest facets using a given tolerance
+    //! 
+    //! \param this_point The point near which we want to find facets
+    //! \param compare_tol The tolerance at which the facets were found
+    //! \param facet_list The list of facets near the point
+    //!
+  void facets_from_search_grid( CubitVector &this_point,
+                                double compare_tol,
+                                DLIList<CubitFacet *> &facet_list );
     //- set up a grid search data structure if we have lots of facets
 
   CubitStatus get_points_from_facets(DLIList<CubitFacet*> &facet_list,
@@ -388,10 +408,6 @@ public:
     //- Initialize the bezier control points for 
     //- G1 bezier patch surface interpolation
 
-  static CubitBoolean is_boundary_facet( CubitFacet *facet_ptr );
-    //- decides if this is a boundary facet based on whether its
-    //- edges or points have boundary tool datas attached.
-
   CubitStatus parameterize();
     //- define a parameterization
 
@@ -419,14 +435,14 @@ public:
   // liable for any real or imagined damage resulting from its use.
   // Users of this code must verify correctness for their application.
 
-  static int intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance );
+  static int intersect_ray( CubitVector &origin, CubitVector &direction, CubitFacet* facet, CubitVector* point, double &distance );
     //- Find intersection point of a ray and a facet
     //    Return: -1 = triangle is degenerate (a segment or point)
     //             0 = disjoint (no intersect)
     //             1 = intersect at unique point
     //             2 = are in the same plane
 
-  static int intersect_ray( const CubitVector &origin, const CubitVector &direction, CubitFacetEdge* facet, CubitVector* point, double &distance );
+  static int intersect_ray( CubitVector &origin, CubitVector &direction, CubitFacetEdge* facet, CubitVector* point, double &distance );
     //- Find intersection point of a ray and a facet edge
     //    Return: -1 = edge is degenerate (a point)
     //             0 = disjoint (no intersect)

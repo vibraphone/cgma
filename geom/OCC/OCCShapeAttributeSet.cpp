@@ -8,7 +8,6 @@
 #include "CubitSimpleAttrib.hpp"
 #include "OCCAttribSet.hpp"
 #include "OCCQueryEngine.hpp"
-
 //#include <Poly.hxx>
 #include <TopoDS.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -716,8 +715,7 @@ void  OCCShapeAttributeSet::Write(Standard_OStream& OS)
 //purpose  :
 //=======================================================================
 
-void  OCCShapeAttributeSet::Read(Standard_IStream& IS,
-                                 bool print_results) 
+void  OCCShapeAttributeSet::Read(Standard_IStream& IS, bool print_results)
 {
  // on sauvegarde l'ancien LC_NUMERIC
   char *oldnum,*plocal ;
@@ -1776,10 +1774,10 @@ void  OCCShapeAttributeSet::Read(TopoDS_Shape& S,
       break;
     }
 
-    int l;
+    Standard_Integer l;
     IS >> l;
     S.Location(myLocations.Location(l));
-   
+
     int shape_num = nbshapes - num + 1;
     typedef std::pair <int,int> sh_loc_pair; 
     it = my_ShapeNum_Location.find(shape_num);

@@ -1,8 +1,6 @@
 
 PROJECT(cubit_virtual)
 
-INCLUDE(${cubit_geom_SOURCE_DIR}/../util/UseUtil.cmake)
-
 SET(VIRTUAL_SRCS
     CACompositeVG.cpp
     CAPartitionVG.cpp
@@ -68,13 +66,6 @@ SET(EXTRA_VIRTUAL_SRCS
     AllocMemManagersVirtual.cpp
     )
 
-IF(TEMPLATE_DEFS_INCLUDED)
-SET(TEMPLATE_SRCS
-    VGArray.cpp
-    VGLoopTool.cpp
-    )
-ENDIF(TEMPLATE_DEFS_INCLUDED)
-    
 IF(WIN32)
   FOREACH(var ${VIRTUAL_SRCS})
     STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
@@ -85,6 +76,5 @@ ENDIF(WIN32)
 INCLUDE_DIRECTORIES(${cubit_geom_SOURCE_DIR}/facet
                     ${cubit_geom_SOURCE_DIR}/Cholla)
 
-ADD_LIBRARY(cubit_virtual ${VIRTUAL_SRCS} ${EXTRA_VIRTUAL_SRCS} 
-                          ${TEMPLATE_SRCS} ${VIRTUAL_HEADERS})
+ADD_LIBRARY(cubit_virtual STATIC ${VIRTUAL_SRCS} ${EXTRA_VIRTUAL_SRCS} ${VIRTUAL_HEADERS})
 

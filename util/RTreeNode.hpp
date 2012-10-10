@@ -110,7 +110,7 @@ private:
 
 public:
   RTreeNode(Y data, double tol, int max_children, int min_children );
-  RTreeNode(CubitBox &bound_box, int max_children, int min_children);
+  RTreeNode(CubitBox &bounding_box, int max_children, int min_children);
   
   ~RTreeNode();
     //- Constructor/Destructor
@@ -140,7 +140,7 @@ public:
     {return myData;}
     //- Determine if the RTreeNode is a leaf node.
   
-  void add_child(RTreeNode<Y>* child_node, CubitBoolean recalc_bound_box);
+  void add_child(RTreeNode<Y>* child_node, CubitBoolean recalc_b_box);
     //- Add the child to the myChildrenNodes' list. Adds
     //- it to the next availabel spot.  Won't add if overflow will
     //- occur.
@@ -156,18 +156,13 @@ public:
     //- Returns the number of children in the myChildrenNode's array.
 
   RTreeNode<Y>* get_child(int i)
-    {return ( (i < nextChildIndex) ? myChildrenNodes[i] : static_cast< RTreeNode<Y>* >(NULL) );}
+    {return ((i < nextChildIndex) ? myChildrenNodes[i] : (RTreeNode<Y>*)NULL) ;}
   
     
   void flush(CubitBox &new_box);
     //- Clears out the myChildrenNodes by setting the array values
     //- to null.  Resets the counters and sets the range as the new_box.
   
-#ifdef BOYD15
-  void update_box( CubitBox &new_box );
-    //- updates the nodes box with the new box.
-#endif
-
   void recalc_b_box();
     //- recalculates the bounding box for the node. (won't do it if
     //- this is a data node...
@@ -231,9 +226,8 @@ template <class Y> inline double RTreeNode<Y>::volume(RTreeNode<Y>* curr)
   CubitBox box = curr->bounding_box();
   return box.x_range()*box.y_range()*box.z_range();
 }
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "RTreeNode.cpp"
-#endif
+
+#include "RTreeNode.cpp"
 
 #endif
 

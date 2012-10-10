@@ -12,52 +12,24 @@
 
 CubitMatrix::CubitMatrix()
 {
-  numRows = 3;
-  numCols = 3;
-  
-  matrixPtr = new double *[3];
-  
-  int ii;
-  for(  ii = 0; ii < 3; ii++ )
-  {
-    matrixPtr[ii] = new double [3];
-  }
-  
-    // Initialize matrix to zeros.     
-  for( ii = 0; ii < 3; ii++ )
-     for( int jj = 0 ; jj < 3; jj++ )
-        matrixPtr[ii][jj] = 0.0;
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( 3, 3 );
 }
 
 CubitMatrix::CubitMatrix( const int n, const int m )
 {
-  numRows = n;
-  numCols = m;
-  
-  matrixPtr = new double *[n];
-  
-  int ii;
-  for(  ii = 0; ii < n; ii++ )
-  {
-    matrixPtr[ii] = new double [m];
-  }
-  
-    // Initialize matrix to zeros.     
-  for( ii = 0; ii < n; ii++ )
-     for( int jj = 0 ; jj < m; jj++ )
-        matrixPtr[ii][jj] = 0.0;
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( n, m );
 }
 
 
 CubitMatrix::CubitMatrix( const int n )
 {
-  numRows = n;
-  numCols = n;
-  
-  matrixPtr = new double *[n];
-  
-  for( int ii = 0; ii < n; ii++ )
-    matrixPtr[ii] = new double [n];
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( n, n );
   
     // Initialize matrix to identity.
   set_to_identity();
@@ -67,15 +39,9 @@ CubitMatrix::CubitMatrix (const CubitVector& vec1,
                           const CubitVector& vec2,
                           const CubitVector& vec3 )
 {
-  numRows = 3;
-  numCols = 3;
-  
-  matrixPtr = new double *[3];
-  
-  for( int ii = 0; ii < 3; ii++ )
-  {
-    matrixPtr[ii] = new double [3];
-  }
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( 3, 3 );
   
     // Initialize the matrix columns to the three vectors
   matrixPtr[0][0] = vec1.x();
@@ -89,19 +55,36 @@ CubitMatrix::CubitMatrix (const CubitVector& vec1,
   matrixPtr[2][2] = vec3.z();
 }
 
+CubitMatrix::CubitMatrix (const CubitVector& vec1,
+                          const CubitVector& vec2,
+                          const CubitVector& vec3,
+                          const CubitVector& vec4 )
+{
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( 3, 4 );
+  
+    // Initialize the matrix columns to the four vectors
+  matrixPtr[0][0] = vec1.x();
+  matrixPtr[1][0] = vec1.y();
+  matrixPtr[2][0] = vec1.z();
+  matrixPtr[0][1] = vec2.x();
+  matrixPtr[1][1] = vec2.y();
+  matrixPtr[2][1] = vec2.z();
+  matrixPtr[0][2] = vec3.x();
+  matrixPtr[1][2] = vec3.y();
+  matrixPtr[2][2] = vec3.z();
+  matrixPtr[0][3] = vec4.x();
+  matrixPtr[1][3] = vec4.y();
+  matrixPtr[2][3] = vec4.z();
+}
 
 CubitMatrix::CubitMatrix(const CubitVector& vec1,
                          const CubitVector& vec2 )
 {             
-  numRows = 3;
-  numCols = 3;
-  
-  matrixPtr = new double *[3];
-  
-  for( int ii = 0; ii < 3; ii++ )
-  {
-    matrixPtr[ii] = new double [3];
-  }
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( 3, 3 );
   
     // Initialize the matrix elements using otimes (outer product)
   matrixPtr[0][0] = vec1.x() * vec2.x();
@@ -115,19 +98,34 @@ CubitMatrix::CubitMatrix(const CubitVector& vec1,
   matrixPtr[2][2] = vec1.z() * vec2.z();
 }
 
+CubitMatrix::CubitMatrix
+(
+  vector<int> &is,
+  vector<int> &js,
+  vector<double> &es,
+  int n,
+  int m
+)
+{
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( n, m );
+  int length = is.size();
+  for ( int k = 0; k < length; k++ )
+  {
+    int i = is[k];
+    int j = js[k];
+    matrixPtr[i][j] += es[k];
+  }
+}
+
 CubitMatrix::CubitMatrix( const CubitMatrix &matrix )
 {
-  numRows = matrix.num_rows();
-  numCols = matrix.num_cols();
-  
-  matrixPtr = new double *[numRows];
-  
+  matrixMem = NULL;
+  matrixPtr = NULL;
+  reset_size( matrix.num_rows(), matrix.num_cols() );
+
   int ii;
-  for(  ii = 0; ii < numRows; ii++ )
-  {
-    matrixPtr[ii] = new double [numCols];
-  }
-  
   for( ii = 0; ii < numRows; ii++ )
   {
     for( int jj = 0; jj < numCols; jj++ )
@@ -139,22 +137,60 @@ CubitMatrix::CubitMatrix( const CubitMatrix &matrix )
 
 CubitMatrix::~CubitMatrix()
 {
-  for( int ii = 0; ii < numRows; ii++ )
-  {
-    delete [] ( matrixPtr[ii] );
-  }
-  delete [] ( matrixPtr );
+  delete [] matrixPtr;
+  delete [] matrixMem;
 }
 
+void CubitMatrix::reset_size( const int n, const int m, double default_value )
+{
+  if ( matrixPtr ) delete [] matrixPtr;
+  if ( matrixMem ) delete [] matrixMem;
+
+  numRows = n;
+  numCols = m;
+  
+  matrixMem = new double[numRows*numCols];
+  matrixPtr = new double *[n];
+  
+  int ii;
+  for(  ii = 0; ii < n; ii++ )
+  {
+    matrixPtr[ii] = &matrixMem[ii*numCols];
+  }
+  
+    // Initialize matrix to zeros.     
+  for( ii = 0; ii < n; ii++ )
+     for( int jj = 0 ; jj < m; jj++ )
+        matrixPtr[ii][jj] = default_value;
+}
 
 void CubitMatrix::print_matrix() const
 {
+  printf( "\n\n" );
   for( int row = 0; row < numRows; row++ )
   {
     for( int col = 0; col < numCols; col++ )
        PRINT_INFO("%8.3f", matrixPtr[row][col]);
     PRINT_INFO("\n");
   }
+}
+void CubitMatrix::print_matrix( char *filename ) const
+{
+  FILE *fp = fopen( filename, "w" );
+  if ( !fp )
+  {
+    printf( "CubitMatrix::print_matrix - Unable to open %s for writing\n",
+            filename );
+    return;
+  }
+
+  for( int row = 0; row < numRows; row++ )
+  {
+    for( int col = 0; col < numCols; col++ )
+       fprintf( fp, "%20.15lf", matrixPtr[row][col] );
+    fprintf( fp, "\n" );
+  }
+  fclose( fp );
 }
 
 // Sets this matrix equal to 'matrix'.  'this' is
@@ -166,20 +202,15 @@ CubitMatrix CubitMatrix::operator=(const CubitMatrix& matrix)
   if (numRows != matrix.num_rows() ||
       numCols != matrix.num_cols())
   {
-      // note (vvyas, 3/2006): corrected array deletions below
-    for (i = 0; i < numRows; i++)
-    {
-        //delete matrixPtr[i];
-      delete [] matrixPtr[i];
-    }
-      //delete matrixPtr;
     delete [] matrixPtr;
+    delete [] matrixMem;
     
     numRows = matrix.num_rows();
     numCols = matrix.num_cols();
     matrixPtr = new double*[numRows];
+    matrixMem = new double[numRows*numCols];
     for (i = 0; i < numRows; i++)
-      matrixPtr[i] = new double[numCols];
+      matrixPtr[i] = &matrixMem[i*numCols];
   }
   
   for(i = 0; i < numRows; i++ )
@@ -195,7 +226,9 @@ CubitMatrix CubitMatrix::operator=(const CubitMatrix& matrix)
 CubitMatrix CubitMatrix::operator*(const CubitMatrix& matrix ) const
 {
     // Check that we can multiply them.
-  assert( numCols == matrix.num_rows() );
+  if(numCols != matrix.num_rows())
+    throw std::invalid_argument ("# of columns in first MUST match # of rows of second");
+  //assert( numCols == matrix.num_rows() );
   
   CubitMatrix return_matrix( numRows, matrix.num_cols() );
   
@@ -206,8 +239,8 @@ CubitMatrix CubitMatrix::operator*(const CubitMatrix& matrix ) const
       double temp = 0.0;
       for( int kk = 0; kk < numCols; kk++ )
       {
-          //temp += matrixPtr[ii][kk] * matrix.get( kk, jj );
-        temp += get( ii, kk ) * matrix.get( kk, jj );
+        //temp += get( ii, kk ) * matrix.get( kk, jj );
+        temp += matrixPtr[ii][kk] * matrix.matrixPtr[kk][jj];
       }
       return_matrix.set( ii, jj, temp );
     }
@@ -220,8 +253,12 @@ CubitMatrix CubitMatrix::operator*(const CubitMatrix& matrix ) const
 // multiply this times the input vector
 CubitVector CubitMatrix::operator* (const CubitVector& vector ) const
 {
-    // Check that we can multiply them.
-  assert( numCols == 3 );
+  // Check that we can multiply them.
+  if(numCols!=3)
+  { 
+    throw std::invalid_argument("Matrix must have 3 columns");
+  }
+  //assert( numCols == 3 );
   
   double vec1[3];
   double vec2[3];
@@ -242,6 +279,27 @@ CubitVector CubitMatrix::operator* (const CubitVector& vector ) const
   return CubitVector( vec1[0],  vec1[1], vec1[2] );
 }
 
+// multiply this times the input vector
+std::vector<double> CubitMatrix::operator* (const std::vector<double> & vector) const
+{
+    // Check that we can multiply them.
+  if(numCols != vector.size())
+    throw std::invalid_argument ("Columns of Matrix do not match vector size");
+  //assert( numCols == vector.size() );
+  
+  std::vector<double> return_vec( numRows );
+  
+  for( int row = 0; row < numRows; row++ )
+  {
+    return_vec[row] = 0.0;
+    for( int col = 0; col < numCols; col++ )
+    {
+      return_vec[row] += ( matrixPtr[row][col] * vector[col] );
+    }
+  }
+  
+  return return_vec;
+}
 
 // multiply this times the input scalar
 CubitMatrix CubitMatrix::operator*( double val ) const
@@ -261,7 +319,9 @@ CubitMatrix CubitMatrix::operator*( double val ) const
 // multiply this times the input scalar
 CubitMatrix CubitMatrix::operator/( double val ) const
 {
-  assert( val != 0 );
+  if(val==0)
+    throw std::invalid_argument("Cannot Divide by Zero");
+  //assert( val != 0 );
   CubitMatrix matrix( numRows, numCols );
   
   for( int ii = 0; ii < numRows; ii++ )
@@ -378,7 +438,9 @@ CubitMatrix CubitMatrix::inverse()
 CubitMatrix CubitMatrix::inverse()
 {
   // can't invert a non-square matrix
-  assert(numRows == numCols);
+  if(numRows!=numCols)
+    throw std::invalid_argument ("Cannot invert a non-Square matrix");
+  //assert(numRows == numCols);
 
   CubitMatrix matrix_inverse( numRows, numCols );
   
@@ -386,12 +448,16 @@ CubitMatrix CubitMatrix::inverse()
   {
     double   det;
     det = determinant();
-    assert( fabs(det) > CUBIT_DBL_MIN );
+    if(fabs(det) <= CUBIT_DBL_MIN)
+      throw std::invalid_argument ("Determinants Absolute value must be greater that CUBIT_DBL_MIN");
+    //assert( fabs(det) > CUBIT_DBL_MIN );
     double det_inv = 1./det;
 
     if ( numRows == 1 ) {
       det = determinant();
-      assert( fabs(det) > CUBIT_DBL_MIN );
+      if(fabs(det) <= CUBIT_DBL_MIN)
+      throw std::invalid_argument ("Determinants Absolute value must be greater that CUBIT_DBL_MIN");
+      //assert( fabs(det) > CUBIT_DBL_MIN );
     
       matrix_inverse.set(0,0, matrixPtr[0][0]);
     }
@@ -429,7 +495,9 @@ CubitMatrix CubitMatrix::inverse()
     CubitMatrix save_matrix = *this;
 
     CubitStatus rv = ludcmp(indx, d);
-    assert(rv == CUBIT_SUCCESS);
+    if(rv != CUBIT_SUCCESS)
+      throw std::invalid_argument ("rv must equal CUBIT_SUCCESS");
+    //assert(rv == CUBIT_SUCCESS);
     for (j=0; j<numRows; j++)
     {
       for(i=0; i<numRows; i++) 
@@ -438,7 +506,9 @@ CubitMatrix CubitMatrix::inverse()
       }
       col[j] = 1.0;
       rv = lubksb(indx, col);
-      assert(rv == CUBIT_SUCCESS);
+      if(rv != CUBIT_SUCCESS)
+      throw std::invalid_argument ("rv must equal CUBIT_SUCCESS");
+      //assert(rv == CUBIT_SUCCESS);
       for (i=0; i<numRows; i++) 
       {
         matrix_inverse.set(i,j,col[i]);
@@ -560,6 +630,41 @@ CubitMatrix CubitMatrix::sub_matrix( const int row, const int col ) const
   return matrix;
 }
 
+// Create a matrix containing the rows and cols of this that are true in
+// rows_to_include and cols_to_include.
+void CubitMatrix::sub_matrix
+(
+  const vector<bool> &rows_to_include,
+  const vector<bool> &cols_to_include,
+  CubitMatrix &submatrix
+)
+{
+  if(numRows != rows_to_include.size())
+    throw std::invalid_argument ("rows_to_include size must match numRows");
+  //assert( numRows == rows_to_include.size() );
+  if(numCols != cols_to_include.size())
+    throw std::invalid_argument ("cols_to_include size must match numCols");
+  //assert( numCols == cols_to_include.size() );
+
+  int i;
+  int nrow = 0, ncol = 0;
+  for ( i = 0; i < numRows; i++ ) if ( rows_to_include[i] ) nrow++;
+  for ( i = 0; i < numCols; i++ ) if ( cols_to_include[i] ) ncol++;
+  submatrix.reset_size( nrow, ncol, 0.0 );
+
+  for ( int r = 0, new_r = 0; r < numRows; r++ )
+  {
+    if ( !rows_to_include[r] ) continue;
+    for ( int c = 0, new_c = 0; c < numCols; c++ )
+    {
+      if ( !cols_to_include[c] ) continue;
+      submatrix.set( new_r, new_c, get(r,c) );
+      new_c++;
+    }
+    new_r++;
+  }
+}
+
 double CubitMatrix::inf_norm()  const
 { 
     // infinity norm  = max_i sum_j  | A_ij |
@@ -600,13 +705,14 @@ double CubitMatrix::frobenius_norm_squared_symm()  const
     // frobenius norm-squared 2 = trace[( M^T M )( M^T M )]
   
   double matrix_norm=0;
-  for ( int ii = 0; ii < numRows; ii++ ) {
-
+  for ( int ii = 0; ii < numRows; ii++ )
+  {
     for( int jj = 0; jj < numCols; jj++ )
     {
       double b=0;
-      for ( int kk = 0; kk < numRows; kk++ ) {
-	b += matrixPtr[kk][ii] * matrixPtr[kk][jj];
+      for ( int kk = 0; kk < numRows; kk++ )
+      {
+        b += matrixPtr[kk][ii] * matrixPtr[kk][jj];
       }
       matrix_norm += b*b;
     }
@@ -647,7 +753,10 @@ double CubitMatrix::frobenius_norm_squared_inv()  const
     // square of frobenius norm of A-inverse
   
   double det = this->determinant();
-  assert( det != 0 );
+  
+  if(det==0)
+    throw std::invalid_argument ("Determinant cannot be 0");
+  //assert( det != 0 );
 
   double norm=this->frobenius_norm_squared_adj()/pow(det,2);
 
@@ -665,6 +774,67 @@ double CubitMatrix::condition()  const
 
 }
 
+int CubitMatrix::rank()  const
+{
+  const double tol = 1E-12;
+  int rank = 0;
+  CubitMatrix tmp = *this;
+
+  int irow;
+  for ( irow = 0; irow < numRows; irow++ )
+  {
+    // make sure tmp[irow][irow] is non-zero.  If it isn't, swap a row to
+    // make it so.
+    double val = tmp.get(irow,irow);
+    if ( fabs(val) < tol )
+    {
+      bool found = false;
+      for ( int i = irow+1; i < numRows; i++ )
+      {
+        if ( fabs(tmp.get(i,irow)) > 1E-4 )
+        {
+          // swap row (irow) with row (irow+i).
+          for ( int icol = 0; icol < numCols; icol++ )
+          {
+            double tmp1 = tmp.get(irow, icol);
+            double tmp2 = tmp.get(i, icol);
+            tmp.set(irow, icol, tmp2 );
+            tmp.set(i, icol, tmp1 );
+            found = true;
+          }
+        }
+        if ( found ) break;
+      }
+      val = tmp.get(irow,irow);
+    }
+    if ( fabs(val) < tol )
+      continue;
+
+    rank++;
+
+    for ( int icol = 0; icol < numCols; icol++ )
+    {
+      double col_val = tmp.get(irow, icol);
+      tmp.set(irow,icol, col_val/val );
+    }
+
+    for ( int jrow = irow+1; jrow < numRows; jrow++ )
+    {
+      val = tmp.get(jrow,irow);
+      if ( fabs(val) < tol )
+        continue;
+
+      for ( int icol = 0; icol < numCols; icol++ )
+      {
+        double tmp1 = tmp.get(jrow,icol) / val;
+        tmp1 -= tmp.get(irow, icol);
+        tmp.set(jrow,icol,tmp1 );
+      }
+    }
+  }
+  return rank;
+}
+
 int CubitMatrix::gauss_elim( CubitVector &b )
 {
     CubitVector pivot;
@@ -675,59 +845,70 @@ int CubitMatrix::gauss_elim( CubitVector &b )
 
 int CubitMatrix::factor( CubitVector &pivot )
 {
-    double pvt[3];
+  double pvt[3];
 
-    const int n=3;
-    double s[3], tmp;
+  const int n=3;
+  double s[3], tmp;
 
-    int i,j;
-    for ( i=0; i<n; i++ ) {
-       s[i] = 0.0;
-       for ( j=0; j<n; j++ ) {
-          tmp = fabs( matrixPtr[i][j] );
-          if ( tmp > s[i] ) {
-             s[i] = tmp;
-	  }
-       }
+  int i,j;
+  for ( i=0; i<n; i++ ) 
+  {
+    s[i] = 0.0;
+    for ( j=0; j<n; j++ ) 
+    {
+      tmp = fabs( matrixPtr[i][j] );
+      if ( tmp > s[i] ) 
+      {
+        s[i] = tmp;
+      }
+    }
        
-       if ( s[i] == 0.0 ) { return(1); }
-    
+    if ( s[i] == 0.0 )
+    {
+      return(1);
+    }
+  }
+
+  for ( int k=0; k<n-1; k++ ) 
+  {
+    double ck = 0.0;
+    int i0 = -1;
+    for ( i=k; i<n; i++ ) 
+    {
+      tmp = fabs( matrixPtr[i][k] / s[i] );
+      if ( tmp > ck ) 
+      {
+        ck = tmp;
+        i0 = i;
+      }
     }
 
-    for ( int k=0; k<n-1; k++ ) {
-       double ck = 0.0;
-       int i0 = -1;
-       for ( i=k; i<n; i++ ) {
-          tmp = fabs( matrixPtr[i][k] / s[i] );
-          if ( tmp > ck ) {
-             ck = tmp;
-             i0 = i;
-	  }
-       }
+    pvt[k] = i0;
+    if ( ck == 0.0 ) { return(1); }
 
-       pvt[k] = i0;
-       if ( ck == 0.0 ) { return(1); }
-
-       if ( i0 != k ) {
-          for ( j=k; j<n; j++ ) {
-             double swap = matrixPtr[i0][j];
-             matrixPtr[i0][j] = matrixPtr[k][j];
-             matrixPtr[k][j] = swap;
-	  }
-       }
-
-       for ( i=k+1; i<n; i++ ) {
-          double r = matrixPtr[i][k] / matrixPtr[k][k];
-          matrixPtr[i][k] = r;
-          for ( j=k+1; j<n; j++ ) {
-             matrixPtr[i][j] -= r * matrixPtr[k][j];
-	  }
-       }
-
+    if ( i0 != k ) 
+    {
+      for ( j=k; j<n; j++ ) 
+      {
+        double swap = matrixPtr[i0][j];
+        matrixPtr[i0][j] = matrixPtr[k][j];
+        matrixPtr[k][j] = swap;
+      }
     }
 
-    pivot.set( pvt[0], pvt[1], pvt[2] );
-    return(0);
+    for ( i=k+1; i<n; i++ ) 
+    {
+      double r = matrixPtr[i][k] / matrixPtr[k][k];
+      matrixPtr[i][k] = r;
+      for ( j=k+1; j<n; j++ ) 
+      {
+        matrixPtr[i][j] -= r * matrixPtr[k][j];
+      }
+    }
+  }
+
+  pivot.set( pvt[0], pvt[1], pvt[2] );
+  return(0);
 }
 
 void CubitMatrix::solve( CubitVector &b, const CubitVector& pivot )
@@ -744,15 +925,18 @@ void CubitMatrix::solve( CubitVector &b, const CubitVector& pivot )
 
   int j;
   const int n=3;
-  for ( int k=0; k<n-1; k++ ) {
+  for ( int k=0; k<n-1; k++ ) 
+  {
      j=(int)pvt[k];
-     if ( j != k ) {
+     if ( j != k ) 
+     {
         double swap = rhs[k];
         rhs[k] = rhs[j];
         rhs[j] = swap;
      }
 
-     for ( int i=k+1; i<n; i++ ) {
+     for ( int i=k+1; i<n; i++ ) 
+     {
         rhs[i] -= matrixPtr[i][k] * rhs[k];
      }
 
@@ -760,9 +944,11 @@ void CubitMatrix::solve( CubitVector &b, const CubitVector& pivot )
 
   rhs[n-1] /= matrixPtr[n-1][n-1];
 
-  for ( int i=n-2; i>-1; i-- ) {
+  for ( int i=n-2; i>-1; i-- ) 
+  {
      double sum=0.;
-     for ( j=i+1; j<n; j++ ) {
+     for ( j=i+1; j<n; j++ ) 
+     {
         sum += matrixPtr[i][j] * rhs[j];
      }
      rhs[i] = ( rhs[i] - sum ) / matrixPtr[i][i];
@@ -841,21 +1027,62 @@ CubitStatus CubitMatrix::solveNxN( CubitMatrix& rhs, CubitMatrix& coef )
     numRows != numCols) {
     return CUBIT_FAILURE;
   }
+  int i,j;
+  double d;
+  double *indx = new double [numRows];
+  double *b = new double [numRows];
+  if (!indx)
+  {
+    return CUBIT_FAILURE;
+  }
+  CubitStatus status = ludcmp(indx, d);
+  if (status == CUBIT_SUCCESS)
+  {
+    coef.reset_size( rhs.num_rows(), rhs.num_cols(), 0.0 );
+    for ( j = 0; j < rhs.num_cols(); j++ )
+    {
+      for(i=0; i<numRows; i++)
+      {
+        b[i] = rhs.get(i,j);
+      }
+      status = lubksb(indx, b);
+      for (i=0; i<numRows; i++)
+      {
+        coef.set(i,j,b[i]);
+      }
+    }
+  }
+  delete [] indx;
+  delete [] b;
+  return status;
+}
+
+CubitStatus CubitMatrix::solveNxN( const vector<double> &rhs, vector<double> &coef )
+{
+  if (numRows != rhs.size() ||
+    numRows != numCols) {
+    return CUBIT_FAILURE;
+  }
   int i;
   double d;
   double *indx = new double [numRows];
   double *b = new double [numRows];
-  if (!indx) {
+  if (!indx)
+  {
     return CUBIT_FAILURE;
   }
   CubitStatus status = ludcmp(indx, d);
-  if (status == CUBIT_SUCCESS) {
-    for(i=0; i<numRows; i++) {
-      b[i] = rhs.get(i,0);
+  if (status == CUBIT_SUCCESS)
+  {
+    coef.clear();
+    for(i=0; i<numRows; i++)
+    {
+      b[i] = rhs[i];
     }
     status = lubksb(indx, b);
-    for (i=0; i<numRows; i++) {
-      coef.set(i,0,b[i]);
+    for (i=0; i<numRows; i++)
+    {
+      coef.push_back( b[i] );
     }
   }
   delete [] indx;
@@ -970,4 +1197,36 @@ CubitStatus CubitMatrix::lubksb( double *indx, double *b )
   return CUBIT_SUCCESS;
 }
 
+bool CubitMatrix::is_identity() const
+{
+  bool ident = true;
+
+  for (int i=0; i<numRows && ident; i++)
+  {
+    for (int j=0; j<numCols && ident; j++)
+    {
+      if (i == j)
+      {
+        if(matrixPtr[i][j] != 1.0)
+          ident = false;
+      }
+      else
+      {
+        if(matrixPtr[i][j] != 0.0)
+          ident = false;
+      }
+    }
+  }
+
+  return ident;
+}
+
+void CubitMatrix::plus_identity()
+{
+  for (int i=0; i<numRows; i++)
+  {
+    if ( i == numCols ) break;
+    matrixPtr[i][i] += 1.0;
+  }
+}
 

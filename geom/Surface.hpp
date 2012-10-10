@@ -44,6 +44,8 @@ class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
 
       virtual ~Surface() ;
       //- The destructor
+
+      typedef Curve ChildType;
   
       virtual CubitSense get_shell_sense( ShellSM* shell_ptr ) const = 0;
   
@@ -166,6 +168,15 @@ BWC*/
       //- This functions computes the point on the surface that is closest
       //- to the input location and then calculates the magnitudes of the 
       //- principal curvatures at this (possibly, new) point on the surface. 
+
+
+      virtual CubitStatus evaluate( double u, double v,
+                            CubitVector *position,
+                            CubitVector *normal,
+                            CubitVector *curvature1,
+                            CubitVector *curvature2 );
+
+
 
       virtual CubitVector position_from_u_v (double u, double v) = 0;
       //R CubitVector
@@ -321,6 +332,11 @@ BWC*/
       //- to the geometry underneath.  This is geometry engine dependent.
       //- Currently this is used for the tet mesher...
 
+      virtual CubitStatus get_projected_distance_on_surface( CubitVector *pos1,
+                                                             CubitVector *pos2, 
+                                                             double &distance ) = 0;
+      
+
       virtual GeometryType geometry_type()
       {return UNDEFINED_SURFACE_TYPE;};
       //R GeometryType (enum)
@@ -335,10 +351,85 @@ BWC*/
       //virtual void reverse_sense() = 0;
       //- Switch the sense of this Surface wrt the RefFace that owns it.
 
-  virtual CubitStatus fire_ray(const CubitVector &ray_point,
-                               const CubitVector &unit,
-                               DLIList<double>& ray_params) const;
-  
+      virtual CubitStatus get_nurb_params( bool &rational,
+                                           int &degree_u,
+                                           int &degree_v,
+                                           int &num_cntrl_pts_u,
+                                           int &num_cntrl_pts_v,
+                                           DLIList<CubitVector> &cntrl_pts,
+                                           DLIList<double> &weights,
+                                           DLIList<double> &u_knots,
+                                           DLIList<double> &v_knots ) const = 0;
+      //- Only valid for nurbs surfaces
+      //O rational
+      //O-   True if the nurb is rational
+      //O degree_u
+      //O-   The degree of the nurb in the u direction
+      //O degree_v
+      //O-   The degree of the nurb in the v direction
+      //O num_cntrl_pts_u
+      //O-   Number of control points in the u direction
+      //O num_cntrl_pts_v
+      //O-   Number of control points in the v direction
+      //O cntrl_pts
+      //O-   The control points stored as
+      //O-           cntrl_pts[0                ] = pt[u=0][v=0]
+      //O-           cntrl_pts[1                ] = pt[u=1][v=0]
+      //O-               ...
+      //O-           cntrl_pts[num_cntrl_pts_u-1] = pt[u=?][v=0]
+      //O-           cntrl_pts[num_cntrl_pts_u  ] = pt[u=0][v=1]
+      //O-               ...
+      //O weights
+      //O-   If rational, weights for each control point, stored in the same
+      //O-   order as the control points.  No weights are returned if
+      //O-   rational == false
+      //O u_knots
+      //O-   knot vector in the u direction
+      //O v_knots
+      //O-   knot vector in the v direction
+
+      virtual CubitStatus get_sphere_params( CubitVector &center, 
+                                             double &radius ) const = 0;
+      //- Only valid for spherical surfaces
+      //O center
+      //O- The center of the sphere
+      //O radius
+      //O- The radius of the sphere
+
+      virtual CubitStatus get_cone_params( CubitVector &center,
+                                           CubitVector &normal,
+                                           CubitVector &major_axis,
+                                           double &radius_ratio,
+                                           double &sine_angle,
+                                           double &cos_angle ) const = 0;
+      //- Only valid for conical surfaces.  Cylinders are a special case of conicals.
+      //O center
+      //O- 
+      //O normal
+      //O- 
+      //O major_axis
+      //O- 
+      //O radius_ratio
+      //O- 
+      //O sine_angle
+      //O- 
+      //O cos_angle
+      //O- 
+
+      virtual CubitStatus get_torus_params( CubitVector &center,
+                                            CubitVector &normal,
+                                            double &major_radius,
+                                            double &minor_radius ) const = 0;
+      //- Only valid for torus surfaces.
+      //O center
+      //O- 
+      //O normal
+      //O- 
+      //O major_radius
+      //O- 
+      //O minor_radius
+      //O- 
+
    protected: 
 
    private:

@@ -1,16 +1,18 @@
-AM_CPPFLAGS += -I$(top_srcdir)/util -I$(top_srcdir)/geom
+# Don't require GNU-standard files (Changelog, README, etc.)
+AUTOMAKE_OPTIONS = foreign
+
+# Override default defines with the ones we want from the configure script
+DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
+AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/geom
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcholla.la
-endif
+lib_LTLIBRARIES = libCholla.la
 
 # The directory where headers will be installed
-libcholla_la_includedir = $(includedir)
+libCholla_la_includedir = $(includedir)
 
 # The non-template sources
-libcholla_la_SOURCES = \
+libCholla_la_SOURCES = \
     AllocMemManagersCholla.cpp \
     Cholla.cpp \
     ChollaCurve.cpp \
@@ -19,7 +21,6 @@ libcholla_la_SOURCES = \
     ChollaPoint.cpp \
     ChollaSkinTool.cpp \
     ChollaSurface.cpp \
-    ChollaVolume.cpp \
     ChordalAxis.cpp \
     CubitFacet.cpp \
     CubitFacetData.cpp \
@@ -47,7 +48,7 @@ libcholla_la_SOURCES = \
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
-libcholla_la_include_HEADERS = \
+libCholla_la_include_HEADERS = \
     BoundaryConstrainTool.hpp \
     Cholla.h \
     ChollaCurve.hpp \
@@ -56,7 +57,6 @@ libcholla_la_include_HEADERS = \
     ChollaPoint.hpp \
     ChollaSkinTool.hpp \
     ChollaSurface.hpp \
-    ChollaVolume.hpp \
     ChordalAxis.hpp \
     CubitFacet.hpp \
     CubitFacetData.hpp \
@@ -71,7 +71,6 @@ libcholla_la_include_HEADERS = \
     FacetEntity.hpp \
     FacetEvalTool.hpp \
     FacetorTool.hpp \
-    FacetorUtil.hpp \
     GeoNode.hpp \
     GeoTet.hpp \
     LoopParamTool.hpp \
@@ -91,17 +90,15 @@ libcholla_la_include_HEADERS = \
 # need to be installed with the headers.  Otherwise they need
 # to be compiled.
 if INCLUDE_TEMPLATE_DEFS
-  libcholla_la_include_HEADERS += \
+  libCholla_la_include_HEADERS += \
     BoundaryConstrainTool.cpp \
     FacetorTool.cpp \
-    FacetorUtil.cpp \
     TetFacetorTool.cpp \
     TDDelaunay.cpp 
 else
-  libcholla_la_SOURCES += \
+  libCholla_la_SOURCES += \
     BoundaryConstrainTool.cpp \
     FacetorTool.cpp \
-    FacetorUtil.cpp \
     TetFacetorTool.cpp \
     TDDelaunay.cpp 
 endif

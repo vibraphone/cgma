@@ -107,9 +107,6 @@ void PartitionLumpImprint::init( DLIList<CubitFacet*>* facets )
     }
 
       // copy facets 
-#ifdef BOYD17
-    DLIList<CubitFacetData*> new_facets;
-#endif
     DLIList<CubitPointData*> new_facet_pts;
     for ( i = facets->size(); i--; )
     {
@@ -352,8 +349,8 @@ void PartitionLumpImprint::set_point_owner( CubitPoint* pt,
     TopologyBridge* tb = dynamic_cast<TopologyBridge*>(owner);
     RefEntity* re = dynamic_cast<RefEntity*>(tb->topology_entity());
     PART_LUMP_PRINT("%d. (%f,%f,%f) -> %s %p (%d)\n", index,
-      pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z(), 
-      type, static_cast<void*>(owner), re?re->id():0 );
+                      pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z(), 
+                      type, owner, re?re->id():0 );
     GfxDebug::draw_point( pt->coordinates(), color );
     GfxDebug::flush();
   }
@@ -613,7 +610,7 @@ CubitStatus PartitionLumpImprint::make_vertices( DLIList<CubitPoint*>& vtx_point
       continue;
     
     
-    if( dynamic_cast<Point*>(entity) ) {
+    if( dynamic_cast<TBPoint*>(entity) ) {
      ; // already a point
     }
     else if( dynamic_cast<Curve*>(entity) ) {
@@ -705,9 +702,8 @@ CubitStatus PartitionLumpImprint::partitionCurve( CubitPoint* pt )
   assert(!!curve);
   
   PART_LUMP_PRINT("Splitting curve %p (%d) at (%f,%f,%f)\n",
-    static_cast<void*>(curve),
-    dynamic_cast<RefEntity*>(curve->topology_entity()) ?
-      dynamic_cast<RefEntity*>(curve->topology_entity())->id() : 0,
+    curve, dynamic_cast<RefEntity*>(curve->topology_entity()) ?
+           dynamic_cast<RefEntity*>(curve->topology_entity())->id() : 0,
     pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z() );
   
     // get list of associated points that will need to be moved
@@ -787,7 +783,7 @@ CubitStatus PartitionLumpImprint::partitionSurface( int first_point_id,
   if ( PART_LUMP_DEBUG ) {
     RefEntity* re = dynamic_cast<RefEntity*>(surface->topology_entity());
     PART_LUMP_PRINT("Inserting curve into surface %p (%d)\n",
-      static_cast<void*>(surface), re ? re->id() : 0 );
+      surface, re ? re->id() : 0 );
   }
   
   DLIList<CubitPoint*> segments;
@@ -828,9 +824,6 @@ CubitStatus PartitionLumpImprint::partitionSurface( int first_point_id,
   
   DLIList<PartitionSurface*> input_list(1), new_surfs;
   DLIList<PartitionCurve*> new_curves;
-#ifdef BOYD17
-  DLIList<PartitionPoint*> points;
-#endif
   input_list.append(surface);
   CubitStatus result = PartitionEngine::instance().
     insert_curve( input_list, segment_points, new_surfs, new_curves );
@@ -996,9 +989,8 @@ CubitStatus PartitionLumpImprint::makePointCurve( CubitPoint* pt )
     PartitionEngine::instance().project_to_surface(surf, pt->coordinates());
   
   PART_LUMP_PRINT("Creating vertex on surface %p (%d) at (%f,%f,%f)\n",
-    static_cast<void*>(surf),
-    dynamic_cast<RefEntity*>(surf->topology_entity()) ?
-      dynamic_cast<RefEntity*>(surf->topology_entity())->id() : 0,
+    surf, dynamic_cast<RefEntity*>(surf->topology_entity()) ?
+          dynamic_cast<RefEntity*>(surf->topology_entity())->id() : 0,
     pt->coordinates().x(), pt->coordinates().y(), pt->coordinates().z() );
     
   PartitionPoint* new_point = 0;
@@ -1061,13 +1053,11 @@ CubitStatus PartitionLumpImprint::makeFreeCurve( int start_id, int end_id )
   
   PART_LUMP_PRINT("Creating free curve from point %p (%d) (%f,%f,%f)"
                   "  to point %p (%d) (%f,%f,%f)\n",
-    static_cast<void*>(start_pt),
-    dynamic_cast<RefEntity*>(start_pt->topology_entity()) ?
-      dynamic_cast<RefEntity*>(start_pt->topology_entity())->id() : 0,
+    start_pt, dynamic_cast<RefEntity*>(start_pt->topology_entity()) ?
+              dynamic_cast<RefEntity*>(start_pt->topology_entity())->id() : 0,
     start_pt->coordinates().x(), start_pt->coordinates().y(), start_pt->coordinates().z(),
-    static_cast<void*>(end_pt),
-    dynamic_cast<RefEntity*>(end_pt->topology_entity()) ?
-      dynamic_cast<RefEntity*>(end_pt->topology_entity())->id() : 0,
+    end_pt, dynamic_cast<RefEntity*>(end_pt->topology_entity()) ?
+            dynamic_cast<RefEntity*>(end_pt->topology_entity())->id() : 0,
     end_pt->coordinates().x(), end_pt->coordinates().y(), end_pt->coordinates().z());
     
   bool all_pts = false;

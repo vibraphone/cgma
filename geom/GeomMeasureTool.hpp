@@ -59,12 +59,6 @@ public:
 class CUBIT_GEOM_EXPORT GeomMeasureTool
 {
 private:
-  static int is_narrow_region_at_point(RefEdge *e1,
-                                      const CubitVector &pt_on_e1,
-                                      RefEdge *e2,
-                                      const double &tol_sq);
-  static int has_narrow_region(RefFace* face, const double &tol,
-                                       const double &tol_sq);
   static void get_edges_from_list(DLIList <RefEntity*> &entity_list,
                                   DLIList <RefEdge*> &ref_edges );
   static void get_faces_from_list(DLIList <RefEntity*> &entity_list,
@@ -275,42 +269,6 @@ private:
                                       double &average,
                                       double &sum);
 
-#ifdef BOYD14
-  static void  measure_face_hydraulic_radius( DLIList <RefEntity*> &entity_list,
-                                              double &smallest,
-                                              RefFace *&smallest_face,
-                                              double &largest,
-                                              RefFace *&largest_face,
-                                              double &average,
-                                              double &sum );
-
-  static void  measure_face_hydraulic_radius( DLIList <RefFace*> &ref_faces,
-                                              double &smallest,
-                                              RefFace *&smallest_face,
-                                              double &largest,
-                                              RefFace *&largest_face,
-                                              double &average,
-                                              double &sum );
-#endif
-
-#ifdef BOYD14
-  static void measure_volume_hydraulic_radius(DLIList <RefEntity*> &entity_list,
-                                              double &smallest,
-                                              RefVolume *&smallest_volume,
-                                              double &largest,
-                                              RefVolume *&largest_volume,
-                                              double &average,
-                                              double &sum );
-
-  static void measure_volume_hydraulic_radius(DLIList <RefVolume*> &ref_volumes,
-                                              double &smallest,
-                                              RefVolume *&smallest_volume,
-                                              double &largest,
-                                              RefVolume *&largest_volume,
-                                              double &average,
-                                              double &sum );
-#endif
-
   static void measure_face_area_and_hydraulic_radius(RefFace *curr_face,
                                                      double &face_area,
                                                      double &face_hydraulic_radius);
@@ -326,13 +284,6 @@ private:
                                              RefFace *&face_min_2,
                                              RefFace *&face_max_1,
                                              RefFace *&face_max_2);
-
-#ifdef BOYD14
-  static void curvature_info_for_face(RefFace *curr_face,
-                                      double &max_curvature_change,
-                                      double &min_curvature_change,
-                                      double &average_curvature_change);
-#endif
 
   //! Given a list of volumes, return number of surface merged, unmerged, 
   //! and ratio between the two.
@@ -382,14 +333,6 @@ private:
   //! surfaces in the volumes.
   static void print_volume_measure_summary(DLIList <RefVolume*> &ref_volumes);
 
-#ifdef BOYD14
-  static void print_body_measure_summary(DLIList <Body*> &bodies);
-    ///
-    /// Prints summary of all the body information.  volume and surface
-    /// info is also printed.
-    ///
-#endif
-
   //! Finds the max ratio of adjacent face areas (big face area
   //! divided by  small face area);
   static void find_adjacent_face_ratios(RefVolume *curr_volume,
@@ -402,6 +345,15 @@ private:
                                         double small_curve_size,
                                         DLIList<RefFace*> &narrow_faces,
                                         DLIList<RefFace*> &surfs_to_ignore);
+
+  //! Finds the closed, narrow surfaces in the specified volumes.
+  static void find_closed_narrow_faces( DLIList <RefVolume*> &ref_vols,
+                                        double tol,
+                                        DLIList <RefFace*> &face_list);
+
+  static void get_narrow_regions(DLIList <RefVolume*> &ref_vols,
+                                 double tol,
+                                 DLIList <RefFace*> &surfs_with_narrow_regions);
 
   //! Finds the curves with lengths less than the given tol in specified volume.
   static RefEdge* find_first_small_curve(RefVolume* vol,
@@ -536,17 +488,6 @@ private:
                                DLIList <RefEdge*> &close_edges,
                                DLIList <double> &small_lengths,
                                double tol);
-
-#ifdef BOYD14
-  static void count_entities(DLIList<RefVolume*> &ref_vols,
-                             int &num_faces,
-                             int &num_curves,
-                             int &num_vertices);
-    ///
-    /// Find the total number of entities in this volume list.
-    /// Makes sure not to double count.
-    ///
-#endif
 
   //! Measures the area of the curr_face.  Uses
   //! the GeomDataObserver class to cache the area on the face.

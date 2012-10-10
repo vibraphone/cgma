@@ -38,9 +38,6 @@ public:
   PartitionPoint* end_point() const
     { return endPoint; }
   
-#ifdef BOYD15
-  PartitionPoint* common_point( const PartitionCurve* curve ) const;
-#endif
   PartitionPoint* other_point( const PartitionPoint* pt ) const
     { return pt == startPoint ? endPoint : pt == endPoint ? startPoint : 0; }
     
@@ -49,11 +46,6 @@ public:
   PartitionCoEdge* next_coedge( const PartitionCoEdge* prev = 0 ) const
     { return !prev ? firstCoEdge : prev->myCurve == this ? prev->curveNext : 0; }
   
-#ifdef BOYD15
-  PartitionCoEdge* other_coedge( const PartitionCoEdge* coedge ) const;
-    // Search for a second coedge in the same loop as the passed coedge.
-#endif
-    
   CubitStatus add( PartitionCoEdge* coedge );
   CubitStatus remove( PartitionCoEdge* coedge );
   void remove_all_coedges();
@@ -61,7 +53,10 @@ public:
   CubitStatus start_point( PartitionPoint* point );
   CubitStatus end_point  ( PartitionPoint* point );
   
-  virtual CubitStatus get_graphics( GMem& result ) = 0;
+  virtual CubitStatus get_graphics( GMem& result,
+                                    double angle_tolerance=0,
+                                    double distance_tolerance=0,
+                                    double max_edge_length=0) = 0; 
   
   PartitionCurve* next_curve( const PartitionPoint* about_this ) const
     { return about_this == startPoint ? startNext :
@@ -97,9 +92,6 @@ public:
   void remove_facet_data();
   void replace_facet(CubitFacetEdgeData* dead_facet,
                      DLIList<CubitFacetEdgeData*> &new_facets);
-#ifdef BOYD15
-  bool contains_facet_point( CubitPointData* pt ) const;
-#endif
   virtual void notify_split( FacetEntity* old_entity, FacetEntity* new_entity );
   CubitStatus fix_facet_data( PartitionCurve* new_curve );
   void remove_dead_facet( CubitFacetEdgeData* edge );
@@ -110,10 +102,6 @@ public:
     //- remove small edges, etc.
  
   void draw_facets(int color);
-#ifdef BOYD15
-  void validate_facets();
-#endif
-  
   
   virtual void transform( const CubitTransformMatrix& );
 

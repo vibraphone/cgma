@@ -85,7 +85,7 @@ public:
   virtual double z() = 0;
   virtual void set( const CubitVector &pos ) = 0;
 
-  virtual void marked(int is_marked) {markedFlag = is_marked;};
+  virtual void marked(int marked) {markedFlag = marked;};
   virtual int marked() {return markedFlag;};
       
   virtual CubitVector coordinates() const = 0;
@@ -104,6 +104,9 @@ public:
   virtual void normal( CubitVector &surf_norm );
   virtual CubitVector normal();
   virtual CubitVector* normal_ptr();
+  
+  virtual void set_normal( CubitVector &surf_norm );
+  virtual void reset_normal( );
 
   virtual void d_coef( const double d_coefficient ) {dCoef = d_coefficient;};
   virtual double d_coef() {return dCoef;};
@@ -111,9 +114,8 @@ public:
   virtual double u() { return uVal; };
   virtual double v() { return vVal; };
   virtual double size() {return sizeVal; };
-  virtual void set_uv( double u_new, double v_new ) { uVal = u_new; vVal = v_new; };
-  virtual void set_uvs(double u_new, double v_new, double s_new) 
-    {uVal = u_new; vVal = v_new; sizeVal = s_new; }
+  virtual void set_uv( double u, double v ) { uVal = u; vVal = v; };
+  virtual void set_uvs(double u, double v, double s) {uVal = u; vVal = v; sizeVal = s; }
     //- get and set the u-v coordinates (careful with internal boundaries - see TDFacetBoundarPoint)
   virtual CubitStatus get_uv( CubitFacet *facet, double &u, double &v );
   virtual CubitStatus get_uvs( CubitFacet *facet, double &u, double &v, double &s);
@@ -230,6 +232,15 @@ inline CubitVector* CubitPoint::normal_ptr()
   return surfNormal;
 }
 
+inline void CubitPoint::set_normal( CubitVector &surf_norm )
+{
+  *surfNormal = surf_norm;
+}
+
+inline void CubitPoint::reset_normal()
+{
+  compute_avg_normal();
+}
 
 inline void CubitPoint::du( CubitVector &duvec )
 {

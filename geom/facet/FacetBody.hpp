@@ -140,14 +140,6 @@ public:
     //- Restore the ACIS BODY by replacing the transformation matrix 
     //- associated with it with a unit matrix
   
-#ifdef BOYD14
-  CubitStatus reverse() ;
-    //R CubitStatus
-    //R- CUBIT_SUCCESS/CUBIT_FAILURE
-    //I BODYPtr
-    //- Reverse the face orientations on this body
-#endif
-
   CubitStatus get_transforms( CubitTransformMatrix &tfm );
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
@@ -169,9 +161,6 @@ public:
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
 
-#ifdef BOYD14
-  void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#endif
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
   void get_surfaces( DLIList<FacetSurface*>& surfaces );

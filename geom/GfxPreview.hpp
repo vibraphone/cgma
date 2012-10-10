@@ -35,10 +35,11 @@ class CubitTransformMatrix;
 class CubitBox;
 class Curve;
 class Surface;
-class Point;
+class TBPoint;
 
 #include "CubitColorConstants.hpp"
 #include "CubitGeomConfigure.h"
+#include "DrawingToolDefines.h"
 
 class CUBIT_GEOM_EXPORT GfxPreview
 {
@@ -71,11 +72,11 @@ class CUBIT_GEOM_EXPORT GfxPreview
     static void draw_ref_edge(RefEdge* entity, int color = CUBIT_DEFAULT_COLOR);
     static void draw_ref_face(RefFace* entity, int color = CUBIT_DEFAULT_COLOR);
     static void draw_ref_face_edges(RefFace* entity, int color = CUBIT_DEFAULT_COLOR);
-    static void draw_ref_volume(RefVolume* entity, int color = CUBIT_DEFAULT_COLOR);
+    static void draw_ref_volume(RefVolume* entity, int color = CUBIT_DEFAULT_COLOR, int mode = CUBIT_SMOOTH_SHADING);
     static void draw_ref_volume_edges(RefVolume* entity, int color = CUBIT_DEFAULT_COLOR);
-    static void draw_ref_body(Body* entity, int color = CUBIT_DEFAULT_COLOR);
+    static void draw_ref_body(Body* entity, int color = CUBIT_DEFAULT_COLOR, int mode = CUBIT_SMOOTH_SHADING);
 
-    static void draw_point(Point *pt, int color);
+    static void draw_point(TBPoint *pt, int color);
     static void draw_curve(Curve *curve, int color);
     static void draw_surface(Surface *surf, int color);
     static void draw_surface_facets_shaded(Surface *surf, int color);
@@ -104,7 +105,7 @@ class CUBIT_GEOM_EXPORT GfxPreview
     // pass in the coordinates and the connectivity
     // the face_list is comprised of a list num_points_in_face, face_pt1, face_pt2, face_pt3, ...
     static void draw_polygons(int num_points, const float* xyzs, int num_face_points, 
-                              const int* face_list, int color);
+                              const int* face_list, int color, int mode);
 
     //! \brief draw a cylinder for previewing
     //! \param axis - orientation of the length of the cylinder
@@ -140,9 +141,9 @@ class CUBIT_GEOM_EXPORT GfxPreview
     virtual void p_draw_ref_edge(RefEdge* entity, int color) = 0;
     virtual void p_draw_ref_face(RefFace* entity, int color) = 0;
     virtual void p_draw_ref_face_edges(RefFace* entity, int color) = 0;
-    virtual void p_draw_ref_volume(RefVolume* entity, int color) = 0;
+    virtual void p_draw_ref_volume(RefVolume* entity, int color, int mode) = 0;
     virtual void p_draw_ref_volume_edges(RefVolume* entity, int color) = 0;
-    virtual void p_draw_ref_body(Body* entity, int color) = 0;
+    virtual void p_draw_ref_body(Body* entity, int color, int mode) = 0;
     virtual void p_draw_box(CubitBox& box, int color) = 0;
     virtual void p_draw_point(float, float, float, int) = 0;
     virtual void p_draw_point(const CubitVector& vector, int color) = 0;
@@ -151,7 +152,7 @@ class CUBIT_GEOM_EXPORT GfxPreview
     virtual void p_draw_polyline(const GPoint*, int, int) = 0;
     virtual void p_draw_polygon(const GPoint* points, int num_points, int color, int border_color, bool filled) = 0;
     virtual void p_draw_polygons(int num_points, const float* xyzs, int num_face_points, 
-                                 const int* face_list, int color) = 0;
+                                 const int* face_list, int color, int mode) = 0;
     virtual void p_draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
                                CubitBox& bounding_box, float radius, int color) = 0;
     virtual void p_draw_quad(const GPoint*, int) = 0;

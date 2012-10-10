@@ -50,11 +50,6 @@ public:
     void set_increment(int k);
     //- Change array growth increment
 
-#ifdef BOYD15
-    void shift(int from, int to, int count);
-    //- Shift count items in either direction.
-#endif
-
   SetDynamicMemoryAllocation(memoryManager)
   //- overloaded new and delete operators
 

@@ -21,7 +21,7 @@
 
 class CompositeSurface;
 class CompositePoint;
-class Point;
+class TBPoint;
 
 class CompositeCurve : public Curve, public TBOwner
 {
@@ -57,9 +57,6 @@ class CompositeCurve : public Curve, public TBOwner
     
     CompositeCoEdge* first_coedge() const;
     CompositeCoEdge* next_coedge( CompositeCoEdge* after_this ) const;
-#ifdef BOYD15
-    CompositeCoEdge* find_coedge( CompositeSurface* surface ) const;
-#endif
     CubitStatus add( CompositeCoEdge* coedge );
     CubitStatus remove( CompositeCoEdge* coedge );
     
@@ -68,14 +65,11 @@ class CompositeCurve : public Curve, public TBOwner
     CubitStatus start_point( CompositePoint* pt );
     CubitStatus end_point( CompositePoint* pt );
     CompositePoint* other_point( CompositePoint* pt );
-#ifdef BOYD15
-    CompositePoint* closest_end_point( const CubitVector& pos );
-#endif
     CompositePoint* common_point( CompositeCurve* curve );
     CompositeCurve* next( const CompositePoint* around_this );
 
     HiddenEntitySet& hidden_entities();
-    void get_hidden_points( DLIList<Point*>& points );
+    void get_hidden_points( DLIList<TBPoint*>& points );
     
     bool has_parent_composite_surface() const;
     
@@ -129,10 +123,6 @@ class CompositeCurve : public Curve, public TBOwner
                                CubitVector* tangent_ptr = NULL,
                                CubitVector* curvature_ptr = NULL,
                                double *param = NULL);
-#ifdef BOYD15
-    void get_tangent( CubitVector const& location, CubitVector& tangent );
-    void get_curvature( CubitVector const& location, CubitVector& curvature );
-#endif
 
     CubitStatus closest_point_trimmed( CubitVector const& from_pt,
 	                                   CubitVector& result_pt );
@@ -169,6 +159,28 @@ class CompositeCurve : public Curve, public TBOwner
   
     void read_attributes() ; //{ compGeom->read_attributes(); }
     void write_attributes() ; //{ compGeom->write_attributes(); }
+
+  //R CubitStatus
+  //O- true or false if spline is rational or not.
+  //O- the degree of this spline
+  //O- the control points
+  //O- If rational, weight for each control point
+  //O- the knots
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots
+                                       ) const;
+    //R CubitStatus
+    //O- center - ellipse center point
+    //O- normal - normal of the plane of the ellipse
+    //O- major_axis - major axis of the ellipse
+    //O- radius_ratio - ratio of the length of the major to minor axis.
+  virtual CubitStatus get_ellipse_params( CubitVector &center,
+                                          CubitVector &normal,
+                                          CubitVector &major_axis,
+                                          double &radius_ratio ) const;
 
   protected: 
   

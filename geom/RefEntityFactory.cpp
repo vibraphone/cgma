@@ -18,7 +18,7 @@ static int sort_by_ascending_ids(CubitEntity*& a, CubitEntity*& b)
 
 static int sort_by_ascending_ids(RefVertex*& a, RefVertex*& b)
 {
-  if( a->id() < b->id() )
+  if( a->id() < b->id() ) 
     return -1;
   else
     return 1;
@@ -94,6 +94,7 @@ RefEntityFactory::RefEntityFactory(RefEntityFactory *factory)
   refVolumeListIsSorted = true;
   bodyListIsSorted = true;
   refGroupListIsSorted = true;
+  ManageListSorting = true;
   
   reset_ids();
 }
@@ -119,7 +120,7 @@ RefEntityFactory::~RefEntityFactory()
   instance_ = NULL;
 }
 
-RefVertex *RefEntityFactory::construct_RefVertex(Point *point)
+RefVertex *RefEntityFactory::construct_RefVertex(TBPoint *point)
 {
   RefVertex *temp = new RefVertex(point);
   CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
@@ -238,7 +239,7 @@ void RefEntityFactory::add(RefGroup* refGPtr)
    if(refGroupList->size() > 0)
    {
     refGroupList->last();
-    if(refGPtr->id() < refGroupList->get()->id())
+    if(ManageListSorting && refGPtr->id() < refGroupList->get()->id())
       refGroupListIsSorted = false;
    }
    refGroupList->append(refGPtr);
@@ -251,7 +252,7 @@ void RefEntityFactory::add(Body* bodyPtr)
    if(bodyList->size() > 0)
    {
     bodyList->last();
-    if(bodyPtr->id() < bodyList->get()->id())
+    if(ManageListSorting && bodyPtr->id() < bodyList->get()->id())
       bodyListIsSorted = false;
    }
    bodyList->append(bodyPtr);
@@ -264,7 +265,7 @@ void RefEntityFactory::add(RefVolume* refVPtr)
    if(refVolumeList->size() > 0)
    {
     refVolumeList->last();
-    if(refVPtr->id() < refVolumeList->get()->id())
+    if(ManageListSorting && refVPtr->id() < refVolumeList->get()->id())
       refVolumeListIsSorted = false;
    }
    refVolumeList->append(refVPtr);
@@ -278,7 +279,7 @@ void RefEntityFactory::add(RefFace* refFPtr)
    if(refFaceList->size() > 0)
    {
     refFaceList->last();
-    if(refFPtr->id() < refFaceList->get()->id())
+    if(ManageListSorting && refFPtr->id() < refFaceList->get()->id())
       refFaceListIsSorted = false;
    }
    refFaceList->append(refFPtr);
@@ -292,7 +293,7 @@ void RefEntityFactory::add(RefEdge* refEPtr)
    if(refEdgeList->size() > 0)
    {
     refEdgeList->last();
-    if(refEPtr->id() < refEdgeList->get()->id())
+    if(ManageListSorting && refEPtr->id() < refEdgeList->get()->id())
       refEdgeListIsSorted = false;
    }
    refEdgeList->append(refEPtr);
@@ -306,7 +307,7 @@ void RefEntityFactory::add(RefVertex* refVPtr)
    if(refVertexList->size() > 0)
    {
     refVertexList->last();
-    if(refVPtr->id() < refVertexList->get()->id())
+    if(ManageListSorting && refVPtr->id() < refVertexList->get()->id())
       refVertexListIsSorted = false;
    }
    refVertexList->append(refVPtr);
@@ -527,7 +528,7 @@ Body* RefEntityFactory::get_body (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!bodyListIsSorted)
+   if(ManageListSorting && !bodyListIsSorted)
    {
      bodyList->sort(sort_by_ascending_ids);
      bodyListIsSorted = true;
@@ -575,7 +576,7 @@ RefGroup* RefEntityFactory::get_ref_group   (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!refGroupListIsSorted)
+   if(ManageListSorting && !refGroupListIsSorted)
    {
      refGroupList->sort(sort_by_ascending_ids);
      refGroupListIsSorted = true;
@@ -623,7 +624,7 @@ RefVolume* RefEntityFactory::get_ref_volume (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!refVolumeListIsSorted)
+   if(ManageListSorting && !refVolumeListIsSorted)
    {
      refVolumeList->sort(sort_by_ascending_ids);
      refVolumeListIsSorted = true;
@@ -671,7 +672,7 @@ RefFace* RefEntityFactory::get_ref_face (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!refFaceListIsSorted)
+   if(ManageListSorting && !refFaceListIsSorted)
    {
      refFaceList->sort(sort_by_ascending_ids);
      refFaceListIsSorted = true;
@@ -719,7 +720,7 @@ RefEdge* RefEntityFactory::get_ref_edge (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!refEdgeListIsSorted)
+   if(ManageListSorting && !refEdgeListIsSorted)
    {
      refEdgeList->sort(sort_by_ascending_ids);
      refEdgeListIsSorted = true;
@@ -767,7 +768,7 @@ RefVertex* RefEntityFactory::get_ref_vertex (int id)
        return NULL;
    
    // Make sure the list is sorted for the binary search.
-   if(!refVertexListIsSorted)
+   if(ManageListSorting && !refVertexListIsSorted)
    {
      refVertexList->sort(sort_by_ascending_ids);
      refVertexListIsSorted = true;
@@ -1176,17 +1177,17 @@ CubitStatus RefEntityFactory::notify_observer(CubitObservable *observable,
     remove(entity);
   else if (event == ID_SET) 
   {
-    if(CAST_TO(entity, RefEdge))
+    if(CAST_TO(entity, RefEdge) && ManageListSorting)
       refEdgeListIsSorted = false;
-    else if(CAST_TO(entity, RefFace))
+    else if(CAST_TO(entity, RefFace) && ManageListSorting)
       refFaceListIsSorted = false;
-    else if(CAST_TO(entity, RefVertex))
+    else if(CAST_TO(entity, RefVertex) && ManageListSorting)
       refVertexListIsSorted = false;
-    else if(CAST_TO(entity, RefVolume))
+    else if(CAST_TO(entity, RefVolume) && ManageListSorting)
       refVolumeListIsSorted = false;
-    else if(CAST_TO(entity, RefGroup))
+    else if(CAST_TO(entity, RefGroup) && ManageListSorting)
       refGroupListIsSorted = false;
-    else if(CAST_TO(entity, Body))
+    else if(CAST_TO(entity, Body) && ManageListSorting)
       bodyListIsSorted = false;
   }
 

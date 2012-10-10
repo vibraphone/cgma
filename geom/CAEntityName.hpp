@@ -20,10 +20,6 @@ private:
  
   DLIList<CubitString*> entityNames;
 
-#ifdef BOYD17
-  DLIList<CubitString*> entityOptions;
-#endif
-
 public:
 
   virtual ~CAEntityName();
@@ -53,16 +49,6 @@ public:
   CubitSimpleAttrib* cubit_simple_attrib();
 
   int int_attrib_type() {return CA_ENTITY_NAME;}
-
-#ifdef BOYD14
-  void remove_caentity_name(CubitString old_entity_name);
-
-  void remove_caentity_option(CubitString old_entity_option);
-
-  void add_csa_data(CubitSimpleAttrib *csa_ptr);
-    //- add data in csa_ptr to this attrib; for compatibility with old
-    //- sat files, which have multiple name attributes
-#endif
 
   void print();
   

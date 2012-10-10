@@ -44,7 +44,7 @@
 // ********** BEGIN FORWARD DECLARATIONS   **********
 // ********** END FORWARD DECLARATIONS     **********
 
-class CUBIT_GEOM_EXPORT PointSM : public Point
+class CUBIT_GEOM_EXPORT PointSM : public TBPoint
 {
    public :
 

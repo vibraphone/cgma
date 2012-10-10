@@ -27,6 +27,11 @@ ChollaVolume::~ChollaVolume()
 }
 
 
+void ChollaVolume::debug_draw()
+{
+  for( int i=surfaceList.size(); i--; )
+    surfaceList.get_and_step()->debug_draw();
+}
 
 //EOF
 

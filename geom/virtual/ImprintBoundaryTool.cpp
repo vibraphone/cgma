@@ -3884,9 +3884,6 @@ CubitStatus ImprintBoundaryTool::imprint_surface(RefFace *ref_face,
     {
       PRINT_DEBUG_129("Partitioning surface %d\n",
                       ref_face->id());
-#ifdef BOYD17
-      DLIList <RefFace*> ref_faces;
-#endif
       int tmp_debug = 0;
       if (tmp_debug)
       {
@@ -5952,7 +5949,7 @@ CubitStatus ImprintBoundaryTool::ignore_match( ImprintPointData *start_point,
 RefVertex* ImprintBoundaryTool::create_virtual_vertex(CubitVector &pos)
 {
     //Create a facet point first.
-  Point *new_point;
+  TBPoint *new_point;
   if ( FacetModifyEngine::instance()->make_facet_point(pos, new_point)
        != CUBIT_SUCCESS )
   {
@@ -6015,9 +6012,9 @@ RefEdge* ImprintBoundaryTool::create_virtual_edge(RefVertex *start,
 
   DLIList<CoEdgeSM*> coedgesms;
   GeometryEntity *ge = start->get_geometry_entity_ptr();
-  Point *start_psm = CAST_TO(ge, Point);
+  TBPoint *start_psm = CAST_TO(ge, TBPoint);
   ge = end->get_geometry_entity_ptr();
-  Point *end_psm = CAST_TO(ge, Point);
+  TBPoint *end_psm = CAST_TO(ge, TBPoint);
   assert(start_psm && end_psm);
   FacetCurve *new_facet_curve = new FacetCurve(curve_facet_tool,
                                                start_psm,

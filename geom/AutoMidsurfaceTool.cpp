@@ -693,10 +693,10 @@ CubitStatus AutoMidsurfaceTool::midsurface(
 
 
 CubitStatus AutoMidsurfaceTool::get_planar_mid_surface( RefFace* ref_face1,
-                                                        RefFace* ref_face2,
-                                                        BodySM* body_sm_to_trim_to,
-                                                        BodySM*& midsurface_body_sm,
-                                                        GeometryModifyEngine *gme_ptr )
+													   RefFace* ref_face2,
+													   BodySM* body_sm_to_trim_to,
+													   BodySM*& midsurface_body_sm,
+													   GeometryModifyEngine *gme_ptr )
 {
 	CubitVector normal_1, normal_2, point_1, point_2, point_3;
 	CubitPlane plane_1, plane_2;

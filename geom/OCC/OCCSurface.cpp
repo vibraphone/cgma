@@ -610,6 +610,7 @@ CubitStatus OCCSurface::uv_derivitives( double u,
 // Purpose       : Calculates the derivitives at a given parameter location.
 //
 //-------------------------------------------------------------------------
+/*
 CubitStatus OCCSurface::uv_2nd_derivitives( double u,
                                             double v,
                                             CubitVector &d2u,
@@ -625,7 +626,7 @@ CubitStatus OCCSurface::uv_2nd_derivitives( double u,
   d2uv =CubitVector(duv.X(), duv.Y(), duv.Z()); 
   return CUBIT_SUCCESS;
 }
-
+*/
 //-------------------------------------------------------------------------
 // Purpose       : Determines whether the surface is parametrically defined.
 //                 Hopefully later this will be available.
@@ -1204,7 +1205,6 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
          pshape->ShapeType() <= TopAbs_FACE &&
          OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == CUBIT_TRUE)
        ashape = *pshape;
-
      M.Clear();
 
      TopExp::MapShapesAndAncestors(ashape, TopAbs_FACE, TopAbs_COMPOUND, M);
@@ -1215,6 +1215,185 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
   return CUBIT_SUCCESS;
 }
 
+CubitStatus OCCSurface::get_projected_distance_on_surface( CubitVector *pos1,
+                                                            CubitVector *pos2,
+                                                            double &distance )
+{
+  CubitVector closest_point1;
+  this->closest_point_trimmed(*pos1, closest_point1);  
+  CubitVector closest_point2;
+  this->closest_point_trimmed(*pos2, closest_point2); 
+  distance = closest_point1.distance_between(closest_point2);
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus OCCSurface::get_nurb_params
+(
+  bool &rational,
+  int &degree_u,
+  int &degree_v,
+  int &num_cntrl_pts_u,
+  int &num_cntrl_pts_v,
+  DLIList<CubitVector> &cntrl_pts,
+  DLIList<double> &cntrl_pt_weights,
+  DLIList<double> &u_knots,
+  DLIList<double> &v_knots
+) const
+{
+  BRepAdaptor_Surface asurf(*myTopoDSFace);
+  Handle_Geom_BSplineSurface h_S = NULL;
+  if (asurf.GetType() == GeomAbs_BSplineSurface)
+    h_S = asurf.BSpline();
+  else
+    return CUBIT_FAILURE;
+  assert ( h_S != NULL);
+
+  if(h_S->IsURational() || h_S->IsVRational())
+    rational = true;
+  else 
+    rational = false;
+
+  degree_u = h_S->UDegree();
+  degree_v = h_S->VDegree();
+
+  num_cntrl_pts_u = h_S->NbUPoles();
+  num_cntrl_pts_v = h_S->NbVPoles();
+
+  TColgp_Array2OfPnt P(1, h_S->NbUPoles(), 1, h_S->NbVPoles());
+  h_S->Poles(P);
+  gp_Pnt cnt_p;
+  for(int i = P.LowerRow(); i <= P.UpperRow(); i++)
+  {
+    for (int j = P.LowerCol(); j <= P.UpperCol(); j++)
+    {
+      cnt_p = P(i,j);
+      cntrl_pts.append(CubitVector(cnt_p.X(), cnt_p.Y(), cnt_p.Z()));
+    }
+  } 
+  TColStd_Array2OfReal W(1,h_S->NbUPoles(), 1, h_S->NbVPoles());
+  h_S->Weights(W);
+  for(int i = W.LowerRow(); i <= W.UpperRow(); i++)
+  { 
+    for (int j = W.LowerCol(); j <= W.UpperCol(); j++)
+    {
+      cntrl_pt_weights.append(W(i,j));
+    }
+  }
+  TColStd_Array1OfReal Ku(1,h_S->NbUKnots()), Kv(1, h_S->NbVKnots());
+  h_S->UKnots(Ku);
+  h_S->VKnots(Kv);
+  for(int i = Ku.Lower(); i <= Ku.Upper(); i++)
+    u_knots.append(Ku.Value(i));
+
+  for (int i = Kv.Lower(); i <= Kv.Upper(); i++)
+    v_knots.append(Kv.Value(i));
+   return CUBIT_SUCCESS; 
+}
+//-------------------------------------------------------------------------
+// Purpose       : Return parameters about a surface assuming that it is
+//                 a spherical surface.  If it not CUBIT_FAILURE.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 2/28/2012
+//-------------------------------------------------------------------------
+CubitStatus OCCSurface::get_sphere_params( CubitVector &center,
+                                           double &radius ) const
+{
+  if(const_cast<OCCSurface*> (this)->geometry_type() != SPHERE_SURFACE_TYPE)
+    return CUBIT_FAILURE;
+
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  gp_Sphere sphere =  asurface.Sphere(); 
+  gp_Pnt center_pt = sphere.Location();
+  center = CubitVector(center_pt.X(), center_pt.Y(), center_pt.Z());
+
+  radius = sphere.Radius();
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Return parameters about a surface assuming that it is
+//                 a conical surface.  If it not CUBIT_FAILURE.
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 2/28/2012
+//-------------------------------------------------------------------------
+CubitStatus OCCSurface::get_cone_params
+(
+   CubitVector &center,
+   CubitVector &normal,
+   CubitVector &major_axis,
+   double &radius_ratio,
+   double &sine_angle,
+   double &cos_angle
+) const
+{
+  if(const_cast<OCCSurface*> (this)->geometry_type() != CONE_SURFACE_TYPE)
+    return CUBIT_FAILURE;
+
+  //all cone type surface in OCC have circular base.
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  gp_Cone cone = asurface.Cone();
+  double half_angle = cone.SemiAngle();
+  sine_angle = sin(half_angle);
+  cos_angle = cos(half_angle);
+
+  gp_Ax1 axis = cone.Axis();
+  gp_Dir dir = axis.Direction();
+  normal.set(dir.X(), dir.Y(), dir.Z());
+
+  gp_Pnt center_pt = cone.Location();
+  center = CubitVector(center_pt.X(), center_pt.Y(), center_pt.Z());
+
+  gp_Ax1 x_axis = cone.XAxis();
+  dir = x_axis.Direction();   
+  major_axis.set(dir.X(), dir.Y(), dir.Z());
+
+  radius_ratio = 1;
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Return parameters about a surface assuming that it is
+//                 a torus surface.  If it not CUBIT_FAILURE.
+//
+// Special Notes :
+//
+// Creator       :  Jane Hu
+//
+// Creation Date : 2/28/2012
+//-------------------------------------------------------------------------
+CubitStatus OCCSurface::get_torus_params
+(
+   CubitVector &center,
+   CubitVector &normal,
+   double &major_radius,
+   double &minor_radius
+) const
+{
+  if(const_cast<OCCSurface*> (this)->geometry_type() != TORUS_SURFACE_TYPE)
+    return CUBIT_FAILURE;
+
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+  gp_Torus torus = asurface.Torus();
+  gp_Pnt center_pt = torus.Location();
+  center = CubitVector(center_pt.X(), center_pt.Y(), center_pt.Z());
+
+  gp_Ax1 axis = torus.Axis();
+  gp_Dir dir = axis.Direction();
+  normal.set(dir.X(), dir.Y(), dir.Z());
+
+  major_radius = torus.MajorRadius();
+  minor_radius = torus.MinorRadius();
+
+  return CUBIT_SUCCESS;
+}
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

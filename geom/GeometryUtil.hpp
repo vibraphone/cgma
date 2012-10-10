@@ -19,7 +19,7 @@
 
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
 class Loop;
 class CubitVector;
 class CoEdge;
@@ -49,6 +49,7 @@ public:
       if( instance_ == NULL ) instance_ = new GeometryUtil;
       return instance_;
     }
+  static void delete_instance() { if(instance_) delete instance_; } 
   
   CubitBoolean is_position_within_loop( const CubitVector& position,
                                         Loop* loop_ptr,

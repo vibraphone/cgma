@@ -17,8 +17,6 @@
 //-     18(9), pages 509-517, September 1975.
 //-----------------------------------------------------------------
 
-#if !defined(TEMPLATE_DEFS_INCLUDED) || defined(INCLUDED_FROM_KDD_TREE_NODE_HEADER)
-
 //---------------------------------
 // Include Files
 //---------------------------------
@@ -143,4 +141,3 @@ template <class Y> MY_INLINE DIRECTION KDDTreeNode<Y>::compare_with_equality (KD
   }
 }
 
-#endif

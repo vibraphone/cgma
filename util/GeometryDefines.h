@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include "CubitString.hpp"
 
 /* CUBIT_RESABS - Values less than CUBIT_RESABS are considered to be zero. */
 #ifdef __cplusplus
@@ -51,7 +52,7 @@ enum SolidModelerType
 /* Types of underlying geometric representations. */
 enum GeometricRepresentationType 
 {
-   NONE,
+   GEOMTYPE_NONE,
    SOLID_MODEL,
    FACETTED,
    MESH_BASED,
@@ -72,6 +73,7 @@ enum GeometryType
   SPLINE_CURVE_TYPE,
   STRAIGHT_CURVE_TYPE,
   POINT_CURVE_TYPE,
+  HELIX_CURVE_TYPE,
   HYPERBOLA_CURVE_TYPE,
   UNDEFINED_CURVE_TYPE,
   
@@ -84,6 +86,9 @@ enum GeometryType
   BEST_FIT_SURFACE_TYPE,
   FACET_SURFACE_TYPE,
   CYLINDER_SURFACE_TYPE, // only currently defined in ACIS Engine
+  REVOLUTION_SURFACE_TYPE,  //OCC surface type
+  EXTRUSION_SURFACE_TYPE,   //OCC surface type
+  OFFSET_SURFACE_TYPE,      //OCC surface type
   UNDEFINED_SURFACE_TYPE,
   
     /* Lump types */
@@ -119,6 +124,14 @@ enum LoopType
   LOOP_TYPE_V_PERIODIC
 };
 
+struct ModelExportOptions
+{
+  //this option only relevant to IGES export
+  unsigned short export_as_solid : 1;
+
+  //Granite, Acis option
+  CubitString logfile_name;
+};
 
 #endif
 

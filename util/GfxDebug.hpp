@@ -25,7 +25,7 @@ class CubitTri;
 class CubitTet;
 class CubitHex;
 class CubitPyramid;
-//class CubitWedge;
+class CubitWedge;
 struct GPoint;
 class CubitFacet;
 class CubitFacetEdge;
@@ -54,6 +54,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
 {
   // the one instance of the Graphics Debug object
   // creating a second instance will delete and replace the first instance.
+protected:
   static GfxDebug* mInstance;
 
   public:
@@ -148,7 +149,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     static void draw_tets(DLIList<CubitTet*>* entities, int color);
     static void draw_hexes(DLIList<CubitHex*>* entities, int color);
     //static void draw_pyramids(DLIList<CubitPyramid*>* entities, int color);
-    //static void draw_wedges(DLIList<CubitWedge*>* entities, int color);
+    static void draw_wedges(DLIList<CubitWedge*>* entities, int color);
 
     static void draw_mesh_entity(MeshEntity* entity, int color);
     static void draw_node(CubitNode* entity, int color);
@@ -158,7 +159,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     static void draw_tet(CubitTet* entity, int color);
     static void draw_hex(CubitHex* entity, int color);
     static void draw_pyramid(CubitPyramid* entity, int color);
-    //static void draw_wedge(CubitWedge* entity, int color);
+    static void draw_wedge(CubitWedge* entity, int color);
     //static void draw_node_array(CubitNode* nodes[], int color, bool ink_edges = true);
 
     static void highlight_node(CubitNode* entity);
@@ -168,7 +169,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     static void highlight_tet(CubitTet* entity);
     static void highlight_hex(CubitHex* entity);
     static void highlight_pyramid(CubitPyramid* entity);
-    //static void highlight_wedge(CubitWedge* entity);
+    static void highlight_wedge(CubitWedge* entity);
     
 
   // Facet Drawing Functions
@@ -212,6 +213,10 @@ class CUBIT_UTIL_EXPORT GfxDebug
     // draw a shell (num points, point list, num faces, face list) of color
     static void draw_shell(int num_pts, const GPoint* points, 
                            int num_faces, const int* face_list, int color);
+    
+    // draw a shell (num points, point list, num faces, face list) with point colors
+    static void draw_shell(int num_pts, const GPoint* points, 
+                           int num_faces, const int* face_list, const int* colors);
 
     // draw a label at position x,y,z of color
     static void draw_label(const char* label, float x, float y, float z, int color);
@@ -281,7 +286,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     virtual void p_draw_tets(DLIList<CubitTet*>*, int) = 0;
     virtual void p_draw_hexes(DLIList<CubitHex*>*, int) = 0;
     //virtual void p_draw_pyramids(DLIList<CubitPyramid*>*, int) = 0;
-    //virtual void p_draw_wedges(DLIList<CubitWedge*>*, int) = 0;
+    virtual void p_draw_wedges(DLIList<CubitWedge*>*, int) = 0;
     virtual void p_draw_mesh_entity(MeshEntity*, int) = 0;
     virtual void p_draw_node(CubitNode*, int) = 0;
     virtual void p_draw_edge(CubitEdge*, int) = 0;
@@ -290,7 +295,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     virtual void p_draw_tet(CubitTet*, int) = 0;
     virtual void p_draw_hex(CubitHex*, int) = 0;
     virtual void p_draw_pyramid(CubitPyramid*, int) = 0;
-    //virtual void p_draw_wedge(CubitWedge*, int) = 0;
+    virtual void p_draw_wedge(CubitWedge*, int) = 0;
     virtual void p_highlight_node(CubitNode* entity) = 0;
     virtual void p_highlight_edge(CubitEdge* entity) = 0;
     virtual void p_highlight_quad(CubitFace* entity) = 0;
@@ -298,7 +303,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     virtual void p_highlight_tet(CubitTet* entity) = 0;
     virtual void p_highlight_hex(CubitHex* entity) = 0;
     virtual void p_highlight_pyramid(CubitPyramid* entity) = 0;
-    //virtual void p_highlight_wedge(CubitWedge* entity) = 0;
+    virtual void p_highlight_wedge(CubitWedge* entity) = 0;
 
     virtual void p_draw_facet(CubitFacet*, int,int) = 0;
     virtual void p_draw_facet_edge(CubitFacetEdge*, int) = 0;
@@ -317,6 +322,7 @@ class CUBIT_UTIL_EXPORT GfxDebug
     virtual void p_draw_tri(const GPoint*, int) = 0;
     virtual void p_draw_vector(const CubitVector&, const CubitVector&, int) = 0;
     virtual void p_draw_shell(int, const GPoint*, int, const int*, int) = 0;
+    virtual void p_draw_shell(int, const GPoint*, int, const int*, const int*) = 0;
     virtual void p_draw_label(const char*, float, float, float, int) = 0;
     virtual void p_draw_label(int, float, float, float, int) = 0;
     virtual void p_zoom(CubitBox &box) = 0;

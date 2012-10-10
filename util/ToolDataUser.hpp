@@ -12,7 +12,7 @@
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
 
-#ifdef NT
+#ifdef WIN32
 class __single_inheritance ToolData;
 #else
 class ToolData;

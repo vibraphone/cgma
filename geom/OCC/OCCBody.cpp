@@ -465,7 +465,6 @@ CubitStatus OCCBody::scale(double scale_factor_x,
   get_TopoDS_Shape(shape);
   gBRepTrsf.Perform(*shape);
 /*
-
   for(int i = 0; i < mySheetSurfaces.size(); i++)
   {
     OCCSurface* surface = mySheetSurfaces.get_and_step();
@@ -608,13 +607,14 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
   CubitBoolean updated = CUBIT_FALSE;	
   if(!old_shape.IsNull() && old_shape.ShapeType() == TopAbs_COMPOUND && 
      !new_shape.IsNull() && new_shape.ShapeType() == TopAbs_COMPOUND &&
-     !old_shape.IsSame(new_shape) )
+     !old_shape.IsSame(new_shape)) 
   {
     //By updating underling solids, shells etc., the old_shape will get changed.
     //trying to make sure the the number of each entity in the old and new 
     //shapes are the same, which means that nothing is delete, that we can 
     //update the map here. Otherwise, when deleting solids, it'll delete the
-    //the old body and create new body. This is Ok for general boolean operation    //except imprint when booleans are called, usually the original body are
+    //the old body and create new body. This is Ok for general boolean operation
+    //except imprint when booleans are called, usually the original body are
     // supposed to be kept. 
     updated = CUBIT_TRUE;
     OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);
@@ -651,13 +651,14 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
       } 
       shape = shapes.First();
     }
+
     else if(op->IsDeleted(solid))
     {
        if (M_new.Extent()== 1 && ii == 1)
          shape = M_new(1);
        else if(M_new.Extent()== 1 && ii > 1)
          shape.Nullify();
-       else if(M_new.Extent() > 1 ) 
+       else if(M_new.Extent() > 1)
        {
          GProp_GProps myProps;
          BRepGProp::VolumeProperties(solid, myProps);

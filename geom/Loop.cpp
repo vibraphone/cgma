@@ -152,7 +152,7 @@ CubitStatus Loop::get_angle_metric(double& angle_metric)
                            cur_refedge->end_vertex()->coordinates()));
     
       // Get the interior points for approximation
-    CubitSense return_sense;
+    CubitSense return_sense = cur_coedge->get_sense();
     interior_points.clean_out();
     cur_refedge->get_interior_extrema(interior_points, return_sense);
       // Now put the points into the polygon.

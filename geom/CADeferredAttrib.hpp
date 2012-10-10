@@ -130,14 +130,6 @@ private:
     //- returns true if the simple attribute is deferred type and matches
     //- uid
 
-#ifdef BOYD14
-  static CubitSimpleAttrib *dcsa_from_csa(CubitSimpleAttrib *csa_ptr,
-                                          const int uid);
-    //- given a csa, make a deferred cubit simple attribute by changing
-    //- the type (inserts type at front of string list) and inserting
-    //- uid
-#endif
-  
   static CubitSimpleAttrib *csa_from_dcsa(CubitSimpleAttrib *csa_ptr,
                                           const int uid = 0);
     //- given a deferred csa, convert it to a normal csa by removing

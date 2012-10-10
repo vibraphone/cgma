@@ -21,7 +21,7 @@ class BodySM;
 class Lump;
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
 
 class HiddenEntitySet : public TBOwner
 {
@@ -35,14 +35,10 @@ class HiddenEntitySet : public TBOwner
     CubitStatus hide( TopologyBridge* bridge );
     CubitStatus restore( TopologyBridge* bridge );
 
-#ifdef BOYD15
-    void hidden_bodies( DLIList<BodySM*>& );
-    void hidden_lumps( DLIList<Lump*>& );
-#endif
     void hidden_surfaces( DLIList<Surface*>& );
     void hidden_coedges(DLIList<CoEdgeSM*>& );
     void hidden_curves( DLIList<Curve*>& );
-    void hidden_points( DLIList<Point*>& );
+    void hidden_points( DLIList<TBPoint*>& );
     
     CubitStatus remove_bridge( TopologyBridge* bridge );
     CubitStatus swap_bridge( TopologyBridge* old_tb,

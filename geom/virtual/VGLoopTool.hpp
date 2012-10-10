@@ -129,11 +129,7 @@ private:
                                        
 };
 
-#ifdef TEMPLATE_DEFS_INCLUDED
-#  define INCLUDED_FROM_VG_LOOP_TOOL_HPP
-#  include "VGLoopTool.cpp"
-#  undef INCLUDED_FROM_VG_LOOP_TOOL_HPP
-#endif
+#include "VGLoopTool.cpp"
 
 #endif
 

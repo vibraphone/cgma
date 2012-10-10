@@ -71,13 +71,6 @@ public:
   CubitVector point_on_plane() const;
     //- Returns a random point on the plane.
   
-#ifdef BOYD15
-  double report_plane_error(DLIList<CubitVector*> &points);
-    //- Reports the average squared distance of the points
-    //- to the plane. Deviation is calculated as  {sum(diff^2)/points.size()}
-    //- of {points}
-#endif
-  
   double distance(const CubitVector &vector) const;
     //- Calculates the distance from {vector} to plane. If the point lies
     //- behind the plane (the opposite direction than the normal points),

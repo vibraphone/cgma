@@ -29,8 +29,7 @@ void PartitionEntity::print_debug_info( const char* prefix,
                                         bool print_subent_set ) const
 {
   if( !prefix ) prefix = "";
-  PRINT_INFO("%sPartitionEntity %p\n", prefix,
-    static_cast<const void*>(this) );
+  PRINT_INFO("%sPartitionEntity %p\n", prefix, this );
   if( print_subent_set )
     sub_entity_set().print_debug_info(prefix);
   else
@@ -44,7 +43,7 @@ void PartitionEntity::print_partitioned_entity( const char* prefix ) const
     prefix, 
     partitioned_entity() ? 
     fix_type_name(typeid(*partitioned_entity()).name()) : "TopologyBridge",
-    static_cast<void*>(partitioned_entity()) );
+    partitioned_entity() );
 }
 
 CubitStatus PartitionEntity::move_to_geometry( CubitVector& )

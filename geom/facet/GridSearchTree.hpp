@@ -5,7 +5,7 @@
 #include "GridSearchTreeNode.hpp"
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 

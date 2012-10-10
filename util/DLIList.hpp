@@ -12,6 +12,10 @@
 #include "CubitMessage.hpp"
 #include <cstring>
 #include <cassert>
+#include <vector>
+#include <stdexcept>
+
+using namespace std;
 
 #define DLI_COUNT_INCREMENT 8
 #define DLI_COUNT_FACTOR 1.5
@@ -50,6 +54,10 @@ public:
   /*! \param from The list to be copied. */
   DLIList(const DLIList<X>& from);
   
+  //! Copy constructor for std::vector
+  /*! \param from The list to be copied. */
+  explicit DLIList(const std::vector<X>& from);
+
   //! Destructor: Free all resources used by this list.
   /*! The list and its storage space are freed.  Note that if this is a list
   of pointers, this destructor will \a NOT delete the objects whose pointers
@@ -110,6 +118,11 @@ public:
   \return A reference to this list.*/
   DLIList<X>& operator=(const DLIList<X>& from);
 
+  //! Create a DLIList from a std::vector.
+  /*! This is the most efficient way to do this. 
+  \return A reference to this list.*/
+  DLIList<X>& operator=(const std::vector<X>& from);
+
   //! Create a copy of the list an iterator was obtained from.
   /*! If \a from_iterator is not associated with a list,
   then this list becomes empty.
@@ -124,6 +137,13 @@ public:
   \return A reference to this list.
   */
   DLIList<X>& operator+=(const DLIList<X>& from);
+
+  //! Append a std::vector to a DLIList.
+  /*!  This is the most efficient way to append two lists together. 
+  \param from The list to be appended to this list.
+  \return A reference to this list.
+  */
+  DLIList<X>& operator+=(const std::vector<X>& from);
 
   //! Subtract one list from another list.
   /*! Any element in \from which is also found in this list
@@ -534,6 +554,11 @@ public:
   */
   CubitBoolean move_between(X val1, X val2);
 
+  //! Return a std::vector with the same contents as this list.
+  /*! This function creates a std::vector from the DLIList and returns it.
+  */
+  std::vector<X> as_vector();
+
 private:
   void lengthen_list(int by_how_much = DLI_COUNT_INCREMENT,
                      double by_what_factor = DLI_COUNT_FACTOR );
@@ -561,7 +586,9 @@ DLIList<X>& DLIList<X>::operator=(const DLIListIterator<X>& from_iter)
 template <class X> inline
 X & DLIList<X>::operator[](int index) const
 {
-    assert( index >= 0 && index < itemCount );
+  if(index < 0 || index >= itemCount)
+    throw std::out_of_range ("Index out of Bounds");
+    //assert( index >= 0 && index < itemCount );
     return listArray[index];
 }
 
@@ -680,8 +707,9 @@ template <class X> inline X DLIList<X>::get() const
 {
   if ( !itemCount )
   {
-    PRINT_WARNING("Attempted get of empty DLIList\n");
-    return (X)0;
+    throw std::out_of_range("Attempted get of empty DLIList\n");
+    /*PRINT_WARNING("Attempted get of empty DLIList\n");
+    return (X)0;*/
   }
   else
   {
@@ -694,8 +722,9 @@ template <class X> inline X DLIList<X>::get_and_step()
 #ifndef GDSJAAR
   if ( !itemCount )
   {
-    PRINT_WARNING("Attempted get_and_step from empty DLIList\n");
-    return (X)0;
+    throw std::out_of_range("Attempted get_and_step from empty DLIList\n");
+    /*PRINT_WARNING("Attempted get_and_step from empty DLIList\n");
+    return (X)0;*/
   }
   else
 #endif
@@ -711,8 +740,9 @@ template <class X> inline X DLIList<X>::get_and_back ()
 {
    if ( !itemCount )
    {
-      PRINT_WARNING("Attempted get_and_back from empty DLIList\n");
-      return (X)0;
+     throw std::out_of_range("Attempted get_and_back from empty DLIList\n");
+      /*PRINT_WARNING("Attempted get_and_back from empty DLIList\n");
+      return (X)0;*/
    }
    X temp = listArray[index--];
    if (index < 0)
@@ -724,8 +754,9 @@ template <class X> inline X DLIList<X>::next() const
 {
   if (!itemCount)
   {
-    PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;
+    throw std::out_of_range("Attempted next of empty DLIList\n");
+    /*PRINT_WARNING("Attempted next of empty DLIList\n");
+    return (X)0;*/
   }
   else if (index == itemCount-1)
     return listArray[0];
@@ -737,8 +768,9 @@ template <class X> inline X DLIList<X>::next(int n) const
 {
   if ( !itemCount )
   {
-    PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;
+    throw std::out_of_range("Attempted next of empty DLIList\n");
+    /*PRINT_WARNING("Attempted next of empty DLIList\n");
+    return (X)0;*/
   }
   else
   {
@@ -789,7 +821,8 @@ template <class X> inline X DLIList<X>::change_to (X new_value)
   X temp = (X)0;
   if ( !itemCount )
   {
-    PRINT_WARNING("DLIList: Attempted update of empty list\n");
+    throw std::out_of_range("DLIList: Attempted update of empty list\n");
+    //PRINT_WARNING("DLIList: Attempted update of empty list\n");
   }
   else
   {
@@ -858,11 +891,8 @@ template <class X> inline CubitBoolean DLIList<X>::append_unique(X new_item)
   }
   return CUBIT_FALSE;
 }
-// Added by CAT for NT port
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "DLIList.cpp"
-#endif
 
+#include "DLIList.cpp"
 
 template <class X> class DLIListIterator
 {

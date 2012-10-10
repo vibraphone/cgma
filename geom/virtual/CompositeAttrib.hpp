@@ -47,10 +47,6 @@ class CompositeAttrib
     
     void append_to_csa( CubitSimpleAttrib* attrib ) const;
     
-#ifdef BOYD15
-    void merge_strings( const CompositeAttrib& dead );
-#endif
-    
     bool equals( CubitSimpleAttrib* attrib ) const;
     
     CubitSimpleAttrib* csa( ) const;

@@ -34,9 +34,6 @@ public:
   
   CompositeCoSurf* first_co_surf( ) const;
   CompositeCoSurf* next_co_surf( CompositeCoSurf* prev ) const; 
-#ifdef BOYD15
-  int num_co_surfs() const;
-#endif
   
   CubitStatus add( CompositeCoSurf* cosurf );
   CubitStatus remove( CompositeCoSurf* cosurf );

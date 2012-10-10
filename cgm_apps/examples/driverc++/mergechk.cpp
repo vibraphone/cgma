@@ -29,7 +29,6 @@
 #include "AcisModifyEngine.hpp"
 #include "AppUtil.hpp"
 #include "RefEntityFactory.hpp"
-#include "CubitCompat.hpp"
 
 // forward declare some functions used and defined later
 CubitStatus read_geometry(int, char **);
@@ -111,7 +110,7 @@ CubitStatus read_geometry(int num_files, char **argv)
   PRINT_SEPARATOR;
 
   for (i = 1; i < num_files; i++) {
-    status = CubitCompat_import_solid_model(argv[i], "ACIS_SAT");
+    status = gti->import_solid_model(argv[i], "ACIS_SAT");
     if (status != CUBIT_SUCCESS) {
       PRINT_ERROR("Problems reading geometry file %s.\n", argv[i]);
     }

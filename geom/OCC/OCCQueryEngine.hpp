@@ -50,6 +50,7 @@ class RefVolume;
 class RefFace;
 class RefEdge;
 class RefVertex;
+class TBPoint;
 class Curve;
 class Surface;
 class Lump;
@@ -61,7 +62,6 @@ class ShellSM;
 class Surface;
 class Curve;
 class CoEdgeSM;
-class Point;
 class TopologyEntity;
 class CubitBox;
 class CubitString;
@@ -163,7 +163,10 @@ public:
 
   virtual CubitStatus get_graphics( Curve* curve_ptr,
                                     GMem* gMem = NULL,
-                                    double tolerance = 0.0 ) const;
+                                    double angle_tolerance=0,
+                                    double distance_tolerance=0,
+                                    double max_edge_length = 0.0 ) const;
+
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
     //I ref_edge_ptr
@@ -181,6 +184,20 @@ public:
     //- CUBIT_SUCCESS is returned.  Otherwise, CUBIT_FAILURE is
     //- returned.
  
+  virtual CubitStatus fire_ray( CubitVector &origin,
+                                CubitVector &direction,
+                                DLIList<TopologyBridge*> &at_entity_list,
+                                DLIList<double> &ray_params,
+                                int max_hits = 0,
+                                double ray_radius = 0.0,
+                                DLIList<TopologyBridge*> *hit_entity_list=0 ) const ;
+    //- Fire a ray at specified entities, returning the parameters (distances)
+    //- along the ray and optionally the entities hit.  Returned lists are
+    //- appended to.  Input entities can be any of bodies, volumes, faces,
+    //- edges or vertices.  Optionally you can specify the maximum number of
+    //- hits to return (default = 0 = unlimited), and the ray radius to use for
+    //- intersecting the entities (default = 0.0 = use modeller default).
+
   virtual CubitStatus get_isoparametric_points(Surface* ,
                                                int&, int&,
                                                GMem*&) const;
@@ -233,16 +250,18 @@ public:
 
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
                                           const char* file_name,
-                                          const char* file_type,
+                                          Model_File_Type  file_type,
                                           const CubitString &cubit_version,
-                                          const char* logfile_name = NULL );
+                                          ModelExportOptions &export_options );
+
 
   // write shapes to buffer as binary format
+/*
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
 					  char*& p_buffer,
 					  int& n_buffer_size,
 					  bool b_export_buffer);
-  
+*/ 
   virtual CubitStatus save_temp_geom_file( DLIList<TopologyBridge*>& ref_entity_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
@@ -251,21 +270,13 @@ public:
 
  virtual CubitStatus import_temp_geom_file(FILE* file_ptr,
                                       const char* file_name,
-                                      const char* file_type,
+                                      Model_File_Type file_type,
                                       DLIList<TopologyBridge*> &bridge_list );
 
  virtual CubitStatus import_solid_model(const char* file_name,
-                                         const char* file_type,
-                                         DLIList<TopologyBridge*>& imported_entities,
-                                         CubitBoolean print_results = CUBIT_TRUE,
-                                         const char* logfile_name = NULL,
-                                         CubitBoolean heal_step = CUBIT_TRUE,
-                                         CubitBoolean import_bodies = CUBIT_TRUE,
-                                         CubitBoolean import_surfaces = CUBIT_TRUE,
-                                         CubitBoolean import_curves = CUBIT_TRUE,
-                                         CubitBoolean import_vertices = CUBIT_TRUE,
-                                         CubitBoolean free_surfaces = CUBIT_TRUE );
-
+                                        Model_File_Type file_type,
+                                        DLIList<TopologyBridge*>& imported_entities,
+                                        ModelImportOptions& options);
   virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
 					 const char* pBuffer,
 					 const int n_buffer_size);
@@ -274,7 +285,7 @@ public:
                                     bool remove_lower_entities=CUBIT_TRUE)const;
   CubitStatus unhook_Surface_from_OCC( Surface* surface) const;
   CubitStatus unhook_Curve_from_OCC( Curve* curve) const;
-  CubitStatus unhook_Point_from_OCC( Point* point) const;
+  CubitStatus unhook_Point_from_OCC( TBPoint* point) const;
   void bound_TopoDS_Shape(const TopoDS_Shape & aShape);
 
 private:
@@ -317,16 +328,7 @@ public:
                           bool remove_lower_entities =CUBIT_TRUE) const;
   virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr)const;
   virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr)const; 
-  virtual CubitStatus delete_solid_model_entities( Point* point_ptr)const;
-
-  //brief Fire a ray at entities, passing back distances of hits and entities hit
-  virtual CubitStatus fire_ray( const CubitVector &origin,
-                        const CubitVector &direction,
-                        DLIList<TopologyBridge*> &at_entity_list,
-                        DLIList<double> &ray_params,
-                        int max_hits = 0,
-                        double ray_radius = 0.0,
-                        DLIList<TopologyBridge*> *hit_entity_list_ptr = 0 )const;
+  virtual CubitStatus delete_solid_model_entities( TBPoint* point_ptr)const;
 
   virtual double get_sme_resabs_tolerance() const; // Gets solid modeler's resolution absolute tolerance
   virtual double set_sme_resabs_tolerance( double new_resabs );
@@ -387,7 +389,7 @@ public:
                                     CubitBoolean build_body = CUBIT_FALSE);
   Curve* populate_topology_bridge(const TopoDS_Edge& aShape,
                                   CubitBoolean stand_along = CUBIT_FALSE );
-  Point* populate_topology_bridge(const TopoDS_Vertex& aShape,
+  TBPoint* populate_topology_bridge(const TopoDS_Vertex& aShape,
                                   CubitBoolean stand_along = CUBIT_FALSE);
 
   OCCShell* populate_topology_bridge(const TopoDS_Shell& aShape,
@@ -413,7 +415,7 @@ private:
 				    CubitBoolean standalone = CUBIT_FALSE);  
 
   CubitStatus write_topology( const char* file_name, 
-                              const char* file_type,
+                              Model_File_Type file_type,
                               DLIList<OCCBody*> &facet_bodies,
                               DLIList<OCCSurface*> &facet_surfaces,
                               DLIList<OCCCurve*> &facet_curves,
@@ -439,8 +441,7 @@ private:
   
   CubitBoolean Read(TopoDS_Shape& Shapes,
                     const Standard_CString File,
-                    TDF_Label label,
-                    bool print_results);
+                    TDF_Label label);
 
   CubitBoolean Read(TopoDS_Shape& Sh,
 		    const char* pBuffer,

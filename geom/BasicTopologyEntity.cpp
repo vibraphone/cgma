@@ -473,6 +473,34 @@ CubitBox BasicTopologyEntity::bounding_box()
    return get_geometry_entity_ptr()->bounding_box() ;
 }
 
+// Function to get the bounding box of all of the entities in the merge.  This
+// loop through all of the bridges in the bridge list of a merged entity
+// and get an aggregate bounding box for all of them.
+CubitBox BasicTopologyEntity::unmerged_bounding_box()
+{
+  if(bridge_manager()->number_of_bridges() == 1)
+  {
+    return get_geometry_entity_ptr()->bounding_box() ;
+  }
+  else
+  {
+    CubitBox aggregate_box;
+    DLIList<TopologyBridge*> bridges;
+    bridge_manager()->get_bridge_list(bridges);
+    GeometryEntity *ge = dynamic_cast<GeometryEntity*>(bridges.get_and_step());
+    if(ge)
+      aggregate_box = ge->bounding_box();
+    int i;
+    for(i=bridges.size(); i>1; i--)
+    {
+      ge = dynamic_cast<GeometryEntity*>(bridges.get_and_step());
+      if(ge)
+        aggregate_box |= ge->bounding_box();
+    }
+    return aggregate_box;
+  }
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Set the GeometryEntity pointer of this BTE
 //

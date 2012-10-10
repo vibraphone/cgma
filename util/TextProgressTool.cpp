@@ -89,3 +89,7 @@ void TextProgressTool::percent( double pcnt )
     nCurrent = ncur;
   }
 }
+
+void TextProgressTool::check_interrupt()
+{
+}

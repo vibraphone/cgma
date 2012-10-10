@@ -1,5 +1,3 @@
-#if !defined(TEMPLATE_DEFS_INCLUDED) || defined(INCLUDED_FROM_VG_ARRAY_HPP)
-
 
 #include <algorithm>
 #include "VGArray.hpp"
@@ -167,5 +165,3 @@ void VGArray<T>::reverse()
   }
 }
 
-    
-#endif

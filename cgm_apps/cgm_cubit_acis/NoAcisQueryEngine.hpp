@@ -100,7 +100,6 @@ public:
 
   CubitStatus import_solid_model(const char*, const char*, DLIList<TopologyBridge*>&, bool, const char*, bool, bool, bool, bool, bool, bool);
   virtual CubitBoolean bodies_overlap(BodySM*, BodySM*) const;
-  virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const;
 };
 
 #endif

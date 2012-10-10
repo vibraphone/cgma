@@ -24,6 +24,9 @@ CubitObserver::~CubitObserver()
 
 CubitStatus CubitObserver::register_observable(CubitObservable *observable)
 {
+  if (observable == NULL)
+    return CUBIT_FAILURE;
+
     //- add this observer to the observable's list, and if successful,
     //- increment the observable count
   CubitStatus success = observable->add_observer(this);
@@ -37,6 +40,9 @@ CubitStatus CubitObserver::register_observable(CubitObservable *observable)
 CubitStatus CubitObserver::unregister_observable(CubitObservable *observable,
                                                  CubitBoolean from_observable)
 {
+  if (observable == NULL)
+    return CUBIT_FAILURE;
+
     //- remove this observer from the observable's list, and if successful,
     //- decrement the observable count
   CubitStatus success = CUBIT_SUCCESS;
@@ -63,9 +69,8 @@ CubitStatus CubitObserver::notify_static_observers(CubitObservable *observable,
 
   if (NULL == staticObservers) return CUBIT_SUCCESS;
 
-  for (int i = staticObservers->size(); i > 0; i--) {
-    if ( staticObservers->get_and_step()->
-         notify_observer(observable, observer_event, from_observable) 
+  for (int i = 0; i<staticObservers->size(); i++) {
+    if ( (*staticObservers)[i]->notify_observer(observable, observer_event, from_observable) 
          == CUBIT_FAILURE )
       success = CUBIT_FAILURE;
   }

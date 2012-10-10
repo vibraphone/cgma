@@ -9,7 +9,7 @@
 #define CUBIT_ATTRIB_HPP
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 

@@ -60,27 +60,6 @@ private:
   DLIList<int> numBdyCurves;
     //- for each partition surface, the number of bounding curves
 
-#ifdef BOYD15
-  void add_pcurve(PartitionCurve *pcurve);
-    //- adds data for this vpoint to this CA
-#endif
-
-#ifdef BOYD15
-  void add_psurface(PartitionSurface *psurface);
-    //- adds data for this vcurve to this CA
-#endif
-
-#ifdef BOYD15
-  RefEdge *find_edge(RefVertex *start_vert, 
-                     RefVertex *end_vert, DLIList<RefEdge*> &new_edges);
-    //- given a start and end vertex and a list of edges, return the edge in the list
-    //- bounded by those two vertices
-#endif
-    
-#ifdef BOYD15
-  BasicTopologyEntity* find_related( DLIList<ToolDataUser*>& list );
-#endif
-
 public:
   CAPartitionVG(RefEntity* );
 

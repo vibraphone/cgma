@@ -164,6 +164,26 @@ public:
   // mark facets and their children
   static void mark_facets( DLIList<FacetEntity *> &facet_list, int mark_value );
   
+  // used with stitch_facets to merge points that are coincident
+  static CubitStatus merge_coincident_vertices( DLIList<DLIList<CubitFacet *> *> &shell_list,
+                                         double tol,
+                                         int &mpmerge,
+                                         int &nemerge,
+                                         DLIList<CubitPoint *> &unmerged_points);  
+
+  static CubitStatus merge_coincident_vertices( DLIList<CubitPoint*> &points );
+  
+  // used with stitch_facets to merge two points together that have already been
+  // determined to be coincident.  Also handles their adjacent edges
+  static CubitStatus merge_points( CubitPoint *pt0, CubitPoint *pt1, int &nemerge, 
+                                    RTree<CubitFacetEdge*> *r_tree=NULL);
+
+  static CubitStatus find_facet(  DLIList<CubitFacet *> temp_split_facets, 
+                                  CubitPoint *pnt0, 
+                                  CubitPoint *pnt1, 
+                                  DLIList<CubitFacet *> &select_facets );
+
+
 private:
 
  // used with split_into_shells to group facets
@@ -180,17 +200,6 @@ private:
                                          int &nemerge,
                                          int &nnomerge);
 
-  // used with stitch_facets to merge two points together that have already been
-  // determined to be coincident.  Also handles their adjacent edges
-  static CubitStatus merge_points( CubitPoint *pt0, CubitPoint *pt1, int &nemerge, 
-                                    RTree<CubitFacetEdge*> *r_tree=NULL);
-
-  // used with stitch_facets to merge points that are coincident
-  static CubitStatus merge_coincident_vertices( DLIList<DLIList<CubitFacet *> *> &shell_list,
-                                         double tol,
-                                         int &mpmerge,
-                                         int &nemerge,
-                                         DLIList<CubitPoint *> &unmerged_points);
 
 };
 

@@ -138,7 +138,7 @@ public:
   virtual int id() = 0; 
   virtual void set_id( int ii ) = 0; 
   int tool_id(){return toolID;} 
-  void set_tool_id(int my_tool_id){toolID = my_tool_id;} 
+  void set_tool_id(int tool_id){toolID = tool_id;} 
        
   virtual CubitFacetEdge *edge( int index ) = 0; 
   virtual void edge( CubitFacetEdge *the_edge, int index ) = 0; 
@@ -262,6 +262,8 @@ public:
  
   CubitBoolean contains(CubitPoint *p1); 
     //- Returns TRUE/FALSE if the point defines this facet. 
+
+  CubitFacetEdge* shared_edge( CubitFacet *cubit_facet );
  
   CubitFacet* shared_facet( CubitPoint *p1, CubitPoint *p2 ); 
     //- Returns the "other" facet attached to this edge. (if  
@@ -271,7 +273,7 @@ public:
     //- Returns all adjacent facets to this edge (not including 
     //- this facet) 
   
-  CubitFacet *adjacent( int &index, int *my_tool_data )  
+  CubitFacet *adjacent( int &index, int *tool_data )  
     //- Returns all adjacent facets to this edge index(not including 
     //- this facet) 
   {
@@ -280,7 +282,7 @@ public:
 		CubitPoint *p1, *p2; 
    
 		get_edge_pts( index, p1, p2 ); 
-		return shared_facet_on_surf( p1, p2, *my_tool_data ); 
+		return shared_facet_on_surf( p1, p2, *tool_data ); 
   } 
 
   CubitPoint* next_node(CubitPoint *current_point)
@@ -328,6 +330,9 @@ public:
   double area(); 
     // return the area of the facet 
 
+  double aspect_ratio();
+
+
   CubitStatus init_patch(  );
     // computes the interior control points for the facet and
     // stores them with the facet.  Assumes edge control points
@@ -335,6 +340,8 @@ public:
 
   void add_edge(CubitFacetEdge *edge);
    //- add an existing edge to a facet
+
+  void unlink_from_children( void );
  
 }; 
  

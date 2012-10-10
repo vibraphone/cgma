@@ -27,9 +27,11 @@
 *******************************************************************************/
 
 #include "CubitFile.hpp"
+#include "CubitDefines.h"
 #include "CubitFileIOWrapper.hpp"
 #include "CubitFileMetaData.hpp"
 #include "CubitFileFEModel.hpp"
+#include "CubitFileSimModel.hpp"
 #include <cstring>
 
 using namespace NCubitFile;
@@ -40,7 +42,7 @@ using namespace NCubitFile;
 
 /* Note: some platforms define both BIG_ENDIAN and LITTLE_ENDIAN
    so don't do if defined(LITTLE_ENDIAN) here.  Compare to BYTE_ORDER instead. */
-#if defined(NT) || defined(__LITTLE_ENDIAN__) || defined(CUBIT_LINUX) || (defined(LITTLE_ENDIAN) && (BYTE_ORDER==LITTLE_ENDIAN)) /* should be little endian platforms */
+#if defined(WIN32) || defined(__LITTLE_ENDIAN__) || defined(CUBIT_LINUX) || (defined(LITTLE_ENDIAN) && (BYTE_ORDER==LITTLE_ENDIAN)) /* should be little endian platforms */
     const UnsignedInt32 CCubitFile::mintNativeEndian = 0;
 #else // big endian platforms
     const UnsignedInt32 CCubitFile::mintNativeEndian = 0xFFFFFFFF;
@@ -61,6 +63,7 @@ CCubitFile::CCubitFile()
     mpMetaData = NULL;
     mstrReadFileName = mstrWriteFileName = mstrBackupFileName = NULL;
     mpReadFEModel = mpWriteFEModel = NULL;
+    mpReadSimModel = mpWriteSimModel = NULL;
 
     mModelBuff.mintNumModels = 0;
     mModelBuff.mpaModelData = NULL;
@@ -78,6 +81,10 @@ CCubitFile::~CCubitFile()
         delete mpReadFEModel;
     if(mpWriteFEModel)
         delete mpWriteFEModel;
+    if(mpReadSimModel)
+        delete mpReadSimModel;
+    if(mpWriteSimModel)
+        delete mpWriteSimModel;
 
     if(mModelBuff.mpaModelData)
         delete [] mModelBuff.mpaModelData;
@@ -1376,6 +1383,285 @@ UnsignedInt32 CCubitFile::EndReadFEModel()
     catch(...)  {  return eUnknownError;  }
 }
 
+UnsignedInt32 CCubitFile::BeginWriteSimModel(HModel xintSimModel,
+                                             UnsignedInt32 xintBCCount,
+                                             UnsignedInt32 xintICCount,
+                                             UnsignedInt32 xintBCSetCount,
+                                             UnsignedInt32 xintMaterialCount,
+                                             UnsignedInt32 xintAmplitudeCount,
+                                             UnsignedInt32 xintConstraintCount)
+{
+    try {
+        if(!mpWriteFile)  throw eFileWriteError;
+        if(mpWriteSimModel)  throw eOrderError;
+
+        // Write the model table first to try to guarentee that it will be
+        // at the beginning of the file.
+        WriteModelTable();
+
+        // Lookup the requested model in the model table and make sure it is
+        // an FEA model.
+        if(!FindModel(xintSimModel, mpaWriteModels, mWriteContents.mintNumModels,
+            mintSimModelIndex))
+            throw eNotFound;
+        if(mpaWriteModels[mintSimModelIndex].mintModelType != eSimModel)
+            throw eNotFound;
+
+        // Create the object that manages FEA model file transactions and have
+        // it begin its model write.
+        mpWriteSimModel = new CSimModel();
+        if(!mpWriteSimModel)
+            throw eMemoryError;
+
+        mpaWriteModels[mintSimModelIndex].mintModelOffset =
+            mpWriteSimModel->InitWrite(mpWriteFile, xintBCCount,
+                                       xintICCount, xintBCSetCount,
+                                       xintMaterialCount, xintAmplitudeCount,
+                                       xintConstraintCount);
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::WriteBCSet(UnsignedInt32 xintIndex,
+                                     UnsignedInt32 xintBCSetID,
+                                     UnsignedInt32 xintBCSetUniqueID,
+                                     UnsignedInt32 xintBCSetAnalysisType,
+                                     UnsignedInt32 xintRestraintTypesCount,
+                                     UnsignedInt32 xintLoadTypesCount,
+                                     UnsignedInt32 xintContactPairTypesCount,
+                                     SBCSetData* xpaBCSetRestraintData,
+                                     SBCSetData* xpaBCSetLoadData,
+                                     SBCSetData* xpaBCSetContactPairData)
+// Try to write the membership of the passed group index to the writable file.
+// RETURNS: 0 on success, other values indicate error code.
+{
+    try {
+        if(!mpWriteSimModel)
+            throw eOrderError;
+
+        mpWriteSimModel->WriteBCSet(xintIndex,xintBCSetID,xintBCSetUniqueID,
+            xintBCSetAnalysisType,xintRestraintTypesCount,xintLoadTypesCount,
+            xintContactPairTypesCount,xpaBCSetRestraintData,
+            xpaBCSetLoadData,xpaBCSetContactPairData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::WriteMaterial(UnsignedInt32 xintIndex,
+                                        UnsignedInt32 xintMaterialID,
+                                        UnsignedInt32 xintMaterialUniqueID,
+                                        UnsignedInt32 xintPropertiesCount,
+                                        SMaterialData* xpaMaterialData
+                                        )
+{
+    try {
+        if(!mpWriteSimModel)
+            throw eOrderError;
+
+        mpWriteSimModel->WriteMaterial(xintIndex,xintMaterialID,xintMaterialUniqueID,
+            xintPropertiesCount,xpaMaterialData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::WriteConstraint(UnsignedInt32 xintIndex,
+                                UnsignedInt32 xintConstraintID,
+                                UnsignedInt32 xintConstraintUniqueID,
+                                UnsignedInt32 xintConstraintType,
+                                UnsignedInt32 xintIndependentTypeCount,
+                                SConstraintData* xpaIndependentData,
+                                UnsignedInt32 xintDependentTypeCount,
+                                SConstraintData* xpaDependentData
+                                )
+{
+    try {
+        if(!mpWriteSimModel)
+            throw eOrderError;
+
+        mpWriteSimModel->WriteConstraint(xintIndex,xintConstraintID,xintConstraintUniqueID,
+            xintConstraintType,xintIndependentTypeCount,xpaIndependentData,
+            xintDependentTypeCount,xpaDependentData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::EndWriteSimModel()
+{
+    try {
+        if(!mpWriteSimModel)
+            throw eOrderError;
+        mpaWriteModels[mintSimModelIndex].mintModelLength =
+            mpWriteSimModel->EndWrite();
+        delete mpWriteSimModel;
+        mpWriteSimModel = NULL;
+
+        UnsignedInt32 lintReadIndex;
+        if(FindModel(mpaWriteModels[mintSimModelIndex].mintModelHandle,
+            mpaReadModels, mReadContents.mintNumModels, lintReadIndex))
+            mpaReadModelStat[lintReadIndex] = eStatWritten;
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::BeginReadSimModel(HModel xintSimModel,
+                                            UnsignedInt32& xintBCCount,
+                                            UnsignedInt32& xintICCount,
+                                            UnsignedInt32& xintBCSetCount,
+                                            UnsignedInt32& xintMaterialCount,
+                                            UnsignedInt32& xintAmplitudeCount,
+                                            UnsignedInt32& xintConstraintCount)
+{
+    try {
+        if(!mpReadFile)  throw eFileReadError;
+        if(mpReadSimModel)  throw eOrderError;
+
+        UnsignedInt32 lintIndex;
+        if(!FindModel(xintSimModel, mpaReadModels, mReadContents.mintNumModels,
+            lintIndex))
+            throw eNotFound;
+        if(mpaReadModels[lintIndex].mintModelType != eSimModel)
+            throw eNotFound;
+
+        mpReadSimModel = new CSimModel();
+        if(!mpReadSimModel)  throw eMemoryError;
+
+        mpReadSimModel->InitRead(mpReadFile, mpaReadModels[lintIndex].mintModelOffset,
+                                 xintBCCount, xintICCount, xintBCSetCount,
+                                 xintMaterialCount, xintAmplitudeCount,
+                                 xintConstraintCount);
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
+
+UnsignedInt32 CCubitFile::ReadBCSet(UnsignedInt32 xintIndex,
+                                    UnsignedInt32& xintBCSetID,
+                                    UnsignedInt32& xintBCSetUniqueID,
+                                    UnsignedInt32& xintBCSetAnalysisType,
+                                    UnsignedInt32& xintRestraintTypesCount,
+                                    UnsignedInt32& xintLoadTypesCount,
+                                    UnsignedInt32& xintContactPairTypesCount,
+                                    SBCSetData*& xpaBCSetRestraintData,
+                                    SBCSetData*& xpaBCSetLoadData,
+                                    SBCSetData*& xpaBCSetContactPairData)
+// Try to read the membership of the passed node set index from the read-only file.
+// Note: The 
+// RETURNS: 0 on success, other values indicate error code.
+{
+    UnsignedInt32 lintErrorCode;
+    try {
+        if(!mpReadSimModel)
+            throw eOrderError;
+
+        mpReadSimModel->ReadBCSet(xintIndex,xintBCSetID,xintBCSetUniqueID,
+            xintBCSetAnalysisType,xintRestraintTypesCount,
+            xintLoadTypesCount,xintContactPairTypesCount,xpaBCSetRestraintData,
+            xpaBCSetLoadData,xpaBCSetContactPairData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode) {
+        lintErrorCode = xeErrorCode;
+    }
+    catch(...) {
+        lintErrorCode = eUnknownError;
+    }
+    xintBCSetID = xintBCSetUniqueID = xintBCSetAnalysisType = 0;
+    xintRestraintTypesCount = xintLoadTypesCount = xintContactPairTypesCount = 0;
+    xpaBCSetRestraintData = NULL;
+    xpaBCSetLoadData = NULL;
+    xpaBCSetContactPairData = NULL;
+    return lintErrorCode;
+}
+
+UnsignedInt32 CCubitFile::ReadMaterial(UnsignedInt32 xintIndex,
+                                       UnsignedInt32& xintMaterialID,
+                                       UnsignedInt32& xintMaterialUniqueID,
+                                       UnsignedInt32& xintPropertiesCount,
+                                       SMaterialData*& xpaMaterialData
+                                       )
+{
+    UnsignedInt32 lintErrorCode;
+    try {
+        if(!mpReadSimModel)
+            throw eOrderError;
+
+        mpReadSimModel->ReadMaterial(xintIndex,xintMaterialID,xintMaterialUniqueID,
+            xintPropertiesCount,xpaMaterialData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode) {
+        lintErrorCode = xeErrorCode;
+    }
+    catch(...) {
+        lintErrorCode = eUnknownError;
+    }
+    xintMaterialID = xintMaterialUniqueID = xintPropertiesCount = 0;
+    xpaMaterialData = NULL;
+    return lintErrorCode;
+}
+
+UnsignedInt32 CCubitFile::ReadConstraint(UnsignedInt32 xintIndex,
+                               UnsignedInt32& xintConstraintID,
+                               UnsignedInt32& xintConstraintUniqueID,
+                               UnsignedInt32& xintConstraintType,
+                               UnsignedInt32& xintIndependentTypeCount,
+                               SConstraintData*& xpaIndependentData,
+                               UnsignedInt32& xintDependentTypeCount,
+                               SConstraintData*& xpaDependentData
+                               )
+{
+    UnsignedInt32 lintErrorCode;
+    try {
+        if(!mpReadSimModel)
+            throw eOrderError;
+
+        mpReadSimModel->ReadConstraint(xintIndex,xintConstraintID,xintConstraintUniqueID,
+            xintConstraintType,xintIndependentTypeCount,xpaIndependentData,
+            xintDependentTypeCount,xpaDependentData);
+
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode) {
+        lintErrorCode = xeErrorCode;
+    }
+    catch(...) {
+        lintErrorCode = eUnknownError;
+    }
+    xintConstraintID = xintConstraintUniqueID = xintConstraintType = 0;
+    xpaIndependentData = xpaDependentData = NULL;
+    return lintErrorCode;
+}
+
+UnsignedInt32 CCubitFile::EndReadSimModel()
+{
+    try {
+        if(!mpReadSimModel)
+            return eOrderError;
+        mpReadSimModel->EndRead();
+        delete mpReadSimModel;
+        mpReadSimModel = NULL;
+        return eSuccess;
+    }
+    catch(EErrorCode xeErrorCode)  {  return xeErrorCode;  }
+    catch(...)  {  return eUnknownError;  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Meta-data accessors
@@ -1415,6 +1701,21 @@ UnsignedInt32 CCubitFile::GetReadMetaData(EMetaDataOwnerType xeType,
             break;
         }
     }
+    else if (mpReadSimModel) {
+        switch (xeType) {
+            case eBCSetMetaData:
+                xpMetaData = &mpReadSimModel->GetBCSetMetaData();
+                break;
+            case eMaterialMetaData:
+                xpMetaData = &mpReadSimModel->GetMaterialMetaData();
+                break;
+            case eConstraintMetaData:
+                xpMetaData = &mpReadSimModel->GetConstraintMetaData();
+                break;
+            default:
+                break;
+        }
+    }
     else
         return eOrderError;
     return xpMetaData ? eSuccess : eNotFound;
@@ -1451,7 +1752,22 @@ UnsignedInt32 CCubitFile::GetWriteMetaData(EMetaDataOwnerType xeType,
             xpMetaData = &mpWriteFEModel->GetSideSetMetaData();
             break;
           default:
-            break;
+              break;
+        }
+    }
+    else if (mpWriteSimModel) {
+        switch (xeType) {
+            case eBCSetMetaData:
+                xpMetaData = &mpWriteSimModel->GetBCSetMetaData();
+                break;
+            case eMaterialMetaData:
+                xpMetaData = &mpWriteSimModel->GetMaterialMetaData();
+                break;
+            case eConstraintMetaData:
+                xpMetaData = &mpWriteSimModel->GetConstraintMetaData();
+                break;
+            default:
+                break;
         }
     }
     else

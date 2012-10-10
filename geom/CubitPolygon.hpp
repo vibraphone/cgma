@@ -32,11 +32,6 @@ public:
   void add_point( Cubit2DPoint &point );
   //- Add a point to the end of the point list.  Point is copied.
 
-#ifdef BOYD14
-  void reset();
-  //- Clean out all of the points
-#endif
-  
   CubitPointContainment pnt_containment( Cubit2DPoint &point,
                                          double tol = 1e-10 );
   //- Determine if the input point is inside, outside or on the boundary
@@ -44,12 +39,6 @@ public:
 
   CubitStatus centroid_area( Cubit2DPoint &centroid, double &area );
   //- Get geometrical centroid and area of polygon
-
-#ifdef BOYD14
-  void list_coords();
-  void list_bbox();
-  //- Debug functions
-#endif
 
 private:
   

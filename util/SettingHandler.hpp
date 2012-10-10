@@ -29,9 +29,6 @@ public:
   void add_setting(const char* name, void (*setFn) (CubitBoolean), CubitBoolean (*getFn)());
   void add_setting(const char* name, void (*setFn) (CubitString), CubitString (*getFn)());
 
-#ifdef BOYD15
-  int num_settings();
-#endif
   void get_settings_list( std::vector< std::pair<CubitString, SettingHolder*> > &list);
 
   void print_settings(); // Output all settings using PRINT_INFO

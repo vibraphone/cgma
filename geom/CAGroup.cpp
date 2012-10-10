@@ -153,7 +153,7 @@ void CAGroup::initialize()
 {
   if(initialize_rand == CUBIT_TRUE)
   {
-#if defined NT || defined _NT || defined CUBIT_LINUX
+#if defined WIN32 || defined CUBIT_LINUX
     srand((unsigned)time(NULL));
 #else
     srand48(time(NULL));
@@ -395,7 +395,7 @@ CubitStatus CAGroup::update()
     ToolData *td_temp = ref_group->get_TD(&TDCAGE::is_cage);
     TDCAGE *td_cagroup = (td_temp ? CAST_TO(td_temp, TDCAGE) : NULL);
     if (td_cagroup == NULL) {
-#if defined NT || defined _NT || defined CUBIT_LINUX
+#if defined WIN32 || defined CUBIT_LINUX
       td_cagroup = new TDCAGE(rand());
 #else
       td_cagroup = new TDCAGE((int)lrand48());
@@ -431,7 +431,7 @@ CubitStatus CAGroup::update()
       td_temp = parent_ref_group->get_TD(&TDCAGE::is_cage);
       TDCAGE *td_parent = (td_temp ? CAST_TO(td_temp, TDCAGE) : NULL);
       if (td_parent == NULL) {
-#if defined NT || defined _NT || defined CUBIT_LINUX
+#if defined WIN32 || defined CUBIT_LINUX
         td_parent = new TDCAGE(rand());
 #else
         td_parent = new TDCAGE((int)lrand48());
@@ -527,7 +527,7 @@ void CAGroup::build_ancestor_list(RefGroup *parent_ref_group)
     td_temp = ancestor->get_TD(&TDCAGE::is_cage);
     TDCAGE *td_cagroup = (td_temp ? CAST_TO(td_temp, TDCAGE) : NULL);
     if (td_cagroup == NULL) {
-#if defined NT || defined _NT || defined CUBIT_LINUX
+#if defined WIN32 || defined CUBIT_LINUX
       td_cagroup = new TDCAGE(rand());
 #else
       td_cagroup = new TDCAGE((int)lrand48());

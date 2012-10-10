@@ -993,8 +993,7 @@ int PST_Point::validate(CubitBoolean print)
   {
     if( print )
     {
-      PRINT_INFO("Bad point->edge link.  Point %p, Edge %p.\n",
-                 static_cast<void*>(this), static_cast<void*>(edge_));
+      PRINT_INFO("Bad point->edge link.  Point %p, Edge %p.\n",this,edge_);
     }
     return 1;
   }
@@ -1009,8 +1008,7 @@ int PST_Edge::validate(CubitBoolean print)
 
   if( !start_ )
   {
-    if( print ) PRINT_ERROR("Edge %p has null start point.\n",
-                            static_cast<void*>(this));
+    if( print ) PRINT_ERROR("Edge %p has null start point.\n",this);
     result++;
   }
   else 
@@ -1025,8 +1023,7 @@ int PST_Edge::validate(CubitBoolean print)
       {
         if( print )
         {
-          PRINT_ERROR("Bad edge list around Point %p.\n",
-                      static_cast<void*>(start_));
+          PRINT_ERROR("Bad edge list around Point %p.\n",start_);
         }
         result++;
         break;
@@ -1038,8 +1035,7 @@ int PST_Edge::validate(CubitBoolean print)
   
   if( !end_ )
   {
-    if( print ) PRINT_ERROR("Edge %p has null end point.\n",
-                            static_cast<void*>(this));
+    if( print ) PRINT_ERROR("Edge %p has null end point.\n",this);
     result++;
   }
   else 
@@ -1054,8 +1050,7 @@ int PST_Edge::validate(CubitBoolean print)
       {
         if( print )
         {
-          PRINT_ERROR("Bad edge list around Point %p.\n",
-                      static_cast<void*>(end_));
+          PRINT_ERROR("Bad edge list around Point %p.\n",end_);
         }
         result++;
         break;
@@ -1068,7 +1063,7 @@ int PST_Edge::validate(CubitBoolean print)
   {
     if( print )
       PRINT_ERROR("Forward CoEdge on Edge %p as Face %p but no next().\n",
-                  static_cast<void*>(this), static_cast<void*>(forward_.face_));
+        this, forward_.face_);
     count++;
   }
   
@@ -1076,7 +1071,7 @@ int PST_Edge::validate(CubitBoolean print)
   {
     if( print )
       PRINT_ERROR("Reverse CoEdge on Edge %p as Face %p but no next().\n",
-                  static_cast<void*>(this), static_cast<void*>(reverse_.face_));
+        this, reverse_.face_);
     count++;
   }
   
@@ -1084,7 +1079,7 @@ int PST_Edge::validate(CubitBoolean print)
   {
     if( print )
       PRINT_ERROR("Forward CoEdge on Edge %p as %p as next CoEdge but no Face.\n",
-                  static_cast<void*>(this), static_cast<void*>(forward_.next_));
+        this, forward_.next_);
     count++;
   }
   
@@ -1092,7 +1087,7 @@ int PST_Edge::validate(CubitBoolean print)
   {
     if( print )
       PRINT_ERROR("Reverse CoEdge on Edge %p as %p as next CoEdge but no Face.\n",
-                  static_cast<void*>(this), static_cast<void*>(reverse_.next_));
+        this, reverse_.next_);
     count++;
   }
     
@@ -1104,8 +1099,7 @@ int PST_CoEdge::validate( CubitBoolean print )
   int result = 0;
   if( ! edge_ )
   {
-    if( print ) PRINT_ERROR("Coedge %p has null edge.\n",
-                            static_cast<void*>(this));
+    if( print ) PRINT_ERROR("Coedge %p has null edge.\n",this);
     result++;
   }
   else 
@@ -1114,7 +1108,7 @@ int PST_CoEdge::validate( CubitBoolean print )
     {
       if( print ) 
         PRINT_ERROR( "Inconsistent coedge->edge link.  CoEdge: %p  Edge: %p\n",
-                     static_cast<void*>(edge_), static_cast<void*>(this) );
+          edge_, this );
       result++;
     }
     result += edge_->validate(print);
@@ -1128,7 +1122,7 @@ int PST_Face::validate( CubitBoolean print )
   
   if( !coedge_ )
   {
-    if(print) PRINT_ERROR("Face %p has null loop.\n", static_cast<void*>(this));
+    if(print) PRINT_ERROR("Face %p has null loop.\n",this);
     return 1;
   }
   
@@ -1138,8 +1132,7 @@ int PST_Face::validate( CubitBoolean print )
   {
     if( count++ > PST_MAX_LIST_LEN )
     {
-      if( print ) PRINT_ERROR("Face %p loop is infinite.\n",
-                              static_cast<void*>(this));
+      if( print ) PRINT_ERROR("Face %p loop is infinite.\n",this);
       result++;
       break;
     }
@@ -1148,8 +1141,7 @@ int PST_Face::validate( CubitBoolean print )
     {
       if( print ) 
         PRINT_ERROR("Loop for face %p contains face %p on edge %p.\n",
-                    static_cast<void*>(this), static_cast<void*>(coe->face()),
-                    static_cast<void*>(coe->edge()) );
+          this, coe->face(), coe->edge() );
       result++;
     }
     
@@ -1160,16 +1152,14 @@ int PST_Face::validate( CubitBoolean print )
     else
     {
       if( print )
-        PRINT_ERROR("Coedge %p in face %p has null edge.\n",
-                    static_cast<void*>(coe), static_cast<void*>(this));
+        PRINT_ERROR("Coedge %p in face %p has null edge.\n",coe,this);
       result++;
     }
     
     if( ! coe->next() )
     {
       if( print ) 
-        PRINT_ERROR("Null coedge after coedge %p in face %p.\n",
-                    static_cast<void*>(coe), static_cast<void*>(this) );
+        PRINT_ERROR("Null coedge after coedge %p in face %p.\n", coe, this );
       result++;
       break;
     }
@@ -1196,7 +1186,7 @@ void PST_Face::print()
 {
   if( ! coedge_ )
   {
-    PRINT_ERROR("Face %p has null coedge.\n", static_cast<void*>(this));
+    PRINT_ERROR("Face %p has null coedge.\n",this);
     return;
   }
   
@@ -1204,16 +1194,12 @@ void PST_Face::print()
              "----------  -----------  -----------  -----------  -----------\n" );
   PST_CoEdge* coe = coedge_;
     PRINT_INFO("%10p %10p  %10p  %10p  %10p\n",
-      static_cast<void*>(this), static_cast<void*>(coe),
-      static_cast<void*>(coe->edge()), static_cast<void*>(coe->start_point()),
-      static_cast<void*>(coe->end_point()) );
+      this, coe, coe->edge(), coe->start_point(), coe->end_point() );
   coe = coe->next();
   while( coe && coe != coedge_ )
   {
     PRINT_INFO("            %10p  %10p  %10p  %10p\n",
-      static_cast<void*>(coe), static_cast<void*>(coe->edge()),
-      static_cast<void*>(coe->start_point()),
-      static_cast<void*>(coe->end_point()) );
+      coe, coe->edge(), coe->start_point(), coe->end_point() );
     coe = coe->next();
   }
 }
@@ -1221,15 +1207,12 @@ void PST_Face::print()
 void PST_Edge::print()
 {
   PRINT_INFO("Edge %p:  Points:  Start: %p  End: %p   Faces:  Forward: %p  Reverse: %p\n",
-             static_cast<void*>(this), static_cast<void*>(start_),
-             static_cast<void*>(end_), static_cast<void*>(forward_.face_),
-             static_cast<void*>(reverse_.face_) );
+    this, start_, end_, forward_.face_, reverse_.face_ );
 }
 
 void PST_Point::print()
 {
-  PRINT_INFO("Point %p : ( %f, %f, %f )", static_cast<void*>(this), x(), y(),
-             z() );
+  PRINT_INFO("Point %p : ( %f, %f, %f )", this , x(), y(), z() );
   
   if( edge_ )
   {
@@ -1240,11 +1223,11 @@ void PST_Point::print()
     {
       if( count )
       {
-        PRINT_INFO("\t%8p", static_cast<void*>(edge));
+        PRINT_INFO("\t%8p",edge);
       }
       else
       {
-        PRINT_INFO("\n\t%8p", static_cast<void*>(edge));
+        PRINT_INFO("\n\t%8p",edge);
       }
       
       count = (count + 1) % 4;

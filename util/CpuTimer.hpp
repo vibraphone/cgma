@@ -3,7 +3,7 @@
 #if !defined(CPU_TIMER)
 #define CPU_TIMER
 #include <sys/types.h>
-#ifndef NT
+#ifndef WIN32
 #include <sys/time.h>
 #else
 #include <time.h>
@@ -28,7 +28,7 @@ private:
 
 
     // Added by Cat for NT port
-  #ifdef NT
+  #ifdef WIN32
   void  nt_times(struct tms *);
   clock_t wallTimeInitial;
   clock_t wallTime;

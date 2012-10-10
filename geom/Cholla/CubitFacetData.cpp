@@ -123,7 +123,8 @@ CubitFacetData::CubitFacetData( CubitPoint *p1, CubitPoint *p2,
   counter_id++;
   entityId = counter_id;
   // update toolID
-  set_tool_id(*tool_data);
+  if(tool_data)
+    set_tool_id(*tool_data);
 
   define_bounding_box();
 } 
@@ -332,6 +333,8 @@ CubitPoint* CubitFacetData::split_edge( CubitPoint* edge1_pt,
       int sense = new_facet->point( (e_index+1)%3 ) == other_edge->point(0) ? 1 : -1;
       new_facet->edge_use( sense, e_index );
     }
+
+    // what about a new edge for each of the adj_facets and its tool data
 
   }
        

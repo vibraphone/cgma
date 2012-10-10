@@ -22,10 +22,19 @@ struct CubitInputFile
   int                      breakPoint;
   
   CubitInputFile(FILE *file, FileType type=FILE_NORMAL, int loop=1);
+  
+  CubitInputFile(
+    FILE *file, 
+    const char *fileName,
+    FileType type=FILE_NORMAL, 
+    int loop=1);
+  
   CubitInputFile(const char *fileName,
                  FileType type=FILE_NORMAL,
                  int loop=1,
                  char *default_path=NULL);
+  
+  
   ~CubitInputFile();
   
 };
@@ -35,6 +44,8 @@ inline CubitInputFile::CubitInputFile(FILE *file,
                                       int loop)
   : breakPoint(0)
 {
+  
+  //  FileType FILE_TEMPORARY should not be passed into this function.
   if (file)
   {
     if (file == stdin)
@@ -52,6 +63,20 @@ inline CubitInputFile::CubitInputFile(FILE *file,
   fileType = type;
   loopCount = --loop;
 }
+
+inline CubitInputFile::CubitInputFile(
+  FILE *file,
+  const char *fileName,
+  CubitInputFile::FileType type,
+  int loop)
+: filename(fileName),
+  filePointer(file),
+  lineNumber(1),
+  fileType(type),
+  loopCount(--loop),
+  breakPoint(0)
+{}
+
 
 inline CubitInputFile::CubitInputFile(const char *fileName,
                                       CubitInputFile::FileType type,

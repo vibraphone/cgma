@@ -17,8 +17,8 @@
 #include "FacetEvalTool.hpp" 
 #include "GfxDebug.hpp"
 #include "IntersectionTool.hpp"
- 
-//static int counter_id = 0; 
+#include "CubitMessage.hpp"
+
  
 //====================================================================== 
 // Function: CubitFacetEdge (PUBLIC) 
@@ -28,7 +28,7 @@
 //====================================================================== 
 CubitFacetEdge::CubitFacetEdge( )  
     : bezierOrder(0), markedFlag(0), isFeature(0), isFlipped(CUBIT_FALSE) 
-{
+{  
 } 
  
  
@@ -40,7 +40,6 @@ CubitFacetEdge::CubitFacetEdge( )
 //====================================================================== 
 CubitFacetEdge::~CubitFacetEdge() 
 { 
- 
 } 
  
 //====================================================================== 
@@ -626,12 +625,11 @@ CubitStatus  CubitFacetEdge::proj_to_line(
   CubitStatus stat = CUBIT_SUCCESS; 
   CubitVector p0 = point(0)->coordinates(); 
   CubitVector p1 = point(1)->coordinates(); 
-  CubitVector edge_vec( p1,p0 ); 
-  CubitVector point_vec( this_point, p0 ); 
-  point_vec.normalize(); 
-  double dist_on_edge = edge_vec % point_vec; 
+  CubitVector edge_vec( p0,p1 ); 
+  CubitVector point_vec( p0, this_point ); 
   edge_vec.normalize(); 
-  proj_point = p0 + edge_vec * dist_on_edge; 
+  double dist_on_edge = edge_vec % point_vec;   
+  proj_point = p0 + (edge_vec * dist_on_edge); 
  
   return stat; 
 } 
@@ -897,6 +895,8 @@ void CubitFacetEdge::debug_draw(int color, int flush, int /*draw_uv*/)
   if ( color == -1 ) 
     color = CUBIT_RED; 
   GfxDebug::draw_facet_edge(this, color);
+  GfxDebug::draw_point( point(0)->coordinates(), color );
+  GfxDebug::draw_point( point(1)->coordinates(), color );
   if ( flush ) 
     GfxDebug::flush(); 
 } 
@@ -1135,6 +1135,138 @@ double CubitFacetEdge::angle_between_facets()
     angle = 2.0 * CUBIT_PI - angle;
   }
   return angle;
+}
+
+// order edges in list beginning at start_point
+// report the endpoint
+// return CUBIT_SUCCESS if all edges are connected and ordered successfully
+// otherwise return CUBIT_FAILURE, in which case no changes are made
+CubitStatus CubitFacetEdge::order_edge_list(DLIList<CubitFacetEdge*> &edge_list,
+                                            CubitPoint *start_point,
+                                            CubitPoint *&end_point)
+{
+  int i;
+  assert(start_point);
+
+  end_point = NULL;
+
+  // invalid input
+  if (0 == edge_list.size())
+    return CUBIT_FAILURE;
+
+  // simple case of a single edge - endpoitn
+  if (1 == edge_list.size())
+  {
+    end_point = edge_list.get()->other_point(start_point);
+    return end_point ? CUBIT_SUCCESS : CUBIT_FAILURE;
+  }
+
+  edge_list.reset();
+
+  // note that a periodic/closed curve will fail
+  // we could handle that case here if needed, but we may need more information
+  // to know where to start and end the curve
+  if (NULL == start_point)
+    return CUBIT_FAILURE;
+
+  // put edges in a set for faster searching
+  std::set<CubitFacetEdge *> edge_set;
+  for (i=0; i<edge_list.size(); i++)
+    edge_set.insert(dynamic_cast<CubitFacetEdge*> (edge_list.step_and_get()));
+
+  // a vector for the ordered list
+  std::vector<CubitFacetEdge*> ordered_edges;
+
+  // find connected edges from the start point
+  CubitPoint *cur_pt = start_point;
+  do
+  {
+    // get edges connected to the current point and find the next edge
+    DLIList<CubitFacetEdge *> pt_edges;
+    cur_pt->edges(pt_edges);
+
+    std::set<CubitFacetEdge *>::iterator iter_found;
+    CubitFacetEdge *cur_edge = NULL;
+    for (i=0; i<pt_edges.size() && !cur_edge; i++)
+    {
+      CubitFacetEdge *tmp_edge = pt_edges.get_and_step();
+      iter_found = edge_set.find(tmp_edge);
+      if ( iter_found != edge_set.end() )
+        cur_edge = tmp_edge;
+    }
+
+    // if we don't find a connection before we empty the set
+    // then not all the edges are connected  -- return failure
+    if (NULL == cur_edge)
+      return CUBIT_FAILURE;
+
+    // add the edge to the ordered list
+    ordered_edges.push_back( cur_edge );
+    edge_set.erase(iter_found);
+
+    cur_pt = cur_edge->other_point(cur_pt);
+  }
+  while ( edge_set.size());
+
+  if (ordered_edges.size() != edge_list.size())
+    return CUBIT_FAILURE;
+
+  // store the edges in the correct order
+  edge_list.clean_out();
+
+  std::vector<CubitFacetEdge*>::iterator iter;
+  for (iter=ordered_edges.begin(); iter!=ordered_edges.end(); iter++)
+    edge_list.append(*iter);
+
+  // get the end point
+  CubitFacetEdge *edge1 = edge_list[edge_list.size() - 1];
+  CubitFacetEdge *edge2 = edge_list[edge_list.size() - 2];
+
+  end_point = edge1->other_point( edge1->shared_point(edge2) );
+
+  return CUBIT_SUCCESS;
+}
+
+CubitPoint *CubitFacetEdge::find_start_point_for_edge_list(DLIList<CubitFacetEdge*> edge_list)
+{
+  // look for an edge with a point only connected to the one edge in the set
+  //
+  // TODO - this algorithm could be made more efficient by only checking one endpoint
+  //        per edge.  The current implementation should match the order points were
+  //        checked in previous functionality.
+  //        If speed becomes an issue it could be reimplemented
+  //
+
+  if (1 == edge_list.size())
+  {
+    return edge_list[0]->point(0);
+  }
+
+  int i;
+  CubitPoint *start_point = NULL;
+  for (i=0; i<edge_list.size() && (start_point == NULL); i++)
+  {
+    CubitFacetEdge *tmp_edge = edge_list.get_and_step();
+    DLIList<CubitFacetEdge*> pt_edges;
+    tmp_edge->point(0)->edges(pt_edges);
+
+    pt_edges.intersect_unordered(edge_list);
+    if (pt_edges.size() == 1)
+    {
+      start_point = tmp_edge->point(0);
+    }
+    else
+    {
+      pt_edges.clean_out();
+      tmp_edge->point(1)->edges(pt_edges);
+      pt_edges.intersect_unordered(edge_list);
+      if (pt_edges.size() == 1)
+      {
+        start_point = tmp_edge->point(1);
+      }
+    }
+  }
+  return start_point;
 }
 
 //EOF

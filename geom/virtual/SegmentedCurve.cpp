@@ -717,7 +717,10 @@ CubitVector SegmentedCurve::position( int index ) const
 }
 
   
-CubitStatus SegmentedCurve::get_graphics( GMem& result )
+CubitStatus SegmentedCurve::get_graphics( GMem& result, 
+                                    double /*angle_tolerance*/,
+                                    double /*distance_tolerance*/,
+                                    double /*max_edge_length*/)
 {
   result.allocate_polylines( point_count()-1 );
   for( int i = 0; i < point_count(); i++ )
@@ -857,7 +860,7 @@ void SegmentedCurve::print_debug_info( const char* prefix, bool pss ) const
 {
   if( prefix == 0 ) prefix = "";
   PartitionCurve::print_debug_info( prefix, pss );
-  PRINT_INFO("%sSegmentedCurve %p\n", prefix, static_cast<const void*>(this) );
+  PRINT_INFO("%sSegmentedCurve %p\n", prefix, this );
   PRINT_INFO("%s%d segment points:\n", prefix, point_list.size());
   int i;
   for( i = 0; i  < point_list.size() - 1; i+= 2 )
@@ -873,3 +876,27 @@ void SegmentedCurve::print_debug_info( const char* prefix, bool pss ) const
   }
 }
 
+CubitStatus SegmentedCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for SegmentedCurves.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus SegmentedCurve::get_ellipse_params
+(
+  CubitVector &center_vec,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine ellipse parameters for SegmentedCurves.\n");
+  return CUBIT_FAILURE;
+}

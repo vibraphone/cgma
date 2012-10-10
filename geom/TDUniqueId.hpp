@@ -68,11 +68,6 @@ public:
   virtual ~TDUniqueId();
     //-constructor and destructor
 
-#ifdef BOYD14
-    //- clear out the uid list
-  static void clear_uniqueid_list();
-#endif
-    
     //- clear copy map
   static void clear_copy_map();
 

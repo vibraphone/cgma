@@ -12,8 +12,9 @@
 
 template <class X> MY_INLINE X DLIList<X>::push(X value)
 {
-   last();
+  //- swapped last and append; current position is set new end
    append(value);
+   last();
    return value;
 }
 
@@ -62,6 +63,26 @@ template <class X> MY_INLINE DLIList<X>::DLIList(const DLIList<X>& from)
          listLength = 0;
       }
    }
+}
+
+//- Copy constructor for std::vector
+template <class X> MY_INLINE DLIList<X>::DLIList(const std::vector<X>& from)
+{
+    // Setup the variables
+    index = 0;
+    itemCount = from.size();
+    if (itemCount)
+    {
+        listArray  = new X [from.size()];
+        listLength = from.size();
+        // Now copy the data
+        memcpy (listArray, &from[0], from.size()*sizeof(X));
+    }
+    else
+    {
+        listArray = NULL;
+        listLength = 0;
+    }
 }
 
 // Destructor
@@ -176,20 +197,20 @@ template <class X> MY_INLINE void DLIList<X>::intersect ( const DLIList<X>& merg
 
   CubitBoolean removed_something = CUBIT_FALSE;
 
-  X new_item = NULL;
+  X new_item = (X)0;
   for ( int i = size(); i--; )
   {
     new_item = get();
     if ( !(merge_list.is_in_list(new_item)) )
     {
-      change_to(NULL);
+      change_to((X)0);
       removed_something = CUBIT_TRUE;
     }
     step();
   }
 
   if ( removed_something )
-     remove_all_with_value(NULL);
+     remove_all_with_value((X)0);
 }
 
 //template <class X> MY_INLINE void DLIList<X>::intersect ( void* merge_list )
@@ -205,8 +226,9 @@ template <class X> MY_INLINE X DLIList<X>::remove ()
 {
    if ( !itemCount )
    {
-      PRINT_WARNING("Attempted link removal from empty DLIList\n");
-      return (X)0;
+     throw std::out_of_range("Attempted link removal from empty DLIList\n");
+      /*PRINT_WARNING("Attempted link removal from empty DLIList\n");
+      return (X)0;*/
    }
 
      // save the current value
@@ -242,8 +264,9 @@ template <class X> MY_INLINE X DLIList<X>::extract ()
 {
    if ( !itemCount )
    {
-      PRINT_WARNING("Attempted link removal from empty DLIList\n");
-      return (X)0;
+     throw std::out_of_range("Attempted link removal from empty DLIList\n");
+      /*PRINT_WARNING("Attempted link removal from empty DLIList\n");
+      return (X)0;*/
    }
 
      // save the current value
@@ -309,8 +332,9 @@ template <class X> MY_INLINE X DLIList<X>::step_and_get ()
 {
    if ( !itemCount )
    {
-      PRINT_WARNING("Attempted step_and_get from empty DLIList\n");
-      return (X)0;
+     throw std::out_of_range("Attempted step_and_get from empty DLIList\n");
+      /*PRINT_WARNING("Attempted step_and_get from empty DLIList\n");
+      return (X)0;*/
    }
 
    if (++index == itemCount)
@@ -346,6 +370,30 @@ template <class X> MY_INLINE DLIList<X>& DLIList<X>::
 }
 
 template <class X> MY_INLINE DLIList<X>& DLIList<X>::
+                       operator=(const std::vector<X>& from)
+{
+    index = 0;
+    itemCount = from.size();
+    if (listArray)
+        delete [] listArray;
+    if (itemCount)
+    {
+        listArray  = new X [from.size()];
+        listLength = from.size();
+        // Now copy the data
+        memcpy (listArray, &from[0], listLength*sizeof(X));
+        // Maybe the last one should be itemCount instead of listLength?
+    }
+    else
+    {
+        listArray = NULL;
+        listLength = 0;
+    }
+
+   return *this;
+}
+
+template <class X> MY_INLINE DLIList<X>& DLIList<X>::
                        operator+=(const DLIList<X>& from)
 {
      // Don't do anything if the list being appended is empty.
@@ -371,6 +419,35 @@ template <class X> MY_INLINE DLIList<X>& DLIList<X>::
 
      // Increase the itemCount
    itemCount += from.itemCount;
+   return *this;
+}
+
+template <class X> MY_INLINE DLIList<X>& DLIList<X>::
+                       operator+=(const std::vector<X>& from)
+{
+     // Don't do anything if the list being appended is empty.
+   if (from.size() == 0)
+      return *this;
+
+     // Make sure the array is big enough
+   int tmp_itemCount = itemCount + from.size();
+   if (tmp_itemCount >= listLength)
+     lengthen_list(tmp_itemCount - listLength, 2.0 ); 
+     // factor of 1.0 can cause huge inefficiencies
+
+     // Now add the 'from' items to the list
+   if (from.size == 1)
+   {
+      listArray[itemCount] = from[0];
+   }
+   else
+   {
+      memcpy (&listArray[itemCount], &from[0],
+              from.size()*sizeof(X));
+   }
+
+     // Increase the itemCount
+   itemCount += from.size();
    return *this;
 }
 
@@ -554,7 +631,9 @@ template <class X> MY_INLINE int DLIList<X>::memory_use(CubitBoolean verbose_boo
 template <class X> MY_INLINE void DLIList<X>::copy_to(X *other_array)
     //- copy this list's listArray into other_array
 {
-  assert(other_array != 0);
+  if(other_array == 0)
+    throw std::invalid_argument("Array is NULL");
+  //assert(other_array != 0);
   if (itemCount)
     memcpy (other_array, listArray, itemCount*sizeof(X));
 }
@@ -562,7 +641,9 @@ template <class X> MY_INLINE void DLIList<X>::copy_to(X *other_array)
 template <class X> MY_INLINE void DLIList<X>::copy_from(X *other_array, const int other_size)
   //- copy other_array into listArray
 {
-  assert(other_array);
+  if(other_array == 0)
+    throw std::invalid_argument("Array is NULL");
+  //assert(other_array);
   if (other_size > listLength) {
     lengthen_list(other_size - listLength, 1.0);
   }
@@ -653,7 +734,9 @@ template <class X> MY_INLINE int DLIList<X>::distance_to_nearby(const X body)
 template <class X> MY_INLINE CubitBoolean DLIList<X>::move_between(X item1, X item2)
 {
   {
-    assert(item1 != NULL && item2 != NULL);
+    //assert(item1 != NULL && item2 != NULL);
+    if(item1 == (X)0 || item2 == (X)0)
+      throw std::invalid_argument ("Both Items must be valid, No NULL items");
     if ( !itemCount )
        return CUBIT_FALSE;
 
@@ -733,5 +816,12 @@ template <class X> MY_INLINE void DLIList<X>::uniquify_ordered()
   index = 0;
 }
 
+template <class X> MY_INLINE std::vector<X> DLIList<X>::as_vector()
+{
+    std::vector<X> temp_vector;
+    for (int i=0; i<itemCount; i++)
+        temp_vector.push_back(listArray[i]);
 
+    return temp_vector;
+}
   

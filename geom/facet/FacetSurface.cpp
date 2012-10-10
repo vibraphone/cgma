@@ -1080,6 +1080,68 @@ void  FacetSurface::reverse_sense()
   myShellSense = CubitUtil::opposite_sense( myShellSense );
   //myShellSense[1] = CubitUtil::opposite_sense( myShellSense[1] );
 }
+
+CubitStatus FacetSurface::get_projected_distance_on_surface( CubitVector *pos1,
+                                                             CubitVector *pos2, 
+                                                             double &distance )
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetSurface::get_sphere_params
+(
+  CubitVector &center,
+  double &radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine sphere parameters for FacetSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetSurface::get_cone_params
+(
+  CubitVector &center,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio,
+  double &sine_angle,
+  double &cos_angle
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine cone parameters for FacetSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+CubitStatus FacetSurface::get_torus_params
+(
+  CubitVector &center,
+  CubitVector &normal,
+  double &major_radius,
+  double &minor_radius
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine torus parameters for FacetSurfaces.\n");
+  return CUBIT_FAILURE;
+}
+
+
+CubitStatus FacetSurface::get_nurb_params
+(
+  bool &rational,
+  int &degree_u,
+  int &degree_v,
+  int &num_cntrl_pts_u,
+  int &num_cntrl_pts_v,
+  DLIList<CubitVector> &cntrl_pts,
+  DLIList<double> &cntrl_pt_weights,
+  DLIList<double> &u_knots,
+  DLIList<double> &v_knots
+) const
+{
+  PRINT_ERROR("Currently, Cubit is unable to determine nurbs parameters for FacetSurface.\n");
+  return CUBIT_FAILURE;
+}
+
 // ********** END PRIVATE FUNCTIONS        **********
 
 // ********** BEGIN HELPER CLASSES         **********

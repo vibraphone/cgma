@@ -66,20 +66,31 @@ RefGroup::~RefGroup ()
    remove_all_ref_entities();
 }
 
-CubitStatus RefGroup::add_ref_entity(RefEntity *ref_entity)
+CubitStatus RefGroup::add_ref_entity(RefEntity *ref_entity, bool emit_event)
 {
+  CubitStatus status = CUBIT_FAILURE;
+  
+  //  Force failure of commands like: group 3 add group 3
+  if ( ( ref_entity->entity_type_info() == entity_type_info() ) &&
+	   ( ref_entity->entity_name() == entity_name() ) )
+	  return CUBIT_FAILURE;
+
   if (!entityList.move_to(ref_entity)) 
   {
     entityList.append(ref_entity);
     register_observable(ref_entity);
-    return CUBIT_SUCCESS;
+    status = CUBIT_SUCCESS;
+    if (emit_event)
+      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
   }
-  return CUBIT_FAILURE;
+  return status;
 }
 
-CubitStatus RefGroup::add_ref_entity(DLIList<RefEntity*>& entity_list)
+CubitStatus RefGroup::add_ref_entity(DLIList<RefEntity*>& entity_list, 
+                                        bool emit_event)
 {
   RefEntity* entity = NULL;
+  CubitStatus status = CUBIT_FAILURE;
   for (int i=entity_list.size(); i > 0; i--) 
   {
     entity = entity_list.get_and_step();
@@ -87,37 +98,50 @@ CubitStatus RefGroup::add_ref_entity(DLIList<RefEntity*>& entity_list)
     {
        entityList.append(entity);
        register_observable(entity);
+       status = CUBIT_SUCCESS;
     }
   }
 
-  return CUBIT_SUCCESS ;
+  if (emit_event && status == CUBIT_SUCCESS)
+      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
+
+  return status;
 }
 
 CubitStatus RefGroup::remove_ref_entity(RefEntity *entity,
-                                        const CubitBoolean from_observable)
+                                        const CubitBoolean from_observable,
+                                        bool emit_event)
 {
-  
+  CubitStatus status = CUBIT_FAILURE;
   if (entityList.remove(entity) != NULL) {
     unregister_observable(entity, from_observable);
-    return CUBIT_SUCCESS;
+    status = CUBIT_SUCCESS;
+    if (emit_event)
+      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
   }
-  else return CUBIT_FAILURE;
+  return status;
 }
 
 CubitStatus RefGroup::remove_ref_entity(DLIList<RefEntity*> &entity_list,
-                                        const CubitBoolean from_observable)
+                                        const CubitBoolean from_observable, 
+                                        bool emit_event)
 {
   
   int i;
   RefEntity *entity;
+  CubitStatus status = CUBIT_FAILURE;
   for (i = entity_list.size(); i > 0; i--) {
     entity = entity_list.get_and_step();
     if (entityList.remove(entity) != NULL) {
       unregister_observable(entity, from_observable);
+      status = CUBIT_SUCCESS;
     }
   }
+
+  if (emit_event && status == CUBIT_SUCCESS)
+      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
     
-  return CUBIT_SUCCESS;
+  return status;
 }
 
 int RefGroup::remove_all_ref_entities()
@@ -423,7 +447,7 @@ void RefGroup::delete_all_groups()
    int num_groups = ref_groups.size();
    for( int i=0; i<num_groups; i++ )
       delete_group( ref_groups.get_and_step() );
-
+   
 }
 
 void RefGroup::get_contained_groups (RefGroup *group_ptr, DLIList<RefGroup*> &contained_groups)

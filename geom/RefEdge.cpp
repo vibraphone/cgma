@@ -870,7 +870,7 @@ CubitBoolean RefEdge::common_vertices( RefEdge *other_edge,
     common_verts.append(this_start);
     result = CUBIT_TRUE;
   }
-  else if ( this_end == other_start || this_end == other_end )
+  if ( this_end == other_start || this_end == other_end )
   {
     common_verts.append(this_end);
     result = CUBIT_TRUE;
@@ -1438,7 +1438,9 @@ CubitVector RefEdge::curve_center()
   return p1;
 }
 
-CubitStatus RefEdge::get_graphics( GMem& polyline, double tolerance )
+CubitStatus RefEdge::get_graphics( GMem& polyline, double angle_tolerance, 
+                                   double distance_tolerance, 
+                                   double max_edge_length )
 {
   Curve* curve_ptr = get_curve_ptr();
   if (!curve_ptr)
@@ -1448,7 +1450,7 @@ CubitStatus RefEdge::get_graphics( GMem& polyline, double tolerance )
   }
   
   return curve_ptr->get_geometry_query_engine()->get_graphics(curve_ptr,
-    &polyline, tolerance);
+    &polyline, angle_tolerance, distance_tolerance, max_edge_length );
 }
 
 //-------------------------------------------------------------------------

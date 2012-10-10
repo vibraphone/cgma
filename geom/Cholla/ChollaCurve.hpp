@@ -39,6 +39,7 @@ private:
   int blockID;
   int id;
   double myLength;
+  ChollaCurve *myMergePartner;
 
   CubitStatus determine_ends();
     //- determine the end nodes for the curve (once the curvEdgeList is full)
@@ -79,6 +80,13 @@ public:
 
   CubitStatus replace_facet( FacetEntity *remove_edge, FacetEntity *replace_edge );
     //- replace a facet_edge from underlying backing
+
+  
+  CubitStatus insert_facet( FacetEntity *old_edge, FacetEntity *new_edge );
+    //- inserts new_edge after old_edge
+    
+  CubitStatus is_contain( FacetEntity *edge );
+  //- check to see if an edge is in the list
 
   DLIList<FacetEntity*> &get_facet_list()
     {return curveEdgeList;}
@@ -170,6 +178,9 @@ public:
                                      CubitFacetEdge *start_edge_ptr,
                                      ChollaCurve *parent_curve);
 
+  CubitStatus order_edges();
+    //- put the current edges in the curve's list in order from start to end
+
   CubitStatus feature_angle( double min_dot );
     //- compute angles at nodes on the curve to see if we need to split
     //- the curve.  Mark the node tooldata hitflag if the node will
@@ -200,7 +211,14 @@ public:
   CubitStatus verify_points();
   
   // clear the edge list
-  void clean_out_edges(){curveEdgeList.clean_out();};
+  void clean_out_edges(){ curveEdgeList.clean_out(); }
+
+  int num_volumes();
+
+  ChollaCurve *merge_parter(){ return myMergePartner; }
+
+  void set_merge_partner( ChollaCurve *merge_partner )
+    { myMergePartner = merge_partner;}  
 
 };
 

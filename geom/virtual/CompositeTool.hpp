@@ -218,18 +218,12 @@ class CompositeTool
     //- edges do not form a single chain.  
     
     
-    CubitStatus restore_merged_point( Point* point, 
+    CubitStatus restore_merged_point( TBPoint* point, 
                                       DLIList<RefFace*>& update,
                                       bool force = false );
     
-    CubitStatus stitch_points( Point* pt1, Point* pt2 );
+    CubitStatus stitch_points( TBPoint* pt1, TBPoint* pt2 );
     CubitStatus stitch_curves( Curve* cv1, Curve* cv2 );
-#ifdef BOYD15
-    CubitStatus stitch_surfaces( Surface* sf1, Surface* sf2 );
-    //- Push merging down to composite layer in preperation
-    //- for removing the merged topology.
-#endif
-    
                           
     static CompositeTool* instance_;
     

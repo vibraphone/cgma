@@ -18,7 +18,6 @@
 #include <cassert>
 #include <cstdlib>
 #include <ctype.h>
-#include <string.h>
 #include "CubitDefines.h"
 
 #include <iostream>
@@ -28,7 +27,7 @@
 
 class CubitStringRep;
 
-const size_t MAX_POS = static_cast<size_t>(-1);    // "SIZE_T_MAX"
+const size_t MAX_POS = (size_t) -1;    // "SIZE_T_MAX"
 
 class CUBIT_UTIL_EXPORT CubitString
 {
@@ -95,17 +94,13 @@ public:
   static void to_upper(char *string);
   //- Subscripting
 
-  void tokenize( char *delimiter, std::vector<CubitString> &strings );
+  void tokenize( const char *delimiter, std::vector<CubitString> &strings );
 
   
   size_t find(const CubitString& s, size_t pos = 0) const;
   size_t find_first_of(const CubitString& s, size_t pos = 0) const;
   size_t find_first(char c, size_t pos = 0) const;
   size_t find_last (char c, size_t pos = MAX_POS) const;
-#ifdef BOYD15
-  size_t find_first_not_of(const CubitString& s, size_t pos = 0) const;
-  //- Searching
-#endif
   CUBIT_UTIL_EXPORT friend std::ostream & operator<<(std::ostream &, const CubitString&);
   CUBIT_UTIL_EXPORT friend std::istream & operator>>(std::istream & is, CubitString&);
   //- I/O

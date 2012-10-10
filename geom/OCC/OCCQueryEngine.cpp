@@ -365,24 +365,34 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
 //================================================================================
 CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
                                           GMem* gMem,
-                                          double tolerance ) const
+                                          double angle_tolerance,
+                                          double distance_tolerance,
+                                          double max_edge_length ) const
 {
   //  get the OCCCurve.
   OCCCurve *occ_curve_ptr = CAST_TO(curve_ptr,OCCCurve);
   assert (gMem);
 
+  if(max_edge_length > get_sme_resabs_tolerance())
+  {
+    PRINT_WARNING("OCC surface's tessilation doesn't consider edge_length.\n");
+    PRINT_WARNING("max_edge_length argument is ignored. \n");
+  }
     
   TopoDS_Edge * Topo_Edge = occ_curve_ptr->get_TopoDS_Edge();
   if (!Topo_Edge)
     return CUBIT_FAILURE;
 
   //do tessellation
-  if (tolerance  == 0.0)
-    tolerance = 0.2;
-  double angle  = 0.2;
+  if(distance_tolerance == 0.0)
+    distance_tolerance = 0.2;
+  if(angle_tolerance == 0.0)
+    angle_tolerance = 5;
+  double angle  = CUBIT_PI * angle_tolerance/180;
   BRepAdaptor_Curve acurve(*Topo_Edge);
   GCPnts_TangentialDeflection *myMesh = 
-        new GCPnts_TangentialDeflection(acurve, angle, tolerance);
+        new GCPnts_TangentialDeflection(acurve, angle, 
+                                        distance_tolerance);
   if (myMesh == NULL) 
   {
     PRINT_ERROR("Can't tessellate for this curve.\n");
@@ -822,8 +832,9 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
   CubitString temp_filename(file_name);
   temp_filename += ".occ";
 
-  if( export_solid_model( ref_entity_list, temp_filename.c_str(), "OCC",
-                          cubit_version ) == CUBIT_FAILURE )
+  ModelExportOptions M_O;
+  if( export_solid_model( ref_entity_list, temp_filename.c_str(), OCC_TYPE,
+                          cubit_version, M_O ) == CUBIT_FAILURE )
     {
       PRINT_ERROR( "Error occured while trying to save temporary OCC_BASED_GEOMETRY file\n");
       return CUBIT_FAILURE;
@@ -849,13 +860,13 @@ CubitStatus OCCQueryEngine::save_temp_geom_file( DLIList<TopologyBridge*>& ref_e
 
 CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
 						const char* file_name,
-						const char* file_type,
+						Model_File_Type file_type,
 						const CubitString &,
-						const char*)
+						ModelExportOptions &)
 {
-  if( strcmp( file_type, "OCC" ) != 0 && 
-      strcmp( file_type, "STEP") != 0 &&
-      strcmp( file_type, "IGES") != 0)
+  if(  file_type != OCC_TYPE  && 
+       file_type != STEP_TYPE &&
+       file_type != IGES_TYPE)
     {
       //PRINT_ERROR("The specified file type, %s, is not supported!\n", filetype );
       return CUBIT_FAILURE;
@@ -986,6 +997,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   return CUBIT_SUCCESS;
 }
 
+/*
 CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
 						char*& p_buffer,
 						int& n_buffer_size,
@@ -1103,6 +1115,7 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
   return CUBIT_SUCCESS;
 }
+*/
 
 void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
                                   BRep_Builder &B,
@@ -1174,7 +1187,7 @@ void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
 
 CubitStatus
 OCCQueryEngine::write_topology( const char* file_name,
-                                const char* file_type,
+                                Model_File_Type file_type,
                                 DLIList<OCCBody*> &OCC_bodies,
                                 DLIList<OCCSurface*> &OCC_surfaces,
                                 DLIList<OCCCurve*> &OCC_curves,
@@ -1220,7 +1233,7 @@ OCCQueryEngine::write_topology( const char* file_name,
       B.Add(Co, *vertex);
     }
  
-  if(strcmp(file_type, "OCC") == 0)
+  if(file_type == OCC_TYPE)
   {
     TDF_Label label;
     if(EXPORT_ATTRIB)
@@ -1245,7 +1258,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   } 
 
 #ifdef HAVE_OCC_STEP
-  else if(strcmp(file_type, "STEP") == 0)
+  else if(file_type == STEP_TYPE)
   {
     STEPControl_Writer writer;
     writer.Model( Standard_True);
@@ -1259,7 +1272,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   }
 #endif
 #ifdef HAVE_OCC_IGES
-  else if (strcmp(file_type, "IGES") == 0) // IGES file
+ else if (file_type == IGES_TYPE) // IGES file
   {
     IGESControl_Writer writer;
     writer.AddShape(Co);
@@ -1273,7 +1286,7 @@ OCCQueryEngine::write_topology( const char* file_name,
   }
 #endif
   else {
-    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    PRINT_ERROR("File formats other than OCC, STEP and IGES are  not supported by OCC.\n");
     return CUBIT_FAILURE;
   }
 
@@ -1414,18 +1427,16 @@ CubitBoolean OCCQueryEngine::Write(const TopoDS_Shape& Sh,
                                    
 CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
                                   const Standard_CString File,
-                                  TDF_Label label,
-                                  CubitBoolean print_results)
+                                  TDF_Label label)
 {
   ifstream in( File );
   if (!in) {
-    if (print_results) 
-      PRINT_INFO("%s: Cannot open file", File );
+    PRINT_INFO("%s: Cannot open file", File );
     return CUBIT_FAILURE;
   }
 
   OCCShapeAttributeSet SS;
-  SS.Read(in, print_results);
+  SS.Read(in, CUBIT_TRUE);
   int nbshapes = SS.NbShapes();
   if(!nbshapes) return CUBIT_FALSE;
   SS.Read(Sh,in,nbshapes, &label);
@@ -1455,10 +1466,11 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
 CubitStatus
 OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
                                       const char* file_name,
-                                      const char* file_type,
+                                      Model_File_Type file_type,
                                       DLIList<TopologyBridge*> &bridge_list )
 {
-  return import_solid_model( file_name, file_type, bridge_list );
+  ModelImportOptions M_O;
+  return import_solid_model( file_name, file_type, bridge_list, M_O );
 }
 
 //===========================================================================
@@ -1471,27 +1483,20 @@ OCCQueryEngine::import_temp_geom_file(FILE* file_ptr,
 
 CubitStatus OCCQueryEngine::import_solid_model(
 					       const char* file_name ,
-					       const char* file_type,
+					       Model_File_Type file_type,
 					       DLIList<TopologyBridge*> &imported_entities,
-					       CubitBoolean print_results,
-					       const char* logfile_name,
-					       CubitBoolean heal_step,
-					       CubitBoolean import_bodies,
-					       CubitBoolean import_surfaces,
-					       CubitBoolean import_curves,
-					       CubitBoolean import_vertices,
-					       CubitBoolean free_surfaces)
+                                               ModelImportOptions &import_options)
 {
   TopoDS_Shape *aShape = new TopoDS_Shape;
   
   //BRep_Builder aBuilder;
-  if(strcmp(file_type ,"OCC") == 0)
+  if(file_type == OCC_TYPE)
   {
-    Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel, print_results);
+    Standard_Boolean result = Read(*aShape, (char*) file_name, mainLabel);
     if (result==0) return CUBIT_FAILURE;
   }
 #ifdef HAVE_OCC_STEP 
-  else if (strcmp(file_type, "STEP") == 0)
+  else if (file_type == STEP_TYPE)
   {
     STEPControl_Reader reader;
 /*
@@ -1516,7 +1521,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
   }
 #endif
 #ifdef HAVE_OCC_IGES
-  else if(strcmp(file_type, "IGES") == 0)
+  else if(file_type == IGES_TYPE)
   {
     IGESControl_Reader reader;
 /*
@@ -1541,7 +1546,7 @@ CubitStatus OCCQueryEngine::import_solid_model(
 #endif
   else 
   {
-    PRINT_ERROR("File format \"%s\" not supported by OCC\n", file_type);
+    PRINT_ERROR("File formats other than OCC, STEP and IGES are not supported by OCC\n");
     return CUBIT_FAILURE;
   }
     
@@ -2581,7 +2586,7 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape,
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
   {
     TopoDS_Shape sh = Ex.Current();
-    Point* point = populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
+    TBPoint* point = populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
     CAST_TO(point, OCCPoint)->add_curve(CAST_TO(curve, OCCCurve));
     TopoDS_Shape parent = aShape;
     int current_id;
@@ -2594,11 +2599,11 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape,
   return curve;
 }
 
-Point* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape,
+TBPoint* OCCQueryEngine::populate_topology_bridge(const TopoDS_Vertex& aShape,
                                                 CubitBoolean stand_along)
 {
   if(aShape.IsNull())
-    return (Point*)NULL;
+    return (TBPoint*)NULL;
   OCCPoint *point;
   if (iTotalTBCreated == 0 || !OCCMap->IsBound(aShape) ||
       OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end()) 
@@ -2736,7 +2741,7 @@ CubitStatus OCCQueryEngine::delete_solid_model_entities(
    }
 
      // Point
-   Point* ref_vertex_ptr = CAST_TO(ref_entity_ptr, Point);
+   TBPoint* ref_vertex_ptr = CAST_TO(ref_entity_ptr, TBPoint);
    if (ref_vertex_ptr != NULL)
    {
       return ( this->delete_solid_model_entities(ref_vertex_ptr) );
@@ -3238,7 +3243,7 @@ OCCQueryEngine::delete_solid_model_entities( Curve* curve)const
   fcurve->get_children_virt(children);
   for(int i = 0; i < children.size(); i++)
   {
-     Point* point = CAST_TO(children.get_and_step(), Point);
+     TBPoint* point = CAST_TO(children.get_and_step(), TBPoint);
      CAST_TO(point, OCCPoint)->remove_curve(fcurve);
      delete_solid_model_entities(point);
   }
@@ -3272,7 +3277,7 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
   fcurve->get_children_virt(children);
   for(int i = 0; i < children.size(); i++)
   {
-     Point* point = CAST_TO(children.get_and_step(), Point);
+     TBPoint* point = CAST_TO(children.get_and_step(), TBPoint);
      CAST_TO(point, OCCPoint)->remove_curve(fcurve);
   }
 
@@ -3312,7 +3317,7 @@ OCCQueryEngine::unhook_Curve_from_OCC( Curve* curve ) const
 // Creation Date : 09/29/03
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::delete_solid_model_entities( Point* point) const
+OCCQueryEngine::delete_solid_model_entities( TBPoint* point) const
 {
   OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
   if (!fpoint)
@@ -3338,7 +3343,7 @@ OCCQueryEngine::delete_solid_model_entities( Point* point) const
 // Creation Date : 12/12/07
 //-------------------------------------------------------------------------
 CubitStatus
-OCCQueryEngine::unhook_Point_from_OCC( Point* point) const 
+OCCQueryEngine::unhook_Point_from_OCC( TBPoint* point) const 
 {
   OCCPoint* fpoint = dynamic_cast<OCCPoint*>(point);
   if (!fpoint)
@@ -3377,8 +3382,8 @@ OCCQueryEngine::unhook_Point_from_OCC( Point* point) const
 //
 // Creation Date : 12/12/07
 //-------------------------------------------------------------------------
-CubitStatus OCCQueryEngine::fire_ray( const CubitVector &origin,
-                        const CubitVector &direction,
+CubitStatus OCCQueryEngine::fire_ray(  CubitVector &origin,
+                        CubitVector &direction,
                         DLIList<TopologyBridge*> &at_entity_list,
                         DLIList<double> &ray_params,
                         int max_hits ,
@@ -3936,7 +3941,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     {
       OCCPoint* test_p = CAST_TO(ge, OCCPoint);
       if(test_p)
-      { 
+      {
         test_p->clear_curves();
         curve_removed = CUBIT_TRUE;
       }
@@ -3988,8 +3993,8 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     return k;
   }
 
-  else if (tb && ((!new_subshape.IsNull() && !old_shape.IsSame(new_subshape)&& 
-        OCCMap->IsBound(new_subshape) &&
+  else if (tb && ((!new_subshape.IsNull() && !old_shape.IsSame(new_subshape)&&
+        OCCMap->IsBound(new_subshape) && 
         OccToCGM->find(OCCMap->Find(new_subshape))!= OccToCGM->end()) || 
         new_subshape.IsNull()))
   //already has a TB built on new_shape
@@ -4157,7 +4162,7 @@ void OCCQueryEngine::set_TopoDS_Shape(TopologyBridge* tb,
   if (curve)
     return CAST_TO(curve, OCCCurve)->set_TopoDS_Edge(TopoDS::Edge(shape));
 
-  Point* point = CAST_TO(tb, Point);
+  TBPoint* point = CAST_TO(tb, TBPoint);
   if(point)
     return CAST_TO(point, OCCPoint)->set_TopoDS_Vertex(TopoDS::Vertex(shape));
   

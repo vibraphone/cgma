@@ -16,7 +16,7 @@
 #include "CubitGeomConfigure.h"
 
 #include <typeinfo>
-#if !defined(NT)
+#if !defined(WIN32)
 using std::type_info;
 #endif
 
@@ -51,7 +51,7 @@ class UnMergeEvent;
 
 class Surface;
 class Curve;
-class Point;
+class TBPoint;
 class LoopSM;
 class CoEdgeSM;
 
@@ -242,14 +242,6 @@ class CUBIT_GEOM_EXPORT MergeTool
   RefEntity* force_merge( RefEntity* ent1, RefEntity* ent2 );
   RefEntity* force_merge( const DLIList<RefEntity*>& list );
   
-  //@{
-  //! Sets/Gets the mergeCalled flag.  This signifies
-  //! that currently a merge operation has been called for 
-  //! the model.
-  static CubitBoolean merge_has_occured();
-  static void set_merge_occurance( CubitBoolean t_or_f );
-  //@}
-
   //! Tells us to group the results or not.
   static void group_results( CubitBoolean t_or_f );
   
@@ -369,6 +361,11 @@ class CUBIT_GEOM_EXPORT MergeTool
   CubitStatus find_only_mergeable_surfaces( DLIList<BodySM*> &body_list, 
                  DLIList< DLIList<Surface*>*> &lists_of_mergeable_surfaces);
 
+  //! Faster comparison that only checks for mergeable surfaces. 
+  CubitStatus find_only_mergeable_surfaces( DLIList<BodySM*> &body_list, 
+                 DLIList< DLIList<Surface*>*> &lists_of_mergeable_surfaces, const double tol );
+
+
   //! Check for mergeability of two surfaces. 
   CubitBoolean about_spatially_equal( Surface *surf_1, Surface *surf_2,
                                       double tolerance_factor );
@@ -386,7 +383,7 @@ class CUBIT_GEOM_EXPORT MergeTool
                                       CubitSense &relative_sense, double tolerance_factor );
 
   //! Check for mergeability of two points. 
-  CubitBoolean about_spatially_equal( Point *point_1, Point *point_2, 
+  CubitBoolean about_spatially_equal( TBPoint *point_1, TBPoint *point_2, 
                                       double tolerance_factor );
   
   protected :
@@ -416,7 +413,7 @@ class CUBIT_GEOM_EXPORT MergeTool
   //! is false, skip attempt to unmerge child entities.
   RefEdge* separate_edge( DLIList<Curve*>& bridges, bool descend );
    
-   RefVertex* separate_vertex( DLIList<Point*>& bridges );
+   RefVertex* separate_vertex( DLIList<TBPoint*>& bridges );
     //- Split a merged entity into two such that the returned, new
     //- entity contains the passed list of bridges. 
     
@@ -442,10 +439,6 @@ class CUBIT_GEOM_EXPORT MergeTool
    static MergeTool* instance_;
      // Static pointer to unique instance of this class
    
-   static CubitBoolean mergeCalled;
-     //- This static flag tells us if a merge operation on the
-     //- current model has been performed.  After a FULL unmerge,
-     //- this should be reset, as well after a "reset" to be FALSE.
 
   RefGroup *lastSurfsMerged;
   RefGroup *lastCurvsMerged;
@@ -604,10 +597,6 @@ class CUBIT_GEOM_EXPORT MergeTool
 };
 inline void MergeTool::group_results(CubitBoolean t_or_f)
 {groupResults = t_or_f;}
-inline CubitBoolean MergeTool::merge_has_occured()
-{ return mergeCalled;}
-inline void MergeTool::set_merge_occurance( CubitBoolean t_or_f )
-{ mergeCalled = t_or_f;}
 
 
 //-------------------------------------------------------------------------

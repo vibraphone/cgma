@@ -28,6 +28,7 @@
 // ********** BEGIN FORWARD DECLARATIONS   **********
 template <class X> class DLIList;
 class FacetEvalTool;
+class TBPoint;
 // ********** END FORWARD DECLARATIONS     **********
 
 // ********** BEGIN ENUM DEFINITIONS       **********
@@ -42,6 +43,8 @@ public :
   
   virtual ~Curve();
     //- The destructor  
+
+  typedef TBPoint ChildType;
 
   virtual const type_info& topology_entity_type_info() const;
 
@@ -109,7 +112,7 @@ public :
   
   virtual CubitStatus mid_point(const CubitVector &point1,
                                 const CubitVector &point2,
-                                CubitVector& my_mid_point );
+                                CubitVector& mid_point );
     //R CubitStatus
     //I CubitVector, CubitVector
     //I- points between which the mid_point is needed
@@ -118,7 +121,7 @@ public :
     //- This function returns the mid point between two points on this
     //-edge, by parameter
   
-  virtual CubitStatus mid_point(CubitVector& my_mid_point);
+  virtual CubitStatus mid_point(CubitVector& mid_point);
     //R CubitStatus
     //O CubitVector
     //O- mid point on this edge
@@ -351,6 +354,29 @@ public :
     //- default implementation provided in Curve is a simple numeric
     //- approximation. 
 
+  //R CubitStatus
+  //O- true or false if spline is rational or not.
+  //O- the degree of this spline
+  //O- the control points
+  //O- If rational, weight for each control point
+  //O- the knots
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots // There should be order+cntrl_pts.size()-2 knots
+                                       ) const = 0;
+
+  //R CubitStatus
+  //O- center - ellipse center point
+  //O- normal - normal of the plane of the ellipse
+  //O- major_axis - major axis of the ellipse
+  //O- radius_ratio - ratio of the length of the major to minor axis.
+  virtual CubitStatus get_ellipse_params( CubitVector &center,
+                                          CubitVector &normal,
+                                          CubitVector &major_axis,
+                                          double &radius_ratio ) const = 0;
+
 protected: 
   
 private:
@@ -397,11 +423,11 @@ CubitVector Curve::center_point()
 }
 
 inline
-CubitStatus Curve::mid_point(CubitVector &my_mid_point)
+CubitStatus Curve::mid_point(CubitVector &mid_point)
 {
   double param1 = 0.5 * (start_param() + end_param());
   
-  return position_from_u(param1, my_mid_point);
+  return position_from_u(param1, mid_point);
 }
 
 inline
@@ -418,12 +444,12 @@ CubitStatus Curve::position_from_fraction( const double fraction_along_curve,
 inline
 CubitStatus Curve::mid_point(const CubitVector &point1,
                              const CubitVector &point2,
-                             CubitVector& my_mid_point )
+                             CubitVector& mid_point )
 {
   double param1 = u_from_position(point1);
   double param2 = u_from_position(point2);
   param1 = 0.5 * (param1 + param2);
-  return position_from_u(param1, my_mid_point);
+  return position_from_u(param1, mid_point);
 }
 
   //R CubitStatus

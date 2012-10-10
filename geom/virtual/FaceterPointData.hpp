@@ -102,9 +102,6 @@ public:
     { point_list.append( this ); }
 
   void compute_avg_normal();
-#ifdef BOYD15
-  CubitStatus merge_points( CubitPoint *other_point );
-#endif
 };
 
 #endif

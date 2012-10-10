@@ -1,8 +1,5 @@
 # The name of the library to build
-noinst_LTLIBRARIES = 
-if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_util.la
-endif
+lib_LTLIBRARIES = libcubit_util.la
 
 # The directory where headers will be installed
 libcubit_util_la_includedir = $(includedir)
@@ -35,16 +32,16 @@ libcubit_util_la_SOURCES = \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
-  CubitUndo.cpp \
   CubitUtil.cpp \
   CubitVector.cpp \
+  CubitFileSimModel.cpp \
+  CubitUndo.cpp \
   DIntArray.cpp \
   DLList.cpp \
   DynamicArray.cpp \
   GMem.cpp \
   GetLongOpt.cpp \
   GfxDebug.cpp \
-  GlobalCommandFeedback.cpp \
   IntersectionTool.cpp \
   MemoryBlock.cpp \
   MemoryManager.cpp \
@@ -70,7 +67,6 @@ libcubit_util_la_include_HEADERS = \
   AppUtil.hpp \
   ArrayBasedContainer.hpp \
   CastTo.hpp \
-  CommandFeedback.hpp \
   CpuTimer.hpp \
   Cubit2DPoint.hpp \
   CubitBox.hpp \
@@ -99,17 +95,15 @@ libcubit_util_la_include_HEADERS = \
   CubitStack.hpp \
   CubitString.hpp \
   CubitTransformMatrix.hpp \
-  CubitUndo.hpp \
   CubitUtil.hpp \
   CubitUtilConfigure.h \
   CubitVector.hpp \
   CubitVectorStruct.h \
+  CubitFileSimModel.hpp \
+  CubitUndo.hpp \
   DIntArray.hpp \
-  DLCubitEdgeList.hpp \
-  DLCubitFaceList.hpp \
   DLIList.hpp \
   DLList.hpp \
-  DLMRefEdgeList.hpp \
   DMRefFaceArray.hpp \
   DRefEdgeArray.hpp \
   DRefFaceArray.hpp \
@@ -120,12 +114,10 @@ libcubit_util_la_include_HEADERS = \
   DynamicDLIIterator.hpp \
   DynamicTreeIterator.hpp \
   ElementType.h \
-  ExternalCoordinateSystem.hpp \
   GMem.hpp \
   GeometryDefines.h \
   GetLongOpt.hpp \
   GfxDebug.hpp \
-  GlobalCommandFeedback.hpp \
   IGUIObservers.hpp \
   IdSetEvent.hpp \
   IndexedDouble.hpp \
@@ -134,14 +126,11 @@ libcubit_util_la_include_HEADERS = \
   KDDTree.hpp \
   KDDTreeNode.hpp \
   LocalStart.h \
-  ManagedPtrVector.hpp \
   MemoryBlock.hpp \
   MemoryManager.hpp \
   MergeEvent.hpp \
   OctTree.hpp \
   OctTreeCell.hpp \
-  OrderedMap.hpp \
-  OrderedSet.hpp \
   ParamCubitPlane.hpp \
   ParamTool.hpp \
   PlanarParamTool.hpp \
@@ -166,7 +155,6 @@ libcubit_util_la_include_HEADERS = \
   SettingHolder.hpp \
   StubProgressTool.hpp \
   TDCellIndex.hpp \
-  TDExport.hpp \
   TDUPtr.hpp \
   TDVector.hpp \
   TextProgressTool.hpp \
@@ -206,4 +194,3 @@ else
 endif
 
 libcubit_util_la_LIBADD = -ldl
-

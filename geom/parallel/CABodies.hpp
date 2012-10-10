@@ -1,6 +1,7 @@
 //- Class:          CABodies
 //- Description:    Cubit attribute for bodies entity is part of.
 //- Author: Hong-Jun Kim
+//- Checked by: Tim Tautges
 //- Version:
 
 #ifndef CA_BODIES_HPP
@@ -17,13 +18,8 @@ class CUBIT_GEOM_EXPORT CABodies: public CubitAttrib
 {
 private:
  
-  int m_interface, m_uniqueID;
-
-  DLIList<int> m_sharedBodies; // shared bodies
-
-  DLIList<int> m_sharedProcs; // shared processors
-
-  DLIList<int> m_ghostProcs; // ghost processors
+  DLIList<int> bodyUniqueId;
+  //- body Unique ids containing attribOwnerEntity
 
 public:
 
@@ -50,6 +46,8 @@ public:
 
   int int_attrib_type() {return CA_BODIES;}
   //- returns the enumerated attribute type
+
+  
 };
 
 CubitAttrib* CABodies_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);

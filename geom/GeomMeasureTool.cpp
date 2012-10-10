@@ -1052,9 +1052,6 @@ void GeomMeasureTool::angles_between_volume_surfaces(RefVolume *curr_volume,
   double smallest = CUBIT_DBL_MAX, largest = 0.0;
   DLIList <RefFace*> face_list_1, face_list_2;
   RefFace *curr_face_1, *curr_face_2;
-#ifdef BOYD17
-  DLIList <RefEdge*> my_ref_edges;
-#endif
   RefEdge *common_edge;
 
   curr_volume->ref_faces(face_list_1);
@@ -1210,7 +1207,7 @@ void GeomMeasureTool::report_intersected_volumes(DLIList <RefVolume*> &ref_vols,
     for( j = (i + 1); j < ref_vols.size(); j++ )
     {
       RefVolume *curr_vol2 = ref_vols.next(j);
-      if ( CubitMessage::instance()->Interrupt() )
+      if ( AppUtil::instance()->interrupt() )
       {
           //interrpt.  We need to exit.
         if ( progress_ptr != NULL )
@@ -1282,7 +1279,7 @@ void GeomMeasureTool::report_intersected_bodies(DLIList <Body*> &ref_bodies,
     for( jj = (ii + 1); jj < ref_bodies.size(); jj++ )
     {
       curr_body_2 = ref_bodies.next(jj);
-      if ( CubitMessage::instance()->Interrupt() )
+      if ( AppUtil::instance()->interrupt() )
       {
           //interrpt.  We need to exit.
         if ( progress_ptr != NULL )
@@ -1594,9 +1591,6 @@ void GeomMeasureTool::find_adjacent_face_ratios(RefVolume *curr_volume, double &
   Shell* curr_shell;
   RefFace *curr_ref_face, *adj_face;
     //AreaHashTuple is defined in the .hpp file.
-#ifdef BOYD17
-  DLIList <AreaHashTuple*> *hash_table, hash_index;
-#endif
   DLIList <AreaHashTuple*> *hash_table;
   max_face_ratio = -CUBIT_DBL_MAX;
   
@@ -1899,6 +1893,7 @@ void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_v
                                           DLIList <RefFace*> &surfs_with_narrow_regions)
 {
   int j;
+  double tol_sq = tol*tol;
 
   int ii, jj;
   DLIList <RefFace*> ref_faces, temp_faces;
@@ -1954,7 +1949,7 @@ void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_v
       progress_ptr->percent(curr_percent);
     }
 
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //interrpt.  We need to exit.
       if ( progress_ptr != NULL )
@@ -1966,6 +1961,96 @@ void GeomMeasureTool::find_surfs_with_narrow_regions(DLIList <RefVolume*> &ref_v
       tol, split_pos1_list, split_pos2_list); 
     if(split_pos1_list.size() > 0)
       surfs_with_narrow_regions.append_unique(cur_face);
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+}
+
+void GeomMeasureTool::get_narrow_regions(DLIList <RefVolume*> &ref_vols,
+                                          double tol,
+                                          DLIList <RefFace*> &surfs_with_narrow_regions)
+{
+  int ii, jj;
+  DLIList <RefFace*> ref_faces, temp_faces;
+  RefVolume *ref_vol;
+  RefFace *curr_face;
+  for ( ii = 0; ii < ref_vols.size(); ii++ )
+  {
+    DLIList<RefFace*> faces;
+    ref_vol = ref_vols.get_and_step();
+    ref_vol->ref_faces(faces);
+    for ( jj = faces.size(); jj > 0; jj-- )
+    {
+      curr_face = faces.get_and_step();
+      curr_face->marked(0);
+      temp_faces.append(curr_face);
+    }
+  }
+
+  //uniquely add the faces.
+  for ( jj = temp_faces.size(); jj > 0; jj-- )
+  {
+    curr_face = temp_faces.get_and_step();
+    if ( curr_face->marked()== 0 )
+    {
+      curr_face->marked(1);
+      ref_faces.append(curr_face);
+    }
+  }
+
+  int num_faces = ref_faces.size();
+
+  ProgressTool *progress_ptr = NULL;
+  if (num_faces > 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Surfaces with Narrow Regions", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_faces = 0;
+  double curr_percent = 0.0;
+
+  for(jj=0; jj<num_faces; jj++)
+  {
+    RefFace *cur_face = ref_faces.get_and_step();
+    total_faces++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_faces))/((double)(num_faces));
+      progress_ptr->percent(curr_percent);
+    }
+
+    if ( AppUtil::instance()->interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+    if(cur_face->num_loops() == 1)
+    {
+      DLIList<CubitVector> split_pos1_list;
+      DLIList<CubitVector> split_pos2_list;
+      find_split_points_for_narrow_regions(cur_face,
+        tol, split_pos1_list, split_pos2_list); 
+      if(split_pos1_list.size() > 0)
+        surfs_with_narrow_regions.append(cur_face);
+    }
+    else if(cur_face->num_loops() > 1)
+    {
+      DLIList <RefEdge*> tmp_close_edges;
+      DLIList <double> tmp_small_lengths;
+      find_close_loops( cur_face, tmp_close_edges,
+                        tmp_small_lengths, tol);
+      if ( tmp_close_edges.size() > 0 )
+      {
+        surfs_with_narrow_regions.append(cur_face);
+      }
+    }
   }
 
   if ( progress_ptr != NULL )
@@ -1990,6 +2075,7 @@ bool GeomMeasureTool::is_surface_narrow(RefFace *face, double small_curve_size)
       int num_incs = (int)(edge_length/small_curve_size) + 1;
       double start, end;
       cur_edge->get_param_range(start, end);
+      double dt = small_curve_size*((end-start)/edge_length);
       double t = start;
       bool one_bad = false;
       for(j=0; j<num_incs && ret == true; j++)
@@ -2156,9 +2242,54 @@ int GeomMeasureTool::is_narrow_region_at_point(RefEdge *e1,
 
   CubitVector tan_1, tan_2;
   e2->closest_point_trimmed(pt_on_e1, closest);
-  double dist = (pt_on_e1-closest).length_squared();
-  if(dist < tol_sq)
+  
+  double dist_sq = CUBIT_DBL_MAX;
+
+  // If the surface is not a plane lets project
+  // the midpoint to the surface and fit a circular
+  // arc through the 3 points and get the arc length
+  // to approximate the acutal distance on the surface
+  // between the 2 original points.
+  if(PLANE_SURFACE_TYPE != face->geometry_type())
   {
+    CubitVector closest_mid;
+    CubitVector vec1 = closest-pt_on_e1;
+    double straight_length_sq = vec1.length_squared();
+    CubitVector mid = pt_on_e1 + 0.5 * vec1;
+    face->get_surface_ptr()->closest_point(mid, &closest_mid);
+    CubitVector mid_vec = mid-closest_mid;
+    double mid_length_sq = mid_vec.length_squared();
+    // If we are dealing with very small distances or
+    // it doesn't look like there is much curvature just use
+    // the straight line distance.
+    if(straight_length_sq < 1e-10 || mid_length_sq < 0.01*straight_length_sq)
+    {
+      dist_sq = straight_length_sq;
+    }
+    else
+    {
+      double mid_length = sqrt(mid_length_sq);
+      double half_length = sqrt(straight_length_sq)/2.0;
+      // theta is the angle between the vector from the orig point to its projection
+      // on the other edge and the vector from the orig point to the projected mid point.
+      double theta = atan(mid_length/half_length); 
+      // beta is the angle between the vector going from the circle center to
+      // the orig point and the vector going from the circle center to the
+      // projected mid point.
+      double beta = 2.0*theta;
+      // Some trig to get the radius of the circle that goes through all 3 points
+      double radius = half_length/sin(beta);
+      dist_sq = 2.0*radius*beta;
+      dist_sq *= dist_sq;
+    }
+  }
+  else
+  {
+    dist_sq = (pt_on_e1-closest).length_squared(); 
+  }
+
+  if(dist_sq < tol_sq)
+  { 
     DLIList<CoEdge*> coes;
     e1->tangent(pt_on_e1, tan_1);
     e2->tangent(closest, tan_2);
@@ -2254,6 +2385,9 @@ int GeomMeasureTool::narrow_region_exists(RefFace *face,
   return ret;
 }
 
+// Finds the start and stop locations between two "close" curves
+// that meet the narrow criteria.  The lists that are returned
+// mark the beginning and ends of the narrow regions.
 int GeomMeasureTool::narrow_region_exists(
                                             RefEdge *e1,
                                             RefEdge *e2,
@@ -2266,6 +2400,8 @@ int GeomMeasureTool::narrow_region_exists(
 {
   int ret = 0;
   double tol_sq = tol*tol;
+  double small_step = 5.0*tol;
+  double small_step_sq = small_step*small_step;
   double max_dist_sq = 0.0;
   RefVertex *e1_start_vert = e1->start_vertex();
   RefVertex *e1_end_vert = e1->end_vertex();
@@ -2304,6 +2440,8 @@ int GeomMeasureTool::narrow_region_exists(
   }
 
   // Project cur endpoints onto other.
+
+  // First check the endpoints of e1 agaisnt e2
   int do_narrow_region_check = 1;
   if(num_shared_verts == 1 && shared_vert == e1_start_vert)
   {
@@ -2347,6 +2485,7 @@ int GeomMeasureTool::narrow_region_exists(
     RefVertex *e2_start_vert = e2->start_vertex();
     RefVertex *e2_end_vert = e2->end_vertex();
     do_narrow_region_check = 1;
+	// Now check the end points of e2 against e1
     if(num_shared_verts == 1 && shared_vert == e2_start_vert)
     {
       // Edges are next to each other.  Check the angle between them
@@ -2395,6 +2534,12 @@ int GeomMeasureTool::narrow_region_exists(
     }
   }
 
+  // At this point we have projected each curves endpoints onto the other curve 
+  // and if the projection was "close" we have recorded these as in the lists 
+  // as close positions.
+
+  // If we have two sets of narrow points check to see if the region
+  // between them is all narrow.
   if(e1_pos_list.size() == 2)
   {
     int w;
@@ -2408,10 +2553,12 @@ int GeomMeasureTool::narrow_region_exists(
     CubitVector *other2 = e2_pos_list.get();
 
     double len1 = e1->get_arc_length(*cur1, *cur2);
-    if(len1 > tol)
+    //We have to check for periodic edges because the narrow points
+    //will be the same when one or both of the edges is periodic.
+    if(len1 > tol || (e1->is_periodic()|| e2->is_periodic()))
     {
       double len2 = e2->get_arc_length(*other1, *other2);
-      if(len2 > tol)
+      if(len2 > tol || (e1->is_periodic()|| e2->is_periodic()))
       {
         double cur_param1 = e1->u_from_position(*cur1);
         double cur_param2 = e1->u_from_position(*cur2);
@@ -2429,8 +2576,15 @@ int GeomMeasureTool::narrow_region_exists(
             CubitVector mid = (cur_pos + closest)/2.0;
             CubitVector tmp_pt;
             face->get_surface_ptr()->closest_point_trimmed(mid, tmp_pt);
+			// If it didn't move we are fine but if it did we need to check
+			// a little more.
             if(!mid.about_equal(tmp_pt))
             {
+			  // It is possible that the midpoint between the two curves does not lie on the
+			  // surface.  This would be the case in a blend surface.  Check to see that
+		      // the projected point is just an offset along the normal of the surface
+			  // rather than a laterl movement because the space between the two 
+			  // curves was actually negative space and not part of the surface.
               CubitVector norm = face->normal_at(tmp_pt);
               CubitVector dir(tmp_pt - mid);
               dir.normalize();
@@ -2461,6 +2615,11 @@ int GeomMeasureTool::narrow_region_exists(
     }
   }
 
+  // If we didn't find a continous region that was narrow we may curves
+  // that start narrow at one or more of the ends and then move away from each other.
+  // We need to find if there is a significant region that is narrow and identify
+  // where the two curves start diverging.  Add additional points to the lists
+  // at the points where things start diverging.
   if(!ret && e1_pos_list.size() > 0)
   {
     int i;
@@ -2470,6 +2629,8 @@ int GeomMeasureTool::narrow_region_exists(
     e2_vert_list.reset();
     for(i=e1_pos_list.size(); i--;)
     {
+      CubitVector *e1_pos = e1_pos_list.get_and_step();
+      CubitVector *e2_pos = e2_pos_list.get_and_step();
       RefVertex *e1_vert = e1_vert_list.get_and_step();
       RefVertex *e2_vert = e2_vert_list.get_and_step();
 
@@ -2552,6 +2713,8 @@ int GeomMeasureTool::narrow_region_exists(
     }
   }
 
+  // Now remove and regions of close curves between which 
+  // there is negative space (not actually part of the surface).
   if(ret)
   {
     int i, j;
@@ -2652,7 +2815,7 @@ void GeomMeasureTool::find_small_curves( DLIList <RefVolume*> &ref_vols,
       curr_percent = ((double)(total_curves))/((double)(num_curves));
       progress_ptr->percent(curr_percent);
     }
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //interrpt.  We need to exit.
       if ( progress_ptr != NULL )
@@ -2754,7 +2917,7 @@ void GeomMeasureTool::find_narrow_faces(DLIList<RefVolume*> &ref_vols,
       progress_ptr->percent(curr_percent);
     }
 
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //interrpt.  We need to exit.
       if ( progress_ptr != NULL )
@@ -2839,7 +3002,7 @@ void GeomMeasureTool::find_small_faces( DLIList <RefVolume*> &ref_vols,
       progress_ptr->percent(curr_percent);
     }
 
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //interrpt.  We need to exit.
       if ( progress_ptr != NULL )
@@ -2852,6 +3015,110 @@ void GeomMeasureTool::find_small_faces( DLIList <RefVolume*> &ref_vols,
     area = measure_area(curr_face);
     if ( area <= tol )
       small_faces.append(curr_face);
+  }
+
+  if ( progress_ptr != NULL )
+    progress_ptr->end();
+
+  return;
+}
+
+void GeomMeasureTool::find_closed_narrow_faces( DLIList <RefVolume*> &ref_vols,
+                                        double tol,
+                                        DLIList <RefFace*> &face_list)
+{
+  int ii, jj;
+  DLIList <RefFace*> ref_faces, temp_faces;
+  RefVolume *ref_vol;
+  RefFace *curr_face;
+  for ( ii = 0; ii < ref_vols.size(); ii++ )
+  {
+    DLIList<RefFace*> faces;
+    ref_vol = ref_vols.get_and_step();
+    ref_vol->ref_faces(faces);
+    for ( jj = faces.size(); jj > 0; jj-- )
+    {
+      curr_face = faces.get_and_step();
+      curr_face->marked(0);
+      temp_faces.append(curr_face);
+    }
+  }
+
+  //uniquely add the faces.
+  for ( jj = temp_faces.size(); jj > 0; jj-- )
+  {
+    curr_face = temp_faces.get_and_step();
+    if ( curr_face->marked()== 0 )
+    {
+      curr_face->marked(1);
+      ref_faces.append(curr_face);
+    }
+  }
+
+  int num_faces = ref_faces.size();
+  ProgressTool *progress_ptr = NULL;
+  if (num_faces > 20)
+  {
+    progress_ptr = AppUtil::instance()->progress_tool();
+    assert(progress_ptr != NULL);
+    progress_ptr->start(0, 100, "Finding Small Surfaces", 
+      NULL, CUBIT_TRUE, CUBIT_TRUE);
+  }
+
+  int total_faces = 0;
+  double curr_percent = 0.0;
+  for ( ii = ref_faces.size(); ii > 0; ii-- )
+  {
+    total_faces++;
+    if ( progress_ptr != NULL )
+    {
+      curr_percent = ((double)(total_faces))/((double)(num_faces));
+      progress_ptr->percent(curr_percent);
+    }
+
+    if ( AppUtil::instance()->interrupt() )
+    {
+        //interrpt.  We need to exit.
+      if ( progress_ptr != NULL )
+        progress_ptr->end();
+        //just leave what has been calculated...
+      return;
+    }
+
+    curr_face = ref_faces.get_and_step();
+    if(curr_face->get_surface_ptr()->is_closed_in_U() || curr_face->get_surface_ptr()->is_closed_in_V())
+    {
+      if(curr_face->num_loops() == 2)
+      {
+        DLIList<RefEdge*> ref_edge_list;
+        curr_face->ref_edges(ref_edge_list);
+        if(ref_edge_list.size() == 2)
+        {
+          int num_pts = 5;
+          double start, end;
+          RefEdge *e1 = ref_edge_list.get_and_step();
+          RefEdge *e2 = ref_edge_list.get();
+          e1->get_param_range(start, end);
+          double dt = (end-start)/(double)(num_pts-1);
+          double t = start;
+          bool one_bad = false;
+          double dist_sq = tol*tol;
+          for(jj=0; jj<num_pts && one_bad == false; jj++)
+          {
+            CubitVector pos1, pos2;
+            e1->position_from_u(t, pos1);
+            e2->closest_point_trimmed(pos1, pos2);
+            if((pos1-pos2).length_squared() > dist_sq)
+              one_bad = true;
+            t += dt;
+          }
+          if(one_bad == false)
+          {
+            face_list.append(curr_face);
+          }
+        }
+      }
+    }
   }
 
   if ( progress_ptr != NULL )
@@ -2918,7 +3185,7 @@ void GeomMeasureTool::find_small_faces_hydraulic_radius( DLIList <RefVolume*> &r
       curr_percent = ((double)(total_faces))/((double)(num_faces));
       progress_ptr->percent(curr_percent);
     }
-    if ( CubitMessage::instance()->Interrupt() )
+    if ( AppUtil::instance()->interrupt() )
     {
         //interrpt.  We need to exit.
       if ( progress_ptr != NULL )
@@ -3200,9 +3467,6 @@ void GeomMeasureTool::find_interior_curve_angles( RefVolume *ref_volume,
                                                   int &total_fuzzy)
 {
   int ii, jj, kk;
-#ifdef BOYD17
-  DLIList <RefFace*> ref_faces, temp_faces;
-#endif
   DLIList <RefFace*> ref_faces;
   RefFace *curr_face;
   total_interior = 0;
@@ -3335,9 +3599,6 @@ void GeomMeasureTool::find_dihedral_angles( DLIList <RefVolume*> &ref_vols,
                                             int &total_not_flat)
 {
   int ii;
-#ifdef BOYD17
-  DLIList <RefFace*> ref_faces, temp_faces;
-#endif
   RefVolume *ref_vol;
   total_interior = 0;
   total_fuzzy = 0;
@@ -3573,15 +3834,19 @@ void GeomMeasureTool::find_close_loops(RefFace *face,
   double closest_dist;
   double min_for_loop_squared;
   atree_list.reset();
+  // This searching was orignally coded to not be an n-squared
+  // search but I changed it to be n-squared because the
+  // way the loops are compared comparing loop 1 against loop 2 may
+  // give a different result than comparing loop 2 against loop 1.
   for ( ii = 0; ii < atree_list.size(); ii++ )
   {
     curr_points = boundary_point_loops.get_and_step();
-    for ( jj = ii+1; jj < atree_list.size(); jj++ )
+    for ( jj = 1; jj < atree_list.size(); jj++ )
     {
       min_for_loop_squared = CUBIT_DBL_MAX;
       closest_edge_1 = NULL;
       closest_edge_2 = NULL;
-      curr_tree = atree_list.next(jj);
+      curr_tree = atree_list.next(ii+jj);
         //now for every point in curr_points, find it's closest_point
         //in the curr_tree.
       for ( kk = 0; kk < curr_points->size(); kk++ )
@@ -3876,7 +4141,7 @@ void GeomMeasureTool::find_blends( RefVolume *ref_volume,
   }
     //Find out how many different groups of surfaces there
     //are that share curves.
-  DLIList <RefFace*> *blend_group = NULL;
+  DLIList <RefFace*> *blend_group;
   DLIList <RefFace*> stack;
   RefFace *start_face = NULL, *other_face;
   
@@ -4603,7 +4868,7 @@ CubitStatus GeomMeasureTool::get_centroid( RefFace *ref_face, CubitVector &centr
 CubitStatus
 GeomMeasureTool::center( DLIList<RefFace*> ref_faces )
 {
-  int ii,id(0);
+  int ii,id;
   double surf_area;
   double tot_area = 0.0;
   CubitVector surf_centroid;
@@ -4833,12 +5098,7 @@ struct vert_curve_dist_sort_ptr
 {
   bool operator()( dist_vert_curve_struct *a, dist_vert_curve_struct *b ) const
   {
-    if( a->dist < b->dist )
-      return true;
-    else if( a->dist > b->dist )
-      return false;
-    else 
-      return true;
+    return a->dist < b->dist;
   }
 };
 
@@ -4846,12 +5106,7 @@ struct vert_vert_dist_sort_ptr
 {
   bool operator()( dist_vert_vert_struct *a, dist_vert_vert_struct *b ) const
   {
-    if( a->dist < b->dist )
-      return true;
-    else if( a->dist > b->dist )
-      return false;
-    else 
-      return true;
+    return a->dist < b->dist;
   }
 };
 
@@ -5037,6 +5292,7 @@ CubitStatus GeomMeasureTool::find_near_coincident_vertex_curve_pairs(
     
   double curr_percent = 0.0;
   int processed_verts = 0;
+  int times = 0;
   std::multimap<double, dist_vert_curve_struct> distance_vertex_curve_map; 
 
   //for each vertex

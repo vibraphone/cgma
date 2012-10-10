@@ -22,6 +22,7 @@ enum CubitAttributeType {
     CA_MESH_CONTAINER,
     CA_BODIES,
     CA_ENTITY_COLOR,
+    CA_ENTITY_TOL,
     CA_VERTEX_FORCE,
     CA_SURFACE_FORCE,
     CA_CURVE_FORCE,
@@ -52,7 +53,8 @@ enum CubitAttributeType {
     CA_ASSEMBLY_DATA,
     CA_SIZING_FUNCTION_SKELETON,
     CA_SOURCE_FEATURE,
-    CA_ITAPS_TAG
+    CA_MESH_OUTPUT_GROUP,
+    CA_ENTITY_SENSE
 #ifdef CAT
 	,CA_PRO_WELD
 #endif

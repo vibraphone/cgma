@@ -6,8 +6,11 @@
 #include "CubitTransformMatrix.hpp"
 #include "DLIList.hpp"
 #include "CubitUtilConfigure.h"
+#include "CubitEntity.hpp"
+#include "CubitObservable.hpp"
 
-class CUBIT_UTIL_EXPORT CubitCoordinateSystem
+class CUBIT_UTIL_EXPORT CubitCoordinateSystem : public CubitEntity,
+                                                public CubitObservable
 {
   public:
     
@@ -22,17 +25,17 @@ class CUBIT_UTIL_EXPORT CubitCoordinateSystem
     ~CubitCoordinateSystem();
 
     //! get the id
-    int id() const { return mId; }
+    //int id() const { return mId; } use CubitEntity's ID
+    virtual CubitBox bounding_box();
     
+    virtual const type_info&  entity_type_info() const;
+    virtual const char* class_name() const;
+    //- return class name string.
+
     //! get and set the type of this coordinate system
     Type get_type() const;
     void set_type(Type);
     
-#ifdef BOYD15
-    //! concatenate given transform to this one
-    void concatenate(CubitCoordinateSystem*);
-#endif
-
     //! return the transform of this coordinate system
     const CubitTransformMatrix& get_transform() const;
 
@@ -46,7 +49,7 @@ class CUBIT_UTIL_EXPORT CubitCoordinateSystem
     
   protected:
     // the id of this system
-    int mId;
+    //int mId; now use CubitEntity's ID
     // the type of this system
     Type mType;
     // the transform that represents this coordinate system's transformation

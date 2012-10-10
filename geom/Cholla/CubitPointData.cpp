@@ -275,6 +275,16 @@ CubitStatus CubitPointData::collapse_edge( CubitPointData *dead_point )
     dead_edge = dynamic_cast<CubitFacetEdgeData*>(dead_facet->edge(this_pt_index));
     keep_edge = dynamic_cast<CubitFacetEdgeData*>(dead_facet->edge(dead_pt_index));
     edge_facets.clean_out();
+
+    //propagate all the tds from dead edge to keep edge
+    DLIList<ToolData*> tds;
+    dead_edge->get_all_TDs(&tds);
+    for (int i=0; i<tds.size(); i++)
+    {
+      ToolData* new_td = tds.get_and_step()->propogate(keep_edge);
+      if (new_td)
+        keep_edge->add_TD(new_td);
+    }
     
       // Get the list of adjacent facets to be updated
     dead_point->shared_facets(other_pt, edge_facets);

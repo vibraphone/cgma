@@ -18,7 +18,7 @@ class TopologyBridge;
 class Surface;
 class LoopSM;
 class Curve;
-class Point;
+class TBPoint;
 
 
 class CUBIT_GEOM_EXPORT OldUnmergeCode
@@ -83,7 +83,7 @@ class CUBIT_GEOM_EXPORT OldUnmergeCode
    
    RefFace*    split_out_Surface( Surface* surface_ptr, CubitBoolean& reversed );
    RefEdge*    split_out_Curves ( DLIList<Curve*>& curve_list, CubitBoolean& reversed );
-   RefVertex*  split_out_Points ( DLIList<Point*>& point_list );
+   RefVertex*  split_out_Points ( DLIList<TBPoint*>& point_list );
     //- Split out merged entities from owning BridgeManager, and
     //- construct new topology, including new child GroupingEntities
     //- and child SenseEntities. 
@@ -101,7 +101,7 @@ class CUBIT_GEOM_EXPORT OldUnmergeCode
   static void remove_CAEntityId_attrib( TopologyBridge* tb_ptr );
     
   
-  static void find_curves( Point* point_ptr, DLIList<Curve*>& result_set );
+  static void find_curves( TBPoint* point_ptr, DLIList<Curve*>& result_set );
   static void find_surfaces( Curve* curve_ptr, DLIList<Surface*>& result_set);
     //- Virtual Geometry will provide all downward topology bridge queries,
     //- but not always the corresponding upwards queries of the topology

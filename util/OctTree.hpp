@@ -121,11 +121,7 @@ class OctTree
                     
 };
 
-#ifdef TEMPLATE_DEFS_INCLUDED
-#  define INCLUDED_FROM_OCT_TREE_HPP
-#  include "OctTree.cpp"
-#  undef INCLUDED_FROM_OCT_TREE_HPP
-#endif
+#include "OctTree.cpp"
 
 #endif
 

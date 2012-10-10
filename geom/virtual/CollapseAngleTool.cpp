@@ -97,9 +97,6 @@ CubitStatus CollapseAngleTool::auto_collapse(double length,
     //finding all angles less than 'angle'
     DLIList<RefEntity*> entity_list;
     DLIList<RefVolume*> volume_list;
-#ifdef BOYD17 
-    DLIList<RefVolume*> final_volume_list;
-#endif
     RefVolume * ref_volume;
     DLIList <RefEdge *> large_edge_angles_list;
     DLIList <RefEdge *> small_edge_angles_list;
@@ -159,9 +156,6 @@ CubitStatus CollapseAngleTool::auto_collapse(double length,
        small_edge_angles_list.reset();
        assert (size%2 == 0);
        double angle1, angle2;
-#ifdef BOYD17 
-       DLIList<RefVertex *> vertex_list;
-#endif
        if (CUBIT_TRUE == preview || CUBIT_TRUE == if_step_over)
        {
           if_step_over = CUBIT_FALSE;

@@ -2,8 +2,8 @@
 #include "CubitCompat.hpp"
 #include "GeometryQueryTool.hpp"
 #include <string.h>
-
-#if CUBIT_12 == 2
+#define CUBIT_12 3
+#if CUBIT_12  >= 2
 
   #define CUBIT_COMPAT_FT_ELIF(TYPE) \
     else if (!strcmp(file_type,#TYPE)) \
@@ -34,11 +34,12 @@
     CUBIT_COMPAT_FT_ELIF(CATPRODUCT);
     CUBIT_COMPAT_FT_ELIF(FACET);
     CUBIT_COMPAT_FT_ELIF(SOLIDWORKS);
+    CUBIT_COMPAT_FT_ELIF(OCC);
     else
       return MFT_NOT_DEFINED;
   }
 
-#else // CUBIT_12 != 2
+#else // cubit < 12.2 
   inline const char*
   CubitCompat_file_type( const char* file_type )
     { return file_type; }
@@ -93,11 +94,20 @@ CubitCompat_export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                 const CubitString &cubit_version,
                                 const char* logfile_name )
 {
+#if CUBIT_12 > 2
+  const bool print_results = false;
+  const bool merge_globally = false;
+  const bool no_assembly_level_features = false;
+  ModelExportOptions CubitCompat_opts = {1, logfile_name ? logfile_name : "" }; 
+#else
+  #define CubitCompat_opts logfile_name
+#endif
+
   return GeometryQueryTool::instance()->export_solid_model(
            ref_entity_list,
            filename,
            CubitCompat_file_type(filetype),
            num_ents_exported,
            cubit_version,
-           logfile_name );
+           CubitCompat_opts );
 }

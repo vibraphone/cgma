@@ -38,10 +38,6 @@ public:
 	void getNumberofBins(int *numBins) const;
 	int *getHashBin(int hashValue, int *binSize);
 	void addtoHashList(int hashValue, int value);
-#ifdef BOYD15
-	bool findValueinHash(int value);
-#endif
-
 private:
 	int numberofBins;
 	int binSizeIncrement;

@@ -122,6 +122,15 @@ OCCCurve::~OCCCurve()
   }
 }
 
+//-------------------------------------------------------------------------
+// Purpose       : Add and update looplist for the curve, if input loop is 
+//                 NULL, just update the looplist.
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 10/04/12
+//-------------------------------------------------------------------------
 void OCCCurve::add_loop(OCCLoop* loop) 
 { 
   //before add the loop into the looplist, check to make sure the 
@@ -753,7 +762,7 @@ CubitStatus OCCCurve::get_center_radius( CubitVector& center,
 double OCCCurve::start_param()
 {
    double start = 0.0, end = 0.0;
-   get_param_range( start, end ); 
+   get_param_range( start, end );
    return start;
 }
 
@@ -813,7 +822,7 @@ void OCCCurve::get_children_virt( DLIList<TopologyBridge*>& children )
        CubitVector v;
        position_from_u(start, v);
        children.reset();
-       if(!v.about_equal(CAST_TO(children.get(), Point)->coordinates())) 
+       if(!v.about_equal(CAST_TO(children.get(), TBPoint)->coordinates())) 
          children.reverse();
 }
  
@@ -857,8 +866,8 @@ void OCCCurve::get_points( DLIList<OCCPoint*>& result_list )
 {
   TopTools_IndexedMapOfShape M;
   TopExp::MapShapes(*myTopoDSEdge, TopAbs_VERTEX, M);
-  int ii ;
-  for ( ii =M.Extent(); ii > 0;  ii--) {
+  int ii;
+  for (ii=M.Extent(); ii>0; ii--) {
 	  TopologyBridge *point = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
           if (point)
 	    result_list.append_unique(dynamic_cast<OCCPoint*>(point));
@@ -944,6 +953,101 @@ void OCCCurve::adjust_periodic_parameter(double& param)
   }
 }
 
+//-------------------------------------------------------------------------
+// Purpose       : Return the spline parameters given a curve that is a spline
+//
+// Special Notes :
+//
+// Creator       : Jane Hu
+//
+// Creation Date : 2/20/2012
+//-------------------------------------------------------------------------
+CubitStatus OCCCurve::get_spline_params
+(
+  bool &rational,    // return true/false
+  int &degree,       // the degree of this spline
+  DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
+  DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
+  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+) const
+{
+  BRepAdaptor_Curve acurve(*myTopoDSEdge);
+  Handle_Geom_BSplineCurve h_S = NULL;
+  if (acurve.GetType() == GeomAbs_BSplineCurve)
+    h_S = acurve.BSpline();
+  else
+    return CUBIT_FAILURE;
+  assert ( h_S != NULL);
+
+  rational = h_S->IsRational();
+  degree =   h_S->Degree();
+  
+  TColStd_Array1OfReal K(1, h_S->NbKnots());
+  h_S->Knots(K);
+  for (int i = K.Lower(); i <= K.Upper(); i++)
+    knots.append(K.Value(i));
+
+  TColgp_Array1OfPnt P(1, h_S->NbPoles());
+  h_S->Poles(P);
+  for (int i = P.Lower(); i <= P.Upper(); i++) 
+  {
+    gp_Pnt point = P.Value(i);
+    CubitVector v = CubitVector(point.X(), point.Y(), point.Z());
+    cntrl_pts.append(v); 
+  }
+
+  if(rational)
+  {
+    TColStd_Array1OfReal W(1, h_S->NbPoles());
+    h_S->Weights(W);
+    for (int i = W.Lower(); i <= W.Upper(); i++)
+      cntrl_pt_weights.append(W.Value(i));
+  }
+  return CUBIT_SUCCESS;
+}
+
+//-------------------------------------------------------------------------
+// Purpose       : Return the ellipse parameters given a curve that is an ellipse
+//
+// Special Notes :
+//
+// Creator       : Jane  Hu
+//
+// Creation Date : 2/21/2012
+//-------------------------------------------------------------------------
+CubitStatus OCCCurve::get_ellipse_params
+(
+  CubitVector &center_pt,
+  CubitVector &normal,
+  CubitVector &major_axis,
+  double &radius_ratio
+) const
+{
+  BRepAdaptor_Curve acurve(*myTopoDSEdge);
+  gp_Elips ellipse;
+  if (acurve.GetType() == GeomAbs_Ellipse)
+    ellipse = acurve.Ellipse();
+  else
+    return CUBIT_FAILURE;
+
+  gp_Pnt center = ellipse.Location();
+  center_pt = CubitVector(center.X(), center.Y(), center.Z());
+  
+  gp_Ax1 normal_Axis = ellipse.Axis();
+  gp_Dir normal_dir = normal_Axis.Direction();
+  normal = CubitVector(normal_dir.X(), normal_dir.Y(), normal_dir.Z());
+
+  gp_Ax1 major_Axis = ellipse.Directrix1();
+  gp_Dir major_dir = major_Axis.Direction();
+  major_axis = CubitVector(major_dir.X(), major_dir.Y(), major_dir.Z());
+
+  double major = ellipse.MajorRadius();
+  double minor = ellipse.MinorRadius();
+  radius_ratio = major/minor;
+
+  return CUBIT_SUCCESS;
+}
+
 CubitPointContainment OCCCurve::point_containment( const CubitVector &point )
 {
    if (is_position_on(point) == CUBIT_TRUE)
@@ -978,8 +1082,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
   
   TopoDS_Shape shape;
   if(aBRepTrsf)
-    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Edge());
-
+    shape = aBRepTrsf->ModifiedShape(*get_TopoDS_Edge()); 
   else
   {
     TopTools_ListOfShape shapes;
@@ -1035,7 +1138,7 @@ void OCCCurve::update_OCC_entity( BRepBuilderAPI_ModifyShape *aBRepTrsf,
 // Date       : 01/08
 //===============================================================================
 Curve* OCCCurve::project_curve(Surface* face_ptr, 
-                               DLIList<Point*>&  normal_proj_points,
+                               DLIList<TBPoint*>&  normal_proj_points,
                                CubitBoolean closed,
                                const CubitVector* third_point)
 {
@@ -1106,7 +1209,7 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
       for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
       {
         new_point = TopoDS::Vertex(Ex.Current());
-        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point, CUBIT_TRUE));
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point,CUBIT_TRUE));
       } 
       return (Curve*) NULL;
    }

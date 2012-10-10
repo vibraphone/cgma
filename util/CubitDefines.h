@@ -16,7 +16,20 @@
 #include <assert.h>
 #include "CubitUtilConfigure.h"
 
-#ifdef NT
+// platform defines we can use in Cubit
+#if defined(WIN32) && !defined(NT)
+# define NT
+#endif
+
+#if defined(__APPLE__) && !defined(MACOSX)
+# define MACOSX
+#endif
+
+#if defined(__linux__) && !defined(CUBIT_LINUX)
+# define CUBIT_LINUX
+#endif
+
+#ifdef WIN32
 #pragma warning ( 4 : 4291 4244 4305 4018 4786)
 #pragma warning(error : 4239)
 #endif
@@ -121,31 +134,6 @@ enum CubitFacetboolOp
    CUBIT_FB_SUBTRACTION
 };
 
-enum Model_File_Type {
-  MFT_NOT_DEFINED = 0,
-  ACIS_TYPE,
-  ACIS_SAT_TYPE,
-  ACIS_SAB_TYPE,
-  ACIS_DEBUG_TYPE,
-  IGES_TYPE,
-  CATIA_TYPE,
-  STEP_TYPE,
-  PROE_TYPE,
-  GRANITE_TYPE,
-  GRANITE_G_TYPE,
-  GRANITE_SAT_TYPE,
-  GRANITE_PROE_PART_TYPE,
-  GRANITE_PROE_ASM_TYPE,
-  GRANITE_NEUTRAL_TYPE,
-  NCGM_TYPE,
-  CATIA_NCGM_TYPE,
-  CATPART_TYPE,
-  CATPRODUCT_TYPE,
-  FACET_TYPE,
-  SOLIDWORKS_TYPE
-};
-
-
 /* #define's for the entire CUBIT system */
 
 #ifdef __cplusplus
@@ -238,25 +226,6 @@ const double CUBIT_DBL_MAX      =              1.0E30;
 
 
   
-/*  Setting this flag (asynchronously) to CUBIT_TRUE 
- *  will cause Cubit/CGM to attempt to abort any current
- *  operations and return.  
- * 
- * NOTE: IT IS THE RESPONSIBILITY OF THE APPLICATION 
- *       USING CGM TO RESET THIS FLAG TO CUBIT_FALSE!!!
- *       For Cubit, this flag is reset in UserInterface.
- *       
- *  CubitApp provides a default signal hander that will
- *  set this flag to CUBIT_TRUE whenever a SIGINT (^C)
- *  is detected.  It is still the responsibility of the
- *  application using CGM to reset the flag to false!
- *  The signal hander provided by CubitApp may be set by 
- *  calling CubitApp::instance()->catch_interrupt(CUBIT_TRUE).
- *
- *  The storage space for this flag is defined in CubitApp.cpp
- *  and initialized in CubitApp::initialize().
- */    
-CUBIT_UTIL_EXPORT extern volatile CubitBoolean cubit_intr;
 
 /* Operators on enum types */
 #if 0 /* Does not work on broken Microsoft compiler */

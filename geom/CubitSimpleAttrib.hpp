@@ -158,11 +158,6 @@ public:
   void print();
     //- print the contents of this simpleattrib
 
-#ifdef BOYD14
-  CubitStatus save(FILE *save_file);
-  CubitStatus restore(FILE *restore_file);
-#endif
-
   static CubitBoolean get_push_attribs() {return pushAttribs;};
   static void set_push_attribs(CubitBoolean flag) {pushAttribs = flag;};
     //- get/set pushAttribs

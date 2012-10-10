@@ -50,6 +50,48 @@ void ChollaPoint::get_surfaces(DLIList<ChollaSurface *> &surf_list)
 }
 
 //===============================================================================
+//Function:  is_in_surface (PUBLIC) 
+//===============================================================================
+CubitBoolean ChollaPoint::is_in_surface( ChollaSurface *cholla_surf )
+{
+  int ii;
+  ChollaCurve *curv_ptr;
+  DLIList<ChollaSurface*> *surf_list_ptr;
+
+  curveList.reset();
+  for(ii=0; ii<curveList.size(); ii++) 
+  {
+    curv_ptr = curveList.get_and_step();
+    surf_list_ptr = curv_ptr->get_surface_list_ptr(); 
+
+    if( surf_list_ptr->is_in_list( cholla_surf ) )
+      return CUBIT_TRUE;
+  }
+
+  return CUBIT_FALSE;
+}
+
+//===============================================================================
+//Function:  is_in_volume (PUBLIC) 
+//===============================================================================
+CubitBoolean ChollaPoint::is_in_volume( ChollaVolume *cholla_vol )
+{
+  int ii;
+  ChollaCurve *curv_ptr;  
+
+  curveList.reset();
+  for(ii=0; ii<curveList.size(); ii++) 
+  {
+    curv_ptr = curveList.get_and_step();
+
+    if( curv_ptr->is_in_volume( cholla_vol ) )
+      return CUBIT_TRUE;
+  }
+
+  return CUBIT_FALSE;
+}
+
+//===============================================================================
 //Function:  is_in_curve (PUBLIC) 
 //===============================================================================
 CubitBoolean ChollaPoint::is_in_curve( ChollaCurve *chcurve )

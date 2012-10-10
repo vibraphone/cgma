@@ -1217,7 +1217,7 @@ extern "C" {
      * \param sense_out Sense of edge with respect to face
      * \param *err Pointer to error type returned from function
      */
-  void iGeom_getEgFcSense( iGeom_Instance instance,
+  void iGeom_getEgFcSense( iGeom_Instance,
                            iBase_EntityHandle edge,
                            iBase_EntityHandle face,
                            int* sense_out,
@@ -2678,6 +2678,9 @@ extern "C" {
      */
   void iGeom_reflectEnt( iGeom_Instance instance,
                          iBase_EntityHandle geom_entity,
+                         double point_x,
+                         double point_y,
+                         double point_z,
                          double plane_normal_x,
                          double plane_normal_y,
                          double plane_normal_z,
@@ -2695,6 +2698,9 @@ extern "C" {
      */
   void iGeom_scaleEnt( iGeom_Instance instance,
                        iBase_EntityHandle geom_entity,
+                       double point_x,
+                       double point_y,
+                       double point_z,
                        double scale_x,
                        double scale_y,
                        double scale_z,
@@ -2709,7 +2715,7 @@ extern "C" {
      * \param geom_entity Pointer to new entity handle returned from function
      * \param *err Pointer to error type returned from function
      */
-  void iGeom_uniteEnts( iGeom_Instance instance,
+  void iGeom_uniteEnts( iGeom_Instance instace,
                         iBase_EntityHandle const* geom_entities,
                         int geom_entities_size,
                         iBase_EntityHandle* geom_entity,

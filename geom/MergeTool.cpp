@@ -67,7 +67,6 @@
 #include "SettingHandler.hpp"
 
 MergeTool* MergeTool::instance_ = NULL;
-CubitBoolean MergeTool::mergeCalled = CUBIT_FALSE;
 CubitBoolean MergeTool::groupResults = CUBIT_FALSE;
 CubitBoolean MergeTool::destroyDeadGeometry = CUBIT_TRUE;
 
@@ -87,7 +86,6 @@ MergeTool::MergeTool()
 {
      //This is private.  It can only be accessed through
      //the instance() function above.
-   mergeCalled = CUBIT_FALSE;
    
    unmerged_list_in_use = CUBIT_FALSE;
    displayProgress = false;
@@ -160,14 +158,16 @@ void MergeTool::merge_with_auto_imprint(RefFace *surf1, RefFace *surf2)
                                                 CUBIT_FALSE,
                                                 CUBIT_TRUE);
         if(out1.size() == 1 && out2.size() == 1 &&
-          (out1.get() == new_surf1 && out2.get() == new_surf2) ||
-          (out1.get() == new_surf2 && out2.get() == new_surf1))
+          ((out1.get() == new_surf1 && out2.get() == new_surf2) ||
+           (out1.get() == new_surf2 && out2.get() == new_surf1)))
         {
           local_surf1 = new_surf1;
           local_surf2 = new_surf2;
         }
         else
+        {
           time_to_stop = true;
+        }
       }
       else
       {
@@ -189,6 +189,9 @@ CubitBoolean MergeTool::contains_merged_entities( DLIList<RefEntity*> &ref_entit
      //if we find a merged entity, return true.
 
   DLIList<RefEntity*> all_entities, temp_entities;
+
+  if ( ref_entities.size() == 0 )
+    return CUBIT_FALSE;
 
   ref_entities.reset();
   ref_entities.get()->get_all_child_ref_entities(ref_entities, temp_entities);
@@ -259,8 +262,7 @@ CubitStatus MergeTool::merge_all_bodies()
    int number_volumes = GeometryQueryTool::instance()->num_ref_volumes();
     
    DLIList<RefEntity*> free_ref_ents;
-   int number_free_entities = 
-    GeometryQueryTool::instance()->get_free_ref_entities( free_ref_ents );
+   GeometryQueryTool::instance()->get_free_ref_entities( free_ref_ents );
     
    if( number_volumes == 1 && free_ref_ents.size() == 0 )
    {
@@ -269,7 +271,6 @@ CubitStatus MergeTool::merge_all_bodies()
    }
 
    PRINT_INFO( "\n...Merging all features in the model\n" );
-   set_merge_occurance( CUBIT_TRUE );
    
    if( merge_all_reffaces() == CUBIT_FAILURE )
    {
@@ -294,8 +295,6 @@ CubitStatus MergeTool::merge_all_bodies()
 
 CubitStatus MergeTool::merge_bodies( DLIList<Body*>& body_list )
 {
-   set_merge_occurance( CUBIT_TRUE );
-   
    DLIList<ModelEntity*> query_input(body_list.size()), query_output;
    CAST_LIST_TO_PARENT(body_list, query_input);
    ModelQueryEngine *const mqe = ModelQueryEngine::instance();
@@ -346,7 +345,6 @@ CubitStatus MergeTool::merge_volumes( DLIList<RefVolume*>& vol_list,
                                       CubitBoolean print_info )
 {
    int i;
-   set_merge_occurance( CUBIT_TRUE );
    vol_list.reset();
    
      // Get the RefFaces
@@ -392,7 +390,6 @@ CubitStatus MergeTool::merge_all_reffaces()
 {
 //   if( !displayProgress )
      PRINT_INFO( "\n...Merging all Surfaces in the model\n" );
-   set_merge_occurance( CUBIT_TRUE );
    
      // Get the list of all the RefFaces in the model
    DLIList<RefFace*> refface_list;
@@ -427,7 +424,6 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
     // list, but still keep track of where we are in the list.
     // If the entity that is deleted is before the retained item
     // in the list, then we do not want to step or we will....
-  set_merge_occurance( CUBIT_TRUE );
   
   CpuTimer timer;
   int merge_count = 0;
@@ -466,7 +462,7 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
   int array_size = refface_array.size();
   DLIList<RefFace*> faces_merged;
   
-  for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+  for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
   {
     if( progress )
        progress->step();
@@ -481,7 +477,7 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
       continue ;
     
     j = i+1;
-    for( j = i+1; (j < array_size) && !CubitMessage::instance()->Interrupt(); j++ )
+    for( j = i+1; (j < array_size) && !AppUtil::instance()->interrupt(); j++ )
     {
       compare_refface_ptr = refface_array[j];
       if( compare_refface_ptr == NULL )
@@ -541,7 +537,7 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
       ref_vols_2.intersect( ref_vols_1 );
       if( ref_vols_2.size() > 0 )
       {
-          PRINT_ERROR( "Tolerance problems, trying to merge "
+          PRINT_DEBUG_19( "Tolerance problems, trying to merge "
                        "surfaces\non the same volume.\n"
                        "  %s (surface %d) and %s (surface %d) on\n"
                        "  %s (volume %d)\n",
@@ -551,7 +547,7 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
                        compare_refface_ptr->id(),
                        ref_vols_2.get()->entity_name().c_str(),
                        ref_vols_2.get()->id() );
-          if (print_info) PRINT_INFO( "Try changing the merge tolerance.\n" );
+          if (print_info) PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
           continue;
       }
    
@@ -671,7 +667,7 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
     PRINT_INFO( " of surfaces\n");
   }
   
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
      PRINT_WARNING("Surface merging aborted.\n");
      return CUBIT_FAILURE;
@@ -700,7 +696,6 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
     // been merged out, we can no longer access that pointer
     // since it is invalid. So...we need to remove it from the
     // tree, but still keep track of where we are in the list.
-  set_merge_occurance( CUBIT_TRUE );
   double geom_factor = GeometryQueryTool::get_geometry_factor();
   AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (GEOMETRY_RESABS*geom_factor);
   CpuTimer timer;
@@ -751,7 +746,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
   RefFace* compare_refface_ptr = NULL;
   DLIList<RefFace*> faces_merged, faces_in_range;
   CubitBox temp_box;
-  for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+  for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
   {
     if( progress ) progress->step();
     
@@ -769,7 +764,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
     faces_in_range.clean_out();
     a_tree->find(temp_box, faces_in_range);
     
-    for( j = 0; (j < faces_in_range.size()) && !CubitMessage::instance()->Interrupt(); j++ )
+    for( j = 0; (j < faces_in_range.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
       compare_refface_ptr = faces_in_range.get_and_step();
       if( compare_refface_ptr == NULL )
@@ -829,7 +824,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
       ref_vols_2.intersect( ref_vols_1 );
       if( ref_vols_2.size() > 0 )
       {
-          PRINT_ERROR( "Tolerance problems, trying to merge "
+          PRINT_DEBUG_19( "Tolerance problems, trying to merge "
                        "surfaces\non the same volume.\n"
                        "  %s (surface %d) and %s (surface %d) on\n"
                        "  %s (volume %d)\n",
@@ -839,7 +834,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
                        compare_refface_ptr->id(),
                        ref_vols_2.get()->entity_name().c_str(),
                        ref_vols_2.get()->id() );
-          if (print_info) PRINT_INFO( "Try changing the merge tolerance.\n" );
+          if (print_info) PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
           continue;
       }
  
@@ -963,7 +958,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
        PRINT_INFO("s");
     PRINT_INFO( " of surfaces\n");
   }
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
      PRINT_WARNING("Surface merging aborted.\n");
      return CUBIT_FAILURE;
@@ -976,7 +971,6 @@ CubitStatus MergeTool::merge_all_refedges()
 {
 //   if( !displayProgress )
      PRINT_INFO( "\n...Merging all Curves in the model\n" );
-   set_merge_occurance( CUBIT_TRUE );
    
      // Get the list of all the RefEdges in the model
    DLIList<RefEdge*> refedge_list_model;
@@ -1099,13 +1093,10 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
   int j = 0;
   RefFace* refface_ptr = NULL;
   RefFace* compare_refface_ptr = NULL;
-#ifdef BOYD17 
-  DLIList<RefFace*> faces_merged, faces_in_range;
-#endif
   DLIList<RefFace*> faces_in_range;
   
   CubitBox temp_box;
-  for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+  for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
   {
     if( progress ) progress->step();
     
@@ -1128,7 +1119,7 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
     RefVolume* tmp_vol= tmp_vols.get();
 
     DLIList<RefFace*> *new_list = NULL;
-    for( j = 0; (j < faces_in_range.size()) && !CubitMessage::instance()->Interrupt(); j++ )
+    for( j = 0; (j < faces_in_range.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
       compare_refface_ptr = faces_in_range.get_and_step();
       if( compare_refface_ptr == NULL )
@@ -1235,7 +1226,7 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
 
   delete a_tree;
 
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
      PRINT_WARNING("Finding mergeable surfaces aborted.\n");
      return CUBIT_FAILURE;
@@ -1290,17 +1281,13 @@ CubitStatus MergeTool::find_mergeable_refedges( DLIList<RefEntity*> &entities,
    for( i = edges_on_two_surfs.size(); i--; )
      refedge_array.append( edges_on_two_surfs.get_and_step() ); 
 
-#ifdef BOYD17
-   DLIList<RefEdge*> edges_merged;
-#endif
-  
    ProgressTool* progress = 0;
 
    int j = 0;
    RefEdge* refedge_ptr = NULL;
    RefEdge* compare_refedge_ptr = NULL;
    int array_size = refedge_array.size();
-   for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+   for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
    {
       if( progress ) progress->step();
       
@@ -1332,7 +1319,7 @@ CubitStatus MergeTool::find_mergeable_refedges( DLIList<RefEntity*> &entities,
 
       DLIList<RefEdge*> *new_list = NULL;
       
-      for( j = i+1; (j < array_size) && !CubitMessage::instance()->Interrupt(); j++ )
+      for( j = i+1; (j < array_size) && !AppUtil::instance()->interrupt(); j++ )
       {
         compare_refedge_ptr = refedge_array[j];
          if( compare_refedge_ptr == NULL )
@@ -1366,7 +1353,7 @@ CubitStatus MergeTool::find_mergeable_refedges( DLIList<RefEntity*> &entities,
          ref_faces_2.intersect( ref_faces_1 );
          if( ref_faces_2.size() > 0 )
          {
-               PRINT_ERROR( "Tolerance problems, trying to find mergeable"
+               PRINT_DEBUG_19( "Tolerance problems, trying to find mergeable"
                             " curves\non the same surface.\n"
                             "%s (curve %d) and %s (curve %d) on\n"
                             "%s (surface %d)\n",
@@ -1376,7 +1363,7 @@ CubitStatus MergeTool::find_mergeable_refedges( DLIList<RefEntity*> &entities,
                             compare_refedge_ptr->id(),
                             ref_faces_2.get()->entity_name().c_str(),
                             ref_faces_2.get()->id() );
-               PRINT_INFO( "Try changing the merge tolerance.\n" );
+               PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
                continue;
          }
            // If we are in this block, we want to merge the 
@@ -1460,6 +1447,105 @@ CubitStatus MergeTool::find_only_mergeable_surfaces ( DLIList<BodySM*> &body_lis
       BodySM *tmp_body2 = tmp_body_list.get_and_step();
       CubitBox body2_box = tmp_body2->bounding_box(); 
     
+      
+      if( body1_box.overlap( merge_tolerance, body2_box ) )
+      {
+        DLIList<Surface*> body1_surfs;
+        DLIList<Surface*> body2_surfs;
+
+        tmp_body1->surfaces( body1_surfs );
+        tmp_body2->surfaces( body2_surfs );
+        
+        for( k=body1_surfs.size(); k--; )
+        {
+          Surface *body1_surf = body1_surfs.pop();
+          CubitBox surf1_box = body1_surf->bounding_box();
+
+          for(l=body2_surfs.size(); l--; )
+          {
+            Surface *body2_surf = body2_surfs.get();
+
+            if( body2_surf == NULL )
+            {
+              body2_surfs.step();
+              continue;
+            }
+  
+            CubitBox surf2_box = body2_surf->bounding_box();
+           
+            if( surf1_box.overlap( merge_tolerance, surf2_box ) )
+            {
+
+              if( about_spatially_equal( body1_surf, body2_surf, geom_factor) )
+              {
+                //check to see if surfs have already been inserted into lists
+                DLIList<Surface*> *surf1_list = NULL;
+                DLIList<Surface*> *surf2_list = NULL;
+
+                list_iter = surf_to_list_map.find( body1_surf);
+                if( list_iter != surf_to_list_map.end() )
+                  surf1_list = list_iter->second;
+
+                list_iter = surf_to_list_map.find( body2_surf);
+                if( list_iter != surf_to_list_map.end() )
+                  surf2_list = list_iter->second;
+
+                if( surf1_list == NULL && surf2_list == NULL )
+                {
+                  surf1_list = new DLIList<Surface*>;
+                  surf1_list->append( body1_surf );
+                  surf1_list->append( body2_surf );
+                  surf_to_list_map.insert( std::map<Surface*,
+                        DLIList<Surface*>*>::value_type( body1_surf, surf1_list )); 
+                  surf_to_list_map.insert( std::map<Surface*,
+                        DLIList<Surface*>*>::value_type( body2_surf, surf1_list )); 
+                  lists_of_mergeable_surfaces.append( surf1_list );
+                  break;
+                }
+                else if( surf1_list == NULL )
+                {
+                  PRINT_ERROR("A surface cannot be merged with more than 1 other surface\n");
+                }
+                else if( surf2_list == NULL )
+                {
+                  PRINT_ERROR("A surface cannot be merged with more than 1 other surface\n");
+                }
+
+                body2_surfs.change_to( NULL );
+              }
+            }
+            body2_surfs.step();
+          }
+        }
+      }
+    }
+  }
+  return CUBIT_SUCCESS;
+}
+
+
+CubitStatus MergeTool::find_only_mergeable_surfaces ( DLIList<BodySM*> &body_list, 
+                  DLIList< DLIList<Surface*>*> &lists_of_mergeable_surfaces, const double tol )
+{
+  double geom_factor = GeometryQueryTool::get_geometry_factor();
+  double merge_tolerance = tol;
+  int i,j,k,l;
+
+  std::map< Surface*, DLIList<Surface*>*> surf_to_list_map;
+  std::map< Surface*, DLIList<Surface*>*>::iterator list_iter; 
+
+  DLIList<BodySM*> tmp_body_list = body_list;
+  tmp_body_list.reset();
+  for(i=tmp_body_list.size(); i--; )
+  {
+    BodySM *tmp_body1 = tmp_body_list.pop();
+    CubitBox body1_box = tmp_body1->bounding_box(); 
+    for(j=tmp_body_list.size(); j--; )
+    {
+      BodySM *tmp_body2 = tmp_body_list.get_and_step();
+      CubitBox body2_box = tmp_body2->bounding_box(); 
+    
+      
       if( body1_box.overlap( merge_tolerance, body2_box ) )
       {
         DLIList<Surface*> body1_surfs;
@@ -1712,7 +1798,7 @@ CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities
    RefVertex* refvertex_ptr = NULL;
    RefVertex* compare_refvertex_ptr = NULL;
    int array_size = refvertex_array.size();
-   for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+   for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
    {
       if( progress ) progress->step();
       
@@ -1730,7 +1816,7 @@ CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities
       
       DLIList<RefVertex*> *new_list = NULL;
 
-      for( j = i+1; (j < array_size) && !CubitMessage::instance()->Interrupt(); j++ )
+      for( j = i+1; (j < array_size) && !AppUtil::instance()->interrupt(); j++ )
       {
          compare_refvertex_ptr = refvertex_array[j];
          if( compare_refvertex_ptr == NULL )
@@ -1757,7 +1843,7 @@ CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities
          edges_2.intersect( edges_1 );
          if( edges_2.size() > 0 )
          {
-               PRINT_ERROR( "Tolerance problems, trying to merge"
+               PRINT_DEBUG_19( "Tolerance problems, trying to merge"
                             " vertices\non the same curve.\n"
                             "%s (vertex %d) and %s (vertex %d) on\n"
                             "%s (curve %d)\n",
@@ -1767,7 +1853,7 @@ CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities
                             compare_refvertex_ptr->id(),
                             edges_2.get()->entity_name().c_str(),
                             edges_2.get()->id() );
-               PRINT_INFO( "Try changing the merge tolerance.\n" );
+               PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
                continue;
          }
 
@@ -1824,7 +1910,7 @@ CubitStatus MergeTool::find_mergeable_refvertices( DLIList<RefEntity*> &entities
    if( clean_up_compare_data )
      remove_compare_data();
 
-   if( CubitMessage::instance()->Interrupt() )
+   if( AppUtil::instance()->interrupt() )
    {
      PRINT_WARNING("Vertex merging aborted.\n");
      return CUBIT_FAILURE;
@@ -1840,7 +1926,6 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
   if( refedge_list.size() < 20 )
     return old_merge_refedges( refedge_list, should_clean_out, print_info );
 
-  set_merge_occurance( CUBIT_TRUE );
   int merge_count = 0;
   CpuTimer timer;
 
@@ -1890,7 +1975,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
   RefEdge* compare_refedge_ptr = NULL;
   DLIList<RefEdge*> edges_merged, edges_in_range;
   CubitBox temp_box;
-  for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+  for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
   {
     if( progress ) progress->step();
     
@@ -1908,7 +1993,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
     edges_in_range.clean_out();
     a_tree->find(temp_box, edges_in_range);
     
-    for( j = 0; (j < edges_in_range.size()) && !CubitMessage::instance()->Interrupt(); j++ )
+    for( j = 0; (j < edges_in_range.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
       compare_refedge_ptr = edges_in_range.get_and_step();
       if( compare_refedge_ptr == NULL )
@@ -2013,7 +2098,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
       }
       else
       {
-        PRINT_ERROR( "Curve %d and %d NOT consolidated\n"
+        PRINT_DEBUG_19( "Curve %d and %d NOT consolidated\n"
                      "       The use counts were updated first and"
                      " are now out of date.\n",
                      retained_id, deleted_id);
@@ -2082,7 +2167,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
        PRINT_INFO("s");
     PRINT_INFO( " of curves \n");
   }
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
      PRINT_WARNING("Curve merging aborted.\n");
      return CUBIT_FAILURE;
@@ -2101,7 +2186,6 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
      // merge the entities that are spatially equivalent.
      // In the merge, the entity with the lowest ID is retained.
      // NOTE: RefEdges can participate in multiple merges.
-   set_merge_occurance( CUBIT_TRUE );
    int merge_count = 0;
    CpuTimer timer;
    DRefEdgeArray refedge_array( refedge_list.size() );
@@ -2136,7 +2220,7 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
    RefEdge* refedge_ptr = NULL;
    RefEdge* compare_refedge_ptr = NULL;
    int array_size = refedge_array.size();
-   for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+   for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
    {
       if( progress ) progress->step();
       
@@ -2161,7 +2245,7 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
 //       if ( SMEPtr == NULL )
 //           continue ;
       
-      for( j = i+1; (j < array_size) && !CubitMessage::instance()->Interrupt(); j++ )
+      for( j = i+1; (j < array_size) && !AppUtil::instance()->interrupt(); j++ )
       {
         compare_refedge_ptr = refedge_array[j];
          if( compare_refedge_ptr == NULL )
@@ -2216,7 +2300,7 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
          ref_faces_2.intersect( ref_faces_1 );
          if( ref_faces_2.size() > 0 )
          {
-               PRINT_ERROR( "Tolerance problems, trying to merge"
+               PRINT_DEBUG_19( "Tolerance problems, trying to merge"
                             " curves\non the same surface.\n"
                             "%s (curve %d) and %s (curve %d) on\n"
                             "%s (surface %d)\n",
@@ -2226,7 +2310,7 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
                             compare_refedge_ptr->id(),
                             ref_faces_2.get()->entity_name().c_str(),
                             ref_faces_2.get()->id() );
-               PRINT_INFO( "Try changing the merge tolerance.\n" );
+               PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
                continue;
          }
            // If we are in this block, we want to merge the 
@@ -2348,7 +2432,7 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
    if(print_info) 
      PRINT_INFO( "Consolidated %d curves\n", merge_count );
 
-   if( CubitMessage::instance()->Interrupt() )
+   if( AppUtil::instance()->interrupt() )
    {
      PRINT_WARNING("Curve merging aborted.\n");
      return CUBIT_FAILURE;
@@ -2361,8 +2445,6 @@ CubitStatus MergeTool::merge_all_refvertices()
 {
 //   if( !displayProgress )
      PRINT_INFO( "\n...Merging all Vertices in the model\n" );
-   
-   set_merge_occurance( CUBIT_TRUE );
    
      // Get the list of all the RefVertices in the model
    DLIList<RefVertex*> refvertex_list_model;
@@ -2385,8 +2467,6 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
   if( refvertex_list.size() < 20 )
     return old_merge_refvertices( refvertex_list, print_info );
 
-  set_merge_occurance( CUBIT_TRUE );
-   
   CpuTimer timer;
   int merge_count = 0;
   
@@ -2423,7 +2503,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
   int j = 0;
   RefVertex* refvertex_ptr = NULL;
   RefVertex* compare_refvertex_ptr = NULL;
-  for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+  for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
   {
     if( progress ) progress->step();
       
@@ -2439,7 +2519,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
     DLIList<RefVertex*> close_verts;
     a_tree->find(refvertex_ptr->bounding_box(), close_verts);
       
-    for( j = 0; (j < close_verts.size()) && !CubitMessage::instance()->Interrupt(); j++ )
+    for( j = 0; (j < close_verts.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
       compare_refvertex_ptr = close_verts.get_and_step(); 
      
@@ -2482,25 +2562,24 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
         continue;
       } */
          
-      //Make sure we arn't merging two vertices on a
-      //curve.
-      DLIList<RefEdge*> edges_1, edges_2;
-      refvertex_ptr->ref_edges( edges_1 );
-      compare_refvertex_ptr->ref_edges( edges_2 );
-      edges_2.intersect( edges_1 );
-      if( edges_2.size() > 0 )
+      //Make sure we arn't merging two vertices in the same volume.      
+      DLIList<RefVolume*> vols_1, vols_2;
+      refvertex_ptr->ref_volumes(vols_1);
+      compare_refvertex_ptr->ref_volumes(vols_2);
+      vols_2.intersect( vols_1 );
+      if( vols_2.size() > 0 )
       {
-        PRINT_ERROR( "Tolerance problems, trying to merge"
-                     " vertices\non the same curve.\n"
-                     "%s (vertex %d) and %s (vertex %d) on\n"
-                     "%s (curve %d)\n",
-                     refvertex_ptr->entity_name().c_str(),
-                     refvertex_ptr->id(),
-                     compare_refvertex_ptr->entity_name().c_str(),
-                     compare_refvertex_ptr->id(),
-                     edges_2.get()->entity_name().c_str(),
-                     edges_2.get()->id() );
-        PRINT_INFO( "Try changing the merge tolerance.\n" );
+        PRINT_DEBUG_19( "Tolerance problems, trying to merge"
+          " vertices\non the same volume.\n"
+          "%s (vertex %d) and %s (vertex %d) on\n"
+          "%s (volume %d)\n",
+          refvertex_ptr->entity_name().c_str(),
+          refvertex_ptr->id(),
+          compare_refvertex_ptr->entity_name().c_str(),
+          compare_refvertex_ptr->id(),
+          vols_2.get()->entity_name().c_str(),
+          vols_2.get()->id() );
+        PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
         continue;
       }
 
@@ -2611,7 +2690,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
 
   if (print_info) PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
-  if( CubitMessage::instance()->Interrupt() )
+  if( AppUtil::instance()->interrupt() )
   {
     PRINT_WARNING("Vertex merging aborted.\n");
     return CUBIT_FAILURE;
@@ -2637,7 +2716,6 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
      // merge the entities that are spatially equivalent.
      // In the merge, the entity with the lowest ID is retained.
      // NOTE: RefVertices can participate in multiple merges.
-   set_merge_occurance( CUBIT_TRUE );
    
    CpuTimer timer;
    int merge_count = 0;
@@ -2673,7 +2751,7 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
    RefVertex* refvertex_ptr = NULL;
    RefVertex* compare_refvertex_ptr = NULL;
    int array_size = refvertex_array.size();
-   for( i = 0; (i < array_size) && !CubitMessage::instance()->Interrupt(); i++ )
+   for( i = 0; (i < array_size) && !AppUtil::instance()->interrupt(); i++ )
    {
       if( progress ) progress->step();
       
@@ -2698,7 +2776,7 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
 //       if( SMEPtr == NULL )
 //           continue ;
       
-      for( j = i+1; (j < array_size) && !CubitMessage::instance()->Interrupt(); j++ )
+      for( j = i+1; (j < array_size) && !AppUtil::instance()->interrupt(); j++ )
       {
          compare_refvertex_ptr = refvertex_array[j];
          if( compare_refvertex_ptr == NULL )
@@ -2747,25 +2825,24 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
            continue;
          }
  */        
-           //Make sure we arn't merging two vertices on a
-           //curve.
-         DLIList<RefEdge*> edges_1, edges_2;
-         refvertex_ptr->ref_edges( edges_1 );
-         compare_refvertex_ptr->ref_edges( edges_2 );
-         edges_2.intersect( edges_1 );
-         if( edges_2.size() > 0 )
+           //Make sure we arn't merging two vertices on a that are in the same volume.           
+         DLIList<RefVolume*> vols_1, vols_2;
+         refvertex_ptr->ref_volumes(vols_1);
+         compare_refvertex_ptr->ref_volumes(vols_2);
+         vols_2.intersect( vols_1 );
+         if( vols_2.size() > 0 )
          {
-               PRINT_ERROR( "Tolerance problems, trying to merge"
-                            " vertices\non the same curve.\n"
+               PRINT_DEBUG_19( "Tolerance problems, trying to merge"
+                            " vertices\non the same volume.\n"
                             "%s (vertex %d) and %s (vertex %d) on\n"
-                            "%s (curve %d)\n",
+                            "%s (volume %d)\n",
                             refvertex_ptr->entity_name().c_str(),
                             refvertex_ptr->id(),
                             compare_refvertex_ptr->entity_name().c_str(),
                             compare_refvertex_ptr->id(),
-                            edges_2.get()->entity_name().c_str(),
-                            edges_2.get()->id() );
-               PRINT_INFO( "Try changing the merge tolerance.\n" );
+                            vols_2.get()->entity_name().c_str(),
+                            vols_2.get()->id() );
+               PRINT_DEBUG_19( "Try changing the merge tolerance.\n" );
                continue;
          }
 
@@ -2868,7 +2945,7 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
    if(print_info) 
      PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
 
-   if( CubitMessage::instance()->Interrupt() )
+   if( AppUtil::instance()->interrupt() )
    {
      PRINT_WARNING("Vertex merging aborted.\n");
      return CUBIT_FAILURE;
@@ -2901,21 +2978,19 @@ CubitStatus MergeTool::unmerge_all()
   GeometryQueryTool::instance()->ref_edges( edge_list );
   GeometryQueryTool::instance()->ref_vertices( vtx_list );
   
-  for( i = face_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = face_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(face_list.get_and_step(),CUBIT_FALSE) )
       result = CUBIT_FAILURE;
  
-  for( i = edge_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = edge_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(edge_list.get_and_step(),CUBIT_FALSE) ) 
       result = CUBIT_FAILURE;
   
-  for( i = vtx_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( i = vtx_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     if( ! unmerge(vtx_list.get_and_step()) )
       result = CUBIT_FAILURE;
   
   end_unmerge(top);
-  if(result == CUBIT_SUCCESS)
-     set_merge_occurance(CUBIT_FALSE);
   
   return result;
 }
@@ -2935,7 +3010,7 @@ CubitStatus MergeTool::unmerge( DLIList<RefEntity*> &entity_list,
 {
   CubitBoolean top = start_unmerge();
   
-  for( int i = entity_list.size(); (i > 0) && !CubitMessage::instance()->Interrupt(); i-- )
+  for( int i = entity_list.size(); (i > 0) && !AppUtil::instance()->interrupt(); i-- )
     unmerge( entity_list.get_and_step(), descend );
   
   end_unmerge(top);
@@ -3102,11 +3177,11 @@ CubitStatus MergeTool::unmerge( RefVertex* vtx_ptr )
   if (bridge_list.size() < 2)
     return CUBIT_SUCCESS;
   
-  DLIList<Point*> point_list;
+  DLIList<TBPoint*> point_list;
   bridge_list.reset();
   for (i = bridge_list.size(); i > 1; i--)
   {
-    Point* point = dynamic_cast<Point*>(bridge_list.step_and_get());
+    TBPoint* point = dynamic_cast<TBPoint*>(bridge_list.step_and_get());
     point_list.clean_out();
     point_list.append( point );
     if (0 == separate_vertex( point_list ))
@@ -3277,7 +3352,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
   query_results.intersect( query_results_2 );
   if (query_results.size())
   {
-    PRINT_ERROR( "In MergeTool::merge_BTE()\n"
+    PRINT_DEBUG_19( "In MergeTool::merge_BTE()\n"
                  "  Attempt to merge two entities with same parent.\n"
                  "  %s (%s %d) and %s (%s %d)\n",
                  keeper_entity->entity_name().c_str(),
@@ -4725,7 +4800,7 @@ CubitStatus MergeTool::separate_entities( DLIList<TopologyEntity*>& volume_list,
   DLIList<Lump*> lump_list;
   DLIList<Surface*> surface_list;
   DLIList<Curve*> curve_list;
-  DLIList<Point*> point_list;
+  DLIList<TBPoint*> point_list;
   
   
     // Loop once for each type, 
@@ -4825,7 +4900,7 @@ CubitStatus MergeTool::separate_entities( DLIList<TopologyEntity*>& volume_list,
         else 
         {
           point_list.clean_out();
-          CAST_LIST( split_list, point_list, Point );
+          CAST_LIST( split_list, point_list, TBPoint );
           assert( split_list.size() == point_list.size() );
           RefVertex* vtx = separate_vertex( point_list );
           if (0 == vtx)
@@ -5277,7 +5352,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
   if (unmerge_vertices)
   {
       // Split vertices
-    DLIList<Point*> point_list;
+    DLIList<TBPoint*> point_list;
     DLIList<TopologyBridge*> parent_curves, curve_points;
 
     int n_vert = old_edge->num_ref_vertices();
@@ -5298,7 +5373,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
         bridge_list.reset();
         if (reversed != (curve->bridge_sense() != sense))
           bridge_list.step();
-        Point* point = dynamic_cast<Point*>(bridge_list.get());
+        TBPoint* point = dynamic_cast<TBPoint*>(bridge_list.get());
         assert (point->owner() == vtx->bridge_manager());
         point_list.append( point );
       }
@@ -5307,7 +5382,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
       {
         point_list.reset();
         point_list.step(j);
-        Point* point = point_list.get();
+        TBPoint* point = point_list.get();
         parent_curves.clean_out();
         point->get_parents( parent_curves );
         
@@ -5326,9 +5401,9 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
             bridge_list.get_and_step()->get_children( curve_points );
             assert(curve_points.size() < 3);
             if (curve_points.get()->owner() == point->owner())
-              point_list.append_unique( dynamic_cast<Point*>(curve_points.get()) );
+              point_list.append_unique( dynamic_cast<TBPoint*>(curve_points.get()) );
             else if (curve_points.next()->owner() == point->owner())
-              point_list.append_unique( dynamic_cast<Point*>(curve_points.next()) );
+              point_list.append_unique( dynamic_cast<TBPoint*>(curve_points.next()) );
           }
         }
       }
@@ -5359,7 +5434,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
 //
 // Creation Date : 06/01/04
 //-------------------------------------------------------------------------
-RefVertex* MergeTool::separate_vertex( DLIList<Point*>& points )
+RefVertex* MergeTool::separate_vertex( DLIList<TBPoint*>& points )
 {
   int i, j;
   DLIList<TopologyBridge*> bridge_list( points.size() );
@@ -5711,7 +5786,7 @@ CubitBoolean MergeTool::about_spatially_equal( Curve *curve_1, Curve *curve_2,
   }
 
   //compare the start and end vertices to be spatially equal.
-  DLIList<Point*> curve_1_points(2), curve_2_points(2);
+  DLIList<TBPoint*> curve_1_points(2), curve_2_points(2);
   curve_1->points( curve_1_points );
   curve_2->points( curve_2_points );
 
@@ -5720,13 +5795,13 @@ CubitBoolean MergeTool::about_spatially_equal( Curve *curve_1, Curve *curve_2,
   if( curve_2->bridge_sense() == CUBIT_REVERSED )
     curve_2_points.reverse();
 
-  Point* curve_1_start = curve_1_points.get(); 
+  TBPoint* curve_1_start = curve_1_points.get(); 
   curve_1_points.last();
-  Point* curve_1_end =  curve_1_points.get();
+  TBPoint* curve_1_end =  curve_1_points.get();
 
-  Point* curve_2_start = curve_2_points.get(); 
+  TBPoint* curve_2_start = curve_2_points.get(); 
   curve_2_points.last();
-  Point* curve_2_end =  curve_2_points.get();
+  TBPoint* curve_2_end =  curve_2_points.get();
 
   if (relative_sense == CUBIT_REVERSED)
     std::swap(curve_2_start, curve_2_end);
@@ -5751,7 +5826,7 @@ CubitBoolean MergeTool::about_spatially_equal( Curve *curve_1, Curve *curve_2,
 
 }
 
-CubitBoolean MergeTool::about_spatially_equal( Point *point_1, Point *point_2,
+CubitBoolean MergeTool::about_spatially_equal( TBPoint *point_1, TBPoint *point_2,
                                                double tolerance_factor )
 {
   if( point_1 == point_2 )

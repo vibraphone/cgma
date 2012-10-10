@@ -63,11 +63,9 @@ CAEntityId::CAEntityId(RefEntity* new_attrib_owner,
 
    DLIList<double*> *d_list = csa_ptr->double_data_list();
    if (d_list && d_list->size() > 0) {
-#ifndef NDEBUG
      RefEdge *edge = CAST_TO(new_attrib_owner, RefEdge);
      assert(d_list->size() == 3 && 
             edge && edge->start_vertex() == edge->end_vertex());
-#endif
      d_list->reset();
      boundingXYZ = new CubitVector(*d_list->get_and_step(),
                                    *d_list->get_and_step(),
@@ -291,7 +289,11 @@ CubitStatus CAEntityId::actuate()
   attribOwnerEntity->color(CUBIT_DEFAULT_COLOR);
   BasicTopologyEntity *bte = CAST_TO( attribOwnerEntity, BasicTopologyEntity );
   if( bte )
+  {
+    //if doesn't already have an id, set it, otherwise, leave it alone.
+    if( 0 == bte->get_geometry_entity_ptr()->get_saved_id() )
     bte->get_geometry_entity_ptr()->set_saved_id(entityId+id_inc);
+  }
 
   hasActuated = CUBIT_TRUE;
 

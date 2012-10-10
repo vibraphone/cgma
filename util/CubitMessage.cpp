@@ -12,7 +12,7 @@
 
 #include "SettingHandler.hpp"
 
-#ifdef NT
+#ifdef WIN32
 #define vsnprintf _vsnprintf
 //#define strdup _strdup
 #endif
@@ -98,7 +98,7 @@ CubitMessage::CubitMessage()
     MessageFlag( 27, "Primal Construction debugging, see also flag 70"),
     MessageFlag( 28, "Plastering debugging"),
     MessageFlag( 29, "Volume SubMapping"),
-    MessageFlag( 30, "Volume Mapping"),
+    MessageFlag( 30, "Volume Mapping with total skin mesh (not just points)"),
     MessageFlag( 31, "CleanUp debugging"),
     MessageFlag( 32, "Pyramid debugging"),
     MessageFlag( 33, "Whisker Weaving inside chord list face drawing"),
@@ -280,9 +280,18 @@ CubitMessage::CubitMessage()
     MessageFlag(205, "Enable Paver cleanup partial chord collapse"),
     MessageFlag(206, "Hex Mesh Matching, match chords one at a time." ),
     MessageFlag(207, "Defeature and Geometry tolerant meshing" ),
-    MessageFlag(208, "unassigned" ),
-    MessageFlag(209, "unassigned" ),
-    MessageFlag(210, "unassigned" )
+    MessageFlag(208, "Turn on Weights in Winslow smooth of target in CAMAL sweeper" ),
+    MessageFlag(209, "Change sense of partial/full tet remesh (v = !v)" ),
+    MessageFlag(210, "unassigned" ),
+    MessageFlag(211, "unassigned" ),
+    MessageFlag(212, "unassigned" ),
+    MessageFlag(213, "unassigned" ),
+    MessageFlag(214, "unassigned" ),
+    MessageFlag(215, "unassigned" ),
+    MessageFlag(216, "unassigned" ),
+    MessageFlag(217, "unassigned" ),
+    MessageFlag(218, "unassigned" ),
+    MessageFlag(219, "unassigned" )
     
       // IMPORTANT!!!
       // If you add a new debug flag, make sure that you change
@@ -759,16 +768,6 @@ void CubitMessage::remove_debug_stream(const int index)
   }
   debugFlag[index].filename = NULL;
   debugFlag[index].outputStream = NULL;
-}
-
-CubitBoolean CubitMessage::Interrupt()
-{
-  return cubit_intr;
-}
-
-void CubitMessage::clear_Interrupt()
-{
-  cubit_intr = CUBIT_FALSE;
 }
 
 void CubitMessage::set_message_handler(CubitMessageHandler *handler)

@@ -61,11 +61,6 @@ public:
   virtual ~SDLList();
   //- Destructor: Free all resources used by this list.
   
-#ifdef BOYD15
-  void reverse();
-  //- Reverse the items in the list.
-#endif
-  
   SDLList& operator=(const SDLList&);
   //- Create a copy of a list.
   
@@ -75,12 +70,6 @@ public:
   //- exist in "this" list. If the items are known to appear in the
   //- merge_list only once, then it can be done faster.
   
-#ifdef BOYD15
-  int append_unique(void* new_item);
-  //- Appends the new item to the list, if it doesn't already exist
-  //- in the list. In either case, index is not changed.
-#endif
-
   SetDynamicMemoryAllocation(memoryManager)
   //- overloaded new and delete operators
   

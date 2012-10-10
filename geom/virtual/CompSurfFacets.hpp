@@ -15,9 +15,15 @@
 
 #include "CubitVector.hpp"
 #include <vector>
+#include <map>
+#include "DLIList.hpp"
 
 class Surface;
 class GMem;
+class CubitFacet;
+class FacetEvalTool;
+
+
 template <class X> class DLIList;
 
 class CompSurfFacets
@@ -27,6 +33,9 @@ class CompSurfFacets
   typedef std::vector<Surface*> SurfPtrList;
 
   public:
+
+    CompSurfFacets();
+    ~CompSurfFacets();
     
     CubitStatus setup( const SurfPtrList& surface_data );
     
@@ -35,12 +44,12 @@ class CompSurfFacets
                        
     int closest_index( const CubitVector& from_point,
                        DLIList<int>& index_list,
-                       CubitVector* point_on_facet = 0 ) const;
+                       CubitVector* point_on_facet = 0 );
                        
     void debug_draw_facets() const;
     
     void graphics( double tolerance, GMem& gmem );
-    void set_ignore_flag(int index, int flag);
+    void set_ignore_flag(DLIList<int> &indicies, int flag);
     int get_ignore_flag(int index);
   
   protected:
@@ -56,10 +65,15 @@ class CompSurfFacets
   
   private:
   
-    PointList pointList;
-    IntegerList triangleData;
     bool pointsConsolidated;
     IntegerList ignoreFlags;
+    DLIList<CubitFacet*> facetsToIgnore;
+    
+    std::map<CubitFacet*, int> facetToSurfaceMap;
+    DLIList<CubitFacet*> allFacets;
+    FacetEvalTool *facetEvalTool;
+    DLIList<int> numFacetsPerSurface;
+
 };
 
 #endif

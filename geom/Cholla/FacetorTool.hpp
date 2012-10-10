@@ -117,9 +117,6 @@ private:
   
 };
 
-// Added by CAT for NT port
-#if defined(TEMPLATE_DEFS_INCLUDED)
-  #include "FacetorTool.cpp"
-#endif
+#include "FacetorTool.cpp"
 #endif // FACETOR_TOOL_HPP
 

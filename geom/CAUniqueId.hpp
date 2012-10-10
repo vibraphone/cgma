@@ -11,6 +11,8 @@
 #include "DLIList.hpp"
 #include "CADefines.hpp"
 
+typedef std::map<long, long> UIDMap;
+
 class CUBIT_GEOM_EXPORT CAUniqueId: public CubitAttrib
 {
 private:
@@ -24,6 +26,8 @@ private:
   static bool autoUniqueId;
     //- flag controlling whether uids are automatically created (even when no other 
     //- CA's request them)
+    
+  static UIDMap oldUIDToNewUID;
 
 public:
 
@@ -66,6 +70,10 @@ public:
 
   virtual void print();
     //- print the value of this attribute
+ 
+  static UIDMap get_old_to_new_uid_map() { return oldUIDToNewUID; }  
+  static void clear_out_old_to_new_map();
+
 };
 
 inline bool CAUniqueId::auto_unique_id()

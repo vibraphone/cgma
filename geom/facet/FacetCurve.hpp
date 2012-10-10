@@ -30,7 +30,7 @@ class CurveFacetEvalTool;
 class FacetEvalTool;
 class FacetAttrib;
 class CurveFacetEvalTool;
-class Point;
+class TBPoint;
 class CubitPoint;
 class CubitFacetEdge;
 class CubitFacetEdge;
@@ -50,13 +50,13 @@ class FacetCurve : public Curve
 public :
   
   FacetCurve( CurveFacetEvalTool *curve_facet_tool,
-              Point *fp0, Point *fp1,
+              TBPoint *fp0, TBPoint *fp1,
               DLIList<CoEdgeSM*> &coedgelist );
     //I- curve_facet_eval_tool_ptr pointer
     //I- A pointer to the set of facet edges that define this curve.
   
   FacetCurve( CurveFacetEvalTool *curve_facet_tool,
-              Point *fp0, Point *fp1,
+              TBPoint *fp0, TBPoint *fp1,
               CubitSense sense );
     //I- curve_facet_eval_tool_ptr pointer
     //I- start and end points 
@@ -220,16 +220,6 @@ public :
     //- *owning RefEdge*, regardless of the positive direction of the
     //- underlying solid model entities.
   
-#ifdef BOYD14
-  void get_tangent( CubitVector const& location, 
-                    CubitVector& tangent);
-    //- this function returns the tangent vector at the given location
-  
-  void get_curvature( CubitVector const& location, 
-                      CubitVector& curvature);
-    //- this function returns the curvature vector at the given location
-#endif
-  
   virtual CubitStatus position_from_u (double u_value,
                                        CubitVector& output_position);
     //R CubitStatus
@@ -325,17 +315,11 @@ public :
   CubitStatus restore_attribs( FILE* file_ptr, unsigned int endian );
     // Read FactAttribs from file
   
-#ifdef BOYD14
-  void get_bodies  ( DLIList<FacetBody   *>& bodies   );
-#endif
   void get_lumps   ( DLIList<FacetLump   *>& lumps    );
   void get_shells  ( DLIList<FacetShell  *>& shells   );
   void get_surfaces( DLIList<FacetSurface*>& surfaces );
   void get_loops   ( DLIList<FacetLoop   *>& loops    );
   void get_coedges ( DLIList<FacetCoEdge *>& coedges  );
-#ifdef BOYD14
-  void get_curves  ( DLIList<FacetCurve  *>& curves   );
-#endif
   void get_points  ( DLIList<FacetPoint  *>& points   );
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
@@ -361,9 +345,9 @@ public :
     { curveFacetEvalTool = eval_tool; } 
     //- set the curve evaluation tool
 
-  Point *start_point()
+  TBPoint *start_point()
     { return myStartPoint; }
-  Point *end_point()
+  TBPoint *end_point()
     { return myEndPoint; }
   CubitSense get_sense() { return sense_; }
 
@@ -373,6 +357,28 @@ public :
   void remove_end_point() { myEndPoint = 0; }
   
   bool has_parent_coedge() { return myCoEdges.size() > 0; }
+
+  //R CubitStatus
+  //O- true or false if spline is rational or not.
+  //O- the degree of this spline
+  //O- the control points
+  //O- If rational, weight for each control point
+  //O- the knots
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots
+                                       ) const;
+  //R CubitStatus
+  //O- center - ellipse center point
+  //O- normal - normal of the plane of the ellipse
+  //O- major_axis - major axis of the ellipse
+  //O- radius_ratio - ratio of the length of the major to minor axis.
+  virtual CubitStatus get_ellipse_params( CubitVector &center,
+                                          CubitVector &normal,
+                                          CubitVector &major_axis,
+                                          double &radius_ratio ) const;
 
 protected: 
   
@@ -401,8 +407,8 @@ private:
   friend void run_test_function();
 
   CurveFacetEvalTool *curveFacetEvalTool;
-  Point *myStartPoint;
-  Point *myEndPoint;
+  TBPoint *myStartPoint;
+  TBPoint *myEndPoint;
   DLIList<CoEdgeSM*> myCoEdges;
   int myId;
   bool periodic;
