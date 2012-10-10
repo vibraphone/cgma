@@ -107,6 +107,8 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  remove(filename);
+
   CubitBox box1 = prism1->bounding_box();  
   CubitVector min(-5.0, -1.949, -5.0);
   CubitVector max(4.504, 1.949, 5.0);
@@ -157,6 +159,7 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  remove(filename);
   box1 = pyramid1->bounding_box();
   min.set(-5.0, -1.949, -5.0);
   max.set(4.504, 1.949, 5.0);
@@ -293,6 +296,7 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype, 
                                 num_ents_exported, cubit_version);
  
+  remove(filename);
   //check for vertex
   bodies.clean_out();
   gti->bodies(bodies);
@@ -350,16 +354,20 @@ CubitStatus make_Point()
 
   bodies.last();
   vi = bodies.get()->center_point();
-  gti->reflect(bodies, axis);
+  CubitVector ref_point(0,0,0);
+  gti->reflect(bodies, ref_point, axis);
   vii = bodies.pop()->center_point();
   assert(vi.x() == -vii.x() && vi.y() == vii.y() && vi.z() == vii.z());
   // After reflection, only x value should change.
 
   vi = CompBody->center_point();
-  gti->scale(CompBody,2);
+  double volume1 = CompBody->measure();
+  gti->scale(CompBody,vi, 2);
   vii = CompBody->center_point();
-  assert(vii == 2*vi);
-  // After scale, center point moved by 2 times 
+  double volume2 = CompBody->measure();
+  assert(fabs(volume2 - 8 * volume1) < 0.0000001);
+  assert(vii.distance_between(vi) < 0.0000001);
+  // After scale, center point not moved and volume increased by 8 times 
 
   vi = CompBody->center_point();
   gti->translate(CompBody,axis);
@@ -398,7 +406,6 @@ CubitStatus make_Point()
     if (type == CONE_SURFACE_TYPE)
       break;
   }
-
   RefFace* ref_face = ref_faces.get();
   box = surface->bounding_box();
   // bounding box
@@ -409,8 +416,10 @@ CubitStatus make_Point()
 
   ref_entity_list.clean_out();
   ref_entity_list.append(new_face);
+  filename = "surface.brep";
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  remove(filename);
 
   DLIList<DLIList<RefEdge*>*> ref_edge_loops;
   new_face->ref_edge_loops(ref_edge_loops);
@@ -423,13 +432,12 @@ CubitStatus make_Point()
   for (int i = 0; i < ref_edge_list->size(); i++)
   {
     RefEdge * edge = ref_edge_list->get_and_step();
-    d = edge->measure();
+    double d = edge->measure();
     start = edge->start_vertex();
     end = edge->end_vertex();
   }
 
-  RefFace* new_face2;
-  new_face2 = gmti->make_RefFace(CONE_SURFACE_TYPE, 
+  RefFace* new_face2 = gmti->make_RefFace(CONE_SURFACE_TYPE, 
                          *ref_edge_list, CUBIT_TRUE, new_face, CUBIT_TRUE);
   assert(new_face2 == NULL);
   //2 Errors here for failing making a surface. negtive test here.
@@ -448,6 +456,7 @@ CubitStatus make_Point()
      vii = entity->center_point();
   }
 
+  //center point should moved by (20,20,20) compared with the original one below
   assert(fabs(vi.distance_between(vii)-vector1.length()*2) < 0.0001);
 
   double area = ref_face->measure();
@@ -464,7 +473,7 @@ CubitStatus make_Point()
   double u = 1;      
   double v = 3;
   vi = ref_face->position_from_u_v(u,v);
-  vii.set(8.95117, 37.63107, 131.90751);
+  vii.set(27.88436, 37.66955, 127.69491);
   assert(fabs(vi.distance_between(vii)) < 0.0001);
   // get location on surface for it's u,v
 
@@ -500,8 +509,7 @@ CubitStatus make_Point()
   assert(pc2 == CUBIT_PNT_INSIDE);
 
   ref_edge_loops.clean_out();
-  int num_loops;
-  num_loops = ref_face->ref_edge_loops(ref_edge_loops);
+  int num_loops = ref_face->ref_edge_loops(ref_edge_loops);
   DLIList<RefEdge*> *ref_edges1;
   ref_edges1 = ref_edge_loops.get();
   RefEdge* edge1 = ref_edges1->pop();
@@ -534,7 +542,7 @@ CubitStatus make_Point()
   new_edge_1->closest_point_trimmed(center_pnt1, closest_location);
   assert(center_pnt1.distance_between(closest_location) < 1.E-6);
   new_edge_1->closest_point_trimmed(center_pnt2,closest_location);
-  assert(center_pnt2.distance_between(closest_location) < 1.E-6); 
+  assert(center_pnt2.distance_between(closest_location) < 1.E-6);
 
   //Spline with points and tangents
   DLIList<CubitVector*> tangents;
@@ -567,6 +575,7 @@ CubitStatus make_Point()
   ref_entity_list.append(new_edge_12);
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
+  remove(filename);
 
   //straight line
   RefEdge* new_edge_2 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vertex1,
@@ -589,20 +598,32 @@ CubitStatus make_Point()
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //ellipse curve
+  CubitVector ellps_cnt(0.4, 2.8, 10);
   RefEdge* new_edge_4 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
-                                        vertex3, &center_pnt);
+                                        vertex3, &ellps_cnt);
   d = new_edge_4->measure();
-  assert(fabs(d - 22.21) < 0.01); 
+  assert(fabs(d - 66.31) < 0.01);
   new_edge_4->closest_point_trimmed(vi, c_point);
-  vii.set(10, 10, 10);
-  assert(vii.distance_between( c_point ) < 0.0001);
+  vii.set(-13.163, 7.367 , 10);
+  assert(vii.distance_between( c_point ) < 0.001);
 
-  RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex1,
-                                        vertex3, &center_pnt, CUBIT_REVERSED);
+  RefEdge* new_edge_5 = gmti->make_RefEdge(ELLIPSE_CURVE_TYPE, vertex3,
+                                        vertex1, &ellps_cnt);
   d = new_edge_5->measure();
-  assert(fabs(d-66.643) < 0.001);
+  assert(fabs(d-22.103) < 0.001);
+
+
+  filename = "ellipses.occ";
+  ref_entity_list.clean_out();
+  ref_entity_list.append(new_edge_5);
+  ref_entity_list.append(new_edge_4);
+ 
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+                                 num_ents_exported, cubit_version);
+  remove(filename);
+
   new_edge_5->closest_point_trimmed(vi, c_point);
-  vii.set(-11.2111, 8.62037, 10);
+  vii.set(10, -10, 10);
   assert(vii.distance_between( c_point ) < 0.0001);
 
   //PARABOLA_CURVE_TYPE
@@ -636,8 +657,7 @@ CubitStatus make_Point()
   //make a new refedge out of existing refedge.
   RefEdge* ref_edge = ref_edges.step_and_get();
 
-  RefEdge* new_edge;
-  new_edge = gmti->make_RefEdge(ref_edge);
+  RefEdge* new_edge = gmti->make_RefEdge(ref_edge);
 
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
@@ -653,7 +673,7 @@ CubitStatus make_Point()
   DLIList<OCCCurve*> curves;
   CAST_TO(body, OCCBody)->get_all_curves(curves);
 
-    OCCCurve *curve = NULL;
+  OCCCurve *curve = NULL;
   for(int i = 0; i < curves.size(); i ++)
   {
     curve = curves.step_and_get();
@@ -663,8 +683,8 @@ CubitStatus make_Point()
   }
 
   box = curve-> bounding_box();
-  min.set(7.50564, 41.24873, 128.69915);
-  max.set(14, 41.30805, 135.19324);
+  min.set(26.4388, 41.2872, 124.4865);
+  max.set(32.9331, 41.3465, 130.9806);
   assert(min.distance_between(box.minimum()) < 0.001 &&
          max.distance_between(box.maximum()) < 0.001);
   // bounding box
@@ -709,20 +729,13 @@ CubitStatus make_Point()
   assert(tangent.distance_between(vii) < 0.001);
   // double check tangent
 
-  ref_edge->get_center_radius(center, radius);
-  // center and radius for arc curves
-
   pc = ref_edge->point_containment(c_point);
   assert(pc == CUBIT_PNT_INSIDE);
   // middle point should be on the curve.
 
   //delete all entities
-  bodies.clean_out();
-  gti->bodies(bodies);
   gti->delete_Body(bodies);
 
-  free_entities.clean_out();
-  gti->get_free_ref_entities(free_entities);
   for (int j = free_entities.size(); j--;)
     {
       gti->delete_RefEntity( free_entities.get_and_step());

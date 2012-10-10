@@ -13,7 +13,7 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
 
 TESTS = init sheet
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis merge_acis point_project_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
 else
 if WITH_CUBIT
   TESTS += webcut brick_acis merge_acis
@@ -22,13 +22,13 @@ else
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file  AngleCalc_occ  CreateGeometry_occ GraphicsData_occ modify subtract makept loft offset_curves r_w test_occ operation brick_occ merge_occ point_project imprint_bug section
-endif 
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug modify subtract makept test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ
+endif
 
 check_PROGRAMS = $(TESTS)
 
-LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS)
-AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS) 
+AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) -lcubit_geom -lcubit_util -lcubit_virtual -lcubit_facet
 
 noinst_LTLIBRARIES = libcgm_test.la
 libcgm_test_la_SOURCES = TestUtilities.hpp \
@@ -36,9 +36,6 @@ libcgm_test_la_SOURCES = TestUtilities.hpp \
 
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
-point_project_acis_SOURCES = point_project_acis.cpp
-point_project_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) '-DTEST_ENGINE="ACIS"'
-
 makept_SOURCES = makept.cpp
 offset_curves_SOURCES = offset_curves.cpp
 loft_SOURCES = loft.cpp
@@ -92,9 +89,6 @@ EXTRA_DIST = 62_shaver1.brep \
              66_shaver3.brep \
              72_shaver6.brep \
              LeverArm.brep \
-             aftersub.occ_ref \
-             beforesub.occ_ref \
-             beforesub2.occ_ref \
              unite1.occ\
              huge.sat \
              model1.sat \
@@ -117,8 +111,7 @@ EXTRA_DIST = 62_shaver1.brep \
              stitch.name_occ \
              box-w-hole.brep \
              Solid_6.brep  \
-             Solid_7.brep  \
-             holysurf.sat
+             Solid_7.brep  
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'
@@ -155,18 +148,6 @@ MOSTLYCLEANFILES = \
         prism.occ \
         pyramid.occ \
         fillet.occ \
-        imprint.brep \
-        BsplineCurve.occ \
-        curves.brep \
-        loft.brep \
-        bug.brep \
-        subtract.occ \
-        glue.occ \
-        after_webcut.brep \
-        webcut_sweep.brep \
-        bricks2.occ \
-        bricks22.occ \
-        bricks23.occ \
 	mmgr.log
  
 

@@ -9,6 +9,7 @@
 #include "CGMApp.hpp"
 #include "CubitAttribManager.hpp"
 #include "CAEntityId.hpp"
+#include "CubitCompat.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,8 +63,12 @@ int main()
 
   // export as file
   int junk;
-  s = GeometryQueryTool::instance()->export_solid_model( export_list, "bricks2.occ",
-                                                         FORMAT, junk, CubitString(__FILE__) );
+  const char * filename = "bricks2.occ";
+  const CubitString cubit_version="13.1";
+  const char * filetype = "OCC";
+  int num_ents_exported=0;
+  s = CubitCompat_export_solid_model( export_list, filename, filetype,
+                                      num_ents_exported, cubit_version);
   ASSERT(s);
 
   //check that the two single volume bodys' attributes are exported as SINGLELUMP%
@@ -86,8 +91,10 @@ int main()
    
   assert (found == 2); 
 
-  s = GeometryQueryTool::instance()->export_solid_model( export_list, "bricks22.occ",
-                                                         FORMAT, junk, CubitString(__FILE__) );
+  filename = "bricks22.occ";
+  num_ents_exported = 0;
+  s = CubitCompat_export_solid_model( export_list, filename, filetype,
+                                      num_ents_exported, cubit_version);
   ASSERT(s);
 
   //check that the two single volume bodys' attributes are exported as SINGLELUMP%
@@ -108,15 +115,12 @@ int main()
 
   // delete geometry
   GeometryQueryTool::instance()->delete_geometry();
+  remove(filename);
 
   // import it again
   DLIList<RefEntity*> import_list;
-  s = GeometryQueryTool::instance()->import_solid_model( "bricks2.occ",
-                                                         FORMAT, NULL, CUBIT_FALSE,
-                                                         CUBIT_TRUE, CUBIT_TRUE,
-                                                         CUBIT_TRUE, CUBIT_TRUE,
-                                                         CUBIT_TRUE, &import_list
-                                                         );
+  filename = "bricks2.occ";
+  s = CubitCompat_import_solid_model( filename, filetype);
   ASSERT(s);
 
   // check imported entity has tool data actuated by attributes
@@ -129,11 +133,14 @@ int main()
   export_list.clean_out();
   export_list.append(CAST_TO(body_entity_list.get_and_step(), Body));
   export_list.append(CAST_TO(body_entity_list.get_and_step(), Body));
-  s = GeometryQueryTool::instance()->export_solid_model( export_list, "bricks23.occ",
-                                                         FORMAT, junk, CubitString(__FILE__) );
+  const char * filename2 = "bricks23.occ";
+  s = CubitCompat_export_solid_model( export_list, filename2,  filetype,
+                                      num_ents_exported, cubit_version);
   ASSERT(s);
 
   ASSERT(is_files_same("bricks2.occ", "bricks23.occ"));
+  remove(filename);
+  remove(filename2);
   return 0;
 }
 

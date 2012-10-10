@@ -9,6 +9,8 @@
 
 #undef NDEBUG
 #include <cassert>
+#include <string>
+#include <cctype>
 
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
@@ -37,7 +39,25 @@ CubitStatus make_Point();
 // macro for printing a separator line
 #define PRINT_SEPARATOR   PRINT_INFO("=======================================\n");
 
-
+int findString(const char *filename, std::string search)
+{
+  std::ifstream Myfile;
+  Myfile.open (filename);
+  int found = 0;
+  std::string line;
+  size_t offset;
+  if(Myfile.is_open())
+  {
+    while(!Myfile.eof())
+    {
+      getline(Myfile,line);
+      if ((offset = line.find(search, 0)) != std::string::npos)
+        found ++;
+    }
+    Myfile.close();
+  }
+  return found;
+}
 // main program - initialize, then send to proper function
 int main (int argc, char **argv)
 {
@@ -65,7 +85,7 @@ std::string type_from_file_name( const std::string& filename )
     return std::string();
  
   std::string extension = filename.substr( dot_pos + 1 );
-  std::transform( extension.begin(), extension.end(), extension.begin(), tolower );
+  std::transform( extension.begin(), extension.end(), extension.begin(), ::tolower );
   if (extension == "occ" || extension == "brep")
     return "OCC";
   else if (extension == "step" || extension == "stp")
@@ -133,6 +153,7 @@ CubitStatus make_Point()
 
   //Exported:  18 OCC Curves to ex3.occ
   assert(num_ents_exported == 18);
+  remove(filename);
 
   filetype = "IGES";
   filename = "ex3export.iges";
@@ -142,6 +163,7 @@ CubitStatus make_Point()
 
   //Exported:  18 OCC Curves to ex3export.iges
   assert(num_ents_exported == 18);
+  remove(filename);
 
   filetype = "STEP";
   filename = "ex3export.step";
@@ -150,6 +172,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   //Exported:  18 OCC Curves to ex3export.step
   assert(num_ents_exported == 18);
+  remove(filename);
 
   gti->bodies(bodies);
 
@@ -179,6 +202,7 @@ CubitStatus make_Point()
 
   //Exported:   7 OCC Bodies to diffuser.occ
   assert(num_ents_exported == 7);
+  remove(filename);
 
   gti->bodies(bodies);
 
@@ -194,6 +218,7 @@ CubitStatus make_Point()
     }
 
   const char *argstep = "proe.stp";
+  //const char *argstep = "cub_model.step";
   status = read_geometry(1, &argstep, false);
   //Constructed 12 Volumes: 8 to 19
   if (status == CUBIT_FAILURE) exit(1);
@@ -207,6 +232,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proe.occ
   assert(num_ents_exported == 12);
+  remove(filename);
 
   filetype = "IGES";
   filename = "proeexport.iges";
@@ -215,6 +241,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.iges
   assert(num_ents_exported == 12);
+  remove(filename);
 
   filetype = "STEP";
   filename = "proeexport.step";
@@ -223,6 +250,7 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.step
   assert(num_ents_exported == 12);
+  remove(filename);
 
   gti->bodies(bodies);
 
@@ -251,7 +279,9 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
-
+  std::string search = "6 face15";
+  int found = findString(filename, search);
+  assert (found == 1);
   gti->bodies(bodies); 
 
   //delete all entities
@@ -269,6 +299,7 @@ CubitStatus make_Point()
   status = read_geometry(1, &argv1, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
+  remove(filename);
 
   //export the newly read-in file
   filename = "beforesub2.occ";
@@ -278,6 +309,10 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
+  found = findString(filename, search);
+  assert (found == 1);
+  remove(filename);
+
   bodies.clean_out();
   gti->bodies(bodies);
   DLIList<Body*> new_bodies;
@@ -306,6 +341,39 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
+  search = "5 face1";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face2";
+  found = findString(filename, search); 
+  assert (found == 1);
+
+  search = "5 face3";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face4";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face5";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face7";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face8";
+  found = findString(filename, search);
+  assert (found == 1);
+
+  search = "5 face9";
+  found = findString(filename, search);
+  assert (found == 1);
+  remove(filename);
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -334,8 +402,14 @@ CubitStatus make_Point()
 
   assert(num_ents_exported == 1);
   //name attributes in unite2.occ is 
-  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume B 8 volume_B 0 0
-  //so it changed to volume_B, and code needs use the second name attrib.
+  //CGM_ATTRIB 11 ENTITY_NAME 4 8 volume B 8 volume_B 8 volume A 8 volume_A 0 0
+  //check that the two single volume bodys' attributes are exported as SINGLELUMP%
+  search = "4 8 volume B 8 volume_B 8 volume A 8 volume_A";
+  found = findString(filename, search);
+
+  assert (found == 1);
+  remove(filename);
+
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -350,7 +424,7 @@ CubitStatus make_Point()
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
-  //change the order of the two bodies,and unite, see the united name unchanged.
+  //change the order of the two bodies,and unite, see the united name changed.
   new_bodies.clean_out();
   bodies.clean_out();
   gti->bodies(bodies);
@@ -366,8 +440,13 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
-  //CGM_ATTRIB 11 ENTITY_NAME 2 8 volume A 8 volume_A 0 0 in unite3.occ
-
+  //CGM_ATTRIB 11 ENTITY_NAME 4 8 volume A 8 volume_A 8 volume B 8 volume_B 0 0
+  // in unite3.occ
+  search = "4 8 volume A 8 volume_A 8 volume B 8 volume_B";
+  found = findString(filename, search);
+  
+  assert (found == 1);
+  remove(filename);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -395,8 +474,12 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
-  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeA 0 0 in unite5.occ
- 
+  //CGM_ATTRIB 11 ENTITY_NAME 2 7 volumeA 7 volumeB 0 0 in unite5.occ
+  search = "2 7 volumeA 7 volumeB";
+  found = findString(filename, search);
+  
+  assert (found == 1); 
+  remove(filename);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities
@@ -427,8 +510,12 @@ CubitStatus make_Point()
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
  
-  //CGM_ATTRIB 11 ENTITY_NAME 1 7 volumeB 0 0 in unite6.occ
-
+  //CGM_ATTRIB 11 ENTITY_NAME 2 7 volumeB 7 volumeA 0 0 in unite6.occ
+  search = "2 7 volumeB 7 volumeA";
+  found = findString(filename, search);
+  
+  assert (found == 1);
+  remove(filename);
   bodies.clean_out();
   gti->bodies(bodies);
   //delete all entities

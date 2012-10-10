@@ -66,7 +66,7 @@ std::string type_from_file_name( const std::string& filename )
     return std::string();
  
   std::string extension = filename.substr( dot_pos + 1 );
-  std::transform( extension.begin(), extension.end(), extension.begin(), tolower );
+  std::transform( extension.begin(), extension.end(), extension.begin(), ::tolower );
   if (extension == "occ" || extension == "brep")
     return "OCC";
   else if (extension == "step" || extension == "stp")

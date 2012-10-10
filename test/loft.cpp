@@ -112,9 +112,20 @@ CubitStatus make_Point()
 
   //Do loft
   Body* new_body = NULL;
-  gmti->loft_surfaces_to_body(loft_surfaces.step_and_get(), 0.0, 
-                           loft_surfaces.step_and_get(), 0.0, new_body, CUBIT_FALSE,
-                           CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE); 
+  DLIList<double> takeoff_factor_list;
+  DLIList<RefFace*> takeoff_vector_surface_list;
+  DLIList<CubitVector> surface_takeoff_vector_list;
+  DLIList<RefEdge*> takeoff_vector_curve_list;
+  DLIList<CubitVector> curve_takeoff_vector_list;
+  DLIList<RefEdge*> guides;
+  DLIList<RefVertex*> match_vertices_list;
+  gmti->loft_surfaces_to_body(loft_surfaces, takeoff_factor_list, 
+                           takeoff_vector_surface_list, 
+                           surface_takeoff_vector_list, 
+                           takeoff_vector_curve_list,
+                           curve_takeoff_vector_list, guides,
+                           match_vertices_list, new_body,
+                           false, false, false, false);
   double volume = new_body->measure();
   assert(fabs(volume - 2100) < 0.000001);
 
@@ -126,6 +137,8 @@ CubitStatus make_Point()
   CubitStatus rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  assert(rsl);
+  remove(filename);
   DLIList<Body*> bodies;
   gti->bodies(bodies);
 
@@ -153,7 +166,6 @@ CubitStatus make_Point()
   DLIList<RefEdge*> edges;
   edges.append(new_edge1);
   edges.append(new_edge2);
-  DLIList<RefEdge*> guides;
   gmti->create_skin_surface(edges, new_body, guides); 
   CubitVector center = new_body->center_point();
   CubitVector comp (0.5, 0.5, 0);

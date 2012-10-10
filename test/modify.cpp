@@ -100,7 +100,7 @@ CubitStatus make_Point()
   GeometryQueryTool *gti = GeometryQueryTool::instance();
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
-  OCCQueryEngine::instance();
+  OCCQueryEngine* oqe = OCCQueryEngine::instance();
   OCCModifyEngine* ome = OCCModifyEngine::instance();
 
   //test for tweak fillet and chamfer
@@ -143,7 +143,8 @@ CubitStatus make_Point()
   
   Body* body2 = gmti->brick(10, 10, 10);
   CubitVector scale(1, 2, 5);
-  gmti->scale(body2, scale);
+  CubitVector p1(0, 0, 0);
+  gmti->scale(body2, p1, scale);
   assert(fabs(body2->measure()-10000)< 0.0001);
   CubitBox box1;
   box1 = body2->bounding_box();
@@ -152,7 +153,7 @@ CubitStatus make_Point()
   assert(fabs(box1.max_z()-25)<0.001 && fabs(box1.min_z() + 25) < 0.001);
   scale.z(0.2);
   scale.y(0.5);
-  gmti->scale(body2, scale);
+  gmti->scale(body2, p1, scale);
   assert(fabs(body2->measure()-1000)< 0.0001);
 
   CubitVector away(11, 0 , 0);
@@ -189,7 +190,7 @@ CubitStatus make_Point()
   away *= 3;
   gti->translate(tweak_body, away);
   away /= 3;
-  CubitVector delta(-1, 0, 0);
+  CubitVector delta(-1,0, 0);
   DLIList<Body*> tweak_bodies;
   gmti->tweak_move( tweak_edges, delta, tweak_bodies, CUBIT_FALSE,
                     CUBIT_FALSE);
@@ -310,6 +311,7 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 5);
+  remove(filename);
 
   DLIList<Body*> bodies;
   DLIList<RefEntity*>  free_entities;
@@ -325,7 +327,7 @@ CubitStatus make_Point()
    CubitVector vtii(6.0, 8.0, 0.0);
    RefVertex* vert2 = GeometryModifyTool::instance()->make_RefVertex(vtii);
    CubitVector v3(0, 8.0, 0.0);
-   RefEdge* edge6 = gmti->make_RefEdge(ARC_CURVE_TYPE, vert1, vert2, &v3, CUBIT_FORWARD );
+   RefEdge* edge6 = gmti->make_RefEdge(ARC_CURVE_TYPE, vert1, vert2, &v3 );
    double d = edge6->measure();
    assert(d - 22.14297 < 0.00001);
 
@@ -445,6 +447,7 @@ CubitStatus make_Point()
   status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 1 volume.
+  remove(filename);
 
   bodies.clean_out();
   free_entities.clean_out();
@@ -490,14 +493,13 @@ CubitStatus make_Point()
   test_body =  gmti->torus(10,5);
   d =  test_body->measure(); //d = 4934.8
   assert(d - 4934.8 < 0.1&& d > 4934.8);
- 
+
   CubitVector factors(1,1,0.5);
-  gmti->scale(test_body, factors);  
+  gmti->scale(test_body, p1, factors);  
   d = test_body->measure();
   assert( d > 2475 && d < 2475.5);
- 
+
   //test for planar_sheet making
-  CubitVector p1(0, 0, 0);
   CubitVector p2(0, 0, 1);
   CubitVector p3(0, 1, 1);
   CubitVector p4(0, 1, 0);
@@ -678,14 +680,16 @@ CubitStatus make_Point()
   bodysm = NULL;
 
   //test stitch surfaces operation
-  ome->stitch_surfs(body_list, bodysm);
-  assert(bodysm != NULL);
+  DLIList<BodySM*> new_surf_bodies;
+  ome->stitch(body_list, new_surf_bodies, CUBIT_FALSE, 1E-6);
+  assert(new_surf_bodies.size() == 1);
  
   bodies.clean_out();
   bodies.append(tool_body);
   gti->delete_Body(bodies);
 
   //test flip_normal for a shell body.
+  bodysm = new_surf_bodies.get();
   from_body2 = gti->make_Body(bodysm); 
   test_body = gmti->copy_body(from_body2);
   is_sheet = test_body->is_sheet_body();
@@ -941,6 +945,7 @@ CubitStatus make_Point()
  
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                 num_ents_exported, cubit_version);
+  remove(filename);
 
   bodies.clean_out();
   gti->bodies(bodies); //bodies.size() = 1
@@ -1031,23 +1036,19 @@ CubitStatus make_Point()
   RefFace* draft_face2 = gmti->make_RefFace(sweep_face);
   RefFace* perp_face = gmti->make_RefFace(sweep_face);
   RefFace* rotate_face = gmti->make_RefFace(sweep_face);
-
-  gmti->sweep_translational(refentities, v_move8, 0, 1, CUBIT_FALSE, CUBIT_FALSE);  
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+ 
+  new_bodies.clean_out();
+  gmti->sweep_translational(refentities, v_move8, 0.0, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);  
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 39.2699 < 0.0001 && d >39.2699);
 
   refentities.clean_out();
   refentities.append(draft_face);
   CubitVector v_move8ii(0,0,10);
-  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE); 
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies); 
+  body = new_bodies.get();
   d = body->measure();
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
   assert(d - 66.3676 < 0.0001 && d > 66.3676);
@@ -1055,11 +1056,9 @@ CubitStatus make_Point()
   v_move8ii.z(-10);
   refentities.clean_out();
   refentities.append(draft_face2);
-  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);
+  body = new_bodies.get();
   d = body->measure();
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
   assert(d - 66.3676 < 0.0001 && d > 66.3676);
@@ -1069,22 +1068,18 @@ CubitStatus make_Point()
   body->ref_edges(edges);
   refentities.clean_out();
   refentities.append(edges.get());
-  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);
+  body = new_bodies.get();
   d = body->measure();
   //d = area = 90.1292 theoretica calculation is 90.5754, error 0.49%
   assert(d - 90.1292 < 0.0001 && d > 90.1292);
 
   refentities.clean_out();
   refentities.append(perp_face);
-  gmti->sweep_perpendicular(refentities, 10, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_perpendicular(refentities, 10.0, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);
+  body = new_bodies.get();
   d = body->measure();
   //d = 66.3676  theoretical calculation is 66.7833, error 0.62%
   assert(d - 66.3676 < 0.0001 && d > 66.3676);
@@ -1098,39 +1093,38 @@ CubitStatus make_Point()
   CubitVector sweep_axis(1,0,0);   
   CubitVector point(0, 2, 15);
   double angle = 1.57;
-  stat =gmti->sweep_rotational(refentities, center, sweep_axis, angle, 0, 0, 1,
+  new_bodies.clean_out();
+  stat =gmti->sweep_rotational(refentities, center, sweep_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0.0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
   assert(stat == CUBIT_FAILURE);
 
   //2. surface rotates along a non-intersection axis
-  refentities.clean_out();
   refentities.append(rotate_face);
-  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 0, 0, 1,
+  new_bodies.clean_out();
+  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 9.8646 < 0.0001 && d > 9.8646);
 
   //3. closed curve rotates along an intersecting axis, fails
   refentities.clean_out();
   refentities.append(rotate_edges.get());
-  stat =gmti->sweep_rotational(refentities, center, sweep_axis, angle, 0, 0, 1,
+  new_bodies.clean_out();
+  stat =gmti->sweep_rotational(refentities, center, sweep_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE); 
   assert(stat == CUBIT_FAILURE);
 
   //4. closed curve rotates along a non-intersecting axis with make_solid
   //   option set to be true.
-  refentities.clean_out();
   refentities.append(rotate_edges.get());
-  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 0, 0, 1,
+  gmti->sweep_rotational(refentities, point, sweep_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 9.8646 < 0.0001 && d > 9.8646);
 
@@ -1138,12 +1132,11 @@ CubitStatus make_Point()
   //   option set to be false.
   refentities.clean_out();
   refentities.append(rotate_edges.get());
-  gmti->sweep_rotational(refentities, point, sweep_axis, -angle, 0, 0, 1,
+  new_bodies.clean_out();
+  gmti->sweep_rotational(refentities, point, sweep_axis, -angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 19.7292 < 0.0001 && d> 19.7292);
 
@@ -1154,26 +1147,24 @@ CubitStatus make_Point()
   CubitVector pt3(-1,0,15);
   RefVertex* vt1 = gmti->make_RefVertex(pt1);
   RefVertex* vt2 = gmti->make_RefVertex(pt2);
-  RefEdge* edge1 = gmti->make_RefEdge(ARC_CURVE_TYPE, vt1, vt2, &pt3, 
-                  CUBIT_FORWARD );
+  RefEdge* edge1 = gmti->make_RefEdge(ARC_CURVE_TYPE, vt1, vt2, &pt3); 
   CubitVector apoint(0,-0.5,15);
   refentities.clean_out();
   refentities.append(edge1);
-  stat=gmti->sweep_rotational(refentities, apoint, sweep_axis, angle, 0, 0, 1,
-                         CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
+  new_bodies.clean_out();
+  stat=gmti->sweep_rotational(refentities, apoint, sweep_axis, angle, 
+                              new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
+                              CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
   assert(stat == CUBIT_FAILURE);
 
   //7. open curve rotates along an intersecting axis at end points with 
   //   make_solid option set to be true.
-  refentities.clean_out();
   refentities.append(edge1);
   CubitVector rotate_axis(0, 1, 0);
-  gmti->sweep_rotational(refentities, center, rotate_axis, angle, 0, 0, 1,
+  gmti->sweep_rotational(refentities, center, rotate_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(1.046667-d < 0.0001 && d < 1.046667);
 
@@ -1181,12 +1172,11 @@ CubitStatus make_Point()
   //   make_solid option set to be false.
   refentities.clean_out();
   refentities.append(edge1);
-  gmti->sweep_rotational(refentities, center, rotate_axis, -angle, 0, 0, 1,
+  new_bodies.clean_out();
+  gmti->sweep_rotational(refentities, center, rotate_axis, -angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert( d - 3.14 > -0.0001 && d < 3.14);
 
@@ -1194,7 +1184,9 @@ CubitStatus make_Point()
   RefEdge* edge2 = gmti->make_RefEdge(vt1, vt2, rotate_face);
   refentities.clean_out();
   refentities.append(edge2);
-  stat=gmti->sweep_rotational(refentities, center, rotate_axis, -angle, 0, 0, 1,
+  new_bodies.clean_out();
+  stat=gmti->sweep_rotational(refentities, center, rotate_axis, -angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE); 
   assert(stat == CUBIT_FAILURE);
 
@@ -1203,12 +1195,10 @@ CubitStatus make_Point()
   refentities.clean_out();
   refentities.append(edge1);
   CubitVector off_center(1,0,15);
-  gmti->sweep_rotational(refentities, off_center, rotate_axis, angle, 0, 0, 1,
+  gmti->sweep_rotational(refentities, off_center, rotate_axis, angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_TRUE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 5.0828 < 0.0001 && d > 5.0828);
 
@@ -1216,12 +1206,11 @@ CubitStatus make_Point()
   //    set to be false.
   refentities.clean_out();
   refentities.append(edge1);
-  gmti->sweep_rotational(refentities, off_center, rotate_axis, -angle, 0, 0, 1,
+  new_bodies.clean_out();
+  gmti->sweep_rotational(refentities, off_center, rotate_axis, -angle, 
+                         new_bodies, CUBIT_FALSE, CUBIT_TRUE, 0, 0, 1,
                          CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  body = new_bodies.get();
   d = body->measure();
   assert(d - 8.07227 < 0.001 && d > 8.07227);
 
@@ -1234,11 +1223,10 @@ CubitStatus make_Point()
   RefEdge* edge3 = gmti->make_RefEdge(STRAIGHT_CURVE_TYPE, vt1, vt4);
   edges.clean_out();
   edges.append(edge3);
-  gmti->sweep_along_curve(refentities, edges, 0.087,1);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_along_curve(refentities, edges, new_bodies, CUBIT_FALSE, 
+                          CUBIT_TRUE,0.087,1);
+  body = new_bodies.get();
   d = body->measure();
   //d = 134.7152, theoretical calculation is 135.66363, error 0.67%
   assert(d -134.7152 < 0.0001 && d > 134.7152);
@@ -1251,26 +1239,32 @@ CubitStatus make_Point()
   CubitVector pt7(0,1,-15);
   RefVertex* vt5 = gmti->make_RefVertex(pt7);
   DLIList<CubitVector*> vector_list;
-  vector_list.append(&pt1);
+  CubitVector coord1 = vt1->coordinates();
+  CubitVector coord2 = vt4->coordinates();
+  vector_list.append(&coord1);
   vector_list.append(&pt5);
-  vector_list.append(&pt4); 
+  vector_list.append(&coord2);
+  
   RefEdge* edge4 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt1, vt4, vector_list);
   vector_list.clean_out();
-  vector_list.append(&pt4);
+  vector_list.append(&coord2);
   vector_list.append(&pt6);
-  vector_list.append(&pt7);
+  CubitVector coord3 = vt5->coordinates();
+  vector_list.append(&coord3);
   RefEdge* edge5 = gmti->make_RefEdge( SPLINE_CURVE_TYPE, vt4, vt5, vector_list);  
   edges.clean_out();
   edges.append(edge4);
   edges.append(edge5);
-  gmti->sweep_along_curve(refentities, edges, 0.087,1);
-  bodies.clean_out();
-  gti->bodies(bodies); 
-  bodies.last();
-  body = bodies.get();
+  new_bodies.clean_out();
+  gmti->sweep_along_curve(refentities, edges, new_bodies, CUBIT_FALSE, 
+                          CUBIT_TRUE, 0.087,1);
+  body = new_bodies.get();
   d = body->measure();
-  //d = 92.1335, no effect of draft angle.
-  assert(d - 92.1335 < 0.001 && d > 92.1335);
+  //d = 93.697, no effect of draft angle.
+  if(oqe->get_subminor_version() >= 2)
+    assert(d - 92.1335 < 0.001 && d > 92.1335);
+  else
+    assert(d - 93.697 < 0.001 && d > 93.697);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -1286,9 +1280,9 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   argv = "Cylinder_1.brep";
-  status = read_geometry(1, &argv, false);
+  status = read_geometry(1, &argv, true);
   argv = "Cylinder_2.brep";
-  status = read_geometry(1, &argv, false);
+  status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 
@@ -1300,12 +1294,13 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "imprint.brep";
   ref_entity_list.clean_out();
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 2);
   assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_faces() == 7);
   assert (CAST_TO(ref_entity_list.get_and_step(), Body)->num_ref_edges() == 11);
   assert (CAST_TO(ref_entity_list.get(), Body)->num_ref_volumes() == 1);
+  remove(filename);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -1334,9 +1329,10 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "after_webcut.brep";
   ref_entity_list.clean_out();
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 2);
+  remove(filename);
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -1377,8 +1373,9 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "webcut_sweep.brep";
   ref_entity_list.clean_out();
-  rsl = gti->export_solid_model(ref_entity_list, filename, filetype,
+  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 4);
+  remove(filename);
   return CUBIT_SUCCESS;
 }
