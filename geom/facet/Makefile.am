@@ -6,7 +6,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
 # The name of the library to build
 lib_LTLIBRARIES = libcubit_facet.la
 
-AM_LDFLAGS += -lcubit_facetbool
+AM_LDFLAGS += -lcubit_facetbool -L../facetbool
 
 # The directory where headers will be installed
 libcubit_facet_la_includedir = $(includedir)

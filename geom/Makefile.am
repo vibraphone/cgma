@@ -4,7 +4,7 @@ AUTOMAKE_OPTIONS = foreign
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
-SUBDIRS = . Cholla facet facetbool virtual
+SUBDIRS = . Cholla facetbool facet virtual
 if build_ACIS
   SUBDIRS += ACIS
 endif
