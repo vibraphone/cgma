@@ -27,8 +27,7 @@ endif
 
 check_PROGRAMS = $(TESTS)
 
-LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS) 
-AM_LDFLAGS += $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) -lcubit_geom -lcubit_util -lcubit_virtual -lcubit_facet
+LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 
 noinst_LTLIBRARIES = libcgm_test.la
 libcgm_test_la_SOURCES = TestUtilities.hpp \
