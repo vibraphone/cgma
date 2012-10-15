@@ -42,8 +42,8 @@ m4_ifdef([LT_OUTPUT],[LT_OUTPUT])
 ################################################################################
 #                              Extract libtool config
 ################################################################################
-ITAPS_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
-ITAPS_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
+FATHOM_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
+FATHOM_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
 AC_SUBST(CGM_CXX_LINKFLAGS)
 AC_SUBST(CGM_CXX_LIBS)
 
@@ -608,6 +608,7 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/OCC/Makefile
            geom/parallel/Makefile
+           test/TestConfig.h
            geom/virtual/Makefile 
            init/Makefile
            compat/Makefile
