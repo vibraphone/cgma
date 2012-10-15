@@ -1,7 +1,7 @@
 ###############################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(CGMA, 12.3.0pre)
+AC_INIT(CGMA, 13.1)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
@@ -21,8 +21,6 @@ LIBS="-lm"
 AC_PROG_SED
 AC_C_BIGENDIAN( [], [AM_CPPFLAGS="$AM_CPPFLAGS -DLITTLE_ENDIAN=BYTE_ORDER"] )
 FATHOM_COMPILER_FLAGS
-
-FATHOM_CHECK_CXX_WORKS([], [AC_MSG_ERROR([Cannot build without C++ compiler])])
 
 ################################################################################
 #                Fortran Stuff for ITAPS C bindings
@@ -44,8 +42,8 @@ m4_ifdef([LT_OUTPUT],[LT_OUTPUT])
 ################################################################################
 #                              Extract libtool config
 ################################################################################
-FATHOM_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
-FATHOM_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
+ITAPS_LIBTOOL_VAR( [CXX], [compiler_lib_search_path], [CGM_CXX_LINKFLAGS])
+ITAPS_LIBTOOL_VAR( [CXX], [postdeps], [CGM_CXX_LIBS])
 AC_SUBST(CGM_CXX_LINKFLAGS)
 AC_SUBST(CGM_CXX_LIBS)
 
@@ -103,7 +101,6 @@ AC_ARG_WITH( CUBIT,
              AC_HELP_STRING([--with-CUBIT=<dir>],[DEPRECATED.  Use --with-cubit (small case)]),
              [CUBIT_DIR="$withval"
               DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-cubit=\"${withval}\""])
-
 if test "x$CUBIT_DIR" == "xyes"; then
   AC_MSG_ERROR([Option --with-CUBIT without specifying Cubit directory.])
 elif test "x$CUBIT_DIR" != "xno"; then
@@ -165,11 +162,11 @@ elif test "x$CUBIT_DIR" != "xno"; then
     [CUBIT_CAT_DEFINES=-DACIS_TWEAK_TOOL_CAT; AC_MSG_RESULT([yes])],
     [CUBIT_CAT_DEFINES=; AC_MSG_RESULT([no])])
 
-  # Test for Cubit 12.1 and later import_solid_model
-  AC_MSG_CHECKING([For Cubit 12 minor revision API])
-  # Set to 1 if it looks like Cubit 12.1, set to 2 if it looks like cubit 12.2,
+  # Test for Cubit 13.1 and later import_solid_model
+  AC_MSG_CHECKING([For Cubit 13 minor revision API])
+  # Set to 1 if it looks like Cubit 13.1, 
   # otherwise set to zero
-  CUBIT_MINOR_API=0
+  CUBIT_MINOR_API=1
   if test $CUBIT_MINOR_API = 0; then
     AC_LINK_IFELSE([AC_LANG_PROGRAM(
       [enum Model_File_Type { MFT_NOT_DEFINED = 0 };
@@ -181,7 +178,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
          void import_solid_model( const char*, Model_File_Type,
                 ModelImportOptions&, DLIList<RefEntity*>* );
          void export_solid_model( DLIList<RefEntity*>&, const char*,
-                Model_File_Type, int&, CubitString const&, const char* );
+                Model_File_Type, int&, CubitString const&, ModelExportOptions );
         };],
       [GeometryQueryTool* ptr = 0;
        ModelImportOptions* opt = 0;
@@ -209,6 +206,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
       [CUBIT_MINOR_API=1])
   fi
   AC_MSG_RESULT([$CUBIT_MINOR_API])
+  AC_MSG_RESULT([$CUBIT_MAJOR_API])
 
   AC_DEFINE_UNQUOTED([CUBIT_12],[$CUBIT_MINOR_API],[Cubit 12 GeometryQueryTool interface])
   LIBS="$old_LIBS"
@@ -396,21 +394,10 @@ AM_CONDITIONAL(USE_BABEL, [test "xno" != "x$USE_BABEL"])
 ################################################################################
 #                           ITAPS shim
 ################################################################################
-AC_ARG_WITH(shim,
-            [AC_HELP_STRING([--with-shim],
-                            [Enable ITAPS shim])],
-            [SHIM_DIR="$withval"],
-            [SHIM_DIR=no])
-
-AM_CONDITIONAL([ITAPS_SHIM],[test "xno" != "x$SHIM_DIR"])
-if test "x$CUBIT_DIR" == "xyes"; then
-  AC_MSG_ERROR([Option --with-shim without specifying Cubit directory.])
-elif test "x$SHIM_DIR" != "xno"; then
-  if ! test -d "$SHIM_DIR"; then
-    AC_MSG_ERROR([$SHIM_DIR: not a directory.])
-  fi
-  AM_CPPFLAGS="$AM_CPPFLAGS -I$SHIM_DIR"
-fi
+AC_ARG_ENABLE([shim],[AC_HELP_STRING([--enable-shim],
+  [Enable ITAPS shim])],
+  [ITAPS_SHIM=$enableval],[ITAPS_SHIM=no])
+AM_CONDITIONAL([ITAPS_SHIM],[test "xyes" = "x$ITAPS_SHIM"])
 
 ################################################################################
 #                           OCC Options 
@@ -621,6 +608,8 @@ AC_CONFIG_FILES(Makefile
            geom/facetbool/Makefile
            geom/OCC/Makefile
            geom/parallel/Makefile
+           geom/testing/Makefile
+           geom/testing/TestConfig.h
            geom/virtual/Makefile 
            init/Makefile
            compat/Makefile
@@ -631,7 +620,6 @@ AC_CONFIG_FILES(Makefile
 	   itaps/SIDL/common.make
            itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
-           test/TestConfig.h
            cgm_apps/Makefile
            cgm_apps/examples/Makefile
            cgm_apps/examples/driverc++/Makefile
