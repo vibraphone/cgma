@@ -66,7 +66,7 @@ endif
 
 check_PROGRAMS = chaman $(TESTS)
 
-LDADD = libiGeom.la
+LDADD = libiGeom.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la
 AM_LDFLAGS += $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_SOURCES = testgeom.cc
 testgeom_occ_SOURCES = $(testgeom_SOURCES)

@@ -25,6 +25,8 @@ lib_LTLIBRARIES = libcubit_geom.la
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
 
+LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(top_builddir)/util/libcubit_util.la
+
 # The non-template sources
 libcubit_geom_la_SOURCES = \
     AllocMemManagersGeom.cpp \
