@@ -162,53 +162,6 @@ elif test "x$CUBIT_DIR" != "xno"; then
     [CUBIT_CAT_DEFINES=-DACIS_TWEAK_TOOL_CAT; AC_MSG_RESULT([yes])],
     [CUBIT_CAT_DEFINES=; AC_MSG_RESULT([no])])
 
-  # Test for Cubit 13.1 and later import_solid_model
-  AC_MSG_CHECKING([For Cubit 13 minor revision API])
-  # Set to 1 if it looks like Cubit 13.1, 
-  # otherwise set to zero
-  CUBIT_MINOR_API=1
-  if test $CUBIT_MINOR_API = 0; then
-    AC_LINK_IFELSE([AC_LANG_PROGRAM(
-      [enum Model_File_Type { MFT_NOT_DEFINED = 0 };
-       struct ModelImportOptions;
-       class RefEntity;
-       class CubitString;
-       template <typename T> class DLIList;
-       class GeometryQueryTool { public: 
-         void import_solid_model( const char*, Model_File_Type,
-                ModelImportOptions&, DLIList<RefEntity*>* );
-         void export_solid_model( DLIList<RefEntity*>&, const char*,
-                Model_File_Type, int&, CubitString const&, ModelExportOptions );
-        };],
-      [GeometryQueryTool* ptr = 0;
-       ModelImportOptions* opt = 0;
-       DLIList<RefEntity*>* list = 0;
-       CubitString* str = 0;
-       int i;
-       ptr->import_solid_model( 0, MFT_NOT_DEFINED, *opt, 0 );
-       ptr->export_solid_model( *list, 0, MFT_NOT_DEFINED, i, *str, 0 );])],
-      [CUBIT_MINOR_API=2])
-  fi
-  if test $CUBIT_MINOR_API = 0; then
-    AC_LINK_IFELSE([AC_LANG_PROGRAM(
-      [struct ModelImportOptions;
-       class RefEntity;
-       class CubitString;
-       template <typename T> class DLIList;
-       class GeometryQueryTool { public: 
-         void import_solid_model( const char*, const char*,
-                ModelImportOptions&, DLIList<RefEntity*>* );
-        };],
-      [GeometryQueryTool* ptr = 0;
-       ModelImportOptions* opt = 0;
-       CubitString* str = 0;
-       ptr->import_solid_model( 0, 0, *opt, 0 );])],
-      [CUBIT_MINOR_API=1])
-  fi
-  AC_MSG_RESULT([$CUBIT_MINOR_API])
-  AC_MSG_RESULT([$CUBIT_MAJOR_API])
-
-  AC_DEFINE_UNQUOTED([CUBIT_12],[$CUBIT_MINOR_API],[Cubit 12 GeometryQueryTool interface])
   LIBS="$old_LIBS"
   LDFLAGS="$old_LDFLAGS"
   LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
