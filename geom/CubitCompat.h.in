@@ -1,10 +1,6 @@
 #ifndef CUBIT_COMPAT_H
 #define CUBIT_COMPAT_H
 
-/* Cubit 12 GeometryQueryTool interface */
-#undef CUBIT_12
-
-
 #ifdef __cplusplus
 
 #include "CubitString.hpp"
