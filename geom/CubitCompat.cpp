@@ -2,49 +2,40 @@
 #include "CubitCompat.hpp"
 #include "GeometryQueryTool.hpp"
 #include <string.h>
-#define CUBIT_12 3
-#if CUBIT_12  >= 2
 
-  #define CUBIT_COMPAT_FT_ELIF(TYPE) \
-    else if (!strcmp(file_type,#TYPE)) \
-      return TYPE ## _TYPE
+#define CUBIT_COMPAT_FT_ELIF(TYPE) \
+  else if (!strcmp(file_type,#TYPE)) \
+    return TYPE ## _TYPE
 
-  static Model_File_Type
-  CubitCompat_file_type( const char* file_type )
-  {
-    if (!file_type)
-      return MFT_NOT_DEFINED;
-    CUBIT_COMPAT_FT_ELIF(ACIS);
-    CUBIT_COMPAT_FT_ELIF(ACIS_SAT);
-    CUBIT_COMPAT_FT_ELIF(ACIS_SAB);
-    CUBIT_COMPAT_FT_ELIF(ACIS_DEBUG);
-    CUBIT_COMPAT_FT_ELIF(IGES);
-    CUBIT_COMPAT_FT_ELIF(CATIA);
-    CUBIT_COMPAT_FT_ELIF(STEP);
-    CUBIT_COMPAT_FT_ELIF(PROE);
-    CUBIT_COMPAT_FT_ELIF(GRANITE);
-    CUBIT_COMPAT_FT_ELIF(GRANITE_G);
-    CUBIT_COMPAT_FT_ELIF(GRANITE_SAT);
-    CUBIT_COMPAT_FT_ELIF(GRANITE_PROE_PART);
-    CUBIT_COMPAT_FT_ELIF(GRANITE_PROE_ASM);
-    CUBIT_COMPAT_FT_ELIF(GRANITE_NEUTRAL);
-    CUBIT_COMPAT_FT_ELIF(NCGM);
-    CUBIT_COMPAT_FT_ELIF(CATIA_NCGM);
-    CUBIT_COMPAT_FT_ELIF(CATPART);
-    CUBIT_COMPAT_FT_ELIF(CATPRODUCT);
-    CUBIT_COMPAT_FT_ELIF(FACET);
-    CUBIT_COMPAT_FT_ELIF(SOLIDWORKS);
-    CUBIT_COMPAT_FT_ELIF(OCC);
-    else
-      return MFT_NOT_DEFINED;
-  }
-
-#else // cubit < 12.2 
-  inline const char*
-  CubitCompat_file_type( const char* file_type )
-    { return file_type; }
-#endif
-
+static Model_File_Type
+CubitCompat_file_type( const char* file_type )
+{
+  if (!file_type)
+    return MFT_NOT_DEFINED;
+  CUBIT_COMPAT_FT_ELIF(ACIS);
+  CUBIT_COMPAT_FT_ELIF(ACIS_SAT);
+  CUBIT_COMPAT_FT_ELIF(ACIS_SAB);
+  CUBIT_COMPAT_FT_ELIF(ACIS_DEBUG);
+  CUBIT_COMPAT_FT_ELIF(IGES);
+  CUBIT_COMPAT_FT_ELIF(CATIA);
+  CUBIT_COMPAT_FT_ELIF(STEP);
+  CUBIT_COMPAT_FT_ELIF(PROE);
+  CUBIT_COMPAT_FT_ELIF(GRANITE);
+  CUBIT_COMPAT_FT_ELIF(GRANITE_G);
+  CUBIT_COMPAT_FT_ELIF(GRANITE_SAT);
+  CUBIT_COMPAT_FT_ELIF(GRANITE_PROE_PART);
+  CUBIT_COMPAT_FT_ELIF(GRANITE_PROE_ASM);
+  CUBIT_COMPAT_FT_ELIF(GRANITE_NEUTRAL);
+  CUBIT_COMPAT_FT_ELIF(NCGM);
+  CUBIT_COMPAT_FT_ELIF(CATIA_NCGM);
+  CUBIT_COMPAT_FT_ELIF(CATPART);
+  CUBIT_COMPAT_FT_ELIF(CATPRODUCT);
+  CUBIT_COMPAT_FT_ELIF(FACET);
+  CUBIT_COMPAT_FT_ELIF(SOLIDWORKS);
+  CUBIT_COMPAT_FT_ELIF(OCC);
+  else
+    return MFT_NOT_DEFINED;
+}
 
 CubitStatus
 CubitCompat_import_solid_model( const char* file_name,
@@ -58,7 +49,6 @@ CubitCompat_import_solid_model( const char* file_name,
                                 CubitBoolean free_surfaces,
 				DLIList<RefEntity*> *imported_entities)
 {
-#if CUBIT_12 > 0
   const bool print_results = false;
   const bool merge_globally = false;
   const bool no_assembly_level_features = false;
@@ -72,12 +62,6 @@ CubitCompat_import_solid_model( const char* file_name,
                                         merge_globally,
                                         no_assembly_level_features,
                                         logfile_name ? logfile_name : "" };
-#else 
-  #define CubitCompat_opts logfile_name, heal_step, \
-                           import_bodies, import_surfaces, \
-                           import_curves, import_vertices, \
-                           free_surfaces
-#endif
 
   return GeometryQueryTool::instance()->import_solid_model( 
            file_name,
@@ -94,14 +78,10 @@ CubitCompat_export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                 const CubitString &cubit_version,
                                 const char* logfile_name )
 {
-#if CUBIT_12 > 2
   const bool print_results = false;
   const bool merge_globally = false;
   const bool no_assembly_level_features = false;
   ModelExportOptions CubitCompat_opts = {1, logfile_name ? logfile_name : "" }; 
-#else
-  #define CubitCompat_opts logfile_name
-#endif
 
   return GeometryQueryTool::instance()->export_solid_model(
            ref_entity_list,
