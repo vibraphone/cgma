@@ -25,7 +25,11 @@ lib_LTLIBRARIES = libiGeom.la
 
 libiGeom_la_includedir = $(includedir)
 
-libiGeom_la_LIBADD = $(top_builddir)/libcgm.la
+if BUILD_CGM
+  libiGeom_la_LIBADD = $(top_builddir)/libcgm.la
+else
+  libiGeom_la_LIBADD = -lcubiti19 -lcubit_geom -lcubit_util $(top_builddir)/init/libcgma_init.la $(top_builddir)/geom/libcubit_geom.la
+endif 
 
 AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
                $(HAVE_OCC_DEF) \
@@ -44,13 +48,13 @@ libiGeom_la_SOURCES = \
 	CATag.cpp \
 	iGeom_CGMA.cc \
 	iGeomError.cc \
-	iGeomError.h 
+	iGeomError.h  
 
 libiGeom_la_include_HEADERS = \
 	iBase.h \
 	iGeom_FCDefs.h \
 	iGeom_protos.h \
-	iBase_f.h
+	iBase_f.h 
 
 if ITAPS_SHIM
   AM_CPPFLAGS += -DITAPS_SHIM
@@ -66,8 +70,13 @@ endif
 
 check_PROGRAMS = chaman $(TESTS)
 
-LDADD = libiGeom.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la
-AM_LDFLAGS += $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
+if BUILD_CGM
+  LDADD = libiGeom.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la
+else
+  LDADD = libiGeom.la
+endif
+
+AM_LDFLAGS +=  $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_SOURCES = testgeom.cc
 testgeom_occ_SOURCES = $(testgeom_SOURCES)
 testgeom_occ_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DFORCE_OCC
