@@ -71,9 +71,9 @@ endif
 check_PROGRAMS = chaman $(TESTS)
 
 if BUILD_CGM
-  LDADD = libiGeom.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la
+  LDADD = libiGeom.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 else
-  LDADD = libiGeom.la
+  LDADD = libiGeom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
 
 AM_LDFLAGS +=  $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)

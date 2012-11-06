@@ -28,7 +28,7 @@ endif
 check_PROGRAMS = $(TESTS)
 
 if BUILD_CGM
-  LDADD = ../libcgm.la ../geom/libcubit_geom.la ../init/libcgma_init.la ../util/libcubit_util.la libcgm_test.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../libcgm.la ../geom/libcubit_geom.la ../init/libcgma_init.la ../util/libcubit_util.la libcgm_test.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 else
   LDADD = -lcubit_geom -lcubit_util -lcubiti19 $(top_builddir)/init/libcgma_init.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
