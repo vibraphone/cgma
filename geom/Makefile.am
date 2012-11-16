@@ -128,7 +128,6 @@ libcubit_geom_la_SOURCES = \
 # not be installed, move it to the _SOURCES list above.
 libcubit_geom_la_include_HEADERS = \
   AnalyticGeometryTool.hpp \
-  AutoMidsurfaceTool.hpp \
   BasicTopologyEntity.hpp \
   Body.hpp \
   BodySM.hpp \
@@ -140,8 +139,6 @@ libcubit_geom_la_include_HEADERS = \
   CAEntityColor.hpp \
   CAEntityId.hpp \
   CAEntityName.hpp \
-  CAEntityTol.hpp \
-  CAEntitySense.cpp \
   CAGroup.hpp \
   CAMergePartner.hpp \
   CAMergeStatus.hpp \
@@ -233,7 +230,6 @@ libcubit_geom_la_include_HEADERS = \
   TDUniqueId.hpp \
   TopologyBridge.hpp \
   TopologyEntity.hpp \
-  UnMergeEvent.hpp \
-  CGMHistory.hpp
+  UnMergeEvent.hpp 
 
 
