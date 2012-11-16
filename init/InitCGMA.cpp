@@ -40,13 +40,13 @@ class AcisTweakToolCAT
 #endif
 
 #elif defined(HAVE_ACIS) 
-#  include "AcisQueryEngine.hpp"
-#  include "AcisModifyEngine.hpp"
+#include "AcisQueryEngine.hpp"
+#include "AcisModifyEngine.hpp"
 #endif
 
 #if defined(HAVE_OCC) 
-#  include "OCCQueryEngine.hpp"
-#  include "OCCModifyEngine.hpp"
+#include "OCCQueryEngine.hpp"
+#include "OCCModifyEngine.hpp"
 #endif
 
 

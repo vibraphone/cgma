@@ -550,7 +550,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
-AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h geom/CubitCompat.h)
+AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h amendment/CubitCompat.h)
 AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
@@ -563,6 +563,7 @@ AC_CONFIG_FILES(Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
            init/Makefile
+           amendment/Makefile
            compat/Makefile
            cgm.make
            itaps/Makefile

@@ -4,6 +4,8 @@ lib_LTLIBRARIES = libcubit_util.la
 # The directory where headers will be installed
 libcubit_util_la_includedir = $(includedir)
 
+AM_CPPFLAGS = -I$(top_srcdir)/amendment -I.
+
 # The non-template sources
 # If any of these do not need to be installed, move them
 # to the _SOURCES list above.
@@ -34,8 +36,6 @@ libcubit_util_la_SOURCES = \
   CubitTransformMatrix.cpp \
   CubitUtil.cpp \
   CubitVector.cpp \
-  CubitFileSimModel.cpp \
-  CubitUndo.cpp \
   DIntArray.cpp \
   DLList.cpp \
   DynamicArray.cpp \
@@ -99,8 +99,6 @@ libcubit_util_la_include_HEADERS = \
   CubitUtilConfigure.h \
   CubitVector.hpp \
   CubitVectorStruct.h \
-  CubitFileSimModel.hpp \
-  CubitUndo.hpp \
   DIntArray.hpp \
   DLIList.hpp \
   DLList.hpp \
@@ -194,3 +192,4 @@ else
 endif
 
 libcubit_util_la_LIBADD = -ldl
+LDADD = ../amendment/libcgma_amendment.la

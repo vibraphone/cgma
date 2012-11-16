@@ -3,13 +3,15 @@ AUTOMAKE_OPTIONS = foreign
 
 # Override default defines with the ones we want from the configure script
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
-AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/geom
+AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/geom 
 
 # The name of the library to build
 lib_LTLIBRARIES = libCholla.la
 
 # The directory where headers will be installed
 libCholla_la_includedir = $(includedir)
+
+LDADD = ../../util/libcubit_util.la ../../geom/libcubit_geom.la
 
 # The non-template sources
 libCholla_la_SOURCES = \

@@ -43,15 +43,16 @@ if BUILD_CGM
 		  geom/Cholla/libCholla.la \
                   geom/facetbool/libcubit_facetbool.la \
                   geom/libcubit_geom.la \
-                  util/libcubit_util.la
+                  util/libcubit_util.la \
+                  amendment/libcgma_amendment.la
 else
-  CORE_CGM_LIBS = geom/libcubit_geom.la $(CGM_ll_LIB)
+  CORE_CGM_LIBS = geom/libcubit_geom.la  amendment/libcgma_amendment.la $(CGM_ll_LIB)
 endif
 
-SUBDIRS = compat util geom init . $(igeom_DIR) test cgm_apps
+SUBDIRS = compat amendment util geom init . $(igeom_DIR) test cgm_apps
 # geom/testing
 
-libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
+libcgm_la_LIBADD = $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
 
 libcgm_la_SOURCES = 
 

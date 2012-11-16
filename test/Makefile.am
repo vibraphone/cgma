@@ -11,29 +11,32 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS = 
+TESTS = init sheet
 if build_ACIS
   TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
 else
 if WITH_CUBIT
-  TESTS += webcut merge_acis
+  TESTS += webcut merge_acis brick_acis
 else
-  TESTS += brick_facet merge_facet init sheet
+  TESTS += brick_facet merge_facet
 endif
 endif
 if build_OCC
-  TESTS += init sheet attribute_to_file loft offset_curves point_project imprint_bug modify subtract makept test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug modify subtract makept test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ
 endif
 
 check_PROGRAMS = $(TESTS)
 
+noinst_LTLIBRARIES = libcgm_test.la
+
 if BUILD_CGM
-  LDADD = ../libcgm.la ../geom/libcubit_geom.la ../init/libcgma_init.la ../util/libcubit_util.la libcgm_test.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  libcgm_test_la_LIBADD = $(top_builddir)/libcgm.la 
+
+  LDADD = ../init/libcgma_init.la ../util/libcubit_util.la ../geom/libcubit_geom.la ../geom/OCC/libcubit_OCC.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la libcgm_test.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 else
-  LDADD = -lcubit_geom -lcubit_util -lcubiti19 $(top_builddir)/init/libcgma_init.la $(top_builddir)/geom/libcubit_geom.la $(top_builddir)/util/libcubit_util.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../amendment/libcgma_amendment.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
 
-noinst_LTLIBRARIES = libcgm_test.la
 libcgm_test_la_SOURCES = TestUtilities.hpp \
                          TestUtilities.cpp
 

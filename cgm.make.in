@@ -22,6 +22,8 @@ CGM_INT_INCLUDE = -I@abs_top_srcdir@ \
                   -I@abs_top_builddir@/init \
                   -I@abs_top_srcdir@/geom \
                   -I@abs_top_builddir@/geom \
+                  -I@abs_top_srcdir@/amendment \
+                  -I@abs_top_builddir@/amendment \
                   -I@abs_top_srcdir@/geom/ACIS \
                   -I@abs_top_srcdir@/geom/virtual \
                   -I@abs_top_srcdir@/geom/facet \
