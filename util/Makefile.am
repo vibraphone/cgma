@@ -26,11 +26,13 @@ libcubit_util_la_SOURCES = \
   CubitFileIOWrapper.cpp \
   CubitFileMetaData.cpp \
   CubitFileUtil.cpp \
+  CubitInstrumentation.cpp \
   CubitMatrix.cpp \
   CubitMessage.cpp \
   CubitObservable.cpp \
   CubitObserver.cpp \
   CubitPlane.cpp \
+  CubitProcess.cpp \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
@@ -42,6 +44,7 @@ libcubit_util_la_SOURCES = \
   GMem.cpp \
   GetLongOpt.cpp \
   GfxDebug.cpp \
+  GlobalCommandFeedback.cpp \
   IntersectionTool.cpp \
   MemoryBlock.cpp \
   MemoryManager.cpp \
@@ -86,12 +89,14 @@ libcubit_util_la_include_HEADERS = \
   CubitFileMetaData.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
+  CubitInstrumentation.hpp \
   CubitMatrix.hpp \
   CubitMessage.hpp \
   CubitObservable.hpp \
   CubitObserver.hpp \
   CubitPlane.hpp \
   CubitPlaneStruct.h \
+  CubitProcess.hpp \
   CubitStack.hpp \
   CubitString.hpp \
   CubitTransformMatrix.hpp \
@@ -116,6 +121,7 @@ libcubit_util_la_include_HEADERS = \
   GeometryDefines.h \
   GetLongOpt.hpp \
   GfxDebug.hpp \
+  GlobalCommandFeedback.hpp \
   IGUIObservers.hpp \
   IdSetEvent.hpp \
   IndexedDouble.hpp \
