@@ -55,10 +55,10 @@ directory into CGM_DIR.
 ACIS libraries are located and other options (run "./configure -h" for
 a list of options).
 3. Make the CGM libraries by typing "make".
-4. Install the CGM libraries by typing "make install" (this installs
+4. Test the libraries using "make check".
+5. Install the CGM libraries by typing "make install" (this installs
 the libraries to the location specified by the --prefix option to
 configure, or to /usr/local by default).
-5. Test the installation using "make test".
 
 =====================================
 Documentation, Testing, Example Applications
