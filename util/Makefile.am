@@ -26,13 +26,11 @@ libcubit_util_la_SOURCES = \
   CubitFileIOWrapper.cpp \
   CubitFileMetaData.cpp \
   CubitFileUtil.cpp \
-  CubitInstrumentation.cpp \
   CubitMatrix.cpp \
   CubitMessage.cpp \
   CubitObservable.cpp \
   CubitObserver.cpp \
   CubitPlane.cpp \
-  CubitProcess.cpp \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
@@ -44,7 +42,6 @@ libcubit_util_la_SOURCES = \
   GMem.cpp \
   GetLongOpt.cpp \
   GfxDebug.cpp \
-  GlobalCommandFeedback.cpp \
   IntersectionTool.cpp \
   MemoryBlock.cpp \
   MemoryManager.cpp \
@@ -62,6 +59,12 @@ libcubit_util_la_SOURCES = \
   ToolDataUser.cpp \
   Tree.cpp \
   TtyProgressTool.cpp 
+
+#if WITH_CUBIT
+  libcubit_util_la_SOURCES += GlobalCommandFeedback.cpp \
+      CubitProcess.cpp \
+      CubitInstrumentation.cpp
+#endif 
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
@@ -89,14 +92,12 @@ libcubit_util_la_include_HEADERS = \
   CubitFileMetaData.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
-  CubitInstrumentation.hpp \
   CubitMatrix.hpp \
   CubitMessage.hpp \
   CubitObservable.hpp \
   CubitObserver.hpp \
   CubitPlane.hpp \
   CubitPlaneStruct.h \
-  CubitProcess.hpp \
   CubitStack.hpp \
   CubitString.hpp \
   CubitTransformMatrix.hpp \
@@ -121,7 +122,6 @@ libcubit_util_la_include_HEADERS = \
   GeometryDefines.h \
   GetLongOpt.hpp \
   GfxDebug.hpp \
-  GlobalCommandFeedback.hpp \
   IGUIObservers.hpp \
   IdSetEvent.hpp \
   IndexedDouble.hpp \
@@ -168,6 +168,12 @@ libcubit_util_la_include_HEADERS = \
   TtyProgressTool.hpp \
   database.hpp
 
+#if WITH_CUBIT
+  libcubit_util_la_include_HEADERS += GlobalCommandFeedback.hpp \
+           CubitProcess.hpp \
+           CubitInstrumentation.hpp
+#endif 
+ 
 # If template defs are included, then the template definitions
 # need to be installed with the headers.  Otherwise they need
 # to be compiled.
