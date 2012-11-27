@@ -28,7 +28,7 @@ libiGeom_la_includedir = $(includedir)
 if BUILD_CGM
   libiGeom_la_LIBADD = $(top_builddir)/libcgm.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../geom/Cholla/libCholla.la ../init/libcgma_init.la ../geom/libcubit_geom.la
 else
-  libiGeom_la_LIBADD = -lcubiti19 -lcubit_geom -lcubit_util $(top_builddir)/init/libcgma_init.la $(top_builddir)/amendment/libcgma_amendment.la
+  libiGeom_la_LIBADD = -lcubiti19 -lcubit_util $(top_builddir)/init/libcgma_init.la $(top_builddir)/amendment/libcgma_amendment.la -lcubit_geom
 endif 
 
 AM_CPPFLAGS += $(HAVE_ACIS_DEF) \

@@ -20,16 +20,20 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/amendment -I.
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_geom.la
+lib_LTLIBRARIES =
+if BUILD_CGM
+  lib_LTLIBRARIES += libcubit_geom.la
+endif
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
 
 libcubit_geom_la_LIBADD = $(top_builddir)/amendment/libcgma_amendment.la
 
-LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(top_builddir)/util/libcubit_util.la 
+LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(top_builddir)/util/libcubit_util.la
 
 # The non-template sources
+if BUILD_CGM
 libcubit_geom_la_SOURCES = \
     AllocMemManagersGeom.cpp \
     AnalyticGeometryTool.cpp \
@@ -123,6 +127,7 @@ libcubit_geom_la_SOURCES = \
     TDUniqueId.cpp \
     TopologyBridge.cpp \
     TopologyEntity.cpp 
+endif
 
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.

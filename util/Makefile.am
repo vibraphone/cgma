@@ -1,5 +1,8 @@
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_util.la
+lib_LTLIBRARIES = 
+if BUILD_CGM
+  lib_LTLIBRARIES += libcubit_util.la
+endif
 
 # The directory where headers will be installed
 libcubit_util_la_includedir = $(includedir)
@@ -203,5 +206,4 @@ else
       RStarTreeNode.cpp
 endif
 
-libcubit_util_la_LIBADD = -ldl
-LDADD = ../amendment/libcgma_amendment.la
+libcubit_util_la_LIBADD = -ldl ../amendment/libcgma_amendment.la
