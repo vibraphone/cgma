@@ -36,7 +36,8 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
                -DSRCDIR=$(srcdir) \
                -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
-	       -I$(top_srcdir)/init
+	       -I$(top_srcdir)/init \
+               -I$(top_srcdir)/amendment
 
 if USE_MPI
   AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI

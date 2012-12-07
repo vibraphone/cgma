@@ -6,7 +6,8 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 AM_CPPFLAGS = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom \
            -I$(top_srcdir)/geom/facet \
-           -I$(top_srcdir)/geom/Cholla
+           -I$(top_srcdir)/geom/Cholla \
+           -I$(top_srcdir)/amendment
 
 # The name of the library to build
 lib_LTLIBRARIES = 
