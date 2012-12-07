@@ -16,7 +16,6 @@
 #include "CompositeShell.hpp"
 #include "CompositeLump.hpp"
 #include "CompositeBody.hpp"
-#include "GfxPreview.hpp"
 
 #include "PartitionPoint.hpp"
 #include "SegmentedCurve.hpp"
