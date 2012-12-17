@@ -584,12 +584,12 @@ DLIList<X>& DLIList<X>::operator=(const DLIListIterator<X>& from_iter)
 }
 
 template <class X> inline
-X & DLIList<X>::operator[](int index) const
+X & DLIList<X>::operator[](int index1) const
 {
-  if(index < 0 || index >= itemCount)
+  if(index1 < 0 || index1 >= itemCount)
     throw std::out_of_range ("Index out of Bounds");
     //assert( index >= 0 && index < itemCount );
-    return listArray[index];
+    return listArray[index1];
 }
 
 template <class X> inline
