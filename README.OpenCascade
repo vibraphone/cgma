@@ -1,0 +1,69 @@
+		    Build CGM on Opencascade 6.5.3
+
+•	Please download Opencascade6.5 source package at
+	http://www.opencascade.org/getocc/download/loadocc/
+
+•	Then follow the link instruction to build OCC libraries.
+	http://trac.mcs.anl.gov/projects/ITAPS/wiki/BuildingOcc65
+
+• 	Download CGM trunk files, then under trunk do 
+	•	autoreconf -fi
+        •       ./configure --with-occ=(your occ dir, parent dir of ros) --prefix=Your install dir.
+        •	make or make install
+	•  	make check to see some examples of the testcases running.
+
+                    CGM on OCC6.5 capabilities
+
+1.	Query
+
+•	Import/Export OpenCascade  b-rep files, create CGM geometry/topology entities.
+
+•	Import/Export OpenCascade b-rep plus CGM attribute files.
+
+•	Delete entities build on OCC engine.
+
+•	Translate/Rotate/Scale/Reflect objects.
+        Added scale with 3 different scale factors in 3 axes.
+
+•	Detect body overlap
+
+•	Get iso-parametric points on surfaces and curves.
+
+•	Get curve-curve, curve-surface intersection points.
+
+•	Get distance between entities.
+
+•	Get bounding boxes for entities.
+
+•	Get facets info for surfaces and curves.
+
+
+2.	Modify
+
+•	Create CGM geometry entities using OpenCascade engine. Top-Down method: directly create points, curves, surfaces or solid primitives.
+
+•	Create CGM geometry entities using OpenCascade engine, Bottom-Up method: curve generates by points, surface generates by curves and solid generates by surfaces.
+
+•	Copy body.
+
+•	Boolean operations: subtract, unite, intersect.
+
+•	Project curve on surface
+
+•	Imprint object: body-body imprint, surface-body imprint, curve-surface imprint, point-body imprint, projected curve imprint.
+
+•	Make thick body by hollowing existing solid.
+
+•	Fillet and Chamber creation.
+ 
+•	tweak-move surfaces and curves.
+
+•	Sweep surface or curve along a vector, an edge, perpendicularly or revolutionarily.(alpha testing)
+
+•       Section, cuts in half. To see a cross section of the model.
+
+•	Chop, cuts body by body, returns outside body, intersect body and leftover body.
+
+•	webcut, three point cutting surface, body cutting tool, mid-plane cutting tool.
+     
+

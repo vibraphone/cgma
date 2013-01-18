@@ -1,0 +1,6 @@
+#ifndef CGMConfigure_h
+#define CGMConfigure_h
+
+#cmakedefine CGM_KCM
+
+#endif

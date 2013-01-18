@@ -1,0 +1,88 @@
+=====================================
+Read Me for CGM on OCC 
+=====================================
+
+CGM can be built upon the ACIS solid modeling engine or OCC solid
+modeling engine, but also includes geometry capability developed
+beside and on top of them.  
+CGM is supported on Sun Solaris, SGI, HP, Linux and Windows NT 
+platforms. CGM also includes support for loading OCC
+models on parallel computers.  
+CGM is being released into the public domain under an LGPL license;
+the OCC-based engine is available from Opencascade open source downloads.
+
+=====================================
+Build OCC-based engine
+=====================================
+
+Go to http://www.opencascade.org/getocc/download/loadocc/ and get 
+desired source files.
+
+Untar the files.  Change directory to OpenCASCADE6.3.0.
+Patch OCC by doing:
+
+  patch -p0 <cgm_source>/geom/OCC/occ_patches
+
+This will update the OCC distribution.
+Change directories to ros.  Build OCC by doing:
+
+  autoreconf -fi
+  ./configure (Add --prefix=dir for your install directory)
+  make 
+  make install
+
+=====================================
+Dependencies
+=====================================
+
+CGM can be built using the CMake utility, which is "an extensible,
+open-source system that manages the build process in an operating
+system and compiler independent manner", or (on *NIX) using a
+configure-make system.  Cmake is available under an open source
+license, and can be downloaded in binary or source formats; see
+http://www.cmake.org for details.
+
+=====================================
+Compiling
+=====================================
+
+1. Unpack the source code in some directory CGM_DIR, and change
+directory into CGM_DIR.
+2a. Run cmake in that directory, using either the non-interactive
+("cmake .") or interactive ("ccmake .") version, OR
+2b. Run "./configure" in that directory, optionally specifying where
+ACIS libraries are located and other options (run "./configure -h" for
+a list of options).
+3. Make the CGM libraries by typing "make".
+4. Test the build using "make test".
+5. Install the CGM libraries by typing "make install" (this installs
+the libraries to the location specified by the --prefix option to
+configure, or to /usr/local by default).
+6. Test the installation using "make test".
+
+=====================================
+Documentation, Testing, Example Applications
+=====================================
+
+Documentation for CGM is available from the CGM web page,
+http://cubit.sandia.gov/CGM.
+
+Example applications are included with the CGM distribution in the
+"test" subdirectory.  Examples include importing and querying solid
+model-based geometry, and constructing OCC-based geometry.  If you
+are interested in contributing examples to be included with CGM, we
+would welcome submissions; please send them to the email address
+below.
+
+=====================================
+Bugs, Correspondence, Contributing
+=====================================
+
+CGM on OCC code is now in alpha testing stage, we encourage users to 
+submit bug reports (and, if desired, fixes) to cgma-dev@mcs.anl.gov .
+
+=====================================
+Updates
+=====================================
+
+This is the first version of the file

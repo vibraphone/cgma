@@ -1,0 +1,35 @@
+This is a list of the known issues with CGM on OCC.For more details please see
+the online ticket system at the MOAB website:
+    https://trac.mcs.anl.gov/projects/ITAPS/wiki
+ 
+
+
+ID   Severity  Summary/Details
+===  ========  ===================================================================
+175 critical  imprint special cases fail with crash.
+
+176 minor     CGM memory leak
+
+178 major     Unite function doesn't unite smoothly connected surfaces.
+
+179 major     mcnp2cad test suite lat1-3, lat5, lat1,norot not working, 
+              `needs debugging.
+
+180 major     There are lots new functions or added functions to exsisting 
+              functions requirements to port OCC to cubit12. 
+
+181 minor     Lack of good cases for testing purpose.
+
+182 minor     Dirty geometry/imported geometry is not tested for read/repair yet 
+183 minor     Don't have proper tool to visualize the TopoDS_Shapes, debugging
+           process is long preparing for graphics to understand the issue 
+
+185 major     mcnp2cad/tests/INP-torus test case fails on imprinting 2 spline 
+              surfaces.
+
+247 major     Uniting of two shapes failed in Opencascade
+ 
+251 major     imprint mesh bug by Boyd Tidwell
+
+265 major     step file read crash
+

@@ -1,0 +1,95 @@
+=====================================
+The Common Geometry Module (CGM)
+Read Me
+
+This is code from merging the cubit13.1 code and Version12.2 code.
+=====================================
+
+The Common Geometry Module (CGM) is a code library which provides
+geometry functionality used for mesh generation and other
+applications.  This functionality includes that commonly found in
+solid modeling engines, like geometry creation, query and
+modification; CGM also includes capabilities not commonly found in
+solid modeling engines, like geometry decomposition tools and support
+for shared material interfaces.  CGM is built upon the ACIS solid
+modeling engine, but also includes geometry capability developed
+beside and on top of ACIS.  CGM can be used as-is to provide geometry
+functionality for codes needing this capability.  However, CGM can
+also be extended using derived classes in C++, allowing the geometric
+model to serve as the basis for other applications, for example mesh
+generation.  CGM is supported on Sun Solaris, SGI, HP, Linux
+and Windows NT platforms.  CGM also includes support for loading ACIS
+models on parallel computers, using MPI-based communication.  Future
+plans for CGM are to port it to different solid modeling engines,
+including Pro/Engineer or SolidWorks.  CGM is being released into the
+public domain under an LGPL license; the ACIS-based engine is
+available to ACIS licensees on request.  
+
+=====================================
+Dependencies
+=====================================
+
+CGM can be built using the CMake utility, which is "an extensible,
+open-source system that manages the build process in an operating
+system and compiler independent manner", or (on *NIX) using a
+configure-make system.  Cmake is available under an open source
+license, and can be downloaded in binary or source formats; see
+http://www.cmake.org for details.
+
+CGM can be built without using any external solid modeling engines; in
+this form, facet-based geometry can be constructed, queried and
+modified.  Specific engines relying on third-party, commercial
+modelers are also available, to those licensed to use those modelers.
+Contact the CUBIT team at cubit-dev_at_sandia.gov for details and to
+obtain source code for these engines.
+
+=====================================
+Compiling
+=====================================
+
+1. Unpack the source code in some directory CGM_DIR, and change
+directory into CGM_DIR.
+2a. Run cmake in that directory, using either the non-interactive
+("cmake .") or interactive ("ccmake .") version, OR
+2b. Run "./configure" in that directory, optionally specifying where
+ACIS libraries are located and other options (run "./configure -h" for
+a list of options).
+3. Make the CGM libraries by typing "make".
+4. Test the build using "make test".
+5. Install the CGM libraries by typing "make install" (this installs
+the libraries to the location specified by the --prefix option to
+configure, or to /usr/local by default).
+6. Test the installation using "make test".
+
+=====================================
+Documentation, Testing, Example Applications
+=====================================
+
+Documentation for CGM is available from the CGM web page,
+http://cubit.sandia.gov/CGM.
+
+Example applications are included with the CGM distribution in the
+cgm_apps subdirectory.  Examples include importing and querying solid
+model-based geometry, and constructing facet-based geometry.  If you
+are interested in contributing examples to be included with CGM, we
+would welcome submissions; please send them to the email address
+below.
+
+The best example for how to build applications is to look in the
+cgm_apps/examples/facetdriver (without ACIS) and
+cgm_apps/examples/driverc++ (with ACIS) subdirectories.
+
+=====================================
+Bugs, Correspondence, Contributing
+=====================================
+
+CGM is LGPL code, and we encourage users to submit bug reports (and,
+if desired, fixes) to cubit-dev_at_sandia.gov.  Users are encouraged to check
+http://cubit.sandia.gov/CGM often for news and updates.
+
+=====================================
+Updates
+=====================================
+
+14.0 (4/05): Initial public CGM release
+

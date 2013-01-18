@@ -1,0 +1,45 @@
+#==================================================================
+#
+# To build CGM applications, do the following:
+#
+# 0. include this file in your makefile (using 'include cgm.make')
+# 1. Insert '${CGM_INCLUDES}' (w/o quotes) in your compile command, e.g.
+#      ${CXX} ${CGM_INCLUDES} -c mysource.cpp
+# 2. Insert '${CGM_LIBS_LINK}' (w/o quotes) on your link line
+#
+# That's it! No need to look at the code below, unless you're curious.
+#
+#==================================================================
+
+# The following are initialized here for a non-installed CGM.
+# These values will be overridden when this file is installed.
+CGM_INT_LDFLAGS = -L@abs_top_builddir@/.libs
+CGM_INT_LTFLAGS = -R@abs_top_builddir@/.libs
+CGM_INT_INCLUDE = -I@abs_top_srcdir@ \
+                  -I@abs_top_srcdir@/util \
+                  -I@abs_top_builddir@/util \
+                  -I@abs_top_srcdir@/init \
+                  -I@abs_top_builddir@/init \
+                  -I@abs_top_srcdir@/geom \
+                  -I@abs_top_builddir@/geom \
+                  -I@abs_top_srcdir@/amendment \
+                  -I@abs_top_builddir@/amendment \
+                  -I@abs_top_srcdir@/geom/ACIS \
+                  -I@abs_top_srcdir@/geom/virtual \
+                  -I@abs_top_srcdir@/geom/facet \
+                  -I@abs_top_srcdir@/geom/facetbool \
+                  -I@abs_top_srcdir@/geom/Cholla 
+
+# Pre-processor flags
+CGM_DEFINES = @CGM_DEFINES@ @HAVE_ACIS_DEF@ @HAVE_OCC_DEF@
+CGM_INCLUDES = @CGM_EXT_INCLUDE@ $(CGM_INT_INCLUDE)
+CGM_CPPFLAGS = $(CGM_DEFINES) $(CGM_INCLUDES)
+
+# Link flags
+CGM_LIBS = -lcgm @CGM_EXT_LIBS@
+CGM_LDFLAGS = $(CGM_INT_LDFLAGS) @CGM_EXT_LDFLAGS@
+CGM_LTFLAGS = $(CGM_INT_LTFLAGS) @CGM_EXT_LTFLAGS@
+CGM_LIBS_LINK = $(CGM_LDFLAGS) $(CGM_LIBS)
+
+# Build-generated values appended after this line
+
