@@ -1,0 +1,1125 @@
+import iBase version 0.8;
+package iGeom version 0.6.99
+{
+
+//This file shows the high level organization of the methods into
+//interface groupings and classes
+
+//===========================================================================
+//  Fundamental interface from which all geometry related interfaces inherit.
+//===========================================================================
+/**
+ * This serves as a base interface for all the TSTT geometry query interfaces.
+ * This interface does not have any methods.
+ */
+  interface Geometry {
+
+  }
+
+//===========================================================================
+//  Core entity set query through primitive arrays
+//===========================================================================
+  interface CoreQuery extends Geometry {
+
+//==========================load=============================
+/** 
+ * Load a model specified by name. Which formats are supported and the
+ * specific meaning of this name string (e.g. file name, model name,
+ * etc.) are implementation-dependent.  Options are also implementation-
+ * dependent.
+ * @param name Name of the model
+ * @param options String options 
+ */
+    void load(in string name, in string options) 
+      throws iBase.Error;
+
+//==========================save=============================
+/** 
+ * Save a model to a file specified by name. Which formats are supported and the
+ * specific meaning of this name string (e.g. file name, model name,
+ * etc.) are implementation-dependent.  Options are also implementation-
+ * dependent.
+ * @param name Name of the file to save to
+ * @param options String options 
+ */
+    void save(in string name, in string options) 
+      throws iBase.Error;
+
+  }
+
+//===========================================================================
+//  Topology functions
+//===========================================================================
+/**
+ * Functions for evaluating topological characteristics of and relations 
+ * between gentities of various dimensions.
+ */
+  interface Topology extends Geometry {
+
+//==========================getEntities=================
+/**
+ * Return gentities of specified dimension in this set, or in whole model.
+ * @param set_handle Entity set being queried (if 0, whole model)
+ * @param gentity_dimension Dimension of entities being queried
+ * @param gentity_handles Gentity handles
+ */
+    void getEntities( in opaque set_handle,
+                      in EntityType gentity_type,
+                      inout array<opaque> gentity_handles,
+                      out int gentity_handles_size) 
+      throws iBase.Error;
+
+//==========================getNumOfType=================
+/**
+ * Return number of gentities of specified dimension in this set, or in
+ * whole model.
+ * @param set_handle Entity set being queried (if 0, whole model)
+ * @param gentity_dimension Dimension of entities being queried
+ * @return Number of entities
+ */
+    void getNumOfType(in opaque set_handle, in EntityType gentity_type,
+                      out int num_type) 
+      throws iBase.Error;
+
+    void getEntType( in opaque handle, out EntityType ent_type ) throws iBase.Error;
+
+//==========================getArrType=================
+/**
+ *    Returns an integer array of topological dimensions for an input
+ *    array of entity handles.
+ */
+    void getArrType(in array<opaque> gentity_handles,
+                    in int gentity_handles_size,
+                    inout array<EntityType> gtype,
+                    out int gtype_size) 
+      throws iBase.Error;
+  
+
+//==========================getEntAdj=================
+/**
+ * Get the adjacent entities of a given dimension.
+ * @param gentity_handle Entity for which adjacencies are requested
+ * @param to_dimension Target dimension of adjacent entities
+ * @param adj_gentities List returned with adjacent entities
+ */
+    void getEntAdj(in opaque entity_handle, 
+                   in EntityType to_dimension, 
+                   inout array<opaque> adj_gentities,
+                   out int adj_gentities_size) 
+      throws iBase.Error;
+  
+//==========================getArrAdj=================
+/**
+ * Get the adjacent entities of a given dimension.
+ * @param gentity_handle Entity for which adjacencies are requested
+ * @param to_dimension Target dimension of adjacent entities
+ * @param adj_gentities List returned with adjacent entities
+ */
+    void getArrAdj( in array<opaque> entity_handles,
+                    in int entity_handles_size,
+                    in EntityType requested_entity_type,
+                    inout array<opaque> adj_entity_handles,
+                    out int adj_entity_handles_size,
+                    inout array<int> offset, 
+                    out int offset_size
+                  ) throws iBase.Error;
+
+//==========================getEnt2ndAdj=================
+/**
+ * Get the "2nd order" adjacent entities, through a specified "bridge"
+ * dimension, of a target dimension.  For example, given a region, return
+ * the regions (to_dimension=3) sharing an edge (bridge_dimension=1)
+ * with that region.  bridge_dimension must be less than dimension of 
+ * gentity_handle, and to_dimension must be greater than bridge dimension.
+ * 
+ * @param gentity_handle Entity for which 2nd order adjacencies are requested
+ * @param to_dimension Target dimension of 2nd order adjacent entities
+ * @param bridge_dimension Dimension of "bridge" entities
+ * @param adj_gentities List returned with 2nd order adjacent entities
+ */
+    void getEnt2ndAdj(in opaque gentity_handle, 
+                      in EntityType bridge_dimension, 
+                      in EntityType to_dimension, 
+                      inout array<opaque> adjacent_gentities,
+                      out int adjacent_gentities_size) 
+      throws iBase.Error;
+
+//==========================getArr2ndAdj=================
+/**
+ * Get the "2nd order" adjacent entities, through a specified "bridge"
+ * dimension, of a target dimension.  For example, given a region, return
+ * the regions (to_dimension=3) sharing an edge (bridge_dimension=1)
+ * with that region.  bridge_dimension must be less than dimension of 
+ * gentity_handle, and to_dimension must be greater than bridge dimension.
+ * 
+ * @param gentity_handle Entity for which 2nd order adjacencies are requested
+ * @param order_adjacent_key Dimension of "bridge" entities
+ * @param requested_entity_type Target dimension of 2nd order adjacent entities
+ * @param adj_entity_handles List returned with 2nd order adjacent entities
+ */
+    void getArr2ndAdj( in array<opaque> entity_handles,
+                       in int entity_handles_size,
+                       in EntityType order_adjacent_key,
+                       in EntityType requested_entity_type,
+                       inout array<opaque> adj_entity_handles,
+                       out int adj_entity_handles_size,
+                       inout array<int> offset, 
+                       out int offset_size
+                     ) throws iBase.Error;
+
+//==========================isEntAdj=================
+/**
+ * Return whether or not entities are adjacent.
+ * @param gentity_handle1 1st entity
+ * @param gentity_handle2 2nd entity
+ * @param are_adjacent If true, entities are adjacent
+ */
+    void isEntAdj(in opaque gentity_handle1, in opaque gentity_handle2,
+                  out bool are_adjacent) 
+      throws iBase.Error;
+  
+//==========================isArrAdj=================
+/**
+ * Return whether or not arrays of entities are adjacent.
+ * @param gentity_handle1 1st entity
+ * @param gentity_handle2 2nd entity
+ * @param are_adjacent If true, entities are adjacent
+ */
+    void isArrAdj ( in array<opaque> entity_handles_1,
+                    in int entity_handles_1_size,
+                    in array<opaque> entity_handles_2,
+                    in int entity_handles_2_size,
+                    inout array <int> is_adjacent_info,
+                    out int is_adjacent_info_size
+                  ) throws iBase.Error;
+
+
+    void getTopoLevel( out int level ) throws iBase.Error;
+  }
+
+//===========================================================================
+//  Shape functions
+//===========================================================================
+/**
+ * Functions for evaluating shape characteristics of gentities of 
+ * various dimensions.
+ */
+  interface Shape extends Geometry {
+
+//==========================getEntClosestPt=================
+    void getEntClosestPt( in opaque entity_handle,
+                          in double near_x, in double near_y, in double near_z,
+                          out double on_x, out double on_y, out double on_z
+                          ) throws iBase.Error;
+
+//==========================getArrClosestPt=================
+/**
+ * Return a points on specified entities closest to specified points
+ * in space.  Input coordinates and output points are interleaved in 
+ * the arrays.
+ * @param gentity_handles The gentities being queried
+ * @param near_coordinates Input coordinates
+ * @param on_coordinates Closest point on gentity
+ */
+    void getArrClosestPt(in array<opaque> gentity_handles, 
+                         in int gentity_handles_size,
+                         in iBase.StorageOrder storage_order,
+                         in array <double> near_coordinates, 
+                         in int near_coordinates_size,
+                         inout array <double> on_coordinates,
+                         out int on_coordinates_size) 
+      throws iBase.Error;
+   
+//==========================getEntNrmlXYZ=================
+    void getEntNrmlXYZ( in opaque entity_handle,
+                        in double x, in double y, in double z,
+                        out double nrml_i, out double nrml_j, out double nrml_k
+                        ) throws iBase.Error;
+
+//==========================getArrNrmlXYZ=================
+/**
+ * Return the normals at point on specified entities.  Returns error
+ * if any input entity is not a gface.  Input coordinates and normals
+ * are interleaved in the arrays.
+ * @param gentity_handles The gentities being queried
+ * @param coordinates Input coordinates, interleaved
+ * @param normals The normals at the specified points, interleaved
+ */
+    void getArrNrmlXYZ(in array<opaque> gentity_handles, 
+                       in int gentity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       in array <double> coordinates, 
+                       in int coordinates_size,
+                       inout array <double> normals,
+                       out int normals_size) 
+      throws iBase.Error;
+   
+//==========================getEntNrmlPlXYZ=================
+    void getEntNrmlPlXYZ( in opaque entity_handle,
+                          in double x, in double y, in double z,
+                          out double pt_x, out double pt_y, out double pt_z,
+                          out double nrml_i, out double nrml_j, out double nrml_k
+                        ) throws iBase.Error;
+
+//==========================getArrNrmlPlXYZ=================
+/**
+ * Return points and normals on specified entities closest to specified points
+ * in space.  Input coordinates and output points are interleaved in 
+ * the arrays.
+ * @param gentity_handles The gentities being queried
+ * @param near_coordinates Input coordinates
+ * @param on_coordinates Closest point on gentity
+ * @param normals Normals on gentity
+ */
+    void getArrNrmlPlXYZ(in array<opaque> gentity_handles, 
+                         in int gentity_handles_size,
+                         in iBase.StorageOrder storage_order,
+                         in array <double> near_coordinates, 
+                         in int near_coordinates_size,
+                         inout array <double> on_coordinates,
+                         out int on_coordinates_size,
+                         inout array <double> normals,
+                         out int normals_size) 
+      throws iBase.Error;
+   
+//==========================getEntTgntXYZ=================
+    void getEntTgntXYZ( in opaque entity_handle,
+                        in double x, in double y, in double z,
+                        out double tgnt_i, out double tgnt_j, out double tgnt_k
+                        ) throws iBase.Error;
+//==========================getArrTgntXYZ=================
+/**
+ * Return the tangent at point on specified entities.  Returns error
+ * if any input entity is not a gedge.  Input coordinates and tangents
+ * are interleaved in the arrays.
+ * @param gentity_handles The gentities being queried
+ * @param coordinates Input coordinates, interleaved
+ * @param tangents The tangents at the specified points, interleaved
+ */
+    void getArrTgntXYZ(in array<opaque> gentity_handles, 
+                       in int gentity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       in array <double> coordinates, 
+                       in int coordinates_size,
+                       inout array <double> tangents,
+                       out int tangents_size) 
+      throws iBase.Error;
+   
+// Various Derivatives
+//==========================getFcCvtrXYZ=================
+    void getFcCvtrXYZ( in opaque face_handle,
+                       in double x, in double y, in double z,
+                       out double cvtr1_i, out double cvtr1_j, out double cvtr1_k,
+                       out double cvtr2_i, out double cvtr2_j, out double cvtr2_k
+                       ) throws iBase.Error;
+
+//==========================getEgCvtrXYZ=================
+    void getEgCvtrXYZ( in opaque edge_handle,
+                       in double x, in double y, in double z,
+                       out double cvtr_i, out double cvtr_j, out double cvtr_k
+                       ) throws iBase.Error;
+
+//==========================getEntArrCvtrXYZ=================
+    void getEntArrCvtrXYZ( in array<opaque> entity_handles,
+                           in int entity_handles_size,
+                           in iBase.StorageOrder storage_order,
+                           in array<double> coords, in int coords_size,
+                           inout array<double> cvtr_1, out int cvtr_1_size,
+                           inout array<double> cvtr_2, out int cvtr_2_size
+                        ) throws iBase.Error;
+
+//==========================getEgEvalXYZ=================
+    void getEgEvalXYZ( in opaque edge_handle,
+                       in double x, in double y, in double z,
+                       out double on_x, out double on_y, out double on_z,
+                       out double tgnt_i, out double tgnt_j, out double tgnt_k,
+                       out double cvtr_i, out double cvtr_j, out double cvtr_k
+                     ) throws iBase.Error;
+
+//==========================getFcEvalXYZ=================
+    void getFcEvalXYZ( in opaque face_handle,
+                       in double x, in double y, in double z,
+                       out double on_x, out double on_y, out double on_z,
+                       out double nrml_i, out double nrml_j, out double nrml_k,
+                       out double cvtr1_i, out double cvtr1_j, out double cvtr1_k,
+                       out double cvtr2_i, out double cvtr2_j, out double cvtr2_k
+                     ) throws iBase.Error;
+
+//==========================getArrEgEvalXYZ=================
+    void getArrEgEvalXYZ( in array<opaque> edge_handles,
+                          in int edge_handles_size,
+                          in iBase.StorageOrder storage_order,
+                          in array<double> coords, in int coords_size,
+                          inout array<double> on_coords, out int on_coords_size,
+                          inout array<double> tangent, out int tangent_size,
+                          inout array<double> cvtr, out int cvtr_size
+                        ) throws iBase.Error;
+
+//==========================getArrFcEvalXYZ=================
+    void getArrFcEvalXYZ( in array<opaque> face_handles,
+                          in int face_handles_size,
+                          in iBase.StorageOrder storage_order,
+                          in array<double> coords, in int coords_size,
+                          inout array<double> on_coords, out int on_coords_size,
+                          inout array<double> normal, out int normal_size,
+                          inout array<double> cvtr_1, out int cvtr_1_size,
+                          inout array<double> cvtr_2, out int cvtr_2_size
+                        ) throws iBase.Error;
+
+//==========================getEntBoundBox=================
+    void getEntBoundBox( in opaque entity_handle,
+                         out double min_x, out double min_y, out double min_z,
+                         out double max_x, out double max_y, out double max_z
+                         ) throws iBase.Error;
+
+//==========================getArrBoundBox=================
+/**
+ * Return the bounding boxex of given entities; coordinates returned
+ * interleaved.
+ * @param gentity_handles The gentities being queried
+ * @param min_corners Minimum corner coordinates of the boxes, interleaved
+ * @param max_corners Maximum corner coordinates of the boxes, interleaved
+ */
+    void getArrBoundBox(in array<opaque> gentity_handles, 
+                        in int gentity_handles_size,
+                        in iBase.StorageOrder storage_order,
+                        inout array <double> min_corner, 
+                        out int min_corner_size,
+                        inout array <double> max_corner,
+                        out int max_corner_size) 
+      throws iBase.Error;
+
+//==========================getVtxCoord=================
+    void getVtxCoord( in opaque vertex_handle,
+                      out double x, out double y, out double z
+                    ) throws iBase.Error;
+
+//==========================getVtxArrCoords=================
+/**
+ * Return the coordinates of the specified vertices; returns error if any
+ * of the entities are not gvertices.  Coordinates returned interleaved.
+ * @param gentity_handles The gentities being queried
+ * @param coordinates The coordinates of the gvertices, interleaved.
+ */
+    void getVtxArrCoords(in array<opaque> gentity_handles, 
+                         in int gentity_handles_size,
+                         in iBase.StorageOrder storage_order,
+                         inout array <double> coordinates,
+                         out int coordinates_size)
+      throws iBase.Error;
+   
+//==========================getPntIntsct=================
+    void getPntRayIntsct( in double x, in double y, in double z,
+                       in double dir_x, in double dir_y, in double dir_z,
+                       inout array<opaque> intersect_entity_handles,
+                       out int intersect_entity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       inout array<double> intersect_coords,
+                       out int intersect_coords_size,
+                       inout array<double> param_coords,
+                       out int param_coords_size
+                     ) throws iBase.Error;
+
+//==========================getPntArrRayIntsct=================
+    void getPntArrRayIntsct( in iBase.StorageOrder storage_order,
+                             in array<double> coords, 
+                             in int coords_size,
+                             in array<double> directions,
+                             in int directions_size,
+                             inout array<opaque> intersect_entity_handles,
+                             out int intersect_entity_handles_size,
+                             inout array<int> offset, 
+                             out int offset_size,
+                             inout array<double> intersect_coords,
+                             out int intersect_coords_size,
+                             inout array<double> param_coords,
+                             out int param_coords_size
+                           ) throws iBase.Error;
+
+//==========================getEntNrmlSense=================
+/**
+ * Return the sense of a gface with respect to a gregion.  Sense is either
+ * forward (=1), reverse (=-1), both (=2), or unknown (=0).  Error is returned
+ * if first entity is not a gface or second entity is not a gregion.
+ * @param gface Gface whose sense is being queried.
+ * @param gregion Gregion gface is being queried with respect to
+ */
+    void getEntNrmlSense(in opaque gface,
+                         in opaque gregion,
+                         out int sense) 
+      throws iBase.Error;
+
+//==========================getArrNrmlSense=================
+    void getArrNrmlSense( in array<opaque> face_handles,
+                          in int face_handles_size,
+                          in array<opaque> region_handles,
+                          in int region_handles_size,
+                          inout array<int> sense, 
+                          out int sense_size
+                        ) throws iBase.Error;
+   
+//==========================getEgFcSense=================
+/**
+ * Return the sense of a gedge with respect to a gface.  Sense is either
+ * forward (=1), reverse (=-1), both (=2), or unknown (=0).  Error is returned
+ * if first entity is not a gedge or second entity is not a gface.
+ * @param gedge Gedge whose sense is being queried.
+ * @param gface Gface gedge is being queried with respect to
+ */
+    void getEgFcSense(in opaque gedge,
+                      in opaque gface,
+                      out int sense)
+      throws iBase.Error;
+
+//==========================getEgFcArrSense=================
+    void getEgFcArrSense( in array<opaque> edge_handles,
+                          in int edge_handles_size,
+                          in array<opaque> face_handles,
+                          in int face_handles_size,
+                          inout array<int> sense, 
+                          out int sense_size
+                        ) throws iBase.Error;
+   
+//==========================getEgVtxSense=================
+/**
+ * Return the sense of a gedge with respect to a specified order of
+ * vertices bounding the gedge.  Sense is either forward (=1), reverse (=-1), 
+ * or unknown (=0).  Error is returned if any gentities are not the expected
+ * type or if the gedge is bounded by only one gvertex (in this case, use
+ * getGtangentSense).
+ * @param gedge Gedge whose sense is being queried.
+ * @param gvertex1 First gvertex
+ * @param gvertex2 Second gvertex
+ */
+    void getEgVtxSense(in opaque gedge,
+                      in opaque gvertex1,
+                      in opaque gvertex2,
+                      out int sense)
+      throws iBase.Error;
+
+//==========================getEgVtxArrSense=================
+    void getEgVtxArrSense( in array<opaque> edge_handles,
+                           in int edge_handles_size,
+                           in array<opaque> vertex_handles_1,
+                           in int vertex_handles_1_size,
+                           in array<opaque> vertex_handles_2,
+                           in int vertex_handles_2_size,
+                           inout array<int> sense, 
+                           out int sense_size
+                         ) throws iBase.Error;
+
+//==========================measure=================
+/**
+ * Return the arc length / area / volume of the entities
+ * @param gentity_handles Entities for which measure is requested
+ * @param gentity_handles_size Number of gentities
+ * @param measures Arc length / area / volume of the entities
+ * @param measures_length Number of entries in measures
+ */
+    void measure(in array<opaque> gentity_handles,
+                 in int gentity_handles_size,
+                 inout array<double> measures,
+                 out int measures_size) throws iBase.Error;
+
+//==========================getFaceType=================
+/**
+ * Return the type of surface as a string; if not a surface, an error is returned
+ * @param face_handle Face for which the type is requested
+ * @param face_type Type of face, returned as a string
+ */
+    void getFaceType(in opaque gface_handle,
+                     inout string face_type) throws iBase.Error;
+  }
+
+//===========================================================================
+//  Parametric interface
+//===========================================================================
+/**
+ * Functions dealing with parametric space and parameter-based evaluation
+ */
+  interface Parametric extends Geometry {
+
+//==========================getParametric=================
+  void getParametric(out int parametric) throws iBase.Error;
+
+//==========================isEntParametric=================
+/**
+ * Return whether a given gentity is parametric or not.  If a gentity
+ * is not parametric, all of the following functions will return an error
+ * when called on that entity.
+ * @param gentity_handle Gentity being queried.
+ */
+    void isEntParametric(in opaque gentity_handle, out int is_parametric) 
+      throws iBase.Error;
+      
+//==========================isArrParametric=================
+    void isArrParametric( in array<opaque> entity_handles,
+                          in int entity_handles_size,
+                          inout array<int> is_parametric,
+                          out int is_parametric_size
+                        ) throws iBase.Error;
+
+
+//==========================getEntUVtoXYZ=================
+    void getEntUVtoXYZ( in opaque entity_handle, in double u, in double v,
+                        out double x, out double y, out double z
+                      ) throws iBase.Error;
+//==========================getArrUVtoXYZ=================
+/**
+ * Given sets of parametric coordinates, return the corresponding real
+ * space coordinates on the gentities.  Input and output coordinates are
+ * interleaved.
+ * @param gentity_handles Gentities being queried.
+ * @param uv Input parametric coordinates
+ * @param xyz Output real space coordinates
+ */
+    void getArrUVtoXYZ(in array<opaque> gentity_handles, 
+                       in int gentity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       in array <double> uv, 
+                       in int uv_size,
+                       inout array <double> coordinates,
+                       out int coordinates_size) 
+      throws iBase.Error;
+
+
+//==========================getEntUtoXYZ=================
+    void getEntUtoXYZ( in opaque entity_handle, in double u,
+                       out double x, out double y, out double z
+                     ) throws iBase.Error;
+
+//==========================getArrUtoXYZ=================
+    void getArrUtoXYZ( in array<opaque> entity_handles,
+                       in int entity_handles_size,
+                       in array<double> u, 
+                       in int u_size,
+                       in iBase.StorageOrder storage_order,
+                       inout array<double> on_coords, 
+                       out int on_coords_size
+                     ) throws iBase.Error;
+
+//==========================getEntXYZtoUV=================
+    void getEntXYZtoUV( in opaque entity_handle,
+                        in double x, in double y, in double z,
+                        out double u, out double v) throws iBase.Error;
+
+//==========================getEntXYZtoU=================
+    void getEntXYZtoU( in opaque entity_handle,
+                       in double x, in double y, in double z,
+                       out double u) throws iBase.Error;
+
+//==========================getArrXYZtoUV=================
+/**
+ * Given sets of real space coordinates, return the corresponding 
+ * parametric coordinates on the gentities.  Input and output coordinates 
+ * are interleaved.
+ * @param gentity_handles Gentities being queried.
+ * @param xyz Input real space coordinates
+ * @param uv Output parametric coordinates
+ */
+    void getArrXYZtoUV(in array<opaque> gentity_handles, 
+                       in int gentity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       in array <double> coordinates,
+                       in int coordinates_size,
+                       inout array <double> uv,
+                       out int uv_size) 
+      throws iBase.Error;
+
+//==========================getArrXYZtoU=================
+    void getArrXYZtoU(in array<opaque> gentity_handles, 
+                       in int gentity_handles_size,
+                       in iBase.StorageOrder storage_order,
+                       in array <double> coordinates,
+                       in int coordinates_size,
+                       inout array <double> u,
+                       out int u_size) 
+      throws iBase.Error;
+
+//==========================getEntXYZtoUVHint=================
+    void getEntXYZtoUVHint( in opaque entity_handle,
+                            in double x, in double y, in double z,
+                            inout double u, inout double v
+                          ) throws iBase.Error;
+
+//==========================getArrXYZtoUVHint=================
+    void getArrXYZtoUVHint( in array<opaque> entity_handles,
+                            in int entity_handles_size,
+                            in iBase.StorageOrder storage_order,
+                            in array<double> coords, in int coords_size,
+                            inout array<double> uv, out int uv_size
+                          ) throws iBase.Error;
+
+//==========================getEntUVRange=================
+    void getEntUVRange( in opaque entity_handle,
+                        out double u_min, out double v_min,
+                        out double u_max, out double v_max
+                      ) throws iBase.Error;
+
+//==========================getEntURange=================
+    void getEntURange( in opaque entity_handle,
+                       out double u_min, out double u_max) throws iBase.Error;
+
+//==========================getArrUVRange=================
+/**
+ * Return the uv range of the specified gentities.  Parameters are interleaved.
+ * @param gentity_handles Gentities being queried.
+ * @param uv_min Minimum parameters of gentities, interleaved
+ * @param uv_max Maximum parameters of gentities, interleaved
+ */
+    void getArrUVRange(in array<opaque> gentity_handles, 
+                        in int gentity_handles_size,
+                        in iBase.StorageOrder storage_order,
+                        inout array <double> uv_min, 
+                        out int uv_min_size,
+                        inout array <double> uv_max,
+                        out int uv_max_size) 
+      throws iBase.Error;
+
+//==========================getArrURange=================
+    void getArrURange( in array<opaque> entity_handles,
+                       in int entity_handles_size,
+                       inout array<double> u_min, out int u_min_size,
+                       inout array<double> u_max, out int u_max_size
+                     ) throws iBase.Error;
+
+//==========================getEntUtoV=================
+    void getEntUtoUV( in opaque edge_handle, in opaque face_handle,
+                      in double in_u, out double u, out double v
+                    ) throws iBase.Error;
+                    
+//==========================getVtxToUV=================
+    void getVtxToUV (in opaque vertex_handle, in opaque face_handle,
+                     out double u, out double v) throws iBase.Error;
+                     
+//==========================getVtxToU=================
+    void getVtxToU( in opaque vertex_handle, in opaque edge_handle,
+                    out double u) throws iBase.Error;
+                    
+//==========================getArrToUV=================
+    void getArrUtoUV( in array<opaque> edge_handles,
+                      in int edge_handles_size,
+                      in array<opaque> face_handles,
+                      in int face_handles_size,
+                      in array<double> u_in, in int u_in_size,
+                      in iBase.StorageOrder storage_order,
+                      inout array<double> uv, out int uv_size
+                    ) throws iBase.Error;
+                    
+//==========================getVtxArrToUV=================
+    void getVtxArrToUV( in array<opaque> vertex_handles,
+                        in int vertex_handles_size,
+                        in array<opaque> face_handles,
+                        in int face_handles_size,
+                        in iBase.StorageOrder storage_order,
+                        inout array<double> uv, out int uv_size
+                      ) throws iBase.Error;
+                      
+//==========================getVtxArrToU=================
+    void getVtxArrToU( in array<opaque> vertex_handles,
+                       in int vertex_handles_size,
+                       in array<opaque> edge_handles,
+                       in int edge_handles_size,
+                       inout array<double> u, out int u_size
+                     ) throws iBase.Error;
+
+
+//==========================getEntNrmlUV=================
+    void getEntNrmlUV( in opaque entity_handle, in double u, in double v,
+                       out double nrml_i, out double nrml_j, out double nrml_k
+                     ) throws iBase.Error;
+
+//==========================getArrNrmlUV=================
+/**
+ * Return the normals at specified uv positions on gfaces.  If any
+ * gentity input is not a face, returns error.  Input parameters and 
+ * output normals are interleaved.
+ * @param gface_handles The entities being queried
+ * @param parameters The uv parameters of points being queried, interleaved
+ * @param normals Normals at specified points, interleaved
+ */
+    void getArrNrmlUV(in array<opaque> gface_handles, 
+                      in int gface_handles_size, 
+                      in iBase.StorageOrder storage_order,
+                      in array <double> parameters, 
+                      in int parameters_size, 
+                      inout array <double> normals,
+                      out int normals_size) 
+      throws iBase.Error;
+   
+//==========================getEntTgntU=================
+    void getEntTgntU( in opaque entity_handle, in double param_coord,
+                      out double tngt_i, out double tngt_j, out double tngt_k
+                    ) throws iBase.Error;
+
+//==========================getArrTgntU=================
+/**
+ * Return the tangents at specified u positions on gedges.  If any
+ * gentity input is not a face, returns error.  Output normals are 
+ * interleaved.
+ * @param gentity_handles The gedges being queried
+ * @param parameters The u parameters of points being queried
+ * @param tangents Tangents at specified points, interleaved
+ */
+    void getArrTgntU( in array<opaque> gedge_handles, 
+                      in int gedge_handles_size,
+                      in iBase.StorageOrder storage_order,
+                      in array <double> parameters, 
+                      in int parameters_size, 
+                      inout array <double> tangents,
+                      out int tangents_size) 
+      throws iBase.Error;
+
+//==========================getEnt1stDrvt=================
+    void getEnt1stDrvt( in opaque entity_handle, in double u, in double v,
+                        inout array<double> drvt_u, out int drvt_u_size,
+                        inout array<double> drvt_v, out int drvt_v_size
+                      ) throws iBase.Error;
+
+//==========================getArr1stDrvt=================
+    void getArr1stDrvt( in array<opaque> entity_handles,
+                        in int entity_handles_size,
+                        in iBase.StorageOrder storage_order,
+                        in array<double> uv, in int uv_size,
+                        inout array<double> drvt_u, out int drvt_u_size,
+                        inout array<int> u_offset, out int u_offset_size,
+                        inout array<double> drvt_v, out int drvt_v_size,
+                        inout array<int> v_offset, out int v_offset_size
+                      ) throws iBase.Error;
+
+//==========================getEnt2ndDrvt=================
+    void getEnt2ndDrvt ( in opaque entity_handle, in double u, in double v,
+                         inout array<double> drvt_uu, out int drvt_uu_size,
+                         inout array<double> drvt_vv, out int drvt_vv_size,
+                         inout array<double> drvt_uv, out int drvt_uv_size
+                       ) throws iBase.Error;
+
+//==========================getArr2ndDrvt=================
+    void getArr2ndDrvt( in array<opaque> entity_handles,
+                        in int entity_handles_size,
+                        in iBase.StorageOrder storage_order,
+                        in array<double> uv, in int uv_size,
+                        inout array<double> drvt_uu, out int drvt_uu_size,
+                        inout array<int> uu_offset, out int uu_offset_size,
+                        inout array<double> drvt_vv, out int drvt_vv_size,
+                        inout array<int> vv_offset, out int vv_offset_size,
+                        inout array<double> drvt_uv, out int drvt_uv_size,
+                        inout array<int> uv_offset, out int uv_offset_size
+                      ) throws iBase.Error;
+
+//==========================getFcCvtrUV=================
+    void getFcCvtrUV( in opaque entity_handle, in double u, in double v,
+                out double cvtr1_i, out double cvtr1_j, out double cvtr1_k,
+                out double cvtr2_i, out double cvtr2_j, out double cvtr2_k
+                ) throws iBase.Error;
+
+//==========================getFcArrCvtrUV=================
+    void getFcArrCvtrUV( in array<opaque> face_handles,
+                         in int face_handles_size,
+                         in iBase.StorageOrder storage_order,
+                         in array<double> uv, 
+                         in int uv_size,
+                         inout array<double> cvtr_1, 
+                         out int cvtr_1_size,
+                         inout array<double> cvtr_2, 
+                         out int cvtr_2_size
+                       ) throws iBase.Error;
+
+//==========================isEntPeriodic=================
+    void isEntPeriodic( in opaque entity_handle, out int in_u, out int in_v
+                      ) throws iBase.Error;
+
+//==========================isArrPeriodic=================
+    void isArrPeriodic( in array<opaque> entity_handles,
+                        in int entity_handles_size,
+                        inout array<int> in_uv,
+                        out int in_uv_size
+                      ) throws iBase.Error;
+
+//==========================isFcDegenerate=================
+    void isFcDegenerate( in opaque face_handle, out int is_degenerate) throws iBase.Error;
+
+//==========================isFcArrDegenerate=================
+    void isFcArrDegenerate( in array<opaque> face_handles,
+                            in int face_handles_size,
+                            inout array<int> degenerate,
+                            out int degenerate_size
+                          ) throws iBase.Error;
+
+  }
+
+ 
+//===========================================================================
+//  Tolerance interface
+//===========================================================================
+/**
+ * Tolerances (relative and absolute) for models and gentities in a model
+ */
+  interface Tolerance extends Geometry {
+
+//==========================getTolerance=================
+/**
+ * Return the relative and absolute tolerances at the modeler level.  If
+ * model does not have a modeler-wide tolerance, zero is returned for both
+ * values.
+ * @param relative_tolerance Relative tolerance for model as a whole
+ * @param absolute_tolerance Absolute tolerance for model as a whole
+ */
+    void getTolerance(out int type,
+                      out double tolerance)
+      throws iBase.Error;
+   
+//==========================getEntTolerance=================
+    void getEntTolerance( in opaque entity_handle,
+                          out double tolerance ) throws iBase.Error;
+
+//==========================getArrTolerance=================
+/**
+ * Return the relative and absolute tolerances for specified gentities.  If
+ * a gentity does not have a specific tolerance, zero is returned for both
+ * values.
+ * @param gentity_handles Gentities being queried
+ * @param relative_tolerances Relative tolerances
+ * @param absolute_tolerances Absolute tolerances
+ */
+    void getArrTolerance(in array<opaque> entity_handles,
+                         in int entity_handles_size,
+                         inout array<double> tolerances,
+                         out int tolerances_size)
+      throws iBase.Error;
+
+  }
+
+//===========================================================================
+//  Iterators interface
+//===========================================================================
+/**
+ * This interface provides a means for iterating over all gentities of
+ * a given topological dimension
+ */
+  interface Iterators extends Geometry {
+
+//==========================initEntIter=================
+/**
+ * Initialize an iterator over gentities of a specified dimension.
+ * @param gentity_dimension Dimension of gentities to be iterated over
+ * @param gentity_iterator Iterator initialized by this function
+ */
+    void initEntIter(in opaque entity_set_handle,
+                     in int gentity_dimension, 
+                     out opaque gentity_iterator) 
+      throws iBase.Error;
+
+//==========================initEntArrIter=================
+    void initEntArrIter( in opaque entity_set_handle,
+                         in EntityType requested_entity_type, 
+                         in int requested_array_size,
+                         out opaque entArr_iterator ) throws iBase.Error;
+
+//==========================getNextEntIter=================
+/**
+ * Get the next entity for this iterator.
+ * @param gentity_iterator Iterator being iterated over
+ * @param gentity_handle Next gentity
+ * @return If true, there are more gentities, if false, this is the last one
+ */
+    void getNextEntIter( in opaque entity_iterator,
+                         out opaque entity_handle,
+                         out int has_data) throws iBase.Error;
+      
+//==========================getNextEntArrIter=================
+    void getNextEntArrIter( in opaque entArr_iterator,
+                            inout array<opaque> entity_handles,
+                            out int entity_handles_size,
+                            out int has_data) throws iBase.Error;
+
+//==========================resetEntIter=================
+/**
+ * Reset an iterator back to the first gentity
+ * @param gentity_iterator Iterator reset by this function
+ */
+    void resetEntIter (in opaque gentity_iterator) 
+      throws iBase.Error;
+      
+//==========================resetEntArrIter=================
+    void resetEntArrIter( in opaque entArr_iterator) throws iBase.Error;
+    
+//==========================endEntIter=================
+/**
+ * Delete an iterator
+ * @param gentity_iterator Iterator deleted by this function
+ */
+    void endEntIter (in opaque Gentity_dim_iterator) 
+      throws iBase.Error;
+
+//==========================endEntArrIter=================
+    void endEntArrIter( in opaque entArr_iterator) throws iBase.Error;
+  }
+
+
+  interface Modify extends Geometry 
+    {
+    }
+  
+  interface Construct extends Modify
+    {
+//==========================Copy=================
+        /* Duplicate the input entity
+         */
+      void Copy(in opaque geom_entity,
+                out opaque geom_entity2) 
+        throws iBase.Error;
+      
+//==========================SweepAboutAxis=================
+        /* Sweep the entity around axis specified by normal, by angle specified in degrees.
+         * Generates a new entity, leaving input entity unchanged.
+         * Result undefined if region (dim = 3) is specified
+         */
+      void SweepAboutAxis(in opaque geom_entity,
+                          in double angle,
+                          in double axis_normal_x, 
+                          in double axis_normal_y, 
+                          in double axis_normal_z, 
+                          out opaque geom_entity2) 
+        throws iBase.Error;
+      
+//==========================Delete=================
+        /* Delete the specified entity.  Deletes any lower-dimensional entities.
+         * Result undefined if any higher-dimensional entities still use input
+         * entity.
+         */
+      void Delete(in opaque geom_entity) 
+        throws iBase.Error;
+    }
+
+  interface Primitives extends Modify
+    {
+//==========================Sphere=================
+        /* Construct a Sphere with specified radius. */
+      void createSphere(in double radius,
+                  out opaque geom_entity) 
+        throws iBase.Error;
+          
+//==========================Brick=================
+        /* Construct a brick with specified dimensions.  If both y and z are
+         * zero, a cube of dimension x is constructed.  
+         * Result is undefined if only one dimension is zero.
+         */
+      void createBrick(in double x, in double y, in double z,
+                 out opaque geom_entity) 
+        throws iBase.Error;
+          
+//==========================Cylinder=================
+        /* Construct a cylinder with specified height and major/minor radii.
+         * Major radius is along x axis, minor along y axis, and height along z.
+         * If minor radius is zero, a circular cylinder is produced.
+         */
+      void createCylinder(in double height, in double major_rad, in double minor_rad,
+                    out opaque geom_entity) 
+        throws iBase.Error;
+          
+//==========================Torus=================
+        /* Construct a torus with circular cross-section, with major and minor
+         * radii specified.  Torus is aligned with z axis, i.e. the locus of points
+         * defined by the cross-section centers lies in the xy plane.
+         */
+      void createTorus(in double major_rad, in double minor_rad,
+                 out opaque geom_entity) 
+        throws iBase.Error;
+    }
+  
+  interface Transforms extends Modify
+    {
+//==========================moveEnt=================
+        /* moveEnt the specified entity by the specified vector 
+         */
+      void moveEnt(in opaque geom_entity,
+                in double x, in double y, in double z) 
+        throws iBase.Error;
+      
+//==========================rotateEnt=================
+        /* rotateEnt the specified entity the specified angle (in degrees) about the
+         * specified axis; axis_normal is assumed to pass through the origin.
+         */
+      void rotateEnt(in opaque geom_entity,
+                  in double angle, 
+                  in double axis_normal_x,
+                  in double axis_normal_y,
+                  in double axis_normal_z) 
+        throws iBase.Error;
+      
+//==========================reflectEnt=================
+        /* reflectEnt the specified entity through a plane defined by the specified normal
+         */
+      void reflectEnt(in opaque geom_entity,
+                   in double plane_normal_x,
+                   in double plane_normal_y,
+                   in double plane_normal_z) 
+        throws iBase.Error;
+
+//==========================scaleEnt=================
+        /* scale the specified entity 
+         */
+      void scaleEnt(in opaque geom_entity,
+                 in double scale_x,
+                 in double scale_y,
+                 in double scale_z) 
+        throws iBase.Error;
+    }
+  
+  interface Booleans extends Modify
+    {
+//==========================uniteEnts=================
+        /* uniteEnts the specified entities, resulting in a new entity; original entities
+         * are unmodified
+         */
+      void uniteEnts(in array<opaque> geom_entities,
+                 in int geom_entities_size,
+                 out opaque geom_entity) 
+        throws iBase.Error;
+      
+//==========================subtractEnts=================
+        /* subtractEnts the tool from the blank, resulting in a new entity; original
+         * entities are unmodified
+         */
+      void subtractEnts(in opaque blank, in opaque tool,
+                    out opaque geom_entity) 
+        throws iBase.Error;
+
+//==========================sectionEnt=================
+        /* Cut the specified entity with a plane containing the origin defined by 
+         * the specified normal, discarding anything on the negative side of the
+         * plane (as defined by the normal direction).  If offset is specified, 
+         * plane is offset along the normal direction by the specified distance.  
+         * If reverse is true, positive side of the plane is discarded instead.
+         */
+      void sectionEnt(in opaque geom_entity, 
+                   in double plane_normal_x,
+                   in double plane_normal_y,
+                   in double plane_normal_z,
+                   in double offset, in bool reverse,
+                   out opaque geom_entity2) 
+        throws iBase.Error;
+
+//==========================imprintEnts=================
+        /* imprintEnts the entities in the input list together.
+         */
+      void imprintEnts(in array<opaque> geom_entities,
+                   in int geom_entities_size) 
+        throws iBase.Error;
+
+//==========================mergeEnts=================
+        /* mergeEnts coincident topology in the entities in the input list.
+         */
+      void mergeEnts(in array<opaque> geom_entities,
+                 in int geom_entities_size,
+                 in double tolerance) 
+        throws iBase.Error;
+    };
+
+  class Factory {
+//==========================newGeom=================
+     static Geometry newGeom(in string options) throws iBase.Error;
+   };
+}
+

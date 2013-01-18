@@ -1,0 +1,23 @@
+import iBase;
+import iGeom;
+
+package iGeom_SIDL version 0.001 {
+	class GeomSidl implements-all
+		iBase.EntTag,
+		iBase.ArrTag,
+		iBase.SetTag,
+		iBase.SetRelation,
+		iBase.SetBoolOps,
+		iGeom.CoreQuery,
+		iGeom.Topology,
+		iGeom.Shape, 
+		iGeom.Parametric,
+		iGeom.Tolerance,
+		iGeom.Iterators,
+		iGeom.Construct,
+		iGeom.Primitives, 
+            	iGeom.Transforms,
+		iGeom.Booleans
+		{ }
+}
+
