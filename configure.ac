@@ -564,7 +564,6 @@ AC_CONFIG_FILES(Makefile
            geom/virtual/Makefile 
            init/Makefile
            amendment/Makefile
-           compat/Makefile
            cgm.make
            itaps/Makefile
            itaps/iGeom-Defs.inc
@@ -573,10 +572,6 @@ AC_CONFIG_FILES(Makefile
            itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
            test/TestConfig.h
-           cgm_apps/Makefile
-           cgm_apps/examples/Makefile
-           cgm_apps/examples/driverc++/Makefile
-           cgm_apps/examples/facetdriver/Makefile
 	   )
 # Generate iGeom_FCDefs.h from iBase_FCDefs.h
 AC_CONFIG_COMMANDS([itaps/iGeom_FCDefs.h],
