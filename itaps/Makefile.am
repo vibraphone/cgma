@@ -71,7 +71,7 @@ endif
 check_PROGRAMS = chaman $(TESTS)
 
 if BUILD_CGM
-  LDADD = libiGeom.la ../geom/OCC/libcubit_OCC.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../geom/Cholla/libCholla.la ../amendment/libcgma_amendment.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = libiGeom.la ../geom/OCC/libcubit_OCC.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../util/libcubit_util.la ../geom/libcubit_geom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 else
   LDADD = libiGeom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
