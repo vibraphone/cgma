@@ -402,11 +402,51 @@ public :
     *  the underlying representation and file type. It returns
     *  CUBIT_SUCCESS if everything goes well.
     */
+
+  CubitStatus export_solid_model(DLIList<RefEntity*>& ref_entity_list,
+				 char*& p_buffer,
+				 int& n_buffer_size,
+				 bool b_export_buffer);
+  /**<
+   * Import all or specified entities in a solid model file.
+    *  \arg file_ptr
+    *  A pointer to the file to read (can be NULL for IGES and STEP files).
+    *  \arg file_type
+    *  Type of file.
+    *  \arg heal_step - auto-healing of step bodies on import.  This is recommended
+    *     because they always need it.
+    *  \arg import_bodies (etc...)
+    *  Should bodies be import.
+    *   \return  CubitStatus - success/failure
+    *
+    *  Reads in geometry and creates the necessary Reference entities
+    *  associated with the input geometry.
+    *  Valid file types are:
+    *     "ACIS_SAT"    --  ACIS ASCII (SAT) file format
+    *     "ACIS_SAB"    --  ACIS BINARY (SAB) file format
+    *     "IGES"        --  IGES file
+    *     "STEP"        --  STEP file
+    *
+    *  Function can selectively import solid bodies, free surfaces, free
+    *  curves, or free vertices.  For example, the user may not want
+    *  to import any free entities.
+    *
+    *  The function returns CUBIT_FAILURE if anything goes wrong with
+    *  import - improper file type, inaccessible file, mismatch between
+    *  the underlying representation and file type. It returns
+    *  CUBIT_SUCCESS if everything goes well.
+    */
+
   //! \brief Import a geometry file. 
   CubitStatus import_solid_model(const char* file_name,
                                  Model_File_Type file_type,
                                  ModelImportOptions &import_options,
 				 DLIList<RefEntity*> *imported_entities = NULL );
+
+    // import entities in a solid model buffer
+  CubitStatus import_solid_model(DLIList<RefEntity*> *imported_entities,
+				 const char* pBuffer,
+				 const int n_buffer_size);
 
   /*!
    * Fire a ray at entities, passing back distances of hits and entities hit

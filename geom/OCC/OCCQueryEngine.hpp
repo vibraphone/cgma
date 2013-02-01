@@ -256,12 +256,11 @@ public:
 
 
   // write shapes to buffer as binary format
-/*
   virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
 					  char*& p_buffer,
 					  int& n_buffer_size,
 					  bool b_export_buffer);
-*/ 
+
   virtual CubitStatus save_temp_geom_file( DLIList<TopologyBridge*>& ref_entity_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
