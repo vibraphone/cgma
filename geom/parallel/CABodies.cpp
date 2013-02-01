@@ -1,7 +1,6 @@
 //- Class:          CABodies
 //- Description:    Cubit Attribute for a list of bodies the entity is part of.
 //- Author: Hong-Jun Kim
-//- Checked By: Tim Tautges
 //- Version:
 
 #include "CABodies.hpp"
@@ -28,8 +27,8 @@ CubitAttrib* CABodies_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
 
 
 CABodies::CABodies(RefEntity* new_attrib_owner,
-                           CubitSimpleAttrib *csa_ptr)
-        : CubitAttrib(new_attrib_owner)
+		   CubitSimpleAttrib *csa_ptr)
+  : CubitAttrib(new_attrib_owner)
 {
   assert ( csa_ptr != NULL );
   if (DEBUG_FLAG(138))
@@ -39,19 +38,32 @@ CABodies::CABodies(RefEntity* new_attrib_owner,
 		     (attribOwnerEntity ? attribOwnerEntity->id() : 0));
   }
 
-  //initialize();
-  
   DLIList<int*> *i_list = csa_ptr->int_data_list();
 
   // first, the ints
   i_list->reset();
   
-  int num_bodies = *(i_list->get_and_step());
-  
-  // bodyID
-  int i;
-  for (i = num_bodies; i > 0; i--)
-    bodyUniqueId.append(*(i_list->get_and_step()));
+  m_interface = *(i_list->get_and_step()); // is interface
+
+  m_uniqueID = *(i_list->get_and_step()); // unique ID
+
+  // shared bodies
+  int num_list = *(i_list->get_and_step());
+  for (int i = num_list; i > 0; i--) {
+    m_sharedBodies.append(*(i_list->get_and_step()));
+  }
+
+  // shared procs
+  num_list = *(i_list->get_and_step());
+  for (int i = num_list; i > 0; i--) {
+    m_sharedProcs.append(*(i_list->get_and_step()));
+  }
+
+  // ghost procs
+  num_list = *(i_list->get_and_step());
+  for (int i = num_list; i > 0; i--) {
+    m_ghostProcs.append(*(i_list->get_and_step()));
+  }
 }
 
 CABodies::CABodies(RefEntity* new_attrib_owner)
@@ -85,25 +97,61 @@ CubitStatus CABodies::actuate()
   TDParallel *par = (TDParallel *) attrib_owner()->get_TD(&TDParallel::is_parallel);
 
   if (par != NULL) {
+    if (par->is_interface() != m_interface) {
+      PRINT_ERROR("TDParallel interface check is failed for %s %d.\n",
+		  attrib_owner()->class_name(), attrib_owner()->id());
+      return CUBIT_FAILURE;
+    }
+
     // check to make sure it's the same body list
-    par->body_unique_id_list()->reset();
-    bodyUniqueId.reset();
-    int size = par->body_unique_id_list()->size();
+    par->get_shared_body_list()->reset();
+    m_sharedBodies.reset();
+    int size = par->get_shared_body_list()->size();
 
     for (int i = 0; i < size; i++) {
-      if (par->body_unique_id_list()->get_and_step() != bodyUniqueId.get_and_step()) {
+      if (par->get_shared_body_list()->get_and_step() != m_sharedBodies.get_and_step()) {
 	PRINT_ERROR("Different body found for %s %d.\n",
 		    attrib_owner()->class_name(), attrib_owner()->id());
 	return CUBIT_FAILURE;
       }
     }
+
+    par->get_shared_proc_list()->reset();
+    m_sharedProcs.reset();
+    size = par->get_shared_proc_list()->size();
+
+    for (int i = 0; i < size; i++) {
+      if (par->get_shared_proc_list()->get_and_step() != m_sharedProcs.get_and_step()) {
+	PRINT_ERROR("Different processor found for %s %d.\n",
+		    attrib_owner()->class_name(), attrib_owner()->id());
+	return CUBIT_FAILURE;
+      }
+    }
+
+    par->get_ghost_proc_list()->reset();
+    m_ghostProcs.reset();
+    size = par->get_ghost_proc_list()->size();
+
+    for (int i = 0; i < size; i++) {
+      if (par->get_ghost_proc_list()->get_and_step() != m_ghostProcs.get_and_step()) {
+	PRINT_ERROR("Different ghost processor found for %s %d.\n",
+		    attrib_owner()->class_name(), attrib_owner()->id());
+	return CUBIT_FAILURE;
+      }
+    }
+
+    if (par->get_unique_id() != m_uniqueID) {
+      PRINT_ERROR("Different unique ID found for %s %d.\n",
+		  attrib_owner()->class_name(), attrib_owner()->id());
+      return CUBIT_FAILURE;
+    }
   }
   else {
     // else make a new one
-    par = new TDParallel(attrib_owner(), &bodyUniqueId);
+    par = new TDParallel(attrib_owner(), &m_sharedBodies, &m_sharedProcs,
+			 &m_ghostProcs, m_uniqueID, m_interface);
   }
 
-  //status = par->set_local_non_local_list();
   delete_attrib(CUBIT_TRUE);
   hasActuated = CUBIT_TRUE;
 
@@ -130,12 +178,30 @@ CubitStatus CABodies::update()
     delete_attrib(CUBIT_TRUE);
   }
   else {
-    int size = td_par->body_unique_id_list()->size();
-    td_par->body_unique_id_list()->reset();
-    bodyUniqueId.clean_out();
+    m_interface = td_par->is_interface();
+    m_uniqueID = td_par->get_unique_id();
+    int size = td_par->get_shared_body_list()->size();
+    td_par->get_shared_body_list()->reset();
+    m_sharedBodies.clean_out();
 
     for (int i = 0; i < size; i++) {
-      bodyUniqueId.append(td_par->body_unique_id_list()->get_and_step());
+      m_sharedBodies.append(td_par->get_shared_body_list()->get_and_step());
+    }
+
+    size = td_par->get_shared_proc_list()->size();
+    td_par->get_shared_proc_list()->reset();
+    m_sharedProcs.clean_out();
+
+    for (int i = 0; i < size; i++) {
+      m_sharedProcs.append(td_par->get_shared_proc_list()->get_and_step());
+    }
+
+    size = td_par->get_ghost_proc_list()->size();
+    td_par->get_ghost_proc_list()->reset();
+    m_ghostProcs.clean_out();
+
+    for (int i = 0; i < size; i++) {
+      m_ghostProcs.append(td_par->get_ghost_proc_list()->get_and_step());
     }
 	
     if (delete_attrib() == CUBIT_TRUE) delete_attrib(CUBIT_FALSE);
@@ -152,12 +218,32 @@ CubitSimpleAttrib* CABodies::cubit_simple_attrib()
   // attribute internal name
   cs_list.append(new CubitString(att_internal_name()));
 
-  // bodyID
-  bodyUniqueId.reset();
-  i_list.append(bodyUniqueId.size());
+  // is interface
+  i_list.append(m_interface);
+
+  // unique ID
+  i_list.append(m_uniqueID);
+
+  // shared bodies
+  m_sharedBodies.reset();
+  i_list.append(m_sharedBodies.size());
   int i;
-  for (i = bodyUniqueId.size(); i > 0; i--) {
-    i_list.append(bodyUniqueId.get_and_step());
+  for (i = m_sharedBodies.size(); i > 0; i--) {
+    i_list.append(m_sharedBodies.get_and_step());
+  }
+
+  // shared procs
+  m_sharedProcs.reset();
+  i_list.append(m_sharedProcs.size());
+  for (i = m_sharedProcs.size(); i > 0; i--) {
+    i_list.append(m_sharedProcs.get_and_step());
+  }
+
+  // ghost procs
+  m_ghostProcs.reset();
+  i_list.append(m_ghostProcs.size());
+  for (i = m_ghostProcs.size(); i > 0; i--) {
+    i_list.append(m_ghostProcs.get_and_step());
   }
   
   CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list, NULL, &i_list);
@@ -169,7 +255,7 @@ CubitSimpleAttrib* CABodies::cubit_simple_attrib()
 
 CubitStatus CABodies::reset()
 {
-  bodyUniqueId.clean_out();
+  m_sharedBodies.clean_out();
   return CUBIT_SUCCESS;
 }
 
