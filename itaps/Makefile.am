@@ -41,6 +41,7 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
 
 if USE_MPI
   AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
+  libiGeom_la_LIBADD += $(top_builddir)/geom/parallel/libcubit_parallel.la
 endif
 
 libiGeom_la_SOURCES = \
