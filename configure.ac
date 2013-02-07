@@ -144,7 +144,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
     AC_LINK_IFELSE([AC_LANG_PROGRAM(
       [class AcisQueryEngine { public: static AcisQueryEngine* instance_; };],
       [AcisQueryEngine::instance_ = 0;])],
-      [CUBIT_LIBS="-L${CUBIT_BIN_DIR} -lcubiti$num"
+      [CUBIT_LIBS="-L${CUBIT_BIN_DIR} -lcubiti$num -lcubit_geom -lcubit_util"
        CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
        CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
        AC_MSG_RESULT(yes)
