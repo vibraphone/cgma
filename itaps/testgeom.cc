@@ -15,6 +15,11 @@
  * \brief testgeom, a unit test for the TSTT geometry interface
  *
  */
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "iGeom.h"
 #include <iostream>
 #include <set>
@@ -26,6 +31,8 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+
+
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
 #define STRINGIFY(S) XSTRINGIFY(S)
