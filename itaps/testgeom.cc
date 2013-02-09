@@ -15,11 +15,6 @@
  * \brief testgeom, a unit test for the TSTT geometry interface
  *
  */
-
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
-
 #include "iGeom.h"
 #include <iostream>
 #include <set>
@@ -31,8 +26,6 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
-
-
 #define CHECK( STR ) if (err != iBase_SUCCESS) return print_error( STR, err, geom, __FILE__, __LINE__ )
 
 #define STRINGIFY(S) XSTRINGIFY(S)
@@ -1107,11 +1100,7 @@ bool transforms_test(iGeom_Instance geom)
   }
   
     // now reflect through y plane; should recover original bb
-#if CUBIT_MAJOR_API == 13
   iGeom_reflectEnt( geom, brick, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, &err );
-#else
-  iGeom_reflectEnt( geom, brick, 0.0, 1.0, 0.0, &err );
-#endif
   CHECK( "Problems reflecting brick for transforms test." );
   
   iGeom_getEntBoundBox( geom, brick, bb_min, bb_min+1, bb_min+2, bb_max, bb_max+1, bb_max+2, &err );

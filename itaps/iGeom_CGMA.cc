@@ -6094,11 +6094,9 @@ iGeom_rotateEnt( iGeom_Instance instance,
 ITAPS_API void
 iGeom_reflectEnt( iGeom_Instance instance,
                   /*inout*/ iBase_EntityHandle geom_entity,
-#if CUBIT_MAJOR_API == 13
                   /*in*/ double point_x,
                   /*in*/ double point_y,
                   /*in*/ double point_z,
-#endif
                   /*in*/ double plane_normal_x,
                   /*in*/ double plane_normal_y,
                   /*in*/ double plane_normal_z,
@@ -6111,11 +6109,7 @@ iGeom_reflectEnt( iGeom_Instance instance,
   bods.append(this_bod);
   CubitStatus result;
   if (NULL != this_bod) {
-#if CUBIT_MAJOR_API == 13
     result = gqt->reflect(bods, point , this_plane);
-#else
-    result = gqt->reflect(bods, this_plane);
-#endif
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to reflect body.");
     }
@@ -6125,11 +6119,7 @@ iGeom_reflectEnt( iGeom_Instance instance,
   
   BasicTopologyEntity *this_bte = dynamic_cast<BasicTopologyEntity*>(ENTITY_HANDLE(geom_entity));
   if (NULL != this_bte) {
-#if CUBIT_MAJOR_API == 13
     result = gqt->reflect(this_bte, point, this_plane);
-#else
-    result = gqt->reflect(this_bte, this_plane);
-#endif
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to reflect entity.");
     }
@@ -6143,11 +6133,9 @@ iGeom_reflectEnt( iGeom_Instance instance,
 ITAPS_API void
 iGeom_scaleEnt( iGeom_Instance instance,
                 /*inout*/ iBase_EntityHandle geom_entity,
-#if CUBIT_MAJOR_API == 13
                 /*in*/ double point_x,
                 /*in*/ double point_y,
                 /*in*/ double point_z,
-#endif
                 /*in*/ double scale_x,
                 /*in*/ double scale_y,
                 /*in*/ double scale_z,
@@ -6158,11 +6146,7 @@ iGeom_scaleEnt( iGeom_Instance instance,
   Body *this_bod = dynamic_cast<Body*>(ENTITY_HANDLE(geom_entity));
   CubitStatus result;
   if (NULL != this_bod) {
-#if CUBIT_MAJOR_API == 13
     result = gqt->scale(this_bod, point, factor);
-#else
-    result = gqt->scale(this_bod, factor);
-#endif
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to scale body.");
     }
@@ -6176,11 +6160,7 @@ iGeom_scaleEnt( iGeom_Instance instance,
     // there is no body, it's a free entity and we can move it anyway
   Body *this_body = this_bte->body();
   if (NULL == this_body && NULL != this_bte) {
-#if CUBIT_MAJOR_API == 13
     result = gqt->scale(this_bte, point, factor);
-#else
-    result = gqt->scale(this_bte, factor);
-#endif
     if (CUBIT_SUCCESS != result) {
       ERROR(iBase_FAILURE, "Failed to scale entity.");
     }
@@ -6196,11 +6176,7 @@ iGeom_scaleEnt( iGeom_Instance instance,
     }
     if (num_sibs == 1) {
         // ok to scale the body instead
-#if CUBIT_MAJOR_API == 13
       result = gqt->scale(this_body, point, factor);
-#else
-      result = gqt->scale(this_body, factor);
-#endif
       if (CUBIT_SUCCESS != result) {
         ERROR(iBase_FAILURE, "Failed to scale body even only one entity of that"
                            " dimension in the body.");

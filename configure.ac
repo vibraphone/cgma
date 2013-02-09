@@ -164,8 +164,6 @@ elif test "x$CUBIT_DIR" != "xno"; then
     [CUBIT_CAT_DEFINES=-DACIS_TWEAK_TOOL_CAT; AC_MSG_RESULT([yes])],
     [CUBIT_CAT_DEFINES=; AC_MSG_RESULT([no])])
 
-  AC_DEFINE_UNQUOTED([CUBIT_MAJOR_API], [13], [Cubit Version])
-  AC_DEFINE_UNQUOTED([CUBIT_MINOR_API], [1], [Cubit Minor Version])
   LIBS="$old_LIBS"
   LDFLAGS="$old_LDFLAGS"
   LD_LIBRARY_PATH="$old_LD_LIBRARY_PATH"
