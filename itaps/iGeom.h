@@ -63,6 +63,9 @@
 extern "C" {
 #endif
 
+#define  CUBIT_MAJOR_API  13
+#define  CUBIT_MINOR_API  1
+
     /**\brief  Type used to store iGeom interface handle
      *
      * Type used to store iGeom interface handle
@@ -2678,9 +2681,11 @@ extern "C" {
      */
   void iGeom_reflectEnt( iGeom_Instance instance,
                          iBase_EntityHandle geom_entity,
+#if CUBIT_MAJOR_API == 13
                          double point_x,
                          double point_y,
                          double point_z,
+#endif
                          double plane_normal_x,
                          double plane_normal_y,
                          double plane_normal_z,
@@ -2698,9 +2703,11 @@ extern "C" {
      */
   void iGeom_scaleEnt( iGeom_Instance instance,
                        iBase_EntityHandle geom_entity,
+#if CUBIT_MAJOR_API == 13
                        double point_x,
                        double point_y,
                        double point_z,
+#endif
                        double scale_x,
                        double scale_y,
                        double scale_z,
