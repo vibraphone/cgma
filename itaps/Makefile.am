@@ -42,6 +42,9 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
 if USE_MPI
   AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
   libiGeom_la_LIBADD += $(top_builddir)/geom/parallel/libcubit_parallel.la
+  TESTS += partest
+  partest_SOURCES = partest.cpp
+  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
 endif
 
 libiGeom_la_SOURCES = \
@@ -88,12 +91,6 @@ test_edge_orient_SOURCES = test_edge_orient.cc
 chaman_SOURCES = chaman.cc
 
 copy_attrib_SOURCES = copy_attrib.cpp
-
-if USE_MPI
-  check_PROGRAMS += partest
-  partest_SOURCES = partest.cpp
-  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
-endif
 
 
 # Automake doesn't seem to have a directory defined for
