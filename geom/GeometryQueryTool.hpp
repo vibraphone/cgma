@@ -16,8 +16,6 @@
 #ifndef GEOMETRYQUERYTOOL_HPP
 #define GEOMETRYQUERYTOOL_HPP
 
-#define CUBIT_12 3
-
 #include <stdio.h>
 #include <typeinfo>
 #include <list>
