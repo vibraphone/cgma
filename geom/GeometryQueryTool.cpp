@@ -487,6 +487,155 @@ CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entit
   return result;
 }
 
+// export entities to buffer
+CubitStatus GeometryQueryTool::export_solid_model(DLIList<RefEntity*>& ref_entity_list,
+                                                  char*& p_buffer,
+                                                  int& n_buffer_size,
+                                                  bool b_export_buffer)
+{
+  if (0 == gqeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  int i;
+
+  if (ref_entity_list.size() == 0) {
+    // All bodies are to be exported
+    RefEntityFactory::instance()->ref_entity_list("Body",
+                                                  ref_entity_list);
+   
+    // add free ref entities
+    get_free_ref_entities(ref_entity_list);
+  }
+
+  // Get TopologyBridges from RefEntities.
+  DLIList<TopologyBridge*> bridge_list(ref_entity_list.size()),
+    parent_bridges, ref_ent_bridges;
+  ref_entity_list.reset();
+  for( i = ref_entity_list.size(); i--; ) {
+    ref_ent_bridges.clean_out();
+    TopologyEntity* topo_ptr = dynamic_cast<TopologyEntity*>(ref_entity_list.get_and_step());
+    if( topo_ptr )
+      topo_ptr->bridge_manager()->get_bridge_list( ref_ent_bridges );
+    bridge_list += ref_ent_bridges;
+  }
+
+  // Get all child RefEntities
+  DLIList<RefEntity*> child_list;
+  RefEntity::get_all_child_ref_entities( ref_entity_list, child_list );
+
+  // Scan for free-but-merged entities in child list.
+  child_list.reset();
+  for (i = child_list.size(); i--; )
+  {
+    ref_ent_bridges.clean_out();
+    TopologyEntity* topo_ptr = dynamic_cast<TopologyEntity*>(child_list.get_and_step());
+    assert(!!topo_ptr);
+    topo_ptr->bridge_manager()->get_bridge_list( ref_ent_bridges );
+    ref_ent_bridges.reset();
+    for (int j = ref_ent_bridges.size(); j--; )
+    {
+      TopologyBridge* bridge = ref_ent_bridges.get_and_step();
+      parent_bridges.clean_out();
+      bridge->get_parents(parent_bridges);
+      if (parent_bridges.size() == 0)
+        bridge_list.append_unique(bridge);
+    }
+  }
+
+  // Merge lists so we have one big list of every
+  // RefEntity to be saved.
+  for(i = ref_entity_list.size(); i--; )
+    ref_entity_list.get_and_step()->marked(1);
+
+  for(i = child_list.size(); i--; )
+    child_list.get_and_step()->marked(0);
+  for(i = ref_entity_list.size(); i--; )
+  {
+    RefEntity* ent = ref_entity_list.get_and_step();
+    if( ent->marked() )
+    {
+      ent->marked(0);
+      child_list.append(ent);
+    }
+  }
+
+  // Make a copy of the bridge list to be used below in
+  // removing the virtual geometry attributes.  We can't
+  // use the original bridge list because it gets emptied.
+  DLIList<TopologyBridge*> copy_of_bridge_list = bridge_list;
+
+  /*int num_input_entities =*/ bridge_list.size();
+
+    // now call auto update on this combined list; this will update both visible
+    // and hidden entities; the combined list should be used here, but only the
+    // export list should be exported (some of the hidden entities might be directly
+    // related to other entities on the export list, and we want to avoid exporting
+    // those entities twice)
+  CubitAttribUser::auto_update_cubit_attrib(child_list);
+
+    // Save virtual.
+  IGESet::reverse_iterator itor;
+  for (itor = igeSet.rbegin(); itor != igeSet.rend(); ++itor)
+    (*itor)->export_geometry(bridge_list);
+
+  CubitStatus result = CUBIT_SUCCESS, temp_result;
+
+  if( !bridge_list.size() )
+  {
+    return CUBIT_SUCCESS;
+  }
+  //   GeometryQueryEngine* gqe = NULL;
+  //we're just going to mess with MBG stuff right now
+  gqeList.reset();
+
+  int num_ents_before = bridge_list.size();
+  temp_result = gqeList.get()->export_solid_model(bridge_list, p_buffer,
+                                                  n_buffer_size, b_export_buffer);
+  if (temp_result == CUBIT_SUCCESS )
+    result = temp_result;
+
+  //if all geometry wasn't exported, warn user and print out
+  //what wasn't
+  if( bridge_list.size() != 0 )
+  {
+    if( bridge_list.size() == num_ents_before )
+      PRINT_ERROR("No geometry exported.  Must set geometry engine to another type.\n");
+    else
+      PRINT_WARNING("Not all geometry could be handled for save.\n");
+
+    PRINT_INFO("Set the geometry engine appropriately to export the following geometry:\n");
+    int k;
+    for(k=bridge_list.size(); k--; )
+    {
+      TopologyEntity *te = bridge_list.get()->topology_entity();
+      if( te )
+      {
+        RefEntity *ref_ent = CAST_TO( te, RefEntity );
+        if( ref_ent )
+        {
+          GeometryQueryEngine *gqe = bridge_list.get()->get_geometry_query_engine();
+          PRINT_INFO("%s is of Geometry Engine type %s\n",
+          ref_ent->entity_name().c_str(), gqe->modeler_type() );
+        }
+      }
+      bridge_list.step();
+    }
+  }
+
+    // clean off attributes off of underyling virtual geometry
+  for (itor = igeSet.rbegin(); itor != igeSet.rend(); ++itor)
+    (*itor)->remove_attributes(copy_of_bridge_list);
+
+  CubitAttribUser::clear_all_simple_attrib(child_list);
+
+  //num_ents_exported = num_input_entities - bridge_list.size();
+  gqeList.reset();
+  return result;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Fire a ray at a list of entities and return the
 //                 parameters along the ray (distance from origin of ray)
@@ -888,6 +1037,70 @@ CubitStatus GeometryQueryTool::import_solid_model( const char* file_name,
 
   importingSolidModel = CUBIT_FALSE;
   mergeGloballyOnImport = CUBIT_FALSE; 
+    // now return
+  return status;
+}
+
+// import entities to buffer
+CubitStatus GeometryQueryTool::import_solid_model(DLIList<RefEntity*> *imported_entities,
+                                                  const char* pBuffer,
+                                                  const int n_buffer_size)
+{
+  if (0 == gqeList.size())
+  {
+    PRINT_WARNING("No active geometry engine.\n");
+    return CUBIT_FAILURE;
+  }
+
+  if( CubitUndo::get_undo_enabled() )
+    CubitUndo::save_state();
+
+    // reset the attribImporteds flags to facilitate attribute reporting
+//  CubitAttrib::clear_attrib_importeds();
+
+    // Use the default MQE to import a list of ToplogyBridges from the file.
+  gqeList.reset();
+  DLIList<TopologyBridge*> bridge_list;
+
+  CubitStatus status = CUBIT_SUCCESS;
+  for(int i = 0; i < gqeList.size(); i++)
+  {
+    status = gqeList.get_and_step()->import_solid_model( bridge_list, pBuffer, n_buffer_size );
+
+    if( bridge_list.size() > 0 )
+      break;
+  }
+  if(bridge_list.size() == 0)
+    return status;
+
+  for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
+    (*itor)->import_geometry(bridge_list);
+
+  bridge_list.reset();
+  DLIList<RefEntity*> tmp_ent_list;
+  status = construct_refentities(bridge_list, &tmp_ent_list);
+
+  if( imported_entities )
+    (*imported_entities) += tmp_ent_list;
+
+  if( CubitUndo::get_undo_enabled() )
+  {
+    if( tmp_ent_list.size() && status == CUBIT_SUCCESS )
+      CubitUndo::note_result_entities( tmp_ent_list );
+    else
+      CubitUndo::remove_last_undo();
+  }
+
+  //clear out all attributes that were set to actuate
+//  DLIList<RefEntity*> all_ents;
+//  RefEntity::get_all_child_ref_entities( tmp_ent_list, all_ents );
+//  all_ents += tmp_ent_list;
+//  CubitAttribUser::clear_all_simple_attrib_set_to_actuate( all_ents );
+
+    // report attribs imported
+//  CubitAttrib::report_attrib_importeds();
+
+
     // now return
   return status;
 }

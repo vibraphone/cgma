@@ -46,13 +46,13 @@ USE_BABEL = no
 BABEL = $(BABEL_DIR)/bin/babel
 BABELFLAGS = "--suppress-timestamp"
 ECHO = @ECHO@
-CC = gcc
+CC = /usr/local/mpich2-1.3.2/bin/mpicc
 CCDEPMODE = depmode=gcc3
 CFLAGS =  -Wall -pipe -pedantic -g
-CPP = gcc -E
+CPP = /usr/local/mpich2-1.3.2/bin/mpicc -E
 CPPFLAGS = 
-CXX = g++
-CXXCPP = g++ -E
+CXX = /usr/local/mpich2-1.3.2/bin/mpicxx
+CXXCPP = /usr/local/mpich2-1.3.2/bin/mpicxx -E
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS =  -Wall -pipe -pedantic -g
 CYGPATH_W = echo

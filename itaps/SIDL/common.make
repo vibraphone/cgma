@@ -70,13 +70,13 @@ AUTOMAKE = ${SHELL} /mnt/disk2b/jhu/merge-cubit14.0/missing --run automake-1.11
 AWK = gawk
 BABEL_DIR = 
 BABEL = $(BABEL_DIR)/bin/babel
-CC = gcc
+CC = /usr/local/mpich2-1.3.2/bin/mpicc
 CCDEPMODE = depmode=gcc3
 CFLAGS =  -Wall -pipe -pedantic -g
-CPP = gcc -E
+CPP = /usr/local/mpich2-1.3.2/bin/mpicc -E
 CPPFLAGS = 
-CXX = g++
-CXXCPP = g++ -E
+CXX = /usr/local/mpich2-1.3.2/bin/mpicxx
+CXXCPP = /usr/local/mpich2-1.3.2/bin/mpicxx -E
 CXXDEPMODE = depmode=gcc3
 CXXFLAGS =  -Wall -pipe -pedantic -g
 CYGPATH_W = echo
@@ -84,7 +84,7 @@ CYGPATH_W = echo
 # Some variables
 DEFS = 
 DEPDIR = .deps
-DISTCHECK_CONFIGURE_FLAGS =  --with-occ="/mnt/disk2b/jhu/build653"
+DISTCHECK_CONFIGURE_FLAGS =  --with-mpi="/usr/local/mpich2-1.3.2/bin" --with-occ="/mnt/disk2b/jhu/build653"
 ECHO = @ECHO@
 ECHO_C = 
 ECHO_N = -n

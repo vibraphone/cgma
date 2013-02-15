@@ -388,36 +388,7 @@ CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
   TopoDS_Shape * shape;
   get_TopoDS_Shape(shape);
   aBRepTrsf.Perform(*shape);
-/*
-  for(int i = 0; i < mySheetSurfaces.size(); i++)
-  {
-    OCCSurface* surface = mySheetSurfaces.get_and_step();
-    TopoDS_Face * face = surface->get_TopoDS_Face();
-    aBRepTrsf.Perform(*face);
-  }
 
-  for(int i = 0; i <myShells.size() ; i++)
-  {
-    OCCShell* occ_shell = myShells.get_and_step();
-    TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
-    aBRepTrsf.Perform(*shell);
-  }
-
-  if(myTopoDSShape != NULL)
-  {
-    aBRepTrsf.Perform(*myTopoDSShape);
-  }
-
-  else
-  {
-    for(int i = 0; i < myLumps.size(); i++)
-    {
-      OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
-      aBRepTrsf.Perform(*solid);
-    }
-  } 
-*/
   update_OCC_entity(&aBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
@@ -461,34 +432,7 @@ CubitStatus OCCBody::scale(double scale_factor_x,
   TopoDS_Shape * shape;
   get_TopoDS_Shape(shape);
   gBRepTrsf.Perform(*shape);
-/*
-  for(int i = 0; i < mySheetSurfaces.size(); i++)
-  {
-    OCCSurface* surface = mySheetSurfaces.get_and_step();
-    TopoDS_Face * face = surface->get_TopoDS_Face();
-    gBRepTrsf.Perform(*face);
-  }
 
-  for(int i = 0; i <myShells.size() ; i++)
-  {
-    OCCShell* occ_shell = myShells.get_and_step();
-    TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
-    gBRepTrsf.Perform(*shell);
-  }
-
-  if(myTopoDSShape != NULL)
-    gBRepTrsf.Perform(*myTopoDSShape);
-
-  else
-  {
-    for(int i = 0; i < myLumps.size(); i++)
-    {
-      OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
-      gBRepTrsf.Perform(*solid);
-    }
-  }
-*/
   update_OCC_entity(&gBRepTrsf);
   // calculate for bounding box
   update_bounding_box();

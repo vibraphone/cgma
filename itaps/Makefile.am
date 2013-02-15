@@ -40,6 +40,10 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
 
 if USE_MPI
   AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
+  libiGeom_la_LIBADD += $(top_builddir)/geom/parallel/libcubit_parallel.la
+  TESTS += partest
+  partest_SOURCES = partest.cpp
+  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
 endif
 
 libiGeom_la_SOURCES = \
@@ -71,7 +75,7 @@ endif
 check_PROGRAMS = chaman $(TESTS)
 
 if BUILD_CGM
-  LDADD = libiGeom.la ../geom/OCC/libcubit_OCC.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../util/libcubit_util.la ../geom/libcubit_geom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = libiGeom.la ../geom/OCC/libcubit_OCC.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 else
   LDADD = libiGeom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
@@ -86,13 +90,6 @@ test_edge_orient_SOURCES = test_edge_orient.cc
 chaman_SOURCES = chaman.cc
 
 copy_attrib_SOURCES = copy_attrib.cpp
-
-if USE_MPI
-  check_PROGRAMS += partest
-  partest_SOURCES = partest.cpp
-  partest_CPPFLAGS = $(testgeom_occ_CPPFLAGS)
-endif
-
 
 # Automake doesn't seem to have a directory defined for
 # platform-dependent data (or include) files. So put 

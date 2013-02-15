@@ -180,6 +180,12 @@ public:
                                    const CubitString &cubit_version,
                                    ModelExportOptions &export_options ) = 0;
     
+      virtual CubitStatus export_solid_model(
+                                   DLIList<TopologyBridge*>& bridge_list,
+                                   char*& p_buffer,
+                                   int& n_buffer_size,
+                                   bool b_export_buffer) = 0;
+
      //! Saves out a temporary geometry file.  Entities in list must all be 
      //! of same modeling engine.
      virtual CubitStatus save_temp_geom_file(
@@ -228,6 +234,15 @@ public:
                                 Model_File_Type file_type,
                                 DLIList<TopologyBridge*>& imported_entities,
                                 ModelImportOptions &import_options ) = 0;
+
+     virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+                                            const char* pBuffer,
+                                            const int n_buffer_size) = 0;
+
+     //O imported_entities
+     //O- List of top-level entities read from file
+     //I print_results
+     //I- If false, fail silently (don't write error messages to stdout or stderr)
 
       virtual CubitStatus get_underlying_curves(Curve * curve_ptr,
                                  DLIList<TopologyBridge*>& curve_list)  ;

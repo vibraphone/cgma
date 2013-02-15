@@ -1033,7 +1033,6 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
   return CUBIT_SUCCESS;
 }
 
-/*
 CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_entity_list,
 						char*& p_buffer,
 						int& n_buffer_size,
@@ -1151,7 +1150,6 @@ CubitStatus OCCQueryEngine::export_solid_model( DLIList<TopologyBridge*>& ref_en
 
   return CUBIT_SUCCESS;
 }
-*/
 
 void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
                                   BRep_Builder &B,

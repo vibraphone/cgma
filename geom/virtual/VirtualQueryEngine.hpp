@@ -336,6 +336,12 @@ protected:
                                           const CubitString &cubit_version,
                                           ModelExportOptions &export_options );
 
+  virtual CubitStatus export_solid_model( DLIList<TopologyBridge*>& bridge_list,
+                                          char*& p_buffer,
+                                          int& n_buffer_size,
+                                          bool b_export_buffer)
+{return CUBIT_FAILURE;}
+
   virtual CubitStatus save_temp_geom_file(DLIList<TopologyBridge*>& bridge_list,
                                           const char *file_name,
                                           const CubitString &cubit_version,
@@ -352,6 +358,11 @@ protected:
                              Model_File_Type file_type,
                              DLIList<TopologyBridge*>& imported_entities,
                              ModelImportOptions &import_options ); 
+
+  virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
+                                         const char* pBuffer,
+                                         const int n_buffer_size)
+{return CUBIT_FAILURE;}
 
   virtual void delete_solid_model_entities(DLIList<BodySM*>&) const;
   virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const;

@@ -63,6 +63,8 @@
 extern "C" {
 #endif
 
+#define  CUBIT_MAJOR_API  14
+#define  CUBIT_MINOR_API  0
     /**\brief  Type used to store iGeom interface handle
      *
      * Type used to store iGeom interface handle
