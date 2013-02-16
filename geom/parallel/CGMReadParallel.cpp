@@ -82,7 +82,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
   bool surf_partition = false;
   std::string partition_tag_name;
   std::vector<int> partition_tag_vals;
-  int geom_dim = 0;
+  int geom_dim;
 
   // Get partition tag value(s), if any, and whether they're to be
   result = opts.get_ints_option("PARTITION_VAL", partition_tag_vals);
@@ -214,7 +214,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
 {
   // actuate CA_BODIES and turn on auto flag for other attributes
   CGMApp::instance()->attrib_manager()->register_attrib_type(CA_BODIES, "bodies", "BODIES",
-							     &CABodies_creator, CUBIT_TRUE,
+							     CABodies_creator, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_TRUE, CUBIT_TRUE,
 							     CUBIT_TRUE, CUBIT_FALSE);
   CGMApp::instance()->attrib_manager()->auto_flag(CUBIT_TRUE);
@@ -225,6 +225,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
   }
   
   // do the work by options
+  bool i_read = false;
   std::vector<int>::iterator vit;
   int i;
 
@@ -233,6 +234,7 @@ CubitStatus CGMReadParallel::load_file(const char *file_name,
     switch (*vit) {
 //==================
     case PA_READ:
+      i_read = true;
       double tStart, tEnd;
 
       if (CGM_read_parallel_debug) {
@@ -550,6 +552,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
 {
   // find bodies deleted
   int i;
+  CubitStatus result;
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
   DLIList<RefEntity*> partition_list, delete_body_list;
   int nEntity = body_entity_list.size();
@@ -578,7 +581,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
           int n_shared = shared_procs->size();
           shared_procs->reset();
           for (int k = 0; k < n_shared; k++) {
-            if (shared_procs->get_and_step() == (int)m_rank) {
+            if (shared_procs->get_and_step() == m_rank) {
               b_partitioned_surf = true;
               break;
             }
@@ -595,7 +598,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
   char pre_body[100];
   DLIList<CubitEntity*> tmp_body_list;
   if (CGM_read_parallel_debug) {
-    if ((int)m_rank != reader) {
+    if (m_rank != reader) {
       CAST_LIST_TO_PARENT(delete_body_list, tmp_body_list);
       sprintf(pre_body, "Will delete %d Bodies: ", tmp_body_list.size());
       CubitUtil::list_entity_ids(pre_body, tmp_body_list );
@@ -620,7 +623,7 @@ CubitStatus CGMReadParallel::delete_nonlocal_entities(int reader,
 
 CubitStatus CGMReadParallel::check_partition_info()
 {
-  int i;
+  int i, j;
   DLIList<RefEntity*>& body_entity_list = m_pcomm->partition_body_list();
   int nEntity = body_entity_list.size();
   body_entity_list.reset();
