@@ -2,7 +2,7 @@
 #define PROBDATA_HPP
 
 #ifdef USE_MPI
-#include "mpi.h"
+#include "CGMmpi.h"
 #endif
 
 class ProcData 

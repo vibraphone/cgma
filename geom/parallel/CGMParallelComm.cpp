@@ -205,7 +205,18 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
 	PRINT_ERROR("Partitioned entities should have TDParallel data.");
 	return CUBIT_FAILURE;
       }
-      balancedLists[td_par->get_charge_proc()]->append(entity);
+      int charge_p = td_par->get_charge_proc();
+      if (charge_p != from_proc) { // only to compute processors
+        balancedLists[charge_p]->append(entity); // add charge processor
+      }
+      
+      DLIList<int>* ghost_procs = td_par->get_ghost_proc_list();
+      int n_ghost = ghost_procs->size();
+      ghost_procs->reset();
+      for (int j = 0; j < n_ghost; j++) { // add ghost processors
+        int ghost_p = ghost_procs->get_and_step();
+        if (ghost_p != from_proc) balancedLists[ghost_p]->append(entity);
+      }
     }
     
     // add buffer size for each processors
@@ -231,7 +242,7 @@ CubitStatus CGMParallelComm::scatter_entities(const unsigned int from_proc,
   printf("Broadcasting buffer size array from master.\n");
   MPI_Bcast(sendCounts, nProcs, MPI_INT, from_proc, MPI_COMM_WORLD);
   
-  for (int i = 1; i < nProcs; i++) {
+  for ( i = 1; i < nProcs; i++) {
     displacements[i] = displacements[i-1] + sendCounts[i-1];
   }
   
@@ -267,9 +278,11 @@ CubitStatus CGMParallelComm::write_buffer(DLIList<RefEntity*> &ref_entity_list,
     return CUBIT_SUCCESS;
   }
 
+#ifdef HAVE_OCC
   CubitStatus result = GeometryQueryTool::instance()->export_solid_model(ref_entity_list, pBuffer,
 									 n_buffer_size, b_write_buffer);
   RRA("Failed to write ref entities to buffer.");
+#endif
 
   if (b_write_buffer) m_currentPosition += n_buffer_size;
   return CUBIT_SUCCESS;
@@ -285,9 +298,11 @@ CubitStatus CGMParallelComm::read_buffer(DLIList<RefEntity*> &ref_entity_list,
 #else
   if (n_buffer_size == 0) return CUBIT_SUCCESS;
 
+#ifdef HAVE_OCC
   CubitStatus result = GeometryQueryTool::instance()->import_solid_model(&ref_entity_list, pBuffer,
 									 n_buffer_size);
   RRA("Failed to read ref entities from buffer.");
+#endif
   
   return CUBIT_SUCCESS;
 #endif

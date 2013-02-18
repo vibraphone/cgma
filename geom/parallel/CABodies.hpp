@@ -1,7 +1,6 @@
 //- Class:          CABodies
 //- Description:    Cubit attribute for bodies entity is part of.
 //- Author: Hong-Jun Kim
-//- Checked by: Tim Tautges
 //- Version:
 
 #ifndef CA_BODIES_HPP
@@ -12,14 +11,24 @@
 #include "CubitDefines.h"
 #include "CADefines.hpp"
 
+#include <typeinfo>
+#if !defined(_MSC_VER)
+using std::type_info;
+#endif
+
 class RefEntity;
 
 class CUBIT_GEOM_EXPORT CABodies: public CubitAttrib
 {
 private:
  
-  DLIList<int> bodyUniqueId;
-  //- body Unique ids containing attribOwnerEntity
+  int m_interface, m_uniqueID;
+
+  DLIList<int> m_sharedBodies; // shared bodies
+
+  DLIList<int> m_sharedProcs; // shared processors
+
+  DLIList<int> m_ghostProcs; // ghost processors
 
 public:
 
@@ -39,18 +48,16 @@ public:
 
   CubitStatus update();
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   CubitStatus reset();
   //- reset this attribute
 
   int int_attrib_type() {return CA_BODIES;}
   //- returns the enumerated attribute type
-
-  
 };
 
-CubitAttrib* CABodies_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CABodies_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa);
 
 #endif
 
