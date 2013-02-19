@@ -116,7 +116,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*>  free_entities;
 
   // Read in the geometry from files specified on the command line
-  const char *argv = STRINGIFY(SRCDIR) "/stitch.name_occ";
+  const char *argv = "stitch.name_occ";
   CubitStatus status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.

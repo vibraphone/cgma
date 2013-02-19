@@ -90,7 +90,7 @@ CubitStatus point_project()
 {
   GeometryQueryTool *gti = GeometryQueryTool::instance();
 
-  const char *argv = STRINGIFY(SRCDIR) "/box-w-hole.brep";
+  const char *argv = "box-w-hole.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   

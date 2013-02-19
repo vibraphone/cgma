@@ -136,7 +136,7 @@ CubitStatus make_Point()
   DLIList<RefEntity*>  free_entities;
 
   //Read in the geometry from iges file
-  const char *argiges = STRINGIFY(SRCDIR) "/ex3.iges";
+  const char *argiges = "ex3.iges";
   CubitStatus status = read_geometry(1, &argiges, false);
   //Constructed 18 Free Curves: 1 to 18
   if (status == CUBIT_FAILURE) exit(1);
@@ -187,7 +187,7 @@ CubitStatus make_Point()
     }
 
   
-  const char *argiges2 = STRINGIFY(SRCDIR) "/diffuser.iges";
+  const char *argiges2 = "diffuser.iges";
   status = read_geometry(1, &argiges2, false);
   //Constructed 7 Volumes: 1 to 7
   if (status == CUBIT_FAILURE) exit(1);
@@ -217,7 +217,7 @@ CubitStatus make_Point()
       gti->delete_RefEntity( free_entities.get_and_step());
     }
 
-  const char *argstep = STRINGIFY(SRCDIR) "/proe.stp";
+  const char *argstep = "proe.stp";
   //const char *argstep = "cub_model.step";
   status = read_geometry(1, &argstep, false);
   //Constructed 12 Volumes: 8 to 19
@@ -265,7 +265,7 @@ CubitStatus make_Point()
     }
 
   // Read in the geometry from files specified on the command line
-  const char *argv = STRINGIFY(SRCDIR) "/stitch.name_occ";
+  const char *argv = "stitch.name_occ";
   status = read_geometry(1, &argv, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
@@ -383,7 +383,7 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  const char *argv2 = STRINGIFY(SRCDIR) "/unite1.occ";
+  const char *argv2 = "unite1.occ";
   status = read_geometry(1, &argv2, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
@@ -419,7 +419,7 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
   // Read in the geometry from files specified on the command line
-  const char *argv3 = STRINGIFY(SRCDIR) "/unite1.occ";
+  const char *argv3 = "unite1.occ";
   status = read_geometry(1, &argv3, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
@@ -456,7 +456,7 @@ CubitStatus make_Point()
   assert(free_entities.size() ==0);
 
     // Read in the geometry from files specified on the command line
-  const char *argv4 = STRINGIFY(SRCDIR) "/unite4.occ";
+  const char *argv4 = "unite4.occ";
   status = read_geometry(1, &argv4, false);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
