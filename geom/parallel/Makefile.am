@@ -3,6 +3,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom/ACIS \
 	       -I$(ACIS_DIR)/include \
                -I$(ACIS_DIR)/amendment \
+               -I$(top_srcdir)/amendment \
                $(MPI_INCLUDE) \
 	       $(HAVE_OCC_DEF)
 

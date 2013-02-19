@@ -6,6 +6,7 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
                -I$(top_srcdir)/geom/virtual \
                -I$(top_srcdir)/geom/facet \
                -I$(top_srcdir)/geom/cholla \
+               -I$(top_srcdir)/amendment \
                -I$(srcdir) \
                $(OCC_INC_FLAG)
 
