@@ -253,15 +253,15 @@ CubitStatus make_Point()
      gti->delete_RefEntity( free_entities.get_and_step());
   }
   // Read in the geometry from files specified on the command line
-  const char *argv = "66_shaver3.brep";
+  const char *argv = STRINGIFY(SRCDIR) "/66_shaver3.brep";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
 
-  const char *argv2 = "62_shaver1.brep";
+  const char *argv2 = STRINGIFY(SRCDIR) "/62_shaver1.brep";
   status = read_geometry(1, &argv2);
   if (status == CUBIT_FAILURE) exit(1);
 
-  const char *argv3 = "72_shaver6.brep";
+  const char *argv3 = STRINGIFY(SRCDIR) "/72_shaver6.brep";
   status = read_geometry(1, &argv3);
   if (status == CUBIT_FAILURE) exit(1);
    

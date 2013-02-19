@@ -89,7 +89,7 @@ CubitStatus point_project()
 {
   GeometryQueryTool *gti = GeometryQueryTool::instance();
 
-  const char *argv = "holysurf.sat";
+  const char *argv = STRINGIFY(SRCDIR) "/holysurf.sat";
   CubitStatus status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   

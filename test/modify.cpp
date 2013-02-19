@@ -1279,9 +1279,9 @@ CubitStatus make_Point()
   //So far created volume 80.
 
   // Read in the geometry from files specified on the command line
-  argv = "Cylinder_1.brep";
+  argv = STRINGIFY(SRCDIR) "/Cylinder_1.brep";
   status = read_geometry(1, &argv, true);
-  argv = "Cylinder_2.brep";
+  argv = STRINGIFY(SRCDIR) "/Cylinder_2.brep";
   status = read_geometry(1, &argv, true);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
@@ -1313,7 +1313,7 @@ CubitStatus make_Point()
     gti->delete_RefEntity(free_entities.get_and_step());
 
   // Read in the geometry from files specified on the command line
-  argv = "webcut.brep";
+  argv = STRINGIFY(SRCDIR) "/webcut.brep";
   read_geometry(1, &argv, false);
 
   DLIList<Body*> old_bodies, junk;
@@ -1345,11 +1345,11 @@ CubitStatus make_Point()
     gti->delete_RefEntity(free_entities.get_and_step());
 
   //test for webcut with curve sweep option
-  argv = "webcut.brep";
+  argv = STRINGIFY(SRCDIR) "/webcut.brep";
   read_geometry(1, &argv, false);
-  argv = "Line_1.brep";
+  argv = STRINGIFY(SRCDIR) "/Line_1.brep";
   read_geometry(1, &argv, false);
-  argv = "Line_2.brep";
+  argv = STRINGIFY(SRCDIR) "/Line_2.brep";
   read_geometry(1, &argv, false);
   
   old_bodies.clean_out();
