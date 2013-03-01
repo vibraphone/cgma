@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = foreign
 
 AM_CPPFLAGS = -I$(top_srcdir)/geom -I$(top_srcdir)/util -I.
 
-lib_LTLIBRARIES = libcgma_amendment.la
+noinst_LTLIBRARIES = libcgma_amendment.la
 libcgma_amendment_la_includedir = $(includedir)
 libcgma_amendment_la_SOURCES = AutoMidsurfaceTool.cpp \
     CAEntityTol.cpp \
