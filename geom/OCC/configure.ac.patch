@@ -1,0 +1,13 @@
+--- configure.ac	2012-11-12 04:53:15.000000000 -0600
++++ /mnt/disk2b/jhu/OpenCASCADE6.5.4/ros/configure.ac	2013-03-01 11:13:28.000000000 -0600
+@@ -54,9 +54,7 @@
+ AC_CHECK_HEADERS(iomanip.h limits.h values.h float.h)
+ AC_CHECK_HEADERS(siginfo.h bits/sigset.h bstring.h sys/types.h sys/select.h)
+ AC_CHECK_HEADERS(X11/extensions/transovl.h X11/extensions/readdisplay.h)
+-AC_CHECK_HEADERS(X11/extensions/multibuf.h)
+-AC_CHECK_HEADERS(sys/filio.h sys/mman.h libc.h)
+-AC_CHECK_HEADERS(X11/extensions/multibuf.h)
++AC_CHECK_HEADERS([X11/Xlib.h X11/extensions/multibuf.h], [], [], [#include <X11/Xlib.h>])
+ AC_CHECK_HEADERS(sys/filio.h sys/mman.h libc.h)
+ 
+ #-----------------------------------------------------------------------------
