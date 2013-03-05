@@ -5,9 +5,9 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/geom
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
+lib_LTLIBRARIES = 
 if BUILD_CGM
-  noinst_LTLIBRARIES += libCholla.la
+  lib_LTLIBRARIES += libCholla.la
 endif
 
 # The directory where headers will be installed

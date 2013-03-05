@@ -8,9 +8,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom 
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
+lib_LTLIBRARIES = 
 if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_facetbool.la
+  lib_LTLIBRARIES += libcubit_facetbool.la
 endif
 
 # The directory where headers will be installed

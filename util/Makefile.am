@@ -1,7 +1,7 @@
 # The name of the library to build
-noinst_LTLIBRARIES = 
+lib_LTLIBRARIES = 
 if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_util.la
+  lib_LTLIBRARIES += libcubit_util.la
 endif
 
 # The directory where headers will be installed
