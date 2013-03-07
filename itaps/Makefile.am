@@ -26,18 +26,19 @@ lib_LTLIBRARIES = libiGeom.la
 libiGeom_la_includedir = $(includedir)
 
 if BUILD_CGM
-  libiGeom_la_LIBADD = $(top_builddir)/libcgm.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../geom/Cholla/libCholla.la ../init/libcgma_init.la ../geom/libcubit_geom.la
+  libiGeom_la_LIBADD = $(top_builddir)/libcgm.la 
 else
-  libiGeom_la_LIBADD = -lcubiti19 -lcubit_util $(top_builddir)/init/libcgma_init.la $(top_builddir)/amendment/libcgma_amendment.la -lcubit_geom
+  libiGeom_la_LIBADD = -lcubiti19 -lcubit_util $(top_builddir)/init/libcgma_init.la -lcubit_geom
 endif 
+
+LDADD = libiGeom.la $(top_builddir)/libcgm.la 
 
 AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
                $(HAVE_OCC_DEF) \
                -DSRCDIR=$(srcdir) \
                -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
-	       -I$(top_srcdir)/init \
-               -I$(top_srcdir)/amendment
+	       -I$(top_srcdir)/init 
 
 if USE_MPI
   AM_CPPFLAGS += -I$(top_srcdir)/geom/parallel -DUSE_MPI
@@ -74,12 +75,6 @@ else
 endif
 
 check_PROGRAMS = chaman $(TESTS)
-
-if BUILD_CGM
-  LDADD = libiGeom.la ../geom/OCC/libcubit_OCC.la ../geom/facet/libcubit_facet.la ../geom/virtual/libcubit_virtual.la ../util/libcubit_util.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
-else
-  LDADD = libiGeom.la $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
-endif
 
 AM_LDFLAGS +=  $(CGM_EXT_LTFLAGS) $(CGM_EXT_LDFLAGS)
 testgeom_SOURCES = testgeom.cc

@@ -8,7 +8,6 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
            -I$(top_srcdir)/geom/facet \
            -I$(top_srcdir)/geom/Cholla \
 	   -I$(top_srcdir)/geom/OCC \
-	   -I$(top_srcdir)/amendment \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
@@ -31,11 +30,9 @@ check_PROGRAMS = $(TESTS)
 noinst_LTLIBRARIES = libcgm_test.la
 
 if BUILD_CGM
-  libcgm_test_la_LIBADD = $(top_builddir)/libcgm.la 
-
-  LDADD = ../init/libcgma_init.la ../util/libcubit_util.la ../geom/libcubit_geom.la ../geom/OCC/libcubit_OCC.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la libcgm_test.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS) 
 else
-  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../amendment/libcgma_amendment.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../geom/libcubit_geom.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
 
 libcgm_test_la_SOURCES = TestUtilities.hpp \

@@ -1,6 +1,3 @@
-# Don't require GNU-standard files (Changelog, README, etc.)
-AUTOMAKE_OPTIONS = foreign
-
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
@@ -17,26 +14,20 @@ endif
 
 # Override default defines with the ones we want from the configure script
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
-AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/amendment -I.
+AM_CPPFLAGS = -I$(top_srcdir)/util -I.
 
 # The name of the library to build
-lib_LTLIBRARIES =
-if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_geom.la
-endif
+  noinst_LTLIBRARIES = libcubit_geom.la
 
 # The directory where headers will be installed
 libcubit_geom_la_includedir = $(includedir)
-
-libcubit_geom_la_LIBADD = $(top_builddir)/amendment/libcgma_amendment.la
-
-LDADD = $(top_builddir)/libcgm.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS) $(top_builddir)/util/libcubit_util.la
 
 # The non-template sources
 if BUILD_CGM
 libcubit_geom_la_SOURCES = \
     AllocMemManagersGeom.cpp \
     AnalyticGeometryTool.cpp \
+    AutoMidsurfaceTool.cpp \
     BasicTopologyEntity.cpp \
     Body.cpp \
     BodySM.cpp \
@@ -47,6 +38,8 @@ libcubit_geom_la_SOURCES = \
     CAEntityColor.cpp \
     CAEntityId.cpp \
     CAEntityName.cpp \
+    CAEntitySense.cpp \
+    CAEntityTol.cpp \
     CAGroup.cpp \
     CAMergePartner.cpp \
     CAMergeStatus.cpp \
@@ -54,6 +47,7 @@ libcubit_geom_la_SOURCES = \
     CAUniqueId.cpp \
     CGMApp.cpp \
     CGMEngineDynamicLoader.cpp \
+    CGMHistory.cpp \
     Chain.cpp \
     CoEdge.cpp \
     CoEdgeSM.cpp \
@@ -64,6 +58,7 @@ libcubit_geom_la_SOURCES = \
     CubitAttrib.cpp \
     CubitAttribManager.cpp \
     CubitAttribUser.cpp \
+    CubitCompat.cpp \
     CubitPolygon.cpp \
     CubitSimpleAttrib.cpp \
     Curve.cpp \
@@ -84,8 +79,10 @@ libcubit_geom_la_SOURCES = \
     GeometryQueryTool.cpp \
     GeometryUtil.cpp \
     GeomMeasureTool.cpp \
+    GfxPreview.cpp \
     GroupingEntity.cpp \
     GSaveOpen.cpp \
+    LocalToleranceTool.cpp \
     Loop.cpp \
     LoopSM.cpp \
     Lump.cpp \
@@ -127,6 +124,8 @@ libcubit_geom_la_SOURCES = \
     TDUniqueId.cpp \
     TopologyBridge.cpp \
     TopologyEntity.cpp 
+else
+    libcubit_geom_la_SOURCES = CubitCompat.cpp
 endif
 
 # Headers to be installed.  If any file in this list should
@@ -134,6 +133,7 @@ endif
 libcubit_geom_la_include_HEADERS = \
   AnalyticGeometryTool.hpp \
   BasicTopologyEntity.hpp \
+  AutoMidsurfaceTool.hpp \
   Body.hpp \
   BodySM.hpp \
   BoundingBoxTool.hpp \
@@ -144,6 +144,8 @@ libcubit_geom_la_include_HEADERS = \
   CAEntityColor.hpp \
   CAEntityId.hpp \
   CAEntityName.hpp \
+  CAEntitySense.hpp \
+  CAEntityTol.hpp \
   CAGroup.hpp \
   CAMergePartner.hpp \
   CAMergeStatus.hpp \
@@ -151,6 +153,7 @@ libcubit_geom_la_include_HEADERS = \
   CAUniqueId.hpp \
   CGMApp.hpp \
   CGMEngineDynamicLoader.hpp \
+  CGMHistory.hpp \
   Chain.hpp \
   CoEdge.hpp \
   CoEdgeSM.hpp \
@@ -162,6 +165,8 @@ libcubit_geom_la_include_HEADERS = \
   CubitAttrib.hpp \
   CubitAttribManager.hpp \
   CubitAttribUser.hpp \
+  CubitCompat.hpp \
+  CubitCompat.h \
   CubitEvaluator.hpp \
   CubitGeomConfigure.h \
   CubitPolygon.hpp \
@@ -188,8 +193,10 @@ libcubit_geom_la_include_HEADERS = \
   GeometryQueryEngine.hpp \
   GeometryQueryTool.hpp \
   GeometryUtil.hpp \
+  GfxPreview.hpp \
   GroupingEntity.hpp \
   IntermediateGeomEngine.hpp \
+  LocalToleranceTool.hpp \
   Loop.hpp \
   LoopSM.hpp \
   Lump.hpp \

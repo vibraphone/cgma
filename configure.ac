@@ -144,7 +144,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
     AC_LINK_IFELSE([AC_LANG_PROGRAM(
       [class AcisQueryEngine { public: static AcisQueryEngine* instance_; };],
       [AcisQueryEngine::instance_ = 0;])],
-      [CUBIT_LIBS="-L${CUBIT_BIN_DIR} -lcubiti$num -lcubit_geom -lcubit_util"
+      [CUBIT_LIBS="-L${CUBIT_BIN_DIR} -lcubiti$num"
        CUBIT_FILE=`expr x"$file" : x"$CUBIT_BIN_DIR/\(.*\)"`
        CUBIT_FILE="${CUBIT_BIN_DIR}/$CUBIT_FILE"
        AC_MSG_RESULT(yes)
@@ -552,7 +552,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
-AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h amendment/CubitCompat.h)
+AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h geom/CubitCompat.h)
 AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
@@ -565,7 +565,6 @@ AC_CONFIG_FILES(Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
            init/Makefile
-           amendment/Makefile
            compat/Makefile
            cgm.make
            itaps/Makefile

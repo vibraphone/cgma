@@ -1,11 +1,10 @@
 AM_CPPFLAGS += $(HAVE_OCC_DEF) \
                -I$(top_srcdir)/util \
                -I$(top_srcdir)/geom \
-               -I$(top_srcdir)/amendment \
                $(OCC_INC_FLAG)
 
 # The name of the library to build
-lib_LTLIBRARIES = libcubit_OCC.la
+noinst_LTLIBRARIES = libcubit_OCC.la
 
 libcubit_OCC_la_LIBADD = -L$(OCC_LIB_DIR) $(OCC_LIBS)
 

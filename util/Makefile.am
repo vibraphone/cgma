@@ -1,13 +1,11 @@
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_util.la
+  noinst_LTLIBRARIES += libcubit_util.la
 endif
 
 # The directory where headers will be installed
 libcubit_util_la_includedir = $(includedir)
-
-AM_CPPFLAGS = -I$(top_srcdir)/amendment -I.
 
 # The non-template sources
 # If any of these do not need to be installed, move them
@@ -28,6 +26,7 @@ libcubit_util_la_SOURCES = \
   CubitFileFEModel.cpp \
   CubitFileIOWrapper.cpp \
   CubitFileMetaData.cpp \
+  CubitFileSimModel.cpp \
   CubitFileUtil.cpp \
   CubitMatrix.cpp \
   CubitMessage.cpp \
@@ -37,6 +36,7 @@ libcubit_util_la_SOURCES = \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
+  CubitUndo.cpp \
   CubitUtil.cpp \
   CubitVector.cpp \
   DIntArray.cpp \
@@ -93,6 +93,8 @@ libcubit_util_la_include_HEADERS = \
   CubitFileFEModel.hpp \
   CubitFileIOWrapper.hpp \
   CubitFileMetaData.hpp \
+  CubitFileSimModel.hpp \
+  CubitUndo.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
   CubitMatrix.hpp \
@@ -206,4 +208,4 @@ else
       RStarTreeNode.cpp
 endif
 
-libcubit_util_la_LIBADD = -ldl ../amendment/libcgma_amendment.la
+libcubit_util_la_LIBADD = -ldl 
