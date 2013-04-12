@@ -5,6 +5,8 @@ AC_INIT(CGMA, 13.1)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
+# automake 1.12 seems to require this, but automake 1.11 doesn't recognize it
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES],
  [AM_INIT_AUTOMAKE([foreign -Wall silent-rules color-tests parallel-tests])],
  [AM_INIT_AUTOMAKE([foreign -Wall])])
