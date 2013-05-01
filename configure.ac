@@ -367,6 +367,12 @@ AC_ARG_WITH( occ,
               DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-occ=\"${withval}\""],
              [occ_DIR=no] )
 
+AC_ARG_ENABLE( dev, 
+             [AC_HELP_STRING([--enable-dev],[enable Make Check to check for modify and makept testcases in occ build, default: no])],
+             [DEV=yes], [DEV=no] )
+
+AM_CONDITIONAL(DEV, test x"$DEV" = x"yes")
+
 # if user specified option (other than --without-occ)
 CUBIT_OCC_LIB=
 HAVE_OCC_DEF=

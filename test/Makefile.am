@@ -18,14 +18,20 @@ else
 if WITH_CUBIT
   TESTS += webcut merge_acis brick_acis
 else
-  TESTS += brick_facet merge_facet
+if DEV
+  TESTS += modify makept 
 endif
 endif
-if build_OCC
-  TESTS += attribute_to_file loft offset_curves point_project imprint_bug modify subtract makept test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ
-endif
+endif 
 
+if build_OCC
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet
+endif
 check_PROGRAMS = $(TESTS)
+
+if build_OCC
+  check_PROGRAMS += modify makept
+endif
 
 noinst_LTLIBRARIES = libcgm_test.la
 
