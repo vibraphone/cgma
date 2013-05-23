@@ -123,6 +123,7 @@ libcubit_util_la_include_HEADERS = \
   DynamicDLIIterator.hpp \
   DynamicTreeIterator.hpp \
   ElementType.h \
+  FacetShapeDefs.hpp \
   GMem.hpp \
   GeometryDefines.h \
   GetLongOpt.hpp \
