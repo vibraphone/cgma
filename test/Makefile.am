@@ -120,6 +120,7 @@ EXTRA_DIST = 62_shaver1.brep \
              Line_2.brep    \
              stitch.name_occ \
              box-w-hole.brep \
+             Solid_2.brep \
              Solid_6.brep  \
              Solid_7.brep  
 
@@ -158,6 +159,7 @@ MOSTLYCLEANFILES = \
         prism.occ \
         pyramid.occ \
         fillet.occ \
+        curves.brep \
 	mmgr.log
  
 

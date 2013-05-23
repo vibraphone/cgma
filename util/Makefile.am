@@ -14,6 +14,7 @@ libcubit_util_la_SOURCES = \
   AllocMemManagersList.cpp \
   AppUtil.cpp \
   ArrayBasedContainer.cpp \
+  CommandFeedback.hpp \
   CpuTimer.cpp \
   Cubit2DPoint.cpp \
   CubitBox.cpp \
@@ -97,6 +98,7 @@ libcubit_util_la_include_HEADERS = \
   CubitUndo.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
+  CubitLoops.hpp \
   CubitMatrix.hpp \
   CubitMessage.hpp \
   CubitObservable.hpp \
@@ -136,6 +138,7 @@ libcubit_util_la_include_HEADERS = \
   KDDTree.hpp \
   KDDTreeNode.hpp \
   LocalStart.h \
+  ManagedPtrVector.hpp \
   MemoryBlock.hpp \
   MemoryManager.hpp \
   MergeEvent.hpp \

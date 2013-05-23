@@ -25,6 +25,7 @@ libCholla_la_SOURCES = \
     ChollaPoint.cpp \
     ChollaSkinTool.cpp \
     ChollaSurface.cpp \
+    ChollaVolume.cpp \
     ChordalAxis.cpp \
     CubitFacet.cpp \
     CubitFacetData.cpp \
@@ -61,6 +62,7 @@ libCholla_la_include_HEADERS = \
     ChollaPoint.hpp \
     ChollaSkinTool.hpp \
     ChollaSurface.hpp \
+    ChollaVolume.hpp \
     ChordalAxis.hpp \
     CubitFacet.hpp \
     CubitFacetData.hpp \
@@ -75,6 +77,7 @@ libCholla_la_include_HEADERS = \
     FacetEntity.hpp \
     FacetEvalTool.hpp \
     FacetorTool.hpp \
+    FacetorUtil.hpp \
     GeoNode.hpp \
     GeoTet.hpp \
     LoopParamTool.hpp \
