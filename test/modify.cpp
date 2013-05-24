@@ -9,6 +9,7 @@
 
 #undef NDEBUG
 #include <cassert>
+#include <Standard_Version.hxx>
 
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
@@ -287,13 +288,31 @@ CubitStatus make_Point()
   assert(status == CUBIT_FAILURE);
 
   ref_vertices.clean_out();
-  ref_vertices.append(ref_vertices2.pop());
-  ref_vertices.append(ref_vertices2.pop());
+  ref_vertices2.pop();
+  ref_vertices2.pop();
   ref_vertices2.get()->ref_edges(ref_edges);
   gmti->tweak_chamfer(ref_vertices2, 2, new_bodies, ref_edges.pop(), 1,
                       ref_edges.pop(), 0.5, ref_edges.pop());
 
+  new_bodies.get()->ref_vertices(ref_vertices);
   new_bodies.clean_out();
+  int v_size = ref_vertices.size();
+  for (int i=0; i < v_size; i++)
+  {
+    RefVertex* vertex = ref_vertices.get_and_step();
+    if(vertex->coordinates().x() != 16)
+    {
+      ref_vertices.remove(vertex); 
+      continue;
+    }
+    if((vertex->coordinates().y()== 5 && vertex->coordinates().z() == 5)
+   || (vertex->coordinates().y()== -5 && vertex->coordinates().z() == -5))
+    continue;
+    else
+      ref_vertices.remove(vertex);
+  }
+   
+  assert (ref_vertices.size() ==2);
   gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
 
   ref_edges.clean_out();
@@ -1066,6 +1085,9 @@ CubitStatus make_Point()
   v_move8ii.z(10);
   DLIList<RefEdge*> edges;
   body->ref_edges(edges);
+#if OCC_VERSION_MINOR > 5
+  edges.reverse();
+#endif
   refentities.clean_out();
   refentities.append(edges.get());
   new_bodies.clean_out();
@@ -1261,10 +1283,14 @@ CubitStatus make_Point()
   body = new_bodies.get();
   d = body->measure();
   //d = 93.697, no effect of draft angle.
+#if OCC_VERSION_MINOR > 5
+  assert(d - 92.1335 < 0.001 && d > 92.1335);
+#else
   if(oqe->get_subminor_version() >= 2)
     assert(d - 92.1335 < 0.001 && d > 92.1335);
   else
     assert(d - 93.697 < 0.001 && d > 93.697);
+#endif
 
   bodies.clean_out();
   gti->bodies(bodies);

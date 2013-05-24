@@ -74,7 +74,7 @@ void OCCAttribSet::append_attribute( CubitSimpleAttrib* csa, TopoDS_Shape& shape
   TDF_Label aLabel, lab;
   Handle_TDataStd_Name attr_name;
   CubitString* type = csa->string_data_list()->get_and_step();
-  TCollection_ExtendedString cstring( (Standard_CString)type->c_str() );
+  TCollection_ExtendedString cstring( type->c_str(), CUBIT_TRUE );
 
   FindShape(shape, aLabel, found);
 
@@ -548,7 +548,7 @@ CubitStatus OCCAttribSet::get_attributes( const CubitString& name,
     return CUBIT_FAILURE;
 
   Handle_TDataStd_Name attr_name;
-  TCollection_ExtendedString cstring( (Standard_CString)name.c_str() );
+  TCollection_ExtendedString cstring( name.c_str(), CUBIT_TRUE );
   TDF_Label lab;
   for (TDF_ChildIterator it(aLabel,CUBIT_FALSE); it.More(); it.Next())
   {

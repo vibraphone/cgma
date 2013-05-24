@@ -46,7 +46,8 @@
 #include "BRepBndLib.hxx"
 #include "GProp_GProps.hxx"
 #include "BRepGProp.hxx"
-#include "BOP_SolidClassifier.hxx"
+#include "BRepClass3d_SolidExplorer.hxx"
+#include "BRepClass3d_SClassifier.hxx"
 #include "TopExp_Explorer.hxx"
 #include "TopoDS.hxx"
 #include "BRep_Tool.hxx"
@@ -335,9 +336,9 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
   if (mySheetSurface || myShell)
     return CUBIT_PNT_UNKNOWN;
 
-  BOP_SolidClassifier ps;
   TopoDS_Solid * solid = get_TopoDS_Solid();
   gp_Pnt pnt(point.x(), point.y(), point.z());
+  BRepClass3d_SolidExplorer ex(*solid);
   
   //use face tolerance at the tolerence to see if the point is on.
   TopExp_Explorer Ex;
@@ -345,8 +346,9 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
   TopoDS_Face face = TopoDS::Face(Ex.Current());
   
   double dtol = BRep_Tool::Tolerance(face);
-  TopAbs_State state = ps.Classify(*solid, pnt, dtol); 
+  BRepClass3d_SClassifier ps(ex, pnt, dtol);
   
+  TopAbs_State state = ps.State();
   if (state == TopAbs_IN)
      return CUBIT_PNT_INSIDE;
   else if (state == TopAbs_OUT)

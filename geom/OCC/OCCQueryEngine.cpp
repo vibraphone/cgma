@@ -166,7 +166,7 @@ OCCQueryEngine::OCCQueryEngine()
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
   CubitString name("Doc");
-  TCollection_ExtendedString xString((Standard_CString)name.c_str());
+  TCollection_ExtendedString xString(name.c_str(), CUBIT_TRUE);
   MyDF = new TDocStd_Document(xString);
   mainLabel = MyDF->Main();
   EXPORT_ATTRIB = CUBIT_TRUE;
@@ -2887,7 +2887,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm ,
         occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
 
         if(!OccToCGM->erase(k))
-          PRINT_ERROR("The OccBody and iCreatedTotal pair is not in the map!");
+          PRINT_ERROR("The OccBody and iCreatedTotal %i  pair is not in the map!", k);
     }
   }
 

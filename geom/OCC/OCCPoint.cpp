@@ -84,7 +84,7 @@ OCCPoint::~OCCPoint()
 {
   if (myTopoDSVertex)
   {
-    delete (TopoDS_Vertex*)myTopoDSVertex;
+    delete myTopoDSVertex;
     myTopoDSVertex = NULL;
   }
 }
