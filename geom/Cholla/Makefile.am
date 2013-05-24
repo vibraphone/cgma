@@ -77,7 +77,6 @@ libCholla_la_include_HEADERS = \
     FacetEntity.hpp \
     FacetEvalTool.hpp \
     FacetorTool.hpp \
-    FacetorUtil.hpp \
     GeoNode.hpp \
     GeoTet.hpp \
     LoopParamTool.hpp \

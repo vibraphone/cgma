@@ -127,5 +127,5 @@ private:
   static double radius(TRI* tri_ptr);  
 };
 
-//#include "FacetorUtil.cpp"
+#include "FacetorUtil.cpp"
 #endif
