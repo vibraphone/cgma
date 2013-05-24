@@ -51,6 +51,9 @@ libCholla_la_SOURCES = \
     TDFacetBoundaryPoint.cpp \
     TDGeomFacet.cpp 
 
+EXTRA_DIST = FacetorUtil.hpp \
+             FacetorUtil.cpp 
+              
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
 libCholla_la_include_HEADERS = \
