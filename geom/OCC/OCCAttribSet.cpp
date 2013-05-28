@@ -368,7 +368,7 @@ void OCCAttribSet::remove_attribute( TopoDS_Shape& shape)
   if(!found)
     return;
  
-  myLabel.ForgetAllAttributes(false);
+  myLabel.ForgetAttribute(TDataXtd_Shape::GetID());
 /*
   if(OCCQueryEngine::instance()->OCCMap->IsBound(shape)) 
   {
