@@ -7645,11 +7645,15 @@ CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
   std::vector<TopologyBridge*> vertex_edge_to_point_vector;
   std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
 
-  surf_ptr->get_geometry_query_engine()->
+  CubitStatus rsl = surf_ptr->get_geometry_query_engine()->
     get_graphics(surf_ptr, gmem, vertex_edge_to_point_vector, facetedges_on_curve,
     normal_tolerance, distance_tolerance, max_edge_length );
 
   ref_vertex_edge_to_point_vector.resize( vertex_edge_to_point_vector.size(), NULL );
+
+  if(rsl == CUBIT_FAILURE)
+    return rsl;
+
   RefEntity *ref_ent = NULL;
   int size = vertex_edge_to_point_vector.size();
   for( int i=0; i<size; i++ )
@@ -7720,8 +7724,10 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
   std::vector<Surface*> surfaces_to_facet_vector;
   std::vector<TopologyBridge*> tmp_facet_point_ownership_vector;
   std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
-  gqe->get_graphics( body_sm, g_mem, surfaces_to_facet_vector, tmp_facet_point_ownership_vector,
+  CubitStatus rsl = gqe->get_graphics( body_sm, g_mem, surfaces_to_facet_vector, tmp_facet_point_ownership_vector,
     facetedges_on_curve, normal_tolerance, distance_tolerance, max_edge_length );
+  if(rsl == CUBIT_FAILURE)
+    return rsl;
 
   //map Surfaces to MRefFaces
   Surface *current_surf = NULL;
