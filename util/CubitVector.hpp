@@ -313,26 +313,26 @@ inline void CubitVector::get_xyz(double xyz[3]) const
   xyz[1] = yVal;
   xyz[2] = zVal;
 }
-inline void CubitVector::get_xyz(double &x, double &y, double &z) const
+inline void CubitVector::get_xyz(double &xOut, double &yOut, double &zOut) const
 {
-  x = xVal; 
-  y = yVal; 
-  z = zVal;
+  xOut = xVal; 
+  yOut = yVal; 
+  zOut = zVal;
 }
 inline double &CubitVector::r()
 { return xVal; }
 inline double &CubitVector::theta()
 { return yVal; }
-inline void CubitVector::x( const double x )
-{ xVal = x; }
-inline void CubitVector::y( const double y )
-{ yVal = y; }
-inline void CubitVector::z( const double z )
-{ zVal = z; }
-inline void CubitVector::r( const double x )
-{ xVal = x; }
-inline void CubitVector::theta( const double y )
-{ yVal = y; }
+inline void CubitVector::x( const double xIn )
+{ xVal = xIn; }
+inline void CubitVector::y( const double yIn )
+{ yVal = yIn; }
+inline void CubitVector::z( const double zIn )
+{ zVal = zIn; }
+inline void CubitVector::r( const double xIn )
+{ xVal = xIn; }
+inline void CubitVector::theta( const double yIn )
+{ yVal = yIn; }
 inline CubitVector& CubitVector::operator+=(const CubitVector &v)
 {
   xVal += v.xVal;
@@ -396,13 +396,13 @@ inline void CubitVector::perpendicular_z()
   y( -temp );
 }
 
-inline void CubitVector::set(const double x,
-                             const double y,
-                             const double z)
+inline void CubitVector::set(const double xIn,
+                             const double yIn,
+                             const double zIn)
 {
-  xVal = x;
-  yVal = y;
-  zVal = z;
+  xVal = xIn;
+  yVal = yIn;
+  zVal = zIn;
 }
 
 inline void CubitVector::set(const double xyz[3])

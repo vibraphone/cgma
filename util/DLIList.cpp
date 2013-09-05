@@ -28,16 +28,16 @@ template <class X> MY_INLINE X DLIList<X>::pop()
 //- will be grown by {increment} each time it is filled. Memory for the
 //- list is not allocated until the first element is inserted using
 //- {insertLink}. 
-template <class X> MY_INLINE DLIList<X>::DLIList (int size)
+template <class X> MY_INLINE DLIList<X>::DLIList (int sizeIn)
 {
    index      = 0;
    itemCount  = 0;
    listLength = 0;
    listArray  = NULL;
-   if (size)
+   if (sizeIn)
    {
-      listArray = new X [size];
-      listLength = size;
+      listArray = new X [sizeIn];
+      listLength = sizeIn;
    }
 }
 
@@ -170,7 +170,7 @@ template <class X> MY_INLINE void DLIList<X>::intersect_unordered(
   X* end1 = iter1 + itemCount;               // end of this array
   X* iter2 = intersect_list.listArray;       // iterstor for other array
   X* end2 = iter2 + intersect_list.itemCount;// end of other array
-  X* insert = iter1 - 1;                     // location of last insert
+  X* last_insert = iter1 - 1;                     // location of last insert
   
   for ( ; iter1 < end1; ++iter1 )
   {
@@ -182,8 +182,8 @@ template <class X> MY_INLINE void DLIList<X>::intersect_unordered(
     
     if ((*iter2 == *iter1) &&   // items are the same and ...
         (insert < listArray ||  // is the first item or ...
-         *iter1 != *insert))    // is not the same as the previous item
-      *++insert = *iter1;
+         *iter1 != *last_insert))    // is not the same as the previous item
+      *++last_insert = *iter1;
   }
   
   itemCount = insert - listArray + 1;
@@ -618,14 +618,14 @@ template <class X> MY_INLINE int DLIList<X>::memory_use(CubitBoolean verbose_boo
 {
    // report amount of memory allocated
 
-   int size = listLength * sizeof(X);
+   int Size = listLength * sizeof(X);
 
    if (verbose_boolean)
    {
-      PRINT_INFO("      DLIList: %d bytes\n",size);
+      PRINT_INFO("      DLIList: %d bytes\n",Size);
    }
 
-   return size;
+   return Size;
 }
 
 template <class X> MY_INLINE void DLIList<X>::copy_to(X *other_array)

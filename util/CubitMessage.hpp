@@ -404,9 +404,9 @@ public:
   int  number_of_debug_flags();
   //- debug flag, used with internal_error
 
-  virtual void set_debug_flag_gui(bool flag){};
+  virtual void set_debug_flag_gui(bool flag){flag = flag;};
   virtual int is_debug_flag_gui_set(){return 0;};
-  virtual int print_debug_gui( const char *format, ... ){return 0;};
+  virtual int print_debug_gui( const char *format, ... ){format = format; return 0;};
   //- write out a debug message (from GUI only)
   //- used for GUI Debugging (CAT-only)
 
