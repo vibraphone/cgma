@@ -78,9 +78,6 @@ CubitCompat_export_solid_model( DLIList<RefEntity*>& ref_entity_list,
                                 const CubitString &cubit_version,
                                 const char* logfile_name )
 {
-  const bool print_results = false;
-  const bool merge_globally = false;
-  const bool no_assembly_level_features = false;
   ModelExportOptions CubitCompat_opts = {1, logfile_name ? logfile_name : "" }; 
 
   return GeometryQueryTool::instance()->export_solid_model(
