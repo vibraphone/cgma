@@ -423,11 +423,11 @@ CubitVector Curve::center_point()
 }
 
 inline
-CubitStatus Curve::mid_point(CubitVector &mid_point)
+CubitStatus Curve::mid_point(CubitVector &mid_point_in)
 {
   double param1 = 0.5 * (start_param() + end_param());
   
-  return position_from_u(param1, mid_point);
+  return position_from_u(param1, mid_point_in);
 }
 
 inline
@@ -444,12 +444,12 @@ CubitStatus Curve::position_from_fraction( const double fraction_along_curve,
 inline
 CubitStatus Curve::mid_point(const CubitVector &point1,
                              const CubitVector &point2,
-                             CubitVector& mid_point )
+                             CubitVector& mid_point_in )
 {
   double param1 = u_from_position(point1);
   double param2 = u_from_position(point2);
   param1 = 0.5 * (param1 + param2);
-  return position_from_u(param1, mid_point);
+  return position_from_u(param1, mid_point_in);
 }
 
   //R CubitStatus

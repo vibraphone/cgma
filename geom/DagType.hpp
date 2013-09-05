@@ -27,8 +27,8 @@ class DagType
       // Dimension may be outside the range [0,3], but
       // if so is_valid() will return false.  (i.e. it is
       // possible to construct invalid DagType objects.)
-    inline DagType( int dimension, FunctionalType func )
-      : intType( 3 * dimension + func ) 
+    inline DagType( int dimensionIn, FunctionalType func )
+      : intType( 3 * dimensionIn + func ) 
       { }
     
     
@@ -55,8 +55,8 @@ class DagType
       // move above a Body or below a RefVertex in the DAG.
     inline bool is_valid() const
       { 
-        const unsigned body_type = 11;
-        return (unsigned)intType <= body_type;
+        const unsigned bodyType = 11;
+        return (unsigned)intType <= bodyType;
       }
       
       // get parent of this type
