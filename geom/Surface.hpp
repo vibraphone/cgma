@@ -70,8 +70,8 @@ class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
       //- Finds the underlying plane's origin and normal (unit) vector
       //- Returns CubitFailure if not a plane.
 
-      virtual void param_dir(CubitVector &unit_dir_in_world_space,
-        CubitVector &pos_on_surf, double &du, double &dv){unit_dir_in_world_space = unit_dir_in_world_space; pos_on_surf = pos_on_surf; du = du; dv = dv;}
+      virtual void param_dir(CubitVector& /* unit_dir_in_world_space */,
+        CubitVector& /* pos_on_surf */, double& /* du */, double& /* dv */){}
 
       virtual CubitStatus closest_point_uv_guess(  
           CubitVector const& location,

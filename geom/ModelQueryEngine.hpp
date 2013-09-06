@@ -159,8 +159,8 @@ class CUBIT_GEOM_EXPORT ModelQueryEngine
             { ModelQueryEngine::instance()->inc_query_call_stack(); }
           inline ~BeginQuery()
             { ModelQueryEngine::instance()->dec_query_call_stack(); }
-          inline void* operator new(size_t size)
-            { size = size; assert(0); return (void*)0; }
+          inline void* operator new(size_t /* size */)
+            { assert(0); return (void*)0; }
       };
 
    protected:
