@@ -181,12 +181,12 @@ template <class X> MY_INLINE void DLIList<X>::intersect_unordered(
       break;
     
     if ((*iter2 == *iter1) &&   // items are the same and ...
-        (insert < listArray ||  // is the first item or ...
+        (last_insert < listArray ||  // is the first item or ...
          *iter1 != *last_insert))    // is not the same as the previous item
       *++last_insert = *iter1;
   }
   
-  itemCount = insert - listArray + 1;
+  itemCount = last_insert - listArray + 1;
   reset();
 }    
 
