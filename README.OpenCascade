@@ -1,17 +1,3 @@
-		    Build CGM on Opencascade 6.5
-
-•	Please download Opencascade6.5 source package at
-	http://www.opencascade.org/getocc/download/loadocc/
-
-•	Then follow the link instruction to build OCC libraries.
-	http://trac.mcs.anl.gov/projects/ITAPS/wiki/BuildingOcc65
-
-• 	Download CGM trunk files, then under trunk do 
-	•	autoreconf -fi
-        •       ./configure --with-occ=(your occ dir, parent dir of ros) --prefix=Your install dir.
-        •	make or make install
-	•  	make check to see some examples of the testcases running.
-
                     CGM on OCC6.5 capabilities
 
 1.	Query

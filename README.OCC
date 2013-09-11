@@ -34,6 +34,7 @@ Build OCC by doing:
 
 Here tcl and tk are in version 8.5.13, freetype is in version 2.4.10 and ftgl isin version 2.1.3.
 Configures for tcl, tk and freetype are simple forms, give only --prefix directory.
+ftgl is not required for opencascade 6.6.0.
 Configure for ftgl needs following:
 ./configure --enable-shared=yes --with-ft-prefix=dir for freetype --prefix= --with-gl-inc=dir for OpenGL include files --with-gl-lib=dir for OpenGL lib --with-glut-inc=dir for glut include files --with-glut-libraries=dir for glut lib
 
@@ -60,10 +61,11 @@ directory into CGM_DIR.
 ACIS libraries are located and other options (run "./configure -h" for
 a list of options).
 3. Make the CGM libraries by typing "make".
-4. Install the CGM libraries by typing "make install" (this installs
+4. Test build using "make test".
+5. Install the CGM libraries by typing "make install" (this installs
 the libraries to the location specified by the --prefix option to
 configure, or to /usr/local by default).
-5. Test the installation using "make test".
+6. Test the installation using "make test".
 
 =====================================
 Documentation, Testing, Example Applications
@@ -90,4 +92,4 @@ submit bug reports (and, if desired, fixes) to cgma-dev@mcs.anl.gov .
 Updates
 =====================================
 
-This is the first version of the file
+This file is updated for cgm13.1 release.
