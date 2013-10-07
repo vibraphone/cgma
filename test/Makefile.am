@@ -16,7 +16,7 @@ if build_ACIS
   TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
 else
 if WITH_CUBIT
-  TESTS += webcut merge_acis brick_acis
+  TESTS += webcut merge_acis brick_acis spheres
 else
 if DEV
   TESTS += modify makept 
@@ -25,7 +25,7 @@ endif
 endif 
 
 if build_OCC
-  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres
 endif
 check_PROGRAMS = $(TESTS)
 
@@ -44,6 +44,7 @@ endif
 libcgm_test_la_SOURCES = TestUtilities.hpp \
                          TestUtilities.cpp
 
+spheres_SOURCES = spheres.cpp
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
 makept_SOURCES = makept.cpp
@@ -160,6 +161,7 @@ MOSTLYCLEANFILES = \
         pyramid.occ \
         fillet.occ \
         curves.brep \
+        spheres.sat \
 	mmgr.log
  
 
