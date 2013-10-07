@@ -1871,7 +1871,18 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
     int k = OCCMap->Find(aShape);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
     lump->set_TopoDS_Solid(aShape);
-    body = CAST_TO(lump->get_body(), OCCBody);
+    body = static_cast<OCCBody*>(lump->get_body());
+    TopoDS_Shape *b_shape = NULL;
+    if(body)
+      body->get_TopoDS_Shape(b_shape);
+    if (!body || b_shape == NULL)
+    { 
+      if(body)
+        BodyList->remove(body);
+      body = new OCCBody(NULL, NULL, NULL, lump);
+      BodyList->append(body);
+      lump->add_body(body);
+    }
   }
 
   TopoDS_Compound *shape;

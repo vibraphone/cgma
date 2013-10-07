@@ -6294,12 +6294,6 @@ CubitStatus    OCCModifyEngine::webcut(DLIList<BodySM*>& webcut_body_list,
     return rsl;
   }
 
-  else if(lumps.size() + shells.size() + surfaces.size() > 1)
-  {
-    PRINT_ERROR("Can't webcut with multi-volume-shell-surface body.\n");
-    return CUBIT_FAILURE;
-  }
-
   stat = intersect(body, webcut_body_list, results_list,
                                CUBIT_TRUE);
  
@@ -6671,6 +6665,9 @@ CubitStatus OCCModifyEngine::split_body( BodySM *body_ptr,
     Lump* lump = lumps.get_and_step();
     OCCLump* occ_lump = CAST_TO(lump, OCCLump);
     OCCSurface* occ_surface = occ_lump->my_sheet_surface();
+    //first delete the body which bounds all the stuff.
+    if (i == 0)
+      OCCQueryEngine::instance()->unhook_BodySM_from_OCC(body_ptr, CUBIT_FALSE);
     if(occ_surface) 
     {
       TopoDS_Face* face = occ_surface->get_TopoDS_Face();
@@ -6700,6 +6697,9 @@ CubitStatus OCCModifyEngine::split_body( BodySM *body_ptr,
       continue;
     }
   }
+  
+  if(lumps.size() > 1)
+    delete body_ptr;
   return CUBIT_SUCCESS;
 }
 
