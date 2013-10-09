@@ -4921,6 +4921,9 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
     CubitBoolean intersect = false; 
     shape_list.reset();
     int size = shape_list.size();
+
+    overlaped_bodies.clean_out();
+    overlap_shapes.clean_out();
     for (int k = 0 ; k < size; k++)
     {
       TopoDS_Shape *shape2 = shape_list.get();
