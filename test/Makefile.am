@@ -16,7 +16,7 @@ if build_ACIS
   TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
 else
 if WITH_CUBIT
-  TESTS += webcut merge_acis brick_acis spheres
+  TESTS += webcut merge_acis brick_acis spheres cylinders
 else
 if DEV
   TESTS += modify makept 
@@ -25,7 +25,7 @@ endif
 endif 
 
 if build_OCC
-  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres cylinders
 endif
 check_PROGRAMS = $(TESTS)
 
@@ -44,6 +44,7 @@ endif
 libcgm_test_la_SOURCES = TestUtilities.hpp \
                          TestUtilities.cpp
 
+cylinders_SOURCES = cylinders.cpp
 spheres_SOURCES = spheres.cpp
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
@@ -123,7 +124,9 @@ EXTRA_DIST = 62_shaver1.brep \
              box-w-hole.brep \
              Solid_2.brep \
              Solid_6.brep  \
-             Solid_7.brep  
+             Solid_7.brep  \
+             s5.stp \
+             s5.sat
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'
