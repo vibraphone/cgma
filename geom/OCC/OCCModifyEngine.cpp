@@ -1470,11 +1470,7 @@ BodySM* OCCModifyEngine::make_BodySM( DLIList<Lump*>& lump_list ) const
     }
     BodySM* body = lump->get_body();
     if(body != NULL)
-    {
-      PRINT_ERROR("Can't create compound bodies using existing bodies.\n");
-      PRINT_INFO("Please try unite operation.\n");
-      return (BodySM*) NULL;
-    } 
+      OCCQueryEngine::instance()->delete_body(body, CUBIT_FALSE);
   }
   TopoDS_Compound* Co;
   DLIList<OCCShell*> shells;
@@ -5015,9 +5011,10 @@ CubitStatus     OCCModifyEngine::unite(DLIList<BodySM*> &bodies,
       BodySM* bodysm = CAST_TO(tbs.get(), BodySM);
       if (bodysm)
       {
-        bodies.append(bodysm);
         CAST_TO(bodysm, OCCBody)->get_TopoDS_Shape(first_shape);
-        shape_list.append(first_shape);
+        revised_bodies.append(bodysm);
+        revised_shapes.append(first_shape);
+
       }
     } 
   }

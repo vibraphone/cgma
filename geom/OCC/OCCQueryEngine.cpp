@@ -2791,7 +2791,7 @@ CubitStatus
 OCCQueryEngine::delete_body( BodySM* bodysm,
                              bool remove_lower_entities) const
 {
-  OCCBody* occ_body = dynamic_cast<OCCBody*>(bodysm);
+  OCCBody* occ_body = static_cast<OCCBody*>(bodysm);
   if (!occ_body)
     return CUBIT_FAILURE;
 
