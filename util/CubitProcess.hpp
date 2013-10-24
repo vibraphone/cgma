@@ -20,6 +20,8 @@
 #include <windows.h>
 typedef PROCESS_INFORMATION PidType;
 #else
+#include <unistd.h>
+#include <sys/types.h>
 typedef pid_t PidType;
 #endif
 

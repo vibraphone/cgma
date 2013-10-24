@@ -15,7 +15,6 @@
 #define PATH_MAX _MAX_PATH
 const char path_separator = '\\';
 #else
-#include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <limits.h>
