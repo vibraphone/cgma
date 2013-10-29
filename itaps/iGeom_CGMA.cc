@@ -6525,6 +6525,18 @@ iGeom_isPositionOn( iGeom_Instance instance,
                     int* IsOn )
 {
   CubitVector position(x,y,z);
+  RefVertex* ref_v = dynamic_cast<RefVertex*>(ENTITY_HANDLE(entity));
+  if(ref_v)
+  {
+    CubitVector v_loc = ref_v->coordinates();
+    CubitBoolean test = v_loc.about_equal(position);
+    if (test == CUBIT_TRUE)
+      *IsOn = 1;
+    else
+      *IsOn = 0;
+    return;
+  }
+
   CubitPointContainment pc = CUBIT_PNT_UNKNOWN;
   RefFace *ref_face = dynamic_cast<RefFace*>(ENTITY_HANDLE(entity));
   if(ref_face)
