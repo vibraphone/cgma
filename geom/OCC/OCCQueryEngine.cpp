@@ -175,7 +175,7 @@ OCCQueryEngine::OCCQueryEngine()
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
   CubitString name("Doc");
-  TCollection_ExtendedString xString((Standard_CString)name.c_str());
+  TCollection_ExtendedString xString((Standard_CString)name.c_str(), CUBIT_TRUE);
   MyDF = new TDocStd_Document(xString);
   mainLabel = MyDF->Main();
   EXPORT_ATTRIB = CUBIT_TRUE;
@@ -1898,7 +1898,18 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
     int k = OCCMap->Find(aShape);
     lump = (OCCLump*)(OccToCGM->find(k))->second;
     lump->set_TopoDS_Solid(aShape);
-    body = CAST_TO(lump->get_body(), OCCBody);
+    body = static_cast<OCCBody*>(lump->get_body());
+    TopoDS_Shape *b_shape = NULL;
+    if(body)
+      body->get_TopoDS_Shape(b_shape);
+    if (!body || b_shape == NULL)
+    { 
+      if(body)
+        BodyList->remove(body);
+      body = new OCCBody(NULL, NULL, NULL, lump);
+      BodyList->append(body);
+      lump->add_body(body);
+    }
   }
 
   TopoDS_Compound *shape;
@@ -2832,7 +2843,7 @@ CubitStatus
 OCCQueryEngine::delete_body( BodySM* bodysm,
                              bool remove_lower_entities) const
 {
-  OCCBody* occ_body = dynamic_cast<OCCBody*>(bodysm);
+  OCCBody* occ_body = static_cast<OCCBody*>(bodysm);
   if (!occ_body)
     return CUBIT_FAILURE;
 
@@ -2939,7 +2950,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm ,
         occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
 
         if(!OccToCGM->erase(k))
-          PRINT_ERROR("The OccBody and iCreatedTotal pair is not in the map!");
+          PRINT_ERROR("The OccBody and iCreatedTotal %i pair is not in the map!", k);
     }
   }
 
@@ -3950,7 +3961,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
 
   if(it_lab != Shape_Label_Map->end())
   {
-     Standard_Boolean isNewShapeBound = Standard_False;
+     CubitBoolean isNewShapeBound = CUBIT_FALSE;
      if(old_shape.ShapeType() > TopAbs_COMPOUND && !new_shape.IsNull() &&
         new_shape.ShapeType() == TopAbs_COMPOUND && M.Extent() == 1)
      {

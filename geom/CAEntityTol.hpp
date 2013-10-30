@@ -7,6 +7,11 @@
 #ifndef CA_ENTITY_TOL_HPP
 #define CA_ENTITY_TOL_HPP
 
+#include <typeinfo>
+#if !defined(WIN32)
+using std::type_info;
+#endif
+
 #include "CubitAttrib.hpp"
 #include "CubitDefines.h"
 #include "CADefines.hpp"
@@ -24,8 +29,16 @@ private:
 
   virtual ~CAEntityTol();
 
-  CAEntityTol (RefEntity*, const CubitSimpleAttrib&);
+  CAEntityTol (RefEntity*);
+
+  CAEntityTol (RefEntity*, const CubitSimpleAttrib &);
     //- create a CAEID from a simple attribute
+
+  //HEADER- RTTI and safe casting functions.
+  virtual const type_info& entity_type_info() const
+     { return typeid(CAEntityTol);}
+  //R- The geometric modeler type
+  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
 

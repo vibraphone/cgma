@@ -813,7 +813,7 @@ void CSimModel::ReadBCSet(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mSimModel.mintSimModelEndian);
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaBCSets[xintIndex].mintRestraintsOffset);
-
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintRestraintTypesCount; lintType++) {
             lpIO->Read(&xpaBCSetRestraintData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaBCSetRestraintData[lintType].mintMemberCount, 1);
@@ -853,7 +853,7 @@ void CSimModel::ReadBCSet(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mSimModel.mintSimModelEndian);
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaBCSets[xintIndex].mintLoadsOffset);
-
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintLoadTypesCount; lintType++) {
             lpIO->Read(&xpaBCSetLoadData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaBCSetLoadData[lintType].mintMemberCount, 1);
@@ -893,7 +893,7 @@ void CSimModel::ReadBCSet(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mSimModel.mintSimModelEndian);
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaBCSets[xintIndex].mintContactPairsOffset);
-
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintContactPairTypesCount; lintType++) {
             lpIO->Read(&xpaBCSetContactPairData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaBCSetContactPairData[lintType].mintMemberCount, 1);
@@ -955,6 +955,7 @@ void CSimModel::ReadMaterial(UnsignedInt32 xintIndex,
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaMaterials[xintIndex].mintMaterialPropertiesOffset);
 
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintPropertiesCount; lintType++) {
             lpIO->Read(&xpaMaterialData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaMaterialData[lintType].mintMemberRows, 1);
@@ -1020,6 +1021,8 @@ void CSimModel::ReadConstraint(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mSimModel.mintSimModelEndian);
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaConstraints[xintIndex].mintDependentDataOffset);
+
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintDependentTypeCount; lintType++)
         {
             lpIO->Read(&xpaDependentData[lintType].mintMemberType, 1);
@@ -1060,6 +1063,8 @@ void CSimModel::ReadConstraint(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mSimModel.mintSimModelEndian);
         lpIO->BeginReadBlock(mintSimModelOffset,
             mpaConstraints[xintIndex].mintIndependentDataOffset);
+
+        long start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintIndependentTypeCount; lintType++)
         {
             lpIO->Read(&xpaIndependentData[lintType].mintMemberType, 1);

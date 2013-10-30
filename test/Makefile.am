@@ -16,30 +16,37 @@ if build_ACIS
   TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis 
 else
 if WITH_CUBIT
-  TESTS += webcut merge_acis brick_acis
+  TESTS += webcut merge_acis brick_acis spheres cylinders
 else
   TESTS += brick_facet merge_facet
+if DEV
+  TESTS += modify makept
+endif
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file loft offset_curves point_project imprint_bug modify subtract makept test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres cylinders
 endif
 
 check_PROGRAMS = $(TESTS)
 
+if build_OCC
+  check_PROGRAMS += modify makept
+endif
+
 noinst_LTLIBRARIES = libcgm_test.la
 
 if BUILD_CGM
-  libcgm_test_la_LIBADD = $(top_builddir)/libcgm.la 
-
-  LDADD = ../init/libcgma_init.la ../util/libcubit_util.la ../geom/libcubit_geom.la ../geom/OCC/libcubit_OCC.la ../geom/virtual/libcubit_virtual.la ../geom/facet/libcubit_facet.la libcgm_test.la $(top_builddir)/geom/Cholla/libCholla.la $(top_builddir)/geom/facetbool/libcubit_facetbool.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS)
 else
-  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../amendment/libcgma_amendment.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../geom/libcubit_geom.la -lstdc++ $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
 
 libcgm_test_la_SOURCES = TestUtilities.hpp \
                          TestUtilities.cpp
 
+cylinders_SOURCES = cylinders.cpp
+spheres_SOURCES = spheres.cpp
 webcut_SOURCES = webcut.cpp
 hollow_acis_SOURCES = hollow_acis.cpp
 makept_SOURCES = makept.cpp
@@ -117,8 +124,11 @@ EXTRA_DIST = 62_shaver1.brep \
              Line_2.brep    \
              stitch.name_occ \
              box-w-hole.brep \
+             Solid_2.brep \
              Solid_6.brep  \
-             Solid_7.brep  
+             Solid_7.brep \
+             s5.stp \
+             s5.sat 
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'
@@ -155,6 +165,8 @@ MOSTLYCLEANFILES = \
         prism.occ \
         pyramid.occ \
         fillet.occ \
+        curves.brep \
+        spheres.sat \
 	mmgr.log
  
 

@@ -17,7 +17,7 @@ endif
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
 
-libcubit_virtual_la_LIBADD = ../Cholla/libCholla.la
+#libcubit_virtual_la_LIBADD = ../Cholla/libCholla.la
 
 # The non-template sources
 libcubit_virtual_la_SOURCES = \

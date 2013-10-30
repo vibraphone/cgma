@@ -1,10 +1,12 @@
 ###############################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(CGMA, 13.1)
+AC_INIT(CGMA, 14.0)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
+# automake 1.12 seems to require this, but automake 1.11 doesn't recognize it
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 m4_ifdef([AM_SILENT_RULES],
  [AM_INIT_AUTOMAKE([foreign -Wall silent-rules color-tests parallel-tests])],
  [AM_INIT_AUTOMAKE([foreign -Wall])])
@@ -136,6 +138,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
   export LD_LIBRARY_PATH
   export SHLIB_PATH
   export PATH
+
   pattern=["${CUBIT_BIN_DIR}/*cubiti[0-9][0-9].*"]
   for file in $pattern; do
     AC_MSG_CHECKING([for AcisQueryEngine::instance_ in $file])
@@ -155,7 +158,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
   if test "x$CUBIT_LIBS" = "xno"; then
     AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
   fi
-  
+
   # Test for CAT-proprietary code that must be initialized in Cubit12
   AC_MSG_CHECKING([For AcisTweekToolCAT])
   AC_LINK_IFELSE([AC_LANG_PROGRAM(
@@ -365,6 +368,12 @@ AC_ARG_WITH( occ,
               DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-occ=\"${withval}\""],
              [occ_DIR=no] )
 
+AC_ARG_ENABLE( dev, 
+             [AC_HELP_STRING([--enable-dev],[enable Make Check to check for modify and makept testcases in occ build, default: no])],
+             [DEV=yes], [DEV=no] )
+
+AM_CONDITIONAL(DEV, test x"$DEV" = x"yes")
+
 # if user specified option (other than --without-occ)
 CUBIT_OCC_LIB=
 HAVE_OCC_DEF=
@@ -552,7 +561,7 @@ AC_MSG_RESULT([CXXFLAGS = $CXXFLAGS])
 AC_MSG_RESULT([AM_CPPFLAGS = $AM_CPPFLAGS])
 dnl AC_OUTPUT_COMMANDS( [if test -f util/CubitUtilConfigure.h; then true; else echo "#define CUBIT_UTIL_EXPORT" > util/CubitUtilConfigure.h; fi],
 dnl                     [if test -f geom/CubitGeomConfigure.h; then true; else echo "#define CUBIT_GEOM_EXPORT" > geom/CubitGeomConfigure.h; fi] )
-AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h amendment/CubitCompat.h)
+AC_CONFIG_HEADERS(config.h geom/parallel/CGMmpi_config.h geom/CubitCompat.h)
 AC_CONFIG_HEADERS(itaps/iBase_FCDefs.h)
 AC_CONFIG_FILES(Makefile 
            util/Makefile
@@ -565,7 +574,7 @@ AC_CONFIG_FILES(Makefile
            geom/parallel/Makefile
            geom/virtual/Makefile 
            init/Makefile
-           amendment/Makefile
+           compat/Makefile
            cgm.make
            itaps/Makefile
            itaps/iGeom-Defs.inc

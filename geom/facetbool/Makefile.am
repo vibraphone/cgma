@@ -4,7 +4,6 @@ AUTOMAKE_OPTIONS = foreign
 # Override default defines with the ones we want from the configure script
 DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 AM_CPPFLAGS = -I$(top_srcdir)/util \
-           -I$(top_srcdir)/amendment \
            -I$(top_srcdir)/geom 
 
 # The name of the library to build

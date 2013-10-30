@@ -11,6 +11,7 @@
 #include <cassert>
 #include <string>
 #include <cctype>
+#include <Standard_Version.hxx>
 
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
@@ -353,10 +354,11 @@ CubitStatus make_Point()
   found = findString(filename, search);
   assert (found == 1);
 
+#if OCC_VERSION_MINOR < 6
   search = "5 face4";
   found = findString(filename, search);
   assert (found == 1);
-
+#endif
   search = "5 face5";
   found = findString(filename, search);
   assert (found == 1);
@@ -365,9 +367,11 @@ CubitStatus make_Point()
   found = findString(filename, search);
   assert (found == 1);
 
+#if OCC_VERSION_MINOR < 6
   search = "5 face8";
   found = findString(filename, search);
   assert (found == 1);
+#endif
 
   search = "5 face9";
   found = findString(filename, search);

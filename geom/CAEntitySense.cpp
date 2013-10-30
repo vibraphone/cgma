@@ -13,30 +13,35 @@
 #include "CastTo.hpp"
 
 
-CubitAttrib* CAEntitySense_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
+CubitAttrib* CAEntitySense_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa)
 {
-  return new CAEntitySense(entity, p_csa);
+    return new CAEntitySense(entity, p_csa);
 }
 
 CAEntitySense::CAEntitySense(RefEntity* new_attrib_owner,
                        const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
-  entitySense = CUBIT_FORWARD;
-
-  if(!csa_ptr.isEmpty())
-  {
-   const std::vector<int>& i_list = csa_ptr.int_data_list();
+   std::vector<int, std::allocator<int> > i_list = csa_ptr.int_data_list();
    
-   assert(i_list.size() > 0);
-   int i = i_list[0];
-   if( i == -1 ) 
+   if( i_list.size() > 0)
+   {
+     int i =  i_list[0];
+     if( i == -1 ) 
+       entitySense = CUBIT_UNKNOWN;
+     else if( i == 0 )
+       entitySense = CUBIT_FORWARD;
+     else if( i == 1 )
+       entitySense = CUBIT_REVERSED;
+   }
+   else
      entitySense = CUBIT_UNKNOWN;
-   else if( i == 0 )
-     entitySense = CUBIT_FORWARD;
-   else if( i == 1 )
-     entitySense = CUBIT_REVERSED;
-  }
+}
+
+CAEntitySense::CAEntitySense(RefEntity* new_attrib_owner)
+        : CubitAttrib(new_attrib_owner)
+{
+  entitySense = CUBIT_FORWARD;
 }
 
 CAEntitySense::~CAEntitySense()
@@ -102,13 +107,15 @@ CubitStatus CAEntitySense::update()
 CubitSimpleAttrib CAEntitySense::cubit_simple_attrib()
 {
   std::vector<CubitString> cs_list;
-  std::vector<int> i_list;
+  std::vector<int, std::allocator<int> >  i_list;
 
   i_list.push_back( entitySense );
     
   cs_list.push_back(att_internal_name());
 
-  return CubitSimpleAttrib(&cs_list, NULL, &i_list);
+  CubitSimpleAttrib csattrib_ptr(&cs_list, NULL, &i_list);
+  
+  return csattrib_ptr;
 }
 
 void CAEntitySense::print()

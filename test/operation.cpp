@@ -126,9 +126,9 @@ CubitStatus make_Point()
   DLIList<Body*> from_bodies;
   BodySM* from_body = bodies.get()->get_body_sm_ptr();
   from_bodies.append(bodies.get());
-  CubitVector v1(1,1,3);
-  CubitVector v2(1,2,2);
-  CubitVector v3(1,1,1);
+  CubitVector v1(.5,1,3);
+  CubitVector v2(.5,2,2);
+  CubitVector v3(.5,1,1);
   BodySM* midplane_bodysm = 0;
   status = OCCModifyEngine::instance()->get_mid_plane(v1, v2, v3, from_body, midplane_bodysm);
   if(midplane_bodysm)

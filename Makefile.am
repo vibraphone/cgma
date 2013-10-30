@@ -45,13 +45,13 @@ if BUILD_CGM
                   geom/libcubit_geom.la \
                   util/libcubit_util.la 
 else
-  CORE_CGM_LIBS = $(CGM_ll_LIB)
+  CORE_CGM_LIBS = geom/libcubit_geom.la $(CGM_ll_LIB)
 endif
 
-SUBDIRS =  amendment util geom init . $(igeom_DIR) test 
+SUBDIRS =  compat util geom init . $(igeom_DIR) test 
 # geom/testing
 
-libcgm_la_LIBADD = init/libcgma_init.la amendment/libcgma_amendment.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
+libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT_FILE)
 
 libcgm_la_SOURCES = 
 

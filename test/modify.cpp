@@ -9,6 +9,7 @@
 
 #undef NDEBUG
 #include <cassert>
+#include <Standard_Version.hxx>
 
 #include "GeometryModifyTool.hpp"
 #include "GeometryQueryTool.hpp"
@@ -287,13 +288,31 @@ CubitStatus make_Point()
   assert(status == CUBIT_FAILURE);
 
   ref_vertices.clean_out();
-  ref_vertices.append(ref_vertices2.pop());
-  ref_vertices.append(ref_vertices2.pop());
+  ref_vertices2.pop();
+  ref_vertices2.pop();
   ref_vertices2.get()->ref_edges(ref_edges);
   gmti->tweak_chamfer(ref_vertices2, 2, new_bodies, ref_edges.pop(), 1,
                       ref_edges.pop(), 0.5, ref_edges.pop());
 
+  new_bodies.get()->ref_vertices(ref_vertices);
   new_bodies.clean_out();
+  int v_size = ref_vertices.size();
+  for (int i=0; i < v_size; i++)
+  {
+    RefVertex* vertex = ref_vertices.get_and_step();
+    if(vertex->coordinates().x() != 16)
+    {
+      ref_vertices.remove(vertex); 
+      continue;
+    }
+    if((vertex->coordinates().y()== 5 && vertex->coordinates().z() == 5)
+   || (vertex->coordinates().y()== -5 && vertex->coordinates().z() == -5))
+    continue;
+    else
+      ref_vertices.remove(vertex);
+  }
+   
+  assert (ref_vertices.size() ==2);
   gmti->tweak_chamfer(ref_vertices, 1, new_bodies);
 
   ref_edges.clean_out();
@@ -705,11 +724,15 @@ CubitStatus make_Point()
     if (face != NULL)
       ref_faces.append(face);
   }
-  normal = ref_faces.step_and_get()->normal_at(v1); //(1,0,0)
   CubitVector test_normal0(1,0,0);
-  assert(normal == test_normal0);
-  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
   CubitVector test_normal2(0,0,1);
+  normal = ref_faces.get()->normal_at(v1); //(1,0,0)
+  if (normal != test_normal0)
+  {
+    assert( normal ==test_normal2);
+    ref_faces.step();
+  }
+  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
   assert(normal == test_normal2);
   surfaces.clean_out();
   surfaces.append(ref_faces.step_and_get()->get_surface_ptr());
@@ -1067,7 +1090,17 @@ CubitStatus make_Point()
   DLIList<RefEdge*> edges;
   body->ref_edges(edges);
   refentities.clean_out();
-  refentities.append(edges.step_and_get()); //get the edge with length=6.283185
+  for (int i = 0; i < edges.size(); i++)
+  {
+    RefEdge* edge = edges.get();
+    double length = edge->measure();
+    if (length > 6.28  && length < 6.3)
+    {
+      refentities.append(edge);
+      break;
+    }
+    edges.step();
+  }
   new_bodies.clean_out();
   gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);
   body = new_bodies.get();
@@ -1261,10 +1294,14 @@ CubitStatus make_Point()
   body = new_bodies.get();
   d = body->measure();
   //d = 93.697, no effect of draft angle.
+#if OCC_VERSION_MINOR > 5
+  assert(d - 92.1335 < 0.001 && d > 92.1335);
+#else
   if(oqe->get_subminor_version() >= 2)
     assert(d - 92.1335 < 0.001 && d > 92.1335);
   else
     assert(d - 93.697 < 0.001 && d > 93.697);
+#endif
 
   bodies.clean_out();
   gti->bodies(bodies);
@@ -1280,9 +1317,9 @@ CubitStatus make_Point()
 
   // Read in the geometry from files specified on the command line
   argv = "Cylinder_1.brep";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv);
   argv = "Cylinder_2.brep";
-  status = read_geometry(1, &argv, true);
+  status = read_geometry(1, &argv);
   if (status == CUBIT_FAILURE) exit(1);
   //Read in 2 volumes.
 

@@ -24,7 +24,7 @@
 
 CubitAttrib* CAEntityTol_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  return new CAEntityTol(entity, p_csa);
+    return new CAEntityTol(entity, p_csa);
 }
 
 CAEntityTol::CAEntityTol(RefEntity* new_attrib_owner,
@@ -41,8 +41,18 @@ CAEntityTol::CAEntityTol(RefEntity* new_attrib_owner,
    const std::vector<double>& d_list = csa_ptr.double_data_list();
 
    assert(d_list.size() == 1);
-   entityTol = d_list[0];
+   entityTol =  d_list[0];
   }
+}
+
+CAEntityTol::CAEntityTol(RefEntity* new_attrib_owner)
+        : CubitAttrib(new_attrib_owner)
+{
+  entityTol = 0.0;
+    
+  PRINT_DEBUG_95( "Creating ENTITY_TOL attribute for %s %d\n",
+              (attribOwnerEntity ? attribOwnerEntity->class_name() : "(none)"),
+              (attribOwnerEntity ? attribOwnerEntity->id() : 0));
 }
 
 CAEntityTol::~CAEntityTol()
@@ -127,20 +137,22 @@ CubitSimpleAttrib CAEntityTol::cubit_simple_attrib()
 {
   std::vector<CubitString> cs_list;
   std::vector<double> d_list;
-  std::vector<int> i_list;
+  std::vector<int, std::allocator<int> > i_list;
 
-  d_list.push_back( entityTol );
+  d_list.push_back ( entityTol );
 
   cs_list.push_back(att_internal_name());
 
-  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
+  CubitSimpleAttrib csattrib_ptr(&cs_list, &d_list, &i_list);
+ 
+  return csattrib_ptr;
 }
 
 void CAEntityTol::print()
 {
     // print info on this attribute
   
-  PRINT_INFO("CAEntityTol: owner = %s %d:  tolerance =%lf\n",
+  PRINT_INFO("CAEntityTol: owner = %s %d:  tolerance =%f\n",
              attribOwnerEntity->class_name(), attribOwnerEntity->id(),
              entityTol);
 }

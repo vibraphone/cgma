@@ -7,6 +7,11 @@
 #ifndef CA_ENTITY_SENSE_HPP
 #define CA_ENTIYT_SENSE_HPP
 
+#include <typeinfo>
+#if !defined(WIN32)
+using std::type_info;
+#endif
+
 #include "CubitAttrib.hpp"
 #include "DLIList.hpp"
 #include "CADefines.hpp"
@@ -21,6 +26,8 @@ private:
   CubitSense entitySense;
   
 public:
+  CAEntitySense(RefEntity* = NULL);
+
   CAEntitySense(RefEntity*, const CubitSimpleAttrib&);
     //- make a CAG from a simple attribute
 
@@ -28,6 +35,12 @@ public:
     //- initialize random number generator for this attribute
 
   virtual ~CAEntitySense();
+
+  //HEADER- RTTI and safe casting functions.
+  virtual const type_info& entity_type_info() const
+     { return typeid(CAEntitySense);}
+  //R- The geometric modeler type
+  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
     //- actuate this attribute

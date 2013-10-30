@@ -6525,6 +6525,18 @@ iGeom_isPositionOn( iGeom_Instance instance,
                     int* IsOn )
 {
   CubitVector position(x,y,z);
+  RefVertex* ref_v = dynamic_cast<RefVertex*>(ENTITY_HANDLE(entity));
+  if(ref_v)
+  {
+    CubitVector v_loc = ref_v->coordinates();
+    CubitBoolean test = v_loc.about_equal(position);
+    if (test == CUBIT_TRUE)
+      *IsOn = 1;
+    else
+      *IsOn = 0;
+    return;
+  }
+
   CubitPointContainment pc = CUBIT_PNT_UNKNOWN;
   RefFace *ref_face = dynamic_cast<RefFace*>(ENTITY_HANDLE(entity));
   if(ref_face)
@@ -7206,7 +7218,7 @@ process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list)
     TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
     topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
 
-    for (int csa = csa_list.size(); csa > 0; csa--) {
+    for (int j = csa_list.size(); j > 0; j--) {
         // see if there's a tag for this csa already
       CubitSimpleAttrib csa = csa_list.get_and_step();
       const char *tag_name = csa.character_type().c_str();
