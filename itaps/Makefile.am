@@ -31,7 +31,7 @@ else
   libiGeom_la_LIBADD = -lcubiti19 -lcubit_util $(top_builddir)/init/libcgma_init.la -lcubit_geom
 endif 
 
-#LDADD = libiGeom.la $(top_builddir)/libcgm.la 
+LDADD = libiGeom.la $(top_builddir)/libcgm.la 
 
 AM_CPPFLAGS += $(HAVE_ACIS_DEF) \
                $(HAVE_OCC_DEF) \

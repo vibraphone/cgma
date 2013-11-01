@@ -101,7 +101,7 @@ CubitStatus make_Point()
   GeometryModifyTool *gmti = GeometryModifyTool::instance();
 
   OCCQueryEngine::instance();
-  OCCModifyEngine* ome = OCCModifyEngine::instance();
+  //OCCModifyEngine* ome = OCCModifyEngine::instance();
 
   //test for tweak fillet and chamfer
   Body* body = gmti->brick(10, 10, 10);
@@ -110,8 +110,6 @@ CubitStatus make_Point()
   from_bodies.append(body);
   CubitStatus rsl = gmti->subtract(body2, from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
-
-  int i = new_bodies.size();
 
   int num_ents_exported=0;
   DLIList<RefEntity*> ref_entities;

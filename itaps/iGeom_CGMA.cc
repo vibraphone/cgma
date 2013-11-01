@@ -293,15 +293,61 @@ static
 CubitStatus iGeom_get_graphics(RefFace* face, 
                                DLIList<CubitVector*>& point_list,
                                DLIList<int>& facet_list,
-                               unsigned short normal_tolerance = 15,
-                               double distance_tolerance = 0,
-                               double longest_edge = 0) ;
+                               double normal_tolerance = 15.0,
+                               double distance_tolerance = 0.0,
+                               double longest_edge = 0.0) ;
 
 static
 CubitStatus iGeom_get_graphics(RefEdge* edge,
                                DLIList<CubitVector*>& point_list,
                                DLIList<int>& facet_list,
-                               double tolerance = 0.0 ) ;
+                               double angle_tolerance = 0.0,
+                               double distance_tolerance=0.0 ) ;
+
+static CubitStatus iGeom_get_graphics(RefFace* face,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double normal_tolerance, 
+                               double distance_tolerance,
+                               double longest_edge)
+{
+  GMem facets;
+  face->get_graphics(facets, normal_tolerance, distance_tolerance, longest_edge);
+  int num_points = 0, num_facets = 0;
+  num_points = facets.point_list_size();
+  num_facets = facets.facet_list_size();
+  GPoint* points = facets.point_list();
+  int*  facet_array = facets.facet_list();
+  for(int i = 0; i < num_points; i++)
+  {
+    CubitVector point(points[i].x, points[i].y, points[i].z);
+    point_list.append(&point);
+  }
+  for(int i = 0; i < num_facets; i++)
+    facet_list.append(facet_array[i]);
+}
+
+static CubitStatus iGeom_get_graphics(RefEdge* edge,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double angle_tolerance,
+                               double distance_tolerance )
+{
+  GMem facets;
+  edge->get_graphics(facets, angle_tolerance, distance_tolerance);
+  int num_points = 0, num_facets = 0;
+  num_points = facets.point_list_size();
+  num_facets = facets.facet_list_size();
+  GPoint* points = facets.point_list();
+  int*  facet_array = facets.facet_list();
+  for(int i = 0; i < num_points; i++)
+  {
+    CubitVector point(points[i].x, points[i].y, points[i].z);
+    point_list.append(&point);
+  }
+  for(int i = 0; i < num_facets; i++)
+    facet_list.append(facet_array[i]);
+}
 
 static CubitStatus init_cgm( const std::string& engine )
 {

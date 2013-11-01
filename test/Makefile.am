@@ -37,7 +37,7 @@ endif
 noinst_LTLIBRARIES = libcgm_test.la
 
 if BUILD_CGM
-  LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS)
+  LDADD = ../libcgm.la libcgm_test.la ../geom/Cholla/libCholla.la ../util/libcubit_util.la ../geom/virtual/libcubit_virtual.la $(CGM_EXT_LIBS)
 else
   LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../geom/libcubit_geom.la -lstdc++ $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
