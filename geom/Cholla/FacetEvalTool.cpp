@@ -142,6 +142,7 @@ FacetEvalTool::FacetEvalTool()
   myArea = -1.0;
   interpOrder = 0;
   minDot = 0;
+  isParameterized = CUBIT_FALSE;
 }
 
 //===========================================================================
@@ -202,6 +203,23 @@ CubitStatus FacetEvalTool::reverse_facets( )
   return CUBIT_SUCCESS;
 }
 
+CubitStatus FacetEvalTool::reverse_facets( DLIList<CubitFacet *> &facets )
+{
+  int i;
+  CubitFacet* temp_facet;
+  
+  for(i=0; i<facets.size(); i++){
+    temp_facet=facets.get_and_step();
+    if(!temp_facet){
+      PRINT_ERROR("Unexpected NULL pointer for facet.\n");
+      return CUBIT_FAILURE;
+    }
+    temp_facet->flip();
+  }
+  
+  return CUBIT_SUCCESS;
+}
+
 
 void FacetEvalTool::replace_facets( DLIList<CubitFacet *> &facet_list )
 {
@@ -213,6 +231,7 @@ void FacetEvalTool::replace_facets( DLIList<CubitFacet *> &facet_list )
   myFacetList = facet_list;
   for ( int i = myFacetList.size(); i--; )
     myFacetList.step_and_get()->set_tool_id(toolID);
+  reset_bounding_box();
 }
   
 
@@ -948,13 +967,31 @@ CubitStatus FacetEvalTool::init_facet_control_points(
     Wi[2] = Vi[3] - Vi[2];
     Di[0] = P[(i+2)%3][3] - 0.5*(P[i][1] + P[i][0]);
     Di[3] = P[(i+1)%3][1] - 0.5*(P[i][4] + P[i][3]);
-    Ai[0] = (N0 * Wi[0]) / Wi[0].length();
-    Ai[2] = (N3 * Wi[2]) / Wi[2].length();
+    if(Wi[0].length() == 0.0)
+    {
+      Ai[0] = N0 * Wi[0];
+      lambda[0] = Di[0] % Wi[0];
+    }
+    else
+    {
+      Ai[0] = (N0 * Wi[0]) / Wi[0].length();
+      lambda[0] = (Di[0] % Wi[0]) / (Wi[0] % Wi[0]);
+    }
+  
+    if(Wi[2].length() == 0.0)
+    {
+      Ai[2] = N3 * Wi[2];
+      lambda[1] = Di[3] % Wi[2];
+    }
+    else
+    {
+      Ai[2] = (N3 * Wi[2]) / Wi[2].length();
+      lambda[1] = (Di[3] % Wi[2]) / (Wi[2] % Wi[2]);
+    }
     Ai[1] = Ai[0] + Ai[2];
     denom = Ai[1].length();
-    Ai[1] /= denom;
-    lambda[0] = (Di[0] % Wi[0]) / (Wi[0] % Wi[0]);
-    lambda[1] = (Di[3] % Wi[2]) / (Wi[2] % Wi[2]); 
+    if (denom > 0)
+      Ai[1] /= denom;
     mu[0] = (Di[0] % Ai[0]);
     mu[1] = (Di[3] % Ai[2]);
     G[i*2] = 0.5 * (P[i][1] + P[i][2]) + 
@@ -1749,7 +1786,7 @@ bool FacetEvalTool::have_data_to_calculate_bbox(void)
 //Function Name: reset_bounding_box
 //
 //Member Type:  PUBLIC
-//Descriptoin:  Calculates the bounding box of the surface (also sets
+//Description:  Calculates the bounding box of the surface (also sets
 // the compareTol and grid search).
 //===========================================================================
 void FacetEvalTool::reset_bounding_box()
@@ -2240,7 +2277,7 @@ FacetEvalTool::project_to_facets(
         if (areacoord.x() > -atol && 
             areacoord.y() > -atol && 
             areacoord.z() > -atol) {
-          if (dist_to_plane < compare_tol) {
+          if (dist_to_plane < compare_tol && !trim) {
             close_point = this_point;
           }
           else
@@ -2309,7 +2346,7 @@ FacetEvalTool::project_to_facets(
         best_areacoord = areacoord;
         best_outside_facet = outside_facet;
 
-        if (dist < compare_tol) {
+        if (dist < compare_tol && !trim) {
           done = CUBIT_TRUE;
         }
         big_dist = 10.0 * mindist;
@@ -4233,7 +4270,8 @@ CubitStatus FacetEvalTool::save(
 
   cio.Write(reinterpret_cast<int32*>(&interpOrder), 1);
   cio.Write(reinterpret_cast<int32*>(&isFlat), 1);
-  cio.Write(reinterpret_cast<int32*>(&isParameterized), 1);
+  int32 is_param = isParameterized ? 1 : 0;
+  cio.Write(&is_param, 1);
 
   cio.Write(&myArea, 1);
   cio.Write(&minDot, 1);
@@ -4241,7 +4279,7 @@ CubitStatus FacetEvalTool::save(
    // write ids of facets that belong to this tool 
   int ii;
   CubitFacet *facet_ptr;
-  int nfacets = myFacetList.size();
+  int32 nfacets = myFacetList.size();
   int32* facet_id = new int32 [nfacets];
   myFacetList.reset();
   for (ii=0; ii<nfacets; ii++)
@@ -4249,7 +4287,7 @@ CubitStatus FacetEvalTool::save(
     facet_ptr = myFacetList.get_and_step();
     facet_id[ii] = facet_ptr->id();
   }
-  cio.Write(reinterpret_cast<int32*>(&nfacets), 1);
+  cio.Write(&nfacets, 1);
   if (nfacets > 0)
   {
     cio.Write(facet_id, nfacets);
@@ -4276,7 +4314,7 @@ CubitStatus FacetEvalTool::save(
 
    // write ids of points that belong to this tool
   CubitPoint *point_ptr;
-  int npoints = myPointList.size();
+  int32 npoints = myPointList.size();
   int32* point_id = new int32 [npoints];
   myPointList.reset();
   for (ii=0; ii<npoints; ii++)
@@ -4284,7 +4322,7 @@ CubitStatus FacetEvalTool::save(
     point_ptr = myPointList.get_and_step();
     point_id[ii] = point_ptr->id();
   }
-  cio.Write(reinterpret_cast<int32*>(&npoints), 1);
+  cio.Write(&npoints, 1);
   if (npoints > 0)
   {
     cio.Write(point_id, npoints);
@@ -4655,3 +4693,33 @@ int FacetEvalTool::intersect_ray( CubitVector &origin, CubitVector &direction, C
 
 	return 0;
 }
+
+double FacetEvalTool::contained_volume( DLIList<CubitFacet *> &facets )
+{
+  CubitVector p0, p1, p2, p3, normal;
+  double volume = 0.0;
+  
+  facets.reset();
+  for (int i = facets.size(); i--; )
+  {
+    CubitFacet* facet = facets.get_and_step();
+    p1 = facet->point(0)->coordinates();
+    p2 = facet->point(1)->coordinates();
+    p3 = facet->point(2)->coordinates();
+    normal = (p3 - p1) * (p2 - p1);
+    
+    double two_area = normal.length();
+    if (two_area > CUBIT_RESABS )
+    {
+      normal /= two_area;
+      
+      double height = normal % (p0 - p1);
+      double vol = two_area * height;
+      volume += vol;
+    }
+  }
+  
+  volume /= 6.0;
+  return volume;
+}
+

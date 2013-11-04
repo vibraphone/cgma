@@ -34,6 +34,7 @@ class ChollaMesh : public SMD::MeshData
     SMD::ErrorCode get_element_area(SMD::SMDElement elem_handle, double& area);
     
     SMD::ErrorCode get_element_normal(SMD::SMDElement elem_handle, double normal_vector[3]);
+    SMD::ErrorCode get_element_centroid(SMD::SMDElement elem_handle, double centroid[3]);
     
     SMD::ErrorCode get_coords(int num_nodes, const SMD::SMDNode node_handle_array[], float coords[][3]);
     SMD::ErrorCode get_coords(int num_nodes, const SMD::SMDNode node_handle_array[], double coords[][3]);
@@ -63,7 +64,14 @@ class ChollaMesh : public SMD::MeshData
       const SMD::Real coords[][3],
       SMD::SMeshOwner owner,
       SMD::SMDNode node_handles[]);
-    
+
+    // KGM
+    SMD::ErrorCode create_nodes(
+      unsigned int num_nodes,
+      const SMD::Real* coords,
+      SMD::SMeshOwner owner,
+      SMD::SMDNode node_handles[]){return SMD::ERR_NOT_IMPLEMENTED;}
+
     SMD::ErrorCode create_elements(
       SMD::ElementType type,
       unsigned int num_nodes,

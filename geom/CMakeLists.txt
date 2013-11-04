@@ -3,20 +3,9 @@
 PROJECT(cubit_geom)
 
 OPTION(CGM_FACET "Build CGM with Facet support" ON)
-IF(CGM_FACET)
-SUBDIRS(Cholla facetbool facet)
-ENDIF(CGM_FACET)
-
 OPTION(CGM_VIRTUAL "Build CGM with Virtual support" ON)
-IF(CGM_VIRTUAL)
-SUBDIRS(virtual)
-ENDIF(CGM_VIRTUAL)
-
 # build cgm with acis support, default to off
 OPTION(CGM_ACIS "Build CGM with ACIS support" OFF)
-IF(CGM_ACIS)
-SUBDIRS(ACIS)
-ENDIF(CGM_ACIS)
 
 #turn CGM_KCM on by default on windows systems
 if(CMAKE_SYSTEM MATCHES "Windows")
@@ -26,9 +15,8 @@ else()
 endif()
 
 OPTION(CGM_SMLIB "Build CGM with SMLIB support" OFF)
-IF(CGM_SMLIB)
-SUBDIRS(smlib)
-ENDIF(CGM_SMLIB)
+
+OPTION(CGM_OCC "Build CGM with Open Cascade support" OFF)
 
 # build cgm with granite support, default to off
 IF(CAT_BUILD)
@@ -37,26 +25,28 @@ ELSE(CAT_BUILD)
   OPTION(CGM_GRANITE "Build CGM with Granite support" OFF)
 ENDIF(CAT_BUILD)
 
-IF(CGM_GRANITE)
-  SUBDIRS(granite)
-ENDIF(CGM_GRANITE) 
-
 OPTION(CGM_CATIA "Build CGM with CATIA support" OFF)
 IF(CGM_CATIA)
-  #SET(CGM_ACIS OFF CACHE BOOL "ACIS not supported with CATIA" FORCE)
-  #SET(FEATURE_OPTION OFF CACHE BOOL "Feature option not allowed with CATIA" FORCE)
-  #SET(TOLERANT_TRI OFF CACHE BOOL "Geometry-tolerant meshing option not allowed with CATIA" FORCE)
-  #SET(ACIS_IGES OFF CACHE BOOL "ACIS_IGES not allowed with CATIA" FORCE)
-  #SET(ACIS_STEP OFF CACHE BOOL "ACIS_STEP not allowed with CATIA" FORCE)
   SET(BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
-  SUBDIRS(catia)
 ENDIF(CGM_CATIA)
 
-CONFIGURE_FILE(CGMConfigure.h.in "${CMAKE_CURRENT_BINARY_DIR}/CGMConfigure.h")
 
-#x3d directory
-FIND_PATH(X3D_DIR "" DOC "X3D directory.")
 
+# all parts of CGM need util
+include_directories(
+          ${cubit_util_SOURCE_DIR} 
+          ${cubit_util_BINARY_DIR} 
+          )
+
+IF(CGM_FACET)
+  ADD_SUBDIRECTORY(Cholla)
+ENDIF()
+
+# all remaining parts need geom
+include_directories(
+          ${cubit_geom_SOURCE_DIR} 
+          ${cubit_geom_BINARY_DIR} 
+          )
 
 SET(GEOM_SRCS
     AnalyticGeometryTool.cpp
@@ -171,20 +161,6 @@ IF(WIN32)
   ENDFOREACH(var ${GEOM_SRCS})
 ENDIF(WIN32)
 
-# don't add an include path to other parts of cgm
-SET(THIS_INCLUDES 
-          ${cubit_util_SOURCE_DIR} 
-          ${cubit_util_BINARY_DIR} 
-          ${cubit_geom_SOURCE_DIR} 
-          ${cubit_geom_BINARY_DIR})
-
-SET_DIRECTORY_PROPERTIES(PROPERTIES INCLUDE_DIRECTORIES "${THIS_INCLUDES}")
-
-SET(CUBIT_GEOM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
-CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
-               ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
-               @ONLY)
-
 ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS})
 TARGET_LINK_LIBRARIES(cubit_geom cubit_util)
 
@@ -201,6 +177,51 @@ IF(BUILD_SHARED_LIBS)
           LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
           )
 ENDIF(BUILD_SHARED_LIBS)
+
+
+IF(CGM_FACET)
+  ADD_SUBDIRECTORY(facetbool)
+  ADD_SUBDIRECTORY(facet)
+ENDIF(CGM_FACET)
+
+IF(CGM_VIRTUAL)
+  ADD_SUBDIRECTORY(virtual)
+ENDIF(CGM_VIRTUAL)
+
+IF(CGM_ACIS)
+  ADD_SUBDIRECTORY(ACIS)
+ENDIF(CGM_ACIS)
+
+IF(CGM_SMLIB)
+  ADD_SUBDIRECTORY(smlib)
+ENDIF(CGM_SMLIB)
+
+IF(CGM_OCC)
+  ADD_SUBDIRECTORY(OCC)
+ENDIF(CGM_OCC)
+
+IF(CGM_GRANITE)
+  ADD_SUBDIRECTORY(granite)
+ENDIF(CGM_GRANITE) 
+
+IF(CGM_CATIA)
+  ADD_SUBDIRECTORY(catia)
+ENDIF(CGM_CATIA)
+
+IF(CGM_KCM)
+  ADD_SUBDIRECTORY(KCM)
+ENDIF(CGM_KCM)
+
+CONFIGURE_FILE(CGMConfigure.h.in "${CMAKE_CURRENT_BINARY_DIR}/CGMConfigure.h")
+
+SET(CUBIT_GEOM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
+               ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
+               @ONLY)
+
+#x3d directory
+FIND_PATH(X3D_DIR "" DOC "X3D directory.")
+
 
 IF(BUILD_TESTING)
   #ADD_SUBDIRECTORY(testing)

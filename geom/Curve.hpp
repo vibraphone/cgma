@@ -46,8 +46,6 @@ public :
 
   typedef TBPoint ChildType;
 
-  virtual const type_info& topology_entity_type_info() const;
-
   virtual CubitSense relative_sense(Curve *other_curve);
     //- given another curve, return whether the curves are "aligned" (CUBIT_FORWARD), 
     //- oppositely aligned (CUBIT_REVERSED), or inconclusive (CUBIT_UNKNOWN)
@@ -75,7 +73,7 @@ public :
     //- the point represented by the parameter1 going to the point represented
     //- by parameter2.
     //-
-    //- The sign of the returned length value is always positive.
+    //- The sign of the returned length value depends on the order of the parameters passed in.
   
   virtual double get_arc_length();
     //R double
@@ -92,6 +90,7 @@ public :
     //I- The second position value
     //- This function returns the arc length along the Curve starting from
     //- the point1 going to point2
+    //- the length returned is always positive.
   
   virtual double get_arc_length( const CubitVector &point1,
                                  const int which_end );
@@ -103,6 +102,7 @@ public :
     //I- 0 for start, 1 for end
     //- This function returns the arc length along the Curve starting from
     //- point1 going to either the start or the end
+    //- the length returned is always positive.
   
   virtual CubitVector center_point();
     //R CubitVector
@@ -360,11 +360,13 @@ public :
   //O- the control points
   //O- If rational, weight for each control point
   //O- the knots
+  //O- whether the underlying spline is reversed  
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots // There should be order+cntrl_pts.size()-2 knots
+                                         DLIList<double> &knots, // There should be order+cntrl_pts.size()-2 knots
+                                         bool &spline_is_reversed
                                        ) const = 0;
 
   //R CubitStatus
@@ -396,7 +398,7 @@ double Curve::get_arc_length( const CubitVector &point1,
 {
   double param1 = u_from_position(point1);
   double param2 = u_from_position(point2);
-  return length_from_u(param1, param2);
+  return fabs(length_from_u(param1, param2));
 }
 
 inline
@@ -408,26 +410,26 @@ double Curve::get_arc_length( const CubitVector &point1,
   if (which_end == 0) param2 = start_param();
   else param2 = end_param();
   
-  return length_from_u(param1, param2);
+  return fabs(length_from_u(param1, param2));
 }
 
 inline
 CubitVector Curve::center_point()
 {
-  double param1 = start_param();
+  double s_param = start_param();
   double length = 0.5 * measure();
-  double param2 = u_from_arc_length(param1, length);
+  double param2 = u_from_arc_length(s_param, length);
   CubitVector center;
   position_from_u(param2, center);
   return center;
 }
 
 inline
-CubitStatus Curve::mid_point(CubitVector &mid_point_in)
+CubitStatus Curve::mid_point(CubitVector &mid_point)
 {
   double param1 = 0.5 * (start_param() + end_param());
   
-  return position_from_u(param1, mid_point_in);
+  return position_from_u(param1, mid_point);
 }
 
 inline
@@ -444,12 +446,12 @@ CubitStatus Curve::position_from_fraction( const double fraction_along_curve,
 inline
 CubitStatus Curve::mid_point(const CubitVector &point1,
                              const CubitVector &point2,
-                             CubitVector& mid_point_in )
+                             CubitVector& mid_point )
 {
   double param1 = u_from_position(point1);
   double param2 = u_from_position(point2);
   param1 = 0.5 * (param1 + param2);
-  return position_from_u(param1, mid_point_in);
+  return position_from_u(param1, mid_point);
 }
 
   //R CubitStatus

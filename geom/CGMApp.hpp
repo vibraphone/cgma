@@ -48,11 +48,16 @@ public:
    static CGMApp* instance();
      //- Access to the application object
 
-  static void delete_instance() {if (instance_) delete instance_;};
+  static void delete_instance()
+  {
+    if (instance_)
+      delete instance_;
+    instance_ = NULL;
+  };
         
    ~CGMApp();
 
-  void startup(int argc, char **argv);
+  void startup(const std::vector<CubitString>& args);
    //-  Contains startup code for cubit
 
   void shutdown();

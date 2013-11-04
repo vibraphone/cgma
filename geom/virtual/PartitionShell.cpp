@@ -138,16 +138,16 @@ GeometryQueryEngine* PartitionShell::get_geometry_query_engine() const
   return VirtualQueryEngine::instance();
 }
 
-void PartitionShell::append_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionShell::append_simple_attribute_virt( const CubitSimpleAttrib& )
   { }
-void PartitionShell::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionShell::remove_simple_attribute_virt( const CubitSimpleAttrib& )
   { }
 void PartitionShell::remove_all_simple_attribute_virt() 
   { }
-CubitStatus PartitionShell::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus PartitionShell::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
   { return CUBIT_FAILURE; }
 CubitStatus PartitionShell::get_simple_attribute( const CubitString&,
-                                                 DLIList<CubitSimpleAttrib*>& )
+                                                 DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 
 void PartitionShell::print_debug_info( const char* /*prefix*/ ) const

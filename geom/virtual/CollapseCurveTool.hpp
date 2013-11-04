@@ -17,7 +17,12 @@ class CollapseCurveTool
 {
   public:
     static CollapseCurveTool *instance();
-    static void delete_instance() { if(instance_) delete instance_; };
+    static void delete_instance()
+    {
+      if(instance_)
+        delete instance_;
+      instance_ = NULL;
+    };
 
     CubitStatus collapse_curve(DLIList <RefEdge*> ref_edge_list, 
                 DLIList<RefVertex*> ref_vertex_list,

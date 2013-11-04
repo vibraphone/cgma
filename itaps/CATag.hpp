@@ -24,6 +24,11 @@
 #ifndef CA_TAG_HPP
 #define CA_TAG_HPP
 
+#include <typeinfo>
+#if !defined(WIN32)
+using std::type_info;
+#endif
+
 #include "iBase.h"
 #include "CubitAttrib.hpp"
 #include "DLIList.hpp"
@@ -68,7 +73,7 @@ public:
     bool isActive;
   };
   
-  static CubitAttrib* CATag_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+  static CubitAttrib* CATag_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
   iBase_ErrorType createTag (/*in*/ const char *tag_name,
                              /*in*/ const int tag_size,
@@ -183,11 +188,11 @@ public:
 
   CubitStatus reset();
 
-  CubitSimpleAttrib *split_owner() {return NULL;}
+  CubitSimpleAttrib split_owner() { CubitSimpleAttrib sa; return sa; }
 
   void merge_owner(CubitAttrib *deletable_attrib) {}
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   int int_attrib_type() {return myManager->CATag_att_type;}
 

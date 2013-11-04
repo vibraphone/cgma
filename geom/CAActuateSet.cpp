@@ -19,6 +19,7 @@
 #include "ModelQueryEngine.hpp"
 #include "Body.hpp"
 #include "BasicTopologyEntity.hpp"
+#include "AppUtil.hpp"
 
 #include "RefFace.hpp"
 #include "RefEdge.hpp"
@@ -40,7 +41,7 @@ CAActuateSet::CAActuateSet( DLIList<RefEntity*>& actuate_list )
 {
     // register this as a static observer so that we can
     // remove entities from the lists as they are destroyed
-  register_static_observer( this );
+  AppUtil::instance()->event_dispatcher().add_observer(this);
   
     // put all entities in the actuate_list into the typeList
     // for the appropriate dimension of entity.
@@ -66,7 +67,8 @@ CAActuateSet::CAActuateSet( DLIList<RefEntity*>& actuate_list )
 CAActuateSet::~CAActuateSet()
 {
     // remove from static observer list
-  unregister_static_observer( this );
+
+  AppUtil::instance()->event_dispatcher().remove_observer(this);
 }
 
 //-------------------------------------------------------------------------
@@ -162,8 +164,7 @@ void CAActuateSet::append_to_current( DLIList<RefEntity*>& list )
 // Creation Date : 05/28/02
 //-------------------------------------------------------------------------
 CubitStatus CAActuateSet::notify_observer( CubitObservable* observable,
-                               const CubitEvent& observer_event,
-                               CubitBoolean )
+                               const CubitEvent& observer_event)
 {
   RefEntity* entity_ptr;
   int dimension;

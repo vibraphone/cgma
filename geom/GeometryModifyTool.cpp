@@ -26,6 +26,7 @@
 #include "MergeTool.hpp"
 #include "SurfaceOverlapTool.hpp"
 #include "GeometryQueryEngine.hpp"
+#include "OldUnmergeCode.hpp"
 #include "GeometryModifyEngine.hpp"
 #include "AnalyticGeometryTool.hpp"
 #include "DAG.hpp"
@@ -68,6 +69,7 @@
 #include "CubitPlane.hpp"
 #include "CubitTransformMatrix.hpp"
 #include "GfxPreview.hpp"
+#include "AppUtil.hpp"
 
 #include "DLIList.hpp"
 
@@ -398,11 +400,11 @@ Body* GeometryModifyTool::brick(double width, double depth, double height)
    return new_body;
 }
 
-#ifdef CGM_KCM  
+#ifdef CGM_KCM
 //-------------------------------------------------------------------------
 // Purpose       : Create breps from mesh entities.
 //
-// Special Notes : 
+// Special Notes :
 //
 // Creator       : Brett Clark
 //
@@ -921,7 +923,7 @@ Body* GeometryModifyTool::create_body( VolumeFacets& volume, std::map<FacetShape
     return NULL;
 
   Body* new_body = NULL;
-   
+
   if( CubitUndo::get_undo_enabled() )
      CubitUndo::save_state();
 
@@ -930,12 +932,12 @@ Body* GeometryModifyTool::create_body( VolumeFacets& volume, std::map<FacetShape
   if(body_sm)
   {
     new_body = GeometryQueryTool::instance()->make_Body(body_sm);
-    // map information back to caller 
+    // map information back to caller
     std::map<FacetShapes*, GeometryEntity*>::iterator geom_iter;
     for (geom_iter = geom_entity_map.begin(); geom_iter != geom_entity_map.end(); geom_iter++)
       entity_map[geom_iter->first] = dynamic_cast<RefEntity*>(geom_iter->second->topology_entity());
   }
- 
+
   if( CubitUndo::get_undo_enabled() )
   {
     if( new_body )
@@ -964,12 +966,12 @@ RefVertex* GeometryModifyTool::make_RefVertex( RefVertex *vertex ) const
                   vertex->id() );
      return 0;
   }
-  
+
   CubitVector point = vertex->coordinates();
 
   // Call the default GeometryModifyEngine to create a new TBPoint
   TBPoint* point_ptr = engine->make_Point(point);
-  
+
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::save_state();
 
@@ -985,18 +987,18 @@ RefVertex* GeometryModifyTool::make_RefVertex( RefVertex *vertex ) const
   }
 
   //transfer the names
-  DLIList<CubitString*> names;
+  DLIList<CubitString> names;
   vertex->entity_names( names );
 
   int i;
   for( i=names.size(); i--; )
   {
-    CubitString *tmp_name = names.get_and_step();
-    ref_vertex_ptr->entity_name( *tmp_name ); 
+    CubitString tmp_name = names.get_and_step();
+    ref_vertex_ptr->entity_name( tmp_name );
   }
 
   // Send a message to the model indicating the vertex was created
-  CubitObserver::notify_static_observers(ref_vertex_ptr, FREE_REF_ENTITY_GENERATED);
+  AppUtil::instance()->send_event(ref_vertex_ptr, FREE_REF_ENTITY_GENERATED);
 
   // Return the newly created RefVertex
   return ref_vertex_ptr ;
@@ -1055,7 +1057,7 @@ RefVertex* GeometryModifyTool::make_RefVertex(
    ref_vertex_ptr->color(color);
 
      // Send a message to the model indicating the vertex was created
-   CubitObserver::notify_static_observers(ref_vertex_ptr, FREE_REF_ENTITY_GENERATED);
+   AppUtil::instance()->send_event(ref_vertex_ptr, FREE_REF_ENTITY_GENERATED);
 
      // Return the newly created RefVertex
    return ref_vertex_ptr ;
@@ -1726,7 +1728,7 @@ RefEdge* GeometryModifyTool::make_elliptical_RefEdge( RefVertex *vert1,
                                                       CubitVector center_point,
                                                       double start_angle,
                                                       double end_angle,
-                                                      CubitSense sense) const 
+                                                      CubitSense sense) const
 {
   GeometryModifyEngine* GMEPtr = 0;
 
@@ -1765,7 +1767,7 @@ RefEdge* GeometryModifyTool::make_elliptical_RefEdge( RefVertex *vert1,
   // a NULL pointer.
   if ( curve_ptr == NULL )
   {
-    PRINT_WARNING("In GeometryModifyTool::make_RefEdge\n"
+    PRINT_WARNING("In GeometryModifyTool::make_elliptical_RefEdge\n"
                   "         Got a NULL pointer to a Curve.\n"
                   "         Problems making RefEdge from RefVertex %d and %d\n",
                   vert1->id(), vert2->id());
@@ -1780,14 +1782,9 @@ RefEdge* GeometryModifyTool::make_elliptical_RefEdge( RefVertex *vert1,
     if( new_edge )
       CubitUndo::note_result_entity( new_edge );
   }
-  
+
   return new_edge;
 }
-                                                      
-                                                            
-
-
-
 
 //-------------------------------------------------------------------------
 // Purpose       : This function takes RefEdge type information, two
@@ -2073,7 +2070,7 @@ GeometryModifyTool::make_extended_sheet( DLIList<RefFace*> &ref_face_list,
   DLIList<Surface*> surface_list(count);
   CAST_LIST( bridge_list, surface_list, Surface );
 
-  BodySM *bodySM_ptr = GME_ptr->make_extended_sheet( surface_list, 
+  BodySM *bodySM_ptr = GME_ptr->make_extended_sheet( surface_list,
     clip_box_ptr, preview );
 
   if( bodySM_ptr )
@@ -2130,12 +2127,12 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
    //Collect all the names on vertices to propagate after you create
    //the surface
    DLIList<CubitVector> vertex_coordinates;
-   DLIList<CubitString*> vertex_names;
+   DLIList<CubitString> vertex_names;
    DLIList<RefEdge*> free_ref_edges;
    int kk;
    for( kk=ref_edge_list.size(); kk--; )
    {
-     DLIList<CubitString*> tmp_names;
+     DLIList<CubitString> tmp_names;
      RefEdge *tmp_edge = ref_edge_list.get_and_step();
 
      if( tmp_edge->num_parent_ref_entities() == 0 )
@@ -2149,9 +2146,9 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
      for( jj=tmp_names.size(); jj--; )
      {
        CubitVector tmp_vec = tmp_edge->start_vertex()->coordinates();
-       CubitString *name = tmp_names.get_and_step();
+       CubitString name = tmp_names.get_and_step();
        vertex_coordinates.append( tmp_vec );
-       vertex_names.append( new CubitString(*name) );
+       vertex_names.append( name );
      }
 
      tmp_names.clean_out();
@@ -2159,9 +2156,9 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
      for( jj=tmp_names.size(); jj--; )
      {
        CubitVector tmp_vec = tmp_edge->end_vertex()->coordinates();
-       CubitString *name = tmp_names.get_and_step();
+       CubitString name = tmp_names.get_and_step();
        vertex_coordinates.append( tmp_vec );
-       vertex_names.append( new CubitString(*name) );
+       vertex_names.append( name );
      }
    }
 
@@ -2184,11 +2181,11 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
 
    //send out events for free curves saying that their 'free' status has
    //be changed
-  
+
   for( kk=0; kk<free_ref_edges.size(); kk++ )
   {
     RefEdge *free_edge = free_ref_edges.get_and_step();
-    CubitObserver::notify_static_observers( free_edge, TOP_LEVEL_ENTITY_DESTRUCTED );
+    AppUtil::instance()->send_event(free_edge, TOP_LEVEL_ENTITY_DESTRUCTED );
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, free_edge );
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -2201,7 +2198,7 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
    for( kk=vertex_coordinates.size(); kk--; )
    {
      CubitVector tmp_coord = vertex_coordinates.get_and_step();
-     CubitString *tmp_name = vertex_names.get_and_step();
+     CubitString tmp_name = vertex_names.get_and_step();
 
      int jj;
      for( jj=tmp_verts.size(); jj--; )
@@ -2210,7 +2207,7 @@ RefFace* GeometryModifyTool::make_RefFace(GeometryType ref_face_type,
        if( tmp_coord.distance_between( tmp_vert->coordinates() ) < GEOMETRY_RESABS )
        {
          //add the name if it doesn't already exist
-         RefEntityName::instance()->add_refentity_name( tmp_vert, *tmp_name );
+         RefEntityName::instance()->add_refentity_name( tmp_vert, tmp_name );
        }
      }
    }
@@ -2328,7 +2325,7 @@ Body* GeometryModifyTool::make_Body(GeometryType ref_face_type,
 {
    if( CubitUndo::get_undo_enabled() )
      CubitUndo::save_state_with_cubit_file( ref_edge_list );
-  
+
    bool is_free_face = false;
 
      // Given the arguments, make a RefFace.
@@ -2358,7 +2355,7 @@ Body* GeometryModifyTool::make_Body(GeometryType ref_face_type,
    if( CubitUndo::get_undo_enabled() )
    {
      if( bodies.size() )
-       CubitUndo::note_result_entity( bodies.get() ); 
+       CubitUndo::note_result_entity( bodies.get() );
      else
       CubitUndo::remove_last_undo();
    }
@@ -2552,7 +2549,7 @@ CubitStatus GeometryModifyTool::finish_sm_op( DLIList<Body*>& input_bodies,
   int b;
   for (b = 0; b < input_bodies.size(); b++) {
 	  Body* body = input_bodies.get_and_step();
-	  body->notify_all_observers(MODEL_ENTITY_MODIFIED);
+    AppUtil::instance()->send_event(body, MODEL_ENTITY_MODIFIED);
   }
 
     // Remove dead bodies
@@ -2721,7 +2718,7 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
       BodySM *tmp_body_sm = tmp_body->get_body_sm_ptr();
       if( gme == get_engine(tmp_body_sm ) )
       {
-        neighbor_imprint_list.append( tmp_body_sm ); 
+        neighbor_imprint_list.append( tmp_body_sm );
         bodies_to_modify.append( tmp_body );
       }
     }
@@ -2739,7 +2736,7 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
     }
 
     // note that preview actually gets handled before this point
-    CubitStatus status = webcut_w_cylinder( engine_body_sms, radius, axis,
+    CubitStatus status = webcut_w_cylinder(engine_body_sms, radius, axis,
               center, neighbor_imprint_list, result_sm_list, imprint_type );
 
     if ( status != CUBIT_FAILURE )
@@ -2783,18 +2780,572 @@ CubitStatus GeometryModifyTool::webcut_with_cylinder(
 
   return rval;
 }
+//*************************************************************************************************************************************
+//-------------------------------------------------------------------------
+// Purpose       : Webcut a body with a cone given the input parameters.
+// Special Notes :
+//
+// Creator       : Ajoy
+//
+// Creation Date : 04/23/2012
+//-------------------------------------------------------------------------
+CubitStatus GeometryModifyTool::webcut_with_Cone(
+                                       DLIList<Body*>& webcut_body_list,
+                                       DLIList<BodySM*> &webcut_bodySM_list,
+                                       double outer_radius,double inner_radius,
+                                       CubitVector& AxisPt1,
+                                       CubitVector& AxisPt2,
+                                       DLIList<Body*>& results_list,
+                                       DLIList<Body*> &neighboring_bodies,
+                                       ImprintType imprint_type,
+                                       CubitBoolean merge,
+                                       CubitBoolean preview)
+{
+    if (!okay_to_modify( webcut_body_list, "WEBCUT" ))
+        return CUBIT_FAILURE;
 
+    CubitStatus rval = CUBIT_SUCCESS;
+
+
+
+
+
+    // find the height
+    double dHeight  =  sqrt( (AxisPt2.x()-AxisPt1.x()) * (AxisPt2.x()-AxisPt1.x())+
+                            (AxisPt2.y()-AxisPt1.y()) * (AxisPt2.y()-AxisPt1.y())+
+                            (AxisPt2.z()-AxisPt1.z()) * (AxisPt2.z()-AxisPt1.z()) );
+
+    // Find the Tan Angle
+    double Diff        = fabs(outer_radius - inner_radius);
+           Diff       /= dHeight;
+    double dTanAngle   = atan ( Diff ) ;
+
+    if (preview)
+    {
+        // find the bounding box for the cylinder
+        CubitBox bounding_box;
+        Body* body_ptr = webcut_body_list.get_and_step();
+        bounding_box = body_ptr->bounding_box();
+
+        int i;
+        for( i=1; i<webcut_body_list.size(); i++ )
+        {
+            body_ptr = webcut_body_list.get_and_step();
+            bounding_box |= body_ptr->bounding_box();
+        }
+
+        CubitVector axis;
+        axis.x( AxisPt2.x()-AxisPt1.x() ); axis.y( AxisPt2.y()-AxisPt1.y() );
+        axis.z( AxisPt2.z()-AxisPt1.z() );
+
+
+        CubitVector start;
+        CubitVector end;
+        double dExtendedOuterRadius;
+        double dExtendedInnerRadius;
+
+
+        // Now extend the 2 end points to extend beyond the BBox limits. In case it converges, stop at the Apex.
+
+         FindExtendedPoints( AxisPt1 , AxisPt2 , outer_radius , inner_radius , axis, dHeight , bounding_box ,
+                             dTanAngle, start , end, dExtendedOuterRadius , dExtendedInnerRadius );
+
+        int color = CUBIT_BLUE;
+        GfxPreview::clear();
+        GfxPreview::draw_frustum(axis, start, end, dExtendedOuterRadius, dExtendedInnerRadius ,bounding_box , color);
+        GfxPreview::flush();
+        return rval;
+    }
+
+    if( CubitUndo::get_undo_enabled() )
+    {
+        DLIList<Body*> bodies_to_save;
+        bodies_to_save += webcut_body_list;
+        bodies_to_save += neighboring_bodies;
+        CubitUndo::save_state_with_cubit_file( bodies_to_save );
+    }
+
+    const int count = webcut_body_list.size();
+    DLIList<BodySM*> result_sm_list;
+    DLIList<Body*> body_list(webcut_body_list);
+    DLIList<BodySM*> engine_body_sms(count);
+    DLIList<Body*> engine_bodies(count);
+    GeometryModifyEngine* gme = 0;
+
+    if(!preview)
+        do_attribute_setup();
+
+    while ( (gme = group_bodies_by_engine(webcut_body_list, engine_bodies, engine_body_sms)) )
+    {
+        //get all bodysms that we might modify in this operation
+        DLIList<BodySM*> neighbor_imprint_list;
+        DLIList<BodySM*> bodies_sm_to_modify;
+        DLIList<Body*> bodies_to_modify;
+        bodies_to_modify += engine_bodies;
+        int i;
+        for( i=neighboring_bodies.size(); i--; )
+        {
+            Body *tmp_body = neighboring_bodies.get_and_step();
+            BodySM *tmp_body_sm = tmp_body->get_body_sm_ptr();
+            if( gme == get_engine(tmp_body_sm ) )
+            {
+                neighbor_imprint_list.append( tmp_body_sm );
+                bodies_to_modify.append( tmp_body );
+            }
+        }
+
+
+        DLIList<BodySM*> Body_to_Cut_SM;
+
+        for( i = 0 ;i<webcut_body_list.size(); i++  )
+        {
+            Body* body           = webcut_body_list.get_and_step();
+            BodySM *Body_To_Cut  = body->get_body_sm_ptr();
+
+            Body_to_Cut_SM.append( Body_To_Cut ) ;
+        }
+
+
+
+        DLIList<int> merged_surface_ids;
+        DLIList<int> merged_curve_ids;
+
+        if(!preview)
+        {
+            bodies_sm_to_modify += neighbor_imprint_list;
+
+            push_attributes_before_modify( bodies_sm_to_modify );
+            //get all the child entities that have been merged
+            get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
+        }
+
+
+        // Get the overall bounding box of the bodies list
+        Body* body_ptr;
+        int bbox_init = 0;
+        CubitBox bounding_box;
+        if(body_list.size())
+        {
+            bbox_init = 1;
+            body_ptr  = body_list.get_and_step();
+            bounding_box = body_ptr->bounding_box();
+            for( i=1; i<webcut_body_list.size(); i++ )
+            {
+                body_ptr = body_list.get_and_step();
+                bounding_box |= body_ptr->bounding_box();
+            }
+        }
+
+
+
+        // Get the Geometry engine
+        GeometryModifyEngine* gme =
+            GeometryModifyTool::instance()->get_engine( body_ptr );
+        GeometryQueryEngine* gqe =
+            body_ptr->get_geometry_query_engine();
+
+
+        //// note that preview actually gets handled before this point
+        //CubitStatus status = CreateCircularBody(webcut_body_list );
+
+        CubitStatus status = CUBIT_SUCCESS;
+
+
+        CubitVector axis;
+        axis.x( AxisPt2.x()-AxisPt1.x() ); axis.y( AxisPt2.y()-AxisPt1.y() );
+        axis.z( AxisPt2.z()-AxisPt1.z() );
+
+
+        Body* cutting_tool_ptr = NULL;
+
+
+        // Set The important deciders.
+
+        bool bIfReverseAxis = false;
+        if( outer_radius < inner_radius )
+        {
+            bIfReverseAxis = true;
+        }
+
+
+        //**************************************//
+        // find the extension of the narrow end.
+        //**************************************//
+
+        // For this find the extended end point, at the smaller end
+        // and assign zero radius, setting that point to be the AxisPt2.
+
+        // Will be done only if outerRad is bigger than innerRad
+        // Else set a bool to remember that, the inner_radius is set as the outer.
+
+        bool bIfOuterRad_Modified = false;
+        CubitVector endpt ;
+        if( outer_radius > inner_radius )
+        {
+            //EndPt  = FindExtendedEndPt( outer_radius , inner_radius , AxisPt2 , axis,  dHeight );
+
+
+            double Diff     = (outer_radius - inner_radius);
+            Diff    /= dHeight;
+            double dAngle   = atan ( Diff ) ;
+            axis.normalize();
+
+            double dTan         = tan( dAngle );
+            double dExtendvalue = inner_radius / dTan;
+
+            endpt.x( ( axis.x() * dExtendvalue )  + AxisPt2.x() );
+            endpt.y( ( axis.y() * dExtendvalue )  + AxisPt2.y() );
+            endpt.z( ( axis.z() * dExtendvalue )  + AxisPt2.z() );
+
+
+
+            dHeight = sqrt( (endpt.x() - AxisPt1.x()) * (endpt.x() - AxisPt1.x())+
+                (endpt.y() - AxisPt1.y()) * (endpt.y() - AxisPt1.y())+
+                (endpt.z() - AxisPt1.z()) * (endpt.z() - AxisPt1.z()) );
+
+            AxisPt2.x( endpt.x() );
+            AxisPt2.y( endpt.y() );
+            AxisPt2.z( endpt.z() );
+        }
+        else
+        {
+            // reverse the axis.
+
+            axis.x( -axis.x());
+            axis.y( -axis.y());
+            axis.z( -axis.z());
+
+            //endpt  = FindExtendedendpt( inner_radius , outer_radius , AxisPt1 , axis,  dHeight );
+
+
+            double Diff     = (inner_radius - outer_radius);
+            Diff    /= dHeight;
+            double dAngle   = atan ( Diff ) ;
+            axis.normalize();
+
+            double dTan        = tan( dAngle );
+            double dExtendvalue = outer_radius / dTan;
+
+            endpt.x( ( axis.x() * dExtendvalue )  + AxisPt1.x() );
+            endpt.y( ( axis.y() * dExtendvalue )  + AxisPt1.y() );
+            endpt.z( ( axis.z() * dExtendvalue )  + AxisPt1.z() );
+
+
+
+
+            dHeight = sqrt( (endpt.x() - AxisPt2.x()) * (endpt.x() - AxisPt2.x())+
+                (endpt.y() - AxisPt2.y()) * (endpt.y() - AxisPt2.y())+
+                (endpt.z() - AxisPt2.z()) * (endpt.z() - AxisPt2.z()) );
+
+            AxisPt1.x( endpt.x() );
+            AxisPt1.y( endpt.y() );
+            AxisPt1.z( endpt.z() );
+
+             // reset the axis.
+
+            axis.x( -axis.x());
+            axis.y( -axis.y());
+            axis.z( -axis.z());
+
+            bIfOuterRad_Modified = true;
+        }
+
+
+
+        //*****************************************//
+        // Now find the extension of the bigger end.
+        //*****************************************//
+
+        //CubitVector EndPt ;
+        double dExtendedRadius;
+        if( outer_radius > inner_radius )
+        {
+            // reverse the axis.
+            axis.x( -axis.x());
+            axis.y( -axis.y());
+            axis.z( -axis.z());
+
+
+            //EndPt  = FindExtendedStartPt( bounding_box , outer_radius , inner_radius , AxisPt1 , axis,  dHeight , dTanAngle , dExtendedRadius );
+
+
+
+            CubitVector Extended_Start_Pt;
+
+            // Find the Difference between the Max and thre min values in all 3 directions.
+            // Incase the point is within the box limits, then add the difference values
+            // in all 3 directions , witht he " Axis " as the direction vector and extend the point.
+
+            // After that find the Radius of this bigger end.
+
+            CubitVector DiffVec;
+
+            axis.normalize();
+
+            DiffVec.x( fabs( bounding_box.max_x() - bounding_box.min_x() ));
+            DiffVec.y( fabs( bounding_box.max_y() - bounding_box.min_y() ));
+            DiffVec.z( fabs( bounding_box.max_z() - bounding_box.min_z() ));
+
+            // Extend the start Pt
+
+            Extended_Start_Pt.x( AxisPt1.x() + ( axis.x() * DiffVec.x() ) );
+            Extended_Start_Pt.y( AxisPt1.y() + ( axis.y() * DiffVec.y() ) );
+            Extended_Start_Pt.z( AxisPt1.z() + ( axis.z() * DiffVec.z() ) );
+
+
+            // Find the length
+
+            double dLength = sqrt( (( AxisPt1.x() - Extended_Start_Pt.x()) *  (AxisPt1.x() - Extended_Start_Pt.x()) ) +
+                (( AxisPt1.y() - Extended_Start_Pt.y()) *  (AxisPt1.y() - Extended_Start_Pt.y()) ) +
+                (( AxisPt1.z() - Extended_Start_Pt.z()) *  (AxisPt1.z() - Extended_Start_Pt.z()) ) );
+
+
+
+            // Find the Extended Radius
+
+            dExtendedRadius = outer_radius + ( tan( dTanAngle ) * dLength ) ;
+
+
+            dHeight = sqrt( (Extended_Start_Pt.x() - AxisPt2.x()) * (Extended_Start_Pt.x() - AxisPt2.x())+
+                (Extended_Start_Pt.y() - AxisPt2.y()) * (Extended_Start_Pt.y() - AxisPt2.y())+
+                (Extended_Start_Pt.z() - AxisPt2.z()) * (Extended_Start_Pt.z() - AxisPt2.z()) );
+
+            if( dExtendedRadius == 0 )
+                dExtendedRadius = outer_radius;
+
+            AxisPt1.x( Extended_Start_Pt.x() );
+            AxisPt1.y( Extended_Start_Pt.y() );
+            AxisPt1.z( Extended_Start_Pt.z() );
+
+            // reverse the axis.
+            axis.x( -axis.x());
+            axis.y( -axis.y());
+            axis.z( -axis.z());
+
+        }
+        else
+        {
+            //EndPt  = FindExtendedStartPt( bounding_box ,  inner_radius , outer_radius , AxisPt2 , axis,  dHeight , dTanAngle , dExtendedRadius );
+
+
+
+
+            CubitVector Extended_Start_Pt;
+
+            // Find the Difference between the Max and thre min values in all 3 directions.
+            // Incase the point is within the box limits, then add the difference values
+            // in all 3 directions , witht he " Axis " as the direction vector and extend the point.
+
+            // After that find the Radius of this bigger end.
+
+            CubitVector DiffVec;
+
+            axis.normalize();
+
+            DiffVec.x( fabs( bounding_box.max_x() - bounding_box.min_x() ));
+            DiffVec.y( fabs( bounding_box.max_y() - bounding_box.min_y() ));
+            DiffVec.z( fabs( bounding_box.max_z() - bounding_box.min_z() ));
+
+            // Extend the start Pt
+
+            Extended_Start_Pt.x( AxisPt2.x() + ( axis.x() * DiffVec.x() ) );
+            Extended_Start_Pt.y( AxisPt2.y() + ( axis.y() * DiffVec.y() ) );
+            Extended_Start_Pt.z( AxisPt2.z() + ( axis.z() * DiffVec.z() ) );
+
+
+            // Find the length
+
+            double dLength = sqrt( (( AxisPt2.x() - Extended_Start_Pt.x()) *  (AxisPt2.x() - Extended_Start_Pt.x()) ) +
+                (( AxisPt2.y() - Extended_Start_Pt.y()) *  (AxisPt2.y() - Extended_Start_Pt.y()) ) +
+                (( AxisPt2.z() - Extended_Start_Pt.z()) *  (AxisPt2.z() - Extended_Start_Pt.z()) ) );
+
+
+
+            // Find the Extended Radius
+
+            dExtendedRadius = inner_radius + ( tan( dTanAngle ) * dLength ) ;
+
+
+            dHeight = sqrt( (Extended_Start_Pt.x() - AxisPt1.x()) * (Extended_Start_Pt.x() - AxisPt1.x())+
+                (Extended_Start_Pt.y() - AxisPt1.y()) * (Extended_Start_Pt.y() - AxisPt1.y())+
+                (Extended_Start_Pt.z() - AxisPt1.z()) * (Extended_Start_Pt.z() - AxisPt1.z()) );
+
+            AxisPt2.x( Extended_Start_Pt.x() );
+            AxisPt2.y( Extended_Start_Pt.y() );
+            AxisPt2.z( Extended_Start_Pt.z() );
+
+            if( dExtendedRadius == 0 )
+                dExtendedRadius = outer_radius;
+
+            bIfOuterRad_Modified = true;
+        }
+
+
+
+        //Create the cylinder
+
+        BodySM* bodySM_Ptr = NULL;
+        outer_radius       = dExtendedRadius;
+        inner_radius       = 0;
+        bodySM_Ptr         = gmeList.get()->cylinder( dHeight, outer_radius, outer_radius, inner_radius );
+
+
+        if( !bodySM_Ptr )
+        {
+            return CUBIT_FAILURE;
+        }
+
+
+        DLIList<Curve*> curve_list;
+
+        bodySM_Ptr->curves(curve_list);
+        int iNum_Edges   = curve_list.size();
+
+        double angle1 = 0.00;
+        double angle2 = 0.00;
+
+        // infor for the Frustum Axis
+
+        CubitVector Frustum_Axis;
+
+        Frustum_Axis.x(0);
+        Frustum_Axis.y(0);
+        Frustum_Axis.z(dHeight);
+
+
+
+
+        if( bIfReverseAxis )
+            axis.z( -axis.z() );
+
+
+        // Get Cross product for the resultant vector, which will be the axis for rotation
+        CubitVector cross;
+        cross = Frustum_Axis * axis;
+
+
+        // 2. Find the Angle Between them
+        CubitVector Angle;
+        double dAngle  = Angle.vector_angle( Frustum_Axis , axis );
+
+
+
+        //Now find the angle and the axis to rotate about...
+
+        dAngle = 180.0*dAngle/CUBIT_PI;
+
+        if( bIfReverseAxis )
+            dAngle = 360 - dAngle ;
+
+
+
+        // 3. Rotate the body for the received cross product axis ( cross ) as the axis
+        // and for the angle, dAngle
+        //GeometryQueryTool::instance()->rotate( cutting_tool_ptr , cross , dAngle );
+
+        GeometryQueryEngine* engine = bodySM_Ptr->get_geometry_query_engine();
+        CubitStatus result = engine->rotate( bodySM_Ptr, cross, dAngle );
+
+
+        // 4. Now find the mid-point of the specified 2 vertices, and assign that as the
+        //    2'nd parameter, for the Pt at which the center of the, created frustum should lie.
+
+        CubitVector Pt;
+        Pt.x( (AxisPt1.x() + AxisPt2.x() )/2  );
+        Pt.y( (AxisPt1.y() + AxisPt2.y() )/2  );
+        Pt.z( (AxisPt1.z() + AxisPt2.z() )/2  );
+
+
+
+        // 5 . Now move the body to the location of the target_center.
+
+        CubitTransformMatrix xform;
+        xform.translate( Pt );
+        result = engine->translate( bodySM_Ptr, Pt );
+
+
+
+
+        if (!result )
+        {
+            if(!preview)
+            {
+                restore_vg_after_modify(result_sm_list, bodies_to_modify, gme);
+                remove_pushed_attributes(result_sm_list, bodies_to_modify);
+            }
+            status = finish_webcut( engine_bodies, result_sm_list, merge, status,
+                results_list, &merged_surface_ids, &merged_curve_ids );
+        }
+        else
+        {
+            if(!preview)
+                remove_pushed_attributes(result_sm_list, engine_bodies);
+        }
+
+        if ( !result )
+        {
+            rval = CUBIT_FAILURE;
+            engine_bodies.clean_out();
+            engine_body_sms.clean_out();
+            result_sm_list.clean_out();
+            return rval;
+        }
+
+        DLIList<BodySM*> results_list_SM;
+        DLIList<BodySM*> neighboring_bodies_SM;
+        // Use the BODY to perform webcut
+        rval = gme->webcut(engine_body_sms, bodySM_Ptr,
+            neighboring_bodies_SM, results_list_SM, imprint_type, preview );
+
+        if( GeometryQueryTool::instance()->history().is_tracking() )
+        {
+            if( rval == CUBIT_SUCCESS )
+            {
+                gme->get_gqe()->delete_solid_model_entities(bodySM_Ptr);
+            }
+        }
+
+        // if we're doing the real thing (not preview) finish the process
+        if (!preview)
+        {
+            restore_vg_after_modify(results_list_SM, body_list, gme);
+            remove_pushed_attributes(results_list_SM, body_list);
+            rval = finish_webcut( bodies_to_modify, results_list_SM, merge,
+                rval, results_list);
+            do_attribute_cleanup();
+
+            //GeometryQueryTool::instance()->delete_Body( cutting_tool_ptr );
+            GeometryQueryEngine* gqe = bodySM_Ptr->get_geometry_query_engine();
+            gqe->delete_solid_model_entities(bodySM_Ptr);
+        }
+
+        if( CubitUndo::get_undo_enabled() && preview == CUBIT_FALSE )
+        {
+            if( rval == CUBIT_SUCCESS )
+                CubitUndo::note_result_bodies( results_list );
+            else
+                CubitUndo::remove_last_undo();
+        }
+
+        cutting_tool_ptr = NULL;
+        engine_bodies.clean_out();
+        engine_body_sms.clean_out();
+        result_sm_list.clean_out();
+    }
+    return rval;
+}
+//************************************************************************************************************************************************************
 void GeometryModifyTool::do_attribute_setup(void)
 {
   //save attribute settings
   CGMApp::instance()->save_current_attribute_states();
-  
+
   //Turn off all attributes
   CubitAttribManager *attrib_manager = CGMApp::instance()->attrib_manager();
-  attrib_manager->set_all_auto_update_flags( CUBIT_FALSE ); 
-  attrib_manager->set_all_auto_actuate_flags( CUBIT_FALSE ); 
-  attrib_manager->set_all_auto_write_flags( CUBIT_FALSE ); 
-  attrib_manager->set_all_auto_read_flags( CUBIT_FALSE );  
+  attrib_manager->set_all_auto_update_flags( CUBIT_FALSE );
+  attrib_manager->set_all_auto_actuate_flags( CUBIT_FALSE );
+  attrib_manager->set_all_auto_write_flags( CUBIT_FALSE );
+  attrib_manager->set_all_auto_read_flags( CUBIT_FALSE );
 
   CGMApp::instance()->attrib_manager()->set_auto_update_flag(CA_ENTITY_NAME, CUBIT_TRUE);
   CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_ENTITY_NAME, CUBIT_TRUE);
@@ -2824,6 +3375,11 @@ void GeometryModifyTool::do_attribute_setup(void)
   CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_ENTITY_ID, CUBIT_TRUE);
   CGMApp::instance()->attrib_manager()->set_auto_write_flag(CA_ENTITY_ID, CUBIT_TRUE);
   CGMApp::instance()->attrib_manager()->set_auto_read_flag(CA_ENTITY_ID, CUBIT_TRUE);
+  // enable metadata attributes
+  CGMApp::instance()->attrib_manager()->set_auto_update_flag(CA_ASSEMBLY_DATA, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_actuate_flag(CA_ASSEMBLY_DATA, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_write_flag(CA_ASSEMBLY_DATA, CUBIT_TRUE);
+  CGMApp::instance()->attrib_manager()->set_auto_read_flag(CA_ASSEMBLY_DATA, CUBIT_TRUE);
 }
 
 void GeometryModifyTool::do_attribute_cleanup(void)
@@ -2840,7 +3396,7 @@ void GeometryModifyTool::push_attributes_before_modify(DLIList<BodySM*> &old_sms
   // on to them.  This will help us maintain ids on virtual that doesn't
   // get modified by the real operation.
   int i;
-  DLIList<RefVolume*> volume_list; 
+  DLIList<RefVolume*> volume_list;
 
   for(i=old_sms.size(); i--;)
   {
@@ -2855,7 +3411,7 @@ void GeometryModifyTool::push_attributes_before_modify(DLIList<BodySM*> &old_sms
   // get all child entities (only get entities below volumes)
   DLIList<RefEntity*> child_list, ref_ent_list;
   CAST_LIST_TO_PARENT(volume_list, ref_ent_list);
-  RefEntity::get_all_child_ref_entities( ref_ent_list, child_list );  
+  RefEntity::get_all_child_ref_entities( ref_ent_list, child_list );
 
   //by including the volumes we can propagate the bcs on them
   //across webcuts
@@ -3041,11 +3597,11 @@ CubitStatus GeometryModifyTool::webcut_with_curve_loop(
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -3057,13 +3613,13 @@ CubitStatus GeometryModifyTool::webcut_with_curve_loop(
      bodies_to_modify += neighboring_bodies;
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
    }
-  
+
    CubitStatus result_val = gme->webcut(
                      body_sm_list, cutting_tool_ptr,
                      neighbor_imprint_list,
                      result_sm_list,
                      imprint_type, preview) ;
-
+ 
    // Delete the BodySM that was created to be used as a tool
    gme->get_gqe()->delete_solid_model_entities(cutting_tool_ptr) ;
 
@@ -3159,6 +3715,15 @@ CubitStatus GeometryModifyTool::webcut_with_body(
   if (!okay_to_modify( webcut_body_list, "WEBCUT" ))
     return CUBIT_FAILURE;
 
+  CubitBox tool_bounding_box = tool_body->bounding_box();
+  remove_bodies_outside_bounding_box( webcut_body_list, tool_bounding_box );
+
+  if( webcut_body_list.size() == 0 )
+  {
+    PRINT_INFO("Tool does not intersect any bodies/volumes.\n");
+    return CUBIT_FAILURE;
+  }
+
   DLIList<BodySM*> body_sm_list(webcut_body_list.size()), result_sm_list;
   BodySM* tool_sm = tool_body->get_body_sm_ptr();
   GeometryModifyEngine* gme = 0;
@@ -3206,11 +3771,11 @@ CubitStatus GeometryModifyTool::webcut_with_body(
     for( i=neighboring_bodies.size(); i--; )
     {
       Body *neighbor_body = neighboring_bodies.get_and_step();
-      BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+      BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
       GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-      
+
       if( gme == neighbor_gme )
-        neighbor_imprint_list.append( tmp_body ); 
+        neighbor_imprint_list.append( tmp_body );
     }
 
     do_attribute_setup();
@@ -3263,6 +3828,9 @@ CubitStatus GeometryModifyTool::section(
                                    CubitBoolean keep_normal_side,
                                    CubitBoolean keep_old )
 {
+  if( section_body_list.size() == 0 )
+    return CUBIT_FAILURE;
+
   if (!okay_to_modify( section_body_list, "SECTION" ))
     return CUBIT_FAILURE;
    CubitStatus rval = CUBIT_SUCCESS;
@@ -3439,7 +4007,7 @@ CubitStatus GeometryModifyTool::align_body( Body *body_ptr,
 
         //Now we have the angle and the axis to rotate about...
       angle = 180.0*angle/CUBIT_PI;
-      
+
       //if the angle is greater 180, we want the normals pointing
       //into one another, not in the same direction
       if( angle > 90 )
@@ -3452,7 +4020,7 @@ CubitStatus GeometryModifyTool::align_body( Body *body_ptr,
    GeometryQueryTool::instance()->translate( body_ptr, target_center, true, preview );
 
    if (preview)
-   {  
+   {
      if (axis.length() > CUBIT_RESABS )
        GeometryQueryTool::instance()->rotate( body_ptr, axis, -angle );
      GeometryQueryTool::instance()->translate( body_ptr, my_center );
@@ -3754,12 +4322,12 @@ CubitStatus GeometryModifyTool::sweep_setup(
 
     if( body_list.size()+free_surf_cnt != ref_face_list.size() )
     {
-      //if each is a sheet body, and every surface is in the list, 
+      //if each is a sheet body, and every surface is in the list,
       //it is ok to sweep it
 
       //PRINT_ERROR("The surfaces to be swept cannot belong to the same volume\n");
       //return CUBIT_FAILURE;
-      
+
       for( int k=body_list.size(); k--; )
       {
         Body *tmp_body = body_list.get_and_step();
@@ -3787,8 +4355,8 @@ CubitStatus GeometryModifyTool::sweep_setup(
             return CUBIT_FAILURE;
           }
         }
-      }      
-    } 
+      }
+    }
 
     output_body_list = body_list;
   }
@@ -3903,13 +4471,13 @@ CubitStatus GeometryModifyTool::sweep_rotational(
                                         DLIList<RefEntity*>& ref_ent_list,
                                         const CubitVector& point,
                                         const CubitVector& sweep_axis,
-                                        double angle,  
+                                        double angle,
                                         DLIList<Body*>& output_body_list,
                                         CubitBoolean anchor_entity,
                                         CubitBoolean keep_old,
                                         int steps,
                                         double draft_angle,
-                                        int draft_type,                                        
+                                        int draft_type,
                                         CubitBoolean switchside,
                                         CubitBoolean make_solid,
                                         CubitBoolean rigid)
@@ -4008,7 +4576,7 @@ CubitStatus GeometryModifyTool::sweep_helical( DLIList<RefEntity*>& ref_ent_list
   DLIList<BodySM*> result_list;
   CubitStatus status = gePtr1->
     sweep_helical( geom_list, result_list, location,
-                   direction, thread_distance, angle, right_handed, anchor_entity, keep_old );  
+                   direction, thread_distance, angle, right_handed, anchor_entity, keep_old );
 
   if( keep_old )
     body_list.clean_out();
@@ -4062,7 +4630,7 @@ CubitStatus GeometryModifyTool::sweep_translational(
     //Edges aren't consumed, so there's nothing to save out
     if( edge_list.size() || keep_old )
       CubitUndo::save_state();
-    else 
+    else
      //Faces will get consumed so you have to save out original entities
       CubitUndo::save_state_with_cubit_file( face_list );
   }
@@ -4075,7 +4643,7 @@ CubitStatus GeometryModifyTool::sweep_translational(
                          draft_angle,
                          draft_type,
                          switchside,
-                         rigid,                         
+                         rigid,
                          anchor_entity,
                          keep_old);
 
@@ -4187,6 +4755,7 @@ CubitStatus GeometryModifyTool::sweep_curve_target(CubitPlane ref_plane,
 		{
 			Curve *facet_curve;
 			facet_curve=edge_list[ii]->get_curve_ptr();
+			int color = 2;
 			CubitStatus response;
 			GMem g_mem;
 
@@ -4408,7 +4977,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target(RefFace *face,
   }
 
   // Set up the sweep
-  if (!sweep_setup("target", ref_ent_list, body_list, gePtr1, 
+  if (!sweep_setup("target", ref_ent_list, body_list, gePtr1,
                     change_newids, geom_list, false))
     return CUBIT_FAILURE;
 
@@ -4459,13 +5028,13 @@ CubitStatus GeometryModifyTool::sweep_surface_target(RefFace *face,
   DLIList<Body*> output_body_list;
   if (!sweep_finish("target", body_list, new_bodies, output_body_list, change_newids))
     status = CUBIT_FAILURE;
-    
-  
+
+
   /*
   for (int i = 0; i < new_bodies.size(); i++)
     GeometryQueryTool::instance()->make_Body(new_bodies.get_and_step());
     */
-    
+
 
   return CUBIT_SUCCESS;
 }
@@ -4719,6 +5288,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
 			{
 				Curve *facet_curve;
 				facet_curve=surf_edge_list[ii]->get_curve_ptr();
+				int color = 2;
 				CubitStatus response;
 				GMem g_mem;
 
@@ -4815,7 +5385,7 @@ CubitStatus GeometryModifyTool::sweep_surface_target(CubitPlane ref_plane,
 
 		//sweep the curve down through and hopefully past the target surface
 		CubitStatus status = gePtr1->sweep_translational( geom_list,sweep_result_list,
-			max_result,draft_angle, draft_type,switchside,rigid);
+			max_result,draft_angle, draft_type,switchside,rigid,CUBIT_FALSE,CUBIT_FALSE);
 
 		if (status == 0)
 		{
@@ -4959,7 +5529,7 @@ CubitStatus GeometryModifyTool::sweep_perpendicular( DLIList<RefEntity*>& ref_en
                          draft_type,
                          switchside,
                          rigid,
-                         anchor_entity, 
+                         anchor_entity,
                          keep_old );
 
   if( keep_old )
@@ -5019,7 +5589,6 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
     else
     {
       bool free_curves = false;
-      bool free_surfaces = false;
       for( int i=edge_list.size(); i--; )
       {
         if( edge_list.get_and_step()->num_parent_ref_entities() == 0 )
@@ -5028,17 +5597,21 @@ CubitStatus GeometryModifyTool::sweep_along_curve(DLIList<RefEntity*>& ref_ent_l
           break;
         }
       }
+
+      DLIList<Body*> bodies_to_save;
+      DLIList<RefEntity*> free_surfaces;
       for( int i=face_list.size(); i--; )
       {
-        if( face_list.get_and_step()->num_parent_ref_entities() == 0 )
-        {
-          free_surfaces = true;
-          break;
-        }
+        RefFace *ref_face = face_list.get_and_step();
+
+        if( ref_face->num_parent_ref_entities() == 0 )
+          free_surfaces.append( ref_face );
+        else
+          bodies_to_save.append_unique( ref_face->ref_volume()->body() );
       }
       //Faces will get consumed so you have to save out original entities
-      if( free_surfaces )
-        CubitUndo::save_state_with_cubit_file( face_list );
+      if( bodies_to_save.size() || free_surfaces.size() )
+        CubitUndo::save_state_with_cubit_file( bodies_to_save, &free_surfaces );
       else if(free_curves )
         CubitUndo::save_state_with_cubit_file( edge_list );
       else
@@ -5190,9 +5763,8 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
          sheet_axes[0] = axes[0];
          sheet_axes[1] = axes[1];
       }
- 
-      // Create the planar sheet to cut with
-      // Get the corners of the sheet
+
+      // Get the corners of the sheet ready
       center.next_point( axes[0], width/2.0, p1 );
       p1.next_point( axes[1], -height/2.0, p1 );
       p1.next_point( axes[1], height, p2 );
@@ -5201,7 +5773,19 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
    }
 
    if (!okay_to_modify( webcut_body_list, "WEBCUT" ))
-     return CUBIT_FAILURE;  
+     return CUBIT_FAILURE;
+
+   CubitVector tmp_vec( center.x()+width, center.y()+height, center.z()+depth );
+   CubitBox tmp_box(tmp_vec);
+   tmp_vec.set( center.x()-width, center.y()-height, center.z()-depth );
+   tmp_box |= tmp_vec;
+   remove_bodies_outside_bounding_box( webcut_body_list, tmp_box );
+
+   if( webcut_body_list.size() == 0 )
+   {
+     PRINT_INFO("Tool does not intersect any bodies/volumes.\n");
+     return CUBIT_FAILURE;
+   }
 
    if( CubitUndo::get_undo_enabled() )
    {
@@ -5231,12 +5815,12 @@ CubitStatus GeometryModifyTool::webcut_with_brick(
        for( i=neighboring_bodies.size(); i--; )
        {
          Body *neighbor_body = neighboring_bodies.get_and_step();
-         BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+         BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
          GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-         
+
          if( gme == neighbor_gme )
          {
-           neighbor_imprint_list.append( tmp_body ); 
+           neighbor_imprint_list.append( tmp_body );
            engine_bodies.append( neighbor_body );
          }
        }
@@ -5350,12 +5934,12 @@ CubitStatus GeometryModifyTool::webcut_with_planar_sheet(
        for( i=neighboring_bodies.size(); i--; )
        {
          Body *neighbor_body = neighboring_bodies.get_and_step();
-         BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+         BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
          GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-         
+
          if( gme == neighbor_gme )
          {
-           neighbor_imprint_list.append( tmp_body ); 
+           neighbor_imprint_list.append( tmp_body );
            engine_bodies.append( neighbor_body );
          }
        }
@@ -5445,6 +6029,15 @@ CubitStatus GeometryModifyTool::webcut_with_plane(
     return rval;
   }
 
+  //remove bodies that won't intersect plane bounding box
+  remove_bodies_outside_bounding_box( webcut_body_list, vector1, vector2, vector3 );
+
+  if( webcut_body_list.size() == 0 )
+  {
+    PRINT_INFO("Tool does not intersect any bodies/volumes.\n");
+    return CUBIT_FAILURE;
+  }
+
   if( CubitUndo::get_undo_enabled() && preview == CUBIT_FALSE )
   {
     DLIList<Body*> bodies_to_save;
@@ -5479,12 +6072,12 @@ CubitStatus GeometryModifyTool::webcut_with_plane(
       for( i=neighboring_bodies.size(); i--; )
       {
         Body *neighbor_body = neighboring_bodies.get_and_step();
-        BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+        BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
         GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-        
+
         if( gme == neighbor_gme )
         {
-          neighbor_imprint_list.append( tmp_body ); 
+          neighbor_imprint_list.append( tmp_body );
           engine_bodies.append( neighbor_body );
         }
       }
@@ -5842,8 +6435,8 @@ GeometryModifyTool::unite_separately( GeometryModifyEngine *gme_ptr,
     return CUBIT_SUCCESS;
 
   // Return success if either unite was successful
-  if( (solid_body_list.size() > 1 && result1 == CUBIT_SUCCESS) ||
-      (sheet_body_list.size() > 1 && result2 == CUBIT_SUCCESS) )
+  if( solid_body_list.size() > 1 && result1 == CUBIT_SUCCESS ||
+      sheet_body_list.size() > 1 && result2 == CUBIT_SUCCESS )
   {
     // Give warning if one or the other failed
     if( result1 == CUBIT_FAILURE )
@@ -5883,7 +6476,7 @@ GeometryModifyTool::unite_all( GeometryModifyEngine *gme_ptr,
     else
       CubitUndo::remove_last_undo();
   }
-  
+
   return result;
 }
 
@@ -5903,7 +6496,7 @@ GeometryModifyTool::unite_private( GeometryModifyEngine *gme_ptr,
 
   // Give 1st body all the names of all bodies being united
   std::list<CubitString> names_list;
-  DLIList<CubitString*> entity_names;
+  DLIList<CubitString> entity_names;
 
   body_list.reset();
   for( i=body_list.size(); i--; )
@@ -5919,7 +6512,7 @@ GeometryModifyTool::unite_private( GeometryModifyEngine *gme_ptr,
 
       // Loop through names
       for( j=entity_names.size(); j--; )
-        names_list.push_back( *entity_names.get_and_step() );
+        names_list.push_back( entity_names.get_and_step() );
 
       entity_names.clean_out();
       body_ptr->remove_entity_names();
@@ -6068,9 +6661,6 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*> &bodies,
 
    CubitStatus stat = finish_sm_op(bodies, body_sm_list, result_bodies);
 
-   if( keep_old == CUBIT_FALSE )
-     fixup_merged_entities( merged_surface_ids, merged_curve_ids);
-
    if( CubitUndo::get_undo_enabled() )
    {
      if( stat == CUBIT_SUCCESS )
@@ -6122,6 +6712,9 @@ CubitStatus GeometryModifyTool::chop( DLIList<Body*> &bodies,
      leftoversBody = result_bodies.get();
 
    }
+
+   if( keep_old == CUBIT_FALSE )
+     fixup_merged_entities( merged_surface_ids, merged_curve_ids);
 
   if( CubitUndo::get_undo_enabled() )
   {
@@ -6192,7 +6785,7 @@ CubitStatus GeometryModifyTool::hollow( DLIList<Body*>& bodies,
   DLIList<int> merged_curve_ids;
   get_merged_curve_and_surface_ids( bodies, merged_surface_ids, merged_curve_ids );
   do_attribute_setup();
- 
+
   // Push attributes down onto the bodies to be hollowed
   push_attributes_before_modify( body_sms );
 
@@ -6345,7 +6938,7 @@ CubitStatus GeometryModifyTool::thicken( DLIList<Body*>& bodies,
 
   // Update graphics
   while (entities_to_update.size())
-    entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
   return result;
 }
@@ -6809,11 +7402,11 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
     return CUBIT_FAILURE;
   }
 
-   //if (get_group_imprint() == CUBIT_FALSE)
-   //{
-   //  CubitStatus result = imprint_singly( from_body_list, new_body_list, keep_old );
-   //  return result;
-   //}
+   if (get_group_imprint() == CUBIT_FALSE)
+   {
+     CubitStatus result = imprint_singly( from_body_list, new_body_list, keep_old );
+     return result;
+   }
 
      // Check the GeometryEngine for each of the Body's; check to
      // make sure they're all the same
@@ -6860,9 +7453,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
       push_named_attributes_to_curves_and_points(tb_list, "ORIGINAL");
    }
 
-   DLIList<TopologyBridge*> new_tbs, att_tbs;
-   CubitStatus result =  gePtr1->imprint(from_sms, new_sms, keep_old, &new_tbs,
-     &att_tbs);
+   CubitStatus result =  gePtr1->imprint(from_sms, new_sms, keep_old);
 
    int i, j;
    if(process_composites)
@@ -6872,8 +7463,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &from_body_list,
         // Analyze the results and adjust virtual attributes as necessary.
        DLIList<TopologyBridge*> tb_list;
        CAST_LIST(new_sms, tb_list, TopologyBridge);
-        GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-          tb_list, from_body_list);
+        GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, from_body_list);
 
         // Clean up attributes.
         remove_imprint_attributes_after_modify(from_sms, new_sms);
@@ -7064,7 +7654,7 @@ CubitStatus GeometryModifyTool::scale( Body *&body,
 }
 
 
-/*
+
 CubitStatus GeometryModifyTool::imprint_singly( DLIList<Body*> &from_body_list,
                                                 DLIList<Body*> &new_body_list,
                                                 CubitBoolean keep_old )
@@ -7247,7 +7837,7 @@ CubitStatus GeometryModifyTool::imprint_singly( DLIList<Body*> &from_body_list,
 
    return CUBIT_SUCCESS;
 }
-*/
+
 
 CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
                                          DLIList<RefEdge*> &ref_edge_list,
@@ -7338,7 +7928,10 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     }
 
     while(temporary_bridges.size())
-      delete temporary_bridges.pop();
+    {
+      TopologyBridge* bridge = temporary_bridges.pop();
+      bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+    }
 
     return status;
   }
@@ -7346,7 +7939,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
   {
     if(process_composites)
     {
-      DLIList<TopologyBridge*> tb_list, new_tbs, att_tbs;
+      DLIList<TopologyBridge*> tb_list;
       // Analyze the results and adjust virtual attributes as necessary.
       CAST_LIST(new_sm_list, tb_list, TopologyBridge);
       // The bridges coming back in temporary_bridges may not have IMPRINTER
@@ -7354,8 +7947,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
       // sure they get IMPRINTER attributes.
       push_named_attributes_to_curves_and_points(temporary_bridges, "IMPRINTER");
       tb_list += temporary_bridges;
-      GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-                                                                    tb_list, body_list);
+      GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, body_list);
 
       // Clean up attributes.
       remove_imprint_attributes_after_modify(body_sm_list, new_sm_list);
@@ -7367,9 +7959,12 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
   }
 
   while(temporary_bridges.size())
-    delete temporary_bridges.pop();
+  {
+    TopologyBridge* bridge = temporary_bridges.pop();
+    bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+  }
 
-   status = finish_sm_op(body_list, new_sm_list, new_body_list);
+  status = finish_sm_op(body_list, new_sm_list, new_body_list);
 
   if(process_composites)
     do_attribute_cleanup();
@@ -7470,9 +8065,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
     // sure they get IMPRINTER attributes.
     push_named_attributes_to_curves_and_points(temporary_bridges, "IMPRINTER");
     tb_list += temporary_bridges;
-    DLIList<TopologyBridge*> new_tbs, att_tbs;
-    GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-                    tb_list, body_list);
+    GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, body_list);
 
     // Clean up attributes.
     remove_imprint_attributes_after_modify(body_sm_list, new_sm_list);
@@ -7482,7 +8075,10 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
   }
 
   while(temporary_bridges.size())
-    delete temporary_bridges.pop();
+  {
+    TopologyBridge* bridge = temporary_bridges.pop();
+    bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+  }
 
   CubitStatus status2 = finish_sm_op(body_list, new_sm_list, new_body_list);
 
@@ -7499,7 +8095,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<RefFace*> &ref_face_list,
 
    if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
      return status;
- 
+
    else
      return CUBIT_FAILURE;
 }
@@ -7645,9 +8241,8 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
     push_named_attributes_to_curves_and_points(tb_list, "IMPRINTER");
   }
 
-  DLIList<TopologyBridge*> new_tbs, att_tbs;
   CubitStatus status = gme->imprint( new_surface_list, curve_lists_list,
-    new_body_sm, keep_old_body, expand, &new_tbs, &att_tbs );
+    new_body_sm, keep_old_body, expand);
 
   DLIList<Body*> new_body_list;
   DLIList<BodySM*> new_sm_list;
@@ -7659,8 +8254,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
        DLIList<TopologyBridge*> tmp_tb_list;
        CAST_LIST(new_sm_list, tmp_tb_list, TopologyBridge);
        tb_list += tmp_tb_list;
-    GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-                    tb_list, old_body_list);
+    GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, old_body_list);
 
     // Clean up attributes.
     remove_imprint_attributes_after_modify(body_sm_list, new_sm_list);
@@ -7684,7 +8278,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Surface*> &surface_list,
 
   if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
      return status;
- 
+
    else
      return CUBIT_FAILURE;
 }
@@ -7750,9 +8344,8 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     push_named_attributes_to_curves_and_points(tmp_tb_list, "ORIGINAL");
   }
 
-  DLIList<TopologyBridge*> new_tbs, att_tbs;
   CubitStatus status = gePtr1->imprint( body_sm_list, vector_list,new_sm_list,
-    keep_old_body, &new_tbs,&att_tbs );
+    keep_old_body);
 
   temporary_bridges.uniquify_ordered();
 
@@ -7762,11 +8355,13 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
     DLIList<TopologyBridge*> tb_list;
     CAST_LIST(new_sm_list, tb_list, TopologyBridge);
     tb_list += temporary_bridges;
-    GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-                      tb_list, body_list);
+    GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, body_list);
 
     while(temporary_bridges.size())
-      delete temporary_bridges.pop();
+    {
+      TopologyBridge* bridge = temporary_bridges.pop();
+      bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+    }
 
     // Clean up attributes.
     remove_imprint_attributes_after_modify(body_sm_list, new_sm_list);
@@ -7813,7 +8408,7 @@ CubitStatus GeometryModifyTool::imprint( DLIList<Body*> &body_list,
 
    if( status == CUBIT_SUCCESS && status2 == CUBIT_SUCCESS)
      return status;
- 
+
    else
      return CUBIT_FAILURE;
 }
@@ -7823,7 +8418,7 @@ CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
                                                CubitBoolean trim_projected)
 {
   int i, j;
-  
+
    // Check the GeometryEngine for each of the RefEdges; check to
    // make sure they're all the same
   DLIList<Surface*> surface_list(ref_face_list.size());
@@ -7847,12 +8442,12 @@ CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
 
 
    curve_list_new.reset();
-   
+
    if(trim_projected){
      DLIList<Curve*> tmp_curves, all_new_curves;
      Curve* tmp_curve;
      Surface* tmp_surface;
-     
+
      for(i = 0; i< surface_list.size(); i++){
        tmp_curves.clean_out();
        tmp_surface = surface_list.get_and_step();
@@ -7873,7 +8468,7 @@ CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
          PRINT_WARNING("No curve remained after trimming operation.  \n \tCurve projection may lie completely outside of trimmed surface.\n");
        }
      }
-     
+
        //fix this...
        //can we just cleanout this list or do we need to delete the entities in it.
      for( i = 0; i< curve_list_new.size(); i++ )
@@ -7881,15 +8476,15 @@ CubitStatus GeometryModifyTool::project_edges( DLIList<RefFace*> &ref_face_list,
        Curve *tmp_curve = curve_list_new.get_and_step();
        gme->get_gqe()->delete_solid_model_entities( tmp_curve );
      }
-     
+
      curve_list_new.clean_out();
      curve_list_new = all_new_curves;
-     
+
      if( CubitUndo::get_undo_enabled() && status == CUBIT_SUCCESS )
        CubitUndo::save_state();
    }
-   
-  
+
+
 
    curve_list_new.reset();
    for (i = curve_list_new.size(); i--; )
@@ -7950,7 +8545,7 @@ GeometryModifyTool::imprint_projected_edges(DLIList<RefFace*> &ref_face_list,
    }
 
    CubitStatus status = gme->imprint_projected_edges( surface_list, curve_list,
-                                                      new_sm_list, kept_free_edges, 
+                                                      new_sm_list, kept_free_edges,
                                                       keep_old_body, keep_free_edges);
 
    if (!finish_sm_op(body_list, new_sm_list, new_body_list))
@@ -7972,7 +8567,7 @@ GeometryModifyTool::imprint_projected_edges(DLIList<RefFace*> &ref_face_list,
      if( status == CUBIT_FAILURE )
        CubitUndo::remove_last_undo();
      else
-     {      
+     {
        CubitUndo::note_result_bodies( new_body_list );
        if( keep_free_edges )
        {
@@ -8080,6 +8675,16 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
    if (!okay_to_modify( webcut_body_list, "WEBCUT" ))
      return CUBIT_FAILURE;
 
+   //remove any bodies with bbox that does not intersect tool body bbox
+   CubitBox tool_bounding_box = sheet_body->bounding_box();
+   remove_bodies_outside_bounding_box( webcut_body_list, tool_bounding_box );
+
+   if( webcut_body_list.size() == 0 )
+   {
+     PRINT_INFO("Tool does not intersect any bodies/volumes.\n");
+     return CUBIT_FAILURE;
+   }
+
    DLIList<Body*> original_body_list = webcut_body_list;
    webcut_body_list.append(sheet_body);
    DLIList<BodySM*> body_sm_list(webcut_body_list.size()), new_sms;
@@ -8092,7 +8697,7 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
       return CUBIT_FAILURE;
    }
    BodySM* tool_sm = body_sm_list.pop();
- 
+
    DLIList<int> merged_surface_ids;
    DLIList<int> merged_curve_ids;
    DLIList<BodySM*> neighbor_imprint_list;
@@ -8112,11 +8717,11 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8163,7 +8768,7 @@ CubitStatus GeometryModifyTool::webcut_with_sheet( DLIList<Body*> &webcut_body_l
 
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8208,7 +8813,7 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
       return CUBIT_FAILURE;
    }
 
-   const char* modeler = 
+   const char* modeler =
           ref_face_list.get()->get_geometry_query_engine()->modeler_type();
    if (strncmp("virtual", modeler, 7) == 0)
    {
@@ -8220,7 +8825,7 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
    Surface* surf_ptr = 0;
    TopologyBridge* bridge = ref_face_list.get()->bridge_manager()->topology_bridge(gme->get_gqe());
    surf_ptr = dynamic_cast<Surface*>(bridge);
-   
+
    if ( !surf_ptr )
    {
       PRINT_ERROR("Performing WEBCUTS on volumes containing geometry from a\n"
@@ -8241,7 +8846,7 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
      bridge = ref_face_ptr->bridge_manager()->topology_bridge(gqe);
      surf_ptr = dynamic_cast<Surface*>(bridge);
      surf_list.append( surf_ptr );
-   }   
+   }
 
    DLIList<int> merged_surface_ids;
    DLIList<int> merged_curve_ids;
@@ -8262,11 +8867,11 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8291,7 +8896,7 @@ CubitStatus GeometryModifyTool::webcut_with_extended_sheet( DLIList<Body*> &webc
                           &merged_surface_ids, &merged_curve_ids );
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8345,7 +8950,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
      }
 
      stop_surface = stop_surf->get_surface_ptr();
-   } 
+   }
 
    DLIList<int> merged_surface_ids;
    DLIList<int> merged_curve_ids;
@@ -8366,11 +8971,11 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8411,7 +9016,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces_rotated(
                           &merged_surface_ids, &merged_curve_ids );
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8487,11 +9092,11 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves_rotated(
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8546,7 +9151,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves_rotated(
                           &merged_surface_ids, &merged_curve_ids );
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8642,11 +9247,11 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8659,7 +9264,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
      get_merged_curve_and_surface_ids( bodies_to_modify, merged_surface_ids, merged_curve_ids );
    }
 
-   CubitVector tmp_sweep_vector = sweep_vector;
+  CubitVector tmp_sweep_vector = sweep_vector;
    //get model bbox info...will scale sweep vector by its diagonal
    //so that we go far enough
    if( through_all || stop_surf )
@@ -8725,7 +9330,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_curves(
                           &merged_surface_ids, &merged_curve_ids );
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8802,9 +9407,9 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
      //make sure that the curve is not part of the surface(s) being swept
      DLIList<RefFace*> faces_of_edge;
      edge_to_sweep_along->ref_faces( faces_of_edge );
-      
+
      int kk;
-     for( kk=faces_of_edge.size(); kk--; ) 
+     for( kk=faces_of_edge.size(); kk--; )
      {
        if( tool_faces.is_in_list( faces_of_edge.get_and_step() ) )
        {
@@ -8837,11 +9442,11 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
      for( i=neighboring_bodies.size(); i--; )
      {
        Body *neighbor_body = neighboring_bodies.get_and_step();
-       BodySM *tmp_body = neighbor_body->get_body_sm_ptr(); 
+       BodySM *tmp_body = neighbor_body->get_body_sm_ptr();
        GeometryModifyEngine *neighbor_gme = get_engine( tmp_body );
-       
+
        if( gme == neighbor_gme )
-         neighbor_imprint_list.append( tmp_body ); 
+         neighbor_imprint_list.append( tmp_body );
      }
 
      do_attribute_setup();
@@ -8875,7 +9480,7 @@ CubitStatus GeometryModifyTool::webcut_with_sweep_surfaces(
                           &merged_surface_ids, &merged_curve_ids );
      do_attribute_cleanup();
 
-     if( CubitUndo::get_undo_enabled() ) 
+     if( CubitUndo::get_undo_enabled() )
      {
        if( stat  == CUBIT_SUCCESS )
          CubitUndo::note_result_bodies( new_bodies );
@@ -8893,7 +9498,7 @@ CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
   TopologyBridge* bridge = 0;
   GeometryModifyEngine* gme_ptr = get_engine(ref_edge, &bridge);
   Curve *curve = dynamic_cast<Curve*>(bridge);
-  
+
   if( CubitUndo::get_undo_enabled() )
   {
     DLIList<RefEdge*> tmp_ents(1);
@@ -8903,7 +9508,7 @@ CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
 
   DLIList<Curve*> new_curves;
   gme_ptr->split_free_curve( curve, split_locations, new_curves );
- 
+
   if (!new_curves.size())
   {
     if( CubitUndo::get_undo_enabled() )
@@ -8912,7 +9517,7 @@ CubitStatus GeometryModifyTool::split_free_curve( RefEdge *ref_edge,
   }
 
   GeometryQueryTool::instance()->delete_RefEdge( ref_edge );
-  
+
   int i;
   for( i=0; i<new_curves.size(); i++ )
   {
@@ -9106,7 +9711,7 @@ GeometryModifyTool::separate_surfaces( DLIList<RefFace*> &ref_face_list,
     for( i=gme_face_list.size(); i--; )
       gme_face_list.get_and_step()->bodies( gme_body_list );
     gme_body_list.uniquify_unordered();
-    
+
     DLIList<BodySM*> new_sm_list;
     DLIList<Body*> new_body_list;
     if( gme_ptr->separate_surfaces( surface_list, new_sm_list ) == CUBIT_FAILURE ||
@@ -9189,7 +9794,7 @@ CubitStatus GeometryModifyTool::reverse( DLIList<Body*> &body_list )
      {
        reversed_bodies.append( body );
        GeometryQueryTool::instance()->make_Body( body_sm );
-       body->notify_all_observers( GEOMETRY_MODIFIED );
+       AppUtil::instance()->send_event(body, GEOMETRY_MODIFIED );
        PRINT_INFO("Reversed body %d.\n", body->id());
        continue;
      }
@@ -9272,7 +9877,7 @@ CubitStatus GeometryModifyTool::reverse( DLIList<RefFace*> &ref_face_list )
   for( i=body_list.size(); i--; )
   {
     body_ptr = body_list.get_and_step();
-    body_ptr->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(body_ptr, GEOMETRY_MODIFIED );
     body_sm_ptr = body_ptr->get_body_sm_ptr();
     new_sm_list.append( body_sm_ptr );
   }
@@ -9693,7 +10298,6 @@ GeometryModifyTool::auto_mid_surface(DLIList<Body*> &body_list_in,
                                      double lower_tol,
                                      double upper_tol,
                                      CubitBoolean delete_midsurfaced,
- 
                                      CubitBoolean preview)
 {
 	// Check for virtual geometry
@@ -9782,7 +10386,7 @@ GeometryModifyTool::regularize_refentity(RefEntity *old_entity_ptr, Body *&new_b
   //ignore free entities
   if( body_list.size() == 0 )
   {
-    PRINT_ERROR("%s %d is a free entity.  Cannot regularize it.\n", old_entity_ptr->class_name(), 
+    PRINT_ERROR("%s %d is a free entity.  Cannot regularize it.\n", old_entity_ptr->class_name(),
                                                                     old_entity_ptr->id() );
     new_body_ptr = NULL;
     return CUBIT_FAILURE;
@@ -9915,7 +10519,7 @@ CubitStatus GeometryModifyTool::regularize_body(Body *body_ptr,
    }
 
    // remove mesh from modified body
-   body_ptr->notify_all_observers(MODEL_ENTITY_MODIFIED);
+   AppUtil::instance()->send_event(body_ptr, MODEL_ENTITY_MODIFIED);
 
    new_bodysm_list.append(new_sm);
    restore_vg_after_modify(new_bodysm_list, b_list, gme);
@@ -9987,7 +10591,7 @@ GeometryModifyTool::create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_
   ModelQueryEngine::instance()->
     query_model( query_input, DagType::body_type(), query_output );
   CAST_LIST( query_output, body_list, Body );
-  
+
   int i;
   DLIList<RefFace*> free_face_list;
   for ( i=ref_face_list.size(); i--; )
@@ -10002,8 +10606,8 @@ GeometryModifyTool::create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_
 
   if (CubitUndo::get_undo_enabled())
     CubitUndo::save_state_with_cubit_file(ref_face_list);
-  
-  //get all the bodysm's 
+
+  //get all the bodysm's
   DLIList<BodySM*> old_body_sm_list;
   for( i=body_list.size(); i--; )
   {
@@ -10011,8 +10615,8 @@ GeometryModifyTool::create_solid_bodies_from_surfs( DLIList<RefFace*> &ref_face_
     TopologyBridge *tb = tmp_body->bridge_manager()->topology_bridge();
     BodySM *tmp_body_sm = CAST_TO(tb, BodySM);
     if( tmp_body_sm )
-      old_body_sm_list.append( tmp_body_sm );    
-  }  
+      old_body_sm_list.append( tmp_body_sm );
+  }
 
   // TODO: do I need a clear and a flush here? --KGM
   GeometryModifyTool::instance()->do_attribute_setup();
@@ -10313,7 +10917,7 @@ GeometryModifyTool::surface_intersection( RefFace *ref_face1,
 }
 
 
-RefEdge* 
+RefEdge*
 GeometryModifyTool::create_arc(const CubitVector& position,
                                double radius,
                                double start_angle,
@@ -10758,7 +11362,7 @@ GeometryModifyTool::create_curve_combine( DLIList<RefEdge*>& ref_edge_list,
   result = gme->create_curve_combine(curve_list, new_curve_ptr);
   if (new_curve_ptr)
       new_ref_edge_ptr = CAST_TO(new_curve_ptr->topology_entity(), RefEdge);
-  
+
 
   return result;
 }
@@ -11953,7 +12557,7 @@ CubitStatus GeometryModifyTool::idealize_fillet_geometry(DLIList<RefEntity*> ide
     //grabbing all the curve loops ONLY from surfaces which are a sheet body
     int y, i, j, z;
     DLIList<RefFace*> sheet_body_idealize_face;
-    
+
     for(i=0; i<face_to_idealize.size(); i++)
     {
         RefFace* target_face = face_to_idealize.get_and_step();
@@ -11963,7 +12567,7 @@ CubitStatus GeometryModifyTool::idealize_fillet_geometry(DLIList<RefEntity*> ide
         {
             Shell* target_shell = shell_list.get_and_step();
             if(target_face->is_nonmanifold( (GroupingEntity*)target_shell ) )
-            {         
+            {
                 sheet_body_idealize_face.append(face_to_idealize[i]);
             }
         }
@@ -12079,7 +12683,7 @@ CubitStatus GeometryModifyTool::idealize_fillet_geometry(DLIList<RefEntity*> ide
 
         CubitStatus stat = gme_ptr->tweak_remove(master_curve_remove_list, new_bodysm_list,CUBIT_FALSE, CUBIT_TRUE );
 
-        SET_ERROR_FLAG(old_error_flag); // turn errors back on 
+        SET_ERROR_FLAG(old_error_flag); // turn errors back on
         if(stat==CUBIT_FAILURE)
         {
             PRINT_WARNING("At least one of the fillets which met your requirements \n"
@@ -12103,7 +12707,7 @@ CubitStatus GeometryModifyTool::idealize_fillet_geometry(DLIList<RefEntity*> ide
             PRINT_WARNING("At least one of the fillets which met your requirements \n"
                 "           can't be tweaked due to the curve's geometry\n");
         }
-        SET_ERROR_FLAG(old_error_flag); // turn errors back on 
+        SET_ERROR_FLAG(old_error_flag); // turn errors back on
 
         //update DAG
         DLIList<Body*> new_body_list;
@@ -12149,7 +12753,7 @@ CubitStatus GeometryModifyTool::idealize_hole_slot_geometry(DLIList<RefEntity*> 
         {
             Shell* target_shell = shell_list.get_and_step();
             if(target_face->is_nonmanifold( (GroupingEntity*)target_shell ) )
-            {         
+            {
                 sheet_body_idealize_face.append(face_to_idealize[i]);
             }
         }
@@ -12194,7 +12798,7 @@ CubitStatus GeometryModifyTool::idealize_hole_slot_geometry(DLIList<RefEntity*> 
         //cast the exclude DLIList<RefEntity> to DLIList<RefEdge>
         DLIList<RefEdge*> exclude_edge;
         CAST_LIST(exclude_entity, exclude_edge, RefEdge);
-        
+
         //switching the DLIList<RefEdge> to DLIList<Curve>
         DLIList<Curve*> exclude_cuves;
         GeometryModifyEngine* gme_ptr1;
@@ -12248,7 +12852,7 @@ CubitStatus GeometryModifyTool::idealize_hole_slot_geometry(DLIList<RefEntity*> 
                 possible_internal_arcs[i]->surfaces(temp_list);
                 //check whether or not curve is of arc type and whether it is attached to more than one surface
                 if( possible_internal_arcs[i]->geometry_type() != ARC_CURVE_TYPE || temp_list.size() != 1)
-                {               
+                {
                     not_hole_loop.append(possible_internal_LoopSM_list[y]);
                     break;
                 }
@@ -12525,7 +13129,7 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
 	{
 		doubler_surface.append(tweak_surface[z]);
 	}
-	for(int z = 0;z<tweak_face.size();z++)
+	for(int z=0;z<tweak_face.size();z++)
     {
         target_surface.append(tweak_surface[z]);
     }
@@ -12735,7 +13339,7 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
 			tweak_target_bodySM[0]->surfaces(tweak_body_surfaces);
 			DLIList <Curve*> tweak_external_curves;
 			doubler_external_curves.clean_out();
-			
+
 			//refilling DLIList's as needed based on internal_flg
 			//if we are not keeping internal surfaces we do not want it's curves in the doubler_external_curves list
 			//otherwise if we are, we do want the curves in the list for the following sections for loop
@@ -12851,7 +13455,7 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
             }
             all_kept_bodies+=resulting_bodies;
         }
-    }	
+    }
 	else
 	{
 		DLIList<BodySM*> swept_bodies;
@@ -13054,7 +13658,7 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
 			DLIList <Surface*> surfaces_to_keep;
 			surfaces_to_remove = thicken_surfaces;
 			DLIList <Curve*> tweak_external_curves;
-			
+
 			for(i=0;i<thicken_surfaces.size();i++)
 			{
 				thicken_surfaces[i]->loopsms(test_loopSM_list);
@@ -13151,7 +13755,7 @@ CubitStatus GeometryModifyTool::create_surface_doubler(DLIList<RefEntity*> doubl
                 PRINT_WARNING( "Command may have failed at finding doubler surface(s) and appending them to the drop-down surfaces\n" );
                 return CUBIT_FAILURE;
         }
-        
+
         //update DAG
 		CubitStatus stat;
 		stat = finish_sm_op( old_body_list, all_kept_bodies ,body_list_out );
@@ -13226,12 +13830,12 @@ CubitStatus GeometryModifyTool::tweak_bend( DLIList<Body*> &bend_bodies,
 		else
 			CubitUndo::save_state_with_cubit_file( bend_bodies );
     }
-    
+
     DLIList<BodySM*> new_body_sm_list;
     DLIList<BodySM*> bend_bodies_sm;
     GeometryModifyEngine* engine;
     engine = common_modify_engine(bend_bodies, bend_bodies_sm);
-    
+
     if (!preview)
     {
         //do_attribute_setup();
@@ -13291,7 +13895,7 @@ CubitStatus GeometryModifyTool::tweak_bend( DLIList<Body*> &bend_bodies,
             Body* body_ptr = bend_bodies.get_and_step();
             body_ptr->notify_all_observers( GEOMETRY_MODIFIED );
         }//*/
-        
+
         // get list of entities to update
         DLIList<RefEntity*> entities_to_update;
         int i;
@@ -13324,7 +13928,7 @@ CubitStatus GeometryModifyTool::tweak_bend( DLIList<Body*> &bend_bodies,
         }
         // Update graphics
         while (entities_to_update.size())
-            entities_to_update.pop()->notify_all_observers(GEOMETRY_MODIFIED);
+            AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED);
 
         return stat;
     }
@@ -14348,7 +14952,7 @@ CubitStatus GeometryModifyTool::tweak_move( DLIList<RefFace*>& ref_face_list,
 
     // Update graphics
     while (entities_to_update.size())
-      entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+      AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
     do_attribute_cleanup();
   }
@@ -14537,7 +15141,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefFace*> &ref_face_list,
   if( add_ref_face_list_ptr && add_ref_face_list_ptr->size() )
   {
     DLIList<Body*> old_body_list2;
-    GeometryModifyEngine* gme_ptr2 = tweak_setup( *add_ref_face_list_ptr, "Offsetting", 
+    GeometryModifyEngine* gme_ptr2 = tweak_setup( *add_ref_face_list_ptr, "Offsetting",
       old_body_list2, add_surface_list, CUBIT_TRUE );
     if (!gme_ptr2)
       return CUBIT_FAILURE;
@@ -14584,7 +15188,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefFace*> &ref_face_list,
   DLIList<BodySM*> new_bodysm_list;
   CubitStatus stat;
   if( add_surface_list.size() )
-    stat = gme_ptr->tweak_offset( surface_list, offset_distance, 
+    stat = gme_ptr->tweak_offset( surface_list, offset_distance,
                                   &add_surface_list, add_offset_list_ptr,
                                   new_bodysm_list, keep_old_body, preview );
   else
@@ -14785,7 +15389,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefFace*> &ref_face_list,
 
   // Update graphics
   while (entities_to_update.size())
-    entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
   return stat;
 }
@@ -14821,7 +15425,7 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefEdge*> &ref_edge_list,
   if( add_ref_edge_list_ptr && add_ref_edge_list_ptr->size() )
   {
     DLIList<Body*> old_body_list2;
-    GeometryModifyEngine* gme_ptr2 = tweak_setup( *add_ref_edge_list_ptr, "Offsetting", 
+    GeometryModifyEngine* gme_ptr2 = tweak_setup( *add_ref_edge_list_ptr, "Offsetting",
       old_body_list2, add_curve_list );
     if (!gme_ptr2)
       return CUBIT_FAILURE;
@@ -14859,9 +15463,37 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefEdge*> &ref_edge_list,
   if( stat == CUBIT_FAILURE )
     return CUBIT_FAILURE;
 
-  // Update DAG
+  DLIList<RefEntity*> entities_to_update;
   if( preview == CUBIT_FALSE )
   {
+    // check for resued entities, they have been moved and we need to notify observers
+    for(int i=0; i<new_bodysm_list.size(); i++)
+    {
+      BodySM* bodysm = new_bodysm_list.get_and_step();
+      DLIList<TopologyBridge*> to_check;
+      DLIList<TopologyBridge*> tmp;
+      DLIList<Surface*> surfs;
+      bodysm->surfaces(surfs);
+      DLIList<Curve*> curves;
+      bodysm->curves(curves);
+      DLIList<TBPoint*> points;
+      bodysm->points(points);
+      to_check.append(bodysm);
+      to_check.append(bodysm->lump());
+      CAST_LIST_TO_PARENT(surfs, tmp);
+      to_check += tmp;
+      CAST_LIST_TO_PARENT(curves, tmp);
+      to_check += tmp;
+      CAST_LIST_TO_PARENT(points, tmp);
+      to_check += tmp;
+
+      int k;
+      for(k=0; k<to_check.size(); k++)
+        if(BridgeManager* m = to_check.get_and_step()->bridge_manager())
+          if(TopologyEntity* t = m->topology_entity())
+            entities_to_update.append(CAST_TO(t, RefEntity));
+    }
+
     stat = finish_sm_op( old_body_list, new_bodysm_list, new_body_list );
 
     if( CubitUndo::get_undo_enabled()  )
@@ -14872,6 +15504,10 @@ CubitStatus GeometryModifyTool::tweak_offset( DLIList<RefEdge*> &ref_edge_list,
         CubitUndo::note_result_bodies( new_body_list );
     }
   }
+
+  // Update graphics
+  while (entities_to_update.size())
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
   // Update graphics
   DLIList<Body*> moved_bodies(new_body_list);
@@ -15244,7 +15880,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefFace*> &ref_face_list,
 
     // Update graphics
   while (entities_to_update.size())
-    entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
 
   //unmerge all curves attached to these vertices after
@@ -15407,7 +16043,7 @@ CubitStatus GeometryModifyTool::tweak_remove( DLIList<RefEdge*> &ref_edge_list,
 
     // Update graphics
     while (entities_to_update.size())
-      entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+      AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
     if( CubitUndo::get_undo_enabled()  )
     {
@@ -15486,7 +16122,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
   DLIList<BodySM*> new_bodysm_list;
   CubitStatus stat = gme_ptr1->tweak_target( surface_list, target_surf_list,
                                              new_bodysm_list, extend_flg,
-                                             limit_plane, reverse_flg, 
+                                             limit_plane, reverse_flg,
                                              keep_old_body, preview );
 
 
@@ -15518,7 +16154,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
       old_body->ref_faces(tmp_faces);
       old_faces +=tmp_faces;
   }
-  
+
   // Update DAG
   stat = finish_sm_op( old_body_list, new_bodysm_list, new_body_list );
 
@@ -15682,7 +16318,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefFace*> &ref_face_list,
 
   // Update graphics
   while (entities_to_update.size())
-    entities_to_update.pop()->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
 
 
   return CUBIT_SUCCESS;
@@ -15884,7 +16520,7 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefEdge*> &ref_edge_list,
   DLIList<Body*> moved_bodies(new_body_list);
   moved_bodies.intersect(old_body_list);
   while (moved_bodies.size())
-    moved_bodies.pop()->notify_sub_all_observers( GEOMETRY_MODIFIED );
+	moved_bodies.pop()->notify_sub_all_observers( GEOMETRY_MODIFIED );
 
   return CUBIT_SUCCESS;
 }
@@ -16045,8 +16681,38 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefEdge*> &ref_edge_list,
   if( stat == CUBIT_FAILURE)
     return stat;
 
+  DLIList<RefEntity*> entities_to_update;
   if( preview == CUBIT_FALSE )
   {
+    // check for resued entities, they have been moved and we need to notify observers
+    int i;
+    for(i=0; i<new_bodysm_list.size(); i++)
+    {
+      BodySM* bodysm = new_bodysm_list.get_and_step();
+      DLIList<TopologyBridge*> to_check;
+      DLIList<TopologyBridge*> tmp;
+      DLIList<Surface*> surfs;
+      bodysm->surfaces(surfs);
+      DLIList<Curve*> curves;
+      bodysm->curves(curves);
+      DLIList<TBPoint*> points;
+      bodysm->points(points);
+      to_check.append(bodysm);
+      to_check.append(bodysm->lump());
+      CAST_LIST_TO_PARENT(surfs, tmp);
+      to_check += tmp;
+      CAST_LIST_TO_PARENT(curves, tmp);
+      to_check += tmp;
+      CAST_LIST_TO_PARENT(points, tmp);
+      to_check += tmp;
+
+      int k;
+      for(k=0; k<to_check.size(); k++)
+        if(BridgeManager* m = to_check.get_and_step()->bridge_manager())
+          if(TopologyEntity* t = m->topology_entity())
+            entities_to_update.append(CAST_TO(t, RefEntity));
+    }
+
     // Update DAG
     stat = finish_sm_op( old_body_list, new_bodysm_list, new_body_list );
 
@@ -16060,10 +16726,14 @@ CubitStatus GeometryModifyTool::tweak_target( DLIList<RefEdge*> &ref_edge_list,
   }
 
   // Update graphics
+  while (entities_to_update.size())
+    AppUtil::instance()->send_event(entities_to_update.pop(), GEOMETRY_MODIFIED );
+
+  // Update graphics
   DLIList<Body*> moved_bodies(new_body_list);
   moved_bodies.intersect(old_body_list);
   while (moved_bodies.size())
-    moved_bodies.pop()->notify_sub_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event(moved_bodies.pop(), GEOMETRY_MODIFIED );
 
   return stat;
 }
@@ -16101,12 +16771,12 @@ GeometryModifyTool::tweak_target( RefVertex *ref_vertex_ptr,
 
     if( !ref_face_ptr->is_directly_related( ref_vertex_ptr ) )
     {
-      PRINT_ERROR( "Vertex %d is not part of 'modify' Surface %d\n", 
+      PRINT_ERROR( "Vertex %d is not part of 'modify' Surface %d\n",
         ref_vertex_ptr->id(), ref_face_ptr->id() );
       return CUBIT_FAILURE;
     }
   }
-  
+
   GeometryModifyEngine *gme_ptr;
   DLIList<RefVertex*> ref_vertex_list(1);
   ref_vertex_list.append( ref_vertex_ptr );
@@ -16167,7 +16837,7 @@ GeometryModifyTool::tweak_target( RefVertex *ref_vertex_ptr,
         if( curve_type != STRAIGHT_CURVE_TYPE )
         {
           PRINT_ERROR( "Curve %d is not linear. Curves that are in the 'modify'\n"
-            "       surfaces attached to the tweak vertex must be linear.\n", 
+            "       surfaces attached to the tweak vertex must be linear.\n",
             ref_edge_ptr->id() );
           return CUBIT_FAILURE;
         }
@@ -16223,9 +16893,9 @@ GeometryModifyTool::tweak_target( RefVertex *ref_vertex_ptr,
 
   // Do tweak to target
   BodySM *new_bodysm_ptr;
-  CubitStatus stat = gme_ptr->tweak_target( point_ptr, surface_list, 
+  CubitStatus stat = gme_ptr->tweak_target( point_ptr, surface_list,
                                             ref_loc,
-                                            new_bodysm_ptr, 
+                                            new_bodysm_ptr,
                                             keep_old, preview );
 
   if( CubitUndo::get_undo_enabled() && preview == CUBIT_FALSE )
@@ -16281,7 +16951,7 @@ CubitStatus GeometryModifyTool::create_net_surface( DLIList<Surface*>& ref_face_
                                                     DLIList<DLIList<CubitVector*>*> &vec_lists_u,
                                                     DLIList<DLIList<CubitVector*>*> &vec_lists_v,
                                                     double net_tol, CubitBoolean heal )
-{ 
+{
    GeometryModifyEngine* GMEPtr = get_engine(ref_face_list.get());
    return GMEPtr->create_net_surface( ref_face_list, new_body, vec_lists_u, vec_lists_v, net_tol, heal );
 } */
@@ -16425,7 +17095,7 @@ GeometryModifyTool::create_offset_sheet( DLIList<RefFace*> &ref_face_list,
           if (j == curves.size())
           {
               break;
-          }   
+          }
           j++;
         }
         curves.get()->get_center_radius(loc, rad);
@@ -16539,13 +17209,13 @@ GeometryModifyTool::create_offset_sheet( DLIList<RefFace*> &ref_face_list,
   DLIList<BodySM*> BodySM_list;
   if( add_surf_list.size() )
   {
-    if( GME_ptr->create_offset_sheet( surface_list, offset_distance, &add_surf_list, 
+    if( GME_ptr->create_offset_sheet( surface_list, offset_distance, &add_surf_list,
       add_offset_list_ptr, BodySM_list, preview ) == CUBIT_FAILURE )
       return CUBIT_FAILURE;
   }
   else
   {
-    if( GME_ptr->create_offset_sheet( surface_list, offset_distance, NULL, 
+    if( GME_ptr->create_offset_sheet( surface_list, offset_distance, NULL,
       NULL, BodySM_list, preview ) == CUBIT_FAILURE )
       return CUBIT_FAILURE;
   }
@@ -16957,7 +17627,7 @@ CubitStatus GeometryModifyTool::loft_surfaces_to_body(DLIList<RefFace*> &surface
 //   return result;
 //}
 
-CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list, 
+CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
                                                 Body *&new_body )
 {
    //determine which vertices are free and which are not...
@@ -16984,7 +17654,7 @@ CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
 
      if( tmp_vert->get_parents() == 0 )
      {
-       points.append( tmp_point ); 
+       points.append( tmp_point );
      }
      else
      {
@@ -17033,7 +17703,7 @@ CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
    for( i=free_ref_vertices.size(); i--; )
    {
      RefVertex *free_vertex = free_ref_vertices.get_and_step();
-     CubitObserver::notify_static_observers( free_vertex, TOP_LEVEL_ENTITY_DESTRUCTED );
+     AppUtil::instance()->send_event(free_vertex, TOP_LEVEL_ENTITY_DESTRUCTED );
      CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, free_vertex );
      GeometryQueryTool::instance()->history().add_event(evt);
    }
@@ -17041,7 +17711,7 @@ CubitStatus GeometryModifyTool::create_surface( DLIList<RefVertex*> &vert_list,
    return stat;
 }
 
-CubitStatus GeometryModifyTool::create_surface( DLIList<CubitVector*>& vec_list, 
+CubitStatus GeometryModifyTool::create_surface( DLIList<CubitVector*>& vec_list,
                                                 Body *&new_body,
                                                 RefFace *ref_face_ptr,
                                                 CubitBoolean project_points )
@@ -17333,12 +18003,14 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
 
       //do the imprint onto face2
       BodySM *new_bodysm = NULL;
-      DLIList<TopologyBridge*> new_tbs, att_tbs, temporary_bridges;
-      status = gme->tolerant_imprint_surface_with_curves( surface2, copied_curves, temporary_bridges, new_bodysm,
-        &new_tbs, &att_tbs);
+      DLIList<TopologyBridge*> temporary_bridges;
+      status = gme->tolerant_imprint_surface_with_curves( surface2, copied_curves, temporary_bridges, new_bodysm);
       temporary_bridges.uniquify_ordered();
       while(temporary_bridges.size())
-        delete temporary_bridges.pop();
+      {
+        TopologyBridge* bridge = temporary_bridges.pop();
+        bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+      }
 
       DLIList<BodySM*> new_body_list;
       if(new_bodysm)
@@ -17369,8 +18041,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
           // Analyze the results and adjust virtual attributes as necessary.
         DLIList<TopologyBridge*> tb_list;
         CAST_LIST(new_body_list, tb_list, TopologyBridge);
-          GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-            tb_list, original_body_list);
+          GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, original_body_list);
 
           // Clean up attributes.
           remove_imprint_attributes_after_modify(body_sm_list, new_body_list);
@@ -17461,7 +18132,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
     DLIList<RefFace*> faces_not_to_merge;
     Body *body1 = face1->body();
     Body *body2 = face2->body();
-    /*
+
     if(merge)
     {
       DLIList<RefFace*> tmp_faces;
@@ -17476,7 +18147,6 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
         tmp_faces.extract();
       faces_not_to_merge += tmp_faces;
     }
-    */
 
     //get the modify engine
     DLIList<Surface*> surf_list( 1 );
@@ -17514,19 +18184,19 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<RefFace*> &ref_faces,
     original_body_list.append(body2);
     status = finish_sm_op( original_body_list, new_bodysm_list, result_bodies );
 
-    /*
+
     if( merge )
     {
       DLIList<RefFace*> faces_to_merge, tmp_faces;
       body1->ref_faces(faces_to_merge);
       body2->ref_faces(tmp_faces);
+      faces_to_merge += tmp_faces;
       faces_to_merge -= faces_not_to_merge;
       if(faces_to_merge.size() > 1)
       {
         MergeTool::instance()->merge_reffaces(faces_to_merge);
       }
     }
-    */
   }
 
   return CUBIT_SUCCESS;
@@ -17619,7 +18289,6 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
 
   CubitStatus status = CUBIT_FAILURE;
   DLIList<BodySM*> new_body_list;
-  DLIList<TopologyBridge*> new_tbs, att_tbs;
   // The bridges doing the imprinting often get split during the process but
   // because of the way we are making copies, the IMPRINTER attribute doesn't
   // get propagated to them.  temporary_bridges will be filled in with any
@@ -17633,8 +18302,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
     CubitStatus tmp_status = gme->tolerant_imprint_surface_with_curves(
                                                 cur_surf, curve_list,
                                                 temporary_bridges,
-                                                new_body_sm,
-                                                &new_tbs, &att_tbs);
+                                                new_body_sm);
     if(new_body_sm)
       new_body_list.append(new_body_sm);
     if(tmp_status == CUBIT_SUCCESS)
@@ -17653,6 +18321,13 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
       remove_pushed_attributes(new_body_list, original_body_list);
       do_attribute_cleanup();
     }
+
+    while(temporary_bridges.size())
+    {
+      TopologyBridge* bridge = temporary_bridges.pop();
+      bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
+    }
+
     return CUBIT_FAILURE;
   }
   else
@@ -17668,11 +18343,8 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
       // sure they get IMPRINTER attributes.
       push_named_attributes_to_curves_and_points(temporary_bridges, "IMPRINTER");
       tb_list += temporary_bridges;
-      GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-        tb_list, original_body_list);
+      GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, original_body_list);
 
-      while(temporary_bridges.size())
-        delete temporary_bridges.pop();
 
       // Clean up attributes.
       remove_imprint_attributes_after_modify(body_sm_list, new_body_list);
@@ -17681,6 +18353,12 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
       restore_vg_after_modify(new_body_list, original_body_list, gme);
       remove_pushed_attributes(new_body_list, original_body_list);
     }
+  }
+  // cleanup temp bridges
+  while(temporary_bridges.size())
+  {
+    TopologyBridge* bridge = temporary_bridges.pop();
+    bridge->get_geometry_query_engine()->delete_topology_bridge(bridge);
   }
 
   DLIList<Body*> result_bodies;
@@ -17707,8 +18385,878 @@ CubitStatus GeometryModifyTool::tolerant_imprint( RefFace *ref_face,
   return status;
 }
 
+CubitStatus GeometryModifyTool::unmerge_and_return_merge_partners(RefEdge *input_curve,
+                                                                  DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                                                                  DLIList<DLIList<RefFace*>*> &surf_merge_lists)
+{
+  if(!input_curve->is_merged())
+    return CUBIT_FAILURE;
+
+  DLIList<RefFace*> vert_surfs;
+  input_curve->start_vertex()->ref_faces(vert_surfs);
+  input_curve->end_vertex()->ref_faces(vert_surfs);
+  vert_surfs.uniquify_unordered();
+  for(int i=vert_surfs.size(); i>0; i--)
+  {
+    RefFace *cur_surf = vert_surfs.get_and_step();
+    if(cur_surf->is_merged())
+    {
+      DLIList<RefVolume*> surf_vols;
+      DLIList<RefFace*> all_surfs_on_both_vols;
+      cur_surf->ref_volumes(surf_vols);
+      for(int j=surf_vols.size(); j>0; j--)
+      {
+        RefVolume *cur_vol = surf_vols.get_and_step();
+        cur_vol->ref_faces(all_surfs_on_both_vols);
+      }
+      all_surfs_on_both_vols.uniquify_unordered();
+      DLIList<RefFace*> all_surfs_on_both_vols_after_unmerge;
+      OldUnmergeCode::instance().unmerge(cur_surf, false);
+      for(int j=surf_vols.size(); j>0; j--)
+      {
+        RefVolume *cur_vol = surf_vols.get_and_step();
+        cur_vol->ref_faces(all_surfs_on_both_vols_after_unmerge);
+      }
+      all_surfs_on_both_vols_after_unmerge.uniquify_unordered();
+      all_surfs_on_both_vols_after_unmerge -= all_surfs_on_both_vols;
+      if(all_surfs_on_both_vols_after_unmerge.size() != 1)
+        return CUBIT_FAILURE;
+      all_surfs_on_both_vols_after_unmerge.append(cur_surf);
+      DLIList<RefFace*> *new_list = new DLIList<RefFace*>();
+      for(int r=all_surfs_on_both_vols_after_unmerge.size(); r>0; r--)
+      {
+        RefFace *cur_surf = all_surfs_on_both_vols_after_unmerge.get_and_step();
+        new_list->append(cur_surf);
+      }
+      surf_merge_lists.append(new_list);
+    }
+  }
+  DLIList<RefEdge*> vert_curves;
+  input_curve->start_vertex()->ref_edges(vert_curves);
+  input_curve->end_vertex()->ref_edges(vert_curves);
+  vert_curves.uniquify_unordered();
+  for(int i=vert_curves.size(); i>0; i--)
+  {
+    RefEdge *cur_curve = vert_curves.get_and_step();
+    if(cur_curve->is_merged())
+    {
+      DLIList<RefFace*> curve_surfs;
+      DLIList<RefEdge*> all_curves_on_all_surfs;
+      cur_curve->ref_faces(curve_surfs);
+      for(int j=curve_surfs.size(); j>0; j--)
+      {
+        RefFace *cur_surf = curve_surfs.get_and_step();
+        cur_surf->ref_edges(all_curves_on_all_surfs);
+      }
+      all_curves_on_all_surfs.uniquify_unordered();
+      DLIList<RefEdge*> all_curves_on_all_surfs_after_unmerge;
+      OldUnmergeCode::instance().unmerge(cur_curve, true);
+      for(int j=curve_surfs.size(); j>0; j--)
+      {
+        RefFace *cur_surf = curve_surfs.get_and_step();
+        cur_surf->ref_edges(all_curves_on_all_surfs_after_unmerge);
+      }
+      all_curves_on_all_surfs_after_unmerge.uniquify_unordered();
+      all_curves_on_all_surfs_after_unmerge -= all_curves_on_all_surfs;
+      if(all_curves_on_all_surfs_after_unmerge.size() < 1)
+        return CUBIT_FAILURE;
+      all_curves_on_all_surfs_after_unmerge.append_unique(cur_curve);
+      DLIList<RefEdge*> *new_list = new DLIList<RefEdge*>();
+      for(int r=all_curves_on_all_surfs_after_unmerge.size(); r>0; r--)
+      {
+        RefEdge *cur_edge = all_curves_on_all_surfs_after_unmerge.get_and_step();
+        new_list->append(cur_edge);
+      }
+      curve_merge_lists.append(new_list);
+    }
+  }
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeometryModifyTool::unmerge_and_return_merge_partners(RefVertex *input_vertex,
+                                                                  DLIList<DLIList<RefVertex*>*> &vert_merge_lists,
+                                                                  DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                                                                  DLIList<DLIList<RefFace*>*> &surf_merge_lists)
+{
+  if(!input_vertex->is_merged())
+    return CUBIT_FAILURE;
+
+  DLIList<RefFace*> vert_surfs;
+  input_vertex->ref_faces(vert_surfs);
+  for(int i=vert_surfs.size(); i>0; i--)
+  {
+    RefFace *cur_surf = vert_surfs.get_and_step();
+    if(cur_surf->is_merged())
+    {
+      DLIList<RefVolume*> surf_vols;
+      DLIList<RefFace*> all_surfs_on_both_vols;
+      cur_surf->ref_volumes(surf_vols);
+      for(int j=surf_vols.size(); j>0; j--)
+      {
+        RefVolume *cur_vol = surf_vols.get_and_step();
+        cur_vol->ref_faces(all_surfs_on_both_vols);
+      }
+      all_surfs_on_both_vols.uniquify_unordered();
+      DLIList<RefFace*> all_surfs_on_both_vols_after_unmerge;
+      OldUnmergeCode::instance().unmerge(cur_surf, false);
+      for(int j=surf_vols.size(); j>0; j--)
+      {
+        RefVolume *cur_vol = surf_vols.get_and_step();
+        cur_vol->ref_faces(all_surfs_on_both_vols_after_unmerge);
+      }
+      all_surfs_on_both_vols_after_unmerge.uniquify_unordered();
+      all_surfs_on_both_vols_after_unmerge -= all_surfs_on_both_vols;
+      if(all_surfs_on_both_vols_after_unmerge.size() != 1)
+        return CUBIT_FAILURE;
+      all_surfs_on_both_vols_after_unmerge.append(cur_surf);
+      DLIList<RefFace*> *new_list = new DLIList<RefFace*>();
+      for(int r=all_surfs_on_both_vols_after_unmerge.size(); r>0; r--)
+      {
+        RefFace *cur_surf = all_surfs_on_both_vols_after_unmerge.get_and_step();
+        new_list->append(cur_surf);
+      }
+      surf_merge_lists.append(new_list);
+    }
+  }
+  DLIList<RefEdge*> vert_curves;
+  input_vertex->ref_edges(vert_curves);
+  for(int i=vert_curves.size(); i>0; i--)
+  {
+    RefEdge *cur_curve = vert_curves.get_and_step();
+    if(cur_curve->is_merged())
+    {
+      DLIList<RefFace*> curve_surfs;
+      DLIList<RefEdge*> all_curves_on_all_surfs;
+      cur_curve->ref_faces(curve_surfs);
+      for(int j=curve_surfs.size(); j>0; j--)
+      {
+        RefFace *cur_surf = curve_surfs.get_and_step();
+        cur_surf->ref_edges(all_curves_on_all_surfs);
+      }
+      all_curves_on_all_surfs.uniquify_unordered();
+      DLIList<RefEdge*> all_curves_on_all_surfs_after_unmerge;
+      OldUnmergeCode::instance().unmerge(cur_curve, false);
+      for(int j=curve_surfs.size(); j>0; j--)
+      {
+        RefFace *cur_surf = curve_surfs.get_and_step();
+        cur_surf->ref_edges(all_curves_on_all_surfs_after_unmerge);
+      }
+      all_curves_on_all_surfs_after_unmerge.uniquify_unordered();
+      all_curves_on_all_surfs_after_unmerge -= all_curves_on_all_surfs;
+      if(all_curves_on_all_surfs_after_unmerge.size() < 1)
+        return CUBIT_FAILURE;
+      all_curves_on_all_surfs_after_unmerge.append_unique(cur_curve);
+      DLIList<RefEdge*> *new_list = new DLIList<RefEdge*>();
+      for(int r=all_curves_on_all_surfs_after_unmerge.size(); r>0; r--)
+      {
+        RefEdge *cur_edge = all_curves_on_all_surfs_after_unmerge.get_and_step();
+        new_list->append(cur_edge);
+      }
+      curve_merge_lists.append(new_list);
+    }
+  }
+  vert_curves.clean_out();
+  input_vertex->ref_edges(vert_curves);
+  DLIList<RefVertex*> curve_verts;
+  for(int i=vert_curves.size(); i>0; i--)
+  {
+    RefEdge *cur_curve = vert_curves.get_and_step();
+    cur_curve->ref_vertices(curve_verts);
+  }
+  curve_verts.uniquify_unordered();
+  DLIList<RefVertex*> verts_after_unmerge;
+  OldUnmergeCode::instance().unmerge(input_vertex);
+  for(int j=vert_curves.size(); j>0; j--)
+  {
+    RefEdge *cur_curve = vert_curves.get_and_step();
+    cur_curve->ref_vertices(verts_after_unmerge);
+  }
+  verts_after_unmerge.uniquify_unordered();
+  verts_after_unmerge -= curve_verts;
+  if(verts_after_unmerge.size() < 1)
+    return CUBIT_FAILURE;
+  verts_after_unmerge.append_unique(input_vertex);
+  DLIList<RefVertex*> *new_list = new DLIList<RefVertex*>();
+  for(int r=verts_after_unmerge.size(); r>0; r--)
+  {
+    RefVertex *cur_vert = verts_after_unmerge.get_and_step();
+    new_list->append(cur_vert);
+  }
+  vert_merge_lists.append(new_list);
+
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeometryModifyTool::unmerge_input(RefEdge *curve1,
+                                              RefEdge *curve2,
+                                              DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                                              DLIList<DLIList<RefFace*>*> &surf_merge_lists)
+{
+  if(curve1->is_merged())
+  {
+    this->unmerge_and_return_merge_partners(curve1, curve_merge_lists, surf_merge_lists);
+  }
+  if(curve2->is_merged())
+  {
+    this->unmerge_and_return_merge_partners(curve2, curve_merge_lists, surf_merge_lists);
+  }
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeometryModifyTool::find_best_curves_to_merge(DLIList<RefEdge*> *&curves_from_curve1,
+                                                          DLIList<RefEdge*> *&curves_from_curve2,
+                                                          RefEdge *&curve1,
+                                                          RefEdge *&curve2)
+{
+  /*
+  for(int i=curves_from_curve1.size(); i>0; i--)
+  {
+     if found better curve than curve1 set curve1 to be this curve
+  }
+  for(int i=curves_from_curve2.size(); i>0; i--)
+  {
+     if found better curve than curve2 set curve2 to be this curve
+  }
+  */
+  return CUBIT_SUCCESS;
+}
+
+CubitStatus GeometryModifyTool::imprint_and_merge_curves(RefEdge *input_curve1,
+                                                         RefEdge *input_curve2,
+                                                         DLIList<RefVertex*> &vert_list,
+                                                         double divergence_angle,
+                                                         DLIList<DLIList<RefEdge*>*> &curves_to_merge1,
+                                                         DLIList<DLIList<RefEdge*>*> &curves_to_merge2,
+                                                         DLIList<DLIList<RefEdge*>*> &prev_curve_merge_lists,
+                                                         DLIList<DLIList<RefFace*>*> &prev_surf_merge_lists)
+{
+  CubitStatus status;
+  status = this->unmerge_input(input_curve1, input_curve2, prev_curve_merge_lists, prev_surf_merge_lists);
+  if(status == CUBIT_FAILURE)
+    return status;
+  RefEdge *curve1, *curve2;
+  DLIList<RefEdge*> *curves_from_curve1 = new DLIList<RefEdge*>();
+  DLIList<RefEdge*> *curves_from_curve2 = new DLIList<RefEdge*>();
+  for(int i=prev_curve_merge_lists.size(); i>0; i--)
+  {
+    DLIList<RefEdge*> *cur_list = prev_curve_merge_lists.get_and_step();
+//    DLIList<RefEdge*> cur_list = prev_curve_merge_lists.get();
+    if(cur_list->move_to(input_curve1))
+    {
+      *curves_from_curve1 = *cur_list;
+     // prev_curve_merge_lists.remove();
+    }
+    else if(cur_list->move_to(input_curve2))
+    {
+      *curves_from_curve2 = *cur_list;
+     // prev_curve_merge_lists.remove();
+    }
+//    else
+ //     prev_curve_merge_lists.step();
+  }
+  // Make sure at least the input curves are in the lists.
+  if(curves_from_curve1->size() == 0)
+    curves_from_curve1->append(input_curve1);
+  if(curves_from_curve2->size() == 0)
+    curves_from_curve2->append(input_curve2);
+
+  curve1 = input_curve1;
+  curve2 = input_curve2;
+  status = this->find_best_curves_to_merge(curves_from_curve1, curves_from_curve2, curve1, curve2);
+  if(CUBIT_FAILURE == status)
+    return status;
+
+  DLIList<CubitVector> merge_end_points_on_curve1, merge_end_points_on_curve2;
+  DLIList<bool> split_flags1, split_flags2;
+  this->calculate_split_points_for_merge(curve1, curve2, vert_list, NULL,
+    merge_end_points_on_curve1, merge_end_points_on_curve2, split_flags1, split_flags2, divergence_angle);
+
+  merge_end_points_on_curve1.reset();
+  split_flags1.reset();
+  for(int k=merge_end_points_on_curve1.size(); k>0; k=k-2)
+  {
+    CubitVector end_point1 = merge_end_points_on_curve1.get_and_step();
+    CubitVector end_point2 = merge_end_points_on_curve1.get_and_step();
+    bool split_flag_start = split_flags1.get_and_step();
+    bool split_flag_end = split_flags1.get_and_step();
+    if(split_flag_end)
+    {
+      DLIList<RefEdge*> *cur_merge_list = new DLIList<RefEdge*>();
+      for(int n=curves_from_curve1->size(); n>0; n--)
+      {
+        RefEdge *curve_to_split = curves_from_curve1->get();
+        CubitVector mid = (end_point1 + end_point2)/2.0;
+        CubitVector pos_for_identifying;
+        curve_to_split->closest_point_trimmed(mid, pos_for_identifying);
+
+        DLIList<CubitVector*> loc_list;
+        loc_list.append(new CubitVector(end_point2));
+        CubitStatus loc_status;
+
+        int expected_edge_id_1 = RefEntityFactory::instance()->current_edge_id() + 1;
+        int expected_edge_id_2 = expected_edge_id_1 + 1;
+
+        if(curve_to_split->body())
+        {
+          DLIList<Body*> edge_bodies, new_bodies;
+          edge_bodies.append(curve_to_split->body());  // for now just handle single body case
+
+          loc_status = this->imprint( edge_bodies, loc_list, new_bodies );
+        }
+        else
+        {
+          loc_status = this->split_free_curve( curve_to_split, loc_list );
+        }
+
+        delete loc_list.get();
+
+        if(loc_status == CUBIT_FAILURE)
+        {
+          return CUBIT_FAILURE;
+        }
+
+        RefEdge *new_edge_1 = RefEntityFactory::instance()->get_ref_edge(expected_edge_id_1);
+        RefEdge *new_edge_2 = RefEntityFactory::instance()->get_ref_edge(expected_edge_id_2);
+
+        if(!new_edge_1 || !new_edge_2)
+        {
+          return CUBIT_FAILURE;
+        }
+
+        CubitVector closest;
+        new_edge_1->closest_point_trimmed(pos_for_identifying, closest);
+        if(closest.about_equal(pos_for_identifying))
+        {
+          cur_merge_list->append(new_edge_1);
+          RefEdge *edge_that_was_split = curves_from_curve1->get();
+          curves_from_curve1->change_to(new_edge_2);
+          for(int w=prev_curve_merge_lists.size(); w>0; w--)
+          {
+            DLIList<RefEdge*> *cur_list = prev_curve_merge_lists.get_and_step();
+            if(cur_list->move_to(edge_that_was_split))
+            {
+              cur_list->change_to(new_edge_2);
+              w=0;
+            }
+          }
+        }
+        else
+        {
+          cur_merge_list->append(new_edge_2);
+          RefEdge *edge_that_was_split = curves_from_curve1->get();
+          curves_from_curve1->change_to(new_edge_1);
+          for(int w=prev_curve_merge_lists.size(); w>0; w--)
+          {
+            DLIList<RefEdge*> *cur_list = prev_curve_merge_lists.get_and_step();
+            if(cur_list->move_to(edge_that_was_split))
+            {
+              cur_list->change_to(new_edge_1);
+              w=0;
+            }
+          }
+        }
+        curves_from_curve1->step();
+      }
+      curves_to_merge1.append(cur_merge_list);
+    }
+    else
+    {
+      curves_to_merge1.append(curves_from_curve1);
+    }
+  }
+
+  merge_end_points_on_curve2.reset();
+  split_flags2.reset();
+  for(int k=merge_end_points_on_curve2.size(); k>0; k=k-2)
+  {
+    CubitVector end_point1 = merge_end_points_on_curve2.get_and_step();
+    CubitVector end_point2 = merge_end_points_on_curve2.get_and_step();
+    bool split_flag_start = split_flags2.get_and_step();
+    bool split_flag_end = split_flags2.get_and_step();
+    if(split_flag_end)
+    {
+      DLIList<RefEdge*> *cur_merge_list = new DLIList<RefEdge*>();
+      for(int n=curves_from_curve2->size(); n>0; n--)
+      {
+        RefEdge *curve_to_split = curves_from_curve2->get();
+        CubitVector mid = (end_point1 + end_point2)/2.0;
+        CubitVector pos_for_identifying;
+        curve_to_split->closest_point_trimmed(mid, pos_for_identifying);
+
+        DLIList<CubitVector*> loc_list;
+        loc_list.append(new CubitVector(end_point2));
+        CubitStatus loc_status;
+
+        int expected_edge_id_1 = RefEntityFactory::instance()->current_edge_id() + 1;
+        int expected_edge_id_2 = expected_edge_id_1 + 1;
+
+        if(curve_to_split->body())
+        {
+          DLIList<Body*> edge_bodies, new_bodies;
+          edge_bodies.append(curve_to_split->body());  // for now just handle single body case
+
+          loc_status = this->imprint( edge_bodies, loc_list, new_bodies );
+        }
+        else
+        {
+          loc_status = this->split_free_curve( curve_to_split, loc_list );
+        }
+
+        delete loc_list.get();
+
+        if(loc_status == CUBIT_FAILURE)
+        {
+          return CUBIT_FAILURE;
+        }
+
+        RefEdge *new_edge_1 = RefEntityFactory::instance()->get_ref_edge(expected_edge_id_1);
+        RefEdge *new_edge_2 = RefEntityFactory::instance()->get_ref_edge(expected_edge_id_2);
+
+        if(!new_edge_1 || !new_edge_2)
+        {
+          return CUBIT_FAILURE;
+        }
+
+        CubitVector closest;
+        new_edge_1->closest_point_trimmed(pos_for_identifying, closest);
+        if(closest.about_equal(pos_for_identifying))
+        {
+          cur_merge_list->append(new_edge_1);
+          RefEdge *edge_that_was_split = curves_from_curve2->get();
+          curves_from_curve2->change_to(new_edge_2);
+          for(int w=prev_curve_merge_lists.size(); w>0; w--)
+          {
+            DLIList<RefEdge*> *cur_list = prev_curve_merge_lists.get_and_step();
+            if(cur_list->move_to(edge_that_was_split))
+            {
+              cur_list->change_to(new_edge_2);
+              w=0;
+            }
+          }
+        }
+        else
+        {
+          cur_merge_list->append(new_edge_2);
+          RefEdge *edge_that_was_split = curves_from_curve2->get();
+          curves_from_curve2->change_to(new_edge_1);
+          for(int w=prev_curve_merge_lists.size(); w>0; w--)
+          {
+            DLIList<RefEdge*> *cur_list = prev_curve_merge_lists.get_and_step();
+            if(cur_list->move_to(edge_that_was_split))
+            {
+              cur_list->change_to(new_edge_1);
+              w=0;
+            }
+          }
+        }
+        curves_from_curve2->step();
+      }
+      curves_to_merge2.append(cur_merge_list);
+    }
+    else
+    {
+      curves_to_merge2.append(curves_from_curve2);
+    }
+  }
+  return status;
+}
+
+
+CubitStatus GeometryModifyTool::find_overlap_region(RefEdge *c1,
+                                                  RefEdge *c2,
+                                                  RefVertex *v1,
+                                                  RefVertex *v2,
+                                                  bool forward_c1,
+                                                  bool forward_c2,
+                                                  bool &full_c1,
+                                                  bool &full_c2,
+                                                  double &c1_stop_param,
+                                                  double &c2_stop_param,
+                                                  double divergence_angle)
+{
+  CubitStatus status = CUBIT_SUCCESS;
+  double start_t, end_t, dt, cur_t;
+  int num_segments = 20;
+  double reverse_multiplier;
+  double divergence_tol = cos(divergence_angle*CUBIT_PI/180.0);
+  int i;
+
+  if(forward_c1 != forward_c2)
+    reverse_multiplier = -1.0;
+  else
+    reverse_multiplier = 1.0;
+
+  // Start from the projection of v2 onto c1.
+  CubitVector tmp_pos;
+  c1->closest_point_trimmed(v2->coordinates(), tmp_pos);
+  start_t = c1->u_from_position(tmp_pos);
+  if(forward_c1)
+  {
+    end_t = c1->end_param();
+    dt = (end_t-start_t)/(double)num_segments;
+    cur_t = start_t + dt;
+  }
+  else
+  {
+    end_t = c1->start_param();
+    dt = (end_t-start_t)/(double)num_segments;
+    cur_t = start_t + dt;
+  }
+  // Check all of the interior points to see if the tangents
+  // of the two curves are within tolerance.
+  bool went_past_end_of_c2 = false;
+  bool went_out_of_angle_tolerance = false;
+  for(i=num_segments; i>0; i--)
+//  for(i=num_segments-1; i>0; i--)
+  {
+    if(i==1)
+    {
+      cur_t = end_t;
+    }
+    // Evaluate curve 1.
+    CubitVector vec1, vec2, tangent1, tangent2;
+    c1->position_from_u(cur_t, vec1);
+    c1->tangent(vec1, tangent1);
+    tangent1.normalize();
+    // Project the point to curve 2 and get the tangent.
+    c2->closest_point_trimmed(vec1, vec2);
+    c2->tangent(vec2, tangent2);
+    tangent2.normalize();
+    if(((tangent1 % tangent2) * reverse_multiplier) > divergence_tol)
+    {
+      CubitVector check_vec = vec2-vec1;
+      double dot_val = 0.0;
+      if(check_vec.length() > 1e-6)
+      {
+        check_vec.normalize();
+        dot_val = check_vec % tangent2;
+      }
+      if(dot_val > .001 || dot_val < -.001)
+      {
+        went_past_end_of_c2 = true;
+      }
+      else
+      {
+        // If we made it to the end of curve 1 check to see
+        // if the end of curve 2 is within some tolerance of
+        // the endpoint of curve 1 and if so set the
+        // full_c2 flag to true.
+        if(i==1)
+        {
+          RefVertex *c1_end, *c2_end;
+          if(forward_c1)
+            c1_end = c1->end_vertex();
+          else
+            c1_end = c1->start_vertex();
+          if(forward_c2)
+            c2_end = c2->end_vertex();
+          else
+            c2_end = c2->start_vertex();
+          if(c1_end == c2_end) // verts are already merged
+            full_c2 = true;
+          else
+          {
+            CubitVector c2_end_pos;
+            if(forward_c2)
+              c2_end_pos = c2->end_coordinates();
+            else
+              c2_end_pos = c2->start_coordinates();
+            double dist_sq_1 = (vec1-vec2).length_squared();
+            double dist_sq_2 = (vec1-c2_end_pos).length_squared();
+            if(dist_sq_2 < 2.25*dist_sq_1)
+              full_c2 = true;
+          }
+        }
+      }
+    }
+    else
+    {
+      went_out_of_angle_tolerance = true;
+    }
+    if(went_past_end_of_c2)
+    {
+      i=0;
+      full_c2 = true;
+      c1_stop_param = cur_t;
+      // calculate split point on curve 1
+    }
+    else if(went_out_of_angle_tolerance)
+    {
+      if(i==num_segments)
+        status = CUBIT_FAILURE;
+      i=0;
+      c1_stop_param = cur_t;
+      c2_stop_param = c2->u_from_position(vec2);
+    }
+
+    cur_t += dt;
+  }
+
+  if(i==0)
+  {
+    full_c1 = true;
+  }
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::match_v1_to_c1(RefVertex *&v1,
+                                             RefVertex *&v2,
+                                             RefVertex *c1_v1,
+                                             RefVertex *c1_v2,
+                                             RefVertex *c2_v1,
+                                             RefVertex *c2_v2)
+{
+  CubitStatus status = CUBIT_SUCCESS;
+
+  if(v1 == c1_v1 || v1 == c1_v2)
+  {
+    if(v2 == c2_v1 || v2 == c2_v2)
+    {
+      // everything is fine
+    }
+    else
+      status = CUBIT_FAILURE;
+  }
+  else if(v1 == c2_v1 || v1 == c2_v2)
+  {
+    if(v2 == c1_v1 || v2 == c1_v2)
+    {
+      RefVertex *tmp = v1;
+      v1 = v2;
+      v2 = tmp;
+    }
+    else
+      status = CUBIT_FAILURE;
+  }
+  else
+    status = CUBIT_FAILURE;
+
+  return status;
+}
+
+CubitStatus GeometryModifyTool::calculate_split_points_for_merge(RefEdge* c1,
+                                                               RefEdge* c2,
+                                                               DLIList<RefVertex*> &verts_to_merge,
+                                                               double *merge_tolerance,
+                                                               DLIList<CubitVector> &merge_end_points_on_curve1,
+                                                               DLIList<CubitVector> &merge_end_points_on_curve2,
+                                                               DLIList<bool> &split_flags_for_curve1,
+                                                               DLIList<bool> &split_flags_for_curve2,
+                                                               double divergence_angle)
+{
+
+  CubitStatus status = CUBIT_SUCCESS;
+  bool all_done = false;
+
+  // Get the vertices of the two curves.
+  RefVertex *c1_v1 = c1->start_vertex();
+  RefVertex *c1_v2 = c1->end_vertex();
+  RefVertex *c2_v1 = c2->start_vertex();
+  RefVertex *c2_v2 = c2->end_vertex();
+
+  // Check for closed curves.
+  bool c1_closed = false;
+  bool c2_closed = false;
+  if(c1_v1 == c1_v2)
+    c1_closed = true;
+  if(c2_v1 == c2_v2)
+    c2_closed = true;
+  bool merge_verts_at_both_ends = false;
+
+  // If we are told that certain vertices need to merge
+  // we will know that we do not need to split the curves there.
+  bool full_c1=false, full_c2=false;
+  int verts_to_merge_size = verts_to_merge.size();
+  RefVertex *v1, *v2;
+  if(verts_to_merge_size > 0)
+  {
+    // Verts to merge should always come in pairs.
+    if(verts_to_merge_size % 2 != 0)
+    {
+      status = CUBIT_FAILURE;
+    }
+    else
+    {
+      if(verts_to_merge_size > 2 || c1_closed)
+        merge_verts_at_both_ends = true;
+
+      verts_to_merge.reset();
+      // Process the first set of verts to merge.
+      v1 = verts_to_merge.get_and_step();
+      v2 = verts_to_merge.get_and_step();
+      // Make sure v1 corresponds to c1 and v2 to c2.
+      status = match_v1_to_c1(v1, v2, c1_v1, c1_v2, c2_v1, c2_v2);
+    }
+    if(status == CUBIT_SUCCESS)
+    {
+      // Determine whether the verts are at the
+      // beginning or end of curves.
+      bool forward_c1, forward_c2;
+      if(v1 == c1_v1)
+        forward_c1 = true;
+      else
+        forward_c1 = false;
+      if(v2 == c2_v1)
+        forward_c2 = true;
+      else
+        forward_c2 = false;
+
+      double c1_stop_param, c2_stop_param;
+
+      status = find_overlap_region(c1, c2, v1, v2, forward_c1, forward_c2, full_c1, full_c2,
+        c1_stop_param, c2_stop_param, divergence_angle);
+
+      if(status == CUBIT_SUCCESS)
+      {
+        merge_end_points_on_curve1.append(v1->coordinates());
+        merge_end_points_on_curve2.append(v2->coordinates());
+        split_flags_for_curve1.append(bool(false));
+        split_flags_for_curve2.append(bool(false));
+
+        // If we traversed the whole length of either curve and
+        // we are told to merge the verts at both ends then
+        // just add the verts at the other end and be done.
+        if((full_c1 || full_c2) && merge_verts_at_both_ends)
+        {
+          split_flags_for_curve1.append(bool(false));
+          split_flags_for_curve2.append(bool(false));
+          if(c1_v1 == v1)
+            merge_end_points_on_curve1.append(c1_v2->coordinates());
+          else
+            merge_end_points_on_curve1.append(c1_v1->coordinates());
+          if(c2_v1 == v2)
+            merge_end_points_on_curve2.append(c2_v2->coordinates());
+          else
+            merge_end_points_on_curve2.append(c2_v1->coordinates());
+          all_done = true;
+        }
+        else
+        {
+          if(full_c2)
+          {
+            RefVertex *tmp_vert;
+            if(c2_v1 == v2)
+              tmp_vert = c2_v2;
+            else
+              tmp_vert = c2_v1;
+            merge_end_points_on_curve2.append(tmp_vert->coordinates());
+            split_flags_for_curve2.append(bool(false));
+            if(!full_c1)
+            {
+              CubitVector pos1;
+              c1->closest_point_trimmed(tmp_vert->coordinates(), pos1);
+              merge_end_points_on_curve1.append(pos1);
+              split_flags_for_curve1.append(bool(true));
+            }
+            else
+            {
+              if(c1_v1 == v1)
+                merge_end_points_on_curve1.append(c1_v2->coordinates());
+              else
+                merge_end_points_on_curve1.append(c1_v1->coordinates());
+              split_flags_for_curve1.append(bool(false));
+            }
+          }
+          else
+          {
+            split_flags_for_curve2.append(bool(true));
+            if(full_c1)
+            {
+              split_flags_for_curve1.append(bool(false));
+              if(c1_v1 == v1)
+              {
+                merge_end_points_on_curve1.append(c1_v2->coordinates());
+                // we need to imprint the end of c1 onto c2.
+                CubitVector pos2;
+                c2->closest_point_trimmed(c1_v2->coordinates(), pos2);
+                merge_end_points_on_curve2.append(pos2);
+              }
+              else
+              {
+                merge_end_points_on_curve1.append(c1_v1->coordinates());
+                // we need to imprint the end of c1 onto c2.
+                CubitVector pos2;
+                c2->closest_point_trimmed(c1_v1->coordinates(), pos2);
+                merge_end_points_on_curve2.append(pos2);
+              }
+            }
+            else
+            {
+              split_flags_for_curve1.append(bool(true));
+              // we need to imprint the end of c2 onto c1.
+              CubitVector pos1;
+              c1->position_from_u(c1_stop_param, pos1);
+              merge_end_points_on_curve1.append(pos1);
+              // we need to imprint the end of c1 onto c2.
+              CubitVector pos2;
+              c2->closest_point_trimmed(pos1, pos2);
+              merge_end_points_on_curve2.append(pos2);
+            }
+          }
+        }
+      }
+    }
+    if(status == CUBIT_SUCCESS && !all_done)
+    {
+      if(merge_verts_at_both_ends)
+      {
+        // Process the next set of verts to merge.
+        v1 = verts_to_merge.get_and_step();
+        v2 = verts_to_merge.get_and_step();
+        // Make sure v1 corresponds to c1 and v2 to c2.
+        status = match_v1_to_c1(v1, v2, c1_v1, c1_v2, c2_v1, c2_v2);
+        if(status == CUBIT_SUCCESS)
+        {
+          // Determine whether the verts are at the
+          // beginning or end of curves.
+          bool forward_c1, forward_c2;
+          if(v1 == c1_v1)
+            forward_c1 = true;
+          else
+            forward_c1 = false;
+          if(v2 == c2_v1)
+            forward_c2 = true;
+          else
+            forward_c2 = false;
+
+          double c1_stop_param, c2_stop_param;
+          bool full_c1=false, full_c2=false;
+
+          status = find_overlap_region(c1, c2, v1, v2, forward_c1, forward_c2, full_c1, full_c2,
+            c1_stop_param, c2_stop_param, divergence_angle);
+          if(status == CUBIT_SUCCESS)
+          {
+            merge_end_points_on_curve1.append(v1->coordinates());
+            merge_end_points_on_curve2.append(v2->coordinates());
+            split_flags_for_curve1.append(bool(false));
+            split_flags_for_curve2.append(bool(false));
+            split_flags_for_curve1.append(bool(true));
+            split_flags_for_curve2.append(bool(true));
+            // we need to imprint the end of c2 onto c1.
+            CubitVector pos1;
+            c1->position_from_u(c1_stop_param, pos1);
+            merge_end_points_on_curve1.append(pos1);
+            // we need to imprint the end of c1 onto c2.
+            CubitVector pos2;
+            c2->position_from_u(c2_stop_param, pos2);
+            merge_end_points_on_curve2.append(pos2);
+          }
+        }
+      }
+    }
+  }
+
+  if(status == CUBIT_SUCCESS)
+  {
+  }
+
+  return status;
+}
+
 CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
-                                      DLIList<Body*> &new_bodies, bool merge )
+                                      DLIList<Body*> &new_bodies, double overlap_tol,
+                                      double imprint_tol, bool merge )
 {
   //make sure all bodies are from the same modify engine
   DLIList<BodySM*> body_sm_list;
@@ -17796,7 +19344,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
 
     // Calculate local tolerances at ref entities
     LocalToleranceTool::instance()->calculate_local_tolerances( body_sm_list );
-    
+
 //#ifndef _NDEBUG
 //    LocalToleranceTool::instance()->print_local_tolerances( body_sm_list );
 //#endif
@@ -17804,8 +19352,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
 
   // Call tolerant imprint
   DLIList<BodySM*> new_body_list;
-  DLIList<TopologyBridge*> new_tbs, att_tbs;
-  CubitStatus result = gme->tolerant_imprint( body_sm_list, new_body_list, &new_tbs, &att_tbs );
+  CubitStatus result = gme->tolerant_imprint( body_sm_list, new_body_list, overlap_tol, imprint_tol);
 
 
   if(result == CUBIT_FAILURE)
@@ -17824,8 +19371,7 @@ CubitStatus GeometryModifyTool::tolerant_imprint( DLIList<Body*> &bodies,
       // Analyze the results and adjust virtual attributes as necessary.
        DLIList<TopologyBridge*> tb_list;
        CAST_LIST(new_body_list, tb_list, TopologyBridge);
-      GeometryQueryTool::instance()->ige_attribute_after_imprinting(new_tbs, att_tbs,
-        tb_list, bodies);
+      GeometryQueryTool::instance()->ige_attribute_after_imprinting(tb_list, bodies);
 
       // Clean up attributes.
       remove_imprint_attributes_after_modify(body_sm_list, new_body_list);
@@ -18003,7 +19549,7 @@ void GeometryModifyTool::fixup_merged_entities( DLIList<int> &merged_surface_ids
     //One more thing.....if surface is a composite, update the graphics
     //on the hidden curve...could have been deleted.
     if ( GeometryQueryTool::instance()->ige_is_composite( surface_ptr ) )
-      merged_face->notify_all_observers( TOPOLOGY_MODIFIED );
+      AppUtil::instance()->send_event(merged_face, TOPOLOGY_MODIFIED );
   }
 
   //fix up merged edges -- some might need to be reversed
@@ -18141,7 +19687,7 @@ void GeometryModifyTool::march_path(CubitVector &start_pos,
   CubitVector point_on_surf = start_pos;
   RefVolume *v = start_face->ref_volume();
   RefFace *cur_face = start_face;
-  CubitVector norm = cur_face->normal_at(point_on_surf, v); 
+  CubitVector norm = cur_face->normal_at(point_on_surf, v);
   CubitVector sweep_dir = norm;
 
   RefEdge *snap_edge = NULL;
@@ -18155,7 +19701,7 @@ void GeometryModifyTool::march_path(CubitVector &start_pos,
     {
       // Just set the new position to the position on the
       // edge.  This will force us to jump out without doing
-      // anything and then on the next loop we will start 
+      // anything and then on the next loop we will start
       // onto the new face.
       new_pos = old_pos;
       snapped_to_edge_last_time = false;
@@ -18175,7 +19721,7 @@ void GeometryModifyTool::march_path(CubitVector &start_pos,
 //GfxDebug::draw_point(point_on_surf, 6);
 //GfxDebug::flush();
 
-    norm = cur_face->normal_at(point_on_surf, v); 
+    norm = cur_face->normal_at(point_on_surf, v);
     if(sweep_dir % norm < cos_45)
     {
       turned = true;
@@ -18322,17 +19868,17 @@ CubitStatus GeometryModifyTool::stitch( DLIList<Body*> &bodies_to_stitch,
     Body *tmp_body = bodies_to_stitch.get_and_step();
     if( !tmp_body->is_sheet_body() )
     {
-      PRINT_ERROR("Can't stitch body %d.  It's a solid body\n", tmp_body->id() ); 
+      PRINT_ERROR("Can't stitch body %d.  It's a solid body\n", tmp_body->id() );
       return CUBIT_FAILURE;
     }
   }
-  
+
   DLIList<TopologyEntity*> entity_list(bodies_to_stitch.size());
   DLIList<TopologyBridge*> bridge_list(bodies_to_stitch.size());
   DLIList<BodySM*>         bodysm_list(bodies_to_stitch.size());
   CAST_LIST_TO_PARENT(bodies_to_stitch, entity_list);
   GeometryModifyEngine *gme = common_modify_engine(entity_list, bridge_list);
-  
+
   if( entity_list.size() != bridge_list.size() )
   {
     PRINT_ERROR("Cannot stitch entities of different geometry engines.\n");
@@ -18377,7 +19923,7 @@ CubitStatus GeometryModifyTool::discover_topology(RefFace *surf, CubitVector &po
   CubitVector point_on_surf;
   surf->get_surface_ptr()->closest_point_trimmed(pos, point_on_surf);
   RefVolume *v = surf->ref_volume();
-  CubitVector norm = surf->normal_at(point_on_surf, v); 
+  CubitVector norm = surf->normal_at(point_on_surf, v);
   CubitVector march_dir = norm * CubitVector(1,0,0);
   if(march_dir.length() < .001)
   {
@@ -18410,7 +19956,7 @@ CubitStatus GeometryModifyTool::discover_topology(RefFace *surf, CubitVector &po
     // Now subdivide directions further if requested.
     int i;
     // make sure we start at the end to process the all of the original directions correctly
-    march_directions.last();  
+    march_directions.last();
     for(i=march_directions.size(); i>0; i--)
     {
       CubitVector cur_dir = march_directions.get_and_step();
@@ -18471,7 +20017,7 @@ CubitStatus GeometryModifyTool::create_rectangle_surface( double width, double h
     return status;
   }
 
-  Body *new_body = NULL; 
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18491,7 +20037,7 @@ CubitStatus GeometryModifyTool::create_rectangle_surface( double width, double h
   return status;
 }
 
-CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1, 
+CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1,
                                                               RefVertex *v2,
                                                               RefVertex *v3 )
 {
@@ -18514,7 +20060,7 @@ CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1,
     return CUBIT_FAILURE;
   }
 
-  TBPoint *pt1, *pt2, *pt3; 
+  TBPoint *pt1, *pt2, *pt3;
 
   DLIList<RefVertex*> free_ref_vertices;
   if( v1->num_parent_ref_entities() == 0 )
@@ -18548,7 +20094,7 @@ CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1,
     else
       CubitUndo::save_state();
   }
-  
+
   BodySM *sheet_body_sm = NULL;
   CubitStatus status = GMEPtr->create_parallelogram_surface(pt1, pt2, pt3, sheet_body_sm );
 
@@ -18559,7 +20105,7 @@ CubitStatus GeometryModifyTool::create_parallelogram_surface( RefVertex *v1,
     return status;
   }
 
-  Body *new_body = NULL; 
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18605,8 +20151,8 @@ CubitStatus GeometryModifyTool::create_circle_surface( double radius, CubitVecto
       CubitUndo::remove_last_undo();
     return status;
   }
-  
-  Body *new_body = NULL; 
+
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18626,7 +20172,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( double radius, CubitVecto
   return status;
 }
 
-CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1, 
+CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
                                                        RefVertex *v2,
                                                        RefVertex *v3 )
 {
@@ -18644,7 +20190,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
     return CUBIT_FAILURE;
   }
 
-  TBPoint *pt1, *pt3; 
+  TBPoint *pt1, *pt3;
 
   DLIList<RefVertex*> free_ref_vertices;
   if( v1->num_parent_ref_entities() == 0 )
@@ -18671,7 +20217,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
     else
       CubitUndo::save_state();
   }
-  
+
   BodySM *sheet_body_sm = NULL;
   CubitStatus status = GMEPtr->create_circle_surface(pt1, v2->coordinates(), pt3, sheet_body_sm );
 
@@ -18681,8 +20227,8 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
       CubitUndo::remove_last_undo();
     return status;
   }
-  
-  Body *new_body = NULL; 
+
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18702,7 +20248,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
   return status;
 }
 
-CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1, 
+CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
                                                        RefVertex *v2,
                                                        CubitVector center_point )
 {
@@ -18720,7 +20266,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
     return CUBIT_FAILURE;
   }
 
-  TBPoint *pt1, *pt2; 
+  TBPoint *pt1, *pt2;
 
   DLIList<RefVertex*> free_ref_vertices;
   if( v1->num_parent_ref_entities() == 0 )
@@ -18747,7 +20293,7 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
     else
       CubitUndo::save_state();
   }
-  
+
   BodySM *sheet_body_sm = NULL;
   CubitStatus status = GMEPtr->create_circle_surface(pt1, pt2, center_point, sheet_body_sm );
 
@@ -18757,8 +20303,8 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
       CubitUndo::remove_last_undo();
     return status;
   }
-  
-  Body *new_body = NULL; 
+
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18778,9 +20324,9 @@ CubitStatus GeometryModifyTool::create_circle_surface( RefVertex *v1,
   return status;
 }
 
-CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1, 
+CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1,
                                                         RefVertex *v2,
-                                                        CubitVector center_point ) 
+                                                        CubitVector center_point )
 {
   if(0 == gmeList.size())
   {
@@ -18796,7 +20342,7 @@ CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1,
     return CUBIT_FAILURE;
   }
 
-  TBPoint *pt1, *pt2; 
+  TBPoint *pt1, *pt2;
 
   DLIList<RefVertex*> free_ref_vertices;
   if( v1->num_parent_ref_entities() == 0 )
@@ -18822,7 +20368,7 @@ CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1,
     else
       CubitUndo::save_state();
   }
-  
+
   BodySM *sheet_body_sm = NULL;
   CubitStatus status = GMEPtr->create_ellipse_surface(pt1, pt2, center_point, sheet_body_sm );
 
@@ -18832,8 +20378,8 @@ CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1,
       CubitUndo::remove_last_undo();
     return status;
   }
-  
-  Body *new_body = NULL; 
+
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18853,7 +20399,7 @@ CubitStatus GeometryModifyTool::create_ellipse_surface( RefVertex *v1,
   return status;
 }
 
-CubitStatus GeometryModifyTool::create_ellipse_surface( double major_radius, 
+CubitStatus GeometryModifyTool::create_ellipse_surface( double major_radius,
                                                         double minor_radius,
                                                         CubitVector plane )
 {
@@ -18882,7 +20428,7 @@ CubitStatus GeometryModifyTool::create_ellipse_surface( double major_radius,
     return status;
   }
 
-  Body *new_body = NULL; 
+  Body *new_body = NULL;
   if( sheet_body_sm )
     new_body = GeometryQueryTool::instance()->make_Body(sheet_body_sm);
 
@@ -18915,10 +20461,13 @@ CubitStatus GeometryModifyTool::create_curve_helix( CubitVector &location,
     PRINT_WARNING("No active geometry engine.\n");
     return CUBIT_FAILURE;
   }
-  
-  Curve *new_curve = gmeList.get()->create_curve_helix(location, direction, 
+
+  Curve *new_curve = gmeList.get()->create_curve_helix(location, direction,
                                                 start_point, thread_distance,
                                                 angle, right_handed );
+
+  if (new_curve == NULL)
+    return CUBIT_FAILURE;
 
   if( CubitUndo::get_undo_enabled() )
     CubitUndo::save_state();
@@ -18931,6 +20480,84 @@ CubitStatus GeometryModifyTool::create_curve_helix( CubitVector &location,
   return CUBIT_SUCCESS;
 }
 
+void GeometryModifyTool::remove_bodies_outside_bounding_box(
+  DLIList<Body*> &body_list,
+	CubitBox &tool_bounding_box )
+{
+  //remove bodies that don't overlap
+  for( int k=body_list.size(); k--; )
+  {
+    Body *tmp_body = body_list.get();
+    if( !tool_bounding_box.overlap( 0.001, tmp_body->bounding_box() ) )
+      body_list.change_to( NULL );
+    body_list.step();
+  }
+
+  body_list.remove_all_with_value(NULL);
+}
+
+
+
+void GeometryModifyTool::remove_bodies_outside_bounding_box(
+  DLIList<Body*> &body_list,
+	CubitVector v1, CubitVector v2, CubitVector v3 )
+{
+	//create a bounding box from the body list and the passed in points
+	CubitBox bbox1;
+	for( int k=body_list.size(); k--; )
+		bbox1 |= body_list.get_and_step()->bounding_box();
+
+  //add in the pts
+  bbox1 |= v1;
+  bbox1 |= v2;
+  bbox1 |= v3;
+
+	//get the diagonal of the bounding box
+  double diagonal_length = bbox1.diagonal().length();
+
+	//offset each point by the diagonal
+  CubitVector new_pt;
+  CubitVector direction;
+  direction = v2-v1;
+  direction.normalize();
+  new_pt = v1 + direction*diagonal_length;
+
+  CubitBox bbox2( new_pt );
+
+  direction = v3-v1;
+  direction.normalize();
+  new_pt = v1 + direction*diagonal_length;
+  bbox2 |= new_pt;
+
+  direction = v1-v2;
+  direction.normalize();
+  new_pt = v2 + direction*diagonal_length;
+  bbox2 |= new_pt;
+  direction = v3-v2;
+  direction.normalize();
+  new_pt = v2 + direction*diagonal_length;
+  bbox2 |= new_pt;
+
+  direction = v1-v3;
+  direction.normalize();
+  new_pt = v3 + direction*diagonal_length;
+  bbox2 |= new_pt;
+  direction = v2-v3;
+  direction.normalize();
+  new_pt = v3 + direction*diagonal_length;
+  bbox2 |= new_pt;
+
+  //remove bodies that don't overlap
+  for( int k=body_list.size(); k--; )
+  {
+    Body *tmp_body = body_list.get();
+    if( !bbox2.overlap( 0.001, tmp_body->bounding_box() ) )
+      body_list.change_to( NULL );
+    body_list.step();
+  }
+
+  body_list.remove_all_with_value(NULL);
+}
 
 CubitStatus prepare_surface_sweep(
                               DLIList<BodySM*> &blank_bodies,
@@ -19071,8 +20698,179 @@ CubitStatus prepare_surface_sweep(
     return stat;
 }
 
+
+
+//******************************************************************************************************************************
+CubitVector GeometryModifyTool::FindExtendedEndPt( double outer_rad , double inner_rad , CubitVector inner_AxisPt ,
+                                                    CubitVector Axis , double Height )
+{
+    CubitVector Extended_End_Pt;
+
+    double Diff     = (outer_rad - inner_rad);
+           Diff    /= Height;
+    double dAngle   = atan ( Diff ) ;
+    Axis.normalize();
+
+    double dTan        = tan( dAngle );
+    double dExtendvalue = inner_rad / dTan;
+
+    CubitVector ExtendedPt;
+    ExtendedPt.x( ( Axis.x() * dExtendvalue )  + inner_AxisPt.x() );
+    ExtendedPt.y( ( Axis.y() * dExtendvalue )  + inner_AxisPt.y() );
+    ExtendedPt.z( ( Axis.z() * dExtendvalue )  + inner_AxisPt.z() );
+
+    return ExtendedPt;
+}
+//**********************************************************************************************************************************
+CubitVector GeometryModifyTool::FindExtendedStartPt( CubitBox Box , double outer_rad , double inner_rad , CubitVector AxisPt ,
+                                                    CubitVector Axis , double &dLength , double dTanAngle,  double &dExtendedadius )
+{
+    CubitVector Extended_Start_Pt;
+
+    // Find the Difference between the Max and thre min values in all 3 directions.
+    // Incase the point is within the box limits, then add the difference values
+    // in all 3 directions , witht he " Axis " as the direction vector and extend the point.
+
+    // After that find the Radius of this bigger end.
+
+    CubitVector DiffVec;
+
+    Axis.normalize();
+
+    DiffVec.x( fabs( Box.max_x() - Box.min_x() ));
+    DiffVec.y( fabs( Box.max_y() - Box.min_y() ));
+    DiffVec.z( fabs( Box.max_z() - Box.min_z() ));
+
+    // Extend the start Pt
+
+    Extended_Start_Pt.x( AxisPt.x() + ( Axis.x() * DiffVec.x() ) );
+    Extended_Start_Pt.y( AxisPt.y() + ( Axis.y() * DiffVec.y() ) );
+    Extended_Start_Pt.z( AxisPt.z() + ( Axis.z() * DiffVec.z() ) );
+
+
+    // Find the length
+
+    dLength = sqrt( (( AxisPt.x() - Extended_Start_Pt.x()) *  (AxisPt.x() - Extended_Start_Pt.x()) ) +
+                           (( AxisPt.y() - Extended_Start_Pt.y()) *  (AxisPt.y() - Extended_Start_Pt.y()) ) +
+                           (( AxisPt.z() - Extended_Start_Pt.z()) *  (AxisPt.z() - Extended_Start_Pt.z()) ) );
+
+
+
+    // Find the Extended Radius
+
+    dExtendedadius = outer_rad + ( tan( dTanAngle ) /** 2 */* dLength ) ;
+
+    return Extended_Start_Pt;
+}
+//*****************************************************************************************************************************************
+void GeometryModifyTool::FindExtendedPoints( CubitVector AxisPt1 , CubitVector AxisPt2 , double outer_radius , double inner_radius ,
+            CubitVector axis,double Height , CubitBox bounding_box , double dTanAngle ,
+            CubitVector& start , CubitVector& end , double& dExtended_OuterRadius, double& dExtended_InnerRadius  )
+{
+
+    CubitVector endpt ;
+    if( outer_radius > inner_radius )
+    {
+        endpt  = FindExtendedEndPt( outer_radius , inner_radius , AxisPt2 , axis,  Height );
+        Height = sqrt( (endpt.x() - AxisPt1.x()) * (endpt.x() - AxisPt1.x())+
+            (endpt.y() - AxisPt1.y()) * (endpt.y() - AxisPt1.y())+
+            (endpt.z() - AxisPt1.z()) * (endpt.z() - AxisPt1.z()) );
+
+        AxisPt2.x( endpt.x() );
+        AxisPt2.y( endpt.y() );
+        AxisPt2.z( endpt.z() );
+
+        end.x( endpt.x() );
+        end.y( endpt.y() );
+        end.z( endpt.z() );
+
+        dExtended_InnerRadius = 0;
+    }
+    else
+    {
+        // reverse the axis.
+
+        axis.x( -axis.x());
+        axis.y( -axis.y());
+        axis.z( -axis.z());
+
+        endpt  = FindExtendedEndPt( inner_radius , outer_radius , AxisPt1 , axis,  Height );
+        Height = sqrt( (endpt.x() - AxisPt2.x()) * (endpt.x() - AxisPt2.x())+
+            (endpt.y() - AxisPt2.y()) * (endpt.y() - AxisPt2.y())+
+            (endpt.z() - AxisPt2.z()) * (endpt.z() - AxisPt2.z()) );
+
+        AxisPt1.x( endpt.x() );
+        AxisPt1.y( endpt.y() );
+        AxisPt1.z( endpt.z() );
+
+        start.x( endpt.x() );
+        start.y( endpt.y() );
+        start.z( endpt.z() );
+
+        // reset the axis.
+        axis.x( -axis.x());
+        axis.y( -axis.y());
+        axis.z( -axis.z());
+
+
+        dExtended_OuterRadius = 0;
+
+     }
+
+
+
+    //*****************************************//
+    // Now find the extension of the bigger end.
+    //*****************************************//
+
+    if( outer_radius > inner_radius )
+    {
+        // reverse the axis.
+        axis.x( -axis.x());
+        axis.y( -axis.y());
+        axis.z( -axis.z());
+
+
+        endpt  = FindExtendedStartPt( bounding_box , outer_radius , inner_radius , AxisPt1 , axis,  Height , dTanAngle , dExtended_OuterRadius );
+        Height = sqrt( (endpt.x() - AxisPt2.x()) * (endpt.x() - AxisPt2.x())+
+            (endpt.y() - AxisPt2.y()) * (endpt.y() - AxisPt2.y())+
+            (endpt.z() - AxisPt2.z()) * (endpt.z() - AxisPt2.z()) );
+
+        AxisPt1.x( endpt.x() );
+        AxisPt1.y( endpt.y() );
+        AxisPt1.z( endpt.z() );
+
+        start.x( endpt.x() );
+        start.y( endpt.y() );
+        start.z( endpt.z() );
+
+        // reverse the axis.
+        axis.x( -axis.x());
+        axis.y( -axis.y());
+        axis.z( -axis.z());
+
+    }
+    else
+    {
+        endpt  = FindExtendedStartPt( bounding_box ,  inner_radius , outer_radius , AxisPt2 , axis,  Height , dTanAngle , dExtended_InnerRadius );
+        Height = sqrt( (endpt.x() - AxisPt1.x()) * (endpt.x() - AxisPt1.x())+
+            (endpt.y() - AxisPt1.y()) * (endpt.y() - AxisPt1.y())+
+            (endpt.z() - AxisPt1.z()) * (endpt.z() - AxisPt1.z()) );
+
+        AxisPt2.x( endpt.x() );
+        AxisPt2.y( endpt.y() );
+        AxisPt2.z( endpt.z() );
+
+        end.x( endpt.x() );
+        end.y( endpt.y() );
+        end.z( endpt.z() );
+    }
+}
+
+//author: Jane Hu
+//Date Created: Jan. 9, 2013
 CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
-                               double radius,
+                               double radius, 
                                const CubitVector &axis,
                                const CubitVector &center,
                                DLIList<BodySM*>& neighbor_imprint_list,
@@ -19093,10 +20891,10 @@ CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
   BodySM *body_ptr;
   bounding_box = webcut_body_list[0]->bounding_box();
   cent_bod =  bounding_box.center();
-  cent_bod = cent_bod - center;
+  cent_bod = cent_bod - center; 
   curr = cent_bod.length();
   if ( curr > max_size )
-     max_size = curr;
+     max_size = curr; 
 
 
   for ( int ii = webcut_body_list.size()-1; ii > 0; ii-- )
@@ -19104,16 +20902,16 @@ CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
       body_ptr = webcut_body_list[ii];
       bounding_box |= body_ptr->bounding_box();
       cent_bod = body_ptr->bounding_box().center();
-      cent_bod = cent_bod - center;
+      cent_bod = cent_bod - center; 
       curr = cent_bod.length();
       if ( curr > max_size )
-        max_size = curr;
+        max_size = curr; 
     }
 
   curr = bounding_box.diagonal().length();
 
   if ( curr > max_size )
-     max_size = curr;
+     max_size = curr; 
 
   double height = 0.0;
   if ( center.x() > max_size )
@@ -19167,4 +20965,5 @@ CubitStatus webcut_w_cylinder( DLIList<BodySM*> &webcut_body_list,
   return stat;
 }
 
- 
+//*********************************************************************************************************************************************************************
+

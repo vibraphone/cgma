@@ -274,6 +274,9 @@ public :
 
   virtual void move_to_surface ( CubitVector& location, double* u_guess = NULL, double* v_guess = NULL);
     //- Moves the given node back onto its surface
+
+  virtual void move_to_surface( CubitVector& location, CubitVector& along_vec );
+  //- Moves the given location onto surface along the specified direction
   
   void find_closest_point_trimmed(CubitVector from_point, 
                                   CubitVector& point_on_surface);

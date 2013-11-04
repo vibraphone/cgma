@@ -290,6 +290,18 @@ void RefFace::find_closest_point_trimmed(CubitVector from_point,
 }
 
 void RefFace::move_to_surface ( CubitVector& location, 
+                                CubitVector& along_vec )
+{  
+  CubitVector closest_location;
+  get_surface_ptr()->closest_point_along_vector(location, along_vec,                                                        
+                                                       closest_location);
+
+  location.set ( closest_location.x(), 
+                closest_location.y(), 
+                closest_location.z() );
+}
+
+void RefFace::move_to_surface ( CubitVector& location, 
                                 double* u_guess, double* v_guess )
 {
   CubitVector closest_location;
@@ -644,7 +656,7 @@ CubitBoolean RefFace::about_spatially_equal(
      // that a match was found.
    if (notify_refEntity == CUBIT_TRUE )
    {
-      this->notify(ref_face_ptr_2,COMPARISON_FOUND);
+      this->comparison_found(ref_face_ptr_2);
    }
 
    return CUBIT_TRUE;

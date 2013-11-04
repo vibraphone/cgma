@@ -19,8 +19,8 @@
 #include "CubitObserver.hpp"
 #include "CubitDefines.h"
 #include "GeometryDefines.h"
-#include "CubitCompat.h"
 #include "CubitGeomConfigure.h"
+#include "CubitCompat.h"
 
 class CubitString;
 class CubitVector;
@@ -113,6 +113,8 @@ get_MFT_string(Model_File_Type type)
       return "FACET";
     case SOLIDWORKS_TYPE :
       return "SOLIDWORKS";
+    case OCC_TYPE:
+      return "OCC";
     default :
       PRINT_ERROR("Model_File_Type index %i is not handled properly in get_MFT_string()\n", type);
   }
@@ -134,6 +136,7 @@ static const char* const ACIS_SAT_IMPORT_DEFAULT_LOG = "sat_import.log";
 static const char* const GRANITE_EXPORT_DEFAULT_LOG = "granite_export.log";
 static const char* const STEP_EXPORT_DEFAULT_LOG = "step_export.log";
 static const char* const IGES_EXPORT_DEFAULT_LOG = "iges_export.log";
+static const char* const OCC_EXPORT_DEFAULT_LOG = "occ_export.log";
 static const char* const STEP_IGES_TRANSLATOR = "step_iges_translator";
 static const char* const TRANSLATOR_DIR =  "/translator/";
 
@@ -176,13 +179,13 @@ public:
                                    Model_File_Type file_type,
                                    const CubitString &cubit_version,
                                    ModelExportOptions &export_options ) = 0;
-
+    
       virtual CubitStatus export_solid_model(
                                    DLIList<TopologyBridge*>& bridge_list,
                                    char*& p_buffer,
                                    int& n_buffer_size,
                                    bool b_export_buffer) = 0;
-    
+
      //! Saves out a temporary geometry file.  Entities in list must all be 
      //! of same modeling engine.
      virtual CubitStatus save_temp_geom_file(
@@ -302,10 +305,12 @@ public:
       //- on those entities. Supports vertices, curves, surfaces, volumes and bodies.
 
       virtual void delete_solid_model_entities(DLIList<BodySM*>& body_list) const = 0;
+      virtual CubitStatus delete_solid_model_entities(GeometryEntity* ref_entity_ptr) const;
       virtual CubitStatus delete_solid_model_entities( BodySM* body_ptr ) const = 0;
       virtual CubitStatus delete_solid_model_entities(Surface* surf_ptr ) const = 0;
       virtual CubitStatus delete_solid_model_entities( Curve* curve_ptr ) const = 0;
       virtual CubitStatus delete_solid_model_entities( TBPoint* point_ptr ) const = 0;
+      virtual CubitStatus delete_topology_bridge (TopologyBridge* bridge) const;
       //- Deletes the solid model entities associcated with the input
       //- free-floating RefEntity. If the input RefEntity is not free-floating,
       //- then its underlying ACIS ENTITYs are not deleted and CUBIT_FAILURE
@@ -331,11 +336,11 @@ public:
                                                GMem *&gMem) const = 0;
 
   virtual CubitStatus get_u_isoparametric_points(Surface* ref_face_ptr,
-                                                 double v, int& n,
+                                                 double v, int &n,
                                                  GMem *&gMem) const = 0;
 
   virtual CubitStatus get_v_isoparametric_points(Surface* ref_face_ptr,
-                                                 double u, int&n,
+                                                 double u, int &n,
                                                  GMem *&gMem) const = 0;
 
   virtual CubitStatus transform_vec_position(
@@ -348,8 +353,8 @@ public:
     //O vector showning transform.
     //O-Computes the transform from the transformed body.
 
-  virtual int curve_is_on_ignored_surface(Curve* /* curve */,
-                    Surface* /* surf */) { return 0; }
+  virtual int curve_is_on_ignored_surface(Curve *curve,
+                    Surface *surf) { return 0; }
 
   virtual const char* modeler_type() = 0;
   virtual int get_major_version() = 0;
@@ -380,7 +385,15 @@ public:
                                     std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
                                     std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
                                     unsigned short normal_tolerance, 
-                                    double distance_tolerance, double max_edge_length ) const;
+                                    double distance_tolerance, double max_edge_length ) const;  
+  //I bodysm -- body you want to facet
+  //O g_mem -- structure containing all the points and facet connectivity
+  //O surfaces_to_facets_vector -- the ith facet in g_mem is on the ith Surface in this vector
+  //O vertex_edge_to_point_vector -- the ith point in the g_mem in on the ith surface/edge/vertex in this vector
+  //O facet_edges_on_curves -- the TopologyBri dges are the Curves in bodysm and the pair is the indices to the 
+  //                           facet points in the g_mem's point array that make a single facet edge on the Curve.
+  //I various input tolerances.                           
+
   
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                     GMem* gMem,
@@ -446,7 +459,7 @@ public:
 
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const = 0; 
 
-  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* /* hidden_tb */, CubitVector* /* point */){return NULL;};
+  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point){return NULL;};
 
   virtual CubitStatus get_visible_entities( TopologyBridge *hidden_tb, DLIList<TopologyBridge*> &real_tbs );
 

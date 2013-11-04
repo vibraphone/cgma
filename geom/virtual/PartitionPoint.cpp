@@ -24,7 +24,7 @@ PartitionPoint::PartitionPoint( TBPoint* real_point )
   new SubEntitySet( real_point, this );
 }
 
-PartitionPoint::PartitionPoint( CubitSimpleAttrib& attrib,
+PartitionPoint::PartitionPoint( const CubitSimpleAttrib& attrib,
                                 PartitionEntity* owner )
   : firstCurve(0), curveCount(0), facetPoint(0)
 { 
@@ -159,19 +159,19 @@ void PartitionPoint::print_debug_info( const char* prefix,
 }
 
 
-void PartitionPoint::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionPoint::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().add_attribute( this, csa ); }
-void PartitionPoint::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionPoint::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().rem_attribute( this, csa ); }
 void PartitionPoint::remove_all_simple_attribute_virt()
 { sub_entity_set().rem_all_attrib( this ); }
-CubitStatus PartitionPoint::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartitionPoint::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, list ); 
   return CUBIT_SUCCESS;
 }
 CubitStatus PartitionPoint::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, name.c_str(), list ); 
   return CUBIT_SUCCESS;

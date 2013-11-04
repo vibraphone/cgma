@@ -36,7 +36,7 @@ public:
 
   virtual CubitStatus combine( PartitionSurface* dead_surface );
   
-  static PartitionSurface* construct( CubitSimpleAttrib& attrib, PartitionLump* vol );
+  static PartitionSurface* construct( const CubitSimpleAttrib& attrib, PartitionLump* vol );
 
   PartitionSurface( PartitionLump* owner );
   
@@ -106,7 +106,10 @@ public:
   virtual CubitStatus u_v_from_position( CubitVector const& location,
                                  double& u, double& v,
                                  CubitVector* closest_location = NULL );
-
+  
+  virtual CubitStatus closest_point_along_vector( CubitVector& from_point, 
+                                                  CubitVector& along_vector,
+                                                  CubitVector& point_on_surface);
   virtual CubitBoolean is_periodic();
   virtual CubitBoolean is_periodic_in_U( double& period );
   virtual CubitBoolean is_periodic_in_V( double& period );
@@ -220,12 +223,12 @@ public:
   
   virtual CubitSense get_shell_sense( ShellSM* shell_ptr ) const;
 
-  void append_simple_attribute_virt(CubitSimpleAttrib*);
-  void remove_simple_attribute_virt(CubitSimpleAttrib*);
+  void append_simple_attribute_virt(const CubitSimpleAttrib&);
+  void remove_simple_attribute_virt(const CubitSimpleAttrib&);
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&);
+  CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&);
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& );
+                                    DLIList<CubitSimpleAttrib>& );
   
   void notify_split( FacetEntity* old_tri, FacetEntity* new_tri );
   void notify_destroyed( CubitFacetData* facet );

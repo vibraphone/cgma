@@ -34,6 +34,9 @@
 
 namespace NCubitFile {
 
+UnsignedInt32 GetLocation(FILE* f);
+int SetLocation(FILE* f, UnsignedInt32 offset, int whence);
+
 class CUBIT_UTIL_EXPORT CIOWrapper {
 public:
     CIOWrapper(FILE* xpFile,
@@ -64,7 +67,7 @@ public:
     virtual void EndReadBlock();
     virtual UnsignedInt32 get_endian() { return mintSwapEndian; }  
     
-    virtual long GetLocation();
+    virtual UnsignedInt32 GetLocation();
 
 private:
     FILE* mpFile;

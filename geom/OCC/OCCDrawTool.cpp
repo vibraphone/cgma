@@ -18,6 +18,9 @@
 #include "TopTools_IndexedMapOfShape.hxx"
 #include "TopExp.hxx"
 #include "BRep_Tool.hxx"
+#include "GProp_GProps.hxx"
+#include "BRepGProp.hxx"
+#include <TopExp_Explorer.hxx>
 // ********** END OCC INCLUDES               **********
 
 // ********** BEGIN CUBIT INCLUDES            **********
@@ -60,9 +63,9 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
 				 CubitBoolean tessellate,
                            	 CubitBoolean flush )
 {
-  if( (TopoDS_CompSolid*)shape  ||
-      (TopoDS_Solid*)shape      ||
-      (TopoDS_Shell*)shape  )
+  if( shape->ShapeType() == TopAbs_COMPOUND ||
+      shape->ShapeType() == TopAbs_SOLID ||
+      shape->ShapeType() == TopAbs_SHELL )
   {
     DLIList<TopoDS_Face*> Face_list;
     TopTools_IndexedMapOfShape M;
@@ -70,9 +73,10 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
     int ii;
     for (ii=1; ii<=M.Extent(); ii++) 
     {
-          TopologyBridge *face = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCSurface *occ_face = CAST_TO(face, OCCSurface);
-          Face_list.append_unique(occ_face->get_TopoDS_Face());
+     //     TopologyBridge *face = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
+     //     OCCSurface *occ_face = CAST_TO(face, OCCSurface);
+     //     Face_list.append_unique(occ_face->get_TopoDS_Face());
+      Face_list.append_unique( const_cast<TopoDS_Face*>(&(TopoDS::Face(M(ii)))));
     } 
     int i;
     for( i=Face_list.size(); i--; )
@@ -81,11 +85,11 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
       GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
-  else if ((TopoDS_Face*)shape )
+  else if (shape->ShapeType() == TopAbs_FACE )
   {
     return draw_FACE((TopoDS_Face *)shape , color, tessellate, flush );
   }
-  else if( (TopoDS_Wire*)shape) 
+  else if (shape->ShapeType() == TopAbs_WIRE )
   {
     DLIList<TopoDS_Edge*> EDGE_list;
     TopTools_IndexedMapOfShape M;
@@ -93,9 +97,7 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
     int ii;
     for (ii=1; ii<=M.Extent(); ii++)
     {
-          TopologyBridge *edge = OCCQueryEngine::instance()->occ_to_cgm(M(ii));
-          OCCCurve *occ_curve = CAST_TO(edge, OCCCurve);
-          EDGE_list.append_unique(occ_curve->get_TopoDS_Edge());
+          EDGE_list.append_unique( const_cast<TopoDS_Edge*>(&(TopoDS::Edge(M(ii)))));
     }
     int i;
     for( i=EDGE_list.size(); i--; )
@@ -104,11 +106,11 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
       GfxPreview::flush();
     return CUBIT_SUCCESS;
   }
-  else if ((TopoDS_Edge*)shape )
+  else if (shape->ShapeType() == TopAbs_EDGE )
   {
     return draw_EDGE( (TopoDS_Edge*)shape, color, flush );
   }
-  else if ((TopoDS_Vertex*)shape )
+  else if (shape->ShapeType() == TopAbs_VERTEX )
   {
     return draw_VERTEX( (TopoDS_Vertex*)shape, color, flush );
   }
@@ -124,14 +126,37 @@ OCCDrawTool::draw_TopoDS_Shape( TopoDS_Shape *shape, int color,
 CubitStatus
 OCCDrawTool::draw_EDGE( TopoDS_Edge *EDGE_ptr, int color, CubitBoolean flush )
 {
+  //OCCQueryEngine *OQE = OCCQueryEngine::instance();
+  //Curve *curve_ptr = OQE->populate_topology_bridge( *EDGE_ptr, CUBIT_TRUE );
+  //CubitStatus stat;
+  //stat = draw_curve(curve_ptr, color, flush);
+
+  GMem g_mem;
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
+  double tol = OQE->get_sme_resabs_tolerance();
 
-  Curve *curve_ptr = OQE->populate_topology_bridge( *EDGE_ptr, CUBIT_TRUE );
-
+  GProp_GProps myProps;
+  BRepGProp::LinearProperties(*EDGE_ptr, myProps);
+  if( myProps.Mass() < tol)
+    return CUBIT_SUCCESS;
+  // get the graphics
   CubitStatus stat;
-  stat = draw_curve(curve_ptr, color, flush);
+  stat = OQE->get_graphics( EDGE_ptr, &g_mem );
 
-  return stat;
+  if (stat==CUBIT_FAILURE )
+  {
+    PRINT_ERROR("Unable to tessellate a curve for display\n" );
+    return CUBIT_FAILURE;
+  }
+  else
+  {
+    // Draw the polyline
+    GfxPreview::draw_polyline( g_mem.point_list(), g_mem.pointListCount, color );
+  }
+
+  if( flush )
+    GfxPreview::flush();
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus 
@@ -157,7 +182,6 @@ OCCDrawTool::draw_surface( Surface *surface, int color, CubitBoolean tessellate 
       GfxPreview::draw_tri( p, color );
     }
   }
-
   else
   {
     // Draw curves
@@ -203,17 +227,47 @@ OCCDrawTool::draw_curve( Curve *curve, int color , CubitBoolean flush )
 
 CubitStatus
 OCCDrawTool::draw_FACE( TopoDS_Face *FACE_ptr, int color, 
-			CubitBoolean tessellate, 
+                        CubitBoolean tessellate, 
                         CubitBoolean flush )
 {
+  
+  //OCCQueryEngine *OQE = OCCQueryEngine::instance();
+  //Surface *surf_ptr = OQE->populate_topology_bridge( *FACE_ptr );
+
+  //CubitStatus stat;
+  //stat = draw_face(surf_ptr, color, tessellate, flush);
+
   OCCQueryEngine *OQE = OCCQueryEngine::instance();
+  if( tessellate )
+  {
+    GMem g_mem ;
+    OQE->get_graphics( FACE_ptr, &g_mem);
 
-  Surface *surf_ptr = OQE->populate_topology_bridge( *FACE_ptr );
+    // Draw the triangles
+    GPoint p[3];
+    GPoint* plist = g_mem.point_list();
+    int* facet_list = g_mem.facet_list();
+    int i, c = 0;
+    for( i=0; i<g_mem.facet_list_size(); i++ )
+    {
+      p[0] = plist[facet_list[++c]];
+      p[2] = plist[facet_list[++c]];
+      p[1] = plist[facet_list[++c]];
+      c++;
+      GfxPreview::draw_tri( p, color );
+    }
+  }
 
-  CubitStatus stat;
-  stat = draw_surface(surf_ptr, color, tessellate, flush);
+  else
+  {
+    TopExp_Explorer Bx;    
+    for(Bx.Init(*FACE_ptr, TopAbs_EDGE); Bx.More(); Bx.Next())
+      draw_EDGE( const_cast<TopoDS_Edge*>(&(TopoDS::Edge( Bx.Current() ))), color, flush );   
+  }
 
-  return stat;
+  if( flush )
+    GfxPreview::flush();
+  return CUBIT_SUCCESS;
 }
 
 CubitStatus

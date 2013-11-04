@@ -62,7 +62,7 @@ CIOWrapper::CIOWrapper(FILE* xpFile, UnsignedInt32 xintAbsoluteOffset,
     mpFile = xpFile;
     mintBlockStart = mintBlockEnd = 0;
 
-    if(fseek(mpFile, xintAbsoluteOffset + xintRelativeOffset, SEEK_SET))
+    if(NCubitFile::SetLocation(mpFile, xintAbsoluteOffset + xintRelativeOffset, SEEK_SET))
         throw CCubitFile::eFileSeekError;
     UnsignedInt32 lintSourceEndian;
     if(fread(&lintSourceEndian, sizeof(UnsignedInt32), 1, mpFile) != 1)
@@ -80,12 +80,10 @@ UnsignedInt32 CIOWrapper::BeginWriteBlock(UnsignedInt32 xintAbsoluteOffset)
 // where the block begins as a relative offset from the passed value (or
 // absolute offset if the passed offset is 0).
 {
-    if(fseek(mpFile, 0, SEEK_END))
+    if(NCubitFile::SetLocation(mpFile, 0, SEEK_END))
         throw CCubitFile::eFileSeekError;
-    long pos;
-    mintBlockEnd = mintBlockStart = pos = ftell(mpFile);
-    if(pos == -1L)
-        throw CCubitFile::eFileTellError;
+    UnsignedInt32 pos;
+    mintBlockEnd = mintBlockStart = pos = NCubitFile::GetLocation(mpFile);
     return mintBlockStart - xintAbsoluteOffset;
 }
 
@@ -93,7 +91,7 @@ void CIOWrapper::BeginRewriteBlock(UnsignedInt32 xintAbsoluteOffset,
                                    UnsignedInt32 xintRelativeOffset)
 {
     mintBlockEnd = mintBlockStart = xintAbsoluteOffset + xintRelativeOffset;
-    if(fseek(mpFile, mintBlockStart, SEEK_SET))
+    if(NCubitFile::SetLocation(mpFile, mintBlockStart, SEEK_SET))
         throw CCubitFile::eFileSeekError;
 }
 
@@ -156,9 +154,7 @@ UnsignedInt32 CIOWrapper::EndWriteBlock()
 // Completes the writing of a contiguous data block, checks for errors and
 // returns the length of the block.
 {
-    long lintBlockEnd = ftell(mpFile);
-    if(lintBlockEnd == -1L)
-        throw CCubitFile::eFileTellError;
+    UnsignedInt32 lintBlockEnd = NCubitFile::GetLocation(mpFile);
     if((UnsignedInt32)lintBlockEnd != mintBlockEnd)
         throw CCubitFile::eCorruptBlock;
     UnsignedInt32 lintLength = mintBlockEnd - mintBlockStart;
@@ -171,7 +167,7 @@ void CIOWrapper::BeginReadBlock(UnsignedInt32 xintAbsoluteOffset,
                                 UnsignedInt32 xintRelativeOffset)
 // Begin the read of a contiguous data block.
 {
-    if(fseek(mpFile, xintAbsoluteOffset + xintRelativeOffset, SEEK_SET))
+    if(NCubitFile::SetLocation(mpFile, xintAbsoluteOffset + xintRelativeOffset, SEEK_SET))
         throw CCubitFile::eFileSeekError;
 }
 
@@ -241,8 +237,31 @@ void CIOWrapper::EndReadBlock()
     mintBlockStart = mintBlockEnd = 0;
 }
     
-long CIOWrapper::GetLocation()
+UnsignedInt32 NCubitFile::GetLocation(FILE* f)
 {
-  return ftell(mpFile);
+#ifdef _MSC_VER
+  // normal ftell() returns long, which is a 32 bit signed integer.
+  // we use this to increase our 2 GB limit to 4 GB.
+  // To go past 4GB, we'd have to use a 64 bit integer instead of UnsignedInt32.
+  __int64 offset = _ftelli64(f);
+#else
+  long offset = ftell(f);
+#endif
+  if(offset == -1L)
+    throw CCubitFile::eFileTellError;
+  return offset;
 }
 
+UnsignedInt32 CIOWrapper::GetLocation()
+{
+  return NCubitFile::GetLocation(mpFile);
+}
+
+int NCubitFile::SetLocation(FILE* f, UnsignedInt32 offset, int whence)
+{
+#ifdef _MSC_VER
+  return _fseeki64(f, offset, whence);
+#else
+  return fseek(f, offset, whence);
+#endif
+}

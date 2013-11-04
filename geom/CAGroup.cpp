@@ -20,133 +20,113 @@
 // initialize this CA's static members
 CubitBoolean CAGroup::initialize_rand = CUBIT_TRUE;
 
-CubitAttrib* CAGroup_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAGroup_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAGroup *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAGroup(entity);
-  }
-  else
-  {
-    new_attrib = new CAGroup(entity, p_csa);
-  }
-
-  return new_attrib;
-}
-
-CAGroup::CAGroup(RefEntity* new_attrib_owner)
-        : CubitAttrib(new_attrib_owner)
-{
-  initialize();
+  return new CAGroup(entity, p_csa);
 }
 
 CAGroup::CAGroup(RefEntity* new_attrib_owner,
-                 CubitSimpleAttrib *csa_ptr)
+                 const CubitSimpleAttrib& csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
 
   initialize();
-  
-  DLIList<int*> *i_list = csa_ptr->int_data_list();
-  DLIList<CubitString*> *cs_list = csa_ptr->string_data_list();
 
-    // first, the ints
-  i_list->reset();
-  
-  int num_groups = *(i_list->get_and_step());
-  
-    // groupID
-  int i;
-  for (i = num_groups; i > 0; i--)
-    groupID.append(*(i_list->get_and_step()));
+  if(!csa_ptr.isEmpty())
+  {
 
-      // uniqueID
-  for (i = num_groups; i > 0; i--)
-    uniqueID.append(*(i_list->get_and_step()));
+    const std::vector<int>& i_list = csa_ptr.int_data_list();
+    const std::vector<CubitString>& cs_list = csa_ptr.string_data_list();
 
-      // sequenceNumbers
-  for (i = num_groups; i > 0; i--)
-    sequenceNumbers.append(*(i_list->get_and_step()));
+      // first, the ints
 
-    // numOwningGroups
-  for (i = num_groups; i > 0; i--)
-    numOwningGroups.append(*(i_list->get_and_step()));
+    int offset = 0;
+    int num_groups = i_list[offset++];
 
-    // total number of owning groups
-  int total_owning_groups = *(i_list->get_and_step());
-  
-    // owningGroupID
-  for (i = total_owning_groups; i > 0; i--)
-    owningGroupID.append(*(i_list->get_and_step()));
-    
-    // owningUniqueID
-  for (i = total_owning_groups; i > 0; i--)
-    owningUniqueID.append(*(i_list->get_and_step()));
+      // groupID
+    int i;
+    for (i = num_groups; i > 0; i--)
+      groupID.append(i_list[offset++]);
 
-    // owningSequenceNumbers
-  for (i = total_owning_groups; i > 0; i--)
-    owningSequenceNumbers.append(*(i_list->get_and_step()));
+        // uniqueID
+    for (i = num_groups; i > 0; i--)
+      uniqueID.append(i_list[offset++]);
 
-    // ancestor groups added after first implementation of CAGroup,
-    // therefore not all attributes may have ancestor groups
-    // setting total_ancestor_groups to zero first will short-circuit
-    // loops below if there aren't any ancestor groups, so no need for
-    // an 'if' statement
+        // sequenceNumbers
+    for (i = num_groups; i > 0; i--)
+      sequenceNumbers.append(i_list[offset++]);
 
-    // total number of ancestor groups
-  int total_ancestor_groups = 0;
+      // numOwningGroups
+    for (i = num_groups; i > 0; i--)
+      numOwningGroups.append(i_list[offset++]);
 
-  if (i_list->size() > (4*num_groups + 3*total_owning_groups + 2))
-    total_ancestor_groups = *(i_list->get_and_step());
-  
-    // ancestorGroupID
-  for (i = total_ancestor_groups; i > 0; i--)
-    ancestorGroupID.append(*(i_list->get_and_step()));
-    
-    // ancestorUniqueID
-  for (i = total_ancestor_groups; i > 0; i--)
-    ancestorUniqueID.append(*(i_list->get_and_step()));
-    
-    // ancestorOwnedGroupUid
-  for (i = total_ancestor_groups; i > 0; i--)
-    ancestorOwnedGroupUid.append(*(i_list->get_and_step()));
-    
-     // ancestorSequenceNumbers
-  for (i = total_ancestor_groups; i > 0; i--)
-    ancestorSequenceNumbers.append(*(i_list->get_and_step()));
-    
-    // now, doubles (none)
+      // total number of owning groups
+    int total_owning_groups = i_list[offset++];
 
-    // now, strings
-  cs_list->reset();
+      // owningGroupID
+    for (i = total_owning_groups; i > 0; i--)
+      owningGroupID.append(i_list[offset++]);
 
-    // attribute internal name (just pop the list)
-  cs_list->step();
+      // owningUniqueID
+    for (i = total_owning_groups; i > 0; i--)
+      owningUniqueID.append(i_list[offset++]);
 
-    // groupNames
-  for (i = num_groups; i > 0; i--)
-    groupNames.append(new CubitString(*(cs_list->get_and_step())));
+      // owningSequenceNumbers
+    for (i = total_owning_groups; i > 0; i--)
+      owningSequenceNumbers.append(i_list[offset++]);
 
-    // owningGroupNames
-  for (i = total_owning_groups; i > 0; i--)
-    owningGroupNames.append(new CubitString(*(cs_list->get_and_step())));
+      // ancestor groups added after first implementation of CAGroup,
+      // therefore not all attributes may have ancestor groups
+      // setting total_ancestor_groups to zero first will short-circuit
+      // loops below if there aren't any ancestor groups, so no need for
+      // an 'if' statement
 
-    // ancestorGroupName
-  for (i = total_ancestor_groups; i > 0; i--)
-    ancestorGroupName.append(new CubitString(*(cs_list->get_and_step())));
+      // total number of ancestor groups
+    int total_ancestor_groups = 0;
 
-    // ok, we're done
+    if (i_list.size() > (4*num_groups + 3*total_owning_groups + 2))
+      total_ancestor_groups = i_list[offset++];
+
+      // ancestorGroupID
+    for (i = total_ancestor_groups; i > 0; i--)
+      ancestorGroupID.append(i_list[offset++]);
+
+      // ancestorUniqueID
+    for (i = total_ancestor_groups; i > 0; i--)
+      ancestorUniqueID.append(i_list[offset++]);
+
+      // ancestorOwnedGroupUid
+    for (i = total_ancestor_groups; i > 0; i--)
+      ancestorOwnedGroupUid.append(i_list[offset++]);
+
+       // ancestorSequenceNumbers
+    for (i = total_ancestor_groups; i > 0; i--)
+      ancestorSequenceNumbers.append(i_list[offset++]);
+
+      // now, doubles (none)
+
+      // now, strings
+      // attribute internal name (just pop the list)
+    offset = 1;
+
+      // groupNames
+    for (i = num_groups; i > 0; i--)
+      groupNames.append(cs_list[offset++]);
+
+      // owningGroupNames
+    for (i = total_owning_groups; i > 0; i--)
+      owningGroupNames.append(cs_list[offset++]);
+
+      // ancestorGroupName
+    for (i = total_ancestor_groups; i > 0; i--)
+      ancestorGroupName.append(cs_list[offset++]);
+
+      // ok, we're done
+  }
 }
 
 CAGroup::~CAGroup()
 {
-  int i;
-  for ( i = groupNames.size(); i > 0; i--)
-    delete groupNames.get_and_step();
-  
-  for (i = owningGroupNames.size(); i > 0; i--)
-    delete owningGroupNames.get_and_step();
 }
 
 void CAGroup::initialize()
@@ -185,7 +165,7 @@ CubitStatus CAGroup::actuate()
       // pop the data for this group off the lists
     int group_id = groupID.get_and_step();
     int unique_id = uniqueID.get_and_step();
-    CubitString *group_name = groupNames.get_and_step();
+    CubitString group_name = groupNames.get_and_step();
     int seq_num = sequenceNumbers.get_and_step();
 
     RefGroup *ref_group =
@@ -200,7 +180,7 @@ CubitStatus CAGroup::actuate()
     {
       int owning_group_id = owningGroupID.get_and_step();
       int owning_unique_id = owningUniqueID.get_and_step();
-      CubitString *owning_group_name = owningGroupNames.get_and_step();
+      CubitString owning_group_name = owningGroupNames.get_and_step();
       seq_num = owningSequenceNumbers.get_and_step();
 
       assign_group(ref_group, owning_group_id, owning_unique_id,
@@ -233,7 +213,7 @@ CubitStatus CAGroup::actuate()
 
 RefGroup *CAGroup::assign_group(RefEntity *owned_entity,
                                 const int group_id, const int unique_id,
-                                CubitString *group_name,
+                                const CubitString& group_name,
                                 const int seq_num)
 {
   RefGroup* parent_group = NULL;
@@ -273,7 +253,7 @@ RefGroup *CAGroup::assign_group(RefEntity *owned_entity,
     parent_group->add_TD(td_cagroup);
 
       // add the attribOwnerEntity to the group and name the group
-    parent_group->entity_name(*group_name);
+    parent_group->entity_name(group_name);
   }
 
     // add the entity to the group with the proper sequence number
@@ -284,7 +264,7 @@ RefGroup *CAGroup::assign_group(RefEntity *owned_entity,
   
 RefGroup *CAGroup::assign_ancestor_group(const int ancestor_id,
                                          const int ancestor_uid,
-                                         const CubitString *ancestor_name,
+                                         const CubitString& ancestor_name,
                                          const int owned_group_uid,
                                          const int seq_num)
 {
@@ -342,7 +322,7 @@ RefGroup *CAGroup::assign_ancestor_group(const int ancestor_id,
     ancestor_group->add_TD(td_cagroup);
 
       // add the owned group to the group and name the group
-    ancestor_group->entity_name(*ancestor_name);
+    ancestor_group->entity_name(ancestor_name);
   }
 
     // add the entity to the group with the proper sequence number
@@ -408,7 +388,7 @@ CubitStatus CAGroup::update()
       // also append the group name
     groupID.append(ref_group->id());
     uniqueID.append(td_cagroup->unique_id());
-    groupNames.append(new CubitString(ref_group->entity_name()));
+    groupNames.append(ref_group->entity_name());
 
       // get and append the sequence number of the attribOwnerEntity
       // in this group
@@ -444,7 +424,7 @@ CubitStatus CAGroup::update()
         // also append the group name
       owningGroupID.append(parent_ref_group->id());
       owningUniqueID.append(td_parent->unique_id());
-      owningGroupNames.append(new CubitString(parent_ref_group->entity_name()));
+      owningGroupNames.append(parent_ref_group->entity_name());
 
         // get and append the sequence number of the group in the parent
         // group
@@ -472,9 +452,6 @@ CubitStatus CAGroup::reset()
   uniqueID.clean_out();
     //- unique ids of groups containing attribOwnerEntity
 
-  int i;
-  for (i = groupNames.size(); i > 0; i--)
-    delete groupNames.get_and_step();
   groupNames.clean_out();
     //- names of groups containing attribOwnerEntity
 
@@ -490,8 +467,6 @@ CubitStatus CAGroup::reset()
   owningUniqueID.clean_out();
     //- unique ids of groups containing groups containing attribOwnerEntity
 
-  for (i = owningGroupNames.size(); i > 0; i--)
-    delete owningGroupNames.get_and_step();
   owningGroupNames.clean_out();
     //- names of groups containing groups containing attribOwnerEntity
 
@@ -503,8 +478,6 @@ CubitStatus CAGroup::reset()
     //- name, and the uid of the owned group to which this is an ancestor
   ancestorGroupID.clean_out();
   ancestorUniqueID.clean_out();
-  for (i = ancestorGroupName.size(); i > 0; i--)
-    delete ancestorGroupName.get_and_step();
   ancestorGroupName.clean_out();
   ancestorOwnedGroupUid.clean_out();
   ancestorSequenceNumbers.clean_out();
@@ -538,7 +511,7 @@ void CAGroup::build_ancestor_list(RefGroup *parent_ref_group)
 
     ancestorGroupID.append(ancestor->id());
     ancestorUniqueID.append(td_cagroup->unique_id());
-    ancestorGroupName.append(new CubitString(ancestor->entity_name()));
+    ancestorGroupName.append(ancestor->entity_name());
     ancestorOwnedGroupUid.append(td_parent->unique_id());
     
       // get and append the sequence number of the group in the parent
@@ -551,104 +524,98 @@ void CAGroup::build_ancestor_list(RefGroup *parent_ref_group)
   }
 }
       
-CubitSimpleAttrib* CAGroup::cubit_simple_attrib()
+CubitSimpleAttrib CAGroup::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int> i_list;
 
     // first, the ints
     // groupID
   groupID.reset();
-  i_list.append(groupID.size());
+  i_list.push_back(groupID.size());
   int i;
   for (i = groupID.size(); i > 0; i--)
-    i_list.append(groupID.get_and_step());
+    i_list.push_back(groupID.get_and_step());
     
     // uniqueID
   uniqueID.reset();
   for (i = uniqueID.size(); i > 0; i--)
-    i_list.append(uniqueID.get_and_step());
+    i_list.push_back(uniqueID.get_and_step());
     
     // sequenceNumbers
   sequenceNumbers.reset();
   for (i = sequenceNumbers.size(); i > 0; i--)
-    i_list.append(sequenceNumbers.get_and_step());
+    i_list.push_back(sequenceNumbers.get_and_step());
     
     // numOwningGroups
   numOwningGroups.reset();
   for (i = numOwningGroups.size(); i > 0; i--)
-    i_list.append(numOwningGroups.get_and_step());
+    i_list.push_back(numOwningGroups.get_and_step());
 
     // size of owningGroupID
-  i_list.append(owningGroupID.size());
+  i_list.push_back(owningGroupID.size());
   
     // owningGroupID
   owningGroupID.reset();
   for (i = owningGroupID.size(); i > 0; i--)
-    i_list.append(owningGroupID.get_and_step());
+    i_list.push_back(owningGroupID.get_and_step());
     
     // owningUniqueID
   owningUniqueID.reset();
   for (i = owningUniqueID.size(); i > 0; i--)
-    i_list.append(owningUniqueID.get_and_step());
+    i_list.push_back(owningUniqueID.get_and_step());
     
     // owningSequenceNumbers
   owningSequenceNumbers.reset();
   for (i = owningSequenceNumbers.size(); i > 0; i--)
-    i_list.append(owningSequenceNumbers.get_and_step());
+    i_list.push_back(owningSequenceNumbers.get_and_step());
     
     // size of ancestorGroupID
-  i_list.append(ancestorGroupID.size());
+  i_list.push_back(ancestorGroupID.size());
   
     // ancestorGroupID
   ancestorGroupID.reset();
   for (i = ancestorGroupID.size(); i > 0; i--)
-    i_list.append(ancestorGroupID.get_and_step());
+    i_list.push_back(ancestorGroupID.get_and_step());
 
     // ancestorUniqueID
   ancestorUniqueID.reset();
   for (i = ancestorUniqueID.size(); i > 0; i--)
-    i_list.append(ancestorUniqueID.get_and_step());
+    i_list.push_back(ancestorUniqueID.get_and_step());
 
     // ancestorOwnedGroupUid
   ancestorOwnedGroupUid.reset();
   for (i = ancestorOwnedGroupUid.size(); i > 0; i--)
-    i_list.append(ancestorOwnedGroupUid.get_and_step());
+    i_list.push_back(ancestorOwnedGroupUid.get_and_step());
 
     // ancestorSequenceNumbers
   ancestorSequenceNumbers.reset();
   for (i = ancestorSequenceNumbers.size(); i > 0; i--)
-    i_list.append(ancestorSequenceNumbers.get_and_step());
+    i_list.push_back(ancestorSequenceNumbers.get_and_step());
 
     // now, doubles (none)
 
     // now, strings
     // attribute internal name
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
     // groupNames
   groupNames.reset();
   for (i = groupID.size(); i > 0; i--)
-    cs_list.append(new CubitString(*(groupNames.get_and_step())));
+    cs_list.push_back(groupNames.get_and_step());
 
     // owningGroupNames
   owningGroupNames.reset();
   for (i = owningGroupNames.size(); i > 0; i--)
-    cs_list.append(new CubitString(*(owningGroupNames.get_and_step())));
+    cs_list.push_back(owningGroupNames.get_and_step());
 
     // ancestorGroupName
   ancestorGroupName.reset();
   for (i = ancestorGroupName.size(); i > 0; i--)
-    cs_list.append(new CubitString(*(ancestorGroupName.get_and_step())));
+    cs_list.push_back(ancestorGroupName.get_and_step());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-
-  for (i = cs_list.size(); i--; ) delete cs_list.get_and_step();
-  
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
 }
 
 void CAGroup::has_written(CubitBoolean has_written)

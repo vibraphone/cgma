@@ -2,35 +2,30 @@
 #include "CubitString.hpp"
 #include "CubitSimpleAttrib.hpp"
 #include "CubitFileIOWrapper.hpp"
+#include <algorithm>
 
   // Constructor - copy from CubitSimpleAttrib
-FacetAttrib::FacetAttrib( CubitSimpleAttrib* csa ) : listNext(0)
+FacetAttrib::FacetAttrib( const CubitSimpleAttrib& csa ) : listNext(0)
 {
   int i;
-  
-    // reset all lists (if we didn't need to do this, 
-    // csa could be const)
-  csa->string_data_list()->reset();
-  csa->int_data_list()->reset();
-  csa->double_data_list()->reset();
-  
+
     // save counts
-  numStrings = csa->string_data_list()->size();
-  numDoubles = csa->double_data_list()->size();
-  numIntegers = csa->int_data_list()->size();
-  
+  numStrings = csa.string_data_list().size();
+  numDoubles = csa.double_data_list().size();
+  numIntegers = csa.int_data_list().size();
+
     // allocate arrays, but don't try to allocate zero-length arrays
   stringArray = numStrings ? new CubitString[numStrings] : NULL;
   doubleArray = numDoubles ? new double[numDoubles] : NULL;
   integerArray = numIntegers ? new int[numIntegers] : NULL;
-  
+
     // copy data into arrays
   for( i = 0; i < numStrings; i++ )
-    stringArray[i] = *csa->string_data_list()->next(i);
+    stringArray[i] = csa.string_data_list()[i];
   for( i = 0; i < numIntegers; i++ )
-    integerArray[i] = *csa->int_data_list()->next(i);
+    integerArray[i] = csa.int_data_list()[i];
   for( i = 0; i < numDoubles; i++ )
-    doubleArray[i] = *csa->double_data_list()->next(i);
+      doubleArray[i] = csa.double_data_list()[i];
 }
 
   // Private constructor for use by restore(FILE*)
@@ -53,61 +48,43 @@ FacetAttrib::~FacetAttrib()
 }
 
   // Copy this into a new CubitSimpleAttrib
-CubitSimpleAttrib* FacetAttrib::get_CSA() const
+CubitSimpleAttrib FacetAttrib::get_CSA() const
 {
     // Set initial list size
-  DLIList<CubitString*> string_list(numStrings);
-  DLIList<int> int_list(numIntegers);
-  DLIList<double> double_list(numDoubles);
-  
+  std::vector<CubitString> string_list(numStrings);
+  std::vector<int> int_list(numIntegers);
+  std::vector<double> double_list(numDoubles);
+
     // Don't need to 'new' objects in DLIList because
     // CSA will make copies.  Just put addresses in list.
   int i;
   for( i = 0; i < numStrings; i++ )
-    string_list.append( &stringArray[i] );
+    string_list[i] = stringArray[i];
   for( i = 0; i < numIntegers; i++ )
-    int_list.append( integerArray[i] );
+    int_list[i] = integerArray[i];
   for( i = 0; i < numDoubles; i++ )
-    double_list.append( doubleArray[i] );
-  
-  return new CubitSimpleAttrib( &string_list, &double_list, &int_list );
+    double_list[i] = doubleArray[i];
+
+  return CubitSimpleAttrib( &string_list, &double_list, &int_list );
 }
 
   // compare to a CubitSimpleAttrib
-bool FacetAttrib::equals( CubitSimpleAttrib* csa ) const
+bool FacetAttrib::equals( const CubitSimpleAttrib& csa ) const
 {
   // compare counts
-  csa->string_data_list();
-  csa->string_data_list()->size();
-
-  //int size1 = numIntegers;
-  //int size2 = numDoubles;
-  //int size3 = numStrings;
-  
-  if( csa->int_data_list()->size() != numIntegers ||
-      csa->double_data_list()->size() != numDoubles ||
-      csa->string_data_list()->size() != numStrings )
+  if( csa.int_data_list().size() != numIntegers ||
+      csa.double_data_list().size() != numDoubles ||
+      csa.string_data_list().size() != numStrings )
     return false;
-  
+
     // compare strings first because most likely the
     // first string (the name) will differ.
-  int i;
-  csa->string_data_list()->reset();
-  for( i = 0; i < numStrings; i++ )
-    if( stringArray[i] != *csa->string_data_list()->next(i) )
-      return false;
-
-    // compare integers
-  csa->int_data_list()->reset();
-  for( i = 0; i < numIntegers; i++ )
-    if( integerArray[i] != *csa->int_data_list()->next(i) )
-      return false;
-
-    // compare doubles
-  csa->double_data_list()->reset();
-  for( i = 0; i < numDoubles; i++ )
-    if( doubleArray[i] != *csa->double_data_list()->next(i) )
-      return false;
+  if(!std::equal(stringArray, stringArray+numStrings, csa.string_data_list().begin()))
+    return false;
+  if(!std::equal(doubleArray, doubleArray+numDoubles, csa.double_data_list().begin()))
+    return false;
+  if(!std::equal(integerArray, integerArray+numIntegers, csa.int_data_list().begin()))
+    return false;
 
   return true;
 }

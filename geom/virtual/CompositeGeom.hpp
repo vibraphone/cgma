@@ -81,12 +81,12 @@ class CompositeGeom
     void update_cached_data()
       { needToUpdateBbox = true; needToUpdateMeasure = true; }
     
-    void add_attribute( CubitSimpleAttrib* csa );
-    void rem_attribute( CubitSimpleAttrib* csa );
+    void add_attribute( const CubitSimpleAttrib& csa );
+    void rem_attribute( const CubitSimpleAttrib& csa );
     void rem_all_attributes();
-    void get_attributes( DLIList<CubitSimpleAttrib*>& list );
+    void get_attributes( DLIList<CubitSimpleAttrib>& list );
     void get_attributes( const char* name,
-                         DLIList<CubitSimpleAttrib*>& list );
+                         DLIList<CubitSimpleAttrib>& list );
     
     void print_debug_info( const char* line_prefix = 0 );
     

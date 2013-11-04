@@ -99,6 +99,8 @@ CFEModel::~CFEModel()
         delete [] mElemBuff.mpaElemData;
     if(mElemBuff.mpaElemIDs)
         delete [] mElemBuff.mpaElemIDs;
+    if(mElemBuff.mpaElemGlobalIDs)
+        delete [] mElemBuff.mpaElemGlobalIDs;
     if(mElemBuff.mpaElemConnect)
         delete [] mElemBuff.mpaElemConnect;
     if(mGroupBuff.mpaGroupData)
@@ -302,6 +304,8 @@ void CFEModel::WriteElems(UnsignedInt32 xintIndex,
             if(xpaElemData[lintElem].mintElemCount) {
                 if(!xpaElemData[lintElem].mpaElemIDs)
                     throw CCubitFile::ePassedNullPointer;
+                if(!xpaElemData[lintElem].mpaElemGlobalIDs)
+                    throw CCubitFile::ePassedNullPointer;
                 if(xpaElemData[lintElem].mintElemOrder)
                     if(!xpaElemData[lintElem].mpaElemConnect)
                         throw CCubitFile::ePassedNullPointer;
@@ -325,6 +329,8 @@ void CFEModel::WriteElems(UnsignedInt32 xintIndex,
             lpIO->Write(&xpaElemData[lintElem].mintElemOrder, 1);
             lpIO->Write(&xpaElemData[lintElem].mintElemCount, 1);
             lpIO->Write(xpaElemData[lintElem].mpaElemIDs,
+                xpaElemData[lintElem].mintElemCount);
+            lpIO->Write(xpaElemData[lintElem].mpaElemGlobalIDs,
                 xpaElemData[lintElem].mintElemCount);
             if(xpaElemData[lintElem].mintElemOrder) {
                 lpIO->Write(xpaElemData[lintElem].mpaElemConnect,
@@ -618,8 +624,13 @@ void CFEModel::WriteSideSet_11(UnsignedInt32 xintIndex,
             xpaSideSetData[lintSideSet].mintMemberCount);
         lpIO->Write(xpaSideSetData[lintSideSet].mpaintMemberIDs,
             xpaSideSetData[lintSideSet].mintMemberCount);
-        lpIO->Write(xpaSideSetData[lintSideSet].mpachrMemberSenses,
+
+        //for the zero-eth one, mpachrMemberSenses is intMemberCount long
+        if( 0 == lintSideSet ) 
+          lpIO->Write(xpaSideSetData[lintSideSet].mpachrMemberSenses,
             xpaSideSetData[lintSideSet].mintMemberCount, 1);
+        else  //for 1-n, it is 1 long
+          lpIO->Write(xpaSideSetData[lintSideSet].mpachrMemberSenses, 1, 1);
         UnsignedInt32* end = xpaSideSetData[lintSideSet].mpaintMemberWRTEntities;
         int i;
         for(i=0; i<(int)xpaSideSetData[lintSideSet].mintMemberCount; i++)
@@ -871,7 +882,8 @@ void CFEModel::ReadNodes(UnsignedInt32 xintIndex,
     }
 }
 
-void CFEModel::ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
+void CFEModel::ReadElems(double data_version,
+                         UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
                          UnsignedInt32& xintNumTypes, SElemData*& xpaElemData)
 {
     if(!mpReadFile)
@@ -894,7 +906,15 @@ void CFEModel::ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
             mElemBuff.mintNumTypes, mElemBuff.mpaElemData);
         UnsignedInt32* lpIDs =
             AdjustBuffer(mpaGeoms[xintIndex].mintElemCount,
-            mElemBuff.mintNumElems, mElemBuff.mpaElemIDs);
+            mElemBuff.mintNumElemIds, mElemBuff.mpaElemIDs);
+        UnsignedInt32* lpGlobalIDs = NULL;
+        if ( data_version >= 1.3 )
+        {
+          lpGlobalIDs =
+            AdjustBuffer(mpaGeoms[xintIndex].mintElemCount,
+            mElemBuff.mintNumElemGids, mElemBuff.mpaElemGlobalIDs);
+        }
+
         UnsignedInt32* lpConnect =
             AdjustBuffer(lintConnGuess,
             mElemBuff.mintNumConnect, mElemBuff.mpaElemConnect);
@@ -912,6 +932,7 @@ void CFEModel::ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
             lpIO->Read(&xpaElemData[lintType].mintElemCount, 1);
 
             xpaElemData[lintType].mpaElemIDs = lpIDs;
+            xpaElemData[lintType].mpaElemGlobalIDs = lpGlobalIDs;
             xpaElemData[lintType].mpaElemConnect = lpConnect;
             lintNumElems = xpaElemData[lintType].mintElemCount;
             lintNumConnect = lintNumElems * xpaElemData[lintType].mintElemOrder;
@@ -924,6 +945,8 @@ void CFEModel::ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
                 throw CCubitFile::eFileReadError;
 
             lpIO->Read(xpaElemData[lintType].mpaElemIDs, lintNumElems);
+            if ( data_version >= 1.3 )
+                lpIO->Read(xpaElemData[lintType].mpaElemGlobalIDs, lintNumElems);
             if(xpaElemData[lintType].mintElemOrder)
                 lpIO->Read(xpaElemData[lintType].mpaElemConnect, lintNumConnect);
 
@@ -1052,7 +1075,7 @@ void CFEModel::ReadBlock(UnsignedInt32 xintIndex,
     CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
     lpIO->BeginReadBlock(mintFEModelOffset,
         mpaBlocks[xintIndex].mintMemberOffset);
-    long start_location = lpIO->GetLocation();
+    UnsignedInt32 start_location = lpIO->GetLocation();
     for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
         lpIO->Read(&xpaBlockData[lintType].mintMemberType, 1);
         lpIO->Read(&xpaBlockData[lintType].mintMemberCount, 1);
@@ -1130,7 +1153,7 @@ void CFEModel::ReadNodeSet(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
         lpIO->BeginReadBlock(mintFEModelOffset,
             mpaNodeSets[xintIndex].mintMemberOffset);
-        long start_location = lpIO->GetLocation();
+        UnsignedInt32 start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
             lpIO->Read(&xpaNodeSetData[lintType].mintMemberType, 1);
             lpIO->Read(&xpaNodeSetData[lintType].mintMemberCount, 1);
@@ -1328,7 +1351,7 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
         CIOWrapper* lpIO = new CIOWrapper(mpReadFile, mFEModel.mintFEModelEndian);
         lpIO->BeginReadBlock(mintFEModelOffset,
             mpaSideSets[xintIndex].mintMemberOffset);
-        long start_location = lpIO->GetLocation();
+        UnsignedInt32 start_location = lpIO->GetLocation();
         for(UnsignedInt32 lintType = 0; lintType < xintNumTypes; lintType++) {
             lpIO->Read(&xpaSideSetData[lintType].mintMemberCount, 1);
             
@@ -1354,8 +1377,9 @@ void CFEModel::ReadSideSet_11(UnsignedInt32 xintIndex,
             UnsignedInt32 wrt_size=0;
             lpIO->Read(&wrt_size, 1);
         
-            UnsignedInt32* lpaintWRT =
-                AdjustBuffer(wrt_size, mSideSetBuff_11.mintNumWRTEntities, mSideSetBuff_11.mpaintMemberWRTEntities);
+            UnsignedInt32* lpaintWRT = NULL;
+            UnsignedInt32 orig_size = 0;
+            AdjustBuffer(wrt_size, orig_size, lpaintWRT);
 
             xpaSideSetData[lintType].mpaintMemberWRTEntities = lpaintWRT;
         

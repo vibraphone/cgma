@@ -161,8 +161,8 @@ void CubitFacetEdgeData::points(DLIList<CubitPoint*> &point_list )
 CubitStatus CubitFacetEdgeData::remove_facet( CubitFacet *facet_ptr )
 {
   CubitStatus stat = CUBIT_SUCCESS;
-  CubitFacet *rm_facet = adjFacetList.remove( facet_ptr );
-  if (rm_facet != NULL) 
+  bool removed = adjFacetList.remove( facet_ptr );
+  if (removed)
     stat = CUBIT_SUCCESS;
   else
     stat = CUBIT_FAILURE;

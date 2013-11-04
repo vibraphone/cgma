@@ -32,6 +32,9 @@ class CUBIT_UTIL_EXPORT CubitCoordinateSystem : public CubitEntity,
     virtual const char* class_name() const;
     //- return class name string.
 
+    virtual CubitString entity_name() const;
+    //- return entity name
+
     //! get and set the type of this coordinate system
     Type get_type() const;
     void set_type(Type);

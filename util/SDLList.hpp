@@ -246,7 +246,7 @@ inline void SDLList::set_sorted_flag(const int sorted_flag)
 // SSDLListdeclare and SSDLListIntrinsicdeclare
 #define CommonSortedDefine(name, typePtr)                                    \
                                                                              \
-    name(int size_in = 0, int direction = ORDER_ASCENDING) : SDLList(size_in)       \
+    name(int size = 0, int direction = ORDER_ASCENDING) : SDLList(size)       \
     {                                                                        \
       assert(sizeof(typePtr) == sizeof(void*));                              \
       if (direction == ORDER_DESCENDING)                                     \

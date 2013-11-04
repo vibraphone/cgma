@@ -95,7 +95,7 @@ LoopType FacetLoop::loop_type()
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-void FacetLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void FacetLoop::append_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
   //PRINT_ERROR("FacetLoop::append_simple_attribute_virt not defined\n");
   return;
@@ -110,7 +110,7 @@ void FacetLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-void FacetLoop::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void FacetLoop::remove_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
   //PRINT_ERROR("FacetLoop::remove_simple_attribute_virt not defined\n");
   return;
@@ -139,14 +139,14 @@ void FacetLoop::remove_all_simple_attribute_virt()
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-CubitStatus FacetLoop::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus FacetLoop::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                  /*cubit_simple_attrib_list*/)
 {
   //PRINT_ERROR("FacetLoop::get_simple_attribute not defined\n");
   return CUBIT_FAILURE;
 }
 CubitStatus FacetLoop::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
+                                              DLIList<CubitSimpleAttrib>&)
   { return CUBIT_FAILURE; }
 
 //-------------------------------------------------------------------------

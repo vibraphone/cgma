@@ -13,9 +13,8 @@
 #include <cstring>
 #include <cassert>
 #include <vector>
+#include <set>
 #include <stdexcept>
-
-using namespace std;
 
 #define DLI_COUNT_INCREMENT 8
 #define DLI_COUNT_FACTOR 1.5
@@ -39,6 +38,11 @@ template<class X> class DLIList
 {
 public:
   friend class DLIListIterator<X>;
+
+  typedef typename std::vector<X>::reference reference;
+  typedef typename std::vector<X>::const_reference const_reference;
+  typedef typename std::vector<X>::pointer pointer;
+  typedef typename std::vector<X>::const_pointer const_pointer;
   
   //! Constructor: Create a list, allocating enough storage for \a size elements.
   /*! Although enough space is allocated for \a size elements, the list starts
@@ -176,10 +180,12 @@ public:
   \param index The index to the desired element.
   \return A reference to the indicated element.
   */
-  X & operator[](int index) const;
+  const_reference operator[](int index) const;
+  reference operator[](int index);
 
   //! Gets a reference to the last element in the list.
-  X& last_item( void ) const;
+  reference last_item( void );
+  const_reference last_item( void ) const;
 
   //! Merges the contents of another list into this list.
   /*! Each element in \a merge_list is added to this list, but only if
@@ -239,7 +245,7 @@ public:
         {
           if ( listArray[j] == new_item )
           {
-            itemCount--;
+            listArray.resize(listArray.size()-1);
             break;
           }
         }
@@ -265,7 +271,7 @@ public:
   /*! In either case, the current position is not changed.
   \return CUBIT_TRUE if the item was added, otherwise CUBIT_FALSE.
   */
-  CubitBoolean append_unique(X new_item);
+  CubitBoolean append_unique(const_reference new_item);
   
   //! Ensure each element of the list only appears once, not preserving order.
   /*! The list is first sorted for speed, so the order of elements may change.
@@ -302,12 +308,12 @@ public:
   point at the same element, unless it is the element which was removed,
   in which case the behavior is identical to remove().
   \param val The value of the item to remove.
-  \return The removed item, or X(0) if the item was not found.
+  \return Whether the item was found and removed.
   \sa remove()
   \sa remove_all_with_value(X val)
   \sa omit(X val)
   */
-  X remove (X val);
+  bool remove (const_reference val);
 
   //! Remove all instances of a given value from the list.
   /*! This function can be used to remove multiple items efficiently.
@@ -319,7 +325,7 @@ public:
   \sa remove(X val)
   \sa omit(X val)
   */
-  void remove_all_with_value(X val);
+  void remove_all_with_value(const_reference val);
 
   //! Removes all instances of a value from the list.
   /*! The current position of the list is not changed, unless the 
@@ -332,12 +338,12 @@ public:
   \sa remove(X val)
   \sa remove_all_with_value(X val)
   */
-  CubitBoolean omit (X val);
+  CubitBoolean omit (const_reference val);
   
   //! Returns the value of the current item.
   /*! \return The value of the current item. If the list is empty, X(0) is returned.
   */
-  X get () const;
+  const_reference get () const;
   
   //! Returns the value at next position in the list.
   /*! The current position is not changed.  If the current position is at the
@@ -380,7 +386,7 @@ public:
   wrap to the beginning of the list.
   \return The value at the current position, before stepping.
   */
-  X get_and_step ();
+  const_reference get_and_step ();
   
   //! Returns the current value, then moves the current position back one.
   /*! If the current position is at the beginning of the list, the function will
@@ -388,24 +394,24 @@ public:
   \return The value at the current position, before stepping back.
   If the list is empty, X(0) is returned.
   */
-  X get_and_back ();
+  const_reference get_and_back ();
   
   //! Advances the current position by one, then returns the current value.
   /*! If the current position is at the end of the list, the function will
   wrap to the beginning of the list.
   \return The value at the current position, after stepping.
   */
-  X step_and_get ();
+  const_reference step_and_get ();
   
   //! Moves to the next instance of this value, wrapping if necessary.
   /*! \return Returns \a true if the item was found in the list, otherwise returns \a false.
   */
-  CubitBoolean move_to(X item);
+  CubitBoolean move_to(const_reference item);
 
   //! Return \a true if the item is in the list, \a false otherwise.
   /*! \return Returns \a true if the item was found in the list, otherwise returns \a false.
   */
-  CubitBoolean is_in_list(X item) const;
+  CubitBoolean is_in_list(const_reference item) const;
 
   //! Returns and removes last value in list.
   /*! \return Returns the last value in the list.  If the list is empty, returns X(0).
@@ -439,7 +445,7 @@ public:
   The current position is unchanged.
   \param val The value to place at the end of the list.  
   */
-  void append(X new_item);
+  void append(const_reference new_item);
 
   //! Remove the current value and put last value in the list in its place.
   /*!  If list order isn't important, this is much more efficient than remove().
@@ -495,7 +501,7 @@ public:
   //! Returns the number of items in the list
   /*! \return The number of items current in the list. */
   int size() const
-    { return itemCount; }
+    { return listArray.size(); }
 
   //! Returns current index of the current position
   /*! \return the current position */
@@ -509,7 +515,7 @@ public:
   \param val The value to search for.
   \return The index of the first instance of \a val, or -1 if the value is not found.
   */
-  int where_is_item(X val) const;
+  int where_is_item(const_reference val) const;
 
   //! Returns the number of bytes allocated for this list's storage space.
   int memory_use(CubitBoolean verbose_boolean);
@@ -557,7 +563,7 @@ public:
   //! Return a std::vector with the same contents as this list.
   /*! This function creates a std::vector from the DLIList and returns it.
   */
-  std::vector<X> as_vector();
+  const std::vector<X>& as_vector();
 
 private:
   void lengthen_list(int by_how_much = DLI_COUNT_INCREMENT,
@@ -566,10 +572,7 @@ private:
     //- "by_what_factor" and add 'by_how_much'.
   
   int  index;      // Index of current item in {listArray}
-  X   *listArray;  // Array of values
-  int  listLength; // Number of allocated spaces in array
-  int  itemCount;  // Number of items stored in array
-  
+  std::vector<X> listArray;
 };
 
 // *** inline function definitions *******************************************
@@ -584,31 +587,46 @@ DLIList<X>& DLIList<X>::operator=(const DLIListIterator<X>& from_iter)
 }
 
 template <class X> inline
-X & DLIList<X>::operator[](int index1) const
+typename DLIList<X>::const_reference DLIList<X>::operator[](int index) const
 {
-  if(index1 < 0 || index1 >= itemCount)
-    throw std::out_of_range ("Index out of Bounds");
-    //assert( index >= 0 && index < itemCount );
-    return listArray[index1];
+  if(index < 0 || index >= (int)listArray.size())
+    throw std::out_of_range("Index out of Bounds\n");
+  return listArray[index];
 }
 
 template <class X> inline
-X & DLIList<X>::last_item(void) const
+typename DLIList<X>::reference DLIList<X>::operator[](int index)
 {
-    assert( itemCount > 0 );
-    return listArray[itemCount-1];
+  if(index < 0 || index >= (int)listArray.size())
+    throw std::out_of_range("Index out of Bounds\n");
+  return listArray[index];
+}
+
+template <class X> inline
+typename DLIList<X>::reference DLIList<X>::last_item(void)
+{
+    assert( listArray.size() > 0 );
+    return listArray[listArray.size()-1];
+}
+
+template <class X> inline
+typename DLIList<X>::const_reference DLIList<X>::last_item(void) const
+{
+    assert( listArray.size() > 0 );
+    return listArray[listArray.size()-1];
 }
 
 template <class X> inline void DLIList<X>::step()
 {
-  if (itemCount)
+  if (!listArray.empty())
     index++; 
-  if (index >= itemCount)
+  if (index >= (int)listArray.size())
     index = 0;
 }
 
 template <class X> inline void DLIList<X>::step(int n)
 {
+  const int itemCount = listArray.size();
   if (itemCount)
   {
     index += n;
@@ -622,12 +640,13 @@ template <class X> inline void DLIList<X>::step(int n)
 // Chop off the last (k) items in the list.
 template <class X> inline void DLIList<X>::shrink(int k)
 {
-  if (k > 0) 
+  const size_t itemCount = listArray.size();
+  if (k > 0)
   {
     if (itemCount > k)
-      itemCount -= k;
+      listArray.resize(itemCount - k);
     else
-      itemCount = 0;
+      listArray.clear();
   }
   if (index >= itemCount)
   {
@@ -640,6 +659,7 @@ template <class X> inline void DLIList<X>::shrink(int k)
 
 template <class X> inline void DLIList<X>::back()
 {
+  const size_t itemCount = listArray.size();
   if (itemCount)
   {
     index--;
@@ -660,6 +680,7 @@ template <class X> inline void DLIList<X>::reset()
 
 template <class X> inline void DLIList<X>::last()
 {
+  const size_t itemCount = listArray.size();
   if (itemCount)
     index = itemCount - 1;
 }
@@ -674,7 +695,8 @@ template <class X> inline CubitBoolean DLIList<X>::is_at_beginning() const
 
 template <class X> inline CubitBoolean DLIList<X>::is_at_end() const
 {
-  if (itemCount == 0 || index == itemCount-1)
+  const size_t itemCount = listArray.size();
+  if (itemCount == 0 || index == (int)itemCount-1)
     return CUBIT_TRUE;
   else
     return CUBIT_FALSE;
@@ -682,11 +704,11 @@ template <class X> inline CubitBoolean DLIList<X>::is_at_end() const
 
 template <class X> inline void DLIList<X>::clean_out()
 {
-  itemCount = 0;
+  listArray.clear();
   index = 0;
 }
 
-template <class X> inline CubitBoolean DLIList<X>::is_in_list(X item) const
+template <class X> inline CubitBoolean DLIList<X>::is_in_list(const_reference item) const
 {
   return where_is_item(item) >= 0 ? CUBIT_TRUE : CUBIT_FALSE;
 }
@@ -694,71 +716,60 @@ template <class X> inline CubitBoolean DLIList<X>::is_in_list(X item) const
 //- Add item to end of list, do not change current index value.
 //- This function used to reduce time required to do an insert 
 //- followed by a move_to back to where we were.
-template <class X> inline void DLIList<X>::append(X new_item)
+template <class X> inline void DLIList<X>::append(const_reference new_item)
 {
     // see if the list must be lengthened
-  if (itemCount == listLength)
+  if (listArray.capacity() == listArray.size())
     lengthen_list();
-  
-  listArray[itemCount++] = new_item;
+
+  listArray.push_back(new_item);
 }
 
-template <class X> inline X DLIList<X>::get() const
+template <class X> inline typename DLIList<X>::const_reference DLIList<X>::get() const
 {
-  if ( !itemCount )
+  if ( listArray.empty() )
   {
     throw std::out_of_range("Attempted get of empty DLIList\n");
-    /*PRINT_WARNING("Attempted get of empty DLIList\n");
-    return (X)0;*/
+    /*PRINT_WARNING("Attempted get of empty DLIList\n");*/
   }
-  else
-  {
-    return listArray[index];
-  }
+
+  return listArray[index];
 }
 
-template <class X> inline X DLIList<X>::get_and_step()
+template <class X> inline typename DLIList<X>::const_reference DLIList<X>::get_and_step()
 {
-#ifndef GDSJAAR
-  if ( !itemCount )
+  if ( listArray.empty() )
   {
     throw std::out_of_range("Attempted get_and_step from empty DLIList\n");
-    /*PRINT_WARNING("Attempted get_and_step from empty DLIList\n");
-    return (X)0;*/
+    /*PRINT_WARNING("Attempted get_and_step from empty DLIList\n");*/
   }
-  else
-#endif
-  {
-    X temp = listArray[index++];
-    if (index == itemCount)
-      index=0;
-    return temp;
-  }
+  const_reference temp = listArray[index++];
+  if (index == (int)listArray.size())
+    index=0;
+  return temp;
 }
 
-template <class X> inline X DLIList<X>::get_and_back ()
+template <class X> inline typename DLIList<X>::const_reference DLIList<X>::get_and_back ()
 {
-   if ( !itemCount )
+   if ( listArray.empty() )
    {
      throw std::out_of_range("Attempted get_and_back from empty DLIList\n");
-      /*PRINT_WARNING("Attempted get_and_back from empty DLIList\n");
-      return (X)0;*/
+      /*PRINT_WARNING("Attempted get_and_back from empty DLIList\n");*/
    }
-   X temp = listArray[index--];
+   const_reference temp = listArray[index--];
    if (index < 0)
-      index=itemCount-1;
+      index=listArray.size()-1;
    return temp;
 }
 
 template <class X> inline X DLIList<X>::next() const
 {
-  if (!itemCount)
+  if (listArray.empty())
   {
     throw std::out_of_range("Attempted next of empty DLIList\n");
-    /*PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;*/
+    /*PRINT_WARNING("Attempted next of empty DLIList\n");*/
   }
-  else if (index == itemCount-1)
+  else if (index == listArray.size()-1)
     return listArray[0];
   else
     return listArray[index+1];
@@ -766,11 +777,10 @@ template <class X> inline X DLIList<X>::next() const
 
 template <class X> inline X DLIList<X>::next(int n) const
 {
-  if ( !itemCount )
+  if ( listArray.empty() )
   {
     throw std::out_of_range("Attempted next of empty DLIList\n");
-    /*PRINT_WARNING("Attempted next of empty DLIList\n");
-    return (X)0;*/
+    /*PRINT_WARNING("Attempted next of empty DLIList\n");*/
   }
   else
   {
@@ -778,9 +788,9 @@ template <class X> inline X DLIList<X>::next(int n) const
       // beware of negative n leading to negative new_index
     int new_index = index+n;
     while (new_index < 0)
-      new_index += itemCount;
-    if (new_index >= itemCount)
-      new_index %= itemCount;
+      new_index += listArray.size();
+    if (new_index >= (int)listArray.size())
+      new_index %= listArray.size();
     
     return listArray[new_index];
   }
@@ -804,7 +814,7 @@ template <class X> inline void DLIList<X>::insert_first(X new_item)
   insert(new_item);
 }
 
-template <class X> inline CubitBoolean DLIList<X>::move_to (X item)
+template <class X> inline CubitBoolean DLIList<X>::move_to (const_reference item)
 {
   int item_index = where_is_item(item);
   CubitBoolean rv = CUBIT_FALSE;
@@ -818,49 +828,51 @@ template <class X> inline CubitBoolean DLIList<X>::move_to (X item)
 
 template <class X> inline X DLIList<X>::change_to (X new_value)
 {
-  X temp = (X)0;
-  if ( !itemCount )
+  if ( listArray.empty() )
   {
     throw std::out_of_range("DLIList: Attempted update of empty list\n");
     //PRINT_WARNING("DLIList: Attempted update of empty list\n");
   }
-  else
-  {
-    temp = listArray[index];
-    listArray[index] = new_value;
-  }
+
+  X temp = listArray[index];
+  listArray[index] = new_value;
   return temp;
 }
 
 // Removes every instance of 'val' in list.
 // Set to beginning of list after this call.
-template <class X> inline void DLIList<X>::remove_all_with_value(X val)
+template <class X> inline void DLIList<X>::remove_all_with_value(const_reference val)
 {
   int j = 0;
   int i = 0;
-  
-  for ( ; i < itemCount; i++)
+  const size_t itemCount = listArray.size();
+
+  for ( ; i < (int)itemCount; i++)
     if (listArray[i] != val && j++ != i)
       listArray[j-1] = listArray[i];
-  
-  itemCount = j;
+
+  listArray.resize(j);
   index = 0;
 }
 
 // Searches for item and removes the next instance from the list.
 // If the item was found and removed it is returned, else 0 is returned.
-template <class X> inline X DLIList<X>::remove (X item)
+template <class X> inline bool DLIList<X>::remove (const_reference item)
 {
-  X temp = (X)0;
   if (move_to(item))
-    temp = remove();
-  return temp;
+  {
+    remove();
+    return true;
+  }
+  return false;
 }
 
-template <class X> inline int DLIList<X>::where_is_item (X item) const
+template <class X> inline int DLIList<X>::where_is_item (const_reference item) const
 {
-  if (itemCount == 0)
+  if (listArray.empty())
     return -1;
+
+  const int itemCount = listArray.size();
   
     // loop through list searching for item ...
     // if found return index
@@ -881,7 +893,7 @@ template <class X> inline int DLIList<X>::where_is_item (X item) const
 }
 //- Append this new_item to the list if it doesn't already exist in it.
 //- Make sure the index is unchanged.
-template <class X> inline CubitBoolean DLIList<X>::append_unique(X new_item)
+template <class X> inline CubitBoolean DLIList<X>::append_unique(const_reference new_item)
 {
     // Append new_item, if it isn't already there.
   if( where_is_item(new_item) < 0 ) 
@@ -892,7 +904,699 @@ template <class X> inline CubitBoolean DLIList<X>::append_unique(X new_item)
   return CUBIT_FALSE;
 }
 
-#include "DLIList.cpp"
+template <class X> inline X DLIList<X>::push(X value)
+{
+  //- swapped last and append; current position is set new end
+   append(value);
+   last();
+   return value;
+}
+
+template <class X> inline X DLIList<X>::pop()
+{
+  last();
+  return remove();
+}
+
+//- Constructor: Create a list with initial size 0. The list
+//- will be grown by {increment} each time it is filled. Memory for the
+//- list is not allocated until the first element is inserted using
+//- {insertLink}.
+template <class X> inline DLIList<X>::DLIList (int size)
+{
+   index      = 0;
+   listArray.reserve(size);
+}
+
+//- Copy Constructor
+template <class X> inline DLIList<X>::DLIList(const DLIList<X>& from)
+{
+   if (&from != this)
+   {
+     index = from.index;
+     listArray = from.listArray;
+   }
+}
+
+//- Copy constructor for std::vector
+template <class X> inline DLIList<X>::DLIList(const std::vector<X>& from)
+{
+    // Setup the variables
+    index = 0;
+    listArray = from;
+}
+
+// Destructor
+template <class X> inline DLIList<X>::~DLIList()
+{
+}
+
+template <class X> inline void DLIList<X>::reserve(int min_size)
+{
+  listArray.reserve(min_size);
+}
+
+template <class X> inline void DLIList<X>::lengthen_list(int by_how_much,
+                                                  double by_what_factor)
+{
+    // Make a new array
+  int new_size = (int) ((double)listArray.capacity() * by_what_factor) + by_how_much;
+  reserve(new_size);
+}
+
+//- put new item in list after current item and make it current
+template <class X> inline void DLIList<X>::insert(X new_item)
+{
+     // see if the list must be lengthened
+   if ( listArray.size() == listArray.capacity())
+   {
+      lengthen_list();
+   }
+
+     // set new index
+   if ( !listArray.empty() )
+   {
+      index++;
+   }
+   else
+   {
+      index = 0;
+   }
+
+   listArray.insert(listArray.begin()+index, new_item);
+}
+
+//- merge the input list, merge_list, with the current list, making
+//- sure not to add duplicate items into the current list
+template <class X> inline
+void DLIList<X>::merge_unique ( const DLIList<X>& merge_list,
+                                bool  merge_list_unique )
+{
+  this->casting_merge_unique(merge_list, merge_list_unique);
+}
+
+template <class X> inline void DLIList<X>::intersect_unordered(
+  const DLIList<X>& merge_list )
+{
+  if ( &merge_list == this )
+     return;
+
+  DLIList <X> intersect_list(merge_list);   // copy input list so can sort
+  sort();
+  intersect_list.sort();
+
+  typename std::vector<X>::iterator iter1 = listArray.begin();                      // iterator for this array
+  typename std::vector<X>::iterator end1 = listArray.end();               // end of this array
+  typename std::vector<X>::iterator iter2 = intersect_list.listArray.begin();       // iterstor for other array
+  typename std::vector<X>::iterator end2 = intersect_list.listArray.end();// end of other array
+  typename std::vector<X>::iterator insert;                     // location of last insert
+  bool first = true;
+
+  for ( ; iter1 < end1; ++iter1 )
+  {
+    while (iter2 < end2 && *iter2 < *iter1)
+      ++iter2;
+
+    if (iter2 == end2)
+      break;
+
+    // items are the same and ...
+    if (*iter2 == *iter1)
+    {
+      // is the first item or ...
+      if(first)
+      {
+        first = false;
+        insert = listArray.begin();
+        *insert = *iter1;
+      }
+      // is not the same as the previous item
+      else if(*iter1 != *insert)
+      {
+        *++insert = *iter1;
+      }
+    }
+  }
+
+  if(first)
+  {
+    // no intersections
+    listArray.clear();
+  }
+  else
+  {
+    listArray.resize(insert - listArray.begin() + 1);
+  }
+  reset();
+}
+
+template <class X> inline void DLIList<X>::intersect ( const DLIList<X>& merge_list )
+{
+  if ( &merge_list == this )
+     return;
+
+  const int itemCount = listArray.size();
+  std::vector<X> tmp;
+
+  for ( int i=0; i<itemCount; i++ )
+  {
+    if (merge_list.is_in_list(listArray[i]))
+    {
+      tmp.push_back(listArray[i]);
+    }
+  }
+
+  this->listArray.swap(tmp);
+  index = 0;
+}
+
+//template <class X> inline void DLIList<X>::intersect ( void* merge_list )
+//{
+//  intersect( *(DLIList<X>*)merge_list );
+//}
+
+
+//- remove the item at the current location and return a pointer to it.
+//- The next node becomes the current node
+//- Returns 0 if there are no items in list
+template <class X> inline X DLIList<X>::remove ()
+{
+   if ( listArray.empty() )
+   {
+     throw std::out_of_range("Attempted link removal from empty DLIList\n");
+      /*PRINT_WARNING("Attempted link removal from empty DLIList\n");*/
+   }
+
+     // save the current value
+   X temp = listArray[index];
+
+   listArray.erase(listArray.begin()+index);
+
+   if ( index == (int)listArray.size() )
+   {
+      index = 0;
+   }
+
+   return temp;
+}
+
+
+//- remove the item at the current location and return a pointer to it.
+//- used for efficiency in cases where preservation of list order is not
+//- important.  moves last list item (itemCount - 1) to current index and
+//- decrements itemCount.  eliminates the need to perform the list bubble
+//- down (i.e. cut_link) but sacrifices list order in the process.  this
+//- function should not be used when up-stream order from the removed node is
+//- important.  when processing a list using this function the user should
+//- reset the list to the head (index = 0) before beginning to ensure all
+//- list nodes are processed properly.
+//- Returns 0 if there are no items in list
+template <class X> inline X DLIList<X>::extract ()
+{
+   if ( listArray.empty() )
+   {
+     throw std::out_of_range("Attempted link removal from empty DLIList\n");
+      /*PRINT_WARNING("Attempted link removal from empty DLIList\n");*/
+   }
+
+     // save the current value
+   X temp = listArray[index];
+
+     // assign last node to the current index
+   listArray[index] = listArray[listArray.size() - 1];
+
+     // decrement
+   listArray.resize(listArray.size()-1);
+   if ( index == listArray.size() && index )
+        // The choices here are index at beginning or end.
+        // End seems to work better when 'extract' is being used
+        // with calls to 'move_to_item'.
+      index--;
+
+   return temp;
+}
+
+//+//Added so list removals don't disturb current position. PRK 05-23-94
+//+//Corrected for omitting the last item in the list. PRK 09-16-94
+//+//Corrected for omitting before the current position. PRK 10-07-94
+//- Finds instance of item by matching value and delets first instance
+//- of it from the list. The current position of the list is not changed.
+//- Returns CUBIT_TRUE if the item was found and deleted, CUBIT_FALSE if not.
+template <class X> inline CubitBoolean DLIList<X>::omit(const_reference old_val)
+{
+   int scan_index;
+   int squeeze_index = 0;
+   CubitBoolean found = CUBIT_FALSE;
+   for(scan_index = 0; scan_index < listArray.size(); ++scan_index)
+   {
+      if(listArray[scan_index] == old_val)
+      {
+         found = CUBIT_TRUE;
+         if(index == scan_index)
+            index = squeeze_index - 1;
+      }
+      else
+      {
+         if(scan_index != squeeze_index)
+         {
+            listArray[squeeze_index] = listArray[scan_index];
+            if(index == scan_index) index = squeeze_index;
+         }
+         ++squeeze_index;
+      }
+   }
+
+   if(found)
+   {
+      listArray.resize(squeeze_index);
+//+//   If the first item was deleted and index pointed to it, make an
+//+//   adjustment here. If itemCount is zero, don't assign -1 again.
+      if(index < 0)
+         index = listArray.empty() ? 0 : listArray.size()-1;
+   }
+
+   return found;
+}
+
+template <class X> inline typename DLIList<X>::const_reference DLIList<X>::step_and_get ()
+{
+   if ( listArray.empty() )
+   {
+     throw std::out_of_range("Attempted step_and_get from empty DLIList\n");
+      /*PRINT_WARNING("Attempted step_and_get from empty DLIList\n");*/
+   }
+
+   if (++index == (int) listArray.size())
+      index=0;
+   return listArray[index];
+}
+
+template <class X> inline DLIList<X>& DLIList<X>::
+                       operator=(const DLIList<X>& from)
+{
+   if (this != &from)
+   {
+      index = from.index;
+      listArray = from.listArray;
+   }
+   return *this;
+}
+
+template <class X> inline DLIList<X>& DLIList<X>::
+                       operator=(const std::vector<X>& from)
+{
+  index = 0;
+  listArray = from;
+  return *this;
+}
+
+template <class X> inline DLIList<X>& DLIList<X>::
+                       operator+=(const DLIList<X>& from)
+{
+   listArray.insert(listArray.end(), from.listArray.begin(), from.listArray.end());
+   return *this;
+}
+
+template <class X> inline DLIList<X>& DLIList<X>::
+                       operator+=(const std::vector<X>& from)
+{
+  listArray.insert(listArray.end(), from.listArray.begin(), from.listArray.end());
+  return *this;
+}
+
+template <class X> inline DLIList<X>& DLIList<X>::
+                       operator-=(const DLIList<X>& from)
+{
+    // step through items in from list, removing them from this list.
+   for (int i = from.listArray.size(); i--; )
+   {
+     // quit early if this list is empty.
+     if (listArray.empty())
+       break;
+     remove_all_with_value(from.listArray[i]);
+   }
+   return *this;
+}
+
+template <class X> inline int DLIList<X>::operator==(const DLIList<X> &from)
+{
+  if(listArray.size() != from.listArray.size())
+     return CUBIT_FALSE;
+  DLIList<X> temp_list = from;
+  for( int i = 0; i < listArray.size(); i++)
+     if(temp_list.move_to(listArray[i]))
+        temp_list.remove();
+  return temp_list.listArray.size() == 0;
+}
+template <class X> inline int DLIList<X>::operator!=(const DLIList<X> &from)
+{
+  return !( *this == from );
+}
+
+// Sorts list from low to high value, according to the > operator
+// of the list type.
+// List is sorted using a standard Heap Sort algorithm ("Algorithms in C++",
+// Robert Sedgewick).
+template <class X> inline void DLIList<X>::sort(typename DLIList<X>::SortFunction f)
+{
+    // Only sort it if there is more than one
+    // item in the list
+  const size_t itemCount = listArray.size();
+  if (itemCount > 1)
+  {
+    int mid = (itemCount >> 1) + 1;
+    int ir = itemCount;
+    X temp_element;
+
+      // You loop until ir is 1 (ir = iterations remaining)
+    while(CUBIT_TRUE)
+    {
+      if (mid > 1)
+      {
+        mid--;
+        temp_element = listArray[mid - 1];
+      }
+      else
+      {
+        ir--;
+        temp_element = listArray[ir];
+        listArray[ir] = listArray[0];
+        if (ir == 1)
+        {
+          listArray[0] = temp_element;
+          return;
+        }
+      }
+
+      int i = mid;
+      int j = mid + mid;
+
+      while (j <= ir)
+      {
+        if (j < ir)
+        {
+          if (f(listArray[j], listArray[j - 1]) >= 0)
+            j++;
+        }
+        if (f(listArray[j - 1], temp_element) >= 0)
+        {
+          listArray[i - 1] = listArray[j - 1];
+          i = j;
+          j += j;
+        }
+        else
+        {
+          j = ir + 1;
+        }
+      }
+      listArray[i - 1] = temp_element;
+    }
+  }
+}
+
+template <class X> inline void DLIList<X>::sort()
+{
+  const size_t itemCount = listArray.size();
+  // Only sort it if there is more than one
+  // item in the list
+  if (itemCount > 1)
+  {
+    int mid = (itemCount >> 1) + 1;
+    int ir = itemCount;
+    X temp_element;
+
+      // You loop until ir is 1 (ir = iterations remaining)
+    while(CUBIT_TRUE)
+    {
+      if (mid > 1)
+      {
+        mid--;
+        temp_element = listArray[mid - 1];
+      }
+      else
+      {
+        ir--;
+        temp_element = listArray[ir];
+        listArray[ir] = listArray[0];
+        if (ir == 1)
+        {
+          listArray[0] = temp_element;
+          return;
+        }
+      }
+
+      int i = mid;
+      int j = mid + mid;
+
+      while (j <= ir)
+      {
+        if (j < ir)
+        {
+          if (listArray[j] >= listArray[j - 1])
+            j++;
+        }
+        if (listArray[j - 1] >= temp_element)
+        {
+          listArray[i - 1] = listArray[j - 1];
+          i = j;
+          j += j;
+        }
+        else
+        {
+          j = ir + 1;
+        }
+      }
+      listArray[i - 1] = temp_element;
+    }
+  }
+
+}
+
+template <class X> inline void DLIList<X>::reverse()
+{
+  int front = 0;
+  int tail  = listArray.size()-1;
+  X temp;
+
+  while (front < tail)
+  {
+     temp             = listArray[front];
+     listArray[front] = listArray[tail];
+     listArray[tail]  = temp;
+     tail--;
+     front++;
+  }
+}
+
+template <class X> inline int DLIList<X>::memory_use(CubitBoolean verbose_boolean)
+{
+   // report amount of memory allocated
+
+   int size = listArray.capacity() * sizeof(X);
+
+   if (verbose_boolean)
+   {
+      PRINT_INFO("      DLIList: %d bytes\n",size);
+   }
+
+   return size;
+}
+
+template <class X> inline void DLIList<X>::copy_to(X *other_array)
+    //- copy this list's listArray into other_array
+{
+  if(other_array == 0)
+    throw std::invalid_argument("Array is NULL");
+
+  if (listArray.size())
+  {
+    const size_t itemCount = listArray.size();
+    for(size_t i=0; i<itemCount; i++)
+    {
+      other_array[i] = listArray[i];
+    }
+  }
+}
+
+template <class X> inline void DLIList<X>::copy_from(X *other_array, const int other_size)
+  //- copy other_array into listArray
+{
+  if(other_array == 0)
+    throw std::invalid_argument("Array is NULL");
+
+  listArray.clear();
+  listArray.insert(listArray.end(), other_array, other_array+other_size);
+  index = 0;
+}
+
+template <class X> inline CubitBoolean DLIList<X>::move_to_nearby(const X item)
+{
+//  if (nullItem && (X)nullItem == item)
+//     return CUBIT_FALSE;
+//  else
+  if (listArray.empty())
+     return CUBIT_FALSE;
+  else
+
+  {
+    const size_t itemCount = listArray.size();
+    typename std::vector<X>::iterator ptr_up = listArray.begin() + index;
+    if (*ptr_up == item)
+       return CUBIT_TRUE;
+
+    int i_up, i_down;
+    i_up = i_down = index;
+    typename std::vector<X>::iterator ptr_down = ptr_up;
+    while (1)
+    {
+        // check forward in the list increment
+      if ( ++i_up < itemCount )
+         ptr_up++;
+      else
+      {
+        i_up = 0;
+        ptr_up = listArray.begin();
+      }
+        // check
+      if ( *ptr_up == item )
+      {
+        index = i_up;
+        return CUBIT_TRUE;
+      }
+      if ( i_up == i_down )
+      {
+        return CUBIT_FALSE;
+      }
+
+        // check backward in the list
+        //  increment
+      if ( --i_down >= 0 )
+         ptr_down--;
+      else
+      {
+        i_down = itemCount-1;
+        ptr_down = listArray.begin()+ i_down;
+      }
+        // check
+      if ( *ptr_down == item )
+      {
+        index = i_down;
+        return CUBIT_TRUE;
+      }
+      if ( i_up == i_down )
+      {
+        return CUBIT_FALSE;
+      }
+
+    }
+  }
+}
+
+template <class X> inline int DLIList<X>::distance_to_nearby(const X body)
+{
+//  if (nullItem && (X)nullItem == body)
+//     return CUBIT_FALSE;
+//  else
+  {
+    int old_index = index;
+    move_to_nearby( body );
+    int distance = abs(index - old_index);
+    if (distance > listArray.size() / 2)
+       distance = listArray.size() - distance;
+    index= old_index;
+    return distance;
+  }
+}
+
+template <class X> inline CubitBoolean DLIList<X>::move_between(X item1, X item2)
+{
+  {
+    if ( listArray.empty() )
+       return CUBIT_FALSE;
+
+    const size_t itemCount = listArray.size();
+
+    for ( int i = 0; i < itemCount; i++ )
+    {
+      if ( listArray[i] == item1 )
+      {
+          //  dance around looking for item2
+        if ( i+1 < itemCount ) {
+          if ( listArray[i+1] == item2 ) {
+            index = i+1;
+            return CUBIT_TRUE;
+          }
+        }
+        if ( i > 0 ) {
+          if ( listArray[i-1] == item2 ) {
+            index = i;
+            return CUBIT_TRUE;
+          }
+        }
+        if ( ( i+1 == itemCount && listArray[0] == item2 )
+             || ( i == 0 && listArray[itemCount-1] == item2 ) )
+        {
+          index = 0;
+          return CUBIT_TRUE;
+        }
+      }
+    }
+    return CUBIT_FALSE;
+  }
+}
+
+// Removes every instance of 'val' in list.
+// Set to beginning of list after this call.
+template <class X> inline void DLIList<X>::uniquify_unordered()
+{
+  const size_t itemCount = listArray.size();
+  if ( itemCount < 2 )
+    return;
+
+  sort();
+
+  int j = 1;
+  int i = 0;
+
+  while (j < itemCount)
+  {
+    if (listArray[i] != listArray[j])
+      listArray[++i] = listArray[j++];
+    else
+      j++;
+  }
+
+  listArray.resize(i + 1);
+  index = 0;
+}
+
+template <class X> inline void DLIList<X>::uniquify_ordered()
+{
+  std::set<X> encountered;
+  typename std::vector<X>::iterator read, write, end = listArray.end();
+
+    // To avoid copying the array onto itself in the case
+    // where the list contains no duplicates, loop twice.
+
+    // Find first duplicate entry.
+  for ( read = listArray.begin(); read != end; ++read )
+    if ( ! encountered.insert(*read).second )
+      break;
+
+    // Now compact array, removing duplicates.  If there
+    // are no duplicates, this loop will not run (read == end).
+  for ( write = read; read != end; ++read )
+    if ( encountered.insert(*read).second )
+      *(write++) = *read;
+
+  listArray.resize(write - listArray.begin());
+  index = 0;
+}
+
+template <class X> inline const std::vector<X>& DLIList<X>::as_vector()
+{
+  return listArray;
+}
 
 template <class X> class DLIListIterator
 {
@@ -925,8 +1629,8 @@ public:
       {
         mIndex += n;
         while (mIndex < 0)
-          mIndex += dlIList->itemCount;
-        mIndex %= dlIList->itemCount;
+          mIndex += dlIList->size();
+        mIndex %= dlIList->size();
       }
     }
   

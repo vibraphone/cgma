@@ -72,7 +72,12 @@ public:
   ~DAG() ;
     //- Destructor
     
-  static void delete_instance() { if(instance_) delete instance_; };
+  static void delete_instance()
+  {
+    if(instance_)
+      delete instance_;
+    instance_ = NULL;
+  };
 
   void add_deactivated_DAG_node(ModelEntity* deactivatedDAGNodePtr) ;
     //R void
@@ -96,7 +101,7 @@ public:
     //-      done at base class. The classes derived from DAGNode
     //-      must do that.
       
-  void notify(ModelEntity* DAGNodePtr, CubitEventType event);
+  void remove(ModelEntity* DAGNodePtr);
     //R void
     //I DAGNodePtr
     //I- The input DAG Node pointer to the DAG Node that initiated

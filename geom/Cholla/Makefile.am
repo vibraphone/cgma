@@ -5,9 +5,9 @@ DEFS = $(TEMPLATE_DEFS_INCLUDED) $(LITTLE_ENDIAN)
 AM_CPPFLAGS = -I$(top_srcdir)/util -I$(top_srcdir)/geom
 
 # The name of the library to build
-noinst_LTLIBRARIES = 
+lib_LTLIBRARIES = 
 if BUILD_CGM
-  noinst_LTLIBRARIES += libCholla.la
+  lib_LTLIBRARIES += libCholla.la
 endif
 
 # The directory where headers will be installed
@@ -25,7 +25,6 @@ libCholla_la_SOURCES = \
     ChollaPoint.cpp \
     ChollaSkinTool.cpp \
     ChollaSurface.cpp \
-    ChollaVolume.cpp \
     ChordalAxis.cpp \
     CubitFacet.cpp \
     CubitFacetData.cpp \
@@ -51,9 +50,6 @@ libCholla_la_SOURCES = \
     TDFacetBoundaryPoint.cpp \
     TDGeomFacet.cpp 
 
-EXTRA_DIST = FacetorUtil.hpp \
-             FacetorUtil.cpp 
-              
 # Headers to be installed.  If any file in this list should
 # not be installed, move it to the _SOURCES list above.
 libCholla_la_include_HEADERS = \
@@ -65,7 +61,6 @@ libCholla_la_include_HEADERS = \
     ChollaPoint.hpp \
     ChollaSkinTool.hpp \
     ChollaSurface.hpp \
-    ChollaVolume.hpp \
     ChordalAxis.hpp \
     CubitFacet.hpp \
     CubitFacetData.hpp \

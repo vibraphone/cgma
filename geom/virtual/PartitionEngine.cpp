@@ -58,6 +58,7 @@
 
 #include "CubitTransformMatrix.hpp"
 #include "CubitObservable.hpp"
+#include "AppUtil.hpp"
 
 const char* const PARTITION_GEOM_ATTRIB_NAME = "PARTITION_GEOM";
 
@@ -287,10 +288,10 @@ SubCurve* PartitionEngine::replace_curve( Curve* curve )
   // we must notify the graphics of the modify from "real" to virtual -- KGM
   // I realize that this is not where the other notifies are completed but there
   // is no knowledge of the change later on. 
-  CubitObservable* observer = dynamic_cast<CubitObservable*>(result->topology_entity());
-  if (observer)
+  CubitObservable* observable = dynamic_cast<CubitObservable*>(result->topology_entity());
+  if (observable)
   {
-    observer->notify_all_observers(GEOMETRY_MODIFIED);
+     AppUtil::instance()->send_event(observable, GEOMETRY_MODIFIED);
   }
 
   return result;
@@ -580,10 +581,10 @@ Curve* PartitionEngine::restore_curve( SubCurve* curve )
   // we must notify the graphics of the modify from "real" to virtual -- KGM
   // I realize that this is not where the other notifies are completed but there
   // is no knowledge of the change later on. 
-  CubitObservable* observer = dynamic_cast<CubitObservable*>(result->topology_entity());
-  if (observer)
+  CubitObservable* observable = dynamic_cast<CubitObservable*>(result->topology_entity());
+  if (observable)
   {
-    observer->notify_all_observers(GEOMETRY_MODIFIED);
+    AppUtil::instance()->send_event(observable, GEOMETRY_MODIFIED);
   }
 
   return result;
@@ -2862,8 +2863,15 @@ assert(dynamic_cast<CubitFacetData*>(p_dead) != NULL);
       delete pts[k];
 
   for( k = 0; k < 3; k++ )
-    if( edges[k] && !edges[k]->num_adj_facets() )
-      delete edges[k];
+  {
+    if( edges[k] )
+    {
+      edges[k]->remove_facet(p_dead);
+      p_dead->edge(NULL, k);
+      if(!edges[k]->num_adj_facets())
+        delete edges[k];
+    }
+  }
   
   delete p_dead;
 }        
@@ -4532,7 +4540,7 @@ PartitionEntity* PartitionEngine::entity_from_id( int set_id,
 CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
 {
   int i, id, dim, max_id = 0;
-  DLIList<CubitSimpleAttrib*> attribs, point_attribs, curve_attribs;
+  DLIList<CubitSimpleAttrib> attribs, point_attribs, curve_attribs;
   DLIList<CubitVector*> empty;
   DLIList<int> junk, point_conn;
   DLIList<PartitionPoint*> new_points;
@@ -4550,8 +4558,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
     attribs.reset();
     for( i = attribs.size(); i--; )
     {
-      CubitSimpleAttrib* attrib = attribs.get_and_step();
-      dim = SubEntitySet::get_geom_dimension(*attrib);
+      const CubitSimpleAttrib& attrib = attribs.get_and_step();
+      dim = SubEntitySet::get_geom_dimension(attrib);
       if( dim == 0 )
         point_attribs.append(attrib);
       else if( dim == 1 )
@@ -4559,7 +4567,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
       else
         goto CLEANUP_CURVE_FROM_ATTRIB;
 
-      id = SubEntitySet::get_geom_id( *attrib );
+      id = SubEntitySet::get_geom_id( attrib );
       if( id > max_id )
         max_id = id;
     }
@@ -4577,8 +4585,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
     point_attribs.reset();
     for( i = point_attribs.size(); i--; )
     {
-      CubitSimpleAttrib* attrib = point_attribs.get_and_step();
-      PartitionPoint* point = new PartitionPoint( *attrib, first_curve );
+      const CubitSimpleAttrib& attrib = point_attribs.get_and_step();
+      PartitionPoint* point = new PartitionPoint( attrib, first_curve );
       if( !point )
         goto CLEANUP_CURVE_FROM_ATTRIB;
 
@@ -4598,14 +4606,14 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
         // Search for attribute corresponding to curve
         // beginning at prev_point
       PartitionPoint *start = 0, *end = 0;
-      CubitSimpleAttrib* curve_attrib = 0;
+      CubitSimpleAttrib curve_attrib;
       curve_attribs.last();
       for( i = curve_attribs.size(); i--; )
       {
           // Get data from attribute
-        CubitSimpleAttrib* attrib = curve_attribs.step_and_get();
+        const CubitSimpleAttrib& attrib = curve_attribs.step_and_get();
         point_conn.clean_out();
-        if( !SubEntitySet::read_geometry(id,dim,empty,junk,point_conn,junk,*attrib) 
+        if( !SubEntitySet::read_geometry(id,dim,empty,junk,point_conn,junk,attrib)
             || empty.size() || junk.size() || dim != 1 || point_conn.size() != 4)
           goto CLEANUP_CURVE_FROM_ATTRIB;
 
@@ -4625,14 +4633,13 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
           ent = entity_from_id(sid, eid, first_curve->sub_entity_set());
           end = dynamic_cast<PartitionPoint*>(ent);
 
-          curve_attribs.extract();
-          curve_attrib = attrib;
+          curve_attrib = curve_attribs.extract();
           break;
         }
       }
 
         // Make sure we found an attrib to do
-      if( !curve_attrib || !start || !end )
+      if( curve_attrib.isEmpty() || !start || !end )
         goto CLEANUP_CURVE_FROM_ATTRIB;
 
         // Unless this is the last partition (no more splitting
@@ -4650,7 +4657,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
         // Set the new curve's ID to whatever it is stored
         // as in the attribute.
       new_curve->sub_entity_set().set_id( new_curve, 
-        SubEntitySet::get_geom_id( *curve_attrib ) );
+        SubEntitySet::get_geom_id( curve_attrib ) );
 
         // Remove processed attributes.
       curve->remove_simple_attribute_virt( curve_attrib );
@@ -4666,10 +4673,6 @@ CubitStatus PartitionEngine::restore_from_attrib( Curve* curve )
   
 CLEANUP_CURVE_FROM_ATTRIB:
 
-    // free attribs
-  while( attribs.size() )
-    delete attribs.pop();
-    
   for( i = new_points.size(); i--; )
   {
     PartitionPoint* pt = new_points.get_and_step();
@@ -4696,7 +4699,7 @@ CLEANUP_CURVE_FROM_ATTRIB:
 CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
 {
   int i, j, k, id, dim, max_id = 0;
-  DLIList<CubitSimpleAttrib*> attribs;
+  DLIList<CubitSimpleAttrib> attribs;
   DLIList<CubitFacetEdgeData*> polyline_edges;
   DLIList<CubitPointData*> polyline_pts;
   DLIList<CubitFacetData*> surf_facets;
@@ -4721,7 +4724,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
     attribs.reset();
     for( i = attribs.size(); i--; )
     {
-      id = SubEntitySet::get_geom_id( *attribs.get_and_step() );
+      id = SubEntitySet::get_geom_id( attribs.get_and_step() );
       if( id > max_id )
         max_id = id;
     }
@@ -4746,8 +4749,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
     for( i = attribs.size(); i--; )
     {
         // Only want point attributes (dimension of zero)
-      CubitSimpleAttrib* attrib = attribs.get();
-      if( SubEntitySet::get_geom_dimension(*attrib) != 0 ) 
+      CubitSimpleAttrib attrib = attribs.get();
+      if( SubEntitySet::get_geom_dimension(attrib) != 0 )
       {
         attribs.step();
         continue;
@@ -4756,11 +4759,10 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
         // Create the point at the location specified in the attrib.
       attribs.extract();
       surf->remove_simple_attribute_virt(attrib);
-      PartitionPoint* new_pt = new PartitionPoint( *attrib, first_surf );
+      PartitionPoint* new_pt = new PartitionPoint( attrib, first_surf );
       CubitPointData* data = project_to_surface( first_surf, new_pt->coordinates() );
       new_pt->facet_point(data);
       new_geom.append(new_pt);
-      delete attrib;
       PRINT_DEBUG_86("  Created Point %p (%d in subset) at (%f,%f,%f)\n", 
         new_pt, new_pt->sub_entity_set().get_id(new_pt), 
         new_pt->coordinates().x(), new_pt->coordinates().y(), 
@@ -4777,8 +4779,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
     for( i = attribs.size(); i--; )
     {
         // Only want curve attributes (dimension of one)
-      CubitSimpleAttrib* attrib = attribs.get();
-      if( SubEntitySet::get_geom_dimension(*attrib) != 1 ) 
+      CubitSimpleAttrib attrib = attribs.get();
+      if( SubEntitySet::get_geom_dimension(attrib) != 1 )
       {
         attribs.step();
         continue;
@@ -4789,7 +4791,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
       attribs.extract();
       surf->remove_simple_attribute_virt(attrib);
       
-      if ( SubEntitySet::get_segment_count(*attrib) == 0 )
+      if ( SubEntitySet::get_segment_count(attrib) == 0 )
       {
         PartPTCurve* pt_curve = PartPTCurve::construct(attrib, first_surf);
         if (!pt_curve)
@@ -4888,7 +4890,6 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
         }
         delete position;
       }
-      delete attrib;
       if( !s || !polyline_edges.size() ) 
       {
         PRINT_ERROR("Imprint of polyline onto surface facets failed.\n");
@@ -5004,11 +5005,10 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
     while( attribs.size() )
     {
         // read attribute
-      CubitSimpleAttrib* surf_attr = attribs.pop();
+      CubitSimpleAttrib surf_attr = attribs.pop();
       connectivity.clean_out();
       CubitStatus s = SubEntitySet::
-        read_geometry( id, dim, positions, facets, connectivity, pt_owners, *surf_attr );
-      delete surf_attr;
+        read_geometry( id, dim, positions, facets, connectivity, pt_owners, surf_attr );
       
       if( !s || dim != 2 || positions.size() || facets.size() )
       {
@@ -5097,9 +5097,6 @@ CubitStatus PartitionEngine::restore_from_attrib( Surface* surf )
   
 CLEANUP_SURF_FROM_ATTRIB:
 
-  while( attribs.size() )
-    delete attribs.pop();
-    
     // clean up any unused loops from failed surface creation
   while ( loops.size() )
   {
@@ -5163,7 +5160,7 @@ CLEANUP_SURF_FROM_ATTRIB:
 CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
 {
   int i, id, dim, max_id = 0;
-  DLIList<CubitSimpleAttrib*> attribs;
+  DLIList<CubitSimpleAttrib> attribs;
   DLIList<CubitVector*> positions;
   DLIList<int> facets, connectivity, pt_owners;
   DLIList<PartitionEntity*> new_geom;
@@ -5182,7 +5179,7 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
     attribs.reset();
     for( i = attribs.size(); i--; )
     {
-      id = SubEntitySet::get_geom_id( *attribs.get_and_step() );
+      id = SubEntitySet::get_geom_id( attribs.get_and_step() );
       if( id > max_id )
         max_id = id;
     }
@@ -5204,8 +5201,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
     for( i = attribs.size(); i--; )
     {
         // skip any non-point geometry
-      CubitSimpleAttrib* attrib = attribs.get();
-      if( SubEntitySet::get_geom_dimension(*attrib) != 0 ) 
+      CubitSimpleAttrib attrib = attribs.get();
+      if( SubEntitySet::get_geom_dimension(attrib) != 0 )
       {
         attribs.step();
         continue;
@@ -5214,9 +5211,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
         // create the point as specified in the attrib
       attribs.extract();
       lump->remove_simple_attribute_virt(attrib);
-      PartitionPoint* new_pt = new PartitionPoint( *attrib, first_lump );
+      PartitionPoint* new_pt = new PartitionPoint( attrib, first_lump );
       new_geom.append(new_pt);
-      delete attrib;
     }
 
       // create all interior curves
@@ -5224,8 +5220,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
     for( i = attribs.size(); i--; )
     {
         // skip attribs for anything but curves
-      CubitSimpleAttrib* attrib = attribs.get();
-      if( SubEntitySet::get_geom_dimension(*attrib) != 1 ) 
+      CubitSimpleAttrib attrib = attribs.get();
+      if( SubEntitySet::get_geom_dimension(attrib) != 1 )
       {
         attribs.step();
         continue;
@@ -5239,7 +5235,6 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
         goto CLEANUP_LUMP_FROM_ATTRIB;
 
       new_geom.append(new_curve);
-      delete attrib;
     }
 
       // create all interior surfaces
@@ -5247,8 +5242,8 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
     for( i = attribs.size(); i--; )
     {
         // skip non-surface attributes
-      CubitSimpleAttrib* attrib = attribs.get();
-      if( SubEntitySet::get_geom_dimension(*attrib) != 2 ) 
+      CubitSimpleAttrib attrib = attribs.get();
+      if( SubEntitySet::get_geom_dimension(attrib) != 2 )
       {
         attribs.step();
         continue;
@@ -5257,12 +5252,11 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
         // create surface from attribute
       attribs.extract();
       lump->remove_simple_attribute_virt(attrib);
-      PartitionSurface* new_surf = PartitionSurface::construct( *attrib, first_lump );
+      PartitionSurface* new_surf = PartitionSurface::construct( attrib, first_lump );
       if( !new_surf )
         goto CLEANUP_LUMP_FROM_ATTRIB;
 
       new_geom.append(new_surf);
-      delete attrib;
     }
 
 
@@ -5271,10 +5265,10 @@ CubitStatus PartitionEngine::restore_from_attrib( Lump* lump )
     while( attribs.size() )
     {
         // Read data from attribute
-      CubitSimpleAttrib* attr = attribs.pop();
+      const CubitSimpleAttrib& attr = attribs.pop();
       connectivity.clean_out();
       CubitStatus s = SubEntitySet::
-        read_geometry( id, dim, positions, facets, connectivity, pt_owners, *attr );
+        read_geometry( id, dim, positions, facets, connectivity, pt_owners, attr );
       if( !s || dim != 3 || positions.size() || facets.size() )
       {
         new_lump = 0;
@@ -5368,10 +5362,6 @@ CLEANUP_LUMP_FROM_ATTRIB:
     delete first_lump;
   }
   
-    // deallocate any attribute objects still remaining
-  while( attribs.size() )
-    delete attribs.pop();
-    
     // destroy any unused split geometry
   new_geom.reset();
   while( new_geom.size() )

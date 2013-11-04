@@ -120,16 +120,11 @@ int CubitPlane::mk_plane_with_points( const CubitVector& V0,
   
   if(normal_.length() <= CUBIT_RESABS)
   {
-    throw std::invalid_argument ("Length of the Normal must be greater than 1.0E-12");
-  }
-  // assert(normal_.length() > CUBIT_RESABS);
-  /*if (normal_.length() < CUBIT_RESABS)
-  {
     PRINT_ERROR("Points are collinear.\n"
                 "       Cannot create a CubitPlane object.\n");
     d_ = 0.0;
     return CUBIT_FAILURE;
-  }*/
+  }
   
   normal_.normalize();
   

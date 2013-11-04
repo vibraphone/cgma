@@ -34,8 +34,6 @@ public :
   virtual ~TBPoint() ;
     //- The destructor
   
-  virtual const type_info& topology_entity_type_info() const;
-  
   virtual CubitVector coordinates() const = 0;  // pure virtual
     //R CubitVector
     //R- Contains the coordinate values {x y z} of this Point

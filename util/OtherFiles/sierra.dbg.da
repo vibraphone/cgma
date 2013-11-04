@@ -1,3 +1,0 @@
-DEBUG_FLAG = -g 
-EXTRA_GEOM_LIBS = 
-TEMPLATE_FLAG = -tlocal

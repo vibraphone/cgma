@@ -34,6 +34,7 @@
 #include <memory.h>
 #include "CubitUtilConfigure.h"
 #include <vector>
+#include "CubitFileUtil.hpp"
 
 namespace NCubitFile {
 
@@ -54,6 +55,7 @@ struct SElemData {
     UnsignedInt32 mintElemOrder;
     UnsignedInt32 mintElemCount;
     UnsignedInt32* mpaElemIDs;
+    UnsignedInt32* mpaElemGlobalIDs;
     UnsignedInt32* mpaElemConnect;
 };
 struct SGroupData {
@@ -112,7 +114,7 @@ public:
         eBCSetMetaData, eMaterialMetaData, eConstraintMetaData
     };
     enum EModelType {
-      eFEModel, eACISText, eACISBinary, eAssemblyModel, eSimModel
+      eFEModel, eACISText, eACISBinary, eAssemblyModel, eSimModel, eBoundaryLayerModel
     };
     enum ESideSetSenseSize {
         eSideSetSenseNone, eSideSetSenseByte, eSideSetSenseInt32
@@ -140,16 +142,16 @@ public:
 
     // Returns a FILE* that can be directly written to.  Be sure to
     // call EndWriteAssemblyModel() to correctly accomodate the written data.
-  UnsignedInt32 BeginWriteAssemblyModel(HModel xintModelId,
+  UnsignedInt32 BeginWriteModel(HModel xintModelId, EModelType type,
                                         FILE*& writeable_file);
-  UnsignedInt32 EndWriteAssemblyModel(HModel xintModelId);
+  UnsignedInt32 EndWriteModel(HModel xintModelId);
     // Returns a FILE* that can be read from.  The FILE* will NOT return EOF
     // at the end of the data...the reader should not go GetReadModelLength()
     // bytes beyond the current FILE* position.  You should copy the contents
     // to another FILE if this is an issue for the reader.
-  UnsignedInt32 BeginReadAssemblyModel(HModel xintGeomModel,
+  UnsignedInt32 BeginReadModel(HModel xintGeomModel, EModelType type,
                                        FILE*& readable_file);
-  UnsignedInt32 EndReadAssemblyModel();
+  UnsignedInt32 EndReadModel();
   
   UnsignedInt32 BeginWriteGeomModel(HModel xintGeomModel,
                                     const char* xstrGeomFile);
@@ -209,7 +211,7 @@ public:
   UnsignedInt32 ReadNodes(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
                           UnsignedInt32& xintNodeCount, UnsignedInt32*& xpaintNodeIDs,
                           double*& xpadblX, double*& xpadblY, double*& xpadblZ);
-  UnsignedInt32 ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
+  UnsignedInt32 ReadElems(HModel xintFEModel, UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
                           UnsignedInt32& xintNumTypes, SElemData*& xpaElemData);
   UnsignedInt32 ReadGroupIdentity(UnsignedInt32 xintIndex,
                                   UnsignedInt32& xintGroupID,
@@ -337,8 +339,8 @@ private:
     char* mstrWriteFileName;
     char* mstrBackupFileName;
     UnsignedInt32 mintWriteTempFile;
-    FILE* mpReadFile;
-    FILE* mpWriteFile;
+    CubitFile mpReadFile;
+    CubitFile mpWriteFile;
 EErrorCode meErrorState;
     UnsignedInt32 mintWriteBuffNumModels;
     UnsignedInt32 mintNextModelID;

@@ -55,10 +55,11 @@ directory into CGM_DIR.
 ACIS libraries are located and other options (run "./configure -h" for
 a list of options).
 3. Make the CGM libraries by typing "make".
-4. Test the libraries using "make check".
+4. Test the build using "make test".
 5. Install the CGM libraries by typing "make install" (this installs
 the libraries to the location specified by the --prefix option to
 configure, or to /usr/local by default).
+6. Test the installation using "make test".
 
 =====================================
 Documentation, Testing, Example Applications
@@ -90,6 +91,5 @@ http://cubit.sandia.gov/CGM often for news and updates.
 Updates
 =====================================
 
-10.0 (4/05): Initial public CGM release
-12.2 (3/12): Release compatible to cubit12.2
+14.0 (4/05): Initial public CGM release
 

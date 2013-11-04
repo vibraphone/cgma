@@ -159,10 +159,8 @@ public :
   void ige_export_geom( DLIList<TopologyBridge*> &geom_list );
   void ige_import_geom( DLIList<TopologyBridge*> &geom_list );
   void ige_remove_attributes( DLIList<TopologyBridge*> &geom_list );
-  void ige_attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                        DLIList<Body*> &old_bodies);
+  void ige_attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                      DLIList<Body*> &old_bodies);
   void ige_remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges);
   
   //Using the source_bridge, finds all bridges that actually have a BridgeManager the owner.
@@ -440,6 +438,7 @@ public :
                                  Model_File_Type file_type,
                                  ModelImportOptions &import_options,
 				 DLIList<RefEntity*> *imported_entities = NULL );
+
 
     // import entities in a solid model buffer
   CubitStatus import_solid_model(DLIList<RefEntity*> *imported_entities,

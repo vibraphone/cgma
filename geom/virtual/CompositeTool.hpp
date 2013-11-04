@@ -181,9 +181,9 @@ class CompositeTool
     // mesh-handling code.
     virtual CubitStatus update_combined_vols( RefVolume* keep, RefVolume* dead );
     virtual CubitStatus update_combined_faces( RefFace* keep, RefEdge* dead, RefFace* delete_face );
-    virtual CubitStatus update_combined_edges( RefEdge* keep, RefEdge* dead );
-  
-  
+    virtual CubitStatus update_combined_edges( RefEdge* keep, RefEdge* dead,int keep_interval,double keep_size,FirmnessType keep_interval_type,SizeIntervalType keep_size_type);
+    virtual CubitStatus determine_combined_edges_interval_or_size( RefEdge* edge_1, RefEdge* edge_2,int& result_interval,double& result_size,FirmnessType& interval_keep_type,SizeIntervalType& size_keep_type); 
+
     CompositeTool();
     
     //CubitStatus make_mergeable( GeometryEntity* bridge1, GeometryEntity* bridge2 );

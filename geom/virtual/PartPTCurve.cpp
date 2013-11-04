@@ -9,11 +9,11 @@ PartPTCurve::PartPTCurve( PartitionSurface* owner )
   owner->sub_entity_set().add_lower_order( this );
 }
 
-PartPTCurve* PartPTCurve::construct( CubitSimpleAttrib* attrib,
+PartPTCurve* PartPTCurve::construct( const CubitSimpleAttrib& attrib,
                                      PartitionSurface* owner )
 {
   DLIList<int> vertex_conn;
-  PartPTCurve* result = new PartPTCurve( owner, *attrib, vertex_conn );
+  PartPTCurve* result = new PartPTCurve( owner, attrib, vertex_conn );
   
   if ( vertex_conn.size() != 4 )
   {
@@ -45,7 +45,7 @@ PartPTCurve* PartPTCurve::construct( CubitSimpleAttrib* attrib,
 }
 
 PartPTCurve::PartPTCurve( PartitionSurface* surface,
-                          CubitSimpleAttrib& attrib,
+                          const CubitSimpleAttrib& attrib,
                           DLIList<int>& vertex_conn )
 {
   DLIList<CubitVector*> points;
@@ -77,19 +77,19 @@ CubitStatus PartPTCurve::get_graphics( GMem& result,
 }
 
 
-void PartPTCurve::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartPTCurve::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { sub_entity_set().add_attribute( this, csa ); }
-void PartPTCurve::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartPTCurve::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { sub_entity_set().rem_attribute( this, csa ); }
 void PartPTCurve::remove_all_simple_attribute_virt()
   { sub_entity_set().rem_all_attrib( this ); }
-CubitStatus PartPTCurve::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartPTCurve::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, list ); 
   return CUBIT_SUCCESS;
 }
 CubitStatus PartPTCurve::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, name.c_str(), list ); 
   return CUBIT_SUCCESS;
@@ -191,7 +191,8 @@ CubitStatus PartPTCurve::get_spline_params
   int &degree,       // the degree of this spline
   DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
   DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
-  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+  DLIList<double> &knots,   // There should be order+cntrl_pts.size()-2 knots
+  bool &spline_is_reversed
 ) const
 {
   PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for PartPTCurves.\n");

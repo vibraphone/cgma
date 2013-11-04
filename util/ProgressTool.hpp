@@ -8,10 +8,13 @@
 #define PROGRESSTOOL_HPP
 
 #include "CubitDefines.h"
+#include "CubitUtilConfigure.h"
 
-class ProgressTool
+class CUBIT_UTIL_EXPORT ProgressTool
 {
 public:
+  virtual ~ProgressTool() {}
+
   virtual void start(int nLower, int nUpper,
                const char* title = NULL,
                const char* info_string = NULL,

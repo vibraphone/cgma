@@ -17,6 +17,7 @@
 #include "GeometryModifyEngine.hpp" // for creation of temporary construction entities
 #include "DAG.hpp"
 #include "TBOwnerSet.hpp"
+#include "UnMergeEvent.hpp"
 
 #include "RefEntity.hpp"
 #include "RefEntityFactory.hpp"
@@ -696,7 +697,10 @@ CubitStatus GeometryQueryTool::fire_ray( CubitVector &origin,
       return CUBIT_FAILURE;
     }
 
-    if( !gqe_last ) gqe_last = gqe;
+    if( !gqe_last )
+    {
+      gqe_last = gqe;
+    }
     if( gqe != gqe_last )
     {
       if( hits_limited == CUBIT_TRUE )
@@ -1100,6 +1104,7 @@ CubitStatus GeometryQueryTool::import_solid_model(DLIList<RefEntity*> *imported_
     // now return
   return status;
 }
+
 CubitStatus GeometryQueryTool::construct_refentities(DLIList<TopologyBridge*> &bridge_list,
                                                      DLIList<RefEntity*> *imported_entities)
 {
@@ -1420,19 +1425,19 @@ Body* GeometryQueryTool::make_Body(BodySM *bodysm_ptr) const
 
   if( body_created )
   {
-    CubitObserver::notify_static_observers( body, VGI_BODY_CONSTRUCTED );
+    AppUtil::instance()->send_event( body, FREE_REF_ENTITY_GENERATED);
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, body);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
   else if( body_modified )
   {
-    body->notify_all_observers( TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event( body, TOPOLOGY_MODIFIED );
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, body);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
   else if( vol_modified )
   {
-    body->notify_all_observers( GEOMETRY_MODIFIED );
+    AppUtil::instance()->send_event( body, GEOMETRY_MODIFIED );
     CGMHistory::Event evt(CGMHistory::GEOMETRY_CHANGED, body);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
@@ -1529,7 +1534,7 @@ RefVolume* GeometryQueryTool::make_RefVolume( Lump* lump_ptr,
     volume_modified = false;
   else if(!volume_created && volume_modified )
   {
-    volume->notify_all_observers( TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event( volume, TOPOLOGY_MODIFIED );
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, volume);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
@@ -1998,7 +2003,7 @@ RefFace* GeometryQueryTool::make_RefFace( Surface* surface_ptr ) const
 
   if( !face_created && face_modified && !face->deactivated() )
   {
-    face->notify_all_observers( GEOMETRY_TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event( face, GEOMETRY_TOPOLOGY_MODIFIED );
     CGMHistory::Event evt2(CGMHistory::TOPOLOGY_CHANGED, face);
     const_cast<CGMHistory&>(mHistory).add_event(evt2);
     CGMHistory::Event evt(CGMHistory::GEOMETRY_CHANGED, face);
@@ -2006,7 +2011,7 @@ RefFace* GeometryQueryTool::make_RefFace( Surface* surface_ptr ) const
   }
   else if(face_modified2)
   {
-    face->notify_all_observers(TOPOLOGY_MODIFIED);
+    AppUtil::instance()->send_event( face, TOPOLOGY_MODIFIED);
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, face);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
   }
@@ -2440,7 +2445,7 @@ RefEdge* GeometryQueryTool::make_RefEdge( Curve* curve_ptr ) const
 
   if( !edge_created && edge_modified && !edge->deactivated() )
   {
-    edge->notify_all_observers( GEOMETRY_TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event( edge, GEOMETRY_TOPOLOGY_MODIFIED );
     CGMHistory::Event evt2(CGMHistory::TOPOLOGY_CHANGED, edge);
     const_cast<CGMHistory&>(mHistory).add_event(evt2);
     CGMHistory::Event evt(CGMHistory::GEOMETRY_CHANGED, edge);
@@ -2464,19 +2469,19 @@ RefEntity *GeometryQueryTool::check_mergeable_refentity(GeometryEntity *bridge) 
 
     // checks the topology bridge for a merge attribute, which might lead to another
     // refentity
-  DLIList<CubitSimpleAttrib*> csa_list;
+  DLIList<CubitSimpleAttrib> csa_list;
   const char* name = CGMApp::instance()->attrib_manager()->att_internal_name(CA_MERGE_PARTNER);
   bridge->get_simple_attribute(name, csa_list);
-  CubitSimpleAttrib *csa_ptr = csa_list.size() ? csa_list.get() : NULL;
 
   RefEntity *re_ptr = NULL;
 
-  if (csa_ptr != NULL)
+  if(csa_list.size() > 0)
   {
+    const CubitSimpleAttrib &csa_ptr = csa_list.size() ? csa_list.get() : CubitSimpleAttrib();
+
       // from the csa, call CAMP to get the partner, if one exists
       // (and return it)
-    csa_ptr->int_data_list()->reset();
-    int merge_id = *(csa_ptr->int_data_list()->get());
+    int merge_id = csa_ptr.int_data_list()[0];
 
     if( importingSolidModel && CUBIT_FALSE == GSaveOpen::performingUndo && 
         !mergeGloballyOnImport )
@@ -2600,9 +2605,6 @@ RefEntity *GeometryQueryTool::check_mergeable_refentity(GeometryEntity *bridge) 
       bridge->set_saved_id( id );
   }
 
-  while ( csa_list.size() )
-    delete csa_list.pop();
-
   return re_ptr;
 }
 
@@ -2623,7 +2625,7 @@ CubitSense GeometryQueryTool::relative_sense( Surface* surf1, Surface* surf2 )
   CubitVector point = 0.5 * (point1 + point2);
 
   CubitVector closest1, closest2, normal1, normal2;
-  surf1->closest_point( point, &closest1 );
+  surf1->closest_point_trimmed( point, closest1 );
   surf2->closest_point( closest1, &closest2, &normal2 );
   surf1->closest_point( closest2, &closest1, &normal1 );
 
@@ -2687,7 +2689,7 @@ RefFace* GeometryQueryTool::make_free_RefFace(Surface *surface_ptr,
    // Add the new ref_face to the graphics
    if( is_free_face )
    {
-     ref_face_ptr->notify_all_observers( FREE_REF_ENTITY_GENERATED );
+     AppUtil::instance()->send_event( ref_face_ptr, FREE_REF_ENTITY_GENERATED );
      
      CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, ref_face_ptr);
      const_cast<CGMHistory&>(mHistory).add_event(evt);
@@ -2716,7 +2718,7 @@ RefEdge* GeometryQueryTool::make_free_RefEdge(Curve *curve_ptr ) const
      return 0;
    }
 
-   ref_edge_ptr->notify_all_observers( FREE_REF_ENTITY_GENERATED );
+   AppUtil::instance()->send_event( ref_edge_ptr, FREE_REF_ENTITY_GENERATED );
    
    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, ref_edge_ptr);
    const_cast<CGMHistory&>(mHistory).add_event(evt);
@@ -2745,7 +2747,7 @@ RefVertex* GeometryQueryTool::make_free_RefVertex(TBPoint *point_ptr ) const
    }
 
    // Add the new ref_vertex to the graphics
-   ref_vertex_ptr->notify_all_observers( FREE_REF_ENTITY_GENERATED );
+   AppUtil::instance()->send_event( ref_vertex_ptr, FREE_REF_ENTITY_GENERATED );
    
    CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, ref_vertex_ptr);
    const_cast<CGMHistory&>(mHistory).add_event(evt);
@@ -2901,16 +2903,35 @@ CubitStatus GeometryQueryTool::delete_single_Body( Body* body_ptr )
   for( i=merged_children.size(); i--; )
   {
     RefEntity* child = merged_children.get_and_step();
-    child->notify_all_observers( GEOMETRY_TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event( child, GEOMETRY_TOPOLOGY_MODIFIED );
     CGMHistory::Event evt2(CGMHistory::TOPOLOGY_CHANGED, child);
     const_cast<CGMHistory&>(mHistory).add_event(evt2);
     CGMHistory::Event evt(CGMHistory::GEOMETRY_CHANGED, child);
     const_cast<CGMHistory&>(mHistory).add_event(evt);
-
   }
 
-     // Check if body actually got deleted.
-  return destroy_dead_entity( body_ptr );
+  // Check if body actually got deleted.
+  CubitStatus ret = destroy_dead_entity( body_ptr );
+
+  // Send an unmerge event out for surfaces that were a part
+  // of the body that was deleted.  Do this after the above
+  // call to destroy_dead_entity() so that the Body
+  // pointer associated with the deleted volume will no
+  // longer be referenced by the merged surface.  This code
+  // was added so that sidesets which are watching surface
+  // modifications will know to update their data when 
+  // the body is deleted. 
+  for( i=merged_children.size(); i--; )
+  {
+    RefFace* child = CAST_TO(merged_children.get_and_step(), RefFace);
+    if(child)
+    {
+      UnMergeEvent unmerge_event( child, child );
+      AppUtil::instance()->send_event(child, unmerge_event );
+    }
+  }
+
+  return ret;
 }
 
 //-------------------------------------------------------------------------
@@ -5126,11 +5147,13 @@ void GeometryQueryTool::get_connected_free_ref_entities(
   do
   {
       // get vertices (bottom level ref entities)
-    source_entity_list.clean_out();
+    source_entity_list.clean_out();    
+
     for (i = source_list.size(); i--; )
     { 
       TopologyEntity *source_entity = source_list.get_and_step();
       DLIList<RefVertex*> local_vert_list;
+      DLIList<RefEntity*> tmp_source_entity_list;
       source_entity->ref_vertices( local_vert_list );
       if(local_vert_list.size() == 0)
       {
@@ -5141,16 +5164,21 @@ void GeometryQueryTool::get_connected_free_ref_entities(
           DLIList<RefFace*> local_face_list;
           source_entity->ref_faces(local_face_list);
           if(local_face_list.size() > 0)
-            CAST_LIST( local_face_list, source_entity_list, RefEntity);
+          {
+            CAST_LIST( local_face_list, tmp_source_entity_list, RefEntity);
+            source_entity_list += tmp_source_entity_list;
+          }
         }
         else
         {
-          CAST_LIST( local_edge_list, source_entity_list, RefEntity);
+          CAST_LIST( local_edge_list, tmp_source_entity_list, RefEntity);
+          source_entity_list += tmp_source_entity_list;
         }
       }
       else
       {
-        CAST_LIST( local_vert_list, source_entity_list, RefEntity);
+        CAST_LIST( local_vert_list, tmp_source_entity_list, RefEntity);
+        source_entity_list += tmp_source_entity_list;
       }
     }
     source_list.clean_out();
@@ -5171,7 +5199,8 @@ void GeometryQueryTool::get_connected_free_ref_entities(
       for ( j = entity_list.size(); j--; )
       {
         // entity is top level if it has a topology bridge that has a bodysm
-        RefEntity *ref_entity = entity_list.get_and_step();
+        RefEntity *ref_entity = entity_list.get_and_step(); 
+
         if ( !ref_entity->marked() )
         {
           bridge_list.clean_out();
@@ -5184,7 +5213,7 @@ void GeometryQueryTool::get_connected_free_ref_entities(
             DLIList<TopologyBridge*> parents;
             bridge->get_parents( parents );            
             if( parents.size() == 0 )
-            {
+            {             
               ref_entity->marked( 1 );
               topo_entity = CAST_TO( ref_entity, TopologyEntity );
               source_list.append( topo_entity );
@@ -5304,13 +5333,11 @@ void GeometryQueryTool::get_tbs_with_bridge_manager_as_owner( TopologyBridge *so
     (*itor)->get_tbs_with_bridge_manager_as_owner( source_bridge, tbs );
 }
 
-void GeometryQueryTool::ige_attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                        DLIList<Body*> &old_bodies)
+void GeometryQueryTool::ige_attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                                       DLIList<Body*> &old_bodies)
 {
   for (IGESet::iterator itor = igeSet.begin(); itor != igeSet.end(); ++itor)
-    (*itor)->attribute_after_imprinting(new_tbs, att_tbs, tb_list, old_bodies);
+    (*itor)->attribute_after_imprinting(tb_list, old_bodies);
 }
 
 void GeometryQueryTool::ige_remove_attributes( DLIList<TopologyBridge*> &geom_list )
@@ -5426,14 +5453,14 @@ CubitStatus GeometryQueryTool::destroy_dead_entity(
         // that call will be the top-most one.
       if (top)
       {
-        CubitObserver::notify_static_observers( ob, TOP_LEVEL_ENTITY_DESTRUCTED );
+        AppUtil::instance()->send_event( ob, TOP_LEVEL_ENTITY_DESTRUCTED );
         CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, static_cast<RefEntity*>(ob));
         const_cast<CGMHistory&>(mHistory).add_event(evt);
       }
-      ob->notify_all_observers( MODEL_ENTITY_DESTRUCTED );
+      AppUtil::instance()->send_event( ob, MODEL_ENTITY_DESTRUCTED );
     }
     else
-      ob->notify_observers( MODEL_ENTITY_DESTRUCTED );
+      AppUtil::instance()->send_event( ob, MODEL_ENTITY_DESTRUCTED );
   }
 
   DLIList<ModelEntity*> child_list;
@@ -5463,7 +5490,7 @@ CubitStatus GeometryQueryTool::destroy_dead_entity(
         }
         if (!has_parents)
         {
-          ob->notify_all_observers( FREE_REF_ENTITY_GENERATED );
+          AppUtil::instance()->send_event( ob, FREE_REF_ENTITY_GENERATED );
           CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, static_cast<RefEntity*>(ob));
           const_cast<CGMHistory&>(mHistory).add_event(evt);
         }
@@ -5629,7 +5656,7 @@ void GeometryQueryTool::translate( DLIList<RefEntity*> &entities_to_transform,
           {
               GeometryEntity *geom = CAST_TO( bridge, GeometryEntity );
               GeometryQueryEngine* engine = geom->get_geometry_query_engine();
-              engine->translate( geom, delta );
+              CubitStatus result = engine->translate( geom, delta );
           }
       }
   }
@@ -7360,7 +7387,7 @@ double GeometryQueryTool::estimate_merge_tolerance(DLIList<RefVolume*> &vol_list
       std::map <RefVertex*, DLIList<dist_vert_struct*>*>::iterator iter;
       for(iter=vert_dist_map.begin(); iter != vert_dist_map.end(); iter++ )
       {
-        //RefVertex *vert = iter->first;
+        RefVertex *vert = iter->first;
         DLIList<dist_vert_struct*> *struct_list = iter->second;
         int m;
         for(m=struct_list->size(); m>0; m--)
@@ -7629,7 +7656,7 @@ void GeometryQueryTool::get_merged_away_free_entities( DLIList<RefEntity*> &ref_
 
 CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
                                              GMem *gmem,
-                                             std::vector<RefEntity*> &ref_vertex_edge_to_point_vector,
+                                             std::vector<RefEntity*> &facet_point_ownership_vector,
                                              std::vector<std::pair< RefEntity*, std::pair<int,int> > > &facetedges_on_refedges,
                                              unsigned short normal_tolerance, 
                                              double distance_tolerance, 
@@ -7645,18 +7672,13 @@ CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
   std::vector<TopologyBridge*> vertex_edge_to_point_vector;
   std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
 
-  CubitStatus rsl = surf_ptr->get_geometry_query_engine()->
+  CubitStatus rv = surf_ptr->get_geometry_query_engine()->
     get_graphics(surf_ptr, gmem, vertex_edge_to_point_vector, facetedges_on_curve,
     normal_tolerance, distance_tolerance, max_edge_length );
 
-  ref_vertex_edge_to_point_vector.resize( vertex_edge_to_point_vector.size(), NULL );
-
-  if(rsl == CUBIT_FAILURE)
-    return rsl;
-
+  facet_point_ownership_vector.resize( vertex_edge_to_point_vector.size(), NULL );
   RefEntity *ref_ent = NULL;
-  int size = vertex_edge_to_point_vector.size();
-  for( int i=0; i<size; i++ )
+  for( int i=0; i<vertex_edge_to_point_vector.size(); i++ )
   {    
     TopologyBridge *tb = vertex_edge_to_point_vector[i];     
     if( NULL == tb )
@@ -7665,14 +7687,13 @@ CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
     if( tb->topology_entity() )
     {
       ref_ent = CAST_TO( tb->topology_entity(), RefEntity ); 
-      ref_vertex_edge_to_point_vector[i] = ref_ent;
+      facet_point_ownership_vector[i] = ref_ent;
     }
     else
       assert(0);
   }
 
-  size = facetedges_on_curve.size();
-  for( int i=0; i<size; i++ )
+  for( int i=0; i<facetedges_on_curve.size(); i++ )
   {    
     std::pair<TopologyBridge*, std::pair<int,int> > tmp_pair = facetedges_on_curve[i];
     TopologyBridge *tb = tmp_pair.first;
@@ -7687,6 +7708,102 @@ CubitStatus GeometryQueryTool::get_graphics( RefFace *ref_face,
       assert(0);
     }
   }
+
+  
+  bool debug = false;
+
+  if( debug )
+  {    
+    //GfxDebug::clear();
+    GPoint *pt_list = gmem->point_list();
+    for( int i=0; i<facet_point_ownership_vector.size(); i++ )
+    {
+      RefEntity *ref_ent = facet_point_ownership_vector[i];      
+
+      int color = 3;
+      if( ref_ent->dimension() == 1 )       
+        color = 4;
+      else if( ref_ent->dimension() == 2 )       
+        color = 5;   
+    }   
+
+    GfxDebug::flush();
+    GfxDebug::mouse_xforms();    
+    
+
+    GfxDebug::clear();
+    //draw the curves
+    for( int i=0; i<facetedges_on_refedges.size(); i++ )
+    {
+      std::pair<RefEntity*, std::pair<int,int> > tmp_pair;
+      tmp_pair = facetedges_on_refedges[i];
+
+      RefEntity* ref_ent = tmp_pair.first;
+      std::pair<int,int> int_pair = tmp_pair.second;
+
+      CubitVector pt0( gmem->point_list()[int_pair.first].x,
+        gmem->point_list()[int_pair.first].y,
+        gmem->point_list()[int_pair.first].z );
+
+      CubitVector pt1( gmem->point_list()[int_pair.second].x,
+        gmem->point_list()[int_pair.second].y,
+        gmem->point_list()[int_pair.second].z );
+
+      GfxDebug::draw_point(pt0, (ref_ent->id()%10) + 3  );
+      GfxDebug::draw_point(pt1, (ref_ent->id()%10) + 3  );
+      GfxDebug::draw_line( pt0, pt1, (ref_ent->id()%10) + 3 );      
+    }
+    GfxDebug::flush();      
+    GfxDebug::mouse_xforms();
+
+    int index = 0;
+    GfxDebug::clear();
+    for( int i=0; i<gmem->fListCount; i++ )
+    {
+      int step = gmem->facet_list()[index++];      
+      //create pts      
+      CubitVector pt0( gmem->point_list()[ gmem->facet_list()[index] ].x,
+        gmem->point_list()[ gmem->facet_list()[index] ].y,
+        gmem->point_list()[ gmem->facet_list()[index] ].z );       
+      index++;
+
+      CubitVector pt1( gmem->point_list()[ gmem->facet_list()[index] ].x,
+        gmem->point_list()[ gmem->facet_list()[index] ].y,
+        gmem->point_list()[ gmem->facet_list()[index] ].z );
+      index++;
+
+      CubitVector pt2( gmem->point_list()[ gmem->facet_list()[index] ].x,
+        gmem->point_list()[ gmem->facet_list()[index] ].y,
+        gmem->point_list()[ gmem->facet_list()[index] ].z );       
+      index++;
+
+       //draw lines
+       GPoint three_pts[3];
+       three_pts[0].x = pt0.x();
+       three_pts[0].y = pt0.y();
+       three_pts[0].z = pt0.z();    
+
+       three_pts[1].x = pt1.x();
+       three_pts[1].y = pt1.y();
+       three_pts[1].z = pt1.z();    
+
+       three_pts[2].x = pt2.x();
+       three_pts[2].y = pt2.y();
+       three_pts[2].z = pt2.z();                  
+
+       GfxDebug::draw_polygon( three_pts, 3, i%20, i%20, true );
+       GfxDebug::draw_line( pt0, pt1, i%20 );
+       GfxDebug::draw_line( pt1, pt2, i%20 );
+       GfxDebug::draw_line( pt0, pt2, i%20 );       
+       i+=step;              
+    }          
+    GfxDebug::flush();
+    GfxDebug::mouse_xforms();
+  }
+
+
+
+
   return CUBIT_SUCCESS;  
 }
 
@@ -7724,10 +7841,11 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
   std::vector<Surface*> surfaces_to_facet_vector;
   std::vector<TopologyBridge*> tmp_facet_point_ownership_vector;
   std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > facetedges_on_curve;
-  CubitStatus rsl = gqe->get_graphics( body_sm, g_mem, surfaces_to_facet_vector, tmp_facet_point_ownership_vector,
+  CubitStatus stat = gqe->get_graphics( body_sm, g_mem, surfaces_to_facet_vector, tmp_facet_point_ownership_vector,
     facetedges_on_curve, normal_tolerance, distance_tolerance, max_edge_length );
-  if(rsl == CUBIT_FAILURE)
-    return rsl;
+
+  if( CUBIT_FAILURE == stat )
+    return CUBIT_FAILURE;
 
   //map Surfaces to MRefFaces
   Surface *current_surf = NULL;
@@ -7735,8 +7853,7 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
   bool ignore_facets = false;
 
   int i;
-  int size = surfaces_to_facet_vector.size();
-  for( i=0; i<size; i++ )
+  for( i=0; i<surfaces_to_facet_vector.size(); i++ )
   {    
     Surface *tmp_surf = surfaces_to_facet_vector[i];     
     
@@ -7798,8 +7915,7 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
   
   facet_point_ownership_vector.resize( tmp_facet_point_ownership_vector.size(), NULL );
   RefEntity *ref_ent = NULL;
-  size = tmp_facet_point_ownership_vector.size();
-  for( i=0; i<size; i++ )
+  for( i=0; i<tmp_facet_point_ownership_vector.size(); i++ )
   {    
     TopologyBridge *tb = tmp_facet_point_ownership_vector[i];     
     if( NULL == tb )
@@ -7847,9 +7963,8 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
       }     
     }
   }
- 
-  size = facetedges_on_curve.size();
-  for( i=0; i<size; i++ )
+
+  for( i=0; i<facetedges_on_curve.size(); i++ )
   {    
     std::pair<TopologyBridge*, std::pair<int,int> > tmp_pair = facetedges_on_curve[i];
     TopologyBridge *tb = tmp_pair.first;
@@ -7899,21 +8014,107 @@ CubitStatus GeometryQueryTool::get_graphics( Body *body,
   bool debug = false;
 
   if( debug )
-  {
-    GfxDebug::clear();
+  {    
+    //GfxDebug::clear();
     GPoint *pt_list = g_mem->point_list();
-    for( int i=facet_point_ownership_vector.size(); i--; )
+    for( int i=0; i<facet_point_ownership_vector.size(); i++ )
     {
-      RefEntity *ref_ent = facet_point_ownership_vector[i];
-      GfxDebug::draw_ref_entity( ref_ent, 4 );
+      RefEntity *ref_ent = facet_point_ownership_vector[i];      
 
-      if( ref_ent )
-      { 
-        GfxDebug::draw_point(pt_list[i].x, pt_list[i].y, pt_list[i].z, 3 );
-        GfxDebug::flush();
-        GfxDebug::mouse_xforms();
-      }
+      int color = 3;
+      if( ref_ent->dimension() == 1 )       
+        color = 4;
+      else if( ref_ent->dimension() == 2 )       
+        color = 5;   
+
+      GfxDebug::draw_point( pt_list[i].x, pt_list[i].y, pt_list[i].z, color );
+    }   
+
+    GfxDebug::flush();
+    GfxDebug::mouse_xforms();        
+/*
+    GfxDebug::clear();
+    //draw the curves
+    for( int i=0; i<facetedges_on_refedges.size(); i++ )
+    {
+      std::pair<RefEntity*, std::pair<int,int> > tmp_pair;
+      tmp_pair = facetedges_on_refedges[i];
+
+      RefEntity* ref_ent = tmp_pair.first;
+      std::pair<int,int> int_pair = tmp_pair.second;
+
+      CubitVector pt0( g_mem->point_list()[int_pair.first].x,
+        g_mem->point_list()[int_pair.first].y,
+        g_mem->point_list()[int_pair.first].z );
+
+      CubitVector pt1( g_mem->point_list()[int_pair.second].x,
+        g_mem->point_list()[int_pair.second].y,
+        g_mem->point_list()[int_pair.second].z );
+
+      GfxDebug::draw_point(pt0, (ref_ent->id()%10) + 3  );
+      GfxDebug::draw_point(pt1, (ref_ent->id()%10) + 3  );
+      GfxDebug::draw_line( pt0, pt1, (ref_ent->id()%10) + 3 );      
     }
+    GfxDebug::flush();      
+    GfxDebug::mouse_xforms();
+
+    int index = 0;
+    int color;
+
+    index = 0;
+    GfxDebug::clear();
+    for( int i=0; i<g_mem->fListCount; i++ )
+    {
+      int step = g_mem->facet_list()[index++];      
+      //create pts
+      RefEntity *ref_ent = facet_point_ownership_vector[ g_mem->facet_list()[index] ];
+      if( ref_ent->dimension() == 2 )
+        color = ref_ent->id() + 3 ;
+       CubitVector pt0( g_mem->point_list()[ g_mem->facet_list()[index] ].x,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].y,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].z );       
+       index++;
+
+       ref_ent = facet_point_ownership_vector[ g_mem->facet_list()[index] ];
+       if( ref_ent->dimension() == 2 )
+         color = ref_ent->id() + 3 ;       
+       CubitVector pt1( g_mem->point_list()[ g_mem->facet_list()[index] ].x,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].y,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].z );
+       index++;
+
+       ref_ent = facet_point_ownership_vector[ g_mem->facet_list()[index] ];
+       if( ref_ent->dimension() == 2 )
+         color = ref_ent->id() + 3 ;       
+       CubitVector pt2( g_mem->point_list()[ g_mem->facet_list()[index] ].x,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].y,
+         g_mem->point_list()[ g_mem->facet_list()[index] ].z );       
+       index++;
+
+       //draw lines
+
+       GPoint three_pts[3];
+       three_pts[0].x = pt0.x();
+       three_pts[0].y = pt0.y();
+       three_pts[0].z = pt0.z();    
+
+       three_pts[1].x = pt1.x();
+       three_pts[1].y = pt1.y();
+       three_pts[1].z = pt1.z();    
+
+       three_pts[2].x = pt2.x();
+       three_pts[2].y = pt2.y();
+       three_pts[2].z = pt2.z();                  
+
+       GfxDebug::draw_polygon( three_pts, 3, i%20, i%20, true );
+       GfxDebug::draw_line( pt0, pt1, color );
+       GfxDebug::draw_line( pt1, pt2, color );
+       GfxDebug::draw_line( pt0, pt2, color );       
+       i+=step;              
+    }          
+    GfxDebug::flush();
+    GfxDebug::mouse_xforms(); 
+    */
   }
 
   return CUBIT_SUCCESS;

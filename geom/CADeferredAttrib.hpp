@@ -56,7 +56,7 @@ private:
   int uniqueId;
     //- the deferred id tag for an entity
 
-  CubitSimpleAttrib *thisCSA;
+  CubitSimpleAttrib thisCSA;
     //- the deferred attribute information
 
   static SDLCADeferredAttribList allCADeferredAttribs;
@@ -76,14 +76,8 @@ public:
 
 //  CADeferredAttrib(RefEntity*);
 
-  CADeferredAttrib(RefEntity*, CubitSimpleAttrib*);
+  CADeferredAttrib(RefEntity*, const CubitSimpleAttrib&);
     //- make a CADA from a simple attribute
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const
-     { return typeid(CADeferredAttrib);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
 
  CubitStatus actuate();
 
@@ -91,7 +85,7 @@ public:
 
   CubitStatus reset();
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   int unique_id() { return uniqueId;}
 
@@ -99,7 +93,7 @@ public:
 private:
 //  CubitSimpleAttrib *this_csa() {return thisCSA;};
 
-  CubitStatus init_csa(CubitSimpleAttrib *csa_ptr);
+  CubitStatus init_csa(const CubitSimpleAttrib &csa_ptr);
 
   int int_attrib_type() {return CA_DEFERRED_ATTRIB;};
 
@@ -130,7 +124,7 @@ private:
     //- returns true if the simple attribute is deferred type and matches
     //- uid
 
-  static CubitSimpleAttrib *csa_from_dcsa(CubitSimpleAttrib *csa_ptr,
+  static CubitSimpleAttrib csa_from_dcsa(const CubitSimpleAttrib &csa_ptr,
                                           const int uid = 0);
     //- given a deferred csa, convert it to a normal csa by removing
     //- first type string and first int; if first int doesn't match
@@ -146,7 +140,7 @@ public:
     //- from the list.
 };
 
-CubitAttrib* CADeferredAttrib_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CADeferredAttrib_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

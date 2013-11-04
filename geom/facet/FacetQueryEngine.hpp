@@ -168,6 +168,13 @@ public:
 
   Body* copy_body( Body *body_ptr );
 
+  virtual CubitStatus get_graphics( BodySM *bodysm, GMem* g_mem,
+                         std::vector<Surface*> &surface_to_facets_vector,
+                         std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                         std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                         unsigned short normal_tolerance, 
+                         double distance_tolerance, double max_edge_length ) const;
+
   virtual CubitStatus get_graphics( Surface* surface_ptr,
                                           GMem* gMem,
                                           unsigned short normal_tolerance,
@@ -197,15 +204,15 @@ public:
     //- returned.
  
   virtual CubitStatus get_isoparametric_points(Surface* ,
-                                               int&, int&,
+                                               int &, int &,
                                                GMem*&) const;
   
   virtual CubitStatus get_u_isoparametric_points(Surface* ref_face_ptr,
-                                                 double v, int& n,
+                                                 double v, int &n,
                                                  GMem *&gMem) const;
   
   virtual CubitStatus get_v_isoparametric_points(Surface* ref_face_ptr,
-                                                 double u, int&n,
+                                                 double u, int &n,
                                                  GMem *&gMem) const;
   
   virtual CubitStatus transform_vec_position( 
@@ -277,6 +284,7 @@ public:
                                          Model_File_Type file_type,
                                          DLIList<TopologyBridge*>& imported_entities,
                                          ModelImportOptions &import_options );
+
  virtual CubitStatus import_solid_model(DLIList<TopologyBridge*> &imported_entities,
                                         const char* pBuffer,
                                         const int n_buffer_size)

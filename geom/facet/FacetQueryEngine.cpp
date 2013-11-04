@@ -70,6 +70,8 @@
 #include "GridSearchTree.hpp"
 #include <stdio.h>
 #include <errno.h>
+#include "GeometryModifyTool.hpp"
+#include "BodySM.hpp"
 
 using namespace NCubitFile;
 
@@ -326,12 +328,21 @@ Body* FacetQueryEngine::copy_body( Body *body_ptr )
     PRINT_ERROR("Attempt to copy mesh-based geometry Body.  This body is not MBG.");
     return (Body*)NULL;
   }
+
+  TopologyBridge *top_bridge;
+  GeometryModifyTool::instance()->prepare_for_copy( body_ptr, top_bridge );
+
   BodySM* osme_body_ptr = (BodySM*)facet_body_ptr->copy();
   if (!osme_body_ptr)
   {
+    GeometryModifyTool::instance()->clean_up_from_copy_failure( top_bridge );
     PRINT_ERROR("Failed to copy mesh-based geometry Body");
     return (Body*)NULL;
   }
+
+  TopologyBridge *tb = (TopologyBridge*)osme_body_ptr;
+  GeometryModifyTool::instance()->finish_copy( tb, bodysm_ptr );
+
   Body *new_body_ptr = GeometryQueryTool::instance()->make_Body( osme_body_ptr );
   return new_body_ptr;
 }
@@ -418,6 +429,147 @@ CubitStatus FacetQueryEngine::get_connected_patch(
 
 }
 
+CubitStatus FacetQueryEngine::get_graphics( BodySM *bodysm, GMem* g_mem,
+                         std::vector<Surface*> &surface_to_facets_vector,
+                         std::vector<TopologyBridge*> &vertex_edge_to_point_vector,
+                         std::vector<std::pair<TopologyBridge*, std::pair<int,int> > > &facet_edges_on_curves,
+                         unsigned short normal_tolerance, 
+                         double distance_tolerance, double max_edge_length ) const
+{  
+  FacetBody *facet_body = CAST_TO(bodysm, FacetBody );
+  if( NULL == facet_body )
+    return CUBIT_FAILURE;
+ 
+  DLIList<Surface*> surfaces;
+  bodysm->surfaces( surfaces );
+
+  //unmark all the points
+  for( int i=surfaces.size(); i--; )
+  {
+    Surface *tmp_surf = surfaces.get_and_step();
+    FacetSurface *facet_surface = CAST_TO( tmp_surf, FacetSurface );    
+    
+    DLIList<CubitPoint*> surface_points;
+    facet_surface->get_my_points( surface_points );
+
+    for( int k=surface_points.size(); k--; )
+      surface_points.get_and_step()->marked(0);
+  }
+
+  DLIList<CubitFacet*> all_facets;
+  int point_index = 0;
+  std::vector<CubitPoint*> all_points; 
+  for( int i=surfaces.size(); i--; )
+  {
+    Surface *tmp_surf = surfaces.get_and_step();
+    FacetSurface *facet_surface = CAST_TO( tmp_surf, FacetSurface );
+    
+    DLIList<CubitFacet*> surface_facets;
+    DLIList<CubitPoint*> surface_points;
+    facet_surface->get_my_facets(surface_facets, surface_points);
+
+    surface_facets.reset();
+    all_facets += surface_facets;
+    
+    for( int k=surface_points.size(); k--; )
+    {
+      CubitPoint *tmp_pt = surface_points.get_and_step();
+      if( tmp_pt->marked() == 0 )
+      {
+        all_points.push_back( tmp_pt );
+        point_index++;
+        tmp_pt->marked( point_index );       
+        vertex_edge_to_point_vector.push_back( tmp_surf );
+      }      
+    }
+ 
+    surface_facets.reset();
+    for( int k=surface_facets.size(); k--; )    
+      surface_to_facets_vector.push_back( tmp_surf );
+  }
+
+  //now stuff them into the g_mem
+  g_mem->allocate_tri( all_facets.size() );
+  g_mem->fListCount = all_facets.size() * 4;
+  g_mem->pointListCount = all_points.size();
+  
+  GPoint* pt_itor = g_mem->point_list();
+  for ( int i = 0; i < all_points.size(); i++ )
+  {
+    CubitPoint* point = all_points[i];
+    pt_itor->x = (float)point->x();
+    pt_itor->y = (float)point->y();
+    pt_itor->z = (float)point->z();
+    pt_itor++;    
+  }
+
+   // Copy facets to Gmem
+  all_facets.reset();
+  int* f_itor = g_mem->facet_list();
+  for ( int i = 0; i < all_facets.size(); i++ )
+  {
+    *(f_itor++) = 3;
+    CubitFacet* facet = all_facets.get_and_step();    
+    for ( int j = 0; j < 3; j++ )
+    {
+      *(f_itor++) = facet->point(j)->marked() - 1;  //go back to zero-based      
+    }    
+  }
+ 
+  //get all the curves
+  DLIList<Curve*> curves;
+  bodysm->curves( curves );
+  for( int i=curves.size(); i--; )
+  {
+    Curve *tmp_curve = curves.get_and_step();
+    FacetCurve *facet_curve = CAST_TO( tmp_curve, FacetCurve );    
+    
+    //get all the curves
+    DLIList<CubitFacetEdge*> curve_facets;
+    facet_curve->get_facets(curve_facets);
+    int number_facets = curve_facets.size();
+    DLIList<CubitPoint*> curve_points;
+    facet_curve->get_points(curve_points);
+    curve_points.reset();
+    curve_facets.reset();
+
+    for( int k=0; k<curve_points.size(); k++ )
+    {
+      CubitPoint *tmp_pt = curve_points.get_and_step();
+      assert( tmp_pt->marked() );     
+
+      if( k == curve_points.size() - 1 )
+        break;
+            
+      int index1 = tmp_pt->marked();
+      int index2 = curve_points.get()->marked();
+
+      vertex_edge_to_point_vector[index1-1] = tmp_curve;
+      facet_edges_on_curves.push_back( std::make_pair( tmp_curve, std::make_pair( index1-1, index2-1) ) );
+    }
+  }
+  
+  //get all the vertices
+  DLIList<TBPoint*> points;
+  bodysm->points( points );
+
+  for( int i=points.size(); i--; )
+  {
+    TBPoint *tmp_pt = points.get_and_step();
+    FacetPoint *facet_point = CAST_TO( tmp_pt, FacetPoint );
+    CubitPoint *cubit_pt = facet_point->get_cubit_point();
+    assert( cubit_pt->marked() );
+    vertex_edge_to_point_vector[cubit_pt->marked()-1] = tmp_pt;
+  }
+
+
+  //reset the marks back to zero
+  for ( int i = 0; i < all_points.size(); i++ )
+    all_points[i]->marked(0);
+
+
+  return CUBIT_SUCCESS;
+}
 
 //================================================================================
 // Description:
@@ -3400,6 +3552,30 @@ CubitStatus FacetQueryEngine::import_facets(
         if (rv != CUBIT_SUCCESS)
         {
           PRINT_WARNING("Couldn't improve facets.\n");
+        }
+      }
+    }
+    
+    // check for consistent orientations on the facets for each shell
+    
+    for (ishell = 0; ishell < shell_facet_list.size(); ishell++)
+    {
+      facet_list_ptr = shell_facet_list.get_and_step();
+      rv = ChollaEngine::check_all_facet_orientations(*facet_list_ptr,
+                                                      CUBIT_TRUE);
+      if (rv != CUBIT_SUCCESS)
+      {
+        PRINT_WARNING("Couldn't set consistent orientation for facets.\n");
+      }
+      // check to see that we have a positive enclosed volume (note this only works for 
+      // a single shell.  Will need to do something else for multiple shells
+      
+      if (shell_facet_list.size() == 1)
+      {
+        double volume = FacetEvalTool::contained_volume(*facet_list_ptr);
+        if (volume < 0.0)
+        {
+          FacetEvalTool::reverse_facets(*facet_list_ptr);
         }
       }
     }

@@ -27,7 +27,6 @@
 
 
 #include "CubitDefines.h"
-#include "CubitMessage.hpp"
 #include "GeometryEntity.hpp"
 
 
@@ -49,11 +48,13 @@ class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
   
       virtual CubitSense get_shell_sense( ShellSM* shell_ptr ) const = 0;
   
-      virtual const type_info& topology_entity_type_info() const;
-      
       virtual void closest_point_trimmed(CubitVector from_point, 
                                          CubitVector& point_on_surface) = 0;
 
+      virtual CubitStatus closest_point_along_vector(CubitVector& from_point, 
+                                         CubitVector& along_vector,
+                                         CubitVector& point_on_surface) = 0;
+      
       virtual void closest_points_trimmed(DLIList<CubitVector *> &from_point_list, 
                                      DLIList<CubitVector *> &point_on_surface_list);
       //R void
@@ -70,8 +71,8 @@ class CUBIT_GEOM_EXPORT Surface : public GeometryEntity
       //- Finds the underlying plane's origin and normal (unit) vector
       //- Returns CubitFailure if not a plane.
 
-      virtual void param_dir(CubitVector& /* unit_dir_in_world_space */,
-        CubitVector& /* pos_on_surf */, double& /* du */, double& /* dv */){}
+      virtual void param_dir(CubitVector &unit_dir_in_world_space,
+        CubitVector &pos_on_surf, double &du, double &dv){}
 
       virtual CubitStatus closest_point_uv_guess(  
           CubitVector const& location,
@@ -174,8 +175,23 @@ BWC*/
                             CubitVector *position,
                             CubitVector *normal,
                             CubitVector *curvature1,
-                            CubitVector *curvature2 );
-
+                            CubitVector *curvature2 )=0;
+     //R CubitStatus
+      //R- CUBIT_SUCCESS/FAILURE
+           //I u
+      //I- The u coordinate value (local parametric space).
+      //I v
+      //I- The v coordinate value (local parametric space).
+      //O- The coordinates of a point in global
+      //- (world) space that correspond to the input {u,v} point in
+      //- local parametric space. This is an optional output that is 
+      //- only calculated if the supplied CubitVector is not NULL;
+      //O-The normal to the surface at the point with the given parametric position.
+      //- This is an optional output that is only calculated if the 
+      //- supplied CubitVector is not NULL;
+      //O- The principle curvature directions at the point with the given parametric position.
+      //- These are optional outputs that are only calculated if the 
+      //- supplied CubitVectors curvature1 and curvature2 are both not NULL;
 
 
       virtual CubitVector position_from_u_v (double u, double v) = 0;

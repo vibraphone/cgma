@@ -119,7 +119,7 @@ CubitAttribManager::register_attrib_type( const int att_type,
 CubitAttrib*
 CubitAttribManager::create_cubit_attrib(const int attrib_type,
                                         RefEntity *attrib_user,
-                                        CubitSimpleAttrib *p_csa)
+                                        const CubitSimpleAttrib &p_csa)
 {
   CubitAttrib* new_attrib = NULL;
 /*
@@ -216,7 +216,7 @@ CubitStatus CubitAttribManager::auto_update_attribs(RefEntity *cau)
       attrib_list.clean_out();
       cau->find_cubit_attrib_type(mTypes.get(), attrib_list);
       if (attrib_list.size() == 0) {
-        create_cubit_attrib(mTypes.get(), cau, NULL);
+        create_cubit_attrib(mTypes.get(), cau, CubitSimpleAttrib());
         if (status == CUBIT_FAILURE) break;
       }
     }
@@ -415,9 +415,9 @@ int CubitAttribManager::attrib_type(const char* name)
   return CA_UNDEFINED;
 }
 
-int CubitAttribManager::attrib_type(CubitSimpleAttrib *csa_ptr)
+int CubitAttribManager::attrib_type(const CubitSimpleAttrib& csa_ptr)
 {
-  CubitString char_type = csa_ptr->character_type();
+  CubitString char_type = csa_ptr.character_type();
   return attrib_type_from_internal_name(char_type.c_str());
 }
 

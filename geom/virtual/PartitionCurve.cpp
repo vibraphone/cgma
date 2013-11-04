@@ -329,19 +329,19 @@ void PartitionCurve::print_debug_info( const char* prefix,
   delete [] new_prefix;
 }
 
-void PartitionCurve::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionCurve::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { sub_entity_set().add_attribute( this, csa ); }
-void PartitionCurve::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionCurve::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { sub_entity_set().rem_attribute( this, csa ); }
 void PartitionCurve::remove_all_simple_attribute_virt()
   { sub_entity_set().rem_all_attrib( this ); }
-CubitStatus PartitionCurve::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartitionCurve::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, list ); 
   return CUBIT_SUCCESS;
 }
 CubitStatus PartitionCurve::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, name.c_str(), list ); 
   return CUBIT_SUCCESS;

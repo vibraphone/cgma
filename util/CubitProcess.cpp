@@ -1,5 +1,7 @@
 
 #include "CubitProcess.hpp"
+#include "CubitString.hpp"
+#include "CubitFileUtil.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -9,12 +11,10 @@
 #include <windows.h>
 #include <io.h>
 #include <direct.h>
-#define access _access
-#define getcwd _getcwd
-#define X_OK 0
-#define PATH_MAX _MAX_PATH
+
 const char path_separator = '\\';
 #else
+#include <unistd.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <limits.h>
@@ -53,15 +53,16 @@ static std::string make_path_absolute(const std::string& p)
   std::string ret;
   if(!p.empty())
   {
-    if(p[0] == path_separator)
+    if ( CubitFileUtil::is_absolute(p.c_str()) )
     {
       ret = p;
     }
     else
     {
       // if any '/' character is in it, its relative to current directory
-      char tmp[PATH_MAX+1];
-      ret = getcwd(tmp, PATH_MAX);
+      CubitString wd;
+      CubitFileUtil::get_current_working_directory(wd);
+      ret = wd.c_str();
       ret += path_separator;
       ret += p;
     }
@@ -108,7 +109,7 @@ PidType CubitProcess::start(const std::string& app, const std::vector<std::strin
   return pid;
 #else
 
-  STARTUPINFO si;
+  STARTUPINFOW si;
   PROCESS_INFORMATION pi;
   
   ZeroMemory( &si, sizeof(si) );
@@ -125,15 +126,16 @@ PidType CubitProcess::start(const std::string& app, const std::vector<std::strin
   std::string real_app = find_executable(app);
   std::replace(real_app.begin(), real_app.end(), '/', '\\');
   
-  std::string call = quote_string(app);
+  std::string q_string = quote_string(app);
+  std::wstring call = CubitString::toUtf16(q_string);
   std::string joined_args = join_args(args);
-  call += " ";
-  call += joined_args;
+  call += L" ";
+  call += CubitString::toUtf16(joined_args).c_str();
 
 
     // Start the child process. 
-  if( CreateProcessA( real_app.c_str(),  // path to cubit executable 
-                      (char*)call.c_str(), // Command line. 
+  if( CreateProcessW( CubitString::toUtf16(real_app).c_str(),  // path to cubit executable 
+                      const_cast<wchar_t*>(call.c_str()), // Command line. 
                       NULL,      // Process handle not inheritable. 
                       NULL,      // Thread handle not inheritable. 
                       TRUE,     // Set handle inheritance to TRUE.
@@ -236,9 +238,9 @@ std::string CubitProcess::find_executable(const std::string& app)
       {
         std::string p = paths[i];
         p += "/";
-        p += app;
+        p += app_real;
         std::string abs_p = make_path_absolute(p);
-        if(0 == access(abs_p.c_str(), X_OK))
+        if(CubitFileUtil::path_exists(abs_p.c_str()))
         {
           app_real = abs_p;
           break;

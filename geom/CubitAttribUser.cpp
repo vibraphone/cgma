@@ -55,7 +55,7 @@ CubitAttrib* CubitAttribUser::get_cubit_attrib (int attrib_type,
   else if ( create_if_missing == CUBIT_TRUE )
   {
     entity = CAST_TO(this, RefEntity);
-    cubit_attrib_ptr = CGMApp::instance()->attrib_manager()->create_cubit_attrib(attrib_type, entity, NULL);
+    cubit_attrib_ptr = CGMApp::instance()->attrib_manager()->create_cubit_attrib(attrib_type, entity, CubitSimpleAttrib());
   }
 
   return cubit_attrib_ptr;
@@ -86,7 +86,7 @@ CubitStatus CubitAttribUser::add_cubit_attrib (CubitAttrib* cubit_attrib_ptr)
 }
 
 CubitStatus CubitAttribUser::put_simple_attrib 
-  (CubitSimpleAttrib* new_csattrib_ptr, CubitBoolean append_it)
+  (const CubitSimpleAttrib& new_csattrib_ptr, CubitBoolean append_it)
 {
   Body* Body_ptr;
   Body_ptr = CAST_TO(this, Body);
@@ -100,17 +100,17 @@ CubitStatus CubitAttribUser::put_simple_attrib
       // check for duplicates
     if (DEBUG_FLAG(94))
     {
-      DLIList<CubitSimpleAttrib*> cs_list;
+      DLIList<CubitSimpleAttrib> cs_list;
       OSME_ptr->get_simple_attribute(cs_list);
       for (int i = cs_list.size(); i > 0; i--)
       {
-        CubitSimpleAttrib *cs_attrib = cs_list.get_and_step();
-        if (CubitSimpleAttrib::equivalent(cs_attrib, new_csattrib_ptr))
+        const CubitSimpleAttrib cs_attrib = cs_list.get_and_step();
+        if (cs_attrib == new_csattrib_ptr)
           PRINT_INFO("Trying to add equivalent attribute of type %s on Body %d.\n",
-                     new_csattrib_ptr->character_type().c_str(), Body_ptr->id());
-        else if (cs_attrib->character_type() == new_csattrib_ptr->character_type())
+                     new_csattrib_ptr.character_type().c_str(), Body_ptr->id());
+        else if (cs_attrib.character_type() == new_csattrib_ptr.character_type())
           PRINT_INFO("Trying to add attribute of same type %s on Body %d.\n",
-                     new_csattrib_ptr->character_type().c_str(), Body_ptr->id());
+                     new_csattrib_ptr.character_type().c_str(), Body_ptr->id());
       }
     }
     
@@ -133,18 +133,18 @@ CubitStatus CubitAttribUser::put_simple_attrib
       // check for duplicates
     if (DEBUG_FLAG(94))
     {
-      DLIList<CubitSimpleAttrib*> cs_list;
+      DLIList<CubitSimpleAttrib> cs_list;
       GE_ptr->get_simple_attribute(cs_list);
       for (int i = cs_list.size(); i > 0; i--)
       {
-        CubitSimpleAttrib *cs_attrib = cs_list.get_and_step();
-        if (CubitSimpleAttrib::equivalent(cs_attrib, new_csattrib_ptr))
+        const CubitSimpleAttrib &cs_attrib = cs_list.get_and_step();
+        if (cs_attrib == new_csattrib_ptr)
           PRINT_INFO("Trying to add equivalent attribute of type %s on %s %d.\n",
-                     new_csattrib_ptr->character_type().c_str(), 
+                     new_csattrib_ptr.character_type().c_str(),
                      BTE_ptr->class_name(), BTE_ptr->id());
-        else if (cs_attrib->character_type() == new_csattrib_ptr->character_type())
+        else if (cs_attrib.character_type() == new_csattrib_ptr.character_type())
           PRINT_INFO("Trying to add attribute of same type %s on %s %d.\n",
-                     new_csattrib_ptr->character_type().c_str(), 
+                     new_csattrib_ptr.character_type().c_str(),
                      BTE_ptr->class_name(), BTE_ptr->id());
       }
     }
@@ -167,7 +167,7 @@ CubitStatus CubitAttribUser::put_simple_attrib
   {
     RefEntity *ref_entity = CAST_TO(this, RefEntity);
     PRINT_DEBUG_90( "Putting simple attribute of type %s on"
-                " %s %d.\n", new_csattrib_ptr->character_type().c_str(),
+                " %s %d.\n", new_csattrib_ptr.character_type().c_str(),
                 ref_entity->class_name(), ref_entity->id());
   }
   
@@ -267,15 +267,13 @@ CubitStatus CubitAttribUser::write_specific_cubit_attrib(CubitAttrib* cubit_attr
       // in CAMeshContainer, for example)
     cubit_attrib_ptr->has_written(CUBIT_TRUE);
 
-    CubitSimpleAttrib *csa_ptr = cubit_attrib_ptr->cubit_simple_attrib();
-    assert(csa_ptr != 0);
+    const CubitSimpleAttrib &csa_ptr = cubit_attrib_ptr->cubit_simple_attrib();
     
     result = put_simple_attrib(csa_ptr);
 
       // if the write wasn't successful, reset the write flag
     if (result != CUBIT_SUCCESS) cubit_attrib_ptr->has_written(CUBIT_FALSE);
 
-    delete csa_ptr;
   }
   
   return result;
@@ -322,7 +320,7 @@ CubitStatus CubitAttribUser::write_cubit_attribs()
   return write_status;
 }
  
-void CubitAttribUser::split_owner(DLIList<CubitSimpleAttrib*> &csa_list)
+void CubitAttribUser::split_owner(DLIList<CubitSimpleAttrib> &csa_list)
 {
   
     //- if owner is to be split, get simple attribs for new entity
@@ -337,8 +335,9 @@ void CubitAttribUser::split_owner(DLIList<CubitSimpleAttrib*> &csa_list)
   int i;
   for ( i = ca_list.size(); i > 0; i--) {
     CubitAttrib *ca_ptr = ca_list.get_and_step();
-    CubitSimpleAttrib *csa_ptr = ca_ptr->split_owner();
-    if (csa_ptr != NULL) csa_list.append(csa_ptr);
+    CubitSimpleAttrib csa_ptr = ca_ptr->split_owner();
+    if (!csa_ptr.isEmpty())
+      csa_list.append(csa_ptr);
   }
 
     // now, check delete flag for each ca_ptr, and delete if necessary
@@ -459,7 +458,7 @@ void CubitAttribUser::auto_create_for_merge(RefEntity *deletable_entity)
     {
       CGMApp::instance()->attrib_manager()->create_cubit_attrib(
                                                 deletable_ca_ptr->int_attrib_type(),
-                                                entity, NULL);
+            entity, CubitSimpleAttrib());
     }
   }
 }
@@ -691,6 +690,14 @@ CubitStatus CubitAttribUser::auto_update_cubit_attrib ()
       if (update_status == CUBIT_SUCCESS && attrib->int_attrib_type() != CA_ENTITY_NAME)
         attrib->has_written(CUBIT_FALSE);
     }
+	else
+	{
+		PRINT_DEBUG_90("Not updating attribute type %s for %s %d, delete = ",
+                     attrib->att_internal_name(), attrib->attrib_owner()->class_name(),
+                     attrib->attrib_owner()->id());
+		PRINT_DEBUG_90("%s\n",
+                     (attrib->delete_attrib() == CUBIT_FALSE ? "NO" : "YES"));
+	}
   }
   
   
@@ -880,7 +887,7 @@ CubitStatus CubitAttribUser::auto_read_cubit_attrib()
     // Get the GeometryEntity of this RefEntity (it could be the OSME
     // if it is a Body) and get its name, if it exists
   
-  DLIList<CubitSimpleAttrib*> csattrib_list;
+  DLIList<CubitSimpleAttrib> csattrib_list;
 
     // Deal with a Body entity
   Body* Body_ptr = CAST_TO(this, Body);
@@ -902,7 +909,7 @@ CubitStatus CubitAttribUser::auto_read_cubit_attrib()
   csattrib_list.reset();
   for(int i = csattrib_list.size(); i != 0; i--)
   {
-    CubitSimpleAttrib* cubit_simple_attrib_ptr = csattrib_list.get_and_step();
+    const CubitSimpleAttrib& cubit_simple_attrib_ptr = csattrib_list.get_and_step();
     int csa_type = CGMApp::instance()->attrib_manager()->attrib_type(cubit_simple_attrib_ptr);
     CubitAttrib *new_attrib = NULL;
     if (CGMApp::instance()->attrib_manager()->auto_read_flag(csa_type))
@@ -918,8 +925,6 @@ CubitStatus CubitAttribUser::auto_read_cubit_attrib()
     }
     else
       put_simple_attrib(cubit_simple_attrib_ptr);
-
-    delete cubit_simple_attrib_ptr;
   }
   
   return cubit_assign_status;
@@ -931,7 +936,7 @@ CubitStatus CubitAttribUser::read_cubit_attrib(int attrib_type)
   CubitStatus read_status;
   
     // get all simple attrib's
-  DLIList<CubitSimpleAttrib*> csattrib_list;
+  DLIList<CubitSimpleAttrib> csattrib_list;
 
     // Deal with a Body entity
   Body* Body_ptr = CAST_TO(this, Body);
@@ -953,7 +958,7 @@ CubitStatus CubitAttribUser::read_cubit_attrib(int attrib_type)
   csattrib_list.reset();
   for(int i = csattrib_list.size(); i != 0; i--)
   {
-    CubitSimpleAttrib* cubit_simple_attrib_ptr = csattrib_list.get_and_step();
+    const CubitSimpleAttrib& cubit_simple_attrib_ptr = csattrib_list.get_and_step();
     int csa_type = CGMApp::instance()->attrib_manager()->attrib_type(cubit_simple_attrib_ptr);
     if (attrib_type == CA_ALL_ATTRIBUTES || csa_type == attrib_type) {
         // create this CA
@@ -966,7 +971,6 @@ CubitStatus CubitAttribUser::read_cubit_attrib(int attrib_type)
         // took the attribute off, we'll have to put this one back on
       put_simple_attrib(cubit_simple_attrib_ptr);
     }
-    delete cubit_simple_attrib_ptr;
   }
       
   return read_status;
@@ -1021,16 +1025,17 @@ CubitStatus CubitAttribUser::remove_attrib_geometry_entity (CubitAttrib*
                                                             cubit_attrib_ptr)
 {
   CubitStatus removed = CUBIT_FAILURE;
-  CubitSimpleAttrib *csattrib_ptr;
-  
-  if (cubit_attrib_ptr != NULL &&
-      (csattrib_ptr = cubit_attrib_ptr->cubit_simple_attrib()) != NULL)
-  {
 
+  if(cubit_attrib_ptr == NULL)
+    return removed;
+
+  CubitSimpleAttrib csattrib_ptr = cubit_attrib_ptr->cubit_simple_attrib();
+  if(!csattrib_ptr.isEmpty())
+  {
     if (DEBUG_FLAG(90)) {
       RefEntity *ref_entity = CAST_TO(this, RefEntity);
       PRINT_DEBUG_90( "Removing simple attribute of type %s on"
-                  " %s %d.\n", csattrib_ptr->character_type().c_str(),
+                  " %s %d.\n", csattrib_ptr.character_type().c_str(),
                   ref_entity->class_name(), ref_entity->id());
     }
     
@@ -1040,8 +1045,6 @@ CubitStatus CubitAttribUser::remove_attrib_geometry_entity (CubitAttrib*
         remove_simple_attribute(topo_ptr->bridge_manager()->topology_bridge(), csattrib_ptr);
       removed = CUBIT_SUCCESS;
     }
-
-    delete csattrib_ptr;
   }
   return removed;
 }
@@ -1111,7 +1114,7 @@ void CubitAttribUser::set_updated_flag(CubitBoolean flag)
 //  if (attrib_list.size() == 0) PRINT_INFO("(none)\n");
 //}
 
-void CubitAttribUser::append_simple_attribute(TopologyBridge *bridge, CubitSimpleAttrib* attrib_ptr)
+void CubitAttribUser::append_simple_attribute(TopologyBridge *bridge, const CubitSimpleAttrib& attrib_ptr)
 {
     // for merged objects, put attribute on other entities
   if (CubitSimpleAttrib::get_push_attribs() == CUBIT_TRUE ||
@@ -1128,34 +1131,35 @@ void CubitAttribUser::append_simple_attribute(TopologyBridge *bridge, CubitSimpl
       // Special handling of MergePartner attribute.  
       // Need to store the bridge sense in the attribute, which
       // is potentially different for different TopologyBridges.
-    int type = CGMApp::instance()->attrib_manager()->attrib_type_from_internal_name(attrib_ptr->character_type().c_str());
+    int type = CGMApp::instance()->attrib_manager()->attrib_type_from_internal_name(attrib_ptr.character_type().c_str());
     if ( type == CA_MERGE_PARTNER )
     {
+      CubitSimpleAttrib merge_attrib = attrib_ptr;
         // now adjust the attrib on each bridge to hold the 
         // relative sense for that bridge.
       for (int i = tb_list.size(); i > 0; i--) {
         TopologyBridge *temp_tb = tb_list.get_and_step();
 
-        CAMergePartner::set_bridge_sense( attrib_ptr, temp_tb->bridge_sense() );
+        CAMergePartner::set_bridge_sense( merge_attrib, temp_tb->bridge_sense() );
 
         GeometryEntity *geom_ptr = dynamic_cast<GeometryEntity*>(temp_tb);
         if (geom_ptr ) 
         {
           //if we're copying a merged entity, saved id should be zero
           if( GeometryModifyTool::instance()->get_copy_entity() ) 
-            CAMergePartner::set_saved_id( attrib_ptr, 0 );
+            CAMergePartner::set_saved_id( merge_attrib, 0 );
           else
-            CAMergePartner::set_saved_id( attrib_ptr, geom_ptr->get_saved_id() );
+            CAMergePartner::set_saved_id( merge_attrib, geom_ptr->get_saved_id() );
 
           //First bridge should be marked as "survivor"
           if( i == tb_list.size() )
           {
-            CAMergePartner::set_survivor( attrib_ptr, 1 );
+            CAMergePartner::set_survivor( merge_attrib, 1 );
           }
           else
-            CAMergePartner::set_survivor( attrib_ptr, 0 );
+            CAMergePartner::set_survivor( merge_attrib, 0 );
         }
-        append_attrib_internal(temp_tb, attrib_ptr);
+        append_attrib_internal(temp_tb, merge_attrib);
       }
     }
       // For anything other than CAMergePartner, just append the
@@ -1173,33 +1177,28 @@ void CubitAttribUser::append_simple_attribute(TopologyBridge *bridge, CubitSimpl
   }
 }
 
-void CubitAttribUser::append_attrib_internal(TopologyBridge *bridge, CubitSimpleAttrib* attrib_ptr)
+void CubitAttribUser::append_attrib_internal(TopologyBridge *bridge, const CubitSimpleAttrib& attrib_ptr)
 {
-  DLIList<CubitSimpleAttrib*> others(1);
+  DLIList<CubitSimpleAttrib> others;
   
     // Check for duplicates
-  if ( attrib_ptr->character_type() != "DEFERRED_ATTRIB" )
+  if ( attrib_ptr.character_type() != "DEFERRED_ATTRIB" )
   {
-    bridge->get_simple_attribute( attrib_ptr->character_type().c_str(), others );
+    bridge->get_simple_attribute( attrib_ptr.character_type().c_str(), others );
     while ( others.size() )
     {
-      CubitSimpleAttrib* dup_attrib = others.pop();
-      bridge->remove_simple_attribute_virt( dup_attrib );
-      delete dup_attrib;
+      bridge->remove_simple_attribute_virt( others.pop() );
     }
   }
   else
   {
-    attrib_ptr->string_data_list()->reset();
-    CubitString real_name = *attrib_ptr->string_data_list()->next();
+    CubitString real_name = attrib_ptr.string_data_list()[1];
     bridge->get_simple_attribute("DEFERRED_ATTRIB", others);
     while ( others.size() )
     {
-      CubitSimpleAttrib* dup_attrib = others.pop();
-      dup_attrib->string_data_list()->reset();
-      if ( *dup_attrib->string_data_list()->next() == real_name )
+      CubitSimpleAttrib dup_attrib = others.pop();
+      if ( dup_attrib.string_data_list()[1] == real_name )
         bridge->remove_simple_attribute_virt(dup_attrib);
-      delete dup_attrib;
     }
   }
   
@@ -1226,7 +1225,7 @@ void CubitAttribUser::remove_all_simple_attribute(TopologyBridge* bridge)
   }
 }
 
-void CubitAttribUser::remove_simple_attribute(TopologyBridge* bridge, CubitSimpleAttrib* attrib_ptr)
+void CubitAttribUser::remove_simple_attribute(TopologyBridge* bridge, const CubitSimpleAttrib& attrib_ptr)
 {
     // remove this name from the primary object
   bridge->remove_simple_attribute_virt(attrib_ptr);

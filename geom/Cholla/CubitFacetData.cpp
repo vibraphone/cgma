@@ -46,9 +46,11 @@ CubitFacetData::CubitFacetData( CubitPoint *p1, CubitPoint *p2,
   edgeUse[0] = edgeUse[1] = edgeUse[2] = 0; 
   patchCtrlPts = NULL; 
  
-  plane(); 
+  
   counter_id++; 
   entityId = counter_id; 
+
+  plane(); 
  
   define_bounding_box();
  

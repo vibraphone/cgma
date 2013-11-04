@@ -221,6 +221,7 @@ public:
     { return toolID; };
 
   CubitStatus reverse_facets();
+  static CubitStatus reverse_facets(DLIList<CubitFacet *> &facets);
   
   int get_output_id() { return output_id; }
   void set_output_id( int id ) { output_id = id; }
@@ -452,6 +453,12 @@ public:
   
   CubitStatus get_loops_from_facets(DLIList<CubitFacetEdge*> &all_edge_list,
                                     DLIList<DLIList<CubitFacetEdge*>*> &loop_list );
+  
+  
+  static double contained_volume( DLIList<CubitFacet *> &facets );
+    //- computed the contained volume of a set of facets
+    //    Return: volume of facets (may be negative based on orientation of facets)
+  
 };
 
 #endif // SMOOTH_FACET_EVAL_TOOL_HPP

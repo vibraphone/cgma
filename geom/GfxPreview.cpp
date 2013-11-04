@@ -205,6 +205,13 @@ void GfxPreview:: draw_cylinder(const CubitVector& axis, const CubitVector& orig
   mInstance->p_draw_cylinder(axis, origin, bounding_box, radius, color);
 }
 
+void GfxPreview:: draw_frustum( const CubitVector axis , const CubitVector origin1, const CubitVector origin2,double dRad1 , double dRad2,
+                               CubitBox& bounding_box ,int color)
+{
+  if(!mInstance) return;
+  mInstance->p_draw_frustum( axis , origin1, origin2, dRad1 , dRad2 , bounding_box, color);
+}
+
 void GfxPreview::draw_point(TBPoint *pt, int color)
 {
   CubitVector v = pt->coordinates();

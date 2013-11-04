@@ -100,16 +100,16 @@ void PartitionCoEdge::get_parents_virt( DLIList<TopologyBridge*>& list )
 
 
     
-void PartitionCoEdge::append_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionCoEdge::append_simple_attribute_virt( const CubitSimpleAttrib& )
   { }
-void PartitionCoEdge::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionCoEdge::remove_simple_attribute_virt( const CubitSimpleAttrib& )
   { }
 void PartitionCoEdge::remove_all_simple_attribute_virt()
   { }
-CubitStatus PartitionCoEdge::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus PartitionCoEdge::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
   { return CUBIT_FAILURE; }
 CubitStatus PartitionCoEdge::get_simple_attribute(const CubitString& ,
-                                       DLIList<CubitSimpleAttrib*>& )
+                                       DLIList<CubitSimpleAttrib>& )
   { return CUBIT_FAILURE; }
 
 

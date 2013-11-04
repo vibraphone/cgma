@@ -94,6 +94,7 @@ enum FirmnessType {LIMP, SOFT, FIRM, HARD};
    FIRM - determined by advanced heuristic data, including adjacent environmental data
    HARD - user set--"must be this way"
 */
+enum SizeIntervalType{ NOT_SET=LIMP,CALCULATED=SOFT,USER_SET=HARD};
 
 /* Relationships between types of objects in the Entity Relationship
  * Diagram */

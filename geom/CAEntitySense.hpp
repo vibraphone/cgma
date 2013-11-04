@@ -7,6 +7,11 @@
 #ifndef CA_ENTITY_SENSE_HPP
 #define CA_ENTIYT_SENSE_HPP
 
+#include <typeinfo>
+#if !defined(WIN32)
+using std::type_info;
+#endif
+
 #include "CubitAttrib.hpp"
 #include "DLIList.hpp"
 #include "CADefines.hpp"
@@ -23,7 +28,7 @@ private:
 public:
   CAEntitySense(RefEntity* = NULL);
 
-  CAEntitySense(RefEntity*, CubitSimpleAttrib*);
+  CAEntitySense(RefEntity*, const CubitSimpleAttrib&);
     //- make a CAG from a simple attribute
 
   void initialize();
@@ -46,7 +51,7 @@ public:
   CubitStatus reset() {return CUBIT_SUCCESS;}
     //- reset this attribute
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
     //- return a simple attribute with this CA's data  
   
   int int_attrib_type() {return CA_ENTITY_SENSE;}
@@ -56,7 +61,7 @@ public:
 
 };
 
-CubitAttrib* CAEntitySense_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAEntitySense_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

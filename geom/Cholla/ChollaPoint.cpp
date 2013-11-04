@@ -18,6 +18,7 @@ ChollaPoint::ChollaPoint( )
   id = count++; 
   myCubitPoint = NULL; 
   myPoint = NULL; 
+  myMergePartner = NULL;
 }
 //===============================================================================
 //Function:  ~ChollaPoint (PUBLIC) (destructor)

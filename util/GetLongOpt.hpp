@@ -26,6 +26,8 @@
 
 #include <cstring>
 #include "CubitUtilConfigure.h"
+#include <vector>
+#include "CubitString.hpp"
 
 class CUBIT_UTIL_EXPORT GetLongOpt {
 public:
@@ -43,7 +45,7 @@ public:
 
   ~GetLongOpt();                        //- Destructor
   
-  int parse(int argc, char * const *argv);
+  int parse(const std::vector<CubitString>& args);
   int parse(const char * const str, const char *p);
   //- {GetLongOpt::parse} is overloaded. It can either parse a string of
   //- options (typically given from the environment), or it can parse

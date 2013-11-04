@@ -61,12 +61,12 @@ public:
   int layer() const { return COMPOSITE_LAYER; }
   GeometryQueryEngine* get_geometry_query_engine() const;
 
-  void append_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
-  void remove_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
+  void append_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& attrib_list );
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& attrib_list );
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& attrib_list );
+                                    DLIList<CubitSimpleAttrib>& attrib_list );
   
   CubitStatus remove_bridge( TopologyBridge* bridge );
   CubitStatus swap_bridge( TopologyBridge* old_tb, TopologyBridge* new_tb, bool );

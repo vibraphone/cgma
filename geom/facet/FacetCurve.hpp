@@ -66,7 +66,7 @@ public :
     //- The destructor
 
     
-  virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void append_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I 
     //I- 
@@ -75,7 +75,7 @@ public :
     //- attribute to the OSME. The  is attached to each of the 
     //- underlying solid model entities this one points to.
   
-  virtual void remove_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void remove_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I CubitSimpleAttrib*
     //I- A reference to a CubitSimpleAttrib object which is the object
@@ -90,9 +90,9 @@ public :
     //- The purpose of this function is to remove all simple
     //- attributes from the OSME. 
   
-  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&);
+  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&);
   virtual CubitStatus get_simple_attribute(const CubitString& name,
-                                           DLIList<CubitSimpleAttrib*>&);
+                                           DLIList<CubitSimpleAttrib>&);
     //R CubitSimpleAttrib*
     //R- the returned cubit simple attribute.
     //- The purpose of this function is to get the attributes
@@ -139,8 +139,6 @@ public :
     //- This function returns the arc length along the Curve starting from
     //- the point represented by the parameter1 going to the point represented
     //- by parameter2.
-    //-
-    //- The sign of the returned length value is always positive.
   
   virtual CubitBoolean is_periodic( double& period);
     //R CubitBoolean
@@ -364,11 +362,13 @@ public :
   //O- the control points
   //O- If rational, weight for each control point
   //O- the knots
+  //O- whether underlying spline is reversed
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots
+                                         DLIList<double> &knots,
+                                         bool &spline_is_reversed
                                        ) const;
   //R CubitStatus
   //O- center - ellipse center point

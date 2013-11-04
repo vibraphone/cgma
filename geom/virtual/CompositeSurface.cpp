@@ -397,7 +397,7 @@ void CompositeSurface::get_children_virt( DLIList<TopologyBridge*>& list )
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 void CompositeSurface::append_simple_attribute_virt(
-						    CubitSimpleAttrib* simple_attrib_ptr )
+                const CubitSimpleAttrib& simple_attrib_ptr )
 {
   compGeom->add_attribute( simple_attrib_ptr );
 }
@@ -412,7 +412,7 @@ void CompositeSurface::append_simple_attribute_virt(
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 void CompositeSurface::remove_simple_attribute_virt(
-						    CubitSimpleAttrib* simple_attrib_ptr )
+                const CubitSimpleAttrib& simple_attrib_ptr )
 {
   compGeom->rem_attribute( simple_attrib_ptr );
 }
@@ -443,13 +443,13 @@ void CompositeSurface::remove_all_simple_attribute_virt()
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 CubitStatus CompositeSurface::get_simple_attribute(
-						   DLIList<CubitSimpleAttrib*>& attrib_list )
+               DLIList<CubitSimpleAttrib>& attrib_list )
 {
   compGeom->get_attributes( attrib_list );
   return CUBIT_SUCCESS;
 }
 CubitStatus CompositeSurface::get_simple_attribute(
-					const CubitString& name, DLIList<CubitSimpleAttrib*>& attrib_list )
+          const CubitString& name, DLIList<CubitSimpleAttrib>& attrib_list )
 {
   compGeom->get_attributes( name.c_str(), attrib_list );
   return CUBIT_SUCCESS;
@@ -2029,4 +2029,41 @@ CubitStatus CompositeSurface::get_nurb_params
 {
   PRINT_ERROR("Currently, Cubit is unable to determine nurbs parameters for CompositeSurface.\n");
   return CUBIT_FAILURE;
+}
+
+
+CubitStatus CompositeSurface::closest_point_along_vector(CubitVector& from_point, 
+                                         CubitVector& along_vector,
+                                         CubitVector& point_on_surface)
+{
+  int index = closest_underlying_surface( from_point );
+  CubitStatus status = get_surface(index)->closest_point_along_vector( from_point, along_vector, point_on_surface );    
+
+  if( CUBIT_FAILURE == status )
+  {
+    //find the next closest surface and try it
+    double shortest_dist_sqr = CUBIT_DBL_MAX;
+    double current_dist_sqr;
+    CubitVector closest_point;
+    int closest_surf;
+
+    for( int k=0; k<compGeom->num_entities(); k++ )
+    {
+      if( k==index )
+        continue;
+
+      closest_trimmed( k, from_point, closest_point );
+      current_dist_sqr = (from_point - closest_point).length_squared();
+
+      if( current_dist_sqr < shortest_dist_sqr )
+      {
+        closest_surf = k;
+        shortest_dist_sqr = current_dist_sqr;
+      }
+    }
+    status = get_surface(closest_surf)->closest_point_along_vector( from_point, along_vector, point_on_surface );    
+  }
+
+
+  return CUBIT_SUCCESS;
 }

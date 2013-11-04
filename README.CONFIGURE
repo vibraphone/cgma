@@ -42,6 +42,4 @@ What needs to be done to prepare CGM for distribution as a tarball?
   Execute the following commands in the top-most directory:
     autoreconf -fi
     ./configure
-    make 
-    make check 
-    make install
+    make dist

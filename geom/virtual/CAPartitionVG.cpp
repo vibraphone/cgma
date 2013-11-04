@@ -22,63 +22,49 @@ struct my_sort : public std::binary_function< std::pair<double, int>, std::pair<
   bool operator() (std::pair<double, int> const& x, std::pair<double, int> const & y ) { return x.first < y.first; }
 };
 
-CubitAttrib* CAPartitionVG_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAPartitionVG_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
   CAPartitionVG *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAPartitionVG(entity);
-  }
-  else
-  {
-    new_attrib = new CAPartitionVG(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAPartitionVG(entity, p_csa);
 }
 
-CAPartitionVG::CAPartitionVG(RefEntity *owner) 
+CAPartitionVG::CAPartitionVG(RefEntity *owner, const CubitSimpleAttrib &simple_attrib)
         : CubitAttrib(owner)
 {
   numPC = 0;
   numPS = 0;
-}
 
-CAPartitionVG::CAPartitionVG(RefEntity *owner, CubitSimpleAttrib *simple_attrib) 
-        : CubitAttrib(owner)
-{
-    // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> *cs_list = simple_attrib->string_data_list();
-  DLIList<double*> *d_list = simple_attrib->double_data_list();
-  DLIList<int*> *i_list = simple_attrib->int_data_list();
+  if(!simple_attrib.isEmpty())
+  {
+      // generate a simple attribute containing the data in this CA
+    const std::vector<double> &d_list = simple_attrib.double_data_list();
+    const std::vector<int> &i_list = simple_attrib.int_data_list();
 
-  cs_list->reset();
-  d_list->reset();
-  i_list->reset();
-  
-    // (no string)
+    int ioffset = 0;
+    int doffset = 0;
 
-    // now the integers
-    // numVP, numVC
-  numPC = *(i_list->get_and_step());
-  numPS = *(i_list->get_and_step());
+      // now the integers
+      // numVP, numVC
+    numPC = i_list[ioffset++];
+    numPS = i_list[ioffset++];
 
-    // numBdyCurves
-  int temp, i, sum = 0;
-  for (i = numPS; i > 0; i--) {
-    temp = *(i_list->get_and_step());
-    numBdyCurves.append(temp);
-    sum += temp;
+      // numBdyCurves
+    int temp, i, sum = 0;
+    for (i = numPS; i > 0; i--) {
+      temp = i_list[ioffset++];
+      numBdyCurves.append(temp);
+      sum += temp;
+    }
+
+      // vgUIDs: 3 for each PC, numPS+sum for PS
+    for (i = 3*numPC+sum+numPS; i > 0; i--)
+      vgUIDs.append(i_list[ioffset++]);
+
+
+     // If the CubitSimpleAttrib already exists,
+     // then this attribute is already written
+    has_written(CUBIT_TRUE);
   }
-
-    // vgUIDs: 3 for each PC, numPS+sum for PS
-  for (i = 3*numPC+sum+numPS; i > 0; i--)
-    vgUIDs.append(*(i_list->get_and_step()));
-
-
-   // If the CubitSimpleAttrib already exists,
-   // then this attribute is already written
-  has_written(CUBIT_TRUE);
 }
 
 CubitStatus CAPartitionVG::update()
@@ -173,38 +159,32 @@ CubitStatus CAPartitionVG::reset()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib *CAPartitionVG::cubit_simple_attrib()
+CubitSimpleAttrib CAPartitionVG::cubit_simple_attrib()
 {
     // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int> i_list;
 
     // first the string
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
     // now the integers
     // numVP, numVC
-  i_list.append(numPC);
-  i_list.append(numPS);
+  i_list.push_back(numPC);
+  i_list.push_back(numPS);
 
     // numBdyCurves
   int i;
   for (i = numBdyCurves.size(); i > 0; i--)
-    i_list.append(numBdyCurves.get_and_step());
+    i_list.push_back(numBdyCurves.get_and_step());
 
     // vgUIDs
   vgUIDs.reset();
   for (i = vgUIDs.size(); i > 0; i--)
-    i_list.append(vgUIDs.get_and_step());
+    i_list.push_back(vgUIDs.get_and_step());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-
-  for( i=cs_list.size(); i--;) delete cs_list.get_and_step();
-
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
 }
 
 CubitStatus CAPartitionVG::actuate()

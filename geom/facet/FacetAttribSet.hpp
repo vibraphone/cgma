@@ -28,16 +28,16 @@ class FacetAttribSet
     
     ~FacetAttribSet() { remove_all_attributes(); }
     
-    void append_attribute( CubitSimpleAttrib* );
+    void append_attribute( const CubitSimpleAttrib& );
     
-    void remove_attribute( CubitSimpleAttrib* );
+    void remove_attribute( const CubitSimpleAttrib& );
     
     void remove_all_attributes();
     
-    CubitStatus get_attributes( DLIList<CubitSimpleAttrib*>& ) const;
+    CubitStatus get_attributes( DLIList<CubitSimpleAttrib>& ) const;
     
     CubitStatus get_attributes( const CubitString& name,
-                                DLIList<CubitSimpleAttrib*>& ) const;
+                                DLIList<CubitSimpleAttrib>& ) const;
     
     CubitStatus save_attributes( FILE* file ) const;
     

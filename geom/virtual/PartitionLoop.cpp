@@ -258,16 +258,16 @@ GeometryQueryEngine* PartitionLoop::get_geometry_query_engine() const
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void PartitionLoop::append_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionLoop::append_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
-void PartitionLoop::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void PartitionLoop::remove_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
 void PartitionLoop::remove_all_simple_attribute_virt()
 { }
-CubitStatus PartitionLoop::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus PartitionLoop::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 CubitStatus PartitionLoop::get_simple_attribute( const CubitString&,
-                                                 DLIList<CubitSimpleAttrib*>& )
+                                                 DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 
   

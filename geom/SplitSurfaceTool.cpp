@@ -439,7 +439,10 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
     {
       DLIList<Curve*> *cur_list = curve_lists_list.pop();
       while(cur_list->size())
-        delete cur_list->pop();
+      {
+        Curve* curve_ptr = cur_list->pop();
+        curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+      }
       delete cur_list;
     }
     return CUBIT_FAILURE;
@@ -458,7 +461,10 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
     {
       DLIList<Curve*> *cur_list = curve_lists_list.pop();
       while(cur_list->size())
-        delete cur_list->pop();
+      {
+        Curve* curve_ptr = cur_list->pop();
+        curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+      }
       delete cur_list;
     }
     return CUBIT_FAILURE;
@@ -468,7 +474,10 @@ SplitSurfaceTool::split_surface( RefFace *ref_face_ptr,
   {
     DLIList<Curve*> *cur_list = curve_lists_list.pop();
     while(cur_list->size())
-      delete cur_list->pop();
+      {
+        Curve* curve_ptr = cur_list->pop();
+        curve_ptr->get_geometry_query_engine()->delete_solid_model_entities(curve_ptr );
+      }
     delete cur_list;
   }
 
@@ -524,9 +533,7 @@ SplitSurfaceTool::split_surface( DLIList<RefFace*> &ref_face_list,
          PRINT_ERROR( "Cannot split a surface that is contained by multiple volumes\n" );
          return CUBIT_FAILURE;
       }
-      int num_curves_prior = count_curves_in_body( body_ptr );
-
-      int original_id = ref_face_ptr->id();
+      ref_face_ptr->id();
       Surface *surf_ptr = ref_face_ptr->get_surface_ptr();
 
 
@@ -4148,7 +4155,7 @@ SplitSurfaceTool::check_through_vertices( const char *type )
         ;
       else
       {
-        PRINT_ERROR( "Through vertices not compatible with %s curve given\n" );
+        PRINT_ERROR( "%s", "Through vertices not compatible with %s curve given\n" );
         return CUBIT_FAILURE;
       }
     }

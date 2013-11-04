@@ -135,7 +135,6 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //- from the start and end points of the parabola. The 3 points must form
     //- an isosceles triangle. This definition limits the user to generation 
     //- of the tip of parabolic shapes only.
-   
    virtual Curve* make_elliptical_Curve( TBPoint const* point1,
                                          TBPoint const* point2,
                                          CubitVector &center_point, 
@@ -420,6 +419,8 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
 
       virtual CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                             DLIList<BodySM*> &new_bodies,
+                                            double overlap_tol,
+                                            double imprint_tol,
                                    DLIList<TopologyBridge*> *new_tbs = NULL,
                                    DLIList<TopologyBridge*> *att_tbs = NULL ) const = 0;
 
@@ -526,7 +527,7 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
     //O- If the flip operation went through OK, the function returns CUBIT_SUCCESS. If,
     //- for some reason, the flip operation did not go well, the output
     //- returns CUBIT_FAILURE.
-
+	  
      virtual CubitStatus hollow(DLIList<BodySM*>& bodies,
                                 DLIList<Surface*>& surfs_to_remove,
                                 DLIList<BodySM*>& new_bodies,
@@ -600,8 +601,8 @@ class CUBIT_GEOM_EXPORT GeometryModifyEngine
                                       bool rigid,
                                       bool anchor_entity=CUBIT_FALSE,
                                       bool keep_old=CUBIT_FALSE ) const = 0;
-      
-      virtual CubitStatus  sweep_rotational(
+
+       virtual CubitStatus  sweep_rotational(
                                    DLIList<GeometryEntity*>& ref_ent_list,
                                    DLIList<BodySM*>& result_body_list,
                                    const CubitVector& point,

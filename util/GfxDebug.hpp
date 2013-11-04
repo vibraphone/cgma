@@ -46,6 +46,7 @@ class MRefVolume;
 class MBody;
 class CubitTransformMatrix;
 class CubitBox;
+class Surface;
 
 #include "CubitColorConstants.hpp"
 #include "CubitUtilConfigure.h"
@@ -60,6 +61,8 @@ protected:
   public:
     GfxDebug();
     virtual ~GfxDebug();
+  
+    static bool is_initialized();
 
     // this will clear out all temporary data and delete any graphics windows created
     // with this interface.  It'll restore the persistent geom/mesh model.
@@ -230,6 +233,8 @@ protected:
     static void highlight_polylines(int num_points, const float* xyzs, int num_line_points, const int* line_list);
     static void highlight_polygons(int num_points, const float* xyzs, int num_face_points, const int* face_list );
     
+    static void draw_surface(Surface *surf, int color);
+    
   protected:
 
     // p is for protected in case you were wondering :)
@@ -330,6 +335,8 @@ protected:
     virtual void p_highlight_points(int num_points, const float* xyzs) = 0;
     virtual void p_highlight_polylines(int num_points, const float* xyzs, int num_line_points, const int* line_list) = 0;
     virtual void p_highlight_polygons(int num_points, const float* xyzs, int num_face_points, const int* face_list ) = 0;
+
+    virtual void p_draw_surface(Surface *surf, int color) = 0;
 
 };
 

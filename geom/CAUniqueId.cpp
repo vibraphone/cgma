@@ -15,19 +15,9 @@ DLIList<CAUniqueId *> CAUniqueId::allCAUniqueIds;
 bool CAUniqueId::autoUniqueId = false;
 UIDMap CAUniqueId::oldUIDToNewUID;
 
-CubitAttrib* CAUniqueId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAUniqueId_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAUniqueId *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAUniqueId(entity);
-  }
-  else
-  {
-    new_attrib = new CAUniqueId(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAUniqueId(entity, p_csa);
 }
 
 CAUniqueId::~CAUniqueId()
@@ -36,18 +26,16 @@ CAUniqueId::~CAUniqueId()
     allCAUniqueIds.extract();
 }
 
-CAUniqueId::CAUniqueId(RefEntity* new_attrib_owner)
+CAUniqueId::CAUniqueId(RefEntity* new_attrib_owner,
+                               const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
   uniqueId = -1;
-  allCAUniqueIds.append(this);
-}
 
-CAUniqueId::CAUniqueId(RefEntity* new_attrib_owner,
-                               CubitSimpleAttrib *csa_ptr)
-        : CubitAttrib(new_attrib_owner)
-{
-  uniqueId = *csa_ptr->int_data_list()->get();
+  if(!csa_ptr.isEmpty())
+  {
+    uniqueId = csa_ptr.int_data_list()[0];
+  }
   allCAUniqueIds.append(this);
 }
 
@@ -129,10 +117,10 @@ CubitStatus CAUniqueId::update()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CAUniqueId::cubit_simple_attrib()
+CubitSimpleAttrib CAUniqueId::cubit_simple_attrib()
 {
-  return new CubitSimpleAttrib(att_internal_name(), "", "",
-                               uniqueId, 0.0);
+  return CubitSimpleAttrib(att_internal_name(), "", "",
+                               &uniqueId);
 }
 
 CubitStatus CAUniqueId::actuate_all()

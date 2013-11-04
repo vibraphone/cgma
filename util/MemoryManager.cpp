@@ -285,8 +285,8 @@ void MemoryManager::show_all_object_memory()
     pclose(pipe);
   }
 
-  PRINT_INFO("Total memory = %u\n", vm );
-  PRINT_INFO("Resident memory = %u\n", rss );
+  PRINT_INFO("Total memory = %lu\n", (unsigned long)vm );
+  PRINT_INFO("Resident memory = %lu\n", (unsigned long)rss );
 
 
 /*

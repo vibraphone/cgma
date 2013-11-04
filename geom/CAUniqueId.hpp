@@ -33,17 +33,8 @@ public:
 
   virtual ~CAUniqueId();
 
-  CAUniqueId(RefEntity*);
-
-  CAUniqueId(RefEntity*, CubitSimpleAttrib*);
+  CAUniqueId(RefEntity*, const CubitSimpleAttrib&);
     //- make a CAMI from a simple attribute
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const
-     { return typeid(CAUniqueId);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
-
 
   CubitStatus actuate();
 
@@ -53,7 +44,7 @@ public:
     //- don't need to do anything, as all the data gets assigned
     //- and not appended
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   int unique_id() { return uniqueId;}
 
@@ -86,7 +77,7 @@ inline void CAUniqueId::auto_unique_id(const bool flag)
   autoUniqueId = flag;
 }
 
-CubitAttrib* CAUniqueId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAUniqueId_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

@@ -43,6 +43,7 @@
 #include "RefVolume.hpp"
 #include "Loop.hpp"
 #include "RefEdge.hpp"
+#include "AppUtil.hpp"
 
 // ********** END CUBIT INCLUDES              **********
 
@@ -85,7 +86,7 @@ ModelEntity::~ModelEntity()
      // Make sure that the ModelEntity class does not have a pointer to this
      // ModelEntity in its list.  If it does, then remove the instances
      // of the pointer
-   DAG::instance()->notify(this, DAG_NODE_DESTRUCTED);
+   DAG::instance()->remove(this);
   
 }
 
@@ -126,7 +127,7 @@ CubitStatus ModelEntity::remove_from_DAG(CubitBoolean recurse_flag)
          // Notify the static observers that a top-level entity is being
          // destructed.  This must be done before children are disconnected.
        CubitObservable *top_level = CAST_TO(this, CubitObservable);
-       CubitObserver::notify_static_observers(top_level, TOP_LEVEL_ENTITY_DESTRUCTED);
+       AppUtil::instance()->send_event(top_level, TOP_LEVEL_ENTITY_DESTRUCTED);
       }
 
         // Go through all the children and remove their link to
@@ -160,8 +161,7 @@ CubitStatus ModelEntity::remove_from_DAG(CubitBoolean recurse_flag)
             CubitObservable *observable = CAST_TO(childModEntPtr, CubitObservable);
             if (observable) 
             {
-              if( !observable->notify_observers( MODEL_ENTITY_DESTRUCTED ) )
-                 return CUBIT_FAILURE;
+              AppUtil::instance()->send_event(observable, MODEL_ENTITY_DESTRUCTED );
             }
          }
       }
@@ -177,9 +177,7 @@ CubitStatus ModelEntity::remove_from_DAG(CubitBoolean recurse_flag)
          CubitObservable *observable = CAST_TO(childModEntPtr, CubitObservable);
          if (observable) 
          {
-           if( !observable->notify_observers( MODEL_ENTITY_DESTRUCTED ) )
-              return CUBIT_FAILURE;
-
+           AppUtil::instance()->send_event(observable, MODEL_ENTITY_DESTRUCTED );
          }
          GeometryQueryTool::instance()->cleanout_deactivated_geometry() ;
       }

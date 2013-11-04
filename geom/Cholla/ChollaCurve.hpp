@@ -215,7 +215,7 @@ public:
 
   int num_volumes();
 
-  ChollaCurve *merge_parter(){ return myMergePartner; }
+  ChollaCurve *merge_partner(){ return myMergePartner; }
 
   void set_merge_partner( ChollaCurve *merge_partner )
     { myMergePartner = merge_partner;}  

@@ -16,6 +16,7 @@ SET(UTIL_SRCS
     CubitCoordinateSystem.cpp
     CubitDynamicLoader.cpp
     CubitEntity.cpp
+    CubitEventDispatcher.cpp
     CubitFile.cpp
     CubitFileFEModel.cpp
     CubitFileIOWrapper.cpp
@@ -76,12 +77,16 @@ SET(UTIL_HDRS
     CubitDynamicLoader.hpp
     CubitEntity.hpp
     CubitEquation.hpp
+    CubitEvent.hpp
+    CubitEventDefines.h
+    CubitEventDispatcher.hpp
     CubitFile.hpp
     CubitFileFEModel.hpp
     CubitFileIOWrapper.hpp
     CubitFileMetaData.hpp
     CubitFileSimModel.hpp
     CubitFileUtil.hpp
+    CubitInputFile.hpp
     CubitInstrumentation.hpp
     CubitLoops.hpp
     CubitMatrix.hpp
@@ -127,7 +132,6 @@ SET(UTIL_HDRS
     Tree.hpp
     TtyProgressTool.hpp
     VariableArray.hpp
-    CubitEventDefines.h
     ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
   )
 
@@ -154,20 +158,25 @@ CONFIGURE_FILE(${cubit_util_SOURCE_DIR}/CubitUtilConfigure.h.in
                ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
                @ONLY)
 
-IF(NOT CUBIT_UTIL_NAME)
-  SET(CUBIT_UTIL_NAME cubit_util)
-ENDIF(NOT CUBIT_UTIL_NAME)
+ADD_LIBRARY(cubit_util ${UTIL_SRCS} ${UTIL_HDRS})
+TARGET_LINK_LIBRARIES(cubit_util ${CMAKE_DL_LIBS})
 
-ADD_LIBRARY(${CUBIT_UTIL_NAME} ${UTIL_SRCS} ${UTIL_HDRS})
-TARGET_LINK_LIBRARIES(${CUBIT_UTIL_NAME} ${CMAKE_DL_LIBS})
+if(CUBIT_UTIL_NAME)
+  SET_TARGET_PROPERTIES(cubit_util
+                        PROPERTIES OUTPUT_NAME "${CUBIT_UTIL_NAME}")
+endif()
+
+IF(WIN32)
+TARGET_LINK_LIBRARIES(cubit_util shlwapi)
+ENDIF(WIN32)
 
 IF(CUBIT_LIBRARY_PROPERTIES)
-  SET_TARGET_PROPERTIES(${CUBIT_UTIL_NAME}
+  SET_TARGET_PROPERTIES(cubit_util
                         PROPERTIES ${CUBIT_LIBRARY_PROPERTIES})
 ENDIF(CUBIT_LIBRARY_PROPERTIES)
 
 IF(BUILD_WITH_CONCURRENT_SUPPORT)
-  TARGET_LINK_LIBRARIES(${CUBIT_UTIL_NAME} ${QT_LIBRARIES})
+  TARGET_LINK_LIBRARIES(cubit_util ${QT_LIBRARIES})
 ENDIF(BUILD_WITH_CONCURRENT_SUPPORT)
 
 IF(NOT CMAKE_INSTALL_BINARY_DIR)
@@ -180,12 +189,12 @@ ENDIF(NOT CMAKE_INSTALL_INCLUDE_DIR)
 
 IF(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
   IF(BUILD_SHARED_LIBS)
-    INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
+    INSTALL(TARGETS cubit_util ${CUBIT_UTIL_EXPORT_GROUP}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
             LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime)
   ENDIF(BUILD_SHARED_LIBS)
 ELSE(CUBIT_UTIL_INSTALL_NO_DEVELOPMENT)
-INSTALL(TARGETS ${CUBIT_UTIL_NAME} ${CUBIT_UTIL_EXPORT_GROUP}
+INSTALL(TARGETS cubit_util ${CUBIT_UTIL_EXPORT_GROUP}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
         LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
         ARCHIVE DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Development)

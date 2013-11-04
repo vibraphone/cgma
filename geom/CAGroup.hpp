@@ -25,7 +25,7 @@ private:
   DLIList<int> uniqueID;
     //- unique ids of groups containing attribOwnerEntity
 
-  DLIList<CubitString*> groupNames;
+  DLIList<CubitString> groupNames;
     //- names of groups containing attribOwnerEntity
 
   DLIList<int> sequenceNumbers;
@@ -40,7 +40,7 @@ private:
   DLIList<int> owningUniqueID;
     //- unique ids of groups containing groups containing attribOwnerEntity
 
-  DLIList<CubitString*> owningGroupNames;
+  DLIList<CubitString> owningGroupNames;
     //- names of groups containing groups containing attribOwnerEntity
 
   DLIList<int> owningSequenceNumbers;
@@ -51,28 +51,20 @@ private:
     //- name, and the uid of the owned group to which this is an ancestor
   DLIList<int> ancestorGroupID;
   DLIList<int> ancestorUniqueID;
-  DLIList<CubitString*> ancestorGroupName;
+  DLIList<CubitString> ancestorGroupName;
   DLIList<int> ancestorOwnedGroupUid;
   DLIList<int> ancestorSequenceNumbers;
   
   static CubitBoolean initialize_rand;
   
 public:
-  CAGroup(RefEntity* = NULL);
-
-  CAGroup(RefEntity*, CubitSimpleAttrib*);
+  CAGroup(RefEntity*, const CubitSimpleAttrib&);
     //- make a CAG from a simple attribute
 
   void initialize();
     //- initialize random number generator for this attribute
 
   virtual ~CAGroup();
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const
-     { return typeid(CAGroup);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
     //- actuate this attribute
@@ -83,18 +75,18 @@ public:
   CubitStatus reset();
     //- reset this attribute
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
     //- return a simple attribute with this CA's data
   
   RefGroup *assign_group(RefEntity *owned_entity,
                          const int group_id, const int unique_id,
-                         CubitString *group_name,
+                         const CubitString& group_name,
                          const int seq_num);
     //- used in actuating this CA
   
   RefGroup *assign_ancestor_group(const int ancestor_id,
                                   const int ancestor_uid,
-                                  const CubitString *ancestor_name,
+                                  const CubitString& ancestor_name,
                                   const int owned_group_uid,
                                   const int seq_num);
   
@@ -111,7 +103,7 @@ public:
 
 };
 
-CubitAttrib* CAGroup_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAGroup_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

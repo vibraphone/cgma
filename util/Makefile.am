@@ -1,7 +1,7 @@
 # The name of the library to build
-noinst_LTLIBRARIES = 
+lib_LTLIBRARIES = 
 if BUILD_CGM
-  noinst_LTLIBRARIES += libcubit_util.la
+  lib_LTLIBRARIES += libcubit_util.la
 endif
 
 # The directory where headers will be installed
@@ -23,6 +23,7 @@ libcubit_util_la_SOURCES = \
   CubitCoordinateSystem.cpp \
   CubitDynamicLoader.cpp \
   CubitEntity.cpp \
+  CubitEventDispatcher.cpp \
   CubitFile.cpp \
   CubitFileFEModel.cpp \
   CubitFileIOWrapper.cpp \
@@ -89,6 +90,7 @@ libcubit_util_la_include_HEADERS = \
   CubitDynamicLoader.hpp \
   CubitEntity.hpp \
   CubitEvent.hpp \
+  CubitEventDispatcher.hpp \
   CubitEventDefines.h \
   CubitFile.hpp \
   CubitFileFEModel.hpp \
@@ -98,7 +100,6 @@ libcubit_util_la_include_HEADERS = \
   CubitUndo.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
-  CubitLoops.hpp \
   CubitMatrix.hpp \
   CubitMessage.hpp \
   CubitObservable.hpp \
@@ -125,7 +126,6 @@ libcubit_util_la_include_HEADERS = \
   DynamicDLIIterator.hpp \
   DynamicTreeIterator.hpp \
   ElementType.h \
-  FacetShapeDefs.hpp \
   GMem.hpp \
   GeometryDefines.h \
   GetLongOpt.hpp \
@@ -138,7 +138,6 @@ libcubit_util_la_include_HEADERS = \
   KDDTree.hpp \
   KDDTreeNode.hpp \
   LocalStart.h \
-  ManagedPtrVector.hpp \
   MemoryBlock.hpp \
   MemoryManager.hpp \
   MergeEvent.hpp \
@@ -188,7 +187,6 @@ libcubit_util_la_include_HEADERS = \
 # to be compiled.
 if INCLUDE_TEMPLATE_DEFS
   libcubit_util_la_include_HEADERS += \
-      DLIList.cpp \
       KDDTree.cpp \
       KDDTreeNode.cpp \
       OctTreeCell.cpp \
@@ -200,7 +198,6 @@ if INCLUDE_TEMPLATE_DEFS
       RStarTreeNode.cpp
 else
   libcubit_util_la_SOURCES += \
-      DLIList.cpp \
       KDDTree.cpp \
       KDDTreeNode.cpp \
       OctTreeCell.cpp \

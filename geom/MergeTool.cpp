@@ -128,7 +128,14 @@ void MergeTool::merge_with_auto_imprint(RefFace *surf1, RefFace *surf2)
         DLIList<Body*> body_list, new_bodies;
         body_list.append(b1);
         body_list.append(b2);
-        GeometryModifyTool::instance()->tolerant_imprint( body_list, new_bodies, true );
+        double imprint_tol = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS; 
+        double overlap_tol = imprint_tol; 
+        DLIList<RefFace*> faces_to_imprint;
+        faces_to_imprint.append( local_surf1 );
+        faces_to_imprint.append( local_surf2 );
+        DLIList<RefEdge*> dummy_list;
+        //GeometryModifyTool::instance()->tolerant_imprint( body_list, new_bodies, overlap_tol, imprint_tol, true );
+        GeometryModifyTool::instance()->tolerant_imprint( faces_to_imprint, dummy_list, new_bodies, true );        
         first_time = false;
       }
     }
@@ -656,8 +663,6 @@ CubitStatus MergeTool::merge_reffaces_old( DLIList<RefFace*>& refface_list,
   if( destroyDeadGeometry )
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
 
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
-  
   PRINT_DEBUG_3( "cleanout time: %f secs\n", timer.cpu_secs() );
   if (print_info)
   {
@@ -697,7 +702,8 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
     // since it is invalid. So...we need to remove it from the
     // tree, but still keep track of where we are in the list.
   double geom_factor = GeometryQueryTool::get_geometry_factor();
-  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (GEOMETRY_RESABS*geom_factor);
+  RTree<RefFace*> a_tree(GEOMETRY_RESABS*geom_factor);
+//  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (GEOMETRY_RESABS*geom_factor);
   CpuTimer timer;
   int merge_count = 0;
   
@@ -714,7 +720,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
     if( curr_face->is_mergeable() )
     {
       refface_array.append( curr_face );
-      a_tree->add(curr_face);
+      a_tree.add(curr_face);
     }
   }
   PRINT_DEBUG_3( "Time to build r_tree %f secs, with %d entries\n",
@@ -762,7 +768,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
       //Now from the atree, get the surfaces that are close.
     temp_box = refface_ptr->bounding_box();
     faces_in_range.clean_out();
-    a_tree->find(temp_box, faces_in_range);
+    a_tree.find(temp_box, faces_in_range);
     
     for( j = 0; (j < faces_in_range.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
@@ -873,7 +879,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
       PRINT_DEBUG_19( "Consolidating RefFace %d and "
                       "%d...\n", retained_id, deleted_id );
       
-      a_tree->remove(compare_refface_ptr);
+      a_tree.remove(compare_refface_ptr);
       if( merge_BTE( refface_ptr, compare_refface_ptr ) )
       {
         merge_count++;
@@ -892,7 +898,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
                      "       The use counts were updated first and"
                      " are now out of date.\n",
                      retained_id, deleted_id);
-        a_tree->add(compare_refface_ptr);
+        a_tree.add(compare_refface_ptr);
       }
       
       if (nullify == i)
@@ -910,7 +916,7 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
   if (progress)
       progress->end();
   CpuTimer time_to_destroy;
-  delete a_tree;
+
   PRINT_DEBUG_3( "Time to destroy r_tree %f secs.\n",
                   time_to_destroy.cpu_secs());
 
@@ -946,9 +952,6 @@ CubitStatus MergeTool::merge_reffaces( DLIList<RefFace*>& refface_list,
   
   if( destroyDeadGeometry )
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
-
-  //for updating GUI tree
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
 
   PRINT_DEBUG_3( "cleanout time: %f secs\n", timer.cpu_secs() );
   if (print_info)
@@ -1049,7 +1052,8 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
   }
 
   double geom_factor = GeometryQueryTool::get_geometry_factor();
-  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (GEOMETRY_RESABS*geom_factor);
+  RTree<RefFace*> a_tree(GEOMETRY_RESABS*geom_factor);
+//  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (GEOMETRY_RESABS*geom_factor);
   
   DRefFaceArray refface_array( refface_list.size() );
   refface_list.reset();
@@ -1063,7 +1067,7 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
     if( curr_face->is_mergeable() )
     {
       refface_array.append( curr_face );
-      a_tree->add(curr_face);
+      a_tree.add(curr_face);
     }
   }
   PRINT_DEBUG_3( "Time to build r_tree %f secs, with %d entries\n",
@@ -1112,7 +1116,7 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
       //Now from the atree, get the surfaces that are close.
     temp_box = refface_ptr->bounding_box();
     faces_in_range.clean_out();
-    a_tree->find(temp_box, faces_in_range);
+    a_tree.find(temp_box, faces_in_range);
 
     DLIList<RefVolume*> tmp_vols;
     refface_ptr->ref_volumes( tmp_vols);
@@ -1194,7 +1198,7 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
       if( assistant_says_no )
         continue; 
 
-      a_tree->remove(compare_refface_ptr);
+      a_tree.remove(compare_refface_ptr);
 
       refface_array[nullify] = NULL;
 
@@ -1224,7 +1228,6 @@ CubitStatus MergeTool::find_mergeable_reffaces( DLIList<RefEntity*> &entities,
   if (progress)
       progress->end();
 
-  delete a_tree;
 
   if( AppUtil::instance()->interrupt() )
   {
@@ -1622,15 +1625,18 @@ CubitStatus MergeTool::find_only_mergeable_surfaces ( DLIList<BodySM*> &body_lis
 }
 
 CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Curve*> &all_curves, 
-                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
+                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol )
 {
   int i;
   double geom_factor = GeometryQueryTool::get_geometry_factor();
+  if(input_tol > 0.0)
+    geom_factor = input_tol/GEOMETRY_RESABS;
 
   //build up a tree for speed purposes
-  AbstractTree <Curve*> *a_tree = new RTree<Curve*> (GEOMETRY_RESABS*geom_factor);
+  RTree<Curve*> a_tree(GEOMETRY_RESABS*geom_factor);
+  //AbstractTree <Curve*> *a_tree = new RTree<Curve*> (GEOMETRY_RESABS*geom_factor);
   for( i=all_curves.size(); i--; )
-    a_tree->add( all_curves.get_and_step() );
+    a_tree.add( all_curves.get_and_step() );
 
   std::map< Curve*, DLIList<Curve*>*> curve_to_list_map;
   std::map< Curve*, DLIList<Curve*>*>::iterator list_iter; 
@@ -1645,7 +1651,7 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Curve*> &all_curves,
     
     //get close curves
     DLIList<Curve*> close_curves;
-    a_tree->find(curr_curve->bounding_box(), close_curves);
+    a_tree.find(curr_curve->bounding_box(), close_curves);
     
     int j;
     for( j=close_curves.size(); j--; )
@@ -1722,7 +1728,7 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Curve*> &all_curves,
 }
 
 CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Surface*> &surf_list, 
-                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
+                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol )
 {
   //collect all the curves from off the bodies
   DLIList<Curve*> all_curves;
@@ -1736,11 +1742,11 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<Surface*> &surf_list,
     all_curves += tmp_curves;
   }
 
-  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves);
+  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves, input_tol);
 }
 
 CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
-                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves )
+                  DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol )
 {
   //collect all the curves from off the bodies
   DLIList<Curve*> all_curves;
@@ -1754,7 +1760,7 @@ CubitStatus MergeTool::find_only_mergeable_curves( DLIList<BodySM*> &body_list,
     all_curves += tmp_curves;
   }
 
-  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves);
+  return find_only_mergeable_curves(all_curves, lists_of_mergeable_curves, input_tol);
  
 }
 
@@ -1930,7 +1936,8 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
   CpuTimer timer;
 
   double geom_factor = GeometryQueryTool::get_geometry_factor();
-  AbstractTree <RefEdge*> *a_tree = new RTree<RefEdge*> (GEOMETRY_RESABS*geom_factor);
+  RTree<RefEdge*> a_tree(GEOMETRY_RESABS*geom_factor);
+  //AbstractTree <RefEdge*> *a_tree = new RTree<RefEdge*> (GEOMETRY_RESABS*geom_factor);
 
   DRefEdgeArray refedge_array( refedge_list.size() );
   refedge_list.reset();
@@ -1945,7 +1952,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
     if( curr_edge->is_mergeable() )
     {
       refedge_array.append( curr_edge );
-      a_tree->add(curr_edge);
+      a_tree.add(curr_edge);
     }
   }
 
@@ -1991,7 +1998,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
       //Now from the atree, get the edges that are close.
     temp_box = refedge_ptr->bounding_box();
     edges_in_range.clean_out();
-    a_tree->find(temp_box, edges_in_range);
+    a_tree.find(temp_box, edges_in_range);
     
     for( j = 0; (j < edges_in_range.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
@@ -2083,7 +2090,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
       PRINT_DEBUG_19( "Consolidating RefEdge %d and "
                       "%d...\n", retained_id, deleted_id );
       
-      a_tree->remove(compare_refedge_ptr);
+      a_tree.remove(compare_refedge_ptr);
       if( merge_BTE( refedge_ptr, compare_refedge_ptr ) )
       {
         merge_count++;
@@ -2102,7 +2109,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
                      "       The use counts were updated first and"
                      " are now out of date.\n",
                      retained_id, deleted_id);
-        a_tree->add(compare_refedge_ptr);
+        a_tree.add(compare_refedge_ptr);
       }
       
       if (nullify == i)
@@ -2121,7 +2128,7 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
   if (progress)
       progress->end();
   CpuTimer time_to_destroy;
-  delete a_tree;
+
   PRINT_DEBUG_3( "Time to destroy r_tree %f secs.\n",
                   time_to_destroy.cpu_secs());
 
@@ -2155,9 +2162,6 @@ CubitStatus MergeTool::merge_refedges( DLIList<RefEdge*>& refedge_list,
   
   if( destroyDeadGeometry )
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
-  
-  //for updating GUI tree
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
   
   PRINT_DEBUG_3( "cleanout time: %f secs\n", timer.cpu_secs() );
   if (print_info)
@@ -2427,8 +2431,6 @@ CubitStatus MergeTool::old_merge_refedges( DLIList<RefEdge*>& refedge_list,
                    timer.cpu_secs() );
    }
 
-   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
-
    if(print_info) 
      PRINT_INFO( "Consolidated %d curves\n", merge_count );
 
@@ -2472,7 +2474,8 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
   
   double geom_factor = GeometryQueryTool::get_geometry_factor();
   double tol = GEOMETRY_RESABS*geom_factor;
-  AbstractTree <RefVertex*> *a_tree = new RTree<RefVertex*> ( tol );
+  RTree<RefVertex*> a_tree(GEOMETRY_RESABS*geom_factor);
+//  AbstractTree <RefVertex*> *a_tree = new RTree<RefVertex*> ( tol );
   DRefVertexArray refvertex_array( refvertex_list.size() );
   refvertex_list.reset();
    
@@ -2484,7 +2487,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
     if( curr_vert->is_mergeable() )
     {
       refvertex_array.append( curr_vert );
-      a_tree->add( curr_vert );
+      a_tree.add( curr_vert );
     }
   }
   
@@ -2517,7 +2520,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
       continue ;
      
     DLIList<RefVertex*> close_verts;
-    a_tree->find(refvertex_ptr->bounding_box(), close_verts);
+    a_tree.find(refvertex_ptr->bounding_box(), close_verts);
       
     for( j = 0; (j < close_verts.size()) && !AppUtil::instance()->interrupt(); j++ )
     {
@@ -2615,7 +2618,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
         vertices_merged.append(refvertex_ptr);
       }
 
-      a_tree->remove( compare_refvertex_ptr );
+      a_tree.remove( compare_refvertex_ptr );
       if( merge_BTE( refvertex_ptr, compare_refvertex_ptr ) )
       {
         merge_count++;
@@ -2634,7 +2637,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
                      "       The use counts were updated first and"
                      " are now out of date.\n",
                      retained_id, deleted_id );
-        a_tree->add( compare_refvertex_ptr );
+        a_tree.add( compare_refvertex_ptr );
       }
       if( nullify == i )
       break;
@@ -2657,7 +2660,7 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
   complete_merge();
   if(progress)
     progress->end();
-  delete a_tree;
+
   if ( groupResults && vertices_merged.size() )
   {
     DLIList<RefEntity*> refentity_list;
@@ -2685,9 +2688,6 @@ CubitStatus MergeTool::merge_refvertices( DLIList<RefVertex*>& refvertex_list,
    GeometryQueryTool::instance()->cleanout_deactivated_geometry();
   PRINT_DEBUG_3( "cleanout time: %f secs\n",
                 timer.cpu_secs() );
-
-  //for updating GUI tree
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
 
   if (print_info) PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
   if( AppUtil::instance()->interrupt() )
@@ -2940,8 +2940,6 @@ CubitStatus MergeTool::old_merge_refvertices( DLIList<RefVertex*>& refvertex_lis
    PRINT_DEBUG_3( "cleanout time: %f secs\n",
                 timer.cpu_secs() );
 
-   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
-   
    if(print_info) 
      PRINT_INFO( "Consolidated %d pairs of vertices\n", merge_count );
 
@@ -3237,7 +3235,7 @@ void MergeTool::cleanup_unmerge()
     {
       if (new_list.insert(new_ptr).second)
       {
-        CubitObserver::notify_static_observers( new_ptr, FREE_REF_ENTITY_GENERATED );
+        AppUtil::instance()->send_event(new_ptr, FREE_REF_ENTITY_GENERATED );
         CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, new_ptr);
         GeometryQueryTool::instance()->history().add_event(evt);
       }
@@ -3252,13 +3250,13 @@ void MergeTool::cleanup_unmerge()
     modified_list.insert( old_ptr );
     
     UnMergeEvent event( old_ptr, new_ptr );
-    old_ptr->notify_all_observers( event );
+    AppUtil::instance()->send_event(old_ptr, event );
   }
   
   std::set<CubitObservable*>::iterator iter;
   for (iter = modified_list.begin(); iter != modified_list.end(); ++iter)
   {
-    (*iter)->notify_all_observers( TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event(*iter, TOPOLOGY_MODIFIED );
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, static_cast<RefEntity*>(*iter));
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -3278,10 +3276,9 @@ void MergeTool::cleanup_unmerge()
 
     
 
-void MergeTool::compare_notify(RefEntity *entity, CubitEventType event)
+void MergeTool::compare_notify(RefEntity *entity)
 {
     //- notifies MergeTool about comparisons found and put on ref entities
-  assert(event == COMPARISON_FOUND);
   compareEntityList.append_unique(entity);
 }
 
@@ -3564,12 +3561,12 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
   
     // Destroy the old entity
    
-  dead_entity->notify_all_observers( MergeEvent(dead_entity, keeper_entity) );
+  AppUtil::instance()->send_event( dead_entity, MergeEvent(dead_entity, keeper_entity) );
 
-  dead_entity->notify_all_observers( MODEL_ENTITY_DESTRUCTED );
+  AppUtil::instance()->send_event( dead_entity, MODEL_ENTITY_DESTRUCTED );
   if( is_dead_entity_free_entity ) //is free entity...top level
   {
-    dead_entity->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    AppUtil::instance()->send_event( dead_entity, TOP_LEVEL_ENTITY_DESTRUCTED );
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, dead_entity);
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -3597,15 +3594,9 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
     "successful.\n\n\n", keeper_entity_name.c_str(),
     dead_entity_name.c_str() );
   
-    // Tell the model about the merge
-    // It must be a RefFace, a RefEdge or a RefVertex
-  MergeEvent merge_event(dead_entity, keeper_entity);
-  merge_event.set_event_type(ENTITY_SURVIVED_MERGE);
-  CubitObserver::notify_static_observers(keeper_entity, merge_event);
-
   if( is_keeper_entity_free_entity && !is_dead_entity_free_entity ) //is free entity...top level
   {
-    keeper_entity->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    AppUtil::instance()->send_event( keeper_entity, TOP_LEVEL_ENTITY_DESTRUCTED );
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_DELETED, keeper_entity);
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -3613,7 +3604,7 @@ CubitStatus MergeTool::merge_BTE( BasicTopologyEntity* keeper_entity,
 
   for(int i=0; i<dead_parents.size(); i++)
   {
-    dead_parents[i]->notify_all_observers(TOPOLOGY_MODIFIED);
+    AppUtil::instance()->send_event( dead_parents[i], TOPOLOGY_MODIFIED);
     CGMHistory::Event evt(CGMHistory::TOPOLOGY_CHANGED, dead_parents[i]);
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -3955,7 +3946,7 @@ CubitStatus MergeTool::merge_SE( SenseEntity* keeper_entity,
   }
   
   
-  dead_entity->notify_observers( MODEL_ENTITY_DESTRUCTED );
+  AppUtil::instance()->send_event( dead_entity, MODEL_ENTITY_DESTRUCTED );
   
     // Now that the BTE's have been successfully merged, merge the 
     // the links of the SenseEntities.
@@ -4102,7 +4093,8 @@ void MergeTool::test_r_tree(DLIList <RefFace*> &refface_list)
   timer.cpu_secs();
   double geom_factor = GeometryQueryTool::get_geometry_factor();
   double tol = GEOMETRY_RESABS*geom_factor;
-  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (tol);
+  RTree<RefFace*> a_tree(GEOMETRY_RESABS*geom_factor);
+//  AbstractTree <RefFace*> *a_tree = new RTree<RefFace*> (tol);
   
   DRefFaceArray refface_array( refface_list.size() );
   refface_list.reset();
@@ -4117,7 +4109,7 @@ void MergeTool::test_r_tree(DLIList <RefFace*> &refface_list)
     if( curr_face->is_mergeable() )
     {
       refface_array.append( curr_face );
-      a_tree->add(curr_face);
+      a_tree.add(curr_face);
     }
   }
   double time_to_build = timer.cpu_secs();
@@ -4133,7 +4125,7 @@ void MergeTool::test_r_tree(DLIList <RefFace*> &refface_list)
     ref_face = refface_array[i];
     temp_box = ref_face->bounding_box();
     faces_in_range.clean_out();
-    a_tree->find(temp_box, faces_in_range);
+    a_tree.find(temp_box, faces_in_range);
     for ( j = 0; j<faces_in_range.size(); j++)
     {
       ref_face1 = faces_in_range.get_and_step();
@@ -4292,8 +4284,6 @@ RefVertex* MergeTool::force_merge( RefVertex* vtx1, RefVertex* vtx2 )
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
 
-   CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
-  
   return vtx1;
 }
 
@@ -4348,13 +4338,13 @@ RefEdge* MergeTool::force_merge( RefEdge* edge1, RefEdge* edge2 )
   
   CubitSense sense;
   CubitBoolean equal;
-  if (!edge1->relative_sense( edge2, GEOMETRY_RESABS, &sense, equal, true))
+  if (!edge1->relative_sense( edge2, 1.0, &sense, equal, true))
     return NULL;
 
   if (closed1)
   {
     if (edge1->start_vertex() != edge2->start_vertex())
-      edge1->start_vertex()->notify( edge2->start_vertex(), COMPARISON_FOUND );
+      edge1->start_vertex()->comparison_found( edge2->start_vertex());
   }
   else
   {
@@ -4370,9 +4360,9 @@ RefEdge* MergeTool::force_merge( RefEdge* edge1, RefEdge* edge2 )
     }
     
     if (edge1->start_vertex() != start2)
-      edge1->start_vertex()->notify( start2, COMPARISON_FOUND );
+      edge1->start_vertex()->comparison_found( start2 );
     if (edge1->end_vertex() != end2)
-      edge1->end_vertex()->notify( end2, COMPARISON_FOUND );
+      edge1->end_vertex()->comparison_found( end2 );
   }  
   
   if (!merge_BTE( edge1, edge2 ))
@@ -4385,8 +4375,6 @@ RefEdge* MergeTool::force_merge( RefEdge* edge1, RefEdge* edge2 )
   remove_compare_data();
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
-
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
 
   return edge1;
 }
@@ -4475,7 +4463,7 @@ RefFace* MergeTool::force_merge( RefFace* face1, RefFace* face2 )
     vertices2.move_to( closest );
     vertices2.extract();
     if (vtx1 != closest)
-      vtx1->notify( closest, COMPARISON_FOUND );
+      vtx1->comparison_found( closest );
   }
   
     // Compare all loops, find RefEdge merge pairs
@@ -4582,8 +4570,7 @@ RefFace* MergeTool::force_merge( RefFace* face1, RefFace* face2 )
         return 0;
       }
       
-      coedge1->get_ref_edge_ptr()->notify( coedge2->get_ref_edge_ptr(), 
-                                           COMPARISON_FOUND );
+      coedge1->get_ref_edge_ptr()->comparison_found( coedge2->get_ref_edge_ptr());
     }
   } // for(loops1)
   
@@ -4603,8 +4590,6 @@ RefFace* MergeTool::force_merge( RefFace* face1, RefFace* face2 )
   remove_compare_data();
   if (destroyDeadGeometry)
     GeometryQueryTool::instance()->cleanout_deactivated_geometry();
-
-  CubitObserver::notify_static_observers(NULL, MERGE_COMPLETED);
 
   return face1;
 }
@@ -5413,7 +5398,7 @@ RefEdge* MergeTool::separate_edge( DLIList<Curve*>& curves,
 
   if( !old_edge_free_before && old_edge->num_parent_ref_entities() == 0 )
   {
-    CubitObserver::notify_static_observers( old_edge, FREE_REF_ENTITY_GENERATED );
+    AppUtil::instance()->send_event( old_edge, FREE_REF_ENTITY_GENERATED );
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, old_edge );
     GeometryQueryTool::instance()->history().add_event(evt);
   }
@@ -5495,7 +5480,7 @@ RefVertex* MergeTool::separate_vertex( DLIList<TBPoint*>& points )
 
   if( !old_vtx_free_before && old_vtx->num_parent_ref_entities() == 0 )
   {
-    CubitObserver::notify_static_observers( old_vtx, FREE_REF_ENTITY_GENERATED );
+    AppUtil::instance()->send_event( old_vtx, FREE_REF_ENTITY_GENERATED );
     CGMHistory::Event evt(CGMHistory::TOP_LEVEL_ENTITY_CREATED, old_vtx );
     GeometryQueryTool::instance()->history().add_event(evt);
   }

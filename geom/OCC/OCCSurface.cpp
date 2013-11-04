@@ -24,6 +24,8 @@
 #include "OCCCurve.hpp"
 #include "OCCPoint.hpp"
 #include "OCCAttribSet.hpp"
+#include "GfxDebug.hpp"
+#include "OCCDrawTool.hpp"
 // ********** END OCC INCLUDES           **********
 
 // ********** BEGIN CUBIT INCLUDES       **********
@@ -120,7 +122,7 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 
   if(myTopoDSFace)
     myTopoDSFace->Nullify();
-  *myTopoDSFace = face ; 
+  *myTopoDSFace = face ;
 }
 
 
@@ -133,7 +135,7 @@ void OCCSurface::set_TopoDS_Face(TopoDS_Face& face)
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-void OCCSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCSurface::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { OCCAttribSet::append_attribute(csa, *myTopoDSFace); }
 
 
@@ -145,7 +147,7 @@ void OCCSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-void OCCSurface::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCSurface::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { OCCAttribSet::remove_attribute( csa , *myTopoDSFace); }
 
 
@@ -159,7 +161,9 @@ void OCCSurface::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 //-------------------------------------------------------------------------
 void OCCSurface::remove_all_simple_attribute_virt()
-  { OCCAttribSet::remove_attribute(NULL, *myTopoDSFace); }
+{
+  OCCAttribSet::remove_attribute(CubitSimpleAttrib(), *myTopoDSFace);
+}
 
 
 //-------------------------------------------------------------------------
@@ -170,12 +174,12 @@ void OCCSurface::remove_all_simple_attribute_virt()
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-CubitStatus OCCSurface::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus OCCSurface::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                  csa_list)
   { return OCCAttribSet::get_attributes(*myTopoDSFace,csa_list); }
 
 CubitStatus OCCSurface::get_simple_attribute(const CubitString& name,
-                                        DLIList<CubitSimpleAttrib*>& csa_list )
+                                        DLIList<CubitSimpleAttrib>& csa_list )
   { return OCCAttribSet::get_attributes( name, *myTopoDSFace, csa_list ); }
 
 
@@ -189,7 +193,18 @@ GeometryQueryEngine*
                  OCCSurface::get_geometry_query_engine() const
 {
    return OCCQueryEngine::instance();
-}                 
+}   
+
+
+CubitStatus OCCSurface::closest_point_along_vector(CubitVector& from_point, 
+  CubitVector& along_vector,
+  CubitVector& point_on_surface)
+{
+  //This function has not been implemented.
+  closest_point_trimmed(from_point,point_on_surface);
+  return CUBIT_FAILURE;
+
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : Returns a surface type ID -- the values of these are
@@ -432,6 +447,55 @@ CubitStatus OCCSurface::principal_curvatures(
 }
 
 
+
+
+
+CubitStatus OCCSurface::evaluate( double u, double v,
+                               CubitVector *position,                                   
+                               CubitVector *normal,
+                               CubitVector *curvature1,
+                               CubitVector *curvature2 )
+{
+  BRepAdaptor_Surface asurface(*myTopoDSFace);
+
+  gp_Pnt p = asurface.Value(u, v);
+  if(position!=NULL)
+      position->set(p.X(), p.Y(), p.Z());
+
+
+  BRepLProp_SLProps SLP(asurface, 2, Precision::PConfusion());
+  SLP.SetParameters(u, v);
+
+
+  if(normal!=NULL)
+  {
+    gp_Dir occ_normal;
+    //normal of a RefFace point to outside of the material
+    if (SLP.IsNormalDefined()) 
+    {
+      occ_normal = SLP.Normal();
+      CubitSense sense = get_geometry_sense();
+      if(sense == CUBIT_REVERSED)
+        occ_normal.Reverse() ;
+      normal->set(occ_normal.X(), occ_normal.Y(), occ_normal.Z()); 
+    }
+  }
+
+
+  gp_Dir MaxD, MinD;
+  if (curvature1 && curvature2 && SLP.IsCurvatureDefined())
+  {
+    SLP.CurvatureDirections(MaxD, MinD);
+    if (curvature1 != NULL)
+      *curvature1 = CubitVector(MinD.X(), MinD.Y(), MinD.Z());
+    if (curvature2 != NULL)
+      *curvature2 = CubitVector(MaxD.X(), MaxD.Y(), MaxD.Z());
+  }
+
+
+  return CUBIT_SUCCESS;
+}
+
 //-------------------------------------------------------------------------
 // Purpose       : Given values of the two parameters, get the position.
 //
@@ -495,6 +559,7 @@ CubitBoolean OCCSurface::is_periodic()
 //-------------------------------------------------------------------------
 CubitBoolean OCCSurface::is_periodic_in_U( double& period ) 
 {
+
   BRepAdaptor_Surface asurface(*myTopoDSFace);
   if (!asurface.IsUPeriodic())
      return CUBIT_FALSE;
@@ -966,6 +1031,12 @@ CubitStatus OCCSurface::update_OCC_entity(TopoDS_Face& old_surface,
   if(M.Extent() == 1 )
     shape_face = M(1);
 
+      //     GfxDebug::clear();
+      ////    OCCDrawTool::instance()->draw_FACE(&old_face,CUBIT_BLUE,false,false);
+      //    OCCDrawTool::instance()->draw_TopoDS_Shape(&shape_face,CUBIT_GREEN,false,true);
+      //    GfxDebug::mouse_xforms();
+
+
   M.Clear(); 
   //set the Wires
   TopExp::MapShapes(old_surface, TopAbs_WIRE, M);
@@ -1203,7 +1274,7 @@ CubitStatus OCCSurface::get_bodies(DLIList<OCCBody*>& bodies)
      TopoDS_Shape ashape;
      if (pshape && !pshape->IsNull() && 
          pshape->ShapeType() <= TopAbs_FACE &&
-         OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == CUBIT_TRUE)
+         OCCQueryEngine::instance()->OCCMap->IsBound(*pshape) == Standard_True)
        ashape = *pshape;
      M.Clear();
 

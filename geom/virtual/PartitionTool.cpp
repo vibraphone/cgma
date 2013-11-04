@@ -70,6 +70,7 @@ const int PTT_EDGE_POINT_COUNT = 2;
 #include <vector>
 
 #include "CompositeCombineEvent.hpp"
+#include "AppUtil.hpp"
 
 PartitionTool* PartitionTool::instance_ = NULL;
 
@@ -480,6 +481,12 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
         temp_list.clean_out();
         status = partition(the_edge, vect_list, temp_list);
 
+        // explicitly test for status here
+        if (!status == CUBIT_SUCCESS)
+        {
+          PRINT_ERROR("PartitionTool::insert_edge failed at partition...\n");
+        }
+
         // I've seen cases where the resulting partition position is not
         // what we passed in so look at the resulting curves and get
         // the end point that is closest to the point we used for 
@@ -514,6 +521,10 @@ RefFace* PartitionTool::insert_edge( RefFace* face_ptr,
         notify_partition( ref_list, the_edge, temp_list.get(), the_edge );
 
         //need to debug later if this happens.
+        if (!status == CUBIT_SUCCESS)
+        {
+          PRINT_ERROR("PartitionTool::insert_edge failed at assert...\n");
+        }
         assert (CUBIT_SUCCESS == status);
         edge_list.remove(the_edge);
         count ++;
@@ -2016,26 +2027,7 @@ void PartitionTool::notify_partition(
   }
   
     // notify observers of this 
-  CubitObserver::notify_static_observers( old_entity, 
-                                          GEOMETRY_TOPOLOGY_MODIFIED );
-    // non-static
-  old_entity->notify_observers( GEOMETRY_TOPOLOGY_MODIFIED );
-//   DLIList <CubitObserver*> observers;
-//   old_entity->get_observer_list( observers );
-//   for( i = observers.size(); i > 0; i-- )
-//   {
-//     CubitObserver *observer = observers.get_and_step();
-//     observer->notify_observer( old_entity, GEOMETRY_TOPOLOGY_MODIFIED );
-//   }
-//     /* doesn't work - some geometry observers aren't reliable enough
-//        to handle these unexpected observerables
-//        need to transfer just the non-geometry observers?
-//   if (first_unique)
-//     old_entity->observe_friend( first_partitioned_entity );
-//   if (second_unique)
-//     old_entity->observe_friend( second_partitioned_entity );
-//     */
-  
+  AppUtil::instance()->send_event(old_entity, GEOMETRY_TOPOLOGY_MODIFIED );
   
     // notify containing entities
   BasicTopologyEntity* entity_ptr = old_entity;
@@ -2065,8 +2057,7 @@ void PartitionTool::notify_partition(
       for( i = face_list.size(); i > 0; i-- )
       {
         ref_face =  face_list.get_and_step();
-        CubitObserver::notify_static_observers( ref_face, TOPOLOGY_MODIFIED );
-        ref_face->notify_observers( TOPOLOGY_MODIFIED );
+        AppUtil::instance()->send_event( ref_face, TOPOLOGY_MODIFIED );
       }
 
         // no break      
@@ -2077,8 +2068,7 @@ void PartitionTool::notify_partition(
       for( i = vol_list.size(); i > 0; i-- )
       {
         ref_volume = vol_list.get_and_step();
-        CubitObserver::notify_static_observers( ref_volume, TOPOLOGY_MODIFIED );
-        ref_volume->notify_observers( TOPOLOGY_MODIFIED );
+        AppUtil::instance()->send_event( ref_volume, TOPOLOGY_MODIFIED );
       }
       
         // no break      
@@ -2089,8 +2079,7 @@ void PartitionTool::notify_partition(
       for( i = body_list.size(); i > 0; i-- )
       {
         body = body_list.get_and_step();
-        CubitObserver::notify_static_observers( body, TOPOLOGY_MODIFIED );
-        body->notify_observers( TOPOLOGY_MODIFIED );
+        AppUtil::instance()->send_event( body, TOPOLOGY_MODIFIED );
       }
       break;
     default:
@@ -2104,11 +2093,11 @@ void PartitionTool::notify_partition(
     // When that is done, we no longer need these calls to the static observers.
     if( second_unique )
     {
-      CubitObserver::notify_static_observers(second_partitioned_entity, CubitEvent(FREE_REF_ENTITY_GENERATED));
+      AppUtil::instance()->send_event( second_partitioned_entity, CubitEvent(FREE_REF_ENTITY_GENERATED));
     }
     if( first_unique )
     {
-      CubitObserver::notify_static_observers(first_partitioned_entity, CubitEvent(FREE_REF_ENTITY_GENERATED));
+      AppUtil::instance()->send_event( first_partitioned_entity, CubitEvent(FREE_REF_ENTITY_GENERATED));
     }
   }
   

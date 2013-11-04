@@ -73,10 +73,8 @@ public:
                      ( DLIList<BodySM*> &body_sms ){};
   virtual void push_named_attributes_to_curves_and_points
                      ( DLIList<TopologyBridge*> &tb_list, const char *name_in ){};
-  virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                    DLIList<Body*> &old_bodies){};
+  virtual void attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                          DLIList<Body*> &old_bodies){};
   virtual void remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges){};
 
 

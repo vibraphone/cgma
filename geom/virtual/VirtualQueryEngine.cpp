@@ -288,7 +288,7 @@ CubitStatus VirtualQueryEngine::get_graphics( Curve* curve_ptr,
 
 // This is the template for an unimplemented version of this function.
 CubitStatus VirtualQueryEngine::get_isoparametric_points(Surface*,
-                                                            int& nu, int& nv,
+                                                            int &nu, int &nv,
                                                             GMem*& ) const
 {
   nu = nv = 0;
@@ -305,7 +305,7 @@ CubitStatus VirtualQueryEngine::get_u_isoparametric_points(Surface*,
 
 // This is the template for an unimplemented version of this function.
 CubitStatus VirtualQueryEngine::get_v_isoparametric_points(Surface*,
-                                                            double , int&,
+                                                            double , int& ,
                                                             GMem*&) const
 {
   return CUBIT_FAILURE;

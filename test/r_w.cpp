@@ -142,14 +142,13 @@ CubitStatus make_Point()
   //Constructed 18 Free Curves: 1 to 18
   if (status == CUBIT_FAILURE) exit(1);
 
-  CubitStatus rsl = CUBIT_SUCCESS;
   DLIList<RefEntity*> ref_entity_list;
   int num_ents_exported=0;
   const CubitString cubit_version="10.2";
   const char * filename = "ex3.occ";
   const char * filetype = "OCC";
 
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3.occ
@@ -159,7 +158,7 @@ CubitStatus make_Point()
   filetype = "IGES";
   filename = "ex3export.iges";
   num_ents_exported=0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:  18 OCC Curves to ex3export.iges
@@ -169,7 +168,7 @@ CubitStatus make_Point()
   filetype = "STEP";
   filename = "ex3export.step";
   num_ents_exported=0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  18 OCC Curves to ex3export.step
   assert(num_ents_exported == 18);
@@ -198,7 +197,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "diffuser.occ";
 
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   //Exported:   7 OCC Bodies to diffuser.occ
@@ -229,7 +228,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "proe.occ";
 
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proe.occ
   assert(num_ents_exported == 12);
@@ -238,7 +237,7 @@ CubitStatus make_Point()
   filetype = "IGES";
   filename = "proeexport.iges";
   num_ents_exported=0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.iges
   assert(num_ents_exported == 12);
@@ -247,7 +246,7 @@ CubitStatus make_Point()
   filetype = "STEP";
   filename = "proeexport.step";
   num_ents_exported=0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   //Exported:  12 OCC Bodies to proeexport.step
   assert(num_ents_exported == 12);
@@ -276,7 +275,7 @@ CubitStatus make_Point()
   num_ents_exported=0;
   filename = "beforesub.occ";
 
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
@@ -306,7 +305,7 @@ CubitStatus make_Point()
   filename = "beforesub2.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 2);
@@ -320,7 +319,7 @@ CubitStatus make_Point()
   DLIList<Body*> from_bodies;
   from_bodies.append(bodies.get());
   Body* tool_body = bodies.step_and_get();  
-  rsl = gmti->subtract(tool_body,from_bodies, new_bodies,
+  gmti->subtract(tool_body,from_bodies, new_bodies,
                        CUBIT_TRUE, CUBIT_FALSE);
   //Created volume(s): 24, 25
   //Destroyed volume(s): 22, 23
@@ -338,7 +337,7 @@ CubitStatus make_Point()
   filename = "aftersub.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
@@ -359,7 +358,6 @@ CubitStatus make_Point()
   found = findString(filename, search);
   assert (found == 1);
 #endif
-
   search = "5 face5";
   found = findString(filename, search);
   assert (found == 1);
@@ -402,7 +400,7 @@ CubitStatus make_Point()
   filename = "unite2.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
@@ -442,7 +440,7 @@ CubitStatus make_Point()
   filename = "unite3.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
   //CGM_ATTRIB 11 ENTITY_NAME 4 8 volume A 8 volume_A 8 volume B 8 volume_B 0 0
@@ -475,7 +473,7 @@ CubitStatus make_Point()
   filename = "unite5.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
   assert(num_ents_exported == 1);
@@ -511,7 +509,7 @@ CubitStatus make_Point()
   filename = "unite6.occ";
   ref_entity_list.clean_out();
   num_ents_exported = 0;
-  rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
+  CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
   assert(num_ents_exported == 1);
  

@@ -25,7 +25,6 @@ public:
   RefEntity    *value() const;
   void          value(const RefEntity *new_value);
   CubitString   key()   const;
-  CubitString  *ptr_to_key();
 
 private:
   CubitString keyField;
@@ -33,8 +32,6 @@ private:
 };
 
 inline CubitString  RefEntityNameMap::key()   const {return keyField;}
-inline CubitString *RefEntityNameMap::ptr_to_key()  
-{return &keyField;}
 inline RefEntity   *RefEntityNameMap::value() const {return valueField;}
 inline void         RefEntityNameMap::value(const RefEntity *new_value)
 {

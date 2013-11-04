@@ -99,9 +99,10 @@ public:
 };
 
 
-CubitAttrib *CGMTagManager::CATag_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib *CGMTagManager::CATag_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CATag *this_ca = new CATag(&instance(), entity, p_csa);
+  CubitSimpleAttrib csa = p_csa;
+  CATag *this_ca = new CATag(&instance(), entity, &csa);
   return this_ca;
 }
  
@@ -214,35 +215,31 @@ iBase_ErrorType CGMTagManager::set_csa_tag(RefEntity *this_ent,
   if (iBase_TAG_NOT_FOUND != result) this_data.reset();
   
     // set the data
-  this_data.dblDataSize = csa_ptr->double_data_list()->size();
+  this_data.dblDataSize = csa_ptr->double_data_list().size();
   this_data.dblData = (double*) malloc(this_data.dblDataSize*sizeof(double));
-  csa_ptr->double_data_list()->reset();
   for (int i = 0; i < this_data.dblDataSize; i++)
-    this_data.dblData[i] = *(csa_ptr->double_data_list()->get_and_step());
+    this_data.dblData[i] = csa_ptr->double_data_list()[0];
   
-  this_data.intDataSize = csa_ptr->int_data_list()->size();
+  this_data.intDataSize = csa_ptr->int_data_list().size();
   this_data.intData = (int*) malloc(this_data.intDataSize*sizeof(int));
-  csa_ptr->int_data_list()->reset();
   for (int i = 0; i < this_data.intDataSize; i++)
-    this_data.intData[i] = *(csa_ptr->int_data_list()->get_and_step());
+    this_data.intData[i] = csa_ptr->int_data_list()[i];
   
     // find longest string, then allocate
-  DLIList<CubitString*> *sd = csa_ptr->string_data_list();
+  std::vector<CubitString> sd = csa_ptr->string_data_list();
   this_data.indivStringSize = 0;
-  for (int i = 0; i < sd->size(); i++) {
-    if (((int) sd->get()->length()) > this_data.indivStringSize) 
-      this_data.indivStringSize = sd->get()->length();
-    sd->step();
+  for (int i = 0; i < sd.size(); i++) {
+    if (((int) sd[i].length()) > this_data.indivStringSize) 
+      this_data.indivStringSize = sd[i].length();
   }
     // round to next highest multiple of sizeof(int)
   if (this_data.indivStringSize%sizeof(int) != 0) 
     this_data.indivStringSize = ((this_data.indivStringSize/sizeof(int))+1)*sizeof(int);
     // now allocate
-  this_data.stringDataSize = sd->size()*this_data.indivStringSize;
+  this_data.stringDataSize = sd.size()*this_data.indivStringSize;
   this_data.stringData = (char*) malloc(this_data.stringDataSize);
-  sd->reset();
-  for (int i = 0; i < sd->size(); i++)
-    strncpy(this_data.stringData+i*this_data.indivStringSize, sd->get_and_step()->c_str(),
+  for (int i = 0; i < sd.size(); i++)
+    strncpy(this_data.stringData+i*this_data.indivStringSize, sd[i].c_str(),
             this_data.indivStringSize);
 
   result = setArrData(&this_ent, 1, tag_handle, (const char*)&this_data_ptr, sizeof(CSATagData));
@@ -557,16 +554,15 @@ CubitSimpleAttrib* CGMTagManager::get_simple_attrib(RefEntity* entity,
     CGM_iGeom_setLastError( iBase_INVALID_ENTITY_HANDLE, "Entity not topology" );
     return 0;
   }
-  DLIList<CubitSimpleAttrib*> attr_list;
+  DLIList<CubitSimpleAttrib> attr_list;
   tb_ptr->get_simple_attribute("MESH_INTERVAL", attr_list);
   if (attr_list.size() == 0) {
     CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "No MESH_INTERVAL attribute" );
     return 0;
   }
-  CubitSimpleAttrib* result = attr_list.pop();
-  while (attr_list.size() != 0)
-    delete attr_list.pop();
-  return result;
+  CubitSimpleAttrib result = attr_list.pop();
+  CubitSimpleAttrib *p_result = new CubitSimpleAttrib(result);
+  return p_result;
 }
 
 
@@ -589,7 +585,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
   const TagInfo& info = presetTagInfo[-tag_handle];
   tag_size = info.tagLength;
   CubitSimpleAttrib* csa;
-  CubitString* str;
+  CubitString str;
   
   switch (-tag_handle) {
     case 1:
@@ -620,16 +616,14 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
       csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
       if (!csa)
         return false;
-      csa->int_data_list()->reset();
-      val = *csa->int_data_list()->get_and_step();
+      val = csa->int_data_list()[0];
         // check if interval is set
-      csa->string_data_list()->reset();
         // If a) the size is set and b) the firmness is LIMP, then
         // the interval count has not been set.
-      if ( csa->string_data_list()->size() && 
-          *csa->string_data_list()->get() == "LIMP" && 
-           csa->int_data_list()->size() > 1 && 
-         !*csa->int_data_list()->get())
+      if ( csa->string_data_list().size() && 
+           csa->string_data_list()[0] == "LIMP" && 
+           csa->int_data_list().size() > 1 && 
+          !csa->int_data_list()[0])
         val = 0;
       delete csa;
       if (val == 0 || val == CUBIT_INT_MIN) {
@@ -646,13 +640,10 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
       csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
       if (!csa)
         return false;
-      csa->int_data_list()->reset();
-      csa->int_data_list()->step();
-      csa->double_data_list()->reset();
         // if size value is invalid or flag indicates size has not been set...
-      if (csa->double_data_list()->size() == 0 ||
-         *csa->double_data_list()->get() == CUBIT_DBL_MIN ||
-         (csa->int_data_list()->size() > 1 && !*csa->int_data_list()->get())) {
+      if (csa->double_data_list().size() == 0 ||
+          csa->double_data_list()[0] == CUBIT_DBL_MIN ||
+         (csa->int_data_list().size() > 1 && !csa->int_data_list()[1])) {
         if (info.defaultValue)
           dval = *(double*)info.defaultValue;
         else {
@@ -662,7 +653,7 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
         }
       }
       else
-        dval = *csa->double_data_list()->get();
+        dval = csa->double_data_list()[0];
       delete csa;
       *(double*)tag_value = dval;
       return true;
@@ -670,14 +661,13 @@ bool CGMTagManager::getPresetTagData(const RefEntity *entity,
       csa = get_simple_attrib( const_cast<RefEntity*>(entity), "MESH_INTERVAL" );
       if (!csa)
         return false;
-      if (csa->string_data_list()->size() < 2) {
+      if (csa->string_data_list().size() < 2) {
         delete csa;
         CGM_iGeom_setLastError( iBase_TAG_NOT_FOUND, "Interval firmness not set" );
         return false;
       }
-      csa->string_data_list()->reset();
-      str = csa->string_data_list()->step_and_get();
-      memcpy( tag_value, str->c_str(), 4 );
+      str = csa->string_data_list()[1];
+      memcpy( tag_value, str.c_str(), 4 );
       delete csa;
       return true;
   }
@@ -801,18 +791,18 @@ CubitStatus CATag::reset()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CATag::cubit_simple_attrib() 
+CubitSimpleAttrib CATag::cubit_simple_attrib() 
 {
     //if (tagData.size() == 0) return NULL;
   
-  DLIList<int> int_data;
-  DLIList<CubitString*> str_data;
-  DLIList<double> dbl_data;
+  std::vector<int, std::allocator<int> >int_data;
+  std::vector<CubitString> str_data;
+  std::vector<double> dbl_data;
 
-  str_data.append(new CubitString(myManager->CATag_NAME_INTERNAL));
+  str_data.push_back(myManager->CATag_NAME_INTERNAL);
 
     // int data first gets the # tags on this entity
-  int_data.append(tagData.size());
+  int_data.push_back(tagData.size());
 
     // for each tag:
   for (std::map<int, void*>::iterator 
@@ -823,10 +813,10 @@ CubitSimpleAttrib* CATag::cubit_simple_attrib()
                                      &(myManager->presetTagInfo[-tag_handle]));
 
       // store the name
-    str_data.append(new CubitString(tinfo->tagName.c_str()));
+    str_data.push_back(tinfo->tagName.c_str());
     
       // store the length in bytes
-    int_data.append(tinfo->tagLength);
+    int_data.push_back(tinfo->tagLength);
     
       // now the data
       // store the raw memory interpreted as an array of ints, padded to a full int
@@ -835,15 +825,12 @@ CubitSimpleAttrib* CATag::cubit_simple_attrib()
     
     int *tag_data = reinterpret_cast<int*>((*mit).second);
     for (int i = 0; i < tag_ints; i++)
-      int_data.append(tag_data[i]);
+      int_data.push_back(tag_data[i]);
   }
 
     // store the data on the csa
-  CubitSimpleAttrib *csa = new CubitSimpleAttrib(&str_data, &dbl_data, &int_data);
+  CubitSimpleAttrib csa(&str_data, &dbl_data, &int_data);
 
-  for (int i = 0; i < str_data.size(); i++)
-    delete str_data.get_and_step();
-  
   return csa;
 }
 
@@ -854,9 +841,7 @@ void CATag::add_csa_data(CubitSimpleAttrib *csa_ptr)
   if (csa_ptr->character_type() != my_type) 
     return;
 
-  csa_ptr->int_data_list()->reset();
-  csa_ptr->string_data_list()->reset();
-  int num_attribs = *(csa_ptr->int_data_list()->get_and_step());
+  int num_attribs = csa_ptr->int_data_list()[0];
 
   int *tmp_data;
   
@@ -864,14 +849,14 @@ void CATag::add_csa_data(CubitSimpleAttrib *csa_ptr)
 
       // map the attrib name to a tag
     std::map<std::string,long>::iterator pos =
-      myManager->tagNameMap.find(std::string(csa_ptr->string_data_list()->get()->c_str()));
+      myManager->tagNameMap.find(std::string(csa_ptr->string_data_list()[i].c_str()));
 
     long thandle = 0;
     
     if (pos == myManager->tagNameMap.end()) {
         // tag doesn't exist - create one
-      myManager->createTag(csa_ptr->string_data_list()->get()->c_str(),
-                           *(csa_ptr->int_data_list()->get()), iBase_BYTES,
+      myManager->createTag(csa_ptr->string_data_list()[i].c_str(),
+                           csa_ptr->int_data_list()[i], iBase_BYTES,
                            NULL, &thandle);
     }
     else thandle = (*pos).second;
@@ -880,11 +865,11 @@ void CATag::add_csa_data(CubitSimpleAttrib *csa_ptr)
     long tag_handle = thandle;
 
       // copy the ints to a temporary space we can get a ptr to...
-    int int_length = *(csa_ptr->int_data_list()->get_and_step());
+    int int_length = csa_ptr->int_data_list()[i];
     if (int_length % 4 != 0) int_length++;
     tmp_data = (int*) malloc(int_length*sizeof(int));
     for (int j = 0; j < int_length; j++) 
-      tmp_data[j] = *(csa_ptr->int_data_list()->get_and_step());
+      tmp_data[j] = csa_ptr->int_data_list()[j];
 
       // now actually set the data
     this->set_tag_data(tag_handle, tmp_data, true);

@@ -31,14 +31,15 @@
 //===========================================================================
 CubitStatus CurveFacetEvalTool::initialize(
   FacetEvalTool *surf_eval_tool,   // the adjacent surface facet eval tool
-  CubitVector &start, CubitVector &end,  // begin and end vertex
-  CubitSense orientation_wrt_surface )               // direction wrt the surface
+  CubitVector &start, CubitVector &end,  // begin and end vertex  
+  CubitSense orientation_wrt_surface )  // direction wrt the surface  
 {
 //   static int counter = 0;
   output_id = -1;
   myBBox = NULL;
 
-  surfFacetEvalTool = surf_eval_tool;
+  surfFacetEvalTool = surf_eval_tool;  
+
   CubitStatus stat = get_segments_from_loops( surfFacetEvalTool->loops(), start, end, 
                            myEdgeList, myPointList, orientation_wrt_surface );
   goodCurveData = (stat == CUBIT_SUCCESS) ? CUBIT_TRUE : CUBIT_FALSE;
@@ -54,6 +55,33 @@ CubitStatus CurveFacetEvalTool::initialize(
   return CUBIT_SUCCESS;
 }
 
+CubitStatus CurveFacetEvalTool::initialize(
+  FacetEvalTool *surf_eval_tool,   // the adjacent surface facet eval tool
+  CubitVector &start, // begin vertex  
+  std::vector<CubitVector> &positions )  
+{
+//   static int counter = 0;
+  output_id = -1;
+  myBBox = NULL;
+
+  surfFacetEvalTool = surf_eval_tool;  
+  
+  CubitStatus stat = get_segments_from_positions( positions, start,
+                           myEdgeList, myPointList ); 
+
+  goodCurveData = (stat == CUBIT_SUCCESS) ? CUBIT_TRUE : CUBIT_FALSE;
+  if( !goodCurveData )
+  {
+    PRINT_ERROR( "Unable to initialize Curve Evaluation Tool for Faceted Geometry.\n" );
+    return CUBIT_FAILURE;
+  }
+  
+  interpOrder = surfFacetEvalTool->interp_order();
+  curvSense = find_curv_sense( start );
+  bounding_box();
+  return CUBIT_SUCCESS;
+}
+
 //===========================================================================
 //Function Name: initialize
 //
@@ -62,7 +90,7 @@ CubitStatus CurveFacetEvalTool::initialize(
 //===========================================================================
 CubitStatus CurveFacetEvalTool::initialize(
   FacetEvalTool *surf_eval_tool,             // the adjacent surface facet eval tool
-  CubitPoint *start_pt, CubitPoint *end_pt,  // begin and end points
+  CubitPoint *start_pt, CubitPoint *end_pt,  // begin and end points  
   CubitSense orientation_wrt_surf )          // direction wrt the surface
 {
 //   static int counter = 0;
@@ -105,7 +133,12 @@ CubitStatus CurveFacetEvalTool::initialize(
   myEdgeList = edge_list;
   myPointList = point_list;
   set_length();
-  fix_point_edge_order();
+  
+  CubitStatus status = fix_point_edge_order();
+
+  if( CUBIT_SUCCESS != status )
+    return status;
+
   interpOrder = 0;
   if(surf_eval)
     interpOrder = surf_eval->interp_order();
@@ -169,7 +202,8 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
     //loop over the "loops"
   for (ii=0; ii<facet_loop_list->size() && !done && stat == CUBIT_SUCCESS; ii++) {
       //get the next facet loop
-    facet_loop = facet_loop_list->get_and_step();
+    facet_loop = facet_loop_list->get_and_step();   
+
       // now loop over the edges in that loop
     for (jj=0; jj<facet_loop->size() && !done; jj++) {
         //get the start edge... we will 
@@ -191,7 +225,7 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
         if (loc_pt0.within_tolerance( start, GEOMETRY_RESABS )) {
           startedge->set_flag( 1 );
           edge = startedge;
-          if (mydebug) draw_edge( edge, CUBIT_GREEN );
+          if (mydebug) draw_edge( edge, CUBIT_GREEN );          
           while (!done) {
             edge_list.append( edge );
             point_list.append( pt0 );
@@ -214,7 +248,7 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
               }
               loc_pt0 = pt0->coordinates();
               loc_pt1 = pt1->coordinates();
-              if (mydebug) draw_edge( edge, CUBIT_BLUE );
+              if (mydebug) draw_edge( edge, CUBIT_BLUE );              
                 //if we got back to the startedge without the
                 // other end of an edge getting to the start vertex,
                 // we have a problem....
@@ -401,6 +435,83 @@ CubitStatus CurveFacetEvalTool::get_segments_from_loops(
 }
 
 //===========================================================================
+//Function Name: get_segments_from_positions
+//
+//Member Type:  PRIVATE
+//Description:  extract the facet edges from the facets of the parent surface.
+//              This function is used exclusively for hardlines.  
+//===========================================================================
+CubitStatus CurveFacetEvalTool::get_segments_from_positions(
+  std::vector<CubitVector> &positions,   // postions of points on curve
+  CubitVector &start,                    // begin point
+  DLIList<CubitFacetEdge*> &edge_list,   // return the edges used for this curve
+  DLIList<CubitPoint*> &point_list )     // return the points used for this curve  
+{  
+  DLIList<CubitPoint*> surface_pts;
+  surfFacetEvalTool->get_points( surface_pts );  
+
+  facetLength = 0;
+
+  double smallest_dist = CUBIT_DBL_MAX;
+  CubitPoint *start_pt = NULL;
+  //find the closest point to 'start'
+  for( int k=surface_pts.size(); k--; )
+  {
+    double tmp_dist = surface_pts.get()->coordinates().distance_between_squared( start );
+
+    if( tmp_dist < smallest_dist )
+    {
+      smallest_dist = tmp_dist;
+      start_pt = surface_pts.get();
+    }
+    surface_pts.get_and_step();
+  }
+
+  myPointList.append( start_pt );
+
+  CubitPoint *current_pt = start_pt;
+  CubitPoint *next_pt = NULL;
+  for( int k=1; k<positions.size(); k++ )
+  {
+    CubitVector current_pos = positions[k];
+
+    //find the CubitPoint attached to this point via an edge
+    double smallest_dist = CUBIT_DBL_MAX;    
+    CubitFacetEdge *next_edge;
+
+    DLIList<CubitFacetEdge*> adj_edges;
+    current_pt->edges( adj_edges );
+
+    for( int m=adj_edges.size(); m--; )
+    {
+      CubitFacetEdge *tmp_edge = adj_edges.get_and_step();
+      CubitPoint *other_pt = tmp_edge->other_point( current_pt );
+
+      double tmp_dist = current_pos.distance_between_squared(  other_pt->coordinates() );
+      if( tmp_dist < smallest_dist )
+      {
+        smallest_dist = tmp_dist;
+        next_pt = other_pt;
+        next_edge = tmp_edge;
+      }
+    }
+
+    current_pt = next_pt;
+    
+    facetLength += next_edge->length();
+
+    myEdgeList.append( next_edge );
+    myPointList.append( current_pt );    
+  }
+
+  if( myPointList.size() != positions.size() ||
+      myEdgeList.size() != positions.size()-1 )
+    return CUBIT_FAILURE;
+
+  return CUBIT_SUCCESS;
+}
+
+//===========================================================================
 //Function Name: find_curv_sense
 //
 //Member Type:  PRIVATE
@@ -521,6 +632,7 @@ CubitStatus CurveFacetEvalTool::position_from_fraction(
   CubitVector eval_location;
   myEdgeList.reset();
 
+  myPointList.reset();
   pt0 = myPointList.get();
   if (fraction <= 0.0) {
     edge = myEdgeList.get_and_step();
@@ -722,6 +834,7 @@ CubitStatus CurveFacetEvalTool::closest_point(CubitVector &this_point,
   double distance2, closest_distance2; //  distance squared
   CubitFacetEdge *edge, *best_edge = NULL;
 
+  myEdgeList.reset();
   closest_distance2 = CUBIT_DBL_MAX;
   for ( i = myEdgeList.size(); i > 0; i-- ) {  
     edge = myEdgeList.get_and_step();
@@ -1803,7 +1916,8 @@ CubitStatus CurveFacetEvalTool::save(
 
     // write "curveSense" and "goodCurveData"
   cio.Write(reinterpret_cast<int32*>(&sense), 1);
-  cio.Write(reinterpret_cast<int32*>(&goodCurveData), 1);
+  int32 is_good = goodCurveData ? 1 : 0;
+  cio.Write(&is_good, 1);
  
     // write "facetLength"
   cio.Write( &facetLength, 1 );
@@ -1936,13 +2050,16 @@ CubitStatus CurveFacetEvalTool::restore(FILE *fp,
   return CUBIT_SUCCESS;
 }
 
-void CurveFacetEvalTool::fix_point_edge_order()
+CubitStatus CurveFacetEvalTool::fix_point_edge_order()
 {
   CubitFacetEdge* this_edge;
   CubitFacetEdge* next_edge;
   CubitPoint *this_pt1;
   CubitPoint *next_pt0, *next_pt1;
   
+  if( myEdgeList.size() == 0 )
+    return CUBIT_FAILURE;
+
   this_edge = myEdgeList.get_and_step();
   int ii;
   for( ii = myEdgeList.size() - 1; ii > 0; ii-- )
@@ -1988,6 +2105,8 @@ void CurveFacetEvalTool::fix_point_edge_order()
       
     }
   }
+
+  return CUBIT_SUCCESS;
 }
 //===========================================================================
 //Function Name: debug_draw_facet_edges

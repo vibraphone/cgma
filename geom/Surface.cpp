@@ -51,21 +51,6 @@ Surface::Surface()
 Surface::~Surface() 
 {}
 
-//-------------------------------------------------------------------------
-// Purpose       : Get type of TopologyEntity this GeometryEntity
-//                 should be attached to.
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 06/14/01
-//-------------------------------------------------------------------------
-const type_info& Surface::topology_entity_type_info() const
-{ return typeid(RefFace); }
-
-
-
 CubitStatus Surface::closest_points(DLIList<CubitVector *> &location_list,
                                     DLIList<CubitVector *> *closest_location_list,
                                     DLIList<CubitVector *> *unit_normal_list,
@@ -138,11 +123,10 @@ void Surface::are_positions_on( DLIList<CubitVector *> &test_position_list,
   }
 }
 
-CubitStatus Surface::evaluate( double u, double v,
-                               CubitVector *position,                                   
-                               CubitVector *normal,
-                               CubitVector *curvature1,
-                               CubitVector *curvature2 )
+
+CubitStatus Surface::closest_point_along_vector(CubitVector& from_point, 
+                                         CubitVector& along_vector,
+                                         CubitVector& point_on_surface)
 {
   return CUBIT_FAILURE;
 }

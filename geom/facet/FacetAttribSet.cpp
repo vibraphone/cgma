@@ -15,14 +15,14 @@
 #include "CubitSimpleAttrib.hpp"
 #include "CubitFileIOWrapper.hpp"
 
-void FacetAttribSet::append_attribute( CubitSimpleAttrib* csa )
+void FacetAttribSet::append_attribute( const CubitSimpleAttrib& csa )
 {
   FacetAttrib* new_attrib = new FacetAttrib(csa);
   new_attrib->listNext = listHead;
   listHead = new_attrib;
 }
 
-void FacetAttribSet::remove_attribute( CubitSimpleAttrib* csa )
+void FacetAttribSet::remove_attribute( const CubitSimpleAttrib& csa )
 {
   if( !listHead )
     return;
@@ -58,7 +58,7 @@ void FacetAttribSet::remove_all_attributes()
   }
 }
 
-CubitStatus FacetAttribSet::get_attributes( DLIList<CubitSimpleAttrib*>& list ) const
+CubitStatus FacetAttribSet::get_attributes( DLIList<CubitSimpleAttrib>& list ) const
 {
   for( FacetAttrib* attrib = listHead; attrib; attrib = attrib->listNext )
     list.append( attrib->get_CSA() );
@@ -66,7 +66,7 @@ CubitStatus FacetAttribSet::get_attributes( DLIList<CubitSimpleAttrib*>& list ) 
 }
 
 CubitStatus FacetAttribSet::get_attributes( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& list ) const
+                                    DLIList<CubitSimpleAttrib>& list ) const
 {
   for( FacetAttrib* attrib = listHead; attrib; attrib = attrib->listNext )
     if( attrib->name() == name )

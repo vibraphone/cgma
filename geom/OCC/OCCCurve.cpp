@@ -181,6 +181,7 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
         point->remove_curve(this);
     }
   }
+ 
   if(myTopoDSEdge)
     myTopoDSEdge->Nullify();
   *myTopoDSEdge = edge;
@@ -198,7 +199,7 @@ void OCCCurve::set_TopoDS_Edge(TopoDS_Edge edge)
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-void OCCCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCCurve::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { OCCAttribSet::append_attribute(csa, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
@@ -212,7 +213,7 @@ void OCCCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-void OCCCurve::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCCurve::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { OCCAttribSet::remove_attribute(csa, *myTopoDSEdge); }
 
 //-------------------------------------------------------------------------
@@ -228,7 +229,9 @@ void OCCCurve::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
 void OCCCurve::remove_all_simple_attribute_virt()
-  { OCCAttribSet::remove_attribute(NULL, *myTopoDSEdge); }
+{
+  OCCAttribSet::remove_attribute(CubitSimpleAttrib(), *myTopoDSEdge);
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to get the  
@@ -241,12 +244,12 @@ void OCCCurve::remove_all_simple_attribute_virt()
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-CubitStatus OCCCurve::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus OCCCurve::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                csa_list)
   { return OCCAttribSet::get_attributes(*myTopoDSEdge, csa_list); }
   
 CubitStatus OCCCurve::get_simple_attribute( const CubitString& name,
-                                      DLIList<CubitSimpleAttrib*>& csa_list)
+                                      DLIList<CubitSimpleAttrib>& csa_list)
   { return OCCAttribSet::get_attributes( name, *myTopoDSEdge, csa_list ); }
 
 //-------------------------------------------------------------------------
@@ -1204,12 +1207,13 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
       for (Ex.Init(new_shape,TopAbs_EDGE); Ex.More(); Ex.Next())
       {
         new_edge = TopoDS::Edge(Ex.Current());
-        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge,
+                                                                   CUBIT_TRUE );
       }
       for(Ex.Init(new_shape,TopAbs_VERTEX);Ex.More(); Ex.Next())
       {
         new_point = TopoDS::Vertex(Ex.Current());
-        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point,CUBIT_TRUE));
+        normal_proj_points.append(OCCQueryEngine::instance()->populate_topology_bridge(new_point, CUBIT_TRUE));
       } 
       return (Curve*) NULL;
    }
@@ -1310,11 +1314,21 @@ Curve* OCCCurve::project_curve(Surface* face_ptr,
         Geom_BezierCurve BezierCurve(points);
         Handle(Geom_Curve) curve_ptr(&BezierCurve);
         TopoDS_Edge new_edge = BRepBuilderAPI_MakeEdge(curve_ptr);
-        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge, CUBIT_TRUE);
+        return OCCQueryEngine::instance()->populate_topology_bridge(new_edge);
       }
    }
    return (Curve*) NULL;
 }
+CubitStatus OCCCurve::get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots, // There should be order+cntrl_pts.size()-2 knots
+                                         bool &spline_is_reversed
+                                       ) const
+  {
+	  return CUBIT_FAILURE;
+  }
 
 // ********** END PRIVATE FUNCTIONS        **********
 

@@ -75,12 +75,12 @@ class CompositeCurve : public Curve, public TBOwner
     
     /**************** Methods from TopologyBridge *******************/
     
-    void append_simple_attribute_virt( CubitSimpleAttrib* csa );
-    void remove_simple_attribute_virt(CubitSimpleAttrib* csa );
+    void append_simple_attribute_virt( const CubitSimpleAttrib& csa );
+    void remove_simple_attribute_virt(const CubitSimpleAttrib& csa );
     void remove_all_simple_attribute_virt();
-    CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list );
+    CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>& csa_list );
     CubitStatus get_simple_attribute( const CubitString& name,
-                                  DLIList<CubitSimpleAttrib*>& attrib_list );
+                                  DLIList<CubitSimpleAttrib>& attrib_list );
     GeometryQueryEngine* get_geometry_query_engine() const;
     
     void get_parents_virt( DLIList<TopologyBridge*>& parents );
@@ -165,12 +165,13 @@ class CompositeCurve : public Curve, public TBOwner
   //O- the degree of this spline
   //O- the control points
   //O- If rational, weight for each control point
-  //O- the knots
+  //O- whether underlying spline is reversed
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots
+                                         DLIList<double> &knots,
+                                         bool &spline_is_reversed
                                        ) const;
     //R CubitStatus
     //O- center - ellipse center point

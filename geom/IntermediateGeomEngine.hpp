@@ -35,10 +35,8 @@ public:
   virtual void clean_out_deactivated_geometry() = 0;
 
   virtual void remove_attributes( DLIList<TopologyBridge*> &bridge_list ) = 0;
-  virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                        DLIList<Body*> &old_bodies)=0;
+  virtual void attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                          DLIList<Body*> &old_bodies)=0;
   
   virtual void remove_attributes_from_unmodifed_virtual(DLIList<TopologyBridge*> &bridges) = 0;
   virtual void remove_modified(DLIList<Surface*> &all_surfs,

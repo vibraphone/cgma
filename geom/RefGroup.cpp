@@ -12,6 +12,7 @@
 #include "CastTo.hpp"
 #include "GeometryQueryTool.hpp"
 #include "RefEntityFactory.hpp"
+#include "AppUtil.hpp"
 
 RefGroup::RefGroup( const char* name, int id)
 {
@@ -47,7 +48,7 @@ RefGroup::RefGroup (DLIList<RefEntity*>& entity_list)
   entityId = RefEntityFactory::instance()->next_ref_group_id();
 
     // Notify Model about the creation of this object
-  CubitObserver::notify_static_observers(this, MODEL_ENTITY_CONSTRUCTED) ;
+  AppUtil::instance()->send_event(this, MODEL_ENTITY_CONSTRUCTED) ;
 
   // assign default names
   assign_default_name();
@@ -81,7 +82,7 @@ CubitStatus RefGroup::add_ref_entity(RefEntity *ref_entity, bool emit_event)
     register_observable(ref_entity);
     status = CUBIT_SUCCESS;
     if (emit_event)
-      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
+      AppUtil::instance()->send_event(this, GROUP_MODIFIED);
   }
   return status;
 }
@@ -103,27 +104,25 @@ CubitStatus RefGroup::add_ref_entity(DLIList<RefEntity*>& entity_list,
   }
 
   if (emit_event && status == CUBIT_SUCCESS)
-      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
+      AppUtil::instance()->send_event(this, GROUP_MODIFIED);
 
   return status;
 }
 
 CubitStatus RefGroup::remove_ref_entity(RefEntity *entity,
-                                        const CubitBoolean from_observable,
                                         bool emit_event)
 {
   CubitStatus status = CUBIT_FAILURE;
-  if (entityList.remove(entity) != NULL) {
-    unregister_observable(entity, from_observable);
+  if (entityList.remove(entity)) {
+    unregister_observable(entity);
     status = CUBIT_SUCCESS;
     if (emit_event)
-      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
+      AppUtil::instance()->send_event(this, GROUP_MODIFIED);
   }
   return status;
 }
 
 CubitStatus RefGroup::remove_ref_entity(DLIList<RefEntity*> &entity_list,
-                                        const CubitBoolean from_observable, 
                                         bool emit_event)
 {
   
@@ -132,14 +131,14 @@ CubitStatus RefGroup::remove_ref_entity(DLIList<RefEntity*> &entity_list,
   CubitStatus status = CUBIT_FAILURE;
   for (i = entity_list.size(); i > 0; i--) {
     entity = entity_list.get_and_step();
-    if (entityList.remove(entity) != NULL) {
-      unregister_observable(entity, from_observable);
+    if (entityList.remove(entity)) {
+      unregister_observable(entity);
       status = CUBIT_SUCCESS;
     }
   }
 
   if (emit_event && status == CUBIT_SUCCESS)
-      CubitObserver::notify_static_observers(this, GROUP_MODIFIED);
+      AppUtil::instance()->send_event(this, GROUP_MODIFIED);
     
   return status;
 }
@@ -158,6 +157,38 @@ void RefGroup::get_child_ref_entities(DLIList<RefEntity*>& entity_list)
 {
   entityList.reset();
   entity_list.merge_unique(entityList, CUBIT_TRUE );
+}
+
+int RefGroup::get_num_child_ref_entities_by_type(const type_info &entity_type)
+{
+  int count = 0;
+  int size = entityList.size();
+  for(int i=0; i<size; i++)
+  {
+    RefEntity *cur_ent = entityList[i];
+    if(cur_ent->entity_type_info() == entity_type)
+      count++;
+  }
+  return count;
+}
+
+RefEntity* RefGroup::get_child_ref_entity_by_index(const type_info& entity_type, int index)
+{
+  RefEntity *entity = NULL;
+  int size = entityList.size();
+  int type_index = 0;
+  for(int i=0; i<size && !entity; i++)
+  {
+    RefEntity *cur_ent = entityList[i];
+    if(cur_ent->entity_type_info() == entity_type)
+    {
+      if(type_index == index)
+        entity = cur_ent;
+      else
+        type_index++;
+    }
+  }
+  return entity;
 }
 
 void RefGroup::get_child_entities(DLIList<CubitEntity*>& cub_entity_list)
@@ -422,7 +453,7 @@ CubitStatus RefGroup::delete_group(RefGroup *group_ptr, CubitBoolean propagate)
    // This function will delete the corresponding group from the Model
    // If propagate is CUBIT_TRUE, the contained groups are deleted also.
 
-   group_ptr->notify_all_observers( MODEL_ENTITY_DESTRUCTED );
+   AppUtil::instance()->send_event(group_ptr, MODEL_ENTITY_DESTRUCTED );
 
    if( propagate )
    {
@@ -569,8 +600,7 @@ void RefGroup::get_groups_within( RefGroup* ref_group_ptr,
 }
 
 CubitStatus RefGroup::notify_observer(CubitObservable *observable,
-                                      const CubitEvent &observer_event,
-                                      CubitBoolean from_observable)
+                                      const CubitEvent &observer_event)
 {
   RefEntity *entity = CAST_TO(observable, RefEntity);
   if (entity != NULL) {
@@ -582,13 +612,13 @@ CubitStatus RefGroup::notify_observer(CubitObservable *observable,
     }
     else if (event == MODEL_ENTITY_DESTRUCTED ||
              event == ENTITY_DESTRUCTED) {
-      remove_ref_entity(entity, from_observable);
+      remove_ref_entity(entity);
       return CUBIT_SUCCESS;
     }
     else if ( event == ENTITIES_MERGED )
     {
         // Out with the old...
-      remove_ref_entity(entity, from_observable);
+      remove_ref_entity(entity);
 
         // ...in with the new.
       MergeEvent *merge_event = (MergeEvent *) &observer_event;

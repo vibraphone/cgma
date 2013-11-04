@@ -29,17 +29,10 @@ private:
     //- the ids of the sub entities making up this composite
 
 public:
-  CACompositeVG(RefEntity* );
-
-  CACompositeVG(RefEntity*, CubitSimpleAttrib*);
+  CACompositeVG(RefEntity*, const CubitSimpleAttrib&);
     //- construct a CACVG from a simple attribute
 
   virtual ~CACompositeVG() {};
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const { return typeid(*this);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
   
@@ -47,9 +40,9 @@ public:
 
   CubitStatus reset();
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
   
-  CubitSimpleAttrib* cubit_simple_attrib(CubitString);
+  CubitSimpleAttrib cubit_simple_attrib(CubitString);
   
   int int_attrib_type() {return CA_COMPOSITE_VG;}
     //- returns the enumerated attribute type
@@ -63,6 +56,6 @@ public:
     //- any child entities
 };
 
-CubitAttrib* CACompositeVG_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CACompositeVG_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif

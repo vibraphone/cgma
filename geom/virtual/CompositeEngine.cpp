@@ -16,6 +16,7 @@
 #include "CompositeShell.hpp"
 #include "CompositeLump.hpp"
 #include "CompositeBody.hpp"
+#include "GfxPreview.hpp"
 
 #include "PartitionPoint.hpp"
 #include "SegmentedCurve.hpp"
@@ -27,6 +28,7 @@
 #include "LumpSM.hpp"
 
 #include "GeometryQueryTool.hpp"
+#include "AppUtil.hpp"
 
 typedef VGLoopTool<CompositeSurface,
                    CompositeLoop,
@@ -69,8 +71,8 @@ void CompositeEngine::remove_imprint_attributes_after_modify( DLIList<BodySM*> &
 {
   int k, m, q, w, g, b, s, t;
   CubitString name("IMPRINT_PREEXISTING");
-  DLIList<CubitString*> string_list;
-  string_list.append( &name );
+  std::vector<CubitString> string_list;
+  string_list.push_back( name );
   CubitSimpleAttrib geom_attrib( &string_list, 0, 0 );
 
   DLIList<BodySM*> all_sms = old_sms;
@@ -110,7 +112,7 @@ void CompositeEngine::remove_imprint_attributes_after_modify( DLIList<BodySM*> &
               for(s=curves.size(); s--;)
               {
                 TopologyBridge *cur_curve = curves.get_and_step();
-                DLIList<CubitSimpleAttrib*> list;
+                DLIList<CubitSimpleAttrib> list;
                 cur_curve->get_simple_attribute("IMPRINT_PREEXISTING",list);
                 if(list.size() != 0)
                   cur_curve->remove_simple_attribute_virt(list.get());
@@ -144,8 +146,8 @@ void CompositeEngine::push_named_attributes_to_curves_and_points
 {
   int i/*, k, m, q, w, g, b, s, t*/;
   CubitString name(name_in);
-  DLIList<CubitString*> string_list;
-  string_list.append( &name );
+  std::vector<CubitString> string_list;
+  string_list.push_back( name );
   CubitSimpleAttrib attrib( &string_list, 0, 0 );
 
   for(i=in_list.size(); i>0; i--)
@@ -189,14 +191,14 @@ void CompositeEngine::push_named_attributes_to_curves_and_points
     }
     else if(dynamic_cast<Curve*>(tb))
     {
-      append_attrib( tb, &attrib );
+      append_attrib( tb, attrib );
       DLIList<TopologyBridge*> points;
       tb->get_children_virt(points);
       push_named_attributes_to_curves_and_points(points, name_in);
     }
     else if(dynamic_cast<TBPoint*>(tb))
     {
-      append_attrib( tb, &attrib );
+      append_attrib( tb, attrib );
     }
   }
 
@@ -318,10 +320,8 @@ void CompositeEngine::get_all_curves_and_points(DLIList<TopologyBridge*> &tb_lis
 
 // Function to apply/remove COMPOSITE_GEOM attributes as necessary based
 // on imprinting.
-void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                        DLIList<Body*> &old_bodies)
+void CompositeEngine::attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                                 DLIList<Body*> &old_bodies)
 {
   DLIList<TopologyBridge*> all_bridges = tb_list;
   int i, j, k;
@@ -351,7 +351,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   {
     Curve *cur_curve = all_curves.get_and_step();
     crv_tree->add(cur_curve);
-    DLIList<CubitSimpleAttrib*> list;
+    DLIList<CubitSimpleAttrib> list;
     cur_curve->get_simple_attribute("COMPOSITE_GEOM",list);
     if(list.size() > 0)
       all_curves_with_composite_att.append(cur_curve);
@@ -360,13 +360,13 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
   {
     TBPoint *cur_point = all_points.get_and_step();
     pt_tree->add(cur_point);
-    DLIList<CubitSimpleAttrib*> list;
+    DLIList<CubitSimpleAttrib> list;
     cur_point->get_simple_attribute("COMPOSITE_GEOM",list);
     if(list.size() > 0)
       all_points_with_composite_att.append(cur_point);
   }
 
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   while(all_points_with_composite_att.size())
   {
     DLIList<TBPoint*> other_pts;
@@ -493,7 +493,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
               // att on it.
               list.clean_out();
               coincident_pts_with_composite_att.get()->get_simple_attribute("COMPOSITE_GEOM",list);
-              tmp_pt->append_simple_attribute_virt(new CubitSimpleAttrib(list.get()));
+              tmp_pt->append_simple_attribute_virt(list.get());
             }
           }
         }
@@ -654,7 +654,7 @@ void CompositeEngine::attribute_after_imprinting( DLIList<TopologyBridge*> &new_
               // att on it.
               list.clean_out();
               coincident_crvs_with_composite_att.get()->get_simple_attribute("COMPOSITE_GEOM",list);
-              tmp_crv->append_simple_attribute_virt(new CubitSimpleAttrib(list.get()));
+              tmp_crv->append_simple_attribute_virt(list.get());
             }
           }
         }
@@ -717,7 +717,7 @@ void CompositeEngine::process_curves_after_imprint(Curve *att_cur,
                                                    Curve *other_cur,
                                                    DLIList<BodySM*> &new_sms)
 {
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
 
   if(att_cur == other_cur)
   {
@@ -743,7 +743,7 @@ void CompositeEngine::process_curves_after_imprint(Curve *att_cur,
       // so we don't see a resulting imprinted bridge from the hidden bridge.
       list.clean_out();
       att_cur->get_simple_attribute("COMPOSITE_GEOM",list);
-      other_cur->append_simple_attribute_virt(new CubitSimpleAttrib(list.get()));
+      other_cur->append_simple_attribute_virt(list.get());
     }
     else
     {
@@ -788,7 +788,7 @@ void CompositeEngine::process_points_after_imprint(TBPoint *att_pt,
                                                    DLIList<BodySM*> &new_sms)
 {
   int i;
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
 
   if(att_pt == other_pt)
   {
@@ -849,7 +849,7 @@ void CompositeEngine::process_points_after_imprint(TBPoint *att_pt,
       {
         list.clean_out();
         att_pt->get_simple_attribute("COMPOSITE_GEOM",list);
-        other_pt->append_simple_attribute_virt(new CubitSimpleAttrib(list.get()));
+        other_pt->append_simple_attribute_virt(list.get());
       }
     }
     else
@@ -1192,7 +1192,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
       CompositePoint *cp = dynamic_cast<CompositePoint*>(pt);
       if(cp)
         pt = cp->get_point();
-      DLIList<CubitSimpleAttrib*> attribs;
+      DLIList<CubitSimpleAttrib> attribs;
       pt->get_simple_attribute("COMPOSITE_GEOM", attribs);
       if(attribs.size() > 0)
       {
@@ -1202,7 +1202,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
         for(j=tmp_curves.size(); j>0; j--)
         {
           TopologyBridge *crv = tmp_curves.get_and_step();
-          DLIList<CubitSimpleAttrib*> attribs;
+          DLIList<CubitSimpleAttrib> attribs;
           crv->get_simple_attribute("COMPOSITE_GEOM", attribs);
           if(attribs.size() == 0)
             num_curves++;
@@ -1211,7 +1211,7 @@ void CompositeEngine::remove_modified(DLIList<Surface*> &surfaces,
         {
           for(j=attribs.size(); j>0; j--)
           {
-            CubitSimpleAttrib *csa = attribs.get_and_step();
+            const CubitSimpleAttrib &csa = attribs.get_and_step();
             pt->remove_simple_attribute_virt(csa);
           }
         }
@@ -1696,10 +1696,10 @@ Curve* CompositeEngine::remove_composite( CompositeCurve* composite )
   // we must notify the graphics of the modify from "real" to virtual -- KGM
   // I realize that this is not where the other notifies are completed but there
   // is no knowledge of the change later on. 
-  CubitObservable* observer = dynamic_cast<CubitObservable*>(curve->topology_entity());
-  if (observer)
+  CubitObservable* observable = dynamic_cast<CubitObservable*>(curve->topology_entity());
+  if (observable)
   {
-    observer->notify_all_observers(GEOMETRY_MODIFIED);
+      AppUtil::instance()->send_event(observable, GEOMETRY_MODIFIED);
   }
 
   return curve;
@@ -4756,27 +4756,20 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
       TopologyBridge *tb = dynamic_cast<TopologyBridge*>(s);
       if(ge && tb)
       {
-        DLIList<CubitSimpleAttrib*> list;
+        DLIList<CubitSimpleAttrib> list;
         ge->get_simple_attribute("TOPOLOGY_BRIDGE_ID",list);
         list.reset();
         for(int j = list.size(); j--;)
         {
-          CubitSimpleAttrib* attrib = list.get_and_step();
-          attrib->int_data_list()->reset();
-          assert(attrib->int_data_list()->size() == 1);
-          int id = *(attrib->int_data_list()->get());
+          const CubitSimpleAttrib& attrib = list.get_and_step();
+          assert(attrib.int_data_list().size() == 1);
+          int id = attrib.int_data_list()[0];
           ge->set_saved_id(id);
           
-          DLIList<CubitString*> *cs_list = attrib->string_data_list();
-          DLIList<CubitString*> names;
-          
-          cs_list->reset();
-          cs_list->step();
-          for( int k=0; k<cs_list->size()-1; k++ )
-          {
-            CubitString *tmp_string = cs_list->get_and_step();            
-            names.append( tmp_string );
-          }
+          std::vector<CubitString> names = attrib.string_data_list();
+          if(!names.empty())
+            names.erase(names.begin());
+
           ge->set_saved_names( names );
 
           tb->remove_simple_attribute_virt(attrib);
@@ -4793,27 +4786,19 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
       TopologyBridge *tb = dynamic_cast<TopologyBridge*>(c);
       if(ge && tb)
       {
-        DLIList<CubitSimpleAttrib*> list;
+        DLIList<CubitSimpleAttrib> list;
         ge->get_simple_attribute("TOPOLOGY_BRIDGE_ID",list);
         list.reset();
         for(int j = list.size(); j--;)
         {
-          CubitSimpleAttrib* attrib = list.get_and_step();
-          attrib->int_data_list()->reset();
-          assert(attrib->int_data_list()->size() == 1);
-          int id = *(attrib->int_data_list()->get());
+          const CubitSimpleAttrib& attrib = list.get_and_step();
+          assert(attrib.int_data_list().size() == 1);
+          int id = attrib.int_data_list()[0];
           ge->set_saved_id(id);
           
-          DLIList<CubitString*> *cs_list = attrib->string_data_list();
-          DLIList<CubitString*> names;          
-
-          cs_list->reset();
-          cs_list->step();
-          for( int k=0; k<cs_list->size()-1; k++ )
-          {
-            CubitString *tmp_string = cs_list->get_and_step();            
-            names.append( tmp_string );
-          }
+          std::vector<CubitString> names = attrib.string_data_list();
+          if(!names.empty())
+            names.erase(names.begin());
           ge->set_saved_names( names );
 
           tb->remove_simple_attribute_virt(attrib);
@@ -4825,7 +4810,63 @@ CubitStatus CompositeEngine::import_geometry( DLIList<TopologyBridge*>& imported
     if( !create_composites( bodies   ) ) result = CUBIT_FAILURE;
     if( !create_composites( surfaces ) ) result = CUBIT_FAILURE;
     if( !create_composites( curves   ) ) result = CUBIT_FAILURE;
-    if( !create_composites( points   ) ) result = CUBIT_FAILURE;
+    if( !create_composites( points   ) ) result = CUBIT_FAILURE;   
+    
+    
+    for( i = bodies.size(); i--; )
+    {
+      BodySM* ptr = bodies.get_and_step();
+      
+      temp_curves.clean_out();
+      temp_surfaces.clean_out();
+      
+      ptr->curves( temp_curves );
+      ptr->surfaces( temp_surfaces );      
+   
+      //for each curve or surface, if it is not a composite,
+      //and has a COMPOSIT_DATA_ATTRIB_NAME, 
+      //which is an ENTITY_NAME, convert it into an ENTITY_NAME attribute
+
+      for( int k=temp_curves.size(); k--; )
+      {
+        Curve *tmp_curve =  temp_curves.get_and_step();
+
+        DLIList<CubitSimpleAttrib> list;
+        tmp_curve->get_simple_attribute("COMPOSITE_ATTRIB",list);
+        for( int j = list.size(); j--; )
+        {
+          CubitSimpleAttrib tmp_attrib = list.get_and_step();
+          std::vector<CubitString> string_list = tmp_attrib.string_data_list();
+          if( string_list[1] == "ENTITY_NAME" && !dynamic_cast<CompositeCurve*>( tmp_curve ) )
+          {         
+            //convert the attribute into an ENTITY_NAME attribute                        
+            tmp_curve->remove_simple_attribute_virt( tmp_attrib );
+            tmp_attrib.string_data_list().erase( tmp_attrib.string_data_list().begin() );            
+            tmp_curve->append_simple_attribute_virt( tmp_attrib );   
+          }
+        }                
+      }
+      
+      for( int k=temp_surfaces.size(); k--; )
+      {
+        Surface *tmp_surf = temp_surfaces.get_and_step();
+
+        DLIList<CubitSimpleAttrib> list;
+        tmp_surf->get_simple_attribute("COMPOSITE_ATTRIB",list);
+        for( int j = list.size(); j--; )
+        {
+          CubitSimpleAttrib tmp_attrib = list.get_and_step();
+          std::vector<CubitString> string_list = tmp_attrib.string_data_list();
+          if( string_list[1] == "ENTITY_NAME" && !dynamic_cast<CompositeSurface*>( tmp_surf ) )
+          {       
+            //convert the attribute into an ENTITY_NAME attribute            
+            tmp_surf->remove_simple_attribute_virt( tmp_attrib );
+            tmp_attrib.string_data_list().erase( tmp_attrib.string_data_list().begin() );
+            tmp_surf->append_simple_attribute_virt( tmp_attrib );
+          }
+        }                
+      }
+    }   
   }
 
   for ( i = bodies.size(); i--; )
@@ -5095,15 +5136,13 @@ void CompositeEngine::strip_attributes( TopologyBridge* bridge )
                                        "TOPOLOGY_BRIDGE_ID",
                                        0 };
   
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   for( int i = 0; attrib_names[i]; i++ )
   {
     bridge->get_simple_attribute( attrib_names[i], list );
     while( list.size() )
     {
-      CubitSimpleAttrib* csa = list.pop();
-      bridge->remove_simple_attribute_virt(csa);
-      delete csa;
+      bridge->remove_simple_attribute_virt(list.pop());
     }
   }
 }
@@ -5118,19 +5157,16 @@ void CompositeEngine::strip_attributes( TopologyBridge* bridge )
 //
 // Creation Date : 06/18/02
 //-------------------------------------------------------------------------
-CubitSimpleAttrib*
+CubitSimpleAttrib
 CompositeEngine::find_attribute_by_name( TopologyBridge* bridge, 
                                          const CubitString name )
 {
-  CubitSimpleAttrib* result = 0;
-  DLIList<CubitSimpleAttrib*> attrib_list;
+  CubitSimpleAttrib result;
+  DLIList<CubitSimpleAttrib> attrib_list;
   bridge->get_simple_attribute( name, attrib_list );
   attrib_list.reset();
   if ( attrib_list.size() )
     result = attrib_list.extract();
-    
-  while( attrib_list.size() )
-    delete attrib_list.pop();
     
   return result;
 }  
@@ -5155,8 +5191,8 @@ CubitStatus CompositeEngine::create_composites( DLIList<Curve*>& list )
     ccurve = dynamic_cast<CompositeCurve*>(curve->owner());
     if( ccurve )
       curve = ccurve;
-    CubitSimpleAttrib* attrib = find_attribute_by_name( curve, "COMPOSITE_GEOM" );
-    if( attrib )
+    CubitSimpleAttrib attrib = find_attribute_by_name( curve, "COMPOSITE_GEOM" );
+    if( !attrib.isEmpty() )
     {
       curve->remove_simple_attribute_virt( attrib );
       
@@ -5209,8 +5245,8 @@ CubitStatus CompositeEngine::create_composites( DLIList<Curve*>& list )
         for(int j=0; j<surf->num_surfs(); j++)
         {
           Surface *srf = surf->get_surface(j);
-          CubitSimpleAttrib* ignore_attrib = find_attribute_by_name( srf, "COMPOSITE_IGNORE" );
-          if( ignore_attrib )
+          CubitSimpleAttrib ignore_attrib = find_attribute_by_name( srf, "COMPOSITE_IGNORE" );
+          if( !ignore_attrib.isEmpty() )
           {
             surf->ignore_surface(srf);
             srf->remove_simple_attribute_virt( ignore_attrib );
@@ -5246,8 +5282,8 @@ CubitStatus CompositeEngine::create_composites( DLIList<TBPoint*>& list )
     cpoint = dynamic_cast<CompositePoint*>(point->owner());
     if( cpoint )
       point = cpoint;
-    CubitSimpleAttrib* attrib = find_attribute_by_name( point, "COMPOSITE_GEOM" );
-    if( attrib )
+    CubitSimpleAttrib attrib = find_attribute_by_name( point, "COMPOSITE_GEOM" );
+    if( !attrib.isEmpty() )
     {
       point->remove_simple_attribute_virt( attrib );
 /*      
@@ -5297,8 +5333,8 @@ CubitStatus CompositeEngine::create_composites( DLIList<TBPoint*>& list )
     cpoint = dynamic_cast<CompositePoint*>(point->owner());
     if( cpoint )
       point = cpoint;
-    CubitSimpleAttrib* attrib = find_attribute_by_name( point, "COMPOSITE_NULLGEOM" );
-    if( attrib )
+    CubitSimpleAttrib attrib = find_attribute_by_name( point, "COMPOSITE_NULLGEOM" );
+    if( !attrib.isEmpty() )
     {
       point->remove_simple_attribute_virt( attrib );
    
@@ -5442,23 +5478,15 @@ CubitStatus CompositeEngine::export_geometry( DLIList<TopologyBridge*>& list )
        TopologyBridge *tb = dynamic_cast<TopologyBridge*>(s);
        if(ge && tb)
        {
-         DLIList<CubitString*> string_list;
-         string_list.append( new CubitString("TOPOLOGY_BRIDGE_ID") );
-         
-         DLIList<int> int_list;
-         int_list.append( ge->get_saved_id() );
+         std::vector<int> int_list;
+         int_list.push_back(ge->get_saved_id() );
 
          //save out the names
-         DLIList<CubitString*> names;
+         std::vector<CubitString> names;
          ge->get_saved_names( names );
-         for( int i=names.size(); i--; )               
-           string_list.append( new CubitString( names.get_and_step()->c_str() ) );                      
-
-         CubitSimpleAttrib geom_attrib( &string_list, 0, &int_list );
-         append_attrib(tb, &geom_attrib);
-
-         for( int i=names.size(); i--; )               
-           delete string_list.get_and_step();
+         names.insert(names.begin(), CubitString("TOPOLOGY_BRIDGE_ID"));
+         CubitSimpleAttrib geom_attrib( &names, 0, &int_list );
+         append_attrib(tb, geom_attrib);
        }
      }
    }
@@ -5475,23 +5503,16 @@ CubitStatus CompositeEngine::export_geometry( DLIList<TopologyBridge*>& list )
        TopologyBridge *tb = dynamic_cast<TopologyBridge*>(c);
        if(ge && tb)
        {
-         DLIList<CubitString*> string_list;
-         string_list.append( new CubitString("TOPOLOGY_BRIDGE_ID") );
-         
-         DLIList<int> int_list;
-         int_list.append( ge->get_saved_id() );
+         std::vector<int> int_list;
+         int_list.push_back( ge->get_saved_id() );
 
          //save out the names
-         DLIList<CubitString*> names;
+         std::vector<CubitString> names;
          ge->get_saved_names( names );
-         for( int i=names.size(); i--; )               
-           string_list.append( new CubitString( names.get_and_step()->c_str() ) );                      
+         names.insert(names.begin(), CubitString("TOPOLOGY_BRIDGE_ID"));
 
-         CubitSimpleAttrib geom_attrib( &string_list, 0, &int_list );
-         append_attrib(tb, &geom_attrib);
-
-         for( int i=names.size(); i--; )               
-           delete string_list.get_and_step();
+         CubitSimpleAttrib geom_attrib( &names, 0, &int_list );
+         append_attrib(tb, geom_attrib);
        }
      }
    }
@@ -5538,14 +5559,13 @@ CubitStatus CompositeEngine::export_geometry( DLIList<TopologyBridge*>& list )
 
 
 void CompositeEngine::append_attrib( TopologyBridge* tb, 
-                                     CubitSimpleAttrib* csa )
+                                     const CubitSimpleAttrib& csa )
 {
-  CubitSimpleAttrib* old = find_attribute_by_name( tb,
-                           csa->character_type() );
-  if( old )
+  CubitSimpleAttrib old = find_attribute_by_name( tb,
+                           csa.character_type() );
+  if( !old.isEmpty() )
   {
     tb->remove_simple_attribute_virt( old );
-    delete old;
   }
   tb->append_simple_attribute_virt( csa );
 }
@@ -5558,14 +5578,14 @@ CubitStatus CompositeEngine::save( CompositePoint* point )
   if( points.size() > 1 )
   {
     CubitString name("COMPOSITE_STITCH");
-    DLIList<CubitString*> string_list;
-    string_list.append(&name);
+    std::vector<CubitString> string_list;
+    string_list.push_back(name);
     CubitSimpleAttrib geom_attrib( &string_list, 0, 0 );
     int uid = TDUniqueId::generate_unique_id();
-    geom_attrib.int_data_list()->append( &uid );
+    geom_attrib.int_data_list().push_back( uid );
     
     for( int i = points.size(); i--; )
-      append_attrib( points.step_and_get()->get_point(), &geom_attrib );
+      append_attrib( points.step_and_get()->get_point(), geom_attrib );
   }
   return CUBIT_SUCCESS;
 }
@@ -5574,28 +5594,27 @@ CubitStatus CompositeEngine::save( CompositePoint* point )
 CubitStatus CompositeEngine::save( CompositeCurve* curve  )
 {
   DLIList<TBPoint*> hidden_points;
-  DLIList<CubitString*> string_list;
+  std::vector<CubitString> string_list;
 
   if (curve->num_curves() == 0) // point-curve
   {
     assert(hidden_points.size() == 0);
     CubitString ptname("COMPOSITE_NULLGEOM");
-    string_list.clean_out();
-    string_list.append( &ptname );
+    string_list.clear();
+    string_list.push_back( ptname );
     CubitSimpleAttrib null_geom_attrib( &string_list, 0, 0 );
     CompositePoint* pt = curve->start_point();
     assert(curve->end_point() == pt);
-    append_attrib( pt, &null_geom_attrib );
+    append_attrib( pt, null_geom_attrib );
     curve->write_attributes();
     return CUBIT_SUCCESS;
   }
   
-  CubitString name("COMPOSITE_GEOM");
-  string_list.append( &name );
+  ;
+  string_list.push_back( CubitString("COMPOSITE_GEOM") );
   CubitSimpleAttrib geom_attrib( &string_list, 0, 0 );
 
   int i;
-  CubitSimpleAttrib* old = 0;
 
   curve->write_attributes();
   curve->get_hidden_points( hidden_points );
@@ -5605,7 +5624,7 @@ CubitStatus CompositeEngine::save( CompositeCurve* curve  )
     if( CompositePoint* cpoint = dynamic_cast<CompositePoint*>(point) )
       save(cpoint);
     
-    append_attrib( point, &geom_attrib );
+    append_attrib( point, geom_attrib );
   }
 
 
@@ -5615,12 +5634,12 @@ CubitStatus CompositeEngine::save( CompositeCurve* curve  )
     DLIList<CompositeCurve*> curve_list;
     curve->get_stitched( curve_list );
 
-    name = "COMPOSITE_STITCH";
+    string_list[0] = "COMPOSITE_STITCH";
     CubitSimpleAttrib stitch_attrib( &string_list, 0, 0 );
-    stitch_attrib.int_data_list()->append(&stitch_uid);
+    stitch_attrib.int_data_list().push_back(stitch_uid);
     for( i = curve_list.size(); i--; )
-      append_attrib( curve_list.step_and_get(), &stitch_attrib );
-    stitch_attrib.int_data_list()->clean_out();
+      append_attrib( curve_list.step_and_get(), stitch_attrib );
+    stitch_attrib.int_data_list().clear();
 
     if( curve_list.move_to( curve ) )
       curve_list.extract();
@@ -5630,21 +5649,20 @@ CubitStatus CompositeEngine::save( CompositeCurve* curve  )
   }
 
   
-  name = "COMPOSITE_SENSE";
+  string_list[0] = "COMPOSITE_SENSE";
   CubitSimpleAttrib sense_attrib( &string_list, 0, 0 );
   
   for( i = 0; i < curve->num_curves(); i++ )
   {
-    old = find_attribute_by_name( curve->get_curve(i), "COMPOSITE_SENSE" );
-    if( old )
+    CubitSimpleAttrib old = find_attribute_by_name( curve->get_curve(i), "COMPOSITE_SENSE" );
+    if( !old.isEmpty() )
     {
       if( curve->get_sense(i) == CUBIT_FORWARD )
         curve->get_curve(i)->remove_simple_attribute_virt( old );
-      delete old;
     }
     else if( curve->get_sense(i) == CUBIT_REVERSED )
     {
-      curve->get_curve(i)->append_simple_attribute_virt( &sense_attrib );
+      curve->get_curve(i)->append_simple_attribute_virt( sense_attrib );
     }
   }
 
@@ -5658,14 +5676,12 @@ CubitStatus CompositeEngine::save( CompositeSurface* surf )
   surf->hidden_entities().hidden_curves( comp_curves );
   surf->write_attributes();
   
-  CubitString name("COMPOSITE_GEOM");
-  DLIList<CubitString*> string_list;
-  string_list.append( &name );
+  std::vector<CubitString> string_list;
+  string_list.push_back( CubitString("COMPOSITE_GEOM") );
   CubitSimpleAttrib geom_attrib( &string_list, 0, 0 );
 
   int i, j;
-  CubitSimpleAttrib* old = 0;
-  
+
   for( i = comp_curves.size(); i--; )
   {
     CompositeCurve* ccurve = 
@@ -5675,50 +5691,49 @@ CubitStatus CompositeEngine::save( CompositeSurface* surf )
     for( j = 0; j < ccurve->num_curves(); j++ )
     {      
       Curve* tb = ccurve->get_curve(j);
-      append_attrib( tb, &geom_attrib );
+      append_attrib( tb, geom_attrib );
     }  
   }
   
 
   if( surf->get_stitch_partner() )
   {
-    CubitSimpleAttrib* old = 
+    CubitSimpleAttrib old =
       find_attribute_by_name( surf->get_stitch_partner(), "COMPOSITE_STITCH" );
-    if( old )
+    if( !old.isEmpty() )
     {
       append_attrib( surf, old );
     }
     else
     {
       int stitch_uid = TDUniqueId::generate_unique_id();
-      name = "COMPOSITE_STITCH";
+      string_list[0] = "COMPOSITE_STITCH";
       CubitSimpleAttrib stitch_attrib( &string_list, 0, 0);
-      stitch_attrib.int_data_list()->append( &stitch_uid );
-      append_attrib( surf, &stitch_attrib );
-      stitch_attrib.int_data_list()->clean_out();
+      stitch_attrib.int_data_list().push_back( stitch_uid );
+      append_attrib( surf, stitch_attrib );
+      stitch_attrib.int_data_list().clear();
     }
   }
 
   
-  name = "COMPOSITE_SENSE";
+  string_list[0] = "COMPOSITE_SENSE";
   CubitSimpleAttrib sense_attrib( &string_list, 0, 0 );
   
   for( i = 0; i < surf->num_surfs(); i++ )
   {
-    old = find_attribute_by_name( surf->get_surface(i), "COMPOSITE_SENSE" );
-    if( old )
+    CubitSimpleAttrib old = find_attribute_by_name( surf->get_surface(i), "COMPOSITE_SENSE" );
+    if( !old.isEmpty() )
     {
       if( surf->get_sense(i) == CUBIT_FORWARD )
         surf->get_surface(i)->remove_simple_attribute_virt( old );
-      delete old;
     }
     else if( surf->get_sense(i) == CUBIT_REVERSED )
     {
-      surf->get_surface(i)->append_simple_attribute_virt( &sense_attrib );
+      surf->get_surface(i)->append_simple_attribute_virt( sense_attrib );
     }
   }
 
-  name = "COMPOSITE_IGNORE";
+  string_list[0] = "COMPOSITE_IGNORE";
   CubitSimpleAttrib ignore_attrib( &string_list, 0, 0 );
 
   DLIList<Surface*> srfs;
@@ -5727,7 +5742,7 @@ CubitStatus CompositeEngine::save( CompositeSurface* surf )
   {
     Surface *srf = surf->get_surface(i);
     if(srfs.is_in_list(srf))
-      srf->append_simple_attribute_virt(&ignore_attrib);
+      srf->append_simple_attribute_virt(ignore_attrib);
   }
 
 
@@ -5740,8 +5755,8 @@ CubitStatus CompositeEngine::save( CompositeLump* lump )
   lump->hidden_entities().hidden_surfaces( comp_surfs );
   
   CubitString name("COMPOSITE_GEOM");
-  DLIList<CubitString*> string_list;
-  string_list.append( &name );
+  std::vector<CubitString> string_list;
+  string_list.push_back( name );
   CubitSimpleAttrib geom_attrib( &string_list, 0, 0 );
 
   int i, j;
@@ -5754,8 +5769,8 @@ CubitStatus CompositeEngine::save( CompositeLump* lump )
     
     for( j = 0; j < csurf->num_surfs(); j++ )
     {
-      append_attrib( csurf, &geom_attrib );
-      geom_attrib.int_data_list()->clean_out();
+      append_attrib( csurf, geom_attrib );
+      geom_attrib.int_data_list().clear();
     }  
   }
   
@@ -6647,11 +6662,18 @@ void CompositeEngine::get_tbs_with_bridge_manager_as_owner( TopologyBridge *sour
       {
         TBOwner *owner = hidden_ent_set->owner();
         CompositeCurve *comp_curve = CAST_TO(owner, CompositeCurve );
-        if( comp_curve->bridge_manager() )
+        if( comp_curve && comp_curve->bridge_manager() )
         {
           tbs.append( comp_curve );
           return;
-        }        
+        }       
+
+        CompositeSurface *comp_surf = CAST_TO(owner, CompositeSurface );
+        if( comp_surf && comp_surf->bridge_manager() )
+        {
+          tbs.append( comp_surf );
+          return;
+        }       
       }
     }
 

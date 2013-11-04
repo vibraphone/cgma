@@ -40,7 +40,7 @@ class DeprecatedCommandError : public CommandFeedback
 {
 public:
   DeprecatedCommandError(const CubitString &some_string)
-    : myString(some_string), myInt(27)
+    : myInt(27), myString(some_string) 
   {}
 
   int wow_an_integer() const

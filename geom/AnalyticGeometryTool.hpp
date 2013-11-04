@@ -279,7 +279,12 @@ public:
    ~AnalyticGeometryTool();
    static AnalyticGeometryTool* instance();
 
-   static void delete_instance() { if( instance_ ) delete instance_; };
+   static void delete_instance()
+   {
+     if( instance_ )
+       delete instance_;
+     instance_ = NULL;
+   };
 
    //*********************************************************
    // Double numbers

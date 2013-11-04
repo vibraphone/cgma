@@ -43,6 +43,7 @@
 
 #include "DLIList.hpp"
 #include "CubitUtil.hpp"
+#include "AppUtil.hpp"
 
 // need to include VGE here for free entity test; since virtual geom
 // is so tied into ref entities, I think it's ok (tjt)
@@ -100,14 +101,14 @@ CubitStatus RefEntity::entity_name (CubitString name)
     add_refentity_name(this, name);
   
   if (success == CUBIT_SUCCESS)
-    CubitObserver::notify_static_observers(this, ENTITY_NAME_CHANGED);
+    AppUtil::instance()->send_event(this, ENTITY_NAME_CHANGED);
 
   return success;
 }
 
 CubitString RefEntity::entity_name() const
 {
-  DLIList<CubitString*> names;
+  DLIList<CubitString> names;
   
     // Get the name(s) associated with this RefEntity.
   RefEntityName::instance()->get_refentity_name(this, names, CUBIT_TRUE);
@@ -123,7 +124,7 @@ CubitString RefEntity::entity_name() const
   } 
   else 
   {
-    name = *(names.get());
+    name = names.get();
   }
   
   return name;
@@ -131,14 +132,14 @@ CubitString RefEntity::entity_name() const
 
 int RefEntity::num_names() const
 {
-  DLIList<CubitString*> names;
+  DLIList<CubitString> names;
   
   // Get the name(s) associated with this RefEntity.
   RefEntityName::instance()->get_refentity_name(this, names);
   return names.size();
 }
   
-void RefEntity::entity_names(DLIList<CubitString*>& names) const
+void RefEntity::entity_names(DLIList<CubitString>& names) const
 {
   RefEntityName::instance()->get_refentity_name(this, names);
 }
@@ -150,14 +151,14 @@ CubitStatus RefEntity::remove_entity_name(CubitString const & name)
     return CUBIT_FAILURE;
   
   RefEntityName::instance()->remove_refentity_name(name);
-  CubitObserver::notify_static_observers(this, ENTITY_NAME_CHANGED);
+  AppUtil::instance()->send_event(this, ENTITY_NAME_CHANGED);
   return CUBIT_SUCCESS;
 }
 
 CubitStatus RefEntity::remove_entity_names()
 {
   RefEntityName::instance()->remove_refentity_name(this, CUBIT_TRUE);
-  CubitObserver::notify_static_observers(this, ENTITY_NAME_CHANGED);
+  AppUtil::instance()->send_event(this, ENTITY_NAME_CHANGED);
   return CUBIT_SUCCESS;
 }
 
@@ -320,7 +321,11 @@ void RefEntity::get_all_child_ref_entities(DLIList<RefEntity*>& entity_list)
   DagType child_type = get_child_ref_entity_type();
   DLIList<ModelEntity*> query_output;
   ModelEntity* this_me = dynamic_cast<ModelEntity*>(this);
-  assert(!!this_me);
+
+  // note that RefGroups are kind of shoe-horned into RefEntity
+  // there are no children of a refgroup
+  if(!this_me)
+	return;  // 
  
     //While there are more child types
   while (child_type.is_valid())
@@ -330,8 +335,8 @@ void RefEntity::get_all_child_ref_entities(DLIList<RefEntity*>& entity_list)
     for (int i = query_output.size(); i--; )
     {
       RefEntity* ref_ptr = dynamic_cast<RefEntity*>(query_output.get_and_step());
-      assert(!!ref_ptr);
-      entity_list.append(ref_ptr);
+      if (ref_ptr)
+        entity_list.append(ref_ptr);
     }
     
     child_type = get_child_ref_entity_type( child_type );
@@ -825,8 +830,8 @@ void RefEntity::notify_sub_all_observers(const CubitEvent& event)
   DLIList<RefEntity*> entity_list;
   get_all_child_ref_entities( entity_list );
   for ( int i = entity_list.size(); i>0; i-- )
-    entity_list.get_and_step()->notify_all_observers(event);
-  this->notify_all_observers(event);
+    AppUtil::instance()->send_event(entity_list.get_and_step(),event);
+  AppUtil::instance()->send_event(this,event);
 }
 
 
@@ -841,14 +846,11 @@ void RefEntity::notify_sub_all_observers(const CubitEvent& event)
 // Creation Date : 11/25/96
 //-------------------------------------------------------------------------
 
-void RefEntity::notify(RefEntity* partner, CubitEventType event)
+void RefEntity::comparison_found(RefEntity* partner)
 {
-  if ( event == COMPARISON_FOUND )
-  {
-    add_compare_data(partner) ;
-    MergeTool::instance()->compare_notify(this, COMPARISON_FOUND) ;
-    MergeTool::instance()->compare_notify(partner, COMPARISON_FOUND) ;
-  }
+  add_compare_data(partner);
+  MergeTool::instance()->compare_notify(this) ;
+  MergeTool::instance()->compare_notify(partner) ;
 }
 
 //-------------------------------------------------------------------------
@@ -1127,7 +1129,7 @@ void RefEntity::set_id(int i, CubitBoolean emit_event )
   entityId = i;
 
   if( emit_event )
-    CubitObserver::notify_static_observers( this, IdSetEvent( old_id, entityId ) );
+    AppUtil::instance()->send_event(this, IdSetEvent( old_id, entityId ) );
 
   int old_max = RefEntityFactory::instance()->maximum_id(this);
   
@@ -1205,7 +1207,7 @@ const char* RefEntity::get_ref_class_name(const type_info& ref_type)
 void RefEntity::color(int value)
 {
   mColor = value;
-  CubitObserver::notify_static_observers(this, ENTITY_GEOMETRY_COLOR_CHANGED);
+  AppUtil::instance()->send_event(this, ENTITY_GEOMETRY_COLOR_CHANGED);
 }
 
 int RefEntity::color() const

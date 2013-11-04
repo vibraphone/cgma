@@ -239,16 +239,16 @@ void CompositeLump::notify_reversed( TopologyBridge* )
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void CompositeLump::append_simple_attribute_virt( CubitSimpleAttrib* csa )
+void CompositeLump::append_simple_attribute_virt( const CubitSimpleAttrib& csa )
 { compGeom->add_attribute(csa); }
-void CompositeLump::remove_simple_attribute_virt( CubitSimpleAttrib* csa )
+void CompositeLump::remove_simple_attribute_virt( const CubitSimpleAttrib& csa )
 { compGeom->rem_attribute(csa); }
 void CompositeLump::remove_all_simple_attribute_virt()
 { compGeom->rem_all_attributes(); }
-CubitStatus CompositeLump::get_simple_attribute( DLIList<CubitSimpleAttrib*>& list )
+CubitStatus CompositeLump::get_simple_attribute( DLIList<CubitSimpleAttrib>& list )
 { compGeom->get_attributes( list ); return CUBIT_SUCCESS; }
 CubitStatus CompositeLump::get_simple_attribute(
-					const CubitString& name, DLIList<CubitSimpleAttrib*>& attrib_list )
+          const CubitString& name, DLIList<CubitSimpleAttrib>& attrib_list )
 {
   compGeom->get_attributes( name.c_str(), attrib_list );
   return CUBIT_SUCCESS;

@@ -400,7 +400,7 @@ double CompositeCurve::u_from_position( const CubitVector& position )
 double CompositeCurve::u_from_arc_length( double param, double length )
 { return param + length; }
 double CompositeCurve::length_from_u( double u1, double u2 )
-{ return fabs( u1 - u2 ); }
+{ return u2 - u1; }
 
 CubitStatus CompositeCurve::closest_point( const CubitVector& location,
                                            CubitVector& closest,
@@ -775,13 +775,14 @@ CubitStatus CompositeCurve::curve_param( double uc, double& ui, int& index ) con
       
   if( index >= compGeom->num_entities() ) return CUBIT_FAILURE;
 
-  double ui_min, ui_max;
-  get_curve(index)->get_param_range( ui_min, ui_max );
+  double start_param, end_param;
+  get_curve(index)->get_param_range( start_param, end_param );
 
   double arc_len = uc - sum;
   if( get_sense(index) == CUBIT_REVERSED ) 
     arc_len = get_curve(index)->measure() - arc_len;
-  ui = get_curve(index)->u_from_arc_length( ui_min, arc_len );
+
+  ui = get_curve(index)->u_from_arc_length( start_param, arc_len );
   return CUBIT_SUCCESS;
 }
 
@@ -923,7 +924,7 @@ CubitBoolean CompositeCurve::contains_bridge( TopologyBridge* bridge ) const
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 void CompositeCurve::append_simple_attribute_virt(
-						    CubitSimpleAttrib* simple_attrib_ptr )
+                const CubitSimpleAttrib& simple_attrib_ptr )
 {
   compGeom->add_attribute( simple_attrib_ptr );
 }
@@ -938,7 +939,7 @@ void CompositeCurve::append_simple_attribute_virt(
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 void CompositeCurve::remove_simple_attribute_virt(
-						    CubitSimpleAttrib* simple_attrib_ptr )
+                const CubitSimpleAttrib& simple_attrib_ptr )
 {
   compGeom->rem_attribute( simple_attrib_ptr );
 }
@@ -969,7 +970,7 @@ void CompositeCurve::remove_all_simple_attribute_virt()
 // Creation Date : 03/10/98
 //-------------------------------------------------------------------------
 CubitStatus CompositeCurve::get_simple_attribute(
-						   DLIList<CubitSimpleAttrib*>& attrib_list )
+               DLIList<CubitSimpleAttrib>& attrib_list )
 {
   compGeom->get_attributes( attrib_list );
   return CUBIT_SUCCESS;
@@ -987,7 +988,7 @@ CubitStatus CompositeCurve::get_simple_attribute(
 // Creation Date : 03/03/03
 //-------------------------------------------------------------------------
 CubitStatus CompositeCurve::get_simple_attribute(
-					const CubitString& name, DLIList<CubitSimpleAttrib*>& attrib_list )
+          const CubitString& name, DLIList<CubitSimpleAttrib>& attrib_list )
 {
   compGeom->get_attributes( name.c_str(), attrib_list );
   return CUBIT_SUCCESS;
@@ -1410,7 +1411,8 @@ CubitStatus CompositeCurve::get_spline_params
   int &degree,       // the degree of this spline
   DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
   DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
-  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+  DLIList<double> &knots,   // There should be order+cntrl_pts.size()-2 knots
+  bool &spline_is_reversed
 ) const
 {
   PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for CompositeCurves.\n");

@@ -13,38 +13,29 @@
 #include "CastTo.hpp"
 
 
-CubitAttrib* CAEntitySense_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAEntitySense_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa)
 {
-  CAEntitySense *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAEntitySense(entity);
-  }
-  else
-  {
-    new_attrib = new CAEntitySense(entity, p_csa);
-  }
-
-  return new_attrib;
+    return new CAEntitySense(entity, p_csa);
 }
 
 CAEntitySense::CAEntitySense(RefEntity* new_attrib_owner,
-                       CubitSimpleAttrib *csa_ptr)
+                       const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
-   assert ( csa_ptr != 0 );
+   std::vector<int, std::allocator<int> > i_list = csa_ptr.int_data_list();
    
-   DLIList<int*> *i_list = csa_ptr->int_data_list();
-   
-   assert(i_list && i_list->size() > 0);
-   i_list->reset();
-   int i = *( i_list->get_and_step() );
-   if( i == -1 ) 
+   if( i_list.size() > 0)
+   {
+     int i =  i_list[0];
+     if( i == -1 ) 
+       entitySense = CUBIT_UNKNOWN;
+     else if( i == 0 )
+       entitySense = CUBIT_FORWARD;
+     else if( i == 1 )
+       entitySense = CUBIT_REVERSED;
+   }
+   else
      entitySense = CUBIT_UNKNOWN;
-   else if( i == 0 )
-     entitySense = CUBIT_FORWARD;
-   else if( i == 1 )
-     entitySense = CUBIT_REVERSED;
 }
 
 CAEntitySense::CAEntitySense(RefEntity* new_attrib_owner)
@@ -113,20 +104,16 @@ CubitStatus CAEntitySense::update()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CAEntitySense::cubit_simple_attrib()
+CubitSimpleAttrib CAEntitySense::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<int, std::allocator<int> >  i_list;
 
-  i_list.append( entitySense );
+  i_list.push_back( entitySense );
     
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          NULL,
-                                                          &i_list);
-  int i;
-  for ( i = cs_list.size(); i--;) delete cs_list.get_and_step();
+  CubitSimpleAttrib csattrib_ptr(&cs_list, NULL, &i_list);
   
   return csattrib_ptr;
 }

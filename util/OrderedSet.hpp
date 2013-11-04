@@ -139,7 +139,7 @@ public:
         return mList.get();
     };
 
-    X & operator[](int index) const;
+    const X & operator[](int index) const;
     OrderedSet<X>& operator=(const OrderedSet<X>& from);
     OrderedSet<X>& operator=(const DLIList<X>& from);
     OrderedSet<X>& operator+=(const DLIList<X>& from);
@@ -183,12 +183,12 @@ public:
         return &mList;
     }
 
-    X & last( void ) const;
-    X & first( void ) const;
+    const X & last( void ) const;
+    const X & first( void ) const;
 };
 
 template <class X> inline
-X & OrderedSet<X>::last(void) const
+const X & OrderedSet<X>::last(void) const
 {
     assert( mList.size() > 0 );
     int index = mList.size()-1;
@@ -196,14 +196,14 @@ X & OrderedSet<X>::last(void) const
 }
 
 template <class X> inline
-X & OrderedSet<X>::first(void) const
+const X & OrderedSet<X>::first(void) const
 {
     assert( mList.size() > 0 );
     return mList[0];
 }
 
 template <class X> inline
-X & OrderedSet<X>::operator[](int index) const
+const X & OrderedSet<X>::operator[](int index) const
 {
     return mList[index];
 }

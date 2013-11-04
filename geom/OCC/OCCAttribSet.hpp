@@ -32,29 +32,29 @@ class OCCAttribSet
                           CubitBoolean& found);
     
     static int find_attribute(TDF_Label child,
-                              CubitSimpleAttrib* csa);
+                              const CubitSimpleAttrib& csa);
 
-    static void append_attribute( CubitSimpleAttrib*, TopoDS_Shape& shape );
+    static void append_attribute( const CubitSimpleAttrib&, TopoDS_Shape& shape );
     
     //remove this simple attrib from all shapes. useful when it's a shared
     //feature like materials
-    static void remove_attribute( CubitSimpleAttrib* );
+    static void remove_attribute( const CubitSimpleAttrib& );
     
     //remove this simple attrib from the shape attribs.
-    static void remove_attribute(CubitSimpleAttrib*, TopoDS_Shape& shape );
+    static void remove_attribute(const CubitSimpleAttrib&, TopoDS_Shape& shape );
  
     //remove this shape's label from the lable tree. 
     static void remove_attribute( TopoDS_Shape& shape);
 
     static void get_attributes(TDF_Label &lab,
-                               DLIList<CubitSimpleAttrib*>& list);
+                               DLIList<CubitSimpleAttrib>& list);
 
     static CubitStatus get_attributes( TopoDS_Shape& shape,
-                                       DLIList<CubitSimpleAttrib*>& ) ;
+                                       DLIList<CubitSimpleAttrib>& ) ;
     
     static CubitStatus get_attributes( const CubitString& name,
                                        TopoDS_Shape& shape,
-                                DLIList<CubitSimpleAttrib*>& ) ;
+                                DLIList<CubitSimpleAttrib>& ) ;
     
     static int attribute_count() ;
     

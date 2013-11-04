@@ -89,11 +89,3 @@ CubitStatus CubitObservable::notify_observers( const CubitEvent &event )
 
   return result;
 }
-
-CubitStatus CubitObservable::notify_all_observers( const CubitEvent &event )
-{
-  CubitStatus d_stat = notify_observers( event );
-  CubitStatus s_stat = CubitObserver::notify_static_observers( this, event );
-  return (s_stat && d_stat) ? CUBIT_SUCCESS : CUBIT_FAILURE;
-}
-

@@ -84,7 +84,7 @@ OCCPoint::~OCCPoint()
 {
   if (myTopoDSVertex)
   {
-    delete myTopoDSVertex;
+    delete (TopoDS_Vertex*)myTopoDSVertex;
     myTopoDSVertex = NULL;
   }
 }
@@ -121,7 +121,7 @@ void OCCPoint::set_TopoDS_Vertex(TopoDS_Vertex vertex)
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-void OCCPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCPoint::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { OCCAttribSet::append_attribute(csa, *myTopoDSVertex); }
 
 //-------------------------------------------------------------------------
@@ -135,7 +135,7 @@ void OCCPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-void OCCPoint::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCPoint::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { OCCAttribSet::remove_attribute(csa, *myTopoDSVertex); }
 
 //-------------------------------------------------------------------------
@@ -151,7 +151,9 @@ void OCCPoint::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
 void OCCPoint::remove_all_simple_attribute_virt()
-  { OCCAttribSet::remove_attribute(NULL, *myTopoDSVertex); }
+{
+  OCCAttribSet::remove_attribute(CubitSimpleAttrib(), *myTopoDSVertex);
+}
 
 //-------------------------------------------------------------------------
 // Purpose       : The purpose of this function is to get the  
@@ -164,13 +166,13 @@ void OCCPoint::remove_all_simple_attribute_virt()
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-CubitStatus OCCPoint::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus OCCPoint::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                csa_list)
   { return OCCAttribSet::get_attributes(*myTopoDSVertex,csa_list);
   }
 
 CubitStatus OCCPoint::get_simple_attribute(const CubitString& name,
-                                     DLIList<CubitSimpleAttrib*>& csa_list )
+                                     DLIList<CubitSimpleAttrib>& csa_list )
   { return OCCAttribSet::get_attributes( name, *myTopoDSVertex, csa_list );
   }
 

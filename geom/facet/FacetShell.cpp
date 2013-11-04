@@ -90,21 +90,21 @@ GeometryQueryEngine*
    return FacetQueryEngine::instance();
 }                 
 
-void FacetShell::append_simple_attribute_virt(CubitSimpleAttrib*)
+void FacetShell::append_simple_attribute_virt(const CubitSimpleAttrib&)
 {
 }
-void FacetShell::remove_simple_attribute_virt(CubitSimpleAttrib* )
+void FacetShell::remove_simple_attribute_virt(const CubitSimpleAttrib& )
 {
 }
 void FacetShell::remove_all_simple_attribute_virt()
 {
 }
-CubitStatus FacetShell::get_simple_attribute(DLIList<CubitSimpleAttrib*>&)
+CubitStatus FacetShell::get_simple_attribute(DLIList<CubitSimpleAttrib>&)
 {
   return CUBIT_FAILURE;
 }
 CubitStatus FacetShell::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
+                                              DLIList<CubitSimpleAttrib>&)
   { return CUBIT_FAILURE; }
 
 /*

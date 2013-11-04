@@ -9,14 +9,13 @@
 #define MERGETOOL_HPP 
 
 #include "CubitDefines.h"
-#include "CubitEventDefines.h"
 #include "GeometryDefines.h"
 #include "CpuTimer.hpp"
 #include "DLIList.hpp"
 #include "CubitGeomConfigure.h"
 
 #include <typeinfo>
-#if !defined(WIN32)
+#if !defined(_MSC_VER)
 using std::type_info;
 #endif
 
@@ -72,7 +71,12 @@ class CUBIT_GEOM_EXPORT MergeTool
    ~MergeTool();
      //- Destructor.
    
-    static void delete_instance() {if(instance_) delete instance_; }
+    static void delete_instance()
+    {
+      if(instance_)
+        delete instance_;
+      instance_ = NULL;
+    }
      
     void imprint_merge_solutions_for_overlapping_surfaces(
                                           RefFace *face1,
@@ -255,7 +259,7 @@ class CUBIT_GEOM_EXPORT MergeTool
   static void initialize_settings();
   
   //! Notifies MergeTool about comparisons found and put on ref entities
-  void compare_notify(RefEntity *entity, CubitEventType event);
+  void compare_notify(RefEntity *entity);
   
   //! Remove TDCompares from RefEntities.
   void remove_compare_data();
@@ -348,11 +352,11 @@ class CUBIT_GEOM_EXPORT MergeTool
   //! or curves between bodies, surfaces, or curves.  
   //! It reports all edges, even if the owning faces are mergeable
   CubitStatus find_only_mergeable_curves( DLIList<Surface*> &surf_list, 
-                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol = -1.0 );
   CubitStatus find_only_mergeable_curves( DLIList<Curve*> &all_curves, 
-                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol = -1.0 );
   CubitStatus find_only_mergeable_curves( DLIList<BodySM*> &body_list, 
-                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves );
+                 DLIList< DLIList<Curve*>*> &lists_of_mergeable_curves, double input_tol = -1.0 );
    CubitStatus find_only_mergeable_refedges( DLIList<Body*> &body_list, 
                   DLIList< DLIList<RefEdge*>*> &lists_of_mergeable_ref_edges );
   //@}

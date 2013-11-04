@@ -915,7 +915,8 @@ virtual Curve* create_arc_radius(const CubitVector &center,
                                  double min_dot,
                                  Surface *&new_surface_ptr,
                                  CubitBoolean use_point_addresses = CUBIT_TRUE,
-                                 FacetEvalTool *eval_tool_ptr = NULL);
+                                 FacetEvalTool *eval_tool_ptr = NULL,
+                                 std::map<FacetCurve*, FacetCurve*> *hard_line_curve_map = NULL );
     //-creates a new FacetSurface given the points and facet list.
 
   CubitStatus make_facet_surface(DLIList<CubitQuadFacet*> &facet_list,
@@ -1053,6 +1054,8 @@ virtual Curve* create_arc_radius(const CubitVector &center,
 
     CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                   DLIList<BodySM*> &new_bodies,
+                                  double overlap_tol,
+                                  double imprint_tol,
                                    DLIList<TopologyBridge*> *new_tbs = NULL,
                                    DLIList<TopologyBridge*> *att_tbs = NULL ) const;
 

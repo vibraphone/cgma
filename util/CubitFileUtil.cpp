@@ -2,17 +2,20 @@
 //- Description:    Class with functions to get files from a directory, etc.
 //- Owner:          Steve Storm
 
+#define NOMINMAX
+
 #include "CubitFileUtil.hpp"
+#include "CubitUtil.hpp"
 #include "CubitString.hpp"
 
 #ifdef WIN32
-  #include <direct.h>
-  #include <io.h>
   #include <sys/types.h>
   #include <sys/stat.h>
+  #include <windows.h>
   #ifndef PATH_MAX
     #define PATH_MAX _MAX_PATH
   #endif
+  #include "shlwapi.h"
 #else
   #include <sys/types.h>
   #include <sys/stat.h>
@@ -21,7 +24,9 @@
   #include <sys/param.h>
   #include <unistd.h>
   #include <pwd.h>
+  #include <fnmatch.h>
 #endif
+#include <errno.h>
 
 
 #ifdef WIN32
@@ -31,71 +36,121 @@ static const char DIR_SEP_CHAR = '\\';
 static const char* DIR_SEP_STR = "/";
 static const char DIR_SEP_CHAR = '/';
 #endif
-
-//#define DEFAULT_NAME  "cubit"
-//#define DEFAULT_EXT   "cub"
+   
+const char* CubitFileUtil::separator()
+{
+  return DIR_SEP_STR;
+}
 
 CubitStatus
-CubitFileUtil::get_current_working_directory( char *wd )
+CubitFileUtil::get_current_working_directory( CubitString& wd )
 {
 #ifdef WIN32
-  if( _getcwd( wd, PATH_MAX ) == NULL )
+  wchar_t* buffer = _wgetcwd( NULL, 0 );
 #else
-  if( getcwd( wd, PATH_MAX ) == NULL )
+  char* buffer = getcwd( NULL, 0 );
 #endif
+  if (!buffer)
   {
     PRINT_WARNING( "Unable to get new working directory\n" );
     return CUBIT_FAILURE;
   }
   else
   {
+    // convert to string
+#ifdef WIN32
+    wd = CubitString::toUtf8(buffer);
+#else
+    wd = buffer;
+#endif
+
     // Add a slash at the end, if not already there
-    int wd_len = strlen(wd);
-    if( wd[wd_len-1] != DIR_SEP_CHAR )
+    int wd_len = wd.length();
+    if( wd.c_str()[wd_len-1] != DIR_SEP_CHAR )
     {
-      wd[wd_len] = DIR_SEP_CHAR;
-      wd[wd_len+1] = '\0';
+      wd += DIR_SEP_STR;
+
+      free(buffer);
     }
 
-#ifdef WIN32
-    // Make sure format is compatible with full path format
-    CubitString full_path_str;
-    if( get_full_path_str( wd, full_path_str ) == CUBIT_SUCCESS )
-      strcpy( wd, full_path_str.c_str() );
-#endif
+// TODO: need to figure out the right way to do this. This assumes
+// variables of length PATH_MAX which is bad!
+//#ifdef WIN32
+//    // Make sure format is compatible with full path format
+//    CubitString full_path_str;
+//    if( get_full_path_str( wd, full_path_str ) == CUBIT_SUCCESS )
+//      strcpy( wd, full_path_str.c_str() );
+//#endif
 
     return CUBIT_SUCCESS;
   }
 }
 
-CubitStatus
-CubitFileUtil::add_name_to_path( char *path, const char *directory )
+CubitStatus CubitFileUtil::set_current_working_directory( const CubitString& wd )
 {
+#ifdef WIN32
+  int ret = _wchdir(CubitString::toUtf16(wd).c_str());
+#else
+  int ret = chdir(wd.c_str());
+#endif
+  return ret == 0 ? CUBIT_SUCCESS : CUBIT_FAILURE;
+}
+
+CubitString CubitFileUtil::add_name_to_path( const CubitString& path, const CubitString& name )
+{
+  CubitString result = path;
   // Add a slash at the end of the path, if not already there
-  int path_len = strlen(path);
-  if( path[path_len-1] != DIR_SEP_CHAR )
+  int path_len = result.length();
+  if( result.c_str()[path_len-1] != DIR_SEP_CHAR )
   {
-    path[path_len] = DIR_SEP_CHAR;
-    path[path_len+1] = '\0';
+    result += DIR_SEP_STR;
   }
   // append the name to the end of the path
-  strcat(path, directory);
+  result += name;
       
-  return CUBIT_SUCCESS;
+  return result;
+}
+
+CubitString CubitFileUtil::find_home_path(const CubitString& which_user)
+{
+  CubitString home_dir;
+
+#ifdef WIN32
+  home_dir = CubitUtil::getenv("USERPROFILE");
+#else
+  if(which_user.length() == 0)
+  {
+    home_dir = CubitUtil::getenv("HOME");
+    if( home_dir.length() == 0 )
+    {
+      struct passwd* userdata = getpwuid( getuid() );
+      if( userdata )
+        home_dir = userdata->pw_dir;
+    }
+  }
+  else
+  {
+    struct passwd* userdata = getpwnam( which_user.c_str() );
+    if(userdata)
+      home_dir = userdata->pw_dir;
+  }
+#endif
+
+  return home_dir;
 }
 
 CubitStatus
-CubitFileUtil::create_directory( char *wd )
+CubitFileUtil::create_directory( const CubitString& wd )
 {
   // Create the directory
 #ifdef WIN32
-  if (mkdir(wd) == -1) 
+  if (_wmkdir(CubitString::toUtf16(wd).c_str()) == -1)
   {  
     PRINT_WARNING( "Unable to create new directory\n" );
     return CUBIT_FAILURE;
   }
 #else    
-  if (mkdir(wd, 0777) == -1) 
+  if (mkdir(wd.c_str(), 0777) == -1)
   {  
     PRINT_WARNING( "Unable to create new directory\n" );
     return CUBIT_FAILURE;
@@ -104,134 +159,148 @@ CubitFileUtil::create_directory( char *wd )
   return CUBIT_SUCCESS;
 }
 
+
+CubitStatus CubitFileUtil::remove_file( const CubitString& file )
+{
+#ifdef WIN32
+  int status = _wremove(CubitString::toUtf16(file).c_str());
+#else
+  int status = remove(file.c_str());
+#endif
+  return status == 0 ? CUBIT_SUCCESS : CUBIT_FAILURE;
+}
+
+CubitStatus CubitFileUtil::rename_file( const CubitString& old_file, const CubitString& new_file )
+{
+#ifdef WIN32
+  int status = _wrename(CubitString::toUtf16(old_file).c_str(), CubitString::toUtf16(new_file).c_str());
+#else
+  int status = rename(old_file.c_str(), new_file.c_str());
+#endif
+  return status == 0 ? CUBIT_SUCCESS : CUBIT_FAILURE;
+}
+
 CubitStatus
-CubitFileUtil::get_full_path_str( const char *part, 
+CubitFileUtil::get_full_path_str( const CubitString& part,
                                   CubitString &full_path_str )
 {
-  char full[PATH_MAX];
-  
-  char my_part[PATH_MAX];
-  strcpy( my_part, part );
-  make_path_platform_compatible( my_part );
+  CubitString my_part = CubitFileUtil::make_path_platform_compatible(part);
 
 #ifdef WIN32
-  if( _fullpath( full, my_part, PATH_MAX ) != NULL )
-  
-    full_path_str = full;
 
-  else
+  wchar_t* full = _wfullpath(NULL, CubitString::toUtf16(my_part).c_str(), 0);
+  if(!full)
   {
-    PRINT_ERROR( "problem getting full path to %s\n", part );
+    PRINT_ERROR( "problem getting full path to %s\n", part.c_str() );
     return CUBIT_FAILURE;
   }
+  full_path_str = CubitString::toUtf8(full);
+  free(full);
   
 #else
 
-  // UNIX
-  if( !contains_char( DIR_SEP_CHAR, my_part ) )
+  // we loop removing parts until realpath can resolve an existing path,
+  // then add the non-existing parts back on.
+
+  std::vector<CubitString> split_parts;
+  CubitString trypart = part;
+
+  if(!CubitFileUtil::is_absolute(trypart))
   {
-    // Add current working directory
-    char wd[PATH_MAX];
-    get_current_working_directory( wd );
-    
-    strcat( wd, my_part );
-    
-    strcpy( my_part, wd );
-    
-    full_path_str = my_part;
-    
-    return CUBIT_SUCCESS;
+    CubitString cwd;
+    CubitFileUtil::get_current_working_directory(cwd);
+    trypart = CubitFileUtil::add_name_to_path(cwd, trypart);
   }
-  else
+
+  char full[PATH_MAX];
+  while(trypart.length() && !realpath(trypart.c_str(), full))
   {
-  
-    // Okay, realpath will not work of the file does not exist
-    // (our Windows function does).  So strip off the path and
-    // just check that (for now assumes user will only be using
-    // wildcards on file names).
-    
-    char dpart[PATH_MAX], fpart[PATH_MAX];
-    split_path( my_part, dpart, fpart );
-
-    //PRINT_INFO( "Calling realpath on %s\n", part );
-    if( realpath( dpart, full ) != NULL )
+    CubitString split_part1, split_part2;
+    CubitFileUtil::split_path(trypart, split_part1, split_part2);
+    split_parts.push_back(split_part2);
+    if(split_part1.length() == 0)
     {
-      //PRINT_INFO( "Got realpath as %s\n", full );
-      
-      // Append filename back on
-      strcat( dpart, fpart );
-
-      full_path_str = dpart;
-    }
-    else
-    {
-      PRINT_ERROR( "problem getting full path to %s\n", my_part );
+      PRINT_ERROR( "problem getting full path to %s\n", part.c_str() );
       return CUBIT_FAILURE;
     }
+    trypart = split_part1;
   }
+
+  full_path_str = full;
+  for(size_t i=0; i<split_parts.size(); i++)
+  {
+    full_path_str += CubitString("/") + split_parts[split_parts.size() - i - 1];
+  }
+
 #endif
 
   return CUBIT_SUCCESS;
 }
 
-void 
-CubitFileUtil::make_path_platform_compatible( char *path )
+CubitString
+CubitFileUtil::make_path_platform_compatible( const CubitString& path)
 {
+  CubitString ret = path;
+  for(size_t i=0; i<ret.length(); i++)
+  {
 #ifdef WIN32
   // Replace '/' with '\\'
-  for( char* path_ptr = path; *path_ptr; path_ptr++ )
-    if( *path_ptr == '/' )
-      *path_ptr = '\\';
+    if(ret.get_at(i) == '/' )
+      ret.put_at(i, '\\');
 #else
      // Replace '\\' with '/'
-  for( char* path_ptr = path; *path_ptr; path_ptr++ )
-    if( *path_ptr == '\\' )
-      *path_ptr = '/';
+    if(ret.get_at(i) == '\\' )
+      ret.put_at(i, '/');
 #endif
+  }
+  return ret;
 }
 
 CubitString
-CubitFileUtil::get_nice_filename( const char *file_in )
+CubitFileUtil::get_nice_filename( const CubitString& path )
 {
   CubitString ret_str;
 
-  char dpart_in[PATH_MAX], fpart_in[PATH_MAX];
-  split_path( file_in, dpart_in, fpart_in );
+  CubitString dpart_in, fpart_in;
+  split_path( path, dpart_in, fpart_in );
 
-  char wd[PATH_MAX];
+  CubitString wd;
   get_current_working_directory( wd );
 
-  if( strcmp( dpart_in, wd ) == 0 )
+  if( dpart_in == wd )
     ret_str = fpart_in;
   else
-    ret_str = file_in;
+    ret_str = path;
 
   return ret_str;
 }
 
 void
-CubitFileUtil::split_path( const char *path, char *dirpart, char *filepart )
+CubitFileUtil::split_path( const CubitString& path, CubitString& dirpart, CubitString& filepart )
 {
-  const char *fpart;
-  
-  if( (fpart = strrchr(path, DIR_SEP_CHAR)) == NULL )
+  CubitString mypath = path;
+  while(mypath.length() && mypath.get_at(mypath.length()-1) == DIR_SEP_CHAR)
   {
-    // No separator - could be filename or directory.  We assume
-    // it's a directory.
-    strcpy( filepart, "." );
-    strcpy( dirpart, path );
+    mypath = mypath.substr(0, mypath.length()-1);
+  }
+  size_t pos = mypath.find_last(DIR_SEP_CHAR);
+
+  // No separator - could be filename or directory.  We assume
+  // it's a directory.
+  if(pos == MAX_POS)
+  {
+    filepart = ".";
+    dirpart = mypath;
   }
   else
   {
-    strcpy( dirpart, path );
-    dirpart[fpart - path + 1] = '\0';
-    strcpy( filepart, ++fpart );
+    filepart = mypath.substr(pos+1);
+    dirpart = mypath.substr(0, pos);
   }
 
   // Add slash on end of dirpart if not already there
-  int len = strlen( dirpart );
-  if( len && dirpart[len-1] != DIR_SEP_CHAR)
-    strcat( dirpart, DIR_SEP_STR );
+  if(dirpart.length() && dirpart.get_at(dirpart.length()-1) != DIR_SEP_CHAR)
+    dirpart += DIR_SEP_STR;
 
   return;
 }
@@ -270,159 +339,6 @@ CubitFileUtil::get_file_extension(
   
 }  //  get_file_extension()
                      
-CubitString
-CubitFileUtil::get_file_extension(
-  const char* file,
-  bool remove_version /* remove .1, .2, ...*/ )
-{
-  CubitString f(file);
-  return get_file_extension(f,remove_version);
-}
-
-CubitStatus
-CubitFileUtil::get_files( const char *path,
-                          char *dirname,
-                          DLIList<CubitString*> &filenames,
-                          CubitBoolean include_dirs )
-{
-  CubitString *str;
-
-  char my_path[PATH_MAX];
-  strcpy( my_path, path );
-
-  // Replace '/' with '\\' or vice versa
-  make_path_platform_compatible( my_path );
-
-  // Get full path
-  CubitString full_path_str;
-  if( get_full_path_str( my_path, full_path_str ) == CUBIT_FAILURE )
-    return CUBIT_FAILURE;
-
-  //PRINT_INFO( "Full path is '%s'\n", full_path_str.c_str() );
-
-  // Get directory and filename parts of pathname
-  char dpart[PATH_MAX];
-  char fpart[PATH_MAX];
-  split_path( full_path_str.c_str(), dpart, fpart );
-
-  strcpy( dirname, dpart );
-  
-#ifdef WIN32
-  
-  // If path points to a directory, add "\*" to the path, to get all the 
-  // files in the directory.
-  struct _stat file_info;
-  if(!_stat(full_path_str.c_str(), &file_info) && (_S_IFDIR & file_info.st_mode))
-  {
-    // Add the backslash only if needed
-    if (full_path_str.get_at(full_path_str.length()-1) == DIR_SEP_CHAR)
-      full_path_str += "*";
-    else
-    {
-      full_path_str += DIR_SEP_STR;
-      full_path_str += "*";
-    }
-  }
-
-  // Note, here full_path_str is actually the wildcard expression we are matching
-  // against.
-
-  // Now gather up the filenames from the directory.
-  _finddata_t c_file;
-  long h_file;
-
-  // Note _findfirst accepts wildcard expressions, so we will only get the
-  // files we want.
-  if( (h_file = _findfirst(full_path_str.c_str(), &c_file )) != -1L )
-  {    
-    do 
-    {
-      if( c_file.attrib & _A_SUBDIR )
-      {
-        // Directory
-        if( include_dirs && !all_chars_are('.', c_file.name) ) // Avoid '.' and '..'
-        {
-          str = new CubitString( c_file.name ); // Without path
-          *str += DIR_SEP_STR; // Add slash at end
-          filenames.append( str );
-        }
-      }
-      else
-      {
-        str = new CubitString( c_file.name ); // Without path
-        filenames.append( str );
-      }
-    } while( _findnext( h_file, &c_file ) == 0 );
-    
-    _findclose( h_file );
-  }
-  
-#else
-
-  // UNIX
-
-  DIR *dir;
-
-  dir = opendir( dirname );
-  if( dir == NULL )
-  {
-    PRINT_ERROR( "%s\n", strerror(0) );
-    return CUBIT_FAILURE;
-  }
-
-  dirent *direntry;       // Info about what dir contains 
-  struct stat stat_buf;   // Info about particular file (or dir) 
-  
-  while( (direntry = readdir(dir)) != NULL )
-  {
-    const char* fname = direntry->d_name;
-    
-    // Append fullpath to fname
-    char full_name[PATH_MAX];
-    strcpy( full_name, dirname );
-    strcat( full_name, fname );
-    
-    // Get info about file
-    if( stat(full_name, &stat_buf) != 0 )
-    {
-//      PRINT_WARNING( "%s\n", strerror(0) );
-      continue;
-    }
-    if( (stat_buf.st_mode & S_IFMT) == S_IFDIR )
-    {
-      // Directory
-      if( include_dirs && !all_chars_are('.', fname) ) // Avoid '.' and '..'
-      {
-        // Do wildcard match.  We do this ourselves for Unix (handles
-        // '*' and '?').  Another possiblity would be to use either glob()
-        // or fnmatch(), but they may not be available on all platforms.
-        if( FRegExp::match( fpart, fname ) )
-        {
-          str = new CubitString( fname ); // Without path
-          *str += DIR_SEP_STR; // Add slash at end
-          filenames.append( str );
-        }
-      }
-    }
-    else
-    {
-      // Do wildcard match.  We do this ourselves for Unix (handles
-      // '*' and '?').  Another possiblity would be to use either glob()
-      // or fnmatch(), but they may not be available on all platforms.
-      if( FRegExp::match( fpart, fname ) )
-      {
-        str = new CubitString( fname ); // Without path
-        filenames.append( str );
-      }
-    }
-  }
-  closedir( dir );
-
-#endif
-
-  return CUBIT_SUCCESS;
-}
- 
 CubitBoolean 
 CubitFileUtil::all_chars_are( char ch, const char *str )
 {
@@ -450,241 +366,312 @@ CubitFileUtil::contains_char( char ch, const char *str )
     return CUBIT_FALSE;
 }
 
-CubitStatus 
-CubitFileUtil::get_default_cubit_file_name( char *filename )
+CubitString
+CubitFileUtil::get_default_cubit_file_name()
 {
   // Get a list of all files matching 'cubit*.cub', in current directory
-  DLIList<CubitString*> filenames;
-  char dir_name[PATH_MAX];
-  
-  if( get_files( "cubit*.cub", dir_name, filenames, CUBIT_FALSE ) == CUBIT_FAILURE )
-    return CUBIT_FAILURE;
 
-  if( !filenames.size() )
+  CubitDirIterator dir_iter(".", "cubit*.cub");
+
+  int max_number = 0;
+
+  while(dir_iter.has_next())
   {
-    strcpy( filename, "cubit01.cub" );
-    return CUBIT_SUCCESS;
-  }
+    CubitString f = dir_iter.next();
 
-  // Loop through each file, keeping track of max file number
-  int i;
-  int curr_num, max_num = 0;
-  CubitString *fname_str;
-  for( i=filenames.size(); i--; )
-  {
-    fname_str = filenames.get_and_step();
-
-    char fname[PATH_MAX];
-    strcpy( fname, fname_str->c_str() );
-    delete fname_str;
-
-    // Extract what's between cubit and ending .cub
-    fname[strlen(fname)-4] = '\0';
-
-    char num_str[PATH_MAX];
-    strcpy( num_str, fname+5 );
-
-    if( !is_int_number( num_str ) )
-      continue;
-
-    curr_num = atoi( num_str );
-
-    if( curr_num > max_num )
-      max_num = curr_num;
-  }
-
-  max_num++;
-
-  // Place the number in the string
-  if( max_num<10 )
-    sprintf( filename, "cubit0%d.cub", max_num );
-  else
-    sprintf( filename, "cubit%d.cub", max_num );
-
-  return CUBIT_SUCCESS;
-}
-
-int
-CubitFileUtil::get_next_backup_filenumber( const char *p_basename,
-                                           int &num_backups,
-                                           int &first_backup_id )
-{
-  num_backups = 0;
-  first_backup_id = -1;
-  DLIList<CubitString*> filenames;
-  
-  char basename[PATH_MAX];
-  strcpy(basename, p_basename);
-  // Replace '/' with '\\' or vice versa
-  make_path_platform_compatible( basename );
-
-  // Get a list of all files matching 'basename.*'
-  char match_name[PATH_MAX];
-  strcpy( match_name, basename );
-  strcat( match_name, ".*" );
-
-  char dir_name[PATH_MAX];
-  if( get_files( match_name, dir_name, filenames, CUBIT_FALSE ) == CUBIT_FAILURE )
-    return -1;
-
-  if( !filenames.size() )
-    return 1;
-
-  // Loop through each file, keeping track of which are valid backup files
-  // and the maximum number.
-
-  char fname[PATH_MAX];
-  split_path( basename, dir_name, fname );
-  unsigned int base_len = strlen( fname );
-
-  int i;
-  int curr_num, max_num = 0, first_num = CUBIT_INT_MAX;
-  CubitString *fname_str;
-  for( i=filenames.size(); i--; )
-  {
-    fname_str = filenames.get_and_step();
-
-    char fname[PATH_MAX];
-    strcpy( fname, fname_str->c_str() );
-    delete fname_str;
-
-    // Continue if nothing after dot.  Also, I noticed the WIN32 will match 
-    // file.cub against wildcard file.cub.*
-    if( strlen( fname ) <= base_len+1 )
-      continue;
-
-    // Extract what's after the dot
-    char aft_dot[PATH_MAX];
-    strcpy( aft_dot, fname+base_len+1 );
-
-    if( !is_int_number( aft_dot ) )
-      continue;
-
-    // Must be a valid integer - extract it
-
-    curr_num = atoi( aft_dot );
-
-    if( curr_num > max_num )
-      max_num = curr_num;
-
-    if( curr_num < first_num )
-      first_num = curr_num;
-
-    num_backups++;
-  }
-
-  if( first_num != CUBIT_INT_MAX )
-    first_backup_id = first_num;
-
-  return max_num+1;
-}
-
-#if 0
-string expand_path(const string& path)
-{
-  if (path.length() == 0 || path[0] != '~')
-    return path;
-  
-  const char *pfx = NULL;
-  string::size_type pos = path.find_first_of(DIR_SEP_CHAR);
-  
-  if (path.length() == 1 || pos == 1)
-  {
-    pfx = getenv("HOME");
-    if (!pfx)
+    // cut off the "cubit" at the start and the ".cub" at the end
+    f = f.substr(5, f.length()-9);
+    if( is_int_number(f.c_str()) )
     {
-      // Punt. We're trying to expand ~/, but HOME isn't set
-      struct passwd *pw = getpwuid(getuid());
-      if (pw)
-        pfx = pw->pw_dir;
+      int num = atoi(f.c_str());
+      max_number = std::max(num, max_number);
     }
   }
-  else
-  {
-    string user(path,1,(pos==string::npos) ? string::npos : pos-1);
-    struct passwd *pw = getpwnam(user.c_str());
-    if (pw)
-      pfx = pw->pw_dir;
-  }
-  
-  // if we failed to find an expansion, return the path unchanged.
-  
-  if (!pfx)
-    return path;
-  
-  string result(pfx);
-  
-  if (pos == string::npos)
-    return result;
-  
-  if (result.length() == 0 || result[result.length()-1] != DIR_SEP_CHAR)
-    result += DIR_SEP_CHAR;
-  
-  result += path.substr(pos+1);
-  
-  return result;
+
+  max_number++;
+
+  CubitString num_str = CubitString(max_number);
+  if(max_number < 10)
+    num_str = CubitString("0") + num_str;
+
+  return CubitString("cubit") + num_str + CubitString(".cub");
 }
+
+int
+CubitFileUtil::get_next_filenumber( const CubitString& file_pattern,
+                                    int &num_matches,
+                                    int &first_id )
+{
+  // TODO: check this bug?
+  // Continue if nothing after dot.  Also, I noticed the WIN32 will match 
+  // file.cub against wildcard file.cub.*
+
+  int max_number = 0;
+  int min_number = CUBIT_INT_MAX;
+  num_matches = 0;
+
+  // get directory and file parts
+  CubitString dir, file, full_file_pattern;
+  CubitFileUtil::get_full_path_str(file_pattern, full_file_pattern);
+  CubitFileUtil::split_path(full_file_pattern, dir, file);
+
+  size_t wildcard_location = file.find("*");
+  if(wildcard_location == MAX_POS)
+    return 1;
+
+  CubitDirIterator dir_iter(dir, file);
+
+  while(dir_iter.has_next())
+  {
+    CubitString f = dir_iter.next();
+
+    // cut off the matched part
+    f = f.substr(wildcard_location, 1 + f.length() - file.length());
+    if( is_int_number(f.c_str()) )
+    {
+      int num = atoi(f.c_str());
+      max_number = std::max(num, max_number);
+      min_number = std::min(num, min_number);
+    }
+    num_matches++;
+  }
+
+  if( min_number != CUBIT_INT_MAX )
+    first_id = min_number;
+
+  return max_number+1;
+}
+
+struct CubitDirIterator::Helper
+{
+  Helper()
+  {
+#ifdef WIN32
+    mFileHandle = INVALID_HANDLE_VALUE;
+#else
+    mDirHandle = NULL;
+    mFileHandle = NULL;
+#endif
+  }
+
+#ifdef WIN32
+  WIN32_FIND_DATAW mDirHandle;
+  HANDLE mFileHandle;
+#else
+  DIR* mDirHandle;
+  dirent* mFileHandle;
+#endif
+};
+  
+
+CubitDirIterator::CubitDirIterator(const CubitString& path, const CubitString& pattern)
+{
+  this->mHelper = new Helper;
+  open(path, pattern);
+}
+
+CubitDirIterator::~CubitDirIterator()
+{
+  cleanup();
+  delete this->mHelper;
+}
+
+void CubitDirIterator::open(const CubitString& path, const CubitString& pattern)
+{
+  cleanup();
+
+  if(pattern.length())
+    mPattern = pattern;
+  else
+    mPattern = "";
+
+  this->atEnd = false;
+#ifdef WIN32
+  CubitString p = path;
+  if (p.get_at(p.length()-1) != DIR_SEP_CHAR)
+    p += "\\";
+  p += mPattern.length() == 0 ? "*" : mPattern;
+  this->mHelper->mFileHandle = FindFirstFileW(CubitString::toUtf16(p).c_str(), &this->mHelper->mDirHandle);
+  if(this->mHelper->mFileHandle == INVALID_HANDLE_VALUE)
+    this->atEnd = true;
+#else
+  this->mHelper->mDirHandle = opendir(path.c_str());
+  if(this->mHelper->mDirHandle)
+  {
+    do
+    {
+      this->mHelper->mFileHandle = readdir(this->mHelper->mDirHandle);
+    } while (this->mHelper->mFileHandle && 
+             (mPattern.length() != 0 && 
+             fnmatch(mPattern.c_str(), this->mHelper->mFileHandle->d_name, 0))
+             );
+  }
+  if(!this->mHelper->mDirHandle || !this->mHelper->mFileHandle)
+    this->atEnd = true;
+#endif
+}
+
+void CubitDirIterator::cleanup()
+{
+#ifdef WIN32
+  if(this->mHelper->mFileHandle != 0)
+    FindClose(this->mHelper->mFileHandle);
+  this->mHelper->mFileHandle = 0;
+#else
+  if(this->mHelper->mDirHandle)
+    closedir(this->mHelper->mDirHandle);
+  this->mHelper->mFileHandle = 0;
+  this->mHelper->mDirHandle = 0;
+#endif
+}
+
+bool CubitDirIterator::has_next()
+{
+  return !this->atEnd;
+}
+
+CubitString CubitDirIterator::next()
+{
+  CubitString file;
+  if(this->atEnd)
+    return file;
+
+#ifdef WIN32
+  file = CubitString::toUtf8(this->mHelper->mDirHandle.cFileName);
+  BOOL result = FindNextFileW(this->mHelper->mFileHandle, &this->mHelper->mDirHandle);
+  if(result == 0)
+    this->atEnd = true;
+#else
+  file = this->mHelper->mFileHandle->d_name;
+  do
+  {
+    this->mHelper->mFileHandle = readdir(this->mHelper->mDirHandle);
+  } while (this->mHelper->mFileHandle && 
+           (mPattern.length() != 0 && 
+           fnmatch(mPattern.c_str(), this->mHelper->mFileHandle->d_name, 0))
+           );
+  if(this->mHelper->mFileHandle == 0)
+    this->atEnd = true;
+#endif
+  return file;
+}
+
+bool CubitFileUtil::is_directory(const CubitString& path)
+{
+  off_t size;
+  time_t time;
+  int mode;
+  if(0 == file_info(path, size, time, mode))
+  {
+#ifdef WIN32
+  if( (_S_IFDIR & mode) )
+#else
+  if( S_ISDIR( mode ) )
+#endif
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CubitFileUtil::path_exists(const CubitString& path)
+{
+  off_t size;
+  time_t time;
+  int mode;
+  return 0 == file_info(path, size, time, mode);
+}
+   
+bool CubitFileUtil::is_absolute(const CubitString& path)
+{
+#ifdef WIN32
+  return !PathIsRelativeW(CubitString::toUtf16(path).c_str());
+#else
+  return path.c_str()[0] == '/' ? true : false;
+#endif
+}
+   
+int  CubitFileUtil::file_info(const CubitString& path, off_t& size, time_t& time, int& mode)
+{
+#ifdef WIN32
+  // remove trailing separators
+  CubitString mypath = path;
+  if(mypath.get_at(mypath.length()-1) == DIR_SEP_CHAR)
+    mypath = mypath.substr(0, mypath.length()-1);
+  struct _stat file_info;
+  int stat_result = _wstat( CubitString::toUtf16(mypath).c_str(), &file_info );
+#else
+  struct stat file_info;
+  int stat_result = lstat( path.c_str(), &file_info );
 #endif
 
-
-FRegExp::FRegExp()
-{}
-
-FRegExp::~FRegExp()
-{}
-
-int
-FRegExp::match(const char *reg, const char *txt)
-{
-  return match_here(reg, txt);
-} 
-
-int
-FRegExp::match_here(const char *reg, const char *txt)
-{
-  if (reg[0] == '\0')
-    return *txt == '\0';
-  if (reg[0] == '*')
-    return match_star(reg + 1, txt);
-  if (reg[0] == DIR_SEP_CHAR && (reg[1] == '*' || reg[1] == '?'))
-    return *txt == reg[1];
-  if (*txt != '\0' && (reg[0] == '?' || tolower(reg[0]) == tolower(*txt)))
-    return match_here(reg + 1, txt + 1);
-  return 0;
-}
-
-int
-FRegExp::match_star(const char *reg, const char *txt)
-{
-  do
+  if(stat_result == 0)
   {
-    if (match_here(reg, txt))
-      return 1;
-  } while (*txt != '\0' && *txt++ != *reg);
-  return 0;
+    size = file_info.st_size;
+    time = file_info.st_mtime;
+    mode = file_info.st_mode;
+    return 0;
+  }
+  return errno ? errno : ENOENT;
 }
 
-int
-FRegExp::matchi_here(const char *reg, const char *txt)
+CubitFile::CubitFile()
+  : mFile(NULL), mError(0)
 {
-  if (reg[0] == '\0')
-    return *txt == '\0';
-  if (reg[0] == '*')
-    return matchi_star(reg + 1, txt);
-  if (reg[0] == DIR_SEP_CHAR && (reg[1] == '*' || reg[1] == '?'))
-    return tolower(*txt) == tolower(reg[1]);
-  if (*txt != '\0' && (reg[0] == '?' || tolower(reg[0]) == tolower(*txt)))
-    return matchi_here(reg + 1, txt + 1);
-  return 0;
 }
 
-int
-FRegExp::matchi_star(const char *reg, const char *txt)
+CubitFile::CubitFile(const CubitString& file, const char* mode)
+  : mFile(NULL)
 {
-  do
+  open(file, mode);
+}
+
+CubitFile::~CubitFile()
+{
+  close();
+}
+
+bool CubitFile::open(const CubitString& file, const char* mode)
+{
+  close();
+
+  this->mError = 0;
+
+#ifdef WIN32
+  this->mFile = _wfopen(CubitString::toUtf16(file).c_str(), CubitString::toUtf16(mode).c_str());
+#else
+  this->mFile = fopen(file.c_str(), mode);
+#endif
+  if(!this->mFile)
   {
-    if (matchi_here(reg, txt))
-      return 1;
-  } while (*txt != '\0' && tolower(*txt++) != tolower(*reg));
-  return 0;
+    this->mError = errno;
+  }
+
+  return mError == 0;
+}
+
+void CubitFile::close()
+{
+  if(mFile)
+  {
+    fclose(mFile);
+  }
+  mFile = NULL;
+  mError = 0;
+}
+
+FILE* CubitFile::file() const
+{
+  return this->mFile;
+}
+
+CubitFile::operator bool () const
+{
+  return this->mFile != NULL;
+}
+
+int CubitFile::error()
+{
+  return this->mError;
 }

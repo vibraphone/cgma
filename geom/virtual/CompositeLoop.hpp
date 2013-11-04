@@ -51,12 +51,12 @@ public:
     //- Returns CUBIT_TRUE if the Loop is an external Loop and CUBIT_FALSE
     //- otherwise.
 
-  void append_simple_attribute_virt( CubitSimpleAttrib* );
-  void remove_simple_attribute_virt( CubitSimpleAttrib* );
+  void append_simple_attribute_virt( const CubitSimpleAttrib& );
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& );
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& );
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& );
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& attrib_list );
+                                    DLIList<CubitSimpleAttrib>& attrib_list );
 
   // reverse the direction of the loop
   // if b_reverse_coedges is true, the function will also reverse the coedges

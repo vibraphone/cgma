@@ -2743,8 +2743,8 @@ int GeomMeasureTool::narrow_region_exists(
           {
             removed = 1;
             j=num_divisions;
-            e1_pos_list.remove();
-            e2_pos_list.remove();
+            delete e1_pos_list.remove();
+            delete e2_pos_list.remove();
             e1_vert_list.remove();
             e2_vert_list.remove();
           }

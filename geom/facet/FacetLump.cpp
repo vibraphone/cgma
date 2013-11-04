@@ -76,7 +76,7 @@ FacetLump::~FacetLump()
 //
 // Creation Date : 11/21/96
 //-------------------------------------------------------------------------
-void FacetLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetLump::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.append_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -90,7 +90,7 @@ void FacetLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 03/18/97
 //-------------------------------------------------------------------------
-void FacetLump::remove_simple_attribute_virt(CubitSimpleAttrib *csa )
+void FacetLump::remove_simple_attribute_virt(const CubitSimpleAttrib &csa )
   { attribSet.remove_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -116,11 +116,11 @@ void FacetLump::remove_all_simple_attribute_virt()
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-CubitStatus FacetLump::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
+CubitStatus FacetLump::get_simple_attribute(DLIList<CubitSimpleAttrib>& csa_list)
   { return attribSet.get_attributes( csa_list ); }
 
 CubitStatus FacetLump::get_simple_attribute( const CubitString& name,
-                                        DLIList<CubitSimpleAttrib*>& csa_list )
+                                        DLIList<CubitSimpleAttrib>& csa_list )
   { return attribSet.get_attributes( name, csa_list ); }
 
 CubitStatus FacetLump::save_attribs( FILE *file_ptr )

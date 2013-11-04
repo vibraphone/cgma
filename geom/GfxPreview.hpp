@@ -115,6 +115,8 @@ class CUBIT_GEOM_EXPORT GfxPreview
     //! \param color - color of the cylinder
     static void  draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
                                CubitBox& bounding_box, float radius, int color);
+    static void  draw_frustum( const CubitVector axis , const CubitVector origin1, const CubitVector origin2,double dRad1 , double dRad2,
+                               CubitBox& bounding_box ,int color);
     // draw a quad of a color
     static void draw_quad(const GPoint* points, int color);
 
@@ -155,6 +157,8 @@ class CUBIT_GEOM_EXPORT GfxPreview
                                  const int* face_list, int color, int mode) = 0;
     virtual void p_draw_cylinder(const CubitVector& axis, const CubitVector& origin, 
                                CubitBox& bounding_box, float radius, int color) = 0;
+    virtual void p_draw_frustum(const CubitVector axis, const CubitVector origin1, const CubitVector origin2, 
+                                  double radius1 , double radius2 ,CubitBox bounding_box , int color) = 0;
     virtual void p_draw_quad(const GPoint*, int) = 0;
     virtual void p_draw_tri(const GPoint*, int) = 0;
     virtual void p_draw_vector(const CubitVector&, const CubitVector&, int) = 0;

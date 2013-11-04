@@ -39,22 +39,14 @@
 GeometryEntity::~GeometryEntity()
 {}
 
-void GeometryEntity::get_saved_names( DLIList<CubitString*> &names )
+void GeometryEntity::get_saved_names( std::vector<CubitString> &names )
 {
-  std::vector<CubitString>::iterator iter = myNames.begin();
-  for(; iter != myNames.end(); iter++ )
-  {
-    CubitString *tmp_name = &(*iter);    
-    names.append( tmp_name );
-  }
+  names = myNames;
 }
 
-void GeometryEntity::set_saved_names( DLIList<CubitString*> names )
+void GeometryEntity::set_saved_names( const std::vector<CubitString>& names )
 {
-  myNames.clear();
-  int i;
-  for( i=names.size(); i--; )   
-    myNames.push_back( *(names.get_and_step()) );  
+  myNames = names;
 }
 
 // ********** END PUBLIC FUNCTIONS         **********

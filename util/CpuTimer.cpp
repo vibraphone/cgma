@@ -38,7 +38,7 @@ struct tms {
 	   clock_t tms_cstime;		/* system time, children */
       };
 
-  #include <Windows.h>
+  #include <windows.h>
 
 #endif
 

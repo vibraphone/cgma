@@ -22,69 +22,51 @@
 #include "BasicTopologyEntity.hpp"
 #include "GeometryEntity.hpp"
 
-CubitAttrib* CAEntityId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAEntityId_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAEntityId *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAEntityId(entity);
-  }
-  else
-  {
-    new_attrib = new CAEntityId(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAEntityId(entity, p_csa);
 }
 
 CAEntityId::CAEntityId(RefEntity* new_attrib_owner,
-                       CubitSimpleAttrib *csa_ptr)
-        : CubitAttrib(new_attrib_owner)
-{
-  assert ( csa_ptr != 0 );
-   PRINT_DEBUG_94( "Creating ENTITY_ID attribute from CSA for %s %d\n",
-      (attribOwnerEntity ? attribOwnerEntity->class_name() : "(none)"),
-      (attribOwnerEntity ? attribOwnerEntity->id() : 0));
-   
-   DLIList<int*> *i_list = csa_ptr->int_data_list();
-
-   assert(i_list && i_list->size() > 0);
-   i_list->reset();
-   entityId = *( i_list->get_and_step() );
-
-   if (i_list->size() > 1) {
-     boundingUid = *(i_list->get_and_step());
-     boundingSense = (CubitSense) *(i_list->get_and_step());
-   }
-   else {
-     boundingUid = CUBIT_INT_MIN;
-     boundingSense = CUBIT_UNKNOWN;
-   }
-
-   DLIList<double*> *d_list = csa_ptr->double_data_list();
-   if (d_list && d_list->size() > 0) {
-     RefEdge *edge = CAST_TO(new_attrib_owner, RefEdge);
-     assert(d_list->size() == 3 && 
-            edge && edge->start_vertex() == edge->end_vertex());
-     d_list->reset();
-     boundingXYZ = new CubitVector(*d_list->get_and_step(),
-                                   *d_list->get_and_step(),
-                                   *d_list->get());
-   }
-   else boundingXYZ = NULL;
-}
-
-CAEntityId::CAEntityId(RefEntity* new_attrib_owner)
+                       const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
   entityId = 0;
   boundingUid = CUBIT_INT_MIN;
   boundingSense = CUBIT_UNKNOWN;
   boundingXYZ = NULL;
-  
-  PRINT_DEBUG_94( "Creating ENTITY_ID attribute for %s %d\n",
-              (attribOwnerEntity ? attribOwnerEntity->class_name() : "(none)"),
-              (attribOwnerEntity ? attribOwnerEntity->id() : 0));
+
+  if(!csa_ptr.isEmpty())
+  {
+   PRINT_DEBUG_94( "Creating ENTITY_ID attribute from CSA for %s %d\n",
+      (attribOwnerEntity ? attribOwnerEntity->class_name() : "(none)"),
+      (attribOwnerEntity ? attribOwnerEntity->id() : 0));
+   
+   const std::vector<int>& i_list = csa_ptr.int_data_list();
+
+   assert(i_list.size() > 0);
+   entityId = i_list[0];
+
+   if (i_list.size() > 1) {
+     boundingUid = i_list[1];
+     boundingSense = (CubitSense) (i_list[2]);
+   }
+   else {
+     boundingUid = CUBIT_INT_MIN;
+     boundingSense = CUBIT_UNKNOWN;
+   }
+
+   const std::vector<double>& d_list = csa_ptr.double_data_list();
+   if (d_list.size() > 0) {
+     RefEdge *edge = CAST_TO(new_attrib_owner, RefEdge);
+     assert(d_list.size() == 3 &&
+            edge && edge->start_vertex() == edge->end_vertex());
+     boundingXYZ = new CubitVector(d_list[0],
+                                   d_list[1],
+                                   d_list[2]);
+   }
+   else boundingXYZ = NULL;
+  }
 }
 
 CAEntityId::~CAEntityId()
@@ -368,30 +350,24 @@ void CAEntityId::merge_owner(CubitAttrib *deletable_attrib)
     entityId = other_caeid->id();
 }
 
-CubitSimpleAttrib* CAEntityId::cubit_simple_attrib()
+CubitSimpleAttrib CAEntityId::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int> i_list;
 
-  i_list.append ( entityId );
-  i_list.append ( boundingUid );
-  i_list.append ( boundingSense );
+  i_list.push_back ( entityId );
+  i_list.push_back ( boundingUid );
+  i_list.push_back ( boundingSense );
   if (boundingXYZ) {
-    d_list.append ( boundingXYZ->x() );
-    d_list.append ( boundingXYZ->y() );
-    d_list.append ( boundingXYZ->z() );
+    d_list.push_back ( boundingXYZ->x() );
+    d_list.push_back ( boundingXYZ->y() );
+    d_list.push_back ( boundingXYZ->z() );
   }
     
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-  int i;
-  for ( i = cs_list.size(); i--;) delete cs_list.get_and_step();
-  
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
 }
 
 void CAEntityId::print()

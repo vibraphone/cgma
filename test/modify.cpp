@@ -724,11 +724,15 @@ CubitStatus make_Point()
     if (face != NULL)
       ref_faces.append(face);
   }
-  normal = ref_faces.get()->normal_at(v1); //(1,0,0)
   CubitVector test_normal0(1,0,0);
-  assert(normal == test_normal0);
-  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
   CubitVector test_normal2(0,0,1);
+  normal = ref_faces.get()->normal_at(v1); //(1,0,0)
+  if (normal != test_normal0)
+  {
+    assert( normal ==test_normal2);
+    ref_faces.step();
+  }
+  normal = ref_faces.step_and_get()->normal_at(v2); //(0,0,1)
   assert(normal == test_normal2);
   surfaces.clean_out();
   surfaces.append(ref_faces.step_and_get()->get_surface_ptr());
@@ -1085,11 +1089,18 @@ CubitStatus make_Point()
   v_move8ii.z(10);
   DLIList<RefEdge*> edges;
   body->ref_edges(edges);
-#if OCC_VERSION_MINOR > 5
-  edges.reverse();
-#endif
   refentities.clean_out();
-  refentities.append(edges.get());
+  for (int i = 0; i < edges.size(); i++)
+  {
+    RefEdge* edge = edges.get();
+    double length = edge->measure();
+    if (length > 6.28  && length < 6.3)
+    {
+      refentities.append(edge);
+      break;
+    }
+    edges.step();
+  }
   new_bodies.clean_out();
   gmti->sweep_translational(refentities, v_move8ii, 0.087, 1, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE, new_bodies);
   body = new_bodies.get();

@@ -72,8 +72,8 @@ public :
   int get_saved_id() const { return myId; }
   void set_saved_id( int value ) { myId = value; }
 
-  void get_saved_names( DLIList<CubitString*> &names );
-  void set_saved_names( DLIList<CubitString*> names );
+  void get_saved_names( std::vector<CubitString> &names );
+  void set_saved_names( const std::vector<CubitString>& names );
   
 protected:
 private:

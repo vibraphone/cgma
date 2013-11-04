@@ -14,6 +14,7 @@
 #include "CubitUtil.hpp"
 #include "CubitMessage.hpp"
 #include "AppUtil.hpp"
+#include "CubitFileUtil.hpp"
 
 
 SettingHandler* SettingHandler::instance_ = NULL;
@@ -121,17 +122,16 @@ void SettingHandler::add_setting(const char* name, void (*setFn) (CubitString),
 
 void SettingHandler::save_settings(const char *filename)
 {
+  CubitFile file(filename, "w");
   
-  FILE* file = fopen(filename, "w");
-  
-  if (file == NULL) {
+  if (!file) {
     std::cerr << "File " << filename << " could not be opened.  Settings not saved." << std::endl;
     return;
    }
 
   //Put a header at the top of the file
-  fprintf(file, "#Setting Name                                 Setting Value\n");
-  fprintf(file, "#------------------------------------------------------------\n");
+  fprintf(file.file(), "#Setting Name                                 Setting Value\n");
+  fprintf(file.file(), "#------------------------------------------------------------\n");
 
   // Get starting and ending iterators from the map
   std::map<CubitString, SettingHolder*>::iterator start = mSettingsList.begin();
@@ -143,22 +143,22 @@ void SettingHandler::save_settings(const char *filename)
 
     //Integer settings
     if (setting->setting_type == 0) {
-      fprintf(file, "%-50.50s%d \n", setting->name.c_str(), (setting->get_int_function)());      
+      fprintf(file.file(), "%-50.50s%d \n", setting->name.c_str(), (setting->get_int_function)());
     }
     
     //Double settings
     else if (setting->setting_type == 1) {
-      fprintf(file, "%-50.50s%f \n", setting->name.c_str(), (setting->get_double_function)());
+      fprintf(file.file(), "%-50.50s%f \n", setting->name.c_str(), (setting->get_double_function)());
     }
 
     //Boolean settings
     else if (setting->setting_type == 2) {
-      fprintf(file, "%-50.50s%d \n", setting->name.c_str(), (setting->get_bool_function)());
+      fprintf(file.file(), "%-50.50s%d \n", setting->name.c_str(), (setting->get_bool_function)());
     }
     
     //String settings
     else if (setting->setting_type == 3) {
-      fprintf(file, "%-50.50s%s \n", setting->name.c_str(), (setting->get_string_function)().c_str());
+      fprintf(file.file(), "%-50.50s%s \n", setting->name.c_str(), (setting->get_string_function)().c_str());
     }
 
     else
@@ -169,9 +169,6 @@ void SettingHandler::save_settings(const char *filename)
 
     ++start;
   }
-  
-  fclose(file);
- 
 }
 
 void SettingHandler::print_settings()
@@ -221,16 +218,16 @@ void SettingHandler::save_settings()
   
   const char* default_filename = "cubit.settings";
 
-  FILE* file = fopen(default_filename, "w");
+  CubitFile file(default_filename, "w");
   
-  if (file == NULL) {
+  if (!file) {
     std::cerr << "File " << default_filename << " could not be opened.  Settings not saved." << std::endl;
     return;
    }
 
   //Put a header at the top of the file
-  fprintf(file, "#Setting Name                                 Setting Value\n");
-  fprintf(file, "#------------------------------------------------------------\n");
+  fprintf(file.file(), "#Setting Name                                 Setting Value\n");
+  fprintf(file.file(), "#------------------------------------------------------------\n");
 
   // Get starting and ending iterators from the map
   std::map<CubitString, SettingHolder*>::iterator start = mSettingsList.begin();
@@ -242,22 +239,22 @@ void SettingHandler::save_settings()
 
     //Integer settings
     if (setting->setting_type == 0) {
-      fprintf(file, "%-50.50s%d \n", setting->name.c_str(), (setting->get_int_function)());      
+      fprintf(file.file(), "%-50.50s%d \n", setting->name.c_str(), (setting->get_int_function)());
     }
     
     //Double settings
     else if (setting->setting_type == 1) {
-      fprintf(file, "%-50.50s%f \n", setting->name.c_str(), (setting->get_double_function)());
+      fprintf(file.file(), "%-50.50s%f \n", setting->name.c_str(), (setting->get_double_function)());
     }
 
     //Boolean settings
     else if (setting->setting_type == 2) {
-      fprintf(file, "%-50.50s%d \n", setting->name.c_str(), (setting->get_bool_function)());
+      fprintf(file.file(), "%-50.50s%d \n", setting->name.c_str(), (setting->get_bool_function)());
     }
     
     //String settings
     else if (setting->setting_type == 3) {
-      fprintf(file, "%-50.50s%s \n", setting->name.c_str(), (setting->get_string_function)().c_str());
+      fprintf(file.file(), "%-50.50s%s \n", setting->name.c_str(), (setting->get_string_function)().c_str());
     }
 
     else
@@ -268,9 +265,6 @@ void SettingHandler::save_settings()
 
     ++start;
   }
-  
-  fclose(file);
-
 }
 
 
@@ -278,9 +272,9 @@ void SettingHandler::restore_settings(const char* filename)
 {
 
   //Open the file for reading
-  FILE* file = fopen(filename, "r");
+  CubitFile file(filename, "r");
 
-  if (file == NULL) {
+  if (file) {
     std::cerr << "File " << filename << " could not be opened.  Settings not restored." << std::endl;
     return;
    }
@@ -288,8 +282,8 @@ void SettingHandler::restore_settings(const char* filename)
   //Read the first 2 lines of the file, we know they are not settings
   //so just get rid of them
   char junk[100];
-  char* s = fgets(junk, 100, file);
-  s = fgets(junk, 100, file);
+  char* s = fgets(junk, 100, file.file());
+  s = fgets(junk, 100, file.file());
 
   char name[51]; //Allocate 50 bytes for the characters and 1 for a null termination
   char new_name[50]; //A string that will hold the setting name without excess white space
@@ -302,10 +296,10 @@ void SettingHandler::restore_settings(const char* filename)
   CubitBoolean bool_value = CUBIT_FALSE;
   CubitString string_value = "";
 
-  while (!feof(file)) {
+  while (!feof(file.file())) {
 
   //Get the setting name.  This will be in the first 50 characters of a line
-  s = fgets(name, 51, file);
+  s = fgets(name, 51, file.file());
 
   //Create a CubitString for the setting name without all the white space
   int i;
@@ -326,7 +320,7 @@ void SettingHandler::restore_settings(const char* filename)
   temp = mSettingsList.find(cubit_name);
   
     //Read in the rest of the line no matter what
-  s = fgets(value, 120, file);
+  s = fgets(value, 120, file.file());
     
   if (temp == mSettingsList.end()) {
     std::cerr << "Setting " << cubit_name.c_str() << " was not found." << std::endl;  
@@ -362,18 +356,14 @@ void SettingHandler::restore_settings(const char* filename)
 
   } //End while
 
-  fclose(file);
-
 }
 
 SettingHolder* SettingHandler::get_setting_holder(CubitString name)
 { 
-	if( mSettingsList.find(name) == mSettingsList.end() )
-		return NULL;
-
-	return (*(mSettingsList.find(name))).second;
+  std::map<CubitString, SettingHolder*>::iterator it = mSettingsList.find(name);
+  return it  ==  mSettingsList.end()  ? NULL : it->second;
 }
-
+ 
 void SettingHandler::get_settings_list(std::vector< std::pair<CubitString, SettingHolder*> > &list)
 {
   // return a list of the settings

@@ -131,19 +131,18 @@ void RefEntityName::remove_refentity_name(RefEntity *entity,
 }
 
 CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
-                                              DLIList<CubitString*> &names,
+                                              DLIList<CubitString> &names,
                                               bool update_attribs, 
                                               bool check_name_validity)
 {
   names.reset();
   //int num_new_names = names.size();
 
-  DLIList<CubitString*> new_names;
+  DLIList<CubitString> new_names;
   
-  int i;
-  for ( i = names.size(); i > 0; i--)
+  for (int i=0; i<names.size(); i++)
   {
-    CubitString name = *names.get();
+    CubitString name = names[i];
     CubitString in_name = name;
     CubitBoolean warn_name_change = CUBIT_FALSE;
     
@@ -229,13 +228,10 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
         // name is valid
       if (name != in_name)
           // name was changed; change in name list too
-        *names.get() = name;
+        names[i] = name;
 
         // save this name to later
-      new_names.append(names.get());
-      
-        // now step the list
-      names.step();
+      new_names.append(names[i]);
     }
   }
   
@@ -245,9 +241,9 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
     new_names.reset();
     
     CubitString name;
-    for (i = new_names.size(); i > 0; i--)
+    for (int i = new_names.size(); i > 0; i--)
     {
-      name = *new_names.get_and_step();
+      name = new_names.get_and_step();
       if (nameEntityList.move_to(name) &&
           nameEntityList.get()->value() == entity) {
             PRINT_DEBUG_92("Already have name %s for %s %d.\n",
@@ -361,7 +357,7 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
 }
 
 int RefEntityName::get_refentity_name(const RefEntity *entity,
-                                      DLIList<CubitString*> &names,
+                                      DLIList<CubitString> &names,
                                       int get_only_one)
 {
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
@@ -371,7 +367,7 @@ int RefEntityName::get_refentity_name(const RefEntity *entity,
   int found_match = get_refentity_name(entity, temp_list, get_only_one);
   
   for (int i=temp_list.size(); i > 0; i--)
-    names.append(temp_list.get_and_step()->ptr_to_key());
+    names.append(temp_list.get_and_step()->key());
 
   return found_match;
 }
@@ -459,8 +455,8 @@ void RefEntityName::merge_refentity_names(RefEntity *retained,
     combined_names.get()->value(retained);
     combined_names.step();
     for (i = combined_names.size()-1; i > 0; i--) {
-      if (same_base_name(combined_names.prev()->ptr_to_key(),
-                         combined_names.get()->ptr_to_key())) {
+      if (same_base_name(combined_names.prev()->key(),
+                         combined_names.get()->key())) {
 
         combined_names.get()->value(dead);
       }
@@ -559,7 +555,7 @@ CubitStatus RefEntityName::clean(CubitString &raw_name)
 {
   if (raw_name == "")
     return CUBIT_FAILURE;
-  
+
     // A valid name consists of alphanumeric characters plus '.', '_', '-', or '@'
   CubitStatus found_invalid_character = CUBIT_FAILURE;
 
@@ -614,12 +610,12 @@ char RefEntityName::get_character(const CubitString& type) const
 
 static int is_valid_char(char c)
 {
-  return (isalnum(c) || c == '.' || c == '_' || c == '@' || c == '-');
+  return (isalnum(c) || c == '.' || c == '_' || c == '@' || c == '-' || !isascii(c));
 }
 
 static int is_valid_first_char(char c)
 {
-  return (isalpha(c) || c == '_');
+  return (isalpha(c) || c == '_' || !isascii(c));
 }
 
 CubitStatus RefEntityName::generate_unique_name(CubitString &name)
@@ -690,40 +686,40 @@ CubitStatus RefEntityName::generate_unique_name(CubitString &name)
   return found_unique;
 }
 
-CubitString RefEntityName::base_name(const CubitString* name)
+CubitString RefEntityName::base_name(const CubitString& name)
 {
-  const char *pos = strchr(name->c_str(), suffixCharacter);
+  const char *pos = strchr(name.c_str(), suffixCharacter);
   if (!pos)
-    return *name;
-  return name->substr(0, pos - name->c_str());
+    return name;
+  return name.substr(0, pos - name.c_str());
 }
 
 
 // returns CUBIT_TRUE if the two names have the same base name (i.e.
 // the same name before the first suffixCharacter
-CubitBoolean RefEntityName::same_base_name(const CubitString *name1,
-                                           const CubitString *name2)
+CubitBoolean RefEntityName::same_base_name(const CubitString &name1,
+                                           const CubitString &name2)
 {
-  const char *pos1 = strchr(name1->c_str(), suffixCharacter);
-  const char *pos2 = strchr(name2->c_str(), suffixCharacter);
+  const char *pos1 = strchr(name1.c_str(), suffixCharacter);
+  const char *pos2 = strchr(name2.c_str(), suffixCharacter);
 
     // check for replacement character in one but not the other
   int length1, length2;
   if (pos1 == NULL)
-    length1 = strlen(name1->c_str());
+    length1 = strlen(name1.c_str());
   else
-    length1 = pos1 - name1->c_str();
+    length1 = pos1 - name1.c_str();
 
   if (pos2 == NULL)
-    length2 = strlen(name2->c_str());
+    length2 = strlen(name2.c_str());
   else
-    length2 = pos2 - name2->c_str();
+    length2 = pos2 - name2.c_str();
 
     // if the lengths are different, the base names are also different
   if (length1 != length2)
     return CUBIT_FALSE;
 
-  if (strncmp(name1->c_str(), name2->c_str(), length1) == 0)
+  if (strncmp(name1.c_str(), name2.c_str(), length1) == 0)
     return CUBIT_TRUE;
   else
     return CUBIT_FALSE;
@@ -746,14 +742,14 @@ void RefEntityName::copy_refentity_names( const RefEntity *source,
   //Assume the name is valid already, as it is attached to
   //the source entity.  Also, assume the name is unique to
   //the source entity.
-  DLIList<CubitString*> names;
+  DLIList<CubitString> names;
   get_refentity_name( source, names );
   names.reset();
   
   //For each of the names on the source entity
   for( int i = names.size(); i > 0; i-- )
   {  
-    CubitString name = *names.get_and_step();
+    CubitString name = names.get_and_step();
     //make the name unique
     generate_unique_name( name );
     //associate name with target
@@ -826,23 +822,23 @@ void RefEntityName::copy_refentity_names( DLIList<RefEntity*>& source_list,
     //Get the first name
     name_list.sort();
     name_list.reset();
-    CubitString* prev_key = name_list.get_and_step()->ptr_to_key();
+    CubitString prev_key = name_list.get_and_step()->key();
     
     //Add name to target
-    CubitString name = *prev_key;
+    CubitString name = prev_key;
     generate_unique_name( name );
     nameEntityList.insert( new RefEntityNameMap( name, target ) );
   
     //For the rest of the names...
     for( int j = name_list.size(); j > 1; j-- )
     {
-      CubitString* key_ptr = name_list.get_and_step()->ptr_to_key();
+      CubitString key_ptr = name_list.get_and_step()->key();
       
       //If the name has a different base name than the previous, 
       //add it to the target.
       if( !same_base_name( prev_key, key_ptr ) )
       {
-        name = *key_ptr;
+        name = key_ptr;
         generate_unique_name( name );
         nameEntityList.insert( new RefEntityNameMap( name, target ) );
       }
@@ -862,7 +858,7 @@ void RefEntityName::copy_refentity_names( DLIList<RefEntity*>& source_list,
   else
   {
     //If we don't care about unique base names, just add them all.
-    DLIList<CubitString*> name_list;
+    DLIList<CubitString> name_list;
     for( int i = source_list.size(); i > 0; i-- )
       get_refentity_name( source_list.get_and_step(), name_list );
     name_list.reset();

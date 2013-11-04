@@ -18,10 +18,6 @@
 
 // ********** BEGIN STANDARD INCLUDES      **********
 #include <assert.h>
-#include <typeinfo>
-#if !defined(WIN32)
-using std::type_info;
-#endif
 // ********** END STANDARD INCLUDES        **********
 
 // ********** BEGIN CUBIT INCLUDES         **********
@@ -52,10 +48,6 @@ public:
     //R- the object.
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
-  
-  virtual const type_info& entity_type_info() const
-    { return typeid(CollectionEntity); }
-    //- return the type for this CollectionEntity
   
   virtual CubitString name() const = 0;
   virtual void name(CubitString) = 0;

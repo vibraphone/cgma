@@ -49,7 +49,12 @@ public:
       if( instance_ == NULL ) instance_ = new GeometryUtil;
       return instance_;
     }
-  static void delete_instance() { if(instance_) delete instance_; } 
+  static void delete_instance()
+  { 
+    if(instance_)
+      delete instance_;
+    instance_ = NULL;
+  } 
   
   CubitBoolean is_position_within_loop( const CubitVector& position,
                                         Loop* loop_ptr,

@@ -55,7 +55,7 @@ public:
   FacetEvalTool* get_eval_tool()
     {return myEvalTool;}
   
-  ChollaSurface *merge_parter(){ return myMergePartner; }
+  ChollaSurface *merge_partner(){ return myMergePartner; }
   void set_merge_partner( ChollaSurface *merge_partner )
     { myMergePartner = merge_partner;}
   

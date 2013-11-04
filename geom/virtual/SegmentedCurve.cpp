@@ -791,7 +791,7 @@ CubitStatus SegmentedCurve::save( CubitSimpleAttrib& attrib )
   return sub_entity_set().save_geometry( id, 1, &segments, 0, &topo, 0, attrib );
 }
 
-SegmentedCurve* SegmentedCurve::construct( CubitSimpleAttrib* attrib,
+SegmentedCurve* SegmentedCurve::construct( const CubitSimpleAttrib& attrib,
                                            PartitionEntity* parent )
 {
   PartitionSurface* owning_surf = dynamic_cast<PartitionSurface*>(parent);
@@ -800,7 +800,7 @@ SegmentedCurve* SegmentedCurve::construct( CubitSimpleAttrib* attrib,
     return 0;
   
   DLIList<int> vertex_conn;
-  SegmentedCurve* result = new SegmentedCurve( parent, *attrib, vertex_conn );
+  SegmentedCurve* result = new SegmentedCurve( parent, attrib, vertex_conn );
   
   if( vertex_conn.size() != 4 )
   {
@@ -832,7 +832,7 @@ SegmentedCurve* SegmentedCurve::construct( CubitSimpleAttrib* attrib,
   
   
 SegmentedCurve::SegmentedCurve( PartitionEntity* vol, 
-                                CubitSimpleAttrib& attrib,
+                                const CubitSimpleAttrib& attrib,
                                 DLIList<int>& vertex_conn )
 {
   DLIList<CubitVector*> points;
@@ -882,7 +882,8 @@ CubitStatus SegmentedCurve::get_spline_params
   int &degree,       // the degree of this spline
   DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
   DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
-  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+  DLIList<double> &knots,   // There should be order+cntrl_pts.size()-2 knots
+  bool &spline_is_reversed
 ) const
 {
   PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for SegmentedCurves.\n");

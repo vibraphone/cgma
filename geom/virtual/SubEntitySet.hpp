@@ -26,7 +26,7 @@ class SubEntitySet : public TBOwnerSet
                       
     void add_lower_order( PartitionEntity* partition );
     void add_lower_order( PartitionEntity* entity, 
-                          CubitSimpleAttrib& attrib,
+                          const CubitSimpleAttrib& attrib,
                           int dimension,
                           DLIList<CubitVector*>& points_from_attrib,
                           DLIList<int>& facets_from_attrib,
@@ -55,12 +55,12 @@ class SubEntitySet : public TBOwnerSet
   
     void print_debug_info( const char* prefix = 0 ) const;
   
-    void add_attribute( PartitionEntity* entity, CubitSimpleAttrib* csa );
-    void rem_attribute( PartitionEntity* entity, CubitSimpleAttrib* csa );
+    void add_attribute( PartitionEntity* entity, const CubitSimpleAttrib& csa );
+    void rem_attribute( PartitionEntity* entity, const CubitSimpleAttrib& csa );
     void get_attributes( PartitionEntity* entity, 
-                         DLIList<CubitSimpleAttrib*>& list );
+                         DLIList<CubitSimpleAttrib>& list );
     void get_attributes( PartitionEntity* entity, const char* name,
-                         DLIList<CubitSimpleAttrib*>& list );
+                         DLIList<CubitSimpleAttrib>& list );
     void rem_all_attrib( PartitionEntity* entity );
     void unwrap_attributes();
   
@@ -100,16 +100,16 @@ class SubEntitySet : public TBOwnerSet
                                DLIList<int>& point_connectivity,
                                DLIList<int>& topo_connectivity,
                                DLIList<int>& point_owners,
-                               CubitSimpleAttrib& attrib );
+                               const CubitSimpleAttrib& attrib );
     
-    static int get_geom_dimension( CubitSimpleAttrib& attrib );
+    static int get_geom_dimension( const CubitSimpleAttrib& attrib );
       // return the dimension of the geometry stored in the attrib
     
-    static int get_geom_id( CubitSimpleAttrib& attrib );
+    static int get_geom_id( const CubitSimpleAttrib& attrib );
     
-    static int get_segment_count( CubitSimpleAttrib& attrib );
+    static int get_segment_count( const CubitSimpleAttrib& attrib );
     
-    static void remove_non_geom_attribs( DLIList<CubitSimpleAttrib*>& list );
+    static void remove_non_geom_attribs( DLIList<CubitSimpleAttrib>& list );
       // given a list of all the geometry attributes on an entity,
       // remove and destroy any that are not partition geometry.
     
@@ -134,9 +134,9 @@ class SubEntitySet : public TBOwnerSet
     SubEntitySet& operator=( const SubEntitySet& ) { return *this;}
     bool operator==( const SubEntitySet& c ) const { return &c == this; }
   
-    CubitStatus wrap_attribute( CubitSimpleAttrib* csa, int id ) const;
-    int unwrap_attribute( CubitSimpleAttrib* csa ) const;
-    bool is_attribute( CubitSimpleAttrib* csa, int id = 0 ) const;
+    CubitStatus wrap_attribute( CubitSimpleAttrib& csa, int id ) const;
+    int unwrap_attribute( CubitSimpleAttrib& csa ) const;
+    bool is_attribute( const CubitSimpleAttrib& csa, int id = 0 ) const;
       
     TopologyBridge* myEntity;
     

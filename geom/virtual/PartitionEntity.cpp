@@ -15,6 +15,11 @@
 #include "CubitMessage.hpp"
 #include "CubitPoint.hpp"
 
+#include <typeinfo>
+#ifdef _MSC_VER
+using std::type_info;
+#endif
+
 PartitionEntity::~PartitionEntity()
 {
   entitySet->remove(this);

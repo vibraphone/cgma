@@ -1,3 +1,6 @@
+# Don't require GNU-standard files (Changelog, README, etc.)
+AUTOMAKE_OPTIONS = foreign
+
 # Subdirectories
 # The values checked are defined in AM_CONDITIONAL statements
 # in configure.in
@@ -38,8 +41,8 @@ libcubit_geom_la_SOURCES = \
     CAEntityColor.cpp \
     CAEntityId.cpp \
     CAEntityName.cpp \
-    CAEntitySense.cpp \
     CAEntityTol.cpp \
+    CAEntitySense.cpp \
     CAGroup.cpp \
     CAMergePartner.cpp \
     CAMergeStatus.cpp \
@@ -132,8 +135,8 @@ endif
 # not be installed, move it to the _SOURCES list above.
 libcubit_geom_la_include_HEADERS = \
   AnalyticGeometryTool.hpp \
-  BasicTopologyEntity.hpp \
   AutoMidsurfaceTool.hpp \
+  BasicTopologyEntity.hpp \
   Body.hpp \
   BodySM.hpp \
   BoundingBoxTool.hpp \
@@ -144,8 +147,8 @@ libcubit_geom_la_include_HEADERS = \
   CAEntityColor.hpp \
   CAEntityId.hpp \
   CAEntityName.hpp \
-  CAEntitySense.hpp \
   CAEntityTol.hpp \
+  CAEntitySense.hpp \
   CAGroup.hpp \
   CAMergePartner.hpp \
   CAMergeStatus.hpp \

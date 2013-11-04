@@ -53,10 +53,8 @@ class CompositeEngine : public IntermediateGeomEngine
                      ( DLIList<TopologyBridge*> &tb_list, const char *name_in);
     virtual void push_imprint_attributes_before_modify
                      ( DLIList<BodySM*> &body_sms );
-    virtual void attribute_after_imprinting( DLIList<TopologyBridge*> &new_tbs,
-                                                    DLIList<TopologyBridge*> &att_tbs,
-                                                    DLIList<TopologyBridge*> &tb_list,
-                                                        DLIList<Body*> &old_bodies);
+    virtual void attribute_after_imprinting(DLIList<TopologyBridge*> &tb_list,
+                                            DLIList<Body*> &old_bodies);
 
     // This is a copy of the function in MergeTool with the difference that it
     // accepts a layer flag to dictate at which level the topology is traversed
@@ -141,7 +139,7 @@ class CompositeEngine : public IntermediateGeomEngine
       //- get_parents/children_virt such that the results are at the
       //- "composite level" of the TB graph.
 */    
-    static CubitSimpleAttrib* 
+    static CubitSimpleAttrib
     find_attribute_by_name( TopologyBridge* bridge, const CubitString name );     
       //- Find the attribute with the specified name.
       //- Caller is responsible for freeing the returned, heap-allocated
@@ -259,7 +257,7 @@ class CompositeEngine : public IntermediateGeomEngine
     CubitStatus save( CompositeBody* );
     
     static void append_attrib( TopologyBridge* bridge, 
-                               CubitSimpleAttrib* attrib );
+                               const CubitSimpleAttrib& attrib );
     
     
     static CubitStatus find_coedges( CompositeSurface* surface,

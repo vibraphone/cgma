@@ -33,7 +33,12 @@ public:
   static RefEntityName *instance();
   ~RefEntityName();
 
-  static void delete_instance() { if(instance_) delete instance_; }
+  static void delete_instance()
+  { 
+    if(instance_)
+      delete instance_;
+    instance_ = NULL;
+  }
 
   void       remove_refentity_name(const CubitString &name,
                                    CubitBoolean update_attribs = CUBIT_TRUE);
@@ -54,14 +59,13 @@ public:
   //- Returns CUBIT_FAILURE if unsuccessful.
 
   CubitStatus add_refentity_name(RefEntity *entity,
-                                 DLIList<CubitString*> &names,
+                                 DLIList<CubitString> &names,
                                  bool update_attribs = true,
                                  bool check_name_validity = true);
     //- add multiple names to the name map for this entity
   
-  int        get_refentity_name(const RefEntity *entity,
-				DLIList<CubitString*> &names,
-				int get_only_one_name = CUBIT_FALSE);
+  int        get_refentity_name(const RefEntity *entity, DLIList<CubitString> &names,
+                                int get_only_one_name = CUBIT_FALSE);
   //- Get the list of names corresponding to this RefEntity.
   //- Returns the number of names found for this RefEntity.
 
@@ -112,10 +116,10 @@ public:
   static void set_replacement_setting(CubitString rep);
   static CubitString get_replacement_setting();
   
-  static CubitString base_name(const CubitString *name);
+  static CubitString base_name(const CubitString &name);
   
-  CubitBoolean same_base_name(const CubitString *name1,
-                              const CubitString *name2);
+  CubitBoolean same_base_name(const CubitString &name1,
+                              const CubitString &name2);
     //- return CUBIT_TRUE if the base name (i.e. the name before the suffixChar)
     //- is the same
 

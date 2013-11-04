@@ -429,9 +429,9 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
                                           TDF_Label& l_attr)
 {
   std::string buffer, type, stringdata;
-  DLIList<CubitString*> strings;
-  DLIList<double> doubles;
-  DLIList<int> ints;
+  std::vector<CubitString> strings;
+  std::vector<double> doubles;
+  std::vector<int> ints;
   int c_num, length;
   char s;
   do {
@@ -444,9 +444,8 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
       type.push_back(s);
     }
 
-    CubitString* string_prt = new CubitString(type.c_str());
-    strings.clean_out();
-    strings.append(string_prt);
+    strings.clear();
+    strings.push_back(type.c_str());
 
     IS >> length; //number of strings
     for(int i =0; i < length; i++)
@@ -459,35 +458,30 @@ void  OCCShapeAttributeSet::ReadAttribute(TopoDS_Shape& S,
         IS.get(s);
         stringdata.push_back(s);
       }
-      CubitString* string_prt2 = new CubitString(stringdata.c_str());
-      strings.append(string_prt2);
+      strings.push_back(stringdata.c_str());
     }
 
     int tmp_int;
     double  tmp_dbl; 
     IS >> length; //number of ints
-    ints.clean_out();
+    ints.clear();
     for (int i = 0; i < length ; i++)
     {
       IS >> tmp_int;
-      ints.append( tmp_int );
+      ints.push_back( tmp_int );
     }
 
     IS >> length; //number of doubles
-    doubles.clean_out();
+    doubles.clear();
     for (int i = 0; i < length ; i++)
     {
       IS >> tmp_dbl;
-      doubles.append( tmp_dbl );
+      doubles.push_back( tmp_dbl );
     }
 
-    CubitSimpleAttrib *tmp_attrib = new CubitSimpleAttrib(&strings, &doubles, &ints);
-
-    for(int i = 0; i < strings.size(); i++)
-      delete strings.get_and_step();
+    CubitSimpleAttrib tmp_attrib(&strings, &doubles, &ints);
 
     OCCAttribSet::append_attribute(tmp_attrib, S);
-    delete tmp_attrib;
   
     IS >> buffer;
   }while(buffer[0] != '*');

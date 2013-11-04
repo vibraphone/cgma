@@ -14,7 +14,12 @@ class SplitCompositeSurfaceTool
 {
   public:
     static SplitCompositeSurfaceTool *instance();
-    static void delete_instance() { if(instance_) delete instance_; };
+    static void delete_instance()
+    {
+      if(instance_)
+        delete instance_;
+      instance_ = NULL;
+    };
     CubitStatus split_surface( RefFace *ref_face_ptr,
                              DLIList<CubitVector*> &locations,
                              DLIList<DLIList<CubitVector*>*> &vec_lists,

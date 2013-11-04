@@ -83,13 +83,13 @@ CGMApp::~CGMApp()
     instance_ = NULL;
 }
 
-void CGMApp::startup(int argc, char **argv)
+void CGMApp::startup(const std::vector<CubitString> &args)
 {
    if (mAppStarted)
        return;
 
     // make sure apputil has started
-  AppUtil::instance()->startup(argc, argv);
+  AppUtil::instance()->startup(args);
 
      // register attributes
    register_attributes();

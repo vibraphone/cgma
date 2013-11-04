@@ -230,7 +230,7 @@ CubitBoolean RefVertex::about_spatially_equal(
      return CUBIT_FALSE;
      
    if ( notify_ref_entity == CUBIT_TRUE )
-     this->notify(ref_vertex_ptr_2, COMPARISON_FOUND);
+     this->comparison_found(ref_vertex_ptr_2);
 
    return CUBIT_TRUE;
 }  

@@ -98,7 +98,6 @@ class TopoDS_Compound;
 // ********** BEGIN ENUM DEFINITIONS          **********
 
 // ********** END ENUM DEFINITIONS            **********
-
 class OCCQueryEngine : public GeometryQueryEngine
 {
 public:
@@ -131,7 +130,7 @@ public:
                                  BRep_Builder &B, //input
                                  TopoDS_Compound &Co, //input and output,
                                  DLIList<OCCLump*> &single_lumps, //output
-                                 DLIList< DLIList<CubitSimpleAttrib*>*> &lists);
+                                 DLIList< DLIList<CubitSimpleAttrib>*> &lists);
 
   int get_major_version();
 
@@ -160,12 +159,27 @@ public:
                                     unsigned short normal_tolerance = 15,
                                     double distance_tolerance = 0,
                                     double longest_edge = 0) const;
+    CubitStatus get_graphics( TopoDS_Face* face_ptr,
+                            GMem* g_mem,                                          
+                            unsigned short normal_tolerance = 15,
+                            double distance_tolerance = 0,
+                            double max_edge_length = 0) const;
+
 
   virtual CubitStatus get_graphics( Curve* curve_ptr,
                                     GMem* gMem = NULL,
                                     double angle_tolerance=0,
                                     double distance_tolerance=0,
                                     double max_edge_length = 0.0 ) const;
+
+
+
+  CubitStatus get_graphics( TopoDS_Edge* edge_ptr,
+    GMem* gMem = NULL,
+    double angle_tolerance = 0,
+    double distance_tolerance = 0,
+    double max_edge_length = 0 ) const;
+
 
     //R CubitStatus
     //R- CUBIT_SUCCESS/CUBIT_FAILURE
@@ -397,7 +411,7 @@ public:
   DLIList<OCCSurface*> *SurfaceList ;
   DLIList<OCCLoop*> *WireList; //standalone wire list
   DLIList<OCCCurve*> *CurveList ;
-  Handle_TDocStd_Document MyDF;
+  Handle(TDocStd_Document) MyDF;
   TDF_Label mainLabel;
   TopTools_DataMapOfShapeInteger* OCCMap;
   std::map<int, TopologyBridge*>* OccToCGM;

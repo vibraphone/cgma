@@ -973,7 +973,7 @@ void FacetboolInterface::make_persistents_webcut(BodySM *body_in,
                                          )
 {
 unsigned int k, n;
-DLIList<CubitSimpleAttrib*> csa_list;                              
+DLIList<CubitSimpleAttrib> csa_list;
 FacetBody *facet_body_in = CAST_TO(body_in, FacetBody);
 FacetBody *facet_body_out1;
 FacetBody *facet_body_out2;                               
@@ -1022,7 +1022,7 @@ DLIList<FacetLump*> flumplist, flumplist2;
         florig->owner()->swap_bridge(florig,fl2,false);
         florig->get_simple_attribute(csa_list);
         for ( k = csa_list.size(); k > 0; k-- ) {
-          CubitSimpleAttrib* csa = csa_list.get_and_step();
+          const CubitSimpleAttrib& csa = csa_list.get_and_step();
           fl2->append_simple_attribute_virt(csa);                               
         }
       }
@@ -1031,7 +1031,7 @@ DLIList<FacetLump*> flumplist, flumplist2;
       facet_body_in->owner()->swap_bridge(facet_body_in,facet_body_out1,false);
       facet_body_in->get_simple_attribute(csa_list);
       for ( k = csa_list.size(); k > 0; k-- ) {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
         facet_body_out1->append_simple_attribute_virt(csa);                               
       } 
     } 
@@ -1044,7 +1044,7 @@ void FacetboolInterface::make_persistents_imprint(BodySM *body_in,
                                           std::vector<FacetCurve *>& fcurvearray
                                          )
 {
-DLIList<CubitSimpleAttrib*> csa_list;                              
+DLIList<CubitSimpleAttrib> csa_list;
 FacetBody *facet_body_in = CAST_TO(body_in, FacetBody);
 FacetBody *facet_body_out1 = CAST_TO(body_out1, FacetBody);                                    
 unsigned int n;
@@ -1079,7 +1079,7 @@ int k;
         florig->owner()->swap_bridge(florig,fl2,false);
         florig->get_simple_attribute(csa_list);
         for ( k = csa_list.size(); k > 0; k-- ) {
-          CubitSimpleAttrib* csa = csa_list.get_and_step();
+          const CubitSimpleAttrib& csa = csa_list.get_and_step();
           fl2->append_simple_attribute_virt(csa);                               
         }
       }
@@ -1089,7 +1089,7 @@ int k;
       facet_body_in->owner()->swap_bridge(facet_body_in,facet_body_out1,false);
       facet_body_in->get_simple_attribute(csa_list);
       for ( k = csa_list.size(); k > 0; k-- ) {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
         facet_body_out1->append_simple_attribute_virt(csa);                               
       }
     }    
@@ -1109,7 +1109,7 @@ void FacetboolInterface::make_persistents_boolean(BodySM *body_in,
                                          )
 {
   unsigned int n;
-  DLIList<CubitSimpleAttrib*> csa_list;                              
+  DLIList<CubitSimpleAttrib> csa_list;
   FacetBody *facet_body_in = CAST_TO(body_in, FacetBody);
   FacetBody *facet_body_out1 = CAST_TO(body_out1, FacetBody);
   int which_parent;
@@ -1175,7 +1175,7 @@ int k;
         florig->owner()->swap_bridge(florig,fl2,false);
         florig->get_simple_attribute(csa_list);
         for ( k = csa_list.size(); k > 0; k-- ) {
-          CubitSimpleAttrib* csa = csa_list.get_and_step();
+          const CubitSimpleAttrib& csa = csa_list.get_and_step();
           fl2->append_simple_attribute_virt(csa);                               
         }
       }
@@ -1185,7 +1185,7 @@ int k;
       facet_body_in->owner()->swap_bridge(facet_body_in,facet_body_out1,false);
       facet_body_in->get_simple_attribute(csa_list);
       for ( k = csa_list.size(); k > 0; k-- ) {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
         facet_body_out1->append_simple_attribute_virt(csa);                               
       }
     }    
@@ -1205,7 +1205,7 @@ bool ifoundit;
 FacetPoint *fpointorig, *fpoint2; 
 DLIList<FacetPoint*> fpointlist, fpointlist2; 
 CubitFacet *cfac;
-DLIList<CubitSimpleAttrib*> csa_list;
+DLIList<CubitSimpleAttrib> csa_list;
 bool is_from_1, error;
 TDFacetboolData* tdf;
  
@@ -1265,7 +1265,7 @@ TDFacetboolData* tdf;
           fpointorig->owner()->swap_bridge(fpointorig,fpoint2,false); 
           fpointorig->get_simple_attribute(csa_list);
           for ( m = csa_list.size(); m > 0; m-- ) {
-            CubitSimpleAttrib* csa = csa_list.get_and_step();
+            const CubitSimpleAttrib& csa = csa_list.get_and_step();
             fpoint2->append_simple_attribute_virt(csa);                                     
           } 
         }             
@@ -1274,7 +1274,7 @@ TDFacetboolData* tdf;
         fcurveorig->owner()->swap_bridge(fcurveorig,fcurve2,false); 
       fcurveorig->get_simple_attribute(csa_list);
       for ( m = csa_list.size(); m > 0; m-- ) {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
         fcurve2->append_simple_attribute_virt(csa);                                     
       }    
       break;
@@ -1287,7 +1287,7 @@ void FacetboolInterface::make_persistent_surfaces(DLIList<FacetSurface*> fsurfac
                             int n,
                             int which_parent)
 {
-DLIList<CubitSimpleAttrib*> csa_list;                              
+DLIList<CubitSimpleAttrib> csa_list;
 int k, m;
 FacetSurface *fsorig, *fsurf2;
 bool is_from_1;
@@ -1310,7 +1310,7 @@ bool is_from_1;
         fsorig->owner()->swap_bridge(fsorig,fsurf2,false); 
       fsorig->get_simple_attribute(csa_list);
       for ( m = csa_list.size(); m > 0; m-- ) {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
         fsurf2->append_simple_attribute_virt(csa);                               
       }    
       break;

@@ -266,6 +266,8 @@ CubitStatus make_Point()
   rsl = CubitCompat_export_solid_model(ref_entity_list, filename, filetype,
                                  num_ents_exported, cubit_version);
 
+  remove(filename);
+
   free_entities.clean_out();
   gti->get_free_ref_entities(free_entities);
 

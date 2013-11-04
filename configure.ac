@@ -1,7 +1,7 @@
 ###############################################################################
 #                           Standard Stuff
 ################################################################################
-AC_INIT(CGMA, 13.1)
+AC_INIT(CGMA, 14.0)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CANONICAL_SYSTEM
@@ -138,6 +138,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
   export LD_LIBRARY_PATH
   export SHLIB_PATH
   export PATH
+
   pattern=["${CUBIT_BIN_DIR}/*cubiti[0-9][0-9].*"]
   for file in $pattern; do
     AC_MSG_CHECKING([for AcisQueryEngine::instance_ in $file])
@@ -157,7 +158,7 @@ elif test "x$CUBIT_DIR" != "xno"; then
   if test "x$CUBIT_LIBS" = "xno"; then
     AC_MSG_ERROR("Cubit library not found in $CUBIT_BIN_DIR")
   fi
-  
+
   # Test for CAT-proprietary code that must be initialized in Cubit12
   AC_MSG_CHECKING([For AcisTweekToolCAT])
   AC_LINK_IFELSE([AC_LANG_PROGRAM(
@@ -582,10 +583,6 @@ AC_CONFIG_FILES(Makefile
            itaps/SIDL/iGeom-SIDL-Defs.inc
            test/Makefile
            test/TestConfig.h
-           cgm_apps/Makefile
-           cgm_apps/examples/Makefile
-           cgm_apps/examples/driverc++/Makefile
-           cgm_apps/examples/facetdriver/Makefile
 	   )
 # Generate iGeom_FCDefs.h from iBase_FCDefs.h
 AC_CONFIG_COMMANDS([itaps/iGeom_FCDefs.h],

@@ -76,12 +76,13 @@ public:
   //O- the degree of this spline
   //O- the control points
   //O- If rational, weight for each control point
-  //O- the knots
+  //O- whether underlying spline is reversed
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots
+                                         DLIList<double> &knots,
+                                         bool &spline_is_reversed
                                        ) const;
   //R CubitStatus
   //O- center - ellipse center point

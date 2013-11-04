@@ -268,16 +268,16 @@ void CompositeBody::notify_reversed( TopologyBridge* )
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void CompositeBody::append_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeBody::append_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
-void CompositeBody::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeBody::remove_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
 void CompositeBody::remove_all_simple_attribute_virt()
 { }
-CubitStatus CompositeBody::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus CompositeBody::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 CubitStatus CompositeBody::get_simple_attribute(
-					const CubitString& , DLIList<CubitSimpleAttrib*>& )
+          const CubitString& , DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 
 //-------------------------------------------------------------------------

@@ -11,22 +11,23 @@ AM_CPPFLAGS += $(HAVE_ACIS_DEF) $(HAVE_OCC_DEF) $(CUBIT_CGM) \
 	   -I$(srcdir) \
 	   $(OCC_INC_FLAG)
 
-TESTS = init sheet
+TESTS = init sheet facets
 if build_ACIS
-  TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis
+  TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis 
 else
 if WITH_CUBIT
   TESTS += webcut merge_acis brick_acis spheres cylinders
 else
+  TESTS += brick_facet merge_facet
 if DEV
-  TESTS += modify makept 
+  TESTS += modify makept
 endif
 endif
-endif 
-
+endif
 if build_OCC
   TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres cylinders
 endif
+
 check_PROGRAMS = $(TESTS)
 
 if build_OCC
@@ -36,9 +37,9 @@ endif
 noinst_LTLIBRARIES = libcgm_test.la
 
 if BUILD_CGM
-  LDADD = ../libcgm.la libcgm_test.la $(CGM_EXT_LIBS) 
+  LDADD = ../libcgm.la libcgm_test.la ../geom/Cholla/libCholla.la ../util/libcubit_util.la ../geom/virtual/libcubit_virtual.la $(CGM_EXT_LIBS)
 else
-  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../geom/libcubit_geom.la $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
+  LDADD = ../init/libcgma_init.la -lcubiti19 -lcubit_util -lcubit_geom ../geom/libcubit_geom.la -lstdc++ $(CGM_EXT_LIBS) $(CGM_EXT_LDFLAGS) $(CGM_EXT_LTFLAGS)
 endif
 
 libcgm_test_la_SOURCES = TestUtilities.hpp \
@@ -61,6 +62,7 @@ test_occ_SOURCES = test_occ.cpp
 point_project_SOURCES = point_project.cpp
 operation_SOURCES = operation.cpp
 init_SOURCES = init.cpp
+facets_SOURCES = facets.cpp
 attribute_to_file_SOURCES = attribute_to_file.cpp
 attribute_to_file_CPPFLAGS = $(CPPFLAGS) $(AM_CPPFLAGS) -DTEST_OCC
 
@@ -124,9 +126,9 @@ EXTRA_DIST = 62_shaver1.brep \
              box-w-hole.brep \
              Solid_2.brep \
              Solid_6.brep  \
-             Solid_7.brep  \
+             Solid_7.brep \
              s5.stp \
-             s5.sat
+             s5.sat 
 
 # Files that are created by tests, and that therefore 
 #  - should be removed during 'make clean'

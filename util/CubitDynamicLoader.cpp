@@ -70,7 +70,7 @@ CubitDynamicLoader::LibraryHandle CubitDynamicLoader::load_library(const char* l
   // if absolute path, test it directly
   if(absolute_path(lib))
   {
-    handle = LoadLibrary(lib);
+    handle = LoadLibraryW(CubitString::toUtf16(lib).c_str());
   }
   else
   { 
@@ -78,7 +78,7 @@ CubitDynamicLoader::LibraryHandle CubitDynamicLoader::load_library(const char* l
     for(int i=0; i<gSearchPaths.size(); i++)
     {
       CubitString path = gSearchPaths[i]+CubitString("\\")+lib;
-      handle = LoadLibrary(path.c_str());
+      handle = LoadLibraryW(CubitString::toUtf16(path.c_str()).c_str());
       if(handle != InvalidLibraryHandle)
       {
         SetErrorMode(old_error_mode);
@@ -88,7 +88,7 @@ CubitDynamicLoader::LibraryHandle CubitDynamicLoader::load_library(const char* l
   }
   
   // one more final attempt
-  handle = LoadLibrary(lib);
+  handle = LoadLibraryW(CubitString::toUtf16(lib).c_str());
 
   SetErrorMode(old_error_mode);
 
@@ -97,20 +97,20 @@ CubitDynamicLoader::LibraryHandle CubitDynamicLoader::load_library(const char* l
 
 CubitString CubitDynamicLoader::get_error()
 {
-  LPVOID lpMsgBuf;
+  LPWSTR lpMsgBuf = NULL;
   DWORD dw = GetLastError(); 
 
-  FormatMessage(
+  FormatMessageW(
     FORMAT_MESSAGE_ALLOCATE_BUFFER | 
     FORMAT_MESSAGE_FROM_SYSTEM |
     FORMAT_MESSAGE_IGNORE_INSERTS,
     NULL,
     dw,
     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    (LPTSTR) &lpMsgBuf,
+    lpMsgBuf,
     0, NULL );
 
-  CubitString error = (LPTSTR)lpMsgBuf;
+  CubitString error = CubitString::toUtf8(lpMsgBuf);
   LocalFree(lpMsgBuf);
 
   return error;
@@ -123,7 +123,7 @@ CubitStatus CubitDynamicLoader::unload_library(CubitDynamicLoader::LibraryHandle
 
 void* CubitDynamicLoader::get_symbol_address(CubitDynamicLoader::LibraryHandle lib, const char* symbol)
 {
-  return GetProcAddress(lib, symbol);
+  return reinterpret_cast<void*>(GetProcAddress(lib, symbol));
 }
 
 const char* CubitDynamicLoader::library_prefix()

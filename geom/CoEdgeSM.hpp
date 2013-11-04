@@ -54,8 +54,6 @@ class CUBIT_GEOM_EXPORT CoEdgeSM : public TopologyBridge
 
       virtual ~CoEdgeSM() ;
       //- The destructor
-  
-  virtual const type_info& topology_entity_type_info() const;
    
   virtual CubitSense sense() = 0;
     //- returns the sense of the underlying coedge wrt the underlying edge

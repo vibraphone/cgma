@@ -282,9 +282,9 @@ CubitMessage::CubitMessage()
     MessageFlag(207, "Defeature and Geometry tolerant meshing" ),
     MessageFlag(208, "Turn on Weights in Winslow smooth of target in CAMAL sweeper" ),
     MessageFlag(209, "Change sense of partial/full tet remesh (v = !v)" ),
-    MessageFlag(210, "unassigned" ),
-    MessageFlag(211, "unassigned" ),
-    MessageFlag(212, "unassigned" ),
+    MessageFlag(210, "Use tetgen tetmesher via files" ),
+    MessageFlag(211, "Use tetgen tetmesher via direct interface" ),
+    MessageFlag(212, "Create debugging groups when doing geometry/meshing association for parallel refinement" ),
     MessageFlag(213, "unassigned" ),
     MessageFlag(214, "unassigned" ),
     MessageFlag(215, "unassigned" ),
@@ -338,11 +338,8 @@ CubitMessage::~CubitMessage()
 
 void CubitMessage::delete_instance()
 {
-  if( NULL != instance )
-  {
     delete instance_;
     instance_ = NULL;
-  }
 }
 
 int CubitMessage::number_of_debug_flags()
@@ -717,9 +714,9 @@ void CubitMessage::set_logging_file_setting(const CubitString &filename, CubitBo
   {
     loggingFile   = new CubitString(filename);
     if(resume_flag)
-       loggingStream = new std::ofstream(filename.c_str(), std::ios::out | std::ios::app);
+       loggingStream = new std::ofstream(CubitString::toNative(filename).c_str(), std::ios::out | std::ios::app);
     else
-       loggingStream = new std::ofstream(filename.c_str());
+       loggingStream = new std::ofstream(CubitString::toNative(filename).c_str());
   }
 }
 
@@ -745,7 +742,7 @@ void CubitMessage::set_debug_file_setting(const int index, const CubitString &fi
   }
   else {
     debugFlag[index].filename = new CubitString(filename);
-    debugFlag[index].outputStream = new std::ofstream(filename.c_str());
+    debugFlag[index].outputStream = new std::ofstream(CubitString::toNative(filename).c_str());
   }
 }
 
@@ -813,7 +810,7 @@ void CubitMessage::set_logging_file_setting(const char* filename)
   }
   else {
     loggingFile   = new CubitString(filename);
-    loggingStream = new std::ofstream(filename, std::ios::out | std::ios::app );
+    loggingStream = new std::ofstream(CubitString::toNative(filename).c_str(), std::ios::out | std::ios::app );
   }
 }
 
@@ -841,9 +838,9 @@ void CubitMessage::set_error_logging_file_setting(const char* filename, CubitBoo
   else {
     loggingErrorFile   = new CubitString(filename);
     if(resume_flag)
-        loggingErrorStream = new std::ofstream(filename, std::ios::out | std::ios::app );
+        loggingErrorStream = new std::ofstream(CubitString::toNative(filename).c_str(), std::ios::out | std::ios::app );
     else
-        loggingErrorStream = new std::ofstream(filename );
+        loggingErrorStream = new std::ofstream(CubitString::toNative(filename).c_str());
   }
 }
 

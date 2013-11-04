@@ -18,7 +18,7 @@ class CubitSimpleAttrib;
 
 #include <map>
 
-typedef CubitAttrib* (*CACreateFunction)(RefEntity*, CubitSimpleAttrib*);
+typedef CubitAttrib* (*CACreateFunction)(RefEntity*, const CubitSimpleAttrib&);
 
 class CUBIT_GEOM_EXPORT CubitAttribManager
 {
@@ -55,7 +55,7 @@ public:
 
   CubitAttrib *create_cubit_attrib(const int attrib_type,
                                    RefEntity *attrib_user,
-                                   CubitSimpleAttrib *p_csa);
+                                   const CubitSimpleAttrib& p_csa);
 
   const char * att_internal_name(int attrib_type);
 
@@ -82,7 +82,7 @@ public:
 
 //  CubitStatus actuate_list(DLIList<CubitAttribUser*> entity_list);
 
-  int attrib_type(CubitSimpleAttrib *csa_ptr);
+  int attrib_type(const CubitSimpleAttrib &csa_ptr);
   int attrib_type(const char* name);
   int attrib_type_from_internal_name(const char* name);
 

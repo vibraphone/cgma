@@ -16,9 +16,6 @@
 #include <stdexcept>
 #include "CubitUtilConfigure.h"
 
-using namespace std;
-using std::vector;
-
 class CUBIT_UTIL_EXPORT CubitMatrix
 {
 public:
@@ -47,7 +44,7 @@ public:
   CubitMatrix( const int n );
     //- Constructor: create n x n Identity matrix
 
-  CubitMatrix( vector<int> &is, vector<int> &js, vector<double> &es, int n, int m );
+  CubitMatrix( std::vector<int> &is, std::vector<int> &js, std::vector<double> &es, int n, int m );
     // - uses vectors i, j, and s to generate an m-by-n
     // - matrix, S,  such that S(i(k),j(k)) = s(k).
     // - Vectors i, j, and s are all the same length.
@@ -73,7 +70,8 @@ public:
 
   void set_to_identity();
   
-  bool is_identity() const;
+  bool is_identity( double tol = 1e-8 ) const;
+  bool is_equal( const CubitMatrix &other, double tol = 1e-8 ) const;
 
    //- Add an identity matrix into this matrix.
   void plus_identity();
@@ -109,7 +107,7 @@ public:
   CubitMatrix operator= (const CubitMatrix& matrix);
   CubitMatrix operator* (const CubitMatrix& matrix) const;
   CubitVector operator* (const CubitVector& vector) const;
-  vector<double> operator* (const vector<double> & vector) const;
+  std::vector<double> operator* (const std::vector<double> & vector) const;
   CubitMatrix operator* (double val ) const;
   CubitMatrix operator/ (double val ) const;
   CubitMatrix operator+ (const CubitMatrix& matrix) const;
@@ -144,8 +142,8 @@ public:
 
   // Create a matrix containing the rows and cols of this that are true in
   // rows_to_include and cols_to_include.
-  void sub_matrix( const vector<bool> &rows_to_include,
-                   const vector<bool> &cols_to_include,
+  void sub_matrix( const std::vector<bool> &rows_to_include,
+                   const std::vector<bool> &cols_to_include,
                    CubitMatrix &submatrix );
   
     // routines to perform Gaussian elimination with pivoting and scaling
@@ -158,8 +156,8 @@ public:
   CubitStatus solveNxN( CubitMatrix& rhs,  // must be NxM, where M is any
                                            // number of colums.
                         CubitMatrix& coef ); // must be NxM, same as rhs.
-  CubitStatus solveNxN( const vector<double> &rhs,
-                        vector<double> &coef );
+  CubitStatus solveNxN( const std::vector<double> &rhs,
+                        std::vector<double> &coef );
   CubitStatus ludcmp( double *indx, double& d );
   CubitStatus lubksb( double *indx, double *b );
   

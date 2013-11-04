@@ -14,33 +14,23 @@
 #include "CAMergeStatus.hpp"
 #include "CADefines.hpp"
 
-CubitAttrib* CAMergeStatus_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAMergeStatus_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAMergeStatus *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAMergeStatus(entity);
-  }
-  else
-  {
-    new_attrib = new CAMergeStatus(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAMergeStatus(entity, p_csa);
 }
 
-CAMergeStatus::CAMergeStatus( RefEntity* owner, CubitSimpleAttrib* csa )
+CAMergeStatus::CAMergeStatus( RefEntity* owner, const CubitSimpleAttrib& csa )
   : CubitAttrib( owner )
 { 
-  assert( csa && csa->int_data_list()->size() == 1 );
-  int i = *(csa->int_data_list()->get());
-  assert( i == 0 || i == 1 || i == 2 );
-  status = (AutoMergeStatus)i;
+  status = AUTO_MERGE_AUTO;
+  if(!csa.isEmpty())
+  {
+    assert( csa.int_data_list().size() == 1 );
+    int i = csa.int_data_list()[0];
+    assert( i == 0 || i == 1 || i == 2 );
+    status = (AutoMergeStatus)i;
+  }
 }
-
-CAMergeStatus::CAMergeStatus( RefEntity* owner )
-  : CubitAttrib( owner ), status(AUTO_MERGE_AUTO)
-{ }
 
 CAMergeStatus::~CAMergeStatus() 
 { }
@@ -89,33 +79,26 @@ CubitStatus CAMergeStatus::reset()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CAMergeStatus::cubit_simple_attrib()
+CubitSimpleAttrib CAMergeStatus::cubit_simple_attrib()
 {
   if( deleteAttrib )
-    return 0;
+    return CubitSimpleAttrib();
   
   assert( status != AUTO_MERGE_AUTO );
   CubitSimpleAttrib* result = 0;
 
-  CubitString name( att_internal_name() );
-  DLIList<CubitString*> string_list(1);
-  string_list.append( &name );
+  std::vector<CubitString> string_list;
+  string_list.push_back(att_internal_name());
   
   int int_data = (int)status;
-  DLIList<int> int_list;
-  int_list.append( int_data );
+  std::vector<int> int_list;
+  int_list.push_back( int_data );
   
-  result = new CubitSimpleAttrib( &string_list, 0, &int_list );
-  return result;
+  return CubitSimpleAttrib( &string_list, 0, &int_list );
 }
 
 int CAMergeStatus::int_attrib_type()
 {
   return CA_MERGE_STATUS;
-}
-
-const type_info& CAMergeStatus::entity_type_info() const
-{
-  return typeid(CAMergeStatus);
 }
 

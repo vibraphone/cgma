@@ -25,6 +25,7 @@
 
 #include "CastTo.hpp"
 #include "RefFace.hpp"
+#include "AppUtil.hpp"
 
 // *** END INCLUDES *** //
 
@@ -299,7 +300,7 @@ CubitStatus GeometryHealerTool::auto_heal_bodies( DLIList<Body*> &body_list,
                                       rebuild, keep_old, make_tolerant, logfile_ptr);
 
      // if( healer_status == CUBIT_SUCCESS )
-        CubitObserver::notify_static_observers(NULL, HEALER_COMPLETED);
+      AppUtil::instance()->send_event(NULL, HEALER_COMPLETED);
 
       return healer_status;
    }

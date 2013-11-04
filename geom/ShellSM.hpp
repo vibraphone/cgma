@@ -53,8 +53,6 @@ class CUBIT_GEOM_EXPORT ShellSM : public TopologyBridge
 
       virtual ~ShellSM() ;
       //- The destructor
-  
-      virtual const type_info& topology_entity_type_info() const;
     
    protected: 
 

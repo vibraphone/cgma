@@ -80,7 +80,8 @@ public:
     void ReadNodes(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
         UnsignedInt32& xintNodeCount, UnsignedInt32*& xpaintNodeIDs,
         double*& xpadblX, double*& xpadblY, double*& xpadblZ);
-    void ReadElems(UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
+    void ReadElems(double data_version,
+        UnsignedInt32 xintIndex, UnsignedInt32& xintGeomID,
         UnsignedInt32& xintNumTypes, SElemData*& xpaElemData);
     void ReadGroupIdentity(UnsignedInt32 xintIndex, UnsignedInt32& xintGroupID,
         UnsignedInt32& xintGroupType, const char*& xpachrGroupName);
@@ -226,10 +227,12 @@ private:
     } mNodeBuff;
     struct SElemReturnBuffer {
         UnsignedInt32 mintNumTypes;
-        UnsignedInt32 mintNumElems;
+        UnsignedInt32 mintNumElemIds;
+        UnsignedInt32 mintNumElemGids;
         UnsignedInt32 mintNumConnect;
         SElemData* mpaElemData;
         UnsignedInt32* mpaElemIDs;
+        UnsignedInt32* mpaElemGlobalIDs;
         UnsignedInt32* mpaElemConnect;
     } mElemBuff;
     struct SGroupReturnBuffer {

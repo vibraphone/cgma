@@ -28,8 +28,7 @@ public:
 
   virtual CubitStatus notify_observer(
     CubitObservable* watched,
-    const CubitEvent& event,
-    CubitBoolean );
+    const CubitEvent& event);
 
   virtual ~GeomDataObserver();
 

@@ -2087,6 +2087,7 @@ CubitStatus FacetDataUtil::merge_coincident_vertices(
           for (ll=0; ll<shell_id; ll++)
             shell_ptr = shell_list.get_and_step();
           *shell_ptr += (*delete_shell_ptr);
+          delete delete_shell_ptr;
         }
 
         // set the marked flag to negative to indicate that it has been

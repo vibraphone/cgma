@@ -89,7 +89,12 @@ class CUBIT_GEOM_EXPORT ModelQueryEngine
       ~ModelQueryEngine() ;
       //- Destructor
 
-      static void delete_instance() {if(instance_) delete instance_; }
+      static void delete_instance()
+      {
+        if(instance_)
+          delete instance_;
+        instance_ = NULL;
+      }
 
       //HEADER- Query functions on single source objects
       
@@ -159,7 +164,7 @@ class CUBIT_GEOM_EXPORT ModelQueryEngine
             { ModelQueryEngine::instance()->inc_query_call_stack(); }
           inline ~BeginQuery()
             { ModelQueryEngine::instance()->dec_query_call_stack(); }
-          inline void* operator new(size_t /* size */)
+          inline void* operator new(size_t size)
             { assert(0); return (void*)0; }
       };
 

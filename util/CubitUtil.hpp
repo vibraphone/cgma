@@ -31,10 +31,28 @@ class CUBIT_UTIL_EXPORT CubitUtil
 {
 public:
   
+  static void set_digits(int new_digits);
+  static int get_digits();
+
    static void convert_string_to_lowercase (char *string);
    static int  strcmp_case_insensitive     (const char *s1, const char *s2);
    static int  strncmp_case_insensitive    (const char *s1, const char *s2,
                                             int n);
+
+  static void list_ids( const char *const heading,
+                  const DLIList<CubitEntity*> &entity_list,
+                  int should_sort = CUBIT_FALSE,
+                  int report_once = CUBIT_FALSE,
+                  int wrap = 80 );
+
+  static void sort_and_print_ids( const char *const heading,
+                           DLIList<int> &id_list,
+                           int should_sort = CUBIT_FALSE,
+                           int report_once = CUBIT_FALSE,
+                           int wrap = 80);
+
+
+
   static void list_entity_ids( const char *pre_string, 
                                const DLIList<CubitEntity*> &entity_list, 
                                int width = 80, const char *post_string = "\n",
@@ -98,23 +116,22 @@ public:
   static void util_strdup_free(char* s1){free(s1);}
 
   static void cubit_sleep(int duration_in_seconds);
-    //Send in a string (in buffer) with two \007 characters next to each other
-    //This function will search from 00 up to 999 to find the next available
-    //filename
-  static int find_available_file_name(char* buffer);
-  
+
   static CubitBoolean file_exist(const char* buffer);
   static CubitBoolean file_exist(const CubitString& buffer);
 
   // get an environment variable
   static CubitString getenv(const CubitString& str);
   static void setenv(const CubitString& var, const CubitString& value);
+
+  static CubitString get_computer_name();
+  static CubitString get_os();
   
 private:
   CubitUtil(){}
 
   static FILE *fp;
-  
+
 };
 
 inline void

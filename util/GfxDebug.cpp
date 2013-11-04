@@ -24,7 +24,12 @@ GfxDebug::~GfxDebug()
   mInstance = 0;
 }
 
-
+bool GfxDebug::is_initialized()
+{
+  if (mInstance == 0)
+    return false;
+  return true;
+}
 
 // this will clear out all temporary data and any graphics windows created
 // with this interface.
@@ -597,4 +602,10 @@ void GfxDebug::highlight_polygons(int num_points, const float* xyzs, int num_fac
   mInstance->p_highlight_polygons(num_points, xyzs, num_face_points, face_list);
 }
 
+// draw surface param lines
+void GfxDebug::draw_surface(Surface *surf, int color)
+{
+  if(!mInstance) return;
+  mInstance->p_draw_surface(surf, color);
+}
 

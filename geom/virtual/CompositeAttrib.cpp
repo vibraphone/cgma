@@ -24,35 +24,12 @@
 //
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
-CompositeAttrib::CompositeAttrib( CubitSimpleAttrib* attrib, CompositeAttrib* n ) 
+CompositeAttrib::CompositeAttrib( const CubitSimpleAttrib& attrib, CompositeAttrib* n )
   : int_array(0), real_array(0), string_array(0), next(n)
 {
-  int_count = attrib->int_data_list()->size();
-  if (int_count) 
-  {
-    int_array = new int[int_count];
-    attrib->int_data_list()->reset();
-    for (int i = 0; i < int_count; i++)
-      int_array[i] = *attrib->int_data_list()->get_and_step();
-  }
-
-  real_count = attrib->double_data_list()->size();
-  if (real_count) 
-  {
-    real_array = new double[real_count];
-    attrib->double_data_list()->reset();
-    for (int i = 0; i < real_count; i++)
-      real_array[i] = *attrib->double_data_list()->get_and_step();
-  }
-
-  string_count = attrib->string_data_list()->size();
-  if (string_count) 
-  {
-    string_array = new CubitString[string_count];
-    attrib->string_data_list()->reset();
-    for (int i = 0; i < string_count; i++)
-      string_array[i] = *attrib->string_data_list()->get_and_step();
-  }
+  int_array = attrib.int_data_list();
+  real_array = attrib.double_data_list();
+  string_array = attrib.string_data_list();
 }  
   
 //-------------------------------------------------------------------------
@@ -65,30 +42,11 @@ CompositeAttrib::CompositeAttrib( CubitSimpleAttrib* attrib, CompositeAttrib* n 
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
 CompositeAttrib::CompositeAttrib( const CompositeAttrib& copy) 
-  : int_count(copy.int_count), int_array(0), 
-    real_count(copy.real_count), real_array(0),
-    string_count(copy.string_count), string_array(0), 
-    next(0)
+  : next(0)
 {
-  if (int_count)
-  {
-    int_array = new int[int_count];
-    memcpy(int_array, copy.int_array, int_count * sizeof(int));
-  }
-  if (real_count)
-  {
-    real_array = new double[real_count];
-    memcpy(real_array, copy.real_array, real_count * sizeof(double));
-  }
-  if (string_count)
-  {
-    string_array = new CubitString[string_count];
-    CubitString *read = copy.string_array;
-    CubitString *write = string_array;
-    CubitString* end = read + string_count;
-    while (read < end)
-      *(write++) = *(read++);
-  }
+  int_array = copy.int_array;
+  real_array = copy.real_array;
+  string_array = copy.string_array;
 }
     
 //-------------------------------------------------------------------------
@@ -100,11 +58,11 @@ CompositeAttrib::CompositeAttrib( const CompositeAttrib& copy)
 //
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
-void CompositeAttrib::append_to_csa( CubitSimpleAttrib* attrib ) const
+void CompositeAttrib::append_to_csa( CubitSimpleAttrib& attrib ) const
 {
-  append_to_lists(*attrib->string_data_list(),
-                  *attrib->int_data_list(),
-                  *attrib->double_data_list());
+  append_to_lists(attrib.string_data_list(),
+                  attrib.int_data_list(),
+                  attrib.double_data_list());
 }
 
 //-------------------------------------------------------------------------
@@ -116,24 +74,13 @@ void CompositeAttrib::append_to_csa( CubitSimpleAttrib* attrib ) const
 //
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
-void CompositeAttrib::append_to_lists( DLIList<CubitString*>& string_list,
-                                       DLIList<int*>& int_list,
-                                       DLIList<double*>& real_list ) const
+void CompositeAttrib::append_to_lists( std::vector<CubitString>& string_list,
+                                       std::vector<int>& int_list,
+                                       std::vector<double>& real_list ) const
 {
-  int* iitor = int_array;
-  int *const iend = int_array + int_count;
-  while( iitor < iend )
-    int_list.append(iitor++);
-  
-  double* ritor = real_array;
-  double *const rend = real_array + real_count;
-  while( ritor < rend )
-    real_list.append(ritor++);
-  
-  CubitString* sitor = string_array;
-  CubitString *const send = string_array + string_count;
-  while( sitor < send )
-    string_list.append(sitor++);
+  int_list.insert(int_list.end(), int_array.begin(), int_array.end());
+  real_list.insert(real_list.end(), real_array.begin(), real_array.end());
+  string_list.insert(string_list.end(), string_array.begin(), string_array.end());
 }
   
 //-------------------------------------------------------------------------
@@ -145,17 +92,13 @@ void CompositeAttrib::append_to_lists( DLIList<CubitString*>& string_list,
 //
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
-CubitSimpleAttrib* CompositeAttrib::csa() const
+CubitSimpleAttrib CompositeAttrib::csa() const
 {
-  DLIList<CubitString*> string_list(string_count);
-  DLIList<int*> int_list(int_count);
-  DLIList<double*> real_list(real_count);
+  std::vector<CubitString> string_list;
+  std::vector<int> int_list;
+  std::vector<double> real_list;
   append_to_lists( string_list, int_list, real_list );
-  CubitSimpleAttrib* result = new CubitSimpleAttrib;
-  result->initialize_from_lists_of_ptrs( &string_list,
-                                real_count ? &real_list : 0, 
-                                int_count ? &int_list : 0 );
-  return result;
+  return CubitSimpleAttrib(&string_list, &real_list, &int_list);
 }
 
 
@@ -170,9 +113,6 @@ CubitSimpleAttrib* CompositeAttrib::csa() const
 //-------------------------------------------------------------------------
 CompositeAttrib::~CompositeAttrib()
 {
-  delete [] int_array;
-  delete [] real_array;
-  delete [] string_array;
 }
 
 //-------------------------------------------------------------------------
@@ -184,31 +124,14 @@ CompositeAttrib::~CompositeAttrib()
 //
 // Creation Date : 06/30/03
 //-------------------------------------------------------------------------
-bool CompositeAttrib::equals( CubitSimpleAttrib* attrib ) const
+bool CompositeAttrib::equals( const CubitSimpleAttrib& attrib ) const
 {
-  if (attrib->string_data_list()->size() != string_count ||
-      attrib->int_data_list()->size() != int_count ||
-      attrib->double_data_list()->size() != real_count)
+  if (attrib.string_data_list().size() != string_array.size() ||
+      attrib.int_data_list().size() != int_array.size() ||
+      attrib.double_data_list().size() != real_array.size())
     return false;
   
-  int i;
-  CubitString* s_itor = string_array;
-  attrib->string_data_list()->reset();
-  for (i = 0; i < attrib->string_data_list()->size(); i++)
-    if (*(attrib->string_data_list()->next(i)) != *(s_itor++))
-      return false;
-  
-  int *i_itor = int_array;
-  attrib->int_data_list()->reset();
-  for (i = 0; i < attrib->int_data_list()->size(); i++)
-    if (*(attrib->int_data_list()->next(i)) != *(i_itor++))
-      return false;
-  
-  double *r_itor = real_array;
-  attrib->double_data_list()->reset();
-  for (i = 0; i < attrib->double_data_list()->size(); i++)
-    if (*(attrib->double_data_list()->next(i)) != *(r_itor++))
-      return false;
-  
-  return true;
+  return std::equal(string_array.begin(), string_array.end(), attrib.string_data_list().begin()) &&
+      std::equal(int_array.begin(), int_array.end(), attrib.int_data_list().begin()) &&
+      std::equal(real_array.begin(), real_array.end(), attrib.double_data_list().begin());
 }

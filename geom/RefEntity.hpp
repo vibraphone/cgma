@@ -80,13 +80,13 @@ public:
   static RefEntity* get_by_name(const CubitString& name);
 
   //! \brief Gets the name of this RefEntity.
-  CubitString entity_name() const;
+  virtual CubitString entity_name() const;
   
   //! \brief Sets the name of this RefEntity.
   CubitStatus entity_name (CubitString name);
 
   //! \brief Gets the names of this RefEntity.
-  void entity_names(DLIList<CubitString*> &names) const;
+  void entity_names(DLIList<CubitString> &names) const;
 
   //! \brief Get the number of names this RefEntity has.
   int num_names() const;
@@ -265,17 +265,9 @@ public:
   //! this entity and all children
   void notify_sub_all_observers(const CubitEvent& event);
 
-  //!R void
-  //!I partner
-  //!I- The merge partner for this object
-  //!I event
-  //!I- The type of event
-  //! This function takes actions depending on the type of event it
-  //! is notified of.
-  //!   COMPARISON_FOUND:
   //!     Make temporary TDCompare objects and attach to "this" and
   //!     the "partner" object.
-  void notify(RefEntity* partner, CubitEventType event);
+  void comparison_found(RefEntity* partner);
   
   //!R void
   //!I partner

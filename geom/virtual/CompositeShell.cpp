@@ -162,16 +162,16 @@ GeometryQueryEngine* CompositeShell::get_geometry_query_engine() const
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void CompositeShell::append_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeShell::append_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
-void CompositeShell::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeShell::remove_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
 void CompositeShell::remove_all_simple_attribute_virt()
 { }
-CubitStatus CompositeShell::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus CompositeShell::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 CubitStatus CompositeShell::get_simple_attribute(
-					const CubitString& , DLIList<CubitSimpleAttrib*>&  )
+          const CubitString& , DLIList<CubitSimpleAttrib>&  )
 { return CUBIT_FAILURE; }
 
 

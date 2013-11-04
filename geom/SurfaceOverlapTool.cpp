@@ -125,6 +125,7 @@ CubitStatus
 SurfaceOverlapTool::find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &body_list,
                                               DLIList<Surface*> &surface_list1,
                                               DLIList<Surface*> &surface_list2,
+                                              double overlap_tol,
                                               bool filter_slivers)
 {
   //collect all the surfaces
@@ -140,6 +141,8 @@ SurfaceOverlapTool::find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &bo
   }
 
   double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+  if(overlap_tol > 0.0)
+    tolerance = overlap_tol;
 
   // Populate the Surface AbstractTree
   AbstractTree<Surface*> *a_tree = new RTree<Surface*>( tolerance );
@@ -186,7 +189,8 @@ SurfaceOverlapTool::find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &bo
       if( check_surfs_for_imprinting( surf1, surf2, 
                          &surface_facet_map, 
                          &surface_to_area_map, 
-                         &a_tree_map  ) == CUBIT_TRUE )
+                         &a_tree_map,
+                         overlap_tol ) == CUBIT_TRUE )
       {
         surface_list1.append( surf1 );
         surface_list2.append( surf2 );
@@ -886,13 +890,16 @@ CubitBoolean SurfaceOverlapTool::check_size_and_swap_surfs(
 CubitBoolean SurfaceOverlapTool::check_surfs_for_imprinting( Surface *surface1, Surface *surface2,
               std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
               std::map<Surface*, double > *area_map,
-              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map )
+              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map,
+              double overlap_tol)
 {
   if( surface1 == surface2 )
     return CUBIT_FALSE;
 
   // Initialize toelrances
   double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+  if(overlap_tol > 0.0)
+    tolerance = overlap_tol;
   double facet_tol = tolerance*10;
   //double facet_tol = 0.00025;
   
@@ -1357,7 +1364,9 @@ SurfaceOverlapTool::check_overlap( RefFace *ref_face_ptr1, RefFace *ref_face_ptr
   
   // Compare facets
   DLIList<SurfaceOverlapFacet*> *facet_list1 = tdso_1->get_facet_list();
-  int num_tri1 = facet_list1->size();
+  int num_tri1 = 0;
+  if(facet_list1)
+    num_tri1 = facet_list1->size();
   if( !num_tri1 )
   {
     PRINT_WARNING( "Unable to facet surface %d\n", ref_face_ptr1->id() );
@@ -1365,7 +1374,9 @@ SurfaceOverlapTool::check_overlap( RefFace *ref_face_ptr1, RefFace *ref_face_ptr
   }
   
   DLIList<SurfaceOverlapFacet*> *facet_list2 = tdso_2->get_facet_list();
-  int num_tri2 = facet_list2->size();
+  int num_tri2 = 0;
+  if(facet_list2)
+    num_tri2 = facet_list2->size();
   if( !num_tri2 )
   {
     PRINT_WARNING( "Unable to facet surface %d\n", ref_face_ptr2->id() );
@@ -1806,12 +1817,15 @@ CubitStatus SurfaceOverlapTool::delete_edges_in_list(DLIList<RefEdge*> &edge_lis
 CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<Curve*> &curve_list,
                                 DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
                                 std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
-                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map)
+                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map,
+                                double overlap_tol)
 {
   int i;
 
   //put all the curves into a tree 
   double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+  if(overlap_tol > 0.0)
+    tolerance = overlap_tol;
 
   // Populate the Surface AbstractTree
   AbstractTree<Curve*> *a_tree = new RTree<Curve*>( tolerance );
@@ -1852,7 +1866,7 @@ CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<Curve*> &curve_
 
       std::multimap<BodySM*, CubitVector> tmp_body_point_imprint_map;
 
-      if( check_overlap( curve1, curve2, &facet_map, &tmp_body_point_imprint_map  ) ) 
+      if( check_overlap( curve1, curve2, &facet_map, &tmp_body_point_imprint_map, overlap_tol  ) ) 
       {
         //check to see if the curve1 is already overlapping with another curve 
         list_iter = curve_to_list_map.find( curve1 );
@@ -1923,7 +1937,8 @@ CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<Surface*> &surf
 CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<BodySM*> &body_list,
                                 DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
                                 std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
-                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map )
+                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map,
+                                double overlap_tol)
 {
   //collect all the surfaces
   DLIList<Curve*> curve_list;
@@ -1938,7 +1953,7 @@ CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<BodySM*> &body_
   }
 
   return find_overlapping_curves(curve_list, overlapping_curve_lists, curve_to_list_map,
-    body_point_imprint_map);
+    body_point_imprint_map, overlap_tol);
 
 }
 
@@ -2128,7 +2143,8 @@ CubitStatus SurfaceOverlapTool::find_overlapping_curves( DLIList<RefEdge*> &edge
 
 CubitBoolean SurfaceOverlapTool::check_overlap( Curve *curve1, Curve *curve2, 
   std::map<Curve*, DLIList<CurveOverlapFacet*>* > *facet_map,
-  std::multimap<BodySM*,CubitVector> *body_point_imprint_map ) 
+  std::multimap<BodySM*,CubitVector> *body_point_imprint_map,
+  double overlap_tol) 
 {
   //if surfaces are not splines and are not of the same type, 
   //they won't overlap
@@ -2136,6 +2152,8 @@ CubitBoolean SurfaceOverlapTool::check_overlap( Curve *curve1, Curve *curve2,
   GeometryType curve2_type = curve2->geometry_type();
 
   double tolerance = GeometryQueryTool::get_geometry_factor()*GEOMETRY_RESABS;
+  if(overlap_tol > 0.0)
+    tolerance = overlap_tol;
 
   double facet_tol = tolerance*10;
 

@@ -64,11 +64,11 @@ OCCCoEdge::get_geometry_query_engine() const
   return OCCQueryEngine::instance();
 }
 
-void OCCCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* csattrib_ptr)
+void OCCCoEdge::append_simple_attribute_virt(const CubitSimpleAttrib& csattrib_ptr)
 {
 }
 
-void OCCCoEdge::remove_simple_attribute_virt(CubitSimpleAttrib* csattrib_ptr)
+void OCCCoEdge::remove_simple_attribute_virt(const CubitSimpleAttrib& csattrib_ptr)
 {
 }
 
@@ -76,13 +76,13 @@ void OCCCoEdge::remove_all_simple_attribute_virt()
 {
 }
 
-CubitStatus OCCCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus OCCCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                              cubit_simple_attrib_list)
 {
   return CUBIT_FAILURE;
 }
 CubitStatus OCCCoEdge::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
   {return CUBIT_FAILURE;  }
 
 void OCCCoEdge::get_parents_virt( DLIList<TopologyBridge*>& parents )

@@ -487,6 +487,7 @@ public:
         *  planar_sheet is called).  Brick creation is done in the
         *  solid modeling engine to reduce the impact on body ids.
         */
+
   virtual CubitStatus webcut_with_planar_sheet(
                              DLIList<BodySM*>& webcut_body_list,
                              const CubitVector &center,
@@ -956,6 +957,12 @@ public:
                                          DLIList<TopologyBridge*> *att_tbs = NULL ) const;
   //Imprints a surface with passed-in curves.  Can imprint successfully
   //and expectedly with sloppy/dirty geometry.
+  virtual CubitStatus tolerant_imprint( DLIList<BodySM*> &bodies_in,
+                                        DLIList<BodySM*> &new_bodies,
+                                        double overlap_tol,
+                                        double imprint_tol,
+				DLIList<TopologyBridge*> *new_tbs = NULL,
+				DLIList<TopologyBridge*> *att_tbs = NULL ) const;
 
   virtual CubitStatus remove_topology(DLIList<Curve*> &curves_to_remove,
                                        DLIList<Surface*> &surfs_to_remove,
@@ -996,6 +1003,13 @@ public:
                       bool tighten_gaps,
                       double tolerance )const;
 
+#ifdef CGM_KCM  
+  virtual CubitStatus mesh2brep(std::vector<double> &xvals,
+                        std::vector<double> &yvals,
+                        std::vector<double> &zvals,
+                        std::vector<unsigned int> &tri_connectivity,
+                        DLIList<BodySM*> &new_body_sms) const;
+#endif
 protected:
 
  TopoDS_Face* make_TopoDS_Face( GeometryType surface_type,
@@ -1133,13 +1147,13 @@ private:
                          bool imprint = CUBIT_FALSE) const;
 
  void get_new_tbs(
-         std::map<OCCSurface*, std::pair<CubitVector, int> >& surf_property_map,
-         std::map<OCCCurve*, std::pair<CubitVector, int> >& curve_property_map,
-         DLIList<OCCPoint*> &points,
-         DLIList<OCCSurface*> &new_surfaces,
-         DLIList<OCCCurve*> &new_curves,
-         DLIList<OCCPoint*> &new_points,
-         DLIList<TopologyBridge*> *new_tbs)const; 
+      std::map<OCCSurface*, std::pair<CubitVector, double> >& surf_property_map,
+      std::map<OCCCurve*, std::pair<CubitVector, double> >& curve_property_map,
+      DLIList<OCCPoint*> &points,
+      DLIList<OCCSurface*> &new_surfaces,
+      DLIList<OCCCurve*> &new_curves,
+      DLIList<OCCPoint*> &new_points,
+      DLIList<TopologyBridge*> *new_tbs)const; 
 
  void get_att_tbs(DLIList<OCCSurface*> &new_surfaces,
                   DLIList<OCCCurve*> &new_curves,

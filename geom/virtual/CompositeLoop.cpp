@@ -246,16 +246,16 @@ GeometryQueryEngine* CompositeLoop::get_geometry_query_engine() const
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void CompositeLoop::append_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeLoop::append_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
-void CompositeLoop::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeLoop::remove_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
 void CompositeLoop::remove_all_simple_attribute_virt()
 { }
-CubitStatus CompositeLoop::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus CompositeLoop::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 CubitStatus CompositeLoop::get_simple_attribute(
-					const CubitString& , DLIList<CubitSimpleAttrib*>& )
+          const CubitString& , DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 
   

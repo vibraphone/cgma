@@ -111,7 +111,7 @@ CubitBox SubCurve::bounding_box() const
 
 double SubCurve::measure()
 {
-  return real_curve()->length_from_u( startParam, endParam );
+  return fabs(real_curve()->length_from_u( startParam, endParam ));
 }
 
 GeometryType SubCurve::geometry_type()
@@ -558,7 +558,8 @@ CubitStatus SubCurve::get_spline_params
   int &degree,       // the degree of this spline
   DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
   DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
-  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+  DLIList<double> &knots,   // There should be order+cntrl_pts.size()-2 knots
+  bool &spline_is_reversed
 ) const
 {
   PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for SubCurves.\n");

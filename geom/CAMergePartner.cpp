@@ -24,47 +24,30 @@
 #include <time.h>
 
 // factory function
-CubitAttrib* CAMergePartner_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAMergePartner_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAMergePartner *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAMergePartner(entity);
-  }
-  else
-  {
-    new_attrib = new CAMergePartner(entity, p_csa);
-  }
-
-  return new_attrib;
-}
-
-// initialize this CA's static members
-CAMergePartner::CAMergePartner (RefEntity* new_attrib_owner)
-        : CubitAttrib(new_attrib_owner)
-{
-  initialize();
-  
+  return new CAMergePartner(entity, p_csa);
 }
 
 CAMergePartner::CAMergePartner(RefEntity* new_attrib_owner,
-                               CubitSimpleAttrib *csa_ptr)
+                               const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
   initialize();
-  
-  assert(csa_ptr->int_data_list() != NULL);
-  int * i_temp = csa_ptr->int_data_list()->get_and_step();
-  if(i_temp != NULL)
-    mergeID = *i_temp;
-  if( csa_ptr->int_data_list()->size() > 1 )
+
+  if(!csa_ptr.isEmpty())
   {
-    i_temp = csa_ptr->int_data_list()->get_and_step();
-    switch( *i_temp ) {
-      case -1: bridge_sense_ = CUBIT_REVERSED; break;
-      case  1: bridge_sense_ = CUBIT_FORWARD;  break;
-      case  0: bridge_sense_ = CUBIT_UNKNOWN; break;
-      default: bridge_sense_ = CUBIT_UNKNOWN; assert(0);
+    int i_temp = csa_ptr.int_data_list()[0];
+    mergeID = i_temp;
+    if( csa_ptr.int_data_list().size() > 1 )
+    {
+      i_temp = csa_ptr.int_data_list()[1];
+      switch( i_temp ) {
+        case -1: bridge_sense_ = CUBIT_REVERSED; break;
+        case  1: bridge_sense_ = CUBIT_FORWARD;  break;
+        case  0: bridge_sense_ = CUBIT_UNKNOWN; break;
+        default: bridge_sense_ = CUBIT_UNKNOWN; assert(0);
+      }
     }
   }
 }
@@ -290,46 +273,36 @@ CubitStatus CAMergePartner::update()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CAMergePartner::cubit_simple_attrib()
+CubitSimpleAttrib CAMergePartner::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int> i_list;
 
-  i_list.append(mergeID);
-  cs_list.append(new CubitString(att_internal_name()));
+  i_list.push_back(mergeID);
+  cs_list.push_back(att_internal_name());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-  int i;
-  for ( i = cs_list.size(); i--;) delete cs_list.get_and_step();
-  
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
 }
 
-void CAMergePartner::set_survivor( CubitSimpleAttrib* csa, int is_survivor )
+void CAMergePartner::set_survivor( CubitSimpleAttrib& csa, int is_survivor )
 {
   //get the list we want to modify from the CSA
-  DLIList<int*>* data = csa->int_data_list();
+  std::vector<int>& data = csa.int_data_list();
   
   //change or append?
-  if( data->size() >= 4 )
+  if( data.size() >= 4 )
   {
-    data->reset();
-    data->step();
-    data->step();
-    *(data->next()) = is_survivor;
+    data[3] = is_survivor;
   }
   else 
   {
-    assert( data->size() == 3 );
-    data->append( new int(is_survivor) );
-    data->reset();
+    assert( data.size() == 3 );
+    data.push_back(is_survivor);
   }
 }
 
-void CAMergePartner::set_bridge_sense( CubitSimpleAttrib* csa, CubitSense sense )
+void CAMergePartner::set_bridge_sense( CubitSimpleAttrib& csa, CubitSense sense )
 {
   //encode/decode sense as:
   // CUBIT_FORWARD :  1
@@ -344,31 +317,25 @@ void CAMergePartner::set_bridge_sense( CubitSimpleAttrib* csa, CubitSense sense 
   }
   
   //get the list we want to modify from the CSA
-  DLIList<int*>* data = csa->int_data_list();
+  std::vector<int>& data = csa.int_data_list();
   
   //change or append?
-  if( data->size() >= 2 )
+  if( data.size() >= 2 )
   {
-    data->reset();
-    *(data->next()) = i;
+    data[1] = i;
   }
   else 
   {
-    assert( data->size() == 1 );
-    data->append( new int(i) );
-    data->reset();
+    assert( data.size() == 1 );
+    data.push_back(i);
   }
 }
-
-CubitBoolean CAMergePartner::is_survivor( CubitSimpleAttrib* csa )
+CubitBoolean CAMergePartner::is_survivor( const CubitSimpleAttrib& csa )
 {
-  DLIList<int*>* data = csa->int_data_list();
-  if( data && (data->size() >= 4) )
+  const std::vector<int>& data = csa.int_data_list();
+  if( data.size() >= 4)
   {
-    data->reset();
-    data->step();
-    data->step();
-    int i = *(data->next());
+    int i = data[3];
     if( i == 1 )
       return true;
   }
@@ -376,13 +343,12 @@ CubitBoolean CAMergePartner::is_survivor( CubitSimpleAttrib* csa )
 }
 
 
-CubitSense CAMergePartner::get_bridge_sense( CubitSimpleAttrib* csa )
+CubitSense CAMergePartner::get_bridge_sense( const CubitSimpleAttrib& csa )
 {
-  DLIList<int*>* data = csa->int_data_list();
-  if( data && (data->size() >= 2) )
+  const std::vector<int>& data = csa.int_data_list();
+  if( data.size() >= 2)
   {
-    data->reset();
-    int i = *(data->next());
+    int i = data[1];
     switch(i) {
       case  1: return CUBIT_FORWARD;
       case -1: return CUBIT_REVERSED;
@@ -394,39 +360,37 @@ CubitSense CAMergePartner::get_bridge_sense( CubitSimpleAttrib* csa )
   return CUBIT_UNKNOWN;
 }
 
-void CAMergePartner::set_saved_id( CubitSimpleAttrib* csa, int id )
+void CAMergePartner::set_saved_id( CubitSimpleAttrib& csa, int id )
 {
    //get the list we want to modify from the CSA
-  DLIList<int*>* data = csa->int_data_list();
+  std::vector<int>& data = csa.int_data_list();
 
     // ID goes after bridge sense, so save bridge sense first
-  if (data->size() == 1)
+  if (data.size() == 1)
     set_bridge_sense( csa, CUBIT_UNKNOWN );
   
     // change?
-  if (data->size() > 2 )
+  if (data.size() > 2 )
   {
-    data->reset();
-    *data->next(2) = id;
+    data[2] = id;
   }
     // set?
   else
   {
-    assert(data->size() == 2);
-    data->append( new int(id) );
+    assert(data.size() == 2);
+    data.push_back(id);
   }
 }
 
-int CAMergePartner::get_saved_id( CubitSimpleAttrib* csa )
+int CAMergePartner::get_saved_id( const CubitSimpleAttrib& csa )
 {
    //get the list we want to modify from the CSA
-  DLIList<int*>* data = csa->int_data_list();
+  const std::vector<int>& data = csa.int_data_list();
 
-  if (data->size() < 3) 
+  if (data.size() < 3)
     return 0;
   
-  data->reset();
-  return *data->next(2);
+  return data[2];
 }
     
   

@@ -15,50 +15,40 @@
 #include "CompositeSurface.hpp"
 #include "CompositeCurve.hpp"
 
-CubitAttrib* CACompositeVG_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CACompositeVG_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CACompositeVG *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CACompositeVG(entity);
-  }
-  else
-  {
-    new_attrib = new CACompositeVG(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CACompositeVG(entity, p_csa);
 }
 
-CACompositeVG::CACompositeVG(RefEntity *owner) 
+CACompositeVG::CACompositeVG(RefEntity *owner, const CubitSimpleAttrib &simple_attrib)
         : CubitAttrib(owner)
 {
+
   compositeId = -1;
-}
 
-CACompositeVG::CACompositeVG(RefEntity *owner, CubitSimpleAttrib *simple_attrib) 
-        : CubitAttrib(owner)
-{
-    // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> *cs_list = simple_attrib->string_data_list();
-  DLIList<int*> *i_list = simple_attrib->int_data_list();
+  if(!simple_attrib.isEmpty())
+  {
 
-  cs_list->reset();
-  i_list->reset();
-  
-    // (no string)
+      // generate a simple attribute containing the data in this CA
+    const std::vector<CubitString>& cs_list = simple_attrib.string_data_list();
+    const std::vector<int>& i_list = simple_attrib.int_data_list();
 
-    // now the integers
-    // compositeId, numSubEntities
-  compositeId = *i_list->get_and_step();
-  int numSubEntities = *i_list->get_and_step();
-  int i;
-  for (i = 0; i < numSubEntities; i++)
-    subEntityIds.append(*i_list->get_and_step());
-  
-    // If we are constructing from a CubitSimpleAttrib,
-    // then this attrib is already written 
-  has_written(CUBIT_TRUE);
+      // (no string)
+
+      // now the integers
+      // compositeId, numSubEntities
+    compositeId = i_list[0];
+    int numSubEntities = i_list[1];
+    int i;
+    for (i = 0; i < numSubEntities; i++)
+    {
+      subEntityIds.append(i_list[i+2]);
+    }
+
+      // If we are constructing from a CubitSimpleAttrib,
+      // then this attrib is already written
+    has_written(CUBIT_TRUE);
+  }
 }
 
 CubitStatus CACompositeVG::update()
@@ -79,32 +69,26 @@ CubitStatus CACompositeVG::reset()
   return CUBIT_SUCCESS;
 }
   
-CubitSimpleAttrib *CACompositeVG::cubit_simple_attrib()
+CubitSimpleAttrib CACompositeVG::cubit_simple_attrib()
 {
     // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> cs_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<int> i_list;
 
     // first the string
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
     // now the integers
     // compositeId, numSubEntities
-  i_list.append(compositeId);
-  i_list.append(subEntityIds.size());
+  i_list.push_back(compositeId);
+  i_list.push_back(subEntityIds.size());
   int i;
   subEntityIds.reset();
   for (i = subEntityIds.size(); i > 0; i--)
-    i_list.append(subEntityIds.get_and_step());
+    i_list.push_back(subEntityIds.get_and_step());
     
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          NULL,
-                                                          &i_list);
-
-  for(i=cs_list.size(); i--;) delete cs_list.get_and_step();
-
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, NULL, &i_list);
 }
 
 CubitStatus CACompositeVG::actuate()

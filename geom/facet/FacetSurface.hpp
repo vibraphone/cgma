@@ -123,7 +123,7 @@ public :
     //CubitSense get_relative_surface_sense();
     //- Return the relative surface sense. (see below)
 
-  virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void append_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I 
     //I- 
@@ -132,7 +132,7 @@ public :
     //- attribute to the OSME. The  is attached to each of the 
     //- underlying solid model entities this one points to.
   
-  virtual void remove_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void remove_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I CubitSimpleAttrib*
     //I- A reference to a CubitSimpleAttrib object which is the object
@@ -147,9 +147,9 @@ public :
     //- The purpose of this function is to remove all simple
     //- attributes from the OSME. 
   
-  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&);
+  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&);
   virtual CubitStatus get_simple_attribute(const CubitString& name,
-                                           DLIList<CubitSimpleAttrib*>&);
+                                           DLIList<CubitSimpleAttrib>&);
     //R CubitSimpleAttrib*
     //R- the returned cubit simple attribute.
     //- The purpose of this function is to get the attributes
@@ -198,6 +198,11 @@ public :
     //O- point on trimmed surface closest to passed-in point
     //- This function finds the closest point on a TRIMMED surface to the
     //- passed-in point.
+
+  virtual CubitStatus closest_point_along_vector(CubitVector& from_point, 
+                                         CubitVector& along_vector,
+                                         CubitVector& point_on_surface);
+
   
   virtual CubitStatus closest_point(  
     CubitVector const& location, 
@@ -260,6 +265,16 @@ public :
     //- to the input location and then calculates the magnitudes of the
     //- principal curvatures at this (possibly, new) point on the surface. 
   
+
+
+  virtual CubitStatus evaluate( double u, double v,
+    CubitVector *position,
+    CubitVector *normal,
+    CubitVector *curvature1,
+    CubitVector *curvature2 );
+
+
+
   virtual CubitVector position_from_u_v (double u, double v);
     //R CubitVector
     //R- Returned position vector.

@@ -68,19 +68,6 @@ BodySM::~BodySM()
 {
 }
 
-//-------------------------------------------------------------------------
-// Purpose       : Get type of TopologyEntity this GeometryEntity
-//                 should be attached to.
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 06/14/01
-//-------------------------------------------------------------------------
-const type_info& BodySM::topology_entity_type_info() const
-{ return typeid(Body); }
-
 CubitBox BodySM::bounding_box()
 {
   DLIList<Lump*> body_lumps;

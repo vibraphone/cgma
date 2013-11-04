@@ -64,6 +64,8 @@
 #include "CylinderEvaluator.hpp"
 #include "CubitLoops.hpp"
 
+#include <algorithm>
+
 FacetModifyEngine* FacetModifyEngine::instance_ = 0;
 CubitBoolean FacetModifyEngine::modifyEnabled = CUBIT_FALSE;
 
@@ -3935,7 +3937,8 @@ CubitStatus FacetModifyEngine::make_facet_surface( const CubitEvaluatorData *eva
                                                    double min_dot,
                                                    Surface *&new_surface_ptr,
                                                    CubitBoolean use_point_addresses,
-                                                   FacetEvalTool *facet_eval_tool)
+                                                   FacetEvalTool *facet_eval_tool,
+                                                   std::map<FacetCurve*, FacetCurve*> *hard_line_curve_map)
 {
   //MODIFY_CHECK_RETURN_FAILURE;
   
@@ -4005,7 +4008,35 @@ CubitStatus FacetModifyEngine::make_facet_surface( const CubitEvaluatorData *eva
       {
         CubitVector temp_vec1 = start_point->coordinates();
         CubitVector temp_vec2 = end_point->coordinates();
-        status = eval_tool->initialize( facet_eval_tool,
+        
+        std::vector<CubitVector> facet_point_positions;
+
+        if( hard_line_curve_map )
+        {
+          std::map<FacetCurve*, FacetCurve*>::iterator map_iter;
+          map_iter = hard_line_curve_map->find( facet_curve );
+          if( map_iter != hard_line_curve_map->end() )
+          {
+            DLIList<CubitPoint*> facet_curve_pts;
+            map_iter->second->get_points( facet_curve_pts );
+            for( int k=facet_curve_pts.size(); k--; )
+              facet_point_positions.push_back( facet_curve_pts.get_and_step()->coordinates() );
+          }
+        }
+
+        if( facet_point_positions.size() )
+        {
+          CubitVector start = temp_vec1;
+          if( sense != CUBIT_FORWARD )
+          {            
+            std::reverse( facet_point_positions.begin(), facet_point_positions.end() );            
+            start = temp_vec2;
+          }
+          status = eval_tool->initialize( facet_eval_tool,
+              start, facet_point_positions );                                      
+        }
+        else
+          status = eval_tool->initialize( facet_eval_tool,
                                         temp_vec1,
                                         temp_vec2,
                                         sense );
@@ -5379,6 +5410,8 @@ CubitStatus FacetModifyEngine::scale( BodySM *&body, const CubitVector& factors 
 
 CubitStatus FacetModifyEngine::tolerant_imprint( DLIList<BodySM*> &bodies_in,
                                                  DLIList<BodySM*> &new_bodies,
+                                                double overlap_tol,
+                                                double imprint_tol,
                                    DLIList<TopologyBridge*> *new_tbs,
                                    DLIList<TopologyBridge*> *att_tbs )  const
 {

@@ -440,19 +440,19 @@ CubitSense PartitionSurface::get_shell_sense( ShellSM* shell_ptr ) const
 }
 
 
-void PartitionSurface::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionSurface::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().add_attribute( this, csa ); }
-void PartitionSurface::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionSurface::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().rem_attribute( this, csa ); }
 void PartitionSurface::remove_all_simple_attribute_virt()
 { sub_entity_set().rem_all_attrib( this ); }
-CubitStatus PartitionSurface::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartitionSurface::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, list ); 
   return CUBIT_SUCCESS;
 }
 CubitStatus PartitionSurface::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, name.c_str(), list ); 
   return CUBIT_SUCCESS;
@@ -512,6 +512,13 @@ GeometryType PartitionSurface::geometry_type()
 void PartitionSurface::closest_point_trimmed( CubitVector f, CubitVector& r )
 { 
   closest_facet( f, r );
+}
+
+CubitStatus PartitionSurface::closest_point_along_vector(CubitVector& from_point, 
+                                          CubitVector& along_vector,
+                                          CubitVector& point_on_surface)
+{
+  return CUBIT_FAILURE;
 }
 
 CubitStatus PartitionSurface::get_point_normal( CubitVector &, CubitVector & )
@@ -1406,7 +1413,7 @@ void PartitionSurface::transform( const CubitTransformMatrix& xform )
       
   
 
-PartitionSurface* PartitionSurface::construct( CubitSimpleAttrib& attrib,
+PartitionSurface* PartitionSurface::construct( const CubitSimpleAttrib& attrib,
                                                PartitionLump* vol )
 {
     // construct surface and read attrib data
@@ -1564,7 +1571,29 @@ PartitionSurface* PartitionSurface::construct( CubitSimpleAttrib& attrib,
     CubitPoint* pt = curve->start_point()->facet_point();
     if (!pt) {okay = false; break;}
 
+    //For periodic curves, you can easily set up 'curve_edges'
+    //in the opposite order.  When finding the first edge, I added 
+    //the logic in the if(find_correct_direction_on_periodics) block.  It
+    //looks at the first facet edge in the curve and finds the appropriate
+    //facet edge sharing the same point that has the smallest angle between.
+    //This approach assure that we are appending the facet edges to the list
+    //'curve_edges' in the same orientation as the facet edges on the curve.  
+    bool find_correct_direction_on_periodics = false;     
+    PartitionPoint* start_vtx = curve->start_point();
+    PartitionPoint* end_vtx = curve->end_point();
+    CubitPointData* start_point = start_vtx->facet_point();
+    CubitPointData* end_point = end_vtx->facet_point();
+    if( start_vtx == end_vtx && start_point == end_point )
+      find_correct_direction_on_periodics = true;          
+    
+    double smallest_angle = CUBIT_DBL_MAX;
+    bool debug = false;
+
     do {
+
+      if( smallest_angle != CUBIT_DBL_MAX )
+        find_correct_direction_on_periodics = false;
+
       CubitFacetEdge *edge = 0, *pt_edge = 0;
       pt_edges.clean_out();
       pt->edges(pt_edges);
@@ -1577,9 +1606,32 @@ PartitionSurface* PartitionSurface::construct( CubitSimpleAttrib& attrib,
         PartitionEntity* owner = TDVGFacetOwner::get(tmp_edge->other_point(pt));
         if ( owner == curve )
         {
-          edge = tmp_edge;
-          TDVGFacetOwner::set(tmp_edge->other_point(pt), 0);
-          break;
+          if( find_correct_direction_on_periodics )
+          {            
+            CubitPoint* start_point = pt;
+           
+            DLIList<CubitFacetEdgeData*> curve_edges;
+            curve->get_facet_data(curve_edges);
+            curve_edges.reset();
+            CubitFacetEdge *first_facet_edge = curve_edges.get();
+            CubitPoint *real_next_point = first_facet_edge->other_point(start_point);
+            CubitPoint *possible_next_point = tmp_edge->other_point(start_point);
+
+            CubitVector v1 = real_next_point->coordinates() - start_point->coordinates();
+            CubitVector v2 = possible_next_point->coordinates() - start_point->coordinates();
+
+            double angle = v1.interior_angle(v2);
+
+            if( angle < smallest_angle )
+            {
+              smallest_angle = angle;
+              edge = tmp_edge;   
+            }
+          }
+          else
+          {
+            edge = tmp_edge;
+          }
         }
         else if ( owner == curve->end_point() )
         {
@@ -1587,11 +1639,31 @@ PartitionSurface* PartitionSurface::construct( CubitSimpleAttrib& attrib,
         }
       }
       
-      if ( !edge ) edge = pt_edge;
+      if ( !edge ) 
+        edge = pt_edge;
+      else
+      {
+        //so we don't traverse backwards
+        TDVGFacetOwner::set(edge->other_point(pt), 0);
+      }
         
       CubitFacetEdgeData* edge_d = dynamic_cast<CubitFacetEdgeData*>(edge);
-      if (!edge_d) {okay = false; break;}
+      if (!edge_d) 
+      {
+        okay = false; 
+        break;
+      }
       
+      if( debug )
+      {
+        pt->debug_draw(4);
+        GfxDebug::mouse_xforms();
+        edge_d->debug_draw(5);
+        GfxDebug::mouse_xforms();
+        edge_d->other_point(pt)->debug_draw(6);
+        GfxDebug::mouse_xforms();
+      }
+
       curve_edges.append(edge_d);
       pt = edge_d->other_point(pt);
     } while (pt != curve->end_point()->facet_point());

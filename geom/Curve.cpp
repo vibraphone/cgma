@@ -55,19 +55,6 @@ Curve::Curve()
 Curve::~Curve()
 {}
 
-//-------------------------------------------------------------------------
-// Purpose       : Get type of TopologyEntity this GeometryEntity
-//                 should be attached to.
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 06/14/01
-//-------------------------------------------------------------------------
-const type_info& Curve::topology_entity_type_info() const
-{ return typeid(RefEdge); }
-
 CubitSense Curve::relative_sense(Curve *other_curve)
 {
   CubitVector center, junk, this_tangent, other_tangent;

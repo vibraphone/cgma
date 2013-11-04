@@ -250,6 +250,12 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
   point_bridges.clean_out();
   vertex->bridge_manager()->get_bridge_list( point_bridges );
     
+
+  int result_interval=-1;
+  double result_size=-1;
+  SizeIntervalType  result_size_type=NOT_SET; 
+  FirmnessType  result_count_type=LIMP; 
+
   std::vector<CubitString> names_to_add;
   Curve* end_result = 0;
   point_bridges.reset();
@@ -313,12 +319,12 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     refedge1 = CAST_TO(topo, RefEdge);
     assert(refedge1 != NULL);
     curves.get()->set_saved_id(refedge1->id());
-    DLIList<CubitString*> tmp_names;
+    DLIList<CubitString> tmp_names;
     std::vector<CubitString> edge1_names;
     refedge1->entity_names( tmp_names );
-    curves.get()->set_saved_names( tmp_names );  
+    curves.get()->set_saved_names( tmp_names.as_vector() );
     for( int i=tmp_names.size(); i--; )
-      edge1_names.push_back( *(tmp_names.get_and_step()) );
+      edge1_names.push_back( tmp_names.get_and_step() );
     tmp_names.clean_out();
     refedge1->remove_entity_names();
 
@@ -328,13 +334,19 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     curves.next()->set_saved_id(refedge2->id());
     std::vector<CubitString> edge2_names;
     refedge2->entity_names( tmp_names );
-    curves.next()->set_saved_names( tmp_names );    
+    curves.next()->set_saved_names( tmp_names.as_vector() );
     for( int i=tmp_names.size(); i--; )
-      edge2_names.push_back( *(tmp_names.get_and_step()) );   
+      edge2_names.push_back( tmp_names.get_and_step() );
     refedge2->remove_entity_names();
 
+
+
+    determine_combined_edges_interval_or_size( refedge1,refedge2,result_interval,result_size,result_count_type,result_size_type); 
+
+
     Curve* keep = 0;
-    if (keep_edge) {
+    if (keep_edge) 
+    {
       if (keep_edge->bridge_manager() == curves.get()->owner())
         keep = curves.get();
       else if (keep_edge->bridge_manager() == curves.next()->owner())
@@ -402,7 +414,7 @@ RefEdge* CompositeTool::remove_vertex( RefVertex* vertex,
     // notify observers that one edge is being composited into another
     // TODO - make a simple function for this notification since it is  times????
     dead = result != refedge1 ? refedge1 : result != refedge2 ? refedge2 : 0;
-    update_combined_edges( result, dead );
+    update_combined_edges( result, dead ,result_interval,result_size,result_count_type,result_size_type);
 
     //append all names to this ref entity
     int k;
@@ -459,7 +471,7 @@ CubitStatus CompositeTool::make_mergeable( GeometryEntity* bridge1,
     bridge2 = tmp;
   }
   
-  DLIList<CubitSimpleAttrib*> csa_list;
+  DLIList<CubitSimpleAttrib> csa_list;
   bridge1->get_simple_attribute( csa_list );
   CubitSimpleAttrib* csa = 0;
   for( int i = csa_list.size(); !csa && i--; )
@@ -656,21 +668,17 @@ RefFace* CompositeTool::remove_edge( RefEdge* edge,
 
     //Save the names and ids
     surfs.get()->set_saved_id(face1->id());
-    DLIList<CubitString*> tmp_names;
+    DLIList<CubitString> tmp_names;
     face1->entity_names( tmp_names );        
-    surfs.get()->set_saved_names( tmp_names );
-    std::vector<CubitString> face1_names;
-    for( int i=tmp_names.size(); i--; )
-      face1_names.push_back( *(tmp_names.get_and_step()) );
+    surfs.get()->set_saved_names( tmp_names.as_vector() );
+    std::vector<CubitString> face1_names = tmp_names.as_vector();
     tmp_names.clean_out();       
     face1->remove_entity_names();
     
     surfs.next()->set_saved_id(face2->id());
     face2->entity_names( tmp_names );        
-    surfs.next()->set_saved_names( tmp_names );
-    std::vector<CubitString> face2_names;
-    for( int i=tmp_names.size(); i--; )
-      face2_names.push_back( *(tmp_names.get_and_step()) );
+    surfs.next()->set_saved_names( tmp_names.as_vector() );
+    std::vector<CubitString> face2_names = tmp_names.as_vector();
     tmp_names.clean_out();       
     face2->remove_entity_names();
 
@@ -982,15 +990,15 @@ RefVolume* CompositeTool::remove_face( RefFace* face,
   Lump* lump = 0;
   RefVolume *tmp_vol = dynamic_cast<RefVolume*>(lumps.get()->topology_entity());
   lumps.get()->set_saved_id( tmp_vol->id() );
-  DLIList<CubitString*> names;
+  DLIList<CubitString> names;
   tmp_vol->entity_names( names );
-  lumps.get()->set_saved_names( names );
+  lumps.get()->set_saved_names( names.as_vector() );
   names.clean_out();  
 
   tmp_vol = dynamic_cast<RefVolume*>(lumps.get()->topology_entity());
   lumps.next()->set_saved_id( tmp_vol->id() );
   tmp_vol->entity_names( names );
-  lumps.next()->set_saved_names( names );
+  lumps.next()->set_saved_names( names.as_vector() );
 
     // if only one lump, the surface should be internal to a composite lump
   lumps.reset();
@@ -1370,11 +1378,11 @@ CubitStatus CompositeTool::uncomposite( RefEdge* composite_edge,
     RefEdge* edge = bm ? dynamic_cast<RefEdge*>(bm->topology_entity()) : 0;
     if( restored_edges )
       restored_edges->append( edge );
-    DLIList<CubitString*> underlying_names;
+    std::vector<CubitString> underlying_names;
     tmp_curve->get_saved_names( underlying_names );
     int k;
-    for( k=underlying_names.size(); k--; )    
-      edge->entity_name( *(underlying_names.get_and_step()) );    
+    for( k=0; k<underlying_names.size(); k++)
+      edge->entity_name( underlying_names[k] );
   }
     
   return result;
@@ -1723,11 +1731,11 @@ CubitStatus CompositeTool::uncomposite( RefFace* composite_face,
     RefFace* face = bm ? dynamic_cast<RefFace*>(bm->topology_entity()) : 0;
     if( restored_faces )
       restored_faces->append( face );
-    DLIList<CubitString*> underlying_names;
+    std::vector<CubitString> underlying_names;
     tmp_surf->get_saved_names( underlying_names );
     int k;
-    for( k=underlying_names.size(); k--; )
-      face->entity_name( *(underlying_names.get_and_step()) );
+    for( k=0; k<underlying_names.size(); k++ )
+      face->entity_name( underlying_names[k] );
 
   }
   
@@ -2416,6 +2424,8 @@ CubitStatus CompositeTool::stitch_curves( Curve* cv1, Curve* cv2 )
   return result ? CUBIT_SUCCESS : CUBIT_FAILURE;
 }
 
+
+
         
 //-------------------------------------------------------------------------
 // Purpose       : Functions overloaded by CompositeToolMesh
@@ -2430,5 +2440,11 @@ CubitStatus CompositeTool::update_combined_vols( RefVolume*, RefVolume* )
   {return CUBIT_SUCCESS;}
 CubitStatus CompositeTool::update_combined_faces( RefFace*, RefEdge*, RefFace* ) 
   {return CUBIT_SUCCESS;}
-CubitStatus CompositeTool::update_combined_edges( RefEdge*, RefEdge* ) 
+CubitStatus CompositeTool::update_combined_edges( RefEdge*, RefEdge* ,int keep_interval,double keep_size,FirmnessType interval_keep_type,SizeIntervalType size_keep_type) 
   {return CUBIT_SUCCESS;}
+CubitStatus CompositeTool::determine_combined_edges_interval_or_size( RefEdge* edge_1, RefEdge* edge_2,int& result_interval,double& result_size,FirmnessType& interval_keep_type,SizeIntervalType& size_keep_type)
+{return CUBIT_SUCCESS;}
+
+
+
+

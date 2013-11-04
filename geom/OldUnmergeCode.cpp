@@ -245,7 +245,7 @@ CubitStatus OldUnmergeCode::unmerge( RefVolume* vol_ptr )
 CubitStatus OldUnmergeCode::unmerge( RefFace* face_ptr, CubitBoolean descend )
 {
   if (!get_use_old_unmerge_code())
-    return MergeTool::instance()->unmerge(face_ptr);
+    return MergeTool::instance()->unmerge(face_ptr, descend);
   
   CubitBoolean top = start_unmerge();
   CubitStatus result = CUBIT_SUCCESS;
@@ -348,7 +348,7 @@ CubitStatus OldUnmergeCode::unmerge( RefFace* face_ptr, CubitBoolean descend )
 CubitStatus OldUnmergeCode::unmerge( RefEdge* edge_ptr, CubitBoolean descend )
 {
   if (!get_use_old_unmerge_code())
-    return MergeTool::instance()->unmerge(edge_ptr);
+    return MergeTool::instance()->unmerge(edge_ptr, descend);
   
   CubitBoolean top = start_unmerge();
   CubitStatus result = CUBIT_SUCCESS;
@@ -851,12 +851,12 @@ RefVertex* OldUnmergeCode::unmerge( RefVertex* vtx_ptr, RefEdge* edge_ptr )
 
 void OldUnmergeCode::remove_CAEntityId_attrib( TopologyBridge* tb_ptr )
 {
-  DLIList<CubitSimpleAttrib*> attrib_list;
+  DLIList<CubitSimpleAttrib> attrib_list;
   tb_ptr->get_simple_attribute( attrib_list );
   for( int i = attrib_list.size(); i > 0; i-- )
   {
-    CubitSimpleAttrib* attrib = attrib_list.get_and_step();
-    if( attrib->character_type() == "ENTITY_ID" )
+    const CubitSimpleAttrib& attrib = attrib_list.get_and_step();
+    if( attrib.character_type() == "ENTITY_ID" )
     {
       tb_ptr->remove_simple_attribute_virt( attrib );
     }
@@ -1380,7 +1380,7 @@ void OldUnmergeCode::cleanup_unmerge()
       entity->get_parent_ref_entities( temp_list );
       
       if( temp_list.size() == 0 )
-        CubitObserver::notify_static_observers( entity, FREE_REF_ENTITY_GENERATED );
+        AppUtil::instance()->send_event(entity, FREE_REF_ENTITY_GENERATED );
 
       if (progress)
         progress->step();
@@ -1395,8 +1395,8 @@ void OldUnmergeCode::cleanup_unmerge()
   while( event_list.size() )
   {
     UnMergeEvent* event = event_list.pop();
-    event->new_entity->notify_all_observers( *event );
-    event->old_entity->notify_all_observers( *event );
+    AppUtil::instance()->send_event( event->new_entity, *event );
+    AppUtil::instance()->send_event( event->old_entity, *event );
     delete event;
     if (progress)
       progress->step();
@@ -1407,7 +1407,7 @@ void OldUnmergeCode::cleanup_unmerge()
   for( i = unmerge_modified.size(); i > 0; i-- )
   {
     PRINT_DEBUG_19("\t\tUpdated graphics for %s.\n", unmerge_modified.get()->entity_name().c_str() );
-    CubitObserver::notify_static_observers( unmerge_modified.get_and_step(), TOPOLOGY_MODIFIED );
+    AppUtil::instance()->send_event(unmerge_modified.get_and_step(), TOPOLOGY_MODIFIED );
     if (progress)
       progress->step();  
   }

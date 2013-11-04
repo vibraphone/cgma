@@ -26,6 +26,7 @@ private:
   FacetEntity *myCubitPoint;
   void *myPoint;
   int id;
+  ChollaPoint *myMergePartner;
 
 public:
 
@@ -92,6 +93,12 @@ public:
   
   CubitStatus verify_curves();
     //- verify that all curves at this point have this point as an adjacency
+
+  ChollaPoint *merge_partner(){ return myMergePartner; }
+
+  void set_merge_partner( ChollaPoint *merge_partner )
+    { myMergePartner = merge_partner;}  
+
 
 };
 

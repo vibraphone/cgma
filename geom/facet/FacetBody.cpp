@@ -28,6 +28,7 @@
 #include "FacetQueryEngine.hpp"
 #include "DLIList.hpp"
 #include "FacetEvalTool.hpp"
+#include "CurveFacetEvalTool.hpp"
 #include "Surface.hpp"
 #include "FacetSurface.hpp"
 #include "CubitTransformMatrix.hpp"
@@ -40,6 +41,8 @@
 #include "CubitFacetEdge.hpp"
 #include "FacetModifyEngine.hpp"
 #include "FacetAttrib.hpp"
+#include "GfxDebug.hpp"
+#include "CubitSimpleAttrib.hpp"
 
 //-------------------------------------------------------------------------
 // Purpose       : A constructor with a list of lumps that are attached.
@@ -61,20 +64,20 @@ GeometryQueryEngine* FacetBody::get_geometry_query_engine() const
   return FacetQueryEngine::instance();
 }
 
-void FacetBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetBody::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.append_attribute(csa); }
   
-void FacetBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetBody::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.remove_attribute(csa); }
 
 void FacetBody::remove_all_simple_attribute_virt()
   { attribSet.remove_all_attributes(); }
   
-CubitStatus FacetBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
+CubitStatus FacetBody::get_simple_attribute(DLIList<CubitSimpleAttrib>& csa_list)
   { return attribSet.get_attributes(csa_list); }
 
 CubitStatus FacetBody::get_simple_attribute( const CubitString& name,
-                                          DLIList<CubitSimpleAttrib*>& csa_list )
+                                          DLIList<CubitSimpleAttrib>& csa_list )
   { return attribSet.get_attributes( name, csa_list ); }
 
 CubitStatus FacetBody::save_attribs( FILE *file_ptr )
@@ -96,6 +99,8 @@ BodySM* FacetBody::copy()
 
   // ----------Copy the points on the body------------------------
 
+  std::map<TopologyBridge*, TopologyBridge*> old_to_new_map;
+
   int ii;
   DLIList<FacetPoint*> point_list;
   get_points(point_list);
@@ -115,18 +120,21 @@ BodySM* FacetBody::copy()
       PRINT_ERROR("Couldn't copy points");
       return (BodySM *)NULL;
     }
-    copy_points.append( point_copy );
+    copy_points.append( point_copy );    
+
+    old_to_new_map.insert( 
+      std::make_pair<TopologyBridge*, TopologyBridge*>( point_ptr, point_copy ) );    
   }
 
   // ------------------Copy the curves-------------------------
 
   int jj;
+  std::map<FacetCurve*, FacetCurve*> hard_line_curve_map;
   DLIList<FacetCurve*> curve_list;
   get_curves( curve_list );
   DLIList<Curve*> copy_curves;
   curve_list.reset();
   Curve *curve_ptr, *curve_copy;
-  Curve *curvsm_copy = NULL;
   FacetCurve *fcurve;
   TBPoint *ptsm_ptr;
   TBPoint *start_ptr, *end_ptr, *copy_start = NULL, *copy_end = NULL;
@@ -170,8 +178,31 @@ BodySM* FacetBody::copy()
       PRINT_ERROR("Couldn't copy curves");
       return (BodySM *)NULL;
     }
-    curvsm_copy = CAST_TO(curve_copy, Curve);
-    copy_curves.append( curvsm_copy );
+
+
+    CurveFacetEvalTool *eval_tool = fcurve->get_eval_tool();
+    DLIList<CubitFacetEdge*> facet_edges;
+    eval_tool->get_facets( facet_edges );
+    CubitFacetEdge *tmp_facet_edge = facet_edges.get();
+    DLIList<CubitFacet*> adj_facets;
+    tmp_facet_edge->facets( adj_facets );    
+    CubitFacet *tmp_facet = adj_facets.get_and_step();
+    tmp_facet->tool_id();
+    
+    for( int k=adj_facets.size(); k--; )
+    {
+      if( tmp_facet_edge->num_adj_facets_on_surf( adj_facets.get_and_step()->tool_id() ) > 1 )
+      {
+        hard_line_curve_map.insert( 
+          std::map<FacetCurve*, FacetCurve*>::value_type( static_cast<FacetCurve*>( CAST_TO( curve_copy, FacetCurve )),fcurve ));
+        break;
+      }
+    }
+
+    old_to_new_map.insert( 
+      std::make_pair<TopologyBridge*, TopologyBridge*>( curve_ptr, curve_copy ) );    
+
+    copy_curves.append( curve_copy );
   }
 
   // ------------------copy coedges-----------------------
@@ -181,6 +212,7 @@ BodySM* FacetBody::copy()
   DLIList<CoEdgeSM*> copy_coedges;
   coedge_list.reset();
   Curve *curvsm_ptr;
+  Curve *curvsm_copy = NULL;
   CoEdgeSM *coedge_ptr, *coedge_copy;
   FacetCoEdge *fcoedge;
   for (ii=0; ii<coedge_list.size(); ii++)
@@ -320,13 +352,19 @@ BodySM* FacetBody::copy()
                                                            copy_loops_on_surface,
                                                            interp_order,
                                                            min_dot,
-                                                           surface_copy, 
-                                                           use_point_addresses);
+                                                           surface_copy,                                                           
+                                                           use_point_addresses,
+                                                           NULL,
+                                                           &hard_line_curve_map);
     if(rv != CUBIT_SUCCESS)
     {
       PRINT_ERROR("Couldn't copy surfaces");
       return (BodySM *)NULL;
     }
+    
+    old_to_new_map.insert( 
+      std::make_pair<TopologyBridge*, TopologyBridge*>( fsurface, surface_copy ) );
+
     copy_surfaces.append( surface_copy );
   }
 
@@ -436,6 +474,10 @@ BodySM* FacetBody::copy()
       PRINT_ERROR("Couldn't copy lump");
       return (BodySM *)NULL;
     }
+    
+    old_to_new_map.insert( 
+      std::make_pair<TopologyBridge*, TopologyBridge*>( flump, lump_copy ) );
+
     copy_lumps.append( lump_copy );
   }
 
@@ -448,6 +490,23 @@ BodySM* FacetBody::copy()
   {
     PRINT_ERROR("Couldn't copy lump");
     return (BodySM *)NULL;
+  }
+
+  //copy the attributes from old to new
+  std::map<TopologyBridge*, TopologyBridge*>::iterator iter;
+  for( iter= old_to_new_map.begin(); iter != old_to_new_map.end(); iter++ )
+  {
+    TopologyBridge *old_tb = iter->first;
+    TopologyBridge *new_tb = iter->second;
+    
+    DLIList<CubitSimpleAttrib> old_attribs;
+    old_tb->get_simple_attribute( old_attribs );
+
+    for( int i=old_attribs.size(); i--; )
+    {
+      const CubitSimpleAttrib& copy = old_attribs.get_and_step();
+      new_tb->append_simple_attribute_virt( copy );
+    }
   }
 
   return (BodySM*)body_copy;

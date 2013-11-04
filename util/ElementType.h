@@ -10,7 +10,7 @@ enum ElementType { SPHERE_EXO=0,
                    BEAM, BEAM2, BEAM3,
                    TRUSS, TRUSS2, TRUSS3,
                    SPRING,
-                   TRI, TRI3, TRI6, TRI7,
+                   CUBIT_TRI, TRI3, TRI6, TRI7, // changing TRI to CUBIT_TRI as CTH already has TRI
                    TRISHELL, TRISHELL3, TRISHELL6, TRISHELL7,
                    SHEL, SHELL4, SHELL8, SHELL9,
                    QUAD, QUAD4, QUAD5, QUAD8, QUAD9,
@@ -21,6 +21,8 @@ enum ElementType { SPHERE_EXO=0,
                    GAP, LUMPMASS, RIGID, CONSTRAINT,
                    WEDGE,
                    INVALID_ELEMENT_TYPE};
+
+
 /*Invalid element type must be the last type...*/
 #endif
 

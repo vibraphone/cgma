@@ -293,15 +293,61 @@ static
 CubitStatus iGeom_get_graphics(RefFace* face, 
                                DLIList<CubitVector*>& point_list,
                                DLIList<int>& facet_list,
-                               unsigned short normal_tolerance = 15,
-                               double distance_tolerance = 0,
-                               double longest_edge = 0) ;
+                               double normal_tolerance = 15.0,
+                               double distance_tolerance = 0.0,
+                               double longest_edge = 0.0) ;
 
 static
 CubitStatus iGeom_get_graphics(RefEdge* edge,
                                DLIList<CubitVector*>& point_list,
                                DLIList<int>& facet_list,
-                               double tolerance = 0.0 ) ;
+                               double angle_tolerance = 0.0,
+                               double distance_tolerance=0.0 ) ;
+
+static CubitStatus iGeom_get_graphics(RefFace* face,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double normal_tolerance, 
+                               double distance_tolerance,
+                               double longest_edge)
+{
+  GMem facets;
+  face->get_graphics(facets, normal_tolerance, distance_tolerance, longest_edge);
+  int num_points = 0, num_facets = 0;
+  num_points = facets.point_list_size();
+  num_facets = facets.facet_list_size();
+  GPoint* points = facets.point_list();
+  int*  facet_array = facets.facet_list();
+  for(int i = 0; i < num_points; i++)
+  {
+    CubitVector point(points[i].x, points[i].y, points[i].z);
+    point_list.append(&point);
+  }
+  for(int i = 0; i < num_facets; i++)
+    facet_list.append(facet_array[i]);
+}
+
+static CubitStatus iGeom_get_graphics(RefEdge* edge,
+                               DLIList<CubitVector*>& point_list,
+                               DLIList<int>& facet_list,
+                               double angle_tolerance,
+                               double distance_tolerance )
+{
+  GMem facets;
+  edge->get_graphics(facets, angle_tolerance, distance_tolerance);
+  int num_points = 0, num_facets = 0;
+  num_points = facets.point_list_size();
+  num_facets = facets.facet_list_size();
+  GPoint* points = facets.point_list();
+  int*  facet_array = facets.facet_list();
+  for(int i = 0; i < num_points; i++)
+  {
+    CubitVector point(points[i].x, points[i].y, points[i].z);
+    point_list.append(&point);
+  }
+  for(int i = 0; i < num_facets; i++)
+    facet_list.append(facet_array[i]);
+}
 
 static CubitStatus init_cgm( const std::string& engine )
 {
@@ -7207,7 +7253,7 @@ static iBase_ErrorType
 process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list) 
 {
     // go through all entities, checking for remaining simple attribs
-  DLIList<CubitSimpleAttrib*> csa_list;
+  DLIList<CubitSimpleAttrib> csa_list;
   iBase_ErrorType result = iBase_SUCCESS;
 
   for (int i = ref_list.size(); i > 0; i--) {
@@ -7218,10 +7264,10 @@ process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list)
     TopologyEntity *topo_ent = dynamic_cast<TopologyEntity*>(this_ent);
     topo_ent->bridge_manager()->topology_bridge()->get_simple_attribute(csa_list);
 
-    for (int csa = csa_list.size(); csa > 0; csa--) {
+    for (int j = csa_list.size(); j > 0; j--) {
         // see if there's a tag for this csa already
-      CubitSimpleAttrib *csa_ptr = csa_list.get_and_step();
-      const char *tag_name = csa_ptr->character_type().c_str();
+      CubitSimpleAttrib csa = csa_list.get_and_step();
+      const char *tag_name = csa.character_type().c_str();
       long tag = TM->getTagHandle(tag_name);
       if (tag < 0) continue;
       else if (0 == tag) {
@@ -7231,11 +7277,8 @@ process_attribs(iGeom_Instance instance, DLIList<RefEntity*> &ref_list)
       }
         
         // now set the tag
-      iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, csa_ptr);
+      iBase_ErrorType tmp_result = TM->set_csa_tag(this_ent, tag, &csa);
       if (iBase_SUCCESS != tmp_result) result = tmp_result;
-    
-        // now destroy this csa
-      delete csa_ptr;
     }
   }
 

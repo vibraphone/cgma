@@ -99,19 +99,19 @@ GeometryQueryEngine* PartitionLump::get_geometry_query_engine() const
 
 
 
-void PartitionLump::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionLump::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().add_attribute( this, csa ); }
-void PartitionLump::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionLump::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
 { sub_entity_set().rem_attribute( this, csa ); }
 void PartitionLump::remove_all_simple_attribute_virt()
 { sub_entity_set().rem_all_attrib( this ); }
-CubitStatus PartitionLump::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartitionLump::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, list ); 
   return CUBIT_SUCCESS;
 }
 CubitStatus PartitionLump::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
 { 
   sub_entity_set().get_attributes( this, name.c_str(), list ); 
   return CUBIT_SUCCESS;

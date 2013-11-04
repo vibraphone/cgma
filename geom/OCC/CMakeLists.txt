@@ -1,80 +1,84 @@
+
 PROJECT(cubit_occ)
 
-SET(OCC_SRCS
-    OCCShapeAttributeSet.cpp
-    OCCAttribSet.cpp
-    OCCBody.cpp
-    OCCCoEdge.cpp
-    OCCCoFace.cpp
-    OCCCurve.cpp
-    OCCLoop.cpp
-    OCCLump.cpp
-    OCCModifyEngine.cpp
-    OCCPoint.cpp
-    OCCQueryEngine.cpp
-    OCCShell.cpp
-    OCCSurface.cpp
-    OCCDrawTool.cpp
-   )
-
-SET(OCC_HDRS
-    OCCShapeAttributeSet.hpp
-    OCCAttribSet.hpp
-    OCCBody.hpp
-    OCCCoEdge.hpp
-    OCCCoFace.hpp
-    OCCCurve.hpp
-    OCCGeometryCreator.hpp
-    OCCLoop.hpp
-    OCCLump.hpp
-    OCCModifyEngine.hpp
-    OCCPoint.hpp
-    OCCQueryEngine.hpp
-    OCCShell.hpp
-    OCCSurface.hpp
-    OCCDrawTool.hpp
-    )
-
-SET(OCC_LIBS
-     TKMath
-     TKXSBase
-     TKernel
-     TKShHealing
-     TKBRep
-     TKG3d
-     TKBO
-     TKFeat
-     TKFillet
-     TKG2d
-     TKOffset
-     TKBool
-     TKGeomAlgo
-     TKGeomBase
-     TKPrim
-     TKTopAlgo
-     TKHLR
-     TKIGES
-     TKMesh
-     TKPrim
-     TKSTEP209
-     TKSTEPAttr
-     TKSTEPBase
-     TKSTEP
-     TKSTL
-     TKTopAlgo
-     TKXSBase
-     TKLCAF
-     TKBinL
-    )
-
-SET(OCC_DIR "" CACHE PATH "Location where OpenCASCADE in installed")
-FIND_LIBRARY( OCC_LIBRARY TKernel ${OCC_DIR}/lib )
-FIND_PATH( OCC_INCLUDES Standard_Version.hxx ${OCC_DIR}/inc )
-
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 OLD)
+if(CMAKE_SYSTEM_NAME MATCHES Windows)
+  if(CMAKE_SIZEOF_VOID_P MATCHES 8)
+    set(OCE_MODULE_HINTS "${CUBITROOT}/OCE/OCE-0.10-64/cmake")
+  else()
+    set(OCE_MODULE_HINTS "${CUBITROOT}/OCE/OCE-0.10-32/cmake")
+  endif()
 endif()
-ADD_LIBRARY( cubit_OCC ${OCC_SRCS} ${OCC_HDRS} )
-INCLUDE_DIRECTORIES( ${OCC_INCLUDES} )
-TARGET_LINK_LIBRARIES( cubit_OCC ${OCC_LIBRARY} ${OCC_LIBS} )
-SET_SOURCE_FILES_PROPERTIES( ${OCC_SRCS} COMPILE_FLAGS "-DHAVE_IOSTREAM -DHAVE_IOMANIP -DHAVE_FSTREAM -DHAVE_LIMITS_H" )
+
+if(CMAKE_SYSTEM_NAME MATCHES Linux)
+  if(CMAKE_SIZEOF_VOID_P MATCHES 8)
+    set(OCE_MODULE_HINTS "${CUBITROOT}/OCE/OCE-0.10-64/lib/oce-0.10")
+  else()
+    set(OCE_MODULE_HINTS "${CUBITROOT}/OCE/OCE-0.10-32/lib/oce-0.10")
+  endif()
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES Darwin)
+  set(OCE_MODULE_HINTS "${CUBITROOT}/OCE/OCE-0.10/OCE.framework/Versions/0.10/Resources")
+endif()
+
+find_package(OCE CONFIG HINTS ${OCE_MODULE_HINTS})
+
+include_directories(${OCE_INCLUDE_DIRS})
+
+SET(OCC_SRCS
+    OCCAttribSet.cpp
+    OCCAttribSet.hpp
+    OCCBody.cpp
+    OCCBody.hpp
+    OCCCoEdge.cpp
+    OCCCoEdge.hpp
+    OCCCoFace.cpp
+    OCCCoFace.hpp
+    OCCCurve.cpp
+    OCCCurve.hpp
+    OCCDrawTool.cpp	
+    OCCDrawTool.hpp	
+    OCCGeometryCreator.hpp    
+    OCCHistory.cpp
+    OCCHistory.hpp
+    OCCLoop.cpp
+    OCCLoop.hpp
+    OCCLump.cpp
+    OCCLump.hpp
+    OCCModifyEngine.cpp
+    OCCModifyEngine.hpp
+    OCCPoint.cpp
+    OCCPoint.hpp
+    OCCQueryEngine.cpp
+    OCCQueryEngine.hpp
+    OCCShapeAttributeSet.cpp
+    OCCShapeAttributeSet.hpp
+    OCCShell.cpp
+    OCCShell.hpp
+    OCCSurface.cpp
+    OCCSurface.hpp
+  )
+
+ADD_DEFINITIONS(
+  -DHAVE_OCC_IGES
+  -DHAVE_OCC_STEP
+  )
+
+if(WIN32)
+  ADD_DEFINITIONS(
+  -DWNT
+  -DHAVE_OCC_DEF
+  -DOCC_INC_FLAG
+  -DWNT
+  )
+endif()
+
+# build cubit occ library from sources
+ADD_LIBRARY(cubit_occ MODULE ${OCC_SRCS})
+TARGET_LINK_LIBRARIES(cubit_occ cubit_geom cubit_util TKShHealing TKBinL TKBin TKLCAF TKCAF TKCDF TKPShape TKFillet TKOffset TKMesh TKBool TKBO TKFeat TKG2d TKG3d TKXSBase TKTopAlgo TKPrim TKGeomAlgo TKBRep TKGeomBase TKernel TKMath TKAdvTools TKIGES TKSTEP)
+
+
+INSTALL(TARGETS cubit_occ ${CUBIT_GEOM_EXPORT_GROUP}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+        LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+        )

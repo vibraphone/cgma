@@ -14,12 +14,14 @@
 #define CURVE_FACET_EVAL_TOOL_HPP
 
 #include "DLIList.hpp"
+#include <map>
 
 class CubitBox;
 class CubitPoint;
 class CubitVector;
 class FacetEvalTool;
 class CubitFacetEdge;
+class FacetCurve;
 
 class CurveFacetEvalTool
 {
@@ -58,6 +60,14 @@ private:
     DLIList<CubitPoint*> &point_list,
     CubitSense owrts );
     // generate a list of edges and points from the loop list
+    // for this curve
+
+  CubitStatus get_segments_from_positions( 
+    std::vector<CubitVector> &positions,
+    CubitVector &start_pt,
+    DLIList<CubitFacetEdge*> &edge_list, 
+    DLIList<CubitPoint*> &point_list );
+      // generate a list of edges and points from the loop list
     // for this curve
   
   /*
@@ -102,7 +112,7 @@ private:
 //                                    double &dist_to_edge );
     // project to the line defined by the edge
 
-  void fix_point_edge_order();
+  CubitStatus fix_point_edge_order();
 
   CubitSense find_curv_sense( CubitPoint *start_ptr );
   CubitSense find_curv_sense( CubitVector &start );
@@ -122,8 +132,11 @@ public:
                           CubitSense orientation );
   CubitStatus initialize( FacetEvalTool *surf_eval_tool,
                           CubitVector &start,
-                          CubitVector &end,
+                          CubitVector &end,                          
                           CubitSense orientation );
+  CubitStatus initialize( FacetEvalTool *surf_eval_tool,
+                          CubitVector &start,
+                          std::vector<CubitVector> &positions );
 
   CubitStatus save(FILE *fp);
     // save to a cubit file

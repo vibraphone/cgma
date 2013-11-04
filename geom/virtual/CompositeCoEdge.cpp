@@ -464,16 +464,16 @@ GeometryQueryEngine* CompositeCoEdge::get_geometry_query_engine() const
 //
 // Creation Date : 01/11/02
 //-------------------------------------------------------------------------
-void CompositeCoEdge::append_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeCoEdge::append_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
-void CompositeCoEdge::remove_simple_attribute_virt( CubitSimpleAttrib* )
+void CompositeCoEdge::remove_simple_attribute_virt( const CubitSimpleAttrib& )
 { }
 void CompositeCoEdge::remove_all_simple_attribute_virt()
 { }
-CubitStatus CompositeCoEdge::get_simple_attribute( DLIList<CubitSimpleAttrib*>& )
+CubitStatus CompositeCoEdge::get_simple_attribute( DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 CubitStatus CompositeCoEdge::get_simple_attribute( const CubitString& ,
-                                                DLIList<CubitSimpleAttrib*>& )
+                                                DLIList<CubitSimpleAttrib>& )
 { return CUBIT_FAILURE; }
 
 

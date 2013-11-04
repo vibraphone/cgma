@@ -56,7 +56,7 @@ CubitStatus CompSurfFacets::setup( const SurfPtrList& surface_data )
     ignoreFlags[index] = 0;
     
     CubitStatus result = surface->get_geometry_query_engine()
-      ->get_graphics( surface, &gmem );
+      ->get_graphics( surface, &gmem, 2);
     if ( !result )
       return CUBIT_FAILURE;
  
@@ -85,8 +85,8 @@ CubitStatus CompSurfFacets::setup( const SurfPtrList& surface_data )
 
       for (int i=0; i<count; i++ )
       {
-        int index = *f_itor++;
-        facet_points[i] = tmp_points[index];
+        int index2 = *f_itor++;
+        facet_points[i] = tmp_points[index2];
       }
       
       CubitFacet *facet = (CubitFacet*) new CubitFacetData( 
@@ -165,7 +165,7 @@ int CompSurfFacets::closest_index( const CubitVector& pos,
                                    CubitVector* closest_pos ) const
 {
   CubitFacet *closest_facet = facetEvalTool->closest_facet( pos );
-  
+ 
   std::map<CubitFacet*, int>::const_iterator my_iter;
   my_iter = facetToSurfaceMap.find( closest_facet );
   

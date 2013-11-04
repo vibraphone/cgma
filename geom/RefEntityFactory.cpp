@@ -7,6 +7,7 @@
 #include "RefGroup.hpp"
 #include "GeometryQueryTool.hpp"
 #include "DLIList.hpp"
+#include "AppUtil.hpp"
 
 static int sort_by_ascending_ids(CubitEntity*& a, CubitEntity*& b)
 {
@@ -66,9 +67,21 @@ static int sort_by_ascending_ids(RefGroup*& a, RefGroup*& b)
 
 RefEntityFactory *RefEntityFactory::instance_ = NULL;
 
+RefEntityFactory *RefEntityFactory::instance()
+{
+  if (instance_ == NULL) {
+    instance_ = new RefEntityFactory();
+  }
+
+  return instance_;
+}
+
 RefEntityFactory::RefEntityFactory(RefEntityFactory *factory) 
 {
   instance_ = factory;
+
+  AppUtil::instance()->event_dispatcher().add_observer(this);
+
 
   if (factory == NULL) {
     refVertexList = new DLIList<RefVertex*>();
@@ -77,7 +90,7 @@ RefEntityFactory::RefEntityFactory(RefEntityFactory *factory)
     refGroupList = new DLIList<RefGroup*>();
     refVolumeList = new DLIList<RefVolume*>();
     bodyList = new DLIList<Body*>();
-    register_static_observer(this);
+    register_observer(this);
   }
   else {
     refVertexList = NULL;
@@ -116,56 +129,56 @@ RefEntityFactory::~RefEntityFactory()
   if (refGroupList != NULL) delete refGroupList;
   if (refVolumeList != NULL) delete refVolumeList;
   if (bodyList != NULL) delete bodyList;
-  unregister_static_observer(this);
+  unregister_observer(this);
   instance_ = NULL;
 }
 
 RefVertex *RefEntityFactory::construct_RefVertex(TBPoint *point)
 {
   RefVertex *temp = new RefVertex(point);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 RefEdge *RefEntityFactory::construct_RefEdge(Curve *curve)
 {
   RefEdge *temp = new RefEdge(curve);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 RefFace *RefEntityFactory::construct_RefFace(Surface *surface)
 {
   RefFace *temp = new RefFace(surface);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 RefVolume *RefEntityFactory::construct_RefVolume(Lump *lump)
 {
   RefVolume *temp = new RefVolume(lump);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 Body *RefEntityFactory::construct_Body(BodySM *body_sm)
 {
   Body *temp = new Body(body_sm);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 RefGroup *RefEntityFactory::construct_RefGroup(const char* name)
 {
   RefGroup *temp = new RefGroup(name);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
 RefGroup *RefEntityFactory::construct_RefGroup (DLIList<RefEntity*>& entity_list)
 {
   RefGroup *temp = new RefGroup(entity_list);
-  CubitObserver::notify_static_observers( temp, MODEL_ENTITY_CONSTRUCTED );
+  AppUtil::instance()->send_event( temp, MODEL_ENTITY_CONSTRUCTED );
   return temp;
 }
 
@@ -1163,8 +1176,7 @@ void RefEntityFactory::renumber_geometry_by_properties(CubitBoolean retain_max)
 }
 
 CubitStatus RefEntityFactory::notify_observer(CubitObservable *observable,
-                                              const CubitEvent &observer_event,
-                                              CubitBoolean )
+                                              const CubitEvent &observer_event)
 {
   RefEntity *entity = CAST_TO(observable, RefEntity);
   if (!entity) return CUBIT_FAILURE;

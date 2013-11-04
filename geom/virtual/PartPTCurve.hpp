@@ -24,7 +24,7 @@ public:
 
   PartPTCurve( PartitionSurface* owner );
   
-  static PartPTCurve* construct( CubitSimpleAttrib* attrib, 
+  static PartPTCurve* construct( const CubitSimpleAttrib& attrib,
                                  PartitionSurface* owner );
   
   virtual ~PartPTCurve();
@@ -44,12 +44,12 @@ public:
 
     /*** Methods from TopologyBridge ***/
 
-  void append_simple_attribute_virt( CubitSimpleAttrib* );
-  void remove_simple_attribute_virt( CubitSimpleAttrib* );
+  void append_simple_attribute_virt( const CubitSimpleAttrib& );
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& );
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& );
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& );
   CubitStatus get_simple_attribute( const CubitString& name, 
-                                    DLIList<CubitSimpleAttrib*>& );
+                                    DLIList<CubitSimpleAttrib>& );
 
     /*** Methods from GeometryEntity ***/
 
@@ -86,12 +86,13 @@ public:
   //O- the degree of this spline
   //O- the control points
   //O- If rational, weight for each control point
-  //O- the knots
+  //O- whether underlying spline is reversed
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots
+                                         DLIList<double> &knots,
+                                         bool &spline_is_reversed
                                        ) const;
   //R CubitStatus
   //O- center - ellipse center point
@@ -106,7 +107,7 @@ public:
   private:
   
   PartPTCurve( PartitionSurface* owner, 
-               CubitSimpleAttrib& attrib,
+               const CubitSimpleAttrib& attrib,
                DLIList<int>& vertex_connectivity );
   
 };

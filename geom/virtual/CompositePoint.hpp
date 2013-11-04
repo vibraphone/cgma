@@ -36,16 +36,16 @@ public:
   TBPoint* get_point() const
     { return realPoint; }
   
-  void append_simple_attribute_virt( CubitSimpleAttrib* csa )
+  void append_simple_attribute_virt( const CubitSimpleAttrib& csa )
     { get_point()->append_simple_attribute_virt( csa ); }
-  void remove_simple_attribute_virt( CubitSimpleAttrib* csa )
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& csa )
     { get_point()->remove_simple_attribute_virt( csa ); }
   void remove_all_simple_attribute_virt()
     { get_point()->remove_all_simple_attribute_virt(); }
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& list )
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& list )
     { return get_point()->get_simple_attribute( list ); }
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& attrib_list )
+                                    DLIList<CubitSimpleAttrib>& attrib_list )
     { return get_point()->get_simple_attribute( name, attrib_list ); }
   
   GeometryQueryEngine* get_geometry_query_engine() const;

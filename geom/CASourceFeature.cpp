@@ -5,52 +5,37 @@
 #include "CastTo.hpp"
 #include "TDSourceFeature.hpp"
 
-CubitAttrib* CASourceFeature_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CASourceFeature_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-    CASourceFeature *new_attrib = NULL;
-    if (NULL == p_csa)
-    {
-        new_attrib = new CASourceFeature(entity);
-    }
-    else
-    {
-        new_attrib = new CASourceFeature(entity, p_csa);
-    }
-
-    return new_attrib;
+  return new CASourceFeature(entity, p_csa);
 }
 
 CASourceFeature::CASourceFeature(RefEntity* new_attrib_owner,
-                                 CubitSimpleAttrib *csa_ptr)
+                                 const CubitSimpleAttrib& csa_ptr)
                                  : CubitAttrib(new_attrib_owner)
 {
     sourceFeature = GeometryFeatureEngine::FEATURE_UNDEFINED;
 
-    DLIList<CubitString*> *cs_list = csa_ptr->string_data_list();
-    cs_list->reset();
-
-    // step over the attribute type
-    cs_list->step();
-
-    // now read name / option pairs
-    if(cs_list->size()==2)
+    if(!csa_ptr.isEmpty())
     {
-        CubitString *cs = cs_list->get_and_step();
-        if (*cs == CubitString(""))
-            PRINT_WARNING("Empty feature attribute for %s %d.\n",
-            attribOwnerEntity->class_name(),
-            attribOwnerEntity->id());
-        else
-            sourceFeature = string_to_feature_type(CubitString(*cs));
-    }
-    else
-        deleteAttrib = CUBIT_TRUE;
-}
 
-CASourceFeature::CASourceFeature(RefEntity* new_attrib_owner)
-: CubitAttrib(new_attrib_owner)
-{
-    sourceFeature = GeometryFeatureEngine::FEATURE_UNDEFINED;
+      const std::vector<CubitString>& cs_list = csa_ptr.string_data_list();
+
+      // step over the attribute type
+      // now read name / option pairs
+      if(cs_list.size()==2)
+      {
+        CubitString cs = cs_list[1];
+          if (cs.length() == 0)
+              PRINT_WARNING("Empty feature attribute for %s %d.\n",
+              attribOwnerEntity->class_name(),
+              attribOwnerEntity->id());
+          else
+              sourceFeature = string_to_feature_type(cs);
+      }
+      else
+          deleteAttrib = CUBIT_TRUE;
+    }
 }
 
 CASourceFeature::~CASourceFeature()
@@ -113,27 +98,18 @@ CubitStatus CASourceFeature::reset()
     return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CASourceFeature::cubit_simple_attrib()
+CubitSimpleAttrib CASourceFeature::cubit_simple_attrib()
 {
-    DLIList<CubitString*> cs_list;
+    std::vector<CubitString> cs_list;
 
     // pack the string list:
     // character type of this CA
-    cs_list.append(new CubitString(att_internal_name()));
+    cs_list.push_back(att_internal_name());
 
     // name, option pairs
-    cs_list.append(new CubitString(feature_type_to_string(sourceFeature)));
+    cs_list.push_back(feature_type_to_string(sourceFeature));
 
-    CubitSimpleAttrib* csattrib_ptr =
-        new CubitSimpleAttrib(&cs_list, NULL, NULL);
-
-    // since CubitSimpleAttrib constructor creates new names from
-    // the list passed in, we should delete the strings created in
-    // this function
-    for (int i = cs_list.size(); i > 0; i--)
-        delete cs_list.get_and_step();
-
-    return csattrib_ptr;
+    return CubitSimpleAttrib(&cs_list, NULL, NULL);
 }
 
 

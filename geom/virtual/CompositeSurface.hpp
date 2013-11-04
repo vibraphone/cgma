@@ -112,12 +112,12 @@ public:
   /************************************************ 
    **** Methods Inhereted from TopologyBridge ***** 
    ************************************************/
-  void append_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
-  void remove_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
+  void append_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& attrib_list );
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& attrib_list );
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& attrib_list );
+                                    DLIList<CubitSimpleAttrib>& attrib_list );
   
 
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
@@ -155,6 +155,10 @@ public:
                                      CubitVector* unit_normal = NULL,
                                      CubitVector* curvature1 = NULL,
                                      CubitVector* curvature2 = NULL );
+
+  virtual CubitStatus closest_point_along_vector(CubitVector& from_point, 
+                                         CubitVector& along_vector,
+                                         CubitVector& point_on_surface);
 
   virtual CubitStatus principal_curvatures( CubitVector const& location,
                                             double& curvature_1, 

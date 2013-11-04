@@ -53,6 +53,7 @@ public :
    CubitStatus find_candidate_surfaces_for_imprinting( DLIList<BodySM*> &body_list,
                                           DLIList<Surface*> &surface_list1,
                                           DLIList<Surface*> &surface_list2,
+                                          double overlap_tol = -1.0,
                                           bool filter_slivers = false );
 
    // Searches for surfaces that overlap each other and are good
@@ -79,7 +80,7 @@ public :
    CubitStatus find_overlapping_curves( DLIList<Curve*> &curve_list,
                                 DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
                                 std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
-                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map);
+                                std::multimap<BodySM*, CubitVector> &body_point_imprint_map, double overlap_tol=-1.0);
 
    //! From the specified bodies, find curves that overlap. 
    CubitStatus find_overlapping_curves( DLIList<Body*> &bodies,
@@ -90,7 +91,8 @@ public :
    CubitStatus find_overlapping_curves( DLIList<BodySM*> &bodies,
                                 DLIList< DLIList<Curve*> *> &overlapping_curve_lists,
                                 std::map<Curve*, DLIList<Curve*>* > &curve_to_list_map,
-                                std::multimap<BodySM*, CubitVector> &body_vertex_imprint_map);
+                                std::multimap<BodySM*, CubitVector> &body_vertex_imprint_map,
+                                double overlap_tol);
 
    //! From the specified surfaces, find curves that overlap. 
    CubitStatus find_overlapping_curves( DLIList<RefFace*> &faces,
@@ -127,7 +129,8 @@ public :
    //! Checks to see if two curves overlap.  Reuses graphic facets.
    CubitBoolean check_overlap( Curve *curve1, Curve *curve2, 
                std::map<Curve*, DLIList<CurveOverlapFacet*>* > *facet_map, 
-               std::multimap<BodySM*, CubitVector > *body_point_imprint_map = NULL );
+               std::multimap<BodySM*, CubitVector > *body_point_imprint_map = NULL,
+               double overlap_tol = -1.0);
 
    //! Checks for boundary contact between surfaces
    CubitBoolean check_boundary_contact(  
@@ -256,7 +259,12 @@ public :
    void set_skip_facing_surfaces( CubitBoolean setting );
    static SurfaceOverlapTool* instance();
      // Returns a static pointer to unique instance of this class.
-   static void delete_instance() { if(instance_) delete instance_; };
+   static void delete_instance()
+   {
+     if(instance_)
+       delete instance_;
+     instance_ = NULL;
+   };
    
    ~SurfaceOverlapTool();
      //- Destructor.
@@ -285,7 +293,8 @@ private :
                                Surface *surface2,
               std::map<Surface*, DLIList<SurfaceOverlapFacet*>* > *facet_map,
               std::map<Surface*, double > *area_map,
-              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map ); 
+              std::map<Surface*, AbstractTree<SurfaceOverlapFacet*>* > *a_tree_map,
+              double overlap_tol=-1.0); 
 
                                 
    //CubitStatus draw_facets( GMem* gMem, int color = 2 );

@@ -54,7 +54,6 @@ using namespace NCubitFile;
 
 CCubitFile::CCubitFile() 
 {
-    mpReadFile = mpWriteFile = NULL;
     meErrorState = eSuccess;
     mintNextModelID = 1;
 
@@ -117,12 +116,11 @@ void CCubitFile::FreeAll()
     // Close any open files.
     try {
         if(mpReadFile)
-            fclose(mpReadFile);
+            mpReadFile.close();
         if(mpWriteFile)
-            fclose(mpWriteFile);
+            mpWriteFile.close();
     }
     catch(...)  { }
-    mpReadFile = mpWriteFile = NULL;
 }
 
 CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
@@ -160,21 +158,21 @@ CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
 
             if( !xstrWriteFileName )
             {
-              mpReadFile = fopen(mstrReadFileName, "rb");
+              mpReadFile.open(mstrReadFileName, "rb");
               if(!mpReadFile)
                   throw eFileReadError;
 
               // Test to see if the file is a cubit file... it should begin with
               // the string 'CUBE'.
               unsigned char lachrMagic[4];
-              if(fread(lachrMagic, 1, 4, mpReadFile) != 4)
+              if(fread(lachrMagic, 1, 4, mpReadFile.file()) != 4)
                   throw eFileUnrecognizedFormat;
               if((lachrMagic[0] != 'C') || (lachrMagic[1] != 'U') ||
                   (lachrMagic[2] != 'B') || (lachrMagic[3] != 'E'))
                   throw eFileUnrecognizedFormat;
               
               // Load the file's "table of contents".
-              CIOWrapper lIO(mpReadFile, 4, 0);
+              CIOWrapper lIO(mpReadFile.file(), 4, 0);
               lIO.BeginReadBlock(4);
               lIO.Read((UnsignedInt32*)&mReadContents, mintSizeOfContents);
               lIO.EndReadBlock();
@@ -202,7 +200,7 @@ CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
               }
               
               // Read the file-scoped (model) meta-data.
-              mpMetaData->ReadMetaData(mpReadFile,
+              mpMetaData->ReadMetaData(mpReadFile.file(),
                   mReadContents.mintModelMetaDataOffset, 0,
                   mReadContents.mintHeaderSourceEndian);
             }
@@ -244,7 +242,7 @@ CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
             if(!mstrReadFileName || strcmp(mstrReadFileName, xstrWriteFileName)) {
                 mintWriteTempFile = 0;
                 strcpy(mstrWriteFileName, xstrWriteFileName);       
-                mpWriteFile = fopen(mstrWriteFileName, "wb");
+                mpWriteFile.open(mstrWriteFileName, "wb");
             }
             // Otherwise, generate a temporary file name to write to so that
             // the read file's contents will not be destroyed until it is 
@@ -255,7 +253,7 @@ CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
                 while(!mpWriteFile && (lintTempFile < 0xFF)) {
                     sprintf(mstrWriteFileName, "%s~%.2x.tmp",
                         mstrReadFileName, lintTempFile);
-                    mpWriteFile = fopen(mstrWriteFileName, "wb");
+                    mpWriteFile.open(mstrWriteFileName, "wb");
                     lintTempFile++;
                 }
             }
@@ -292,7 +290,7 @@ CCubitFile::EErrorCode CCubitFile::Open(const char* xstrReadFileName,
 
             // Initialize the write file by writing its identity and an initial
             // table of contents.
-            CIOWrapper lIO(mpWriteFile);
+            CIOWrapper lIO(mpWriteFile.file());
             lIO.BeginWriteBlock(0);
             lIO.Write("CUBE", 4);
             lIO.Write((UnsignedInt32*)&mWriteContents, mintSizeOfContents);
@@ -335,7 +333,7 @@ CCubitFile::EErrorCode CCubitFile::Close()
             // Write file scoped (model) metadata and update the file's table
             // of contents one last time.
             UnsignedInt32 lintMetaDataLength;
-            mpMetaData->WriteMetaData(mpWriteFile,
+            mpMetaData->WriteMetaData(mpWriteFile.file(),
                 mWriteContents.mintModelMetaDataOffset, lintMetaDataLength);
             WriteModelTable();
 
@@ -345,18 +343,16 @@ CCubitFile::EErrorCode CCubitFile::Close()
             // file and replace it with the temporary file.
             if(mintWriteTempFile) {             
                 // Close any open files.
-                if(mpReadFile)
-                    fclose(mpReadFile);
-                fclose(mpWriteFile);
-                mpReadFile = mpWriteFile = NULL;
+                mpReadFile.close();
+                mpWriteFile.close();
 
                 // If there was a backup name specified for the old read file
                 // rename it instead of deleting it.
                 if(mstrBackupFileName)
-                    rename(mstrReadFileName, mstrBackupFileName);
+                    CubitFileUtil::rename_file(mstrReadFileName, mstrBackupFileName);
                 else
-                    remove(mstrReadFileName);
-                if(rename(mstrWriteFileName, mstrReadFileName))
+                    CubitFileUtil::remove_file(mstrReadFileName);
+                if(CUBIT_SUCCESS != CubitFileUtil::rename_file(mstrWriteFileName, mstrReadFileName))
                     throw eUnknownError;
             }
         }
@@ -563,7 +559,7 @@ void CCubitFile::WriteModelTable()
 
     if(!mWriteContents.mintNumModels)  return;  // no models... nothing to do!
 
-    CIOWrapper lIO(mpWriteFile);
+    CIOWrapper lIO(mpWriteFile.file());
 
     // Write the model table, if the number of models has increased, write the
     // table to a new location in the file, otherwise reuse the previous
@@ -636,7 +632,7 @@ UnsignedInt32 CCubitFile::BeginWriteGeomModel(HModel xintGeomModel,
     if(!mpWriteFile)  return eFileWriteError;
 
     // Try to open the geometry model file for reading.
-    FILE* lpGeomFile = fopen(xstrGeomFile, "rb");
+    CubitFile lpGeomFile(xstrGeomFile, "rb");
     if(!lpGeomFile)
         return eFileReadError;
 
@@ -664,19 +660,16 @@ UnsignedInt32 CCubitFile::BeginWriteGeomModel(HModel xintGeomModel,
 
         // Measure the length of the geometry model file and then copy it into
         // to cubit file.
-        if(fseek(lpGeomFile, 0, SEEK_END))
+        if(NCubitFile::SetLocation(lpGeomFile.file(), 0, SEEK_END))
             throw CCubitFile::eFileSeekError;
-        long lintGeomLength = ftell(lpGeomFile);
-        if(lintGeomLength == -1L)
-            throw CCubitFile::eFileTellError;
+        UnsignedInt32 lintGeomLength = GetLocation(lpGeomFile.file());
         CopyModel(0, mpaWriteModels[lintWriteIndex].mintModelOffset,
-            lintGeomLength, lpGeomFile, mpWriteFile);
+            lintGeomLength, lpGeomFile.file(), mpWriteFile.file());
         mpaWriteModels[lintWriteIndex].mintModelLength = lintGeomLength;
     }
     catch(EErrorCode xeErrorCode)  {  leReturn = xeErrorCode;  }
     catch(...)  {  leReturn = eUnknownError;  }
 
-    fclose(lpGeomFile);
     return leReturn;
 }
 
@@ -693,7 +686,7 @@ UnsignedInt32 CCubitFile::BeginReadGeomModel(HModel xintGeomModel,
     if(!mpReadFile)  return eFileReadError;
     if(!xpGeomFile)  return eFileWriteError;
 
-	UnsignedInt32 lintStartFilePos = ftell(xpGeomFile);
+	UnsignedInt32 lintStartFilePos = GetLocation(xpGeomFile);
 
     // Determine the size of the geometry file and then copy it into the
     // cubit file.
@@ -711,12 +704,12 @@ UnsignedInt32 CCubitFile::BeginReadGeomModel(HModel xintGeomModel,
         // Copy the geometry model file out of the cubit file.
         CopyModel(mpaReadModels[lintReadIndex].mintModelOffset,
             lintWriteOffset, mpaReadModels[lintReadIndex].mintModelLength,
-            mpReadFile, xpGeomFile);
+            mpReadFile.file(), xpGeomFile);
     }
     catch(EErrorCode xeErrorCode)  {  leReturn = xeErrorCode;  }
     catch(...)  {  leReturn = eUnknownError;  }
 
-    fseek(xpGeomFile, lintStartFilePos, SEEK_SET);
+    NCubitFile::SetLocation(xpGeomFile, lintStartFilePos, SEEK_SET);
     return leReturn;
 }
 
@@ -727,7 +720,7 @@ UnsignedInt32 CCubitFile::EndReadGeomModel()
 }
 
 
-UnsignedInt32 CCubitFile::BeginWriteAssemblyModel(HModel xintModelId,
+UnsignedInt32 CCubitFile::BeginWriteModel(HModel xintModelId, EModelType type,
                                                   FILE*& writeable_file)
 {
     // Let's not return a FILE* until we know it's going to be OK to write to.
@@ -748,7 +741,7 @@ UnsignedInt32 CCubitFile::BeginWriteAssemblyModel(HModel xintModelId,
                   lintWriteIndex))
       throw eNotFound;
     
-    if(mpaWriteModels[lintWriteIndex].mintModelType != eAssemblyModel)
+    if(mpaWriteModels[lintWriteIndex].mintModelType != type)
       throw eNotFound;
     
       // Locate the model's index in the read contents, if possible, and
@@ -765,17 +758,15 @@ UnsignedInt32 CCubitFile::BeginWriteAssemblyModel(HModel xintModelId,
       // Move the FILE* to the correct write position so the FILE*
       // can be written to directly.  From CopyFile, it looks like the
       // correct location is the end of the file.
-    if (fseek(mpWriteFile, 0, SEEK_END))
+    if (NCubitFile::SetLocation(mpWriteFile.file(), 0, SEEK_END))
       throw eFileSeekError;
     
       // Save our current FILE* position so we can detect the size of
       // data written to the model.
-    mpaWriteModels[lintWriteIndex].mintModelOffset = ftell(mpWriteFile);
-    if ((int)mpaWriteModels[lintWriteIndex].mintModelOffset == -1L)
-      throw eFileTellError;
+    mpaWriteModels[lintWriteIndex].mintModelOffset = GetLocation(mpWriteFile.file());
     
       // set the FILE*
-    writeable_file = mpWriteFile;
+    writeable_file = mpWriteFile.file();
   }
   catch(EErrorCode xeErrorCode)
   {  leReturn = xeErrorCode;  }
@@ -785,7 +776,7 @@ UnsignedInt32 CCubitFile::BeginWriteAssemblyModel(HModel xintModelId,
   return leReturn;
 }
 
-UnsignedInt32 CCubitFile::EndWriteAssemblyModel(HModel xintModelId)
+UnsignedInt32 CCubitFile::EndWriteModel(HModel xintModelId)
 {
   if (!mpWriteFile)
     return eFileWriteError;
@@ -803,14 +794,12 @@ UnsignedInt32 CCubitFile::EndWriteAssemblyModel(HModel xintModelId)
     return eOrderError;
   
     // Get the end of the FILE.
-  if (fseek(mpWriteFile, 0, SEEK_END))
+  if (NCubitFile::SetLocation(mpWriteFile.file(), 0, SEEK_END))
     return eFileSeekError;
-  long cur_pos = ftell(mpWriteFile);
-  if (cur_pos == -1L)
-    return eFileTellError;
+  UnsignedInt32 cur_pos = GetLocation(mpWriteFile.file());
   
     // See how many bytes that is past our saved position.
-  long size_in_bytes = cur_pos - mpaWriteModels[lintWriteIndex].mintModelOffset;
+  UnsignedInt32 size_in_bytes = cur_pos - mpaWriteModels[lintWriteIndex].mintModelOffset;
   
     // Locate the model's index in the read contents, if possible, and
     // make sure the model has not already been written or deleted, and
@@ -834,7 +823,7 @@ UnsignedInt32 CCubitFile::EndWriteAssemblyModel(HModel xintModelId)
 // at the end of the data...the reader should not go GetReadModelLength()
 // bytes beyond the current FILE* position.  You should copy the contents
 // to another FILE if this is an issue for the reader.
-UnsignedInt32 CCubitFile::BeginReadAssemblyModel(HModel xintModelId,
+UnsignedInt32 CCubitFile::BeginReadModel(HModel xintModelId, EModelType type,
                                                  FILE*& f)
 {
   f = NULL;
@@ -853,14 +842,14 @@ UnsignedInt32 CCubitFile::BeginReadAssemblyModel(HModel xintModelId,
     if(!FindModel(xintModelId, mpaReadModels,
                   mReadContents.mintNumModels, lintReadIndex))
       throw eNotFound;
-    if(mpaReadModels[lintReadIndex].mintModelType != eAssemblyModel)
+    if(mpaReadModels[lintReadIndex].mintModelType != type)
       throw eNotFound;
     
       // Set the read pointer to the correct location
-    fseek(mpReadFile, mpaReadModels[lintReadIndex].mintModelOffset, SEEK_SET);
+    NCubitFile::SetLocation(mpReadFile.file(), mpaReadModels[lintReadIndex].mintModelOffset, SEEK_SET);
     
       // Set the FILE*
-    f = mpReadFile;
+    f = mpReadFile.file();
   }
   catch(EErrorCode xeErrorCode)
   { leReturn = xeErrorCode; }
@@ -870,7 +859,7 @@ UnsignedInt32 CCubitFile::BeginReadAssemblyModel(HModel xintModelId,
   return leReturn;
 }
 
-UnsignedInt32 CCubitFile::EndReadAssemblyModel()
+UnsignedInt32 CCubitFile::EndReadModel()
 {
   return eSuccess;
 }
@@ -914,7 +903,7 @@ UnsignedInt32 CCubitFile::BeginWriteFEModel(HModel xintFEModel,
             throw eMemoryError;
         
         mpaWriteModels[mintFEModelIndex].mintModelOffset =
-            mpWriteFEModel->InitWrite(mpWriteFile, xintGeomCount, xintGroupCount,
+            mpWriteFEModel->InitWrite(mpWriteFile.file(), xintGeomCount, xintGroupCount,
             xintBlockCount, xintNodeSetCount, xintSideSetCount);
         return eSuccess;
     }
@@ -1107,7 +1096,7 @@ UnsignedInt32 CCubitFile::BeginReadFEModel(HModel xintFEModel,
         mpReadFEModel = new CFEModel();
         if(!mpReadFEModel)  throw eMemoryError;
         
-        mpReadFEModel->InitRead(mpReadFile, mpaReadModels[lintIndex].mintModelOffset,
+        mpReadFEModel->InitRead(mpReadFile.file(), mpaReadModels[lintIndex].mintModelOffset,
             xintGeomCount, xintGroupCount,
             xintBlockCount, xintNodeSetCount, xintSideSetCount);
         return eSuccess;
@@ -1147,8 +1136,9 @@ UnsignedInt32 CCubitFile::ReadNodes(UnsignedInt32 xintIndex,
     return lintErrorCode;
 }
 
-UnsignedInt32 CCubitFile::ReadElems(UnsignedInt32 xintIndex,
-									UnsignedInt32& xintGeomID,
+UnsignedInt32 CCubitFile::ReadElems(HModel meshModelId,
+                                    UnsignedInt32 xintIndex,
+                                    UnsignedInt32& xintGeomID,
                                     UnsignedInt32& xintNumTypes,
                                     SElemData*& xpaElemData)
 // Try to read the element connectivity for the passed geometry index/ID
@@ -1157,9 +1147,22 @@ UnsignedInt32 CCubitFile::ReadElems(UnsignedInt32 xintIndex,
 {
     UnsignedInt32 lintErrorCode;
     try {
-        if(!mpReadFEModel)
+
+      CMetaData *mmd = NULL;
+      this->GetReadMetaData(CCubitFile::eModelMetaData, mmd);
+      if( !mmd )
+      {
+        throw eFileReadError;
+      }
+
+      // get the data version from the file.
+      // Version 1.0 has an old element type enum
+      double data_version = 0.0;
+      mmd->GetValue(meshModelId, "DataVersion", data_version);
+      
+      if(!mpReadFEModel)
             throw eOrderError;
-        mpReadFEModel->ReadElems(xintIndex, xintGeomID,
+        mpReadFEModel->ReadElems(data_version, xintIndex, xintGeomID,
 			xintNumTypes, xpaElemData);
         return eSuccess;
     }
@@ -1414,7 +1417,7 @@ UnsignedInt32 CCubitFile::BeginWriteSimModel(HModel xintSimModel,
             throw eMemoryError;
 
         mpaWriteModels[mintSimModelIndex].mintModelOffset =
-            mpWriteSimModel->InitWrite(mpWriteFile, xintBCCount,
+            mpWriteSimModel->InitWrite(mpWriteFile.file(), xintBCCount,
                                        xintICCount, xintBCSetCount,
                                        xintMaterialCount, xintAmplitudeCount,
                                        xintConstraintCount);
@@ -1539,7 +1542,7 @@ UnsignedInt32 CCubitFile::BeginReadSimModel(HModel xintSimModel,
         mpReadSimModel = new CSimModel();
         if(!mpReadSimModel)  throw eMemoryError;
 
-        mpReadSimModel->InitRead(mpReadFile, mpaReadModels[lintIndex].mintModelOffset,
+        mpReadSimModel->InitRead(mpReadFile.file(), mpaReadModels[lintIndex].mintModelOffset,
                                  xintBCCount, xintICCount, xintBCSetCount,
                                  xintMaterialCount, xintAmplitudeCount,
                                  xintConstraintCount);

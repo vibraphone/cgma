@@ -120,7 +120,7 @@ FacetPoint::~FacetPoint()
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-void FacetPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetPoint::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.append_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -134,7 +134,7 @@ void FacetPoint::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-void FacetPoint::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetPoint::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.remove_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -163,11 +163,11 @@ void FacetPoint::remove_all_simple_attribute_virt()
 //
 // Creation Date : 07/16/00
 //-------------------------------------------------------------------------
-CubitStatus FacetPoint::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus FacetPoint::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                csa_list)
   { return attribSet.get_attributes(csa_list); }
 CubitStatus FacetPoint::get_simple_attribute(const CubitString& name,
-                                     DLIList<CubitSimpleAttrib*>& csa_list )
+                                     DLIList<CubitSimpleAttrib>& csa_list )
   { return attribSet.get_attributes( name, csa_list ); }
 
 CubitStatus FacetPoint::save_attribs( FILE *file_ptr )

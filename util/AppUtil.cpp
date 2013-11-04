@@ -169,9 +169,6 @@ AppUtil* AppUtil::instance()
         // Initialize interrupted flag to false.
       cubit_intr = CUBIT_FALSE;
 
-        // initialize the static observer list
-      CubitObserver::init_static_observers();
-
       cubit_update_terminal_size(0);
 
       initialize_settings();
@@ -312,7 +309,7 @@ void AppUtil::catch_interrupt( CubitBoolean yesno )
 }
 
 
-void AppUtil::startup(int argc, char ** argv)
+void AppUtil::startup(const std::vector<CubitString>& args)
 {
 
     if (mAppStarted)
@@ -321,14 +318,15 @@ void AppUtil::startup(int argc, char ** argv)
     // get paths to binaries that AppUtil is compiled into
     // we'll make this our "cubitDir" and can be used a reference for 
     // where Cubit is installed
-    char path_buffer[PATH_MAX];
 #ifdef WIN32
-    if(GetModuleFileName((HINSTANCE)&__ImageBase, path_buffer, PATH_MAX))
+    wchar_t path_buffer[PATH_MAX];
+    if(GetModuleFileNameW((HINSTANCE)&__ImageBase, path_buffer, PATH_MAX))
     {
-      *strrchr(path_buffer, '\\') = '\0';
-      cubitDir = path_buffer;
+      *wcsrchr(path_buffer, '\\') = '\0';
+      cubitDir = CubitString::toUtf8(path_buffer);
     }
 #else
+    char path_buffer[PATH_MAX];
     Dl_info dl_info;
     dladdr((void*) AppUtil::instance, &dl_info);
     strcpy(path_buffer, dl_info.dli_fname);
@@ -359,8 +357,6 @@ int AppUtil::shutdown()
 
      // Delete the singletons
    CubitMessage::delete_instance();
-
-   CubitObserver::term_static_observers();
 
    SettingHandler::delete_instance();
 
@@ -496,3 +492,7 @@ void AppUtil::clear_interrupt()
   cubit_intr = CUBIT_FALSE;
 }
 
+void AppUtil::send_event(CubitObservable* observable, const CubitEvent& event)
+{
+    this->mEventDispatcher.send_event(observable, event);
+}

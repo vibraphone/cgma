@@ -58,8 +58,6 @@ public :
 
   virtual LoopType loop_type() = 0;
   
-  virtual const type_info& topology_entity_type_info() const;
-  
   virtual CubitStatus get_angle_metric(double& /*angle_metric*/)
     { return CUBIT_FAILURE; }
     //- Sets the value of angle_metric, ONLY if the LoopSM

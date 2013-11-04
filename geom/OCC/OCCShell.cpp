@@ -86,7 +86,9 @@ OCCShell::~OCCShell()
 
 OCCCoFace* OCCShell::remove_coface(OCCCoFace *coface)
 {
-  return myCoFaceList.remove(coface);
+  if(myCoFaceList.remove(coface))
+    return coface;
+  return NULL;
 }
 
 void OCCShell::set_TopoDS_Shell(TopoDS_Shell shell)
@@ -112,21 +114,21 @@ GeometryQueryEngine*
    return OCCQueryEngine::instance();
 }                 
 
-void OCCShell::append_simple_attribute_virt(CubitSimpleAttrib*)
+void OCCShell::append_simple_attribute_virt(const CubitSimpleAttrib&)
 {
 }
-void OCCShell::remove_simple_attribute_virt(CubitSimpleAttrib* )
+void OCCShell::remove_simple_attribute_virt(const CubitSimpleAttrib& )
 {
 }
 void OCCShell::remove_all_simple_attribute_virt()
 {
 }
-CubitStatus OCCShell::get_simple_attribute(DLIList<CubitSimpleAttrib*>&)
+CubitStatus OCCShell::get_simple_attribute(DLIList<CubitSimpleAttrib>&)
 {
   return CUBIT_FAILURE;
 }
 CubitStatus OCCShell::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
+                                              DLIList<CubitSimpleAttrib>&)
   { return CUBIT_FAILURE; }
 
 //-------------------------------------------------------------------------

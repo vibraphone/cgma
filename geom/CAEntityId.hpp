@@ -35,16 +35,8 @@ public:
 
   virtual ~CAEntityId();
 
-  CAEntityId (RefEntity*);
-
-  CAEntityId (RefEntity*, CubitSimpleAttrib *);
+  CAEntityId (RefEntity*, const CubitSimpleAttrib &);
     //- create a CAEID from a simple attribute
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const
-     { return typeid(CAEntityId);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
 
@@ -56,7 +48,7 @@ public:
   
   void merge_owner(CubitAttrib *deletable_attrib);
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   int int_attrib_type() {return CA_ENTITY_ID;}
 
@@ -66,7 +58,7 @@ public:
   
 };
 
-CubitAttrib* CAEntityId_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAEntityId_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

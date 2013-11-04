@@ -90,7 +90,7 @@ void PriorityQueue<Object>::pop()
 template <class Object> MY_INLINE
 int PriorityQueue<Object>::where_is_item(Object &a, int start_index, bool queue_is_valid)
 {
-  int i;
+  size_t i;
 
   if (!queue_is_valid)
   {

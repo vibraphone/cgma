@@ -106,6 +106,8 @@ FacetCurve::FacetCurve(CurveFacetEvalTool *curve_facet_tool,
 //-------------------------------------------------------------------------
 FacetCurve::~FacetCurve() 
 {
+    if(this->curveFacetEvalTool)
+        delete this->curveFacetEvalTool;
   
 }
 
@@ -121,7 +123,7 @@ FacetCurve::~FacetCurve()
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-void FacetCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetCurve::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.append_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -135,7 +137,7 @@ void FacetCurve::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-void FacetCurve::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetCurve::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.remove_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -164,12 +166,12 @@ void FacetCurve::remove_all_simple_attribute_virt()
 //
 // Creation Date : 07/14/00
 //-------------------------------------------------------------------------
-CubitStatus FacetCurve::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus FacetCurve::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                csa_list)
   { return attribSet.get_attributes(csa_list); }
   
 CubitStatus FacetCurve::get_simple_attribute( const CubitString& name,
-                                      DLIList<CubitSimpleAttrib*>& csa_list)
+                                      DLIList<CubitSimpleAttrib>& csa_list)
   { return attribSet.get_attributes( name, csa_list ); }
 
 
@@ -229,8 +231,7 @@ double FacetCurve::measure()
 //                 the point represented by the parameter1 going to the 
 //                 point represented by parameter2.
 //
-// Special Notes : The sign of the returned length value is always positive.
-//                 Parameter1 and parameter2 are with respect to the EDGE.
+// Special Notes : Parameter1 and parameter2 are with respect to the EDGE.
 //
 // Creator       : Steve Owen
 //
@@ -248,7 +249,7 @@ double FacetCurve::length_from_u( double parameter1, double parameter2 )
   //  adjust_periodic_parameter( parameter1 );
   //  adjust_periodic_parameter( parameter2 );
   //}
-  return fabs(curveFacetEvalTool->length_from_u( parameter1, parameter2 ));   
+  return curveFacetEvalTool->length_from_u( parameter1, parameter2 );
 }
 
 //-------------------------------------------------------------------------
@@ -1000,7 +1001,8 @@ CubitStatus FacetCurve::get_spline_params
   int &degree,       // the degree of this spline
   DLIList<CubitVector> &cntrl_pts,  // xyz position of controlpoints
   DLIList<double> &cntrl_pt_weights, // if rational, a weight for each cntrl point.
-  DLIList<double> &knots   // There should be order+cntrl_pts.size()-2 knots
+  DLIList<double> &knots,   // There should be order+cntrl_pts.size()-2 knots
+  bool &spline_is_reversed
 ) const
 {
   PRINT_ERROR("Currently, Cubit is unable to determine spline parameters for FacetCurves.\n");

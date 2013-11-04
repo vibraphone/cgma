@@ -2,6 +2,7 @@
 #include "CubitString.hpp"
 #include "Surface.hpp"
 #include "Curve.hpp"
+#include "BodySM.hpp"
 
 
 
@@ -67,5 +68,33 @@ CubitStatus GeometryQueryEngine::get_graphics( Surface* surface_ptr,
 CubitStatus GeometryQueryEngine::get_visible_entities( TopologyBridge *hidden_tb, 
                                                       DLIList<TopologyBridge*> &real_tbs )
 {
+  return CUBIT_FAILURE;
+}
+
+CubitStatus GeometryQueryEngine::delete_solid_model_entities(GeometryEntity* ref_entity_ptr) const
+{
+  return CUBIT_FAILURE;
+}
+
+CubitStatus GeometryQueryEngine::delete_topology_bridge(TopologyBridge* bridge) const
+{
+ 
+  // first, try the geometry entity
+
+  GeometryEntity* ent = dynamic_cast<GeometryEntity*> (bridge);
+  if (ent)
+  {
+    return delete_solid_model_entities(ent);
+  }
+
+  // now, try to cast to a BodySM and call that routine
+  BodySM* body = dynamic_cast<BodySM*> (bridge);
+  if (body)
+  {
+    delete_solid_model_entities(body);
+    return CUBIT_SUCCESS;
+  }
+
+  PRINT_ERROR("GeometryQueryEngine::delete_solid_model_entities(TopologyBridge* bridge): no deletion...\n");
   return CUBIT_FAILURE;
 }

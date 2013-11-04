@@ -1,5 +1,0 @@
-#!/bin/csh
-if (-e $HOME/dot_cubit_files/.cubit.sol) then
-  rm $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}
-endif
-cat $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}_base >>! $HOME/dot_cubit_files/.cubit.${MACHINE_TYPE}

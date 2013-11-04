@@ -49,12 +49,12 @@ public :
 
   void set_myMarked( CubitBoolean marked) {myMarked = marked;}
 
-  void add_loop(OCCLoop* loop);    
+  void add_loop(OCCLoop* loop);   
   DLIList<OCCLoop*> loops() {return myLoopList;}
   void remove_loop(OCCLoop* loop) {myLoopList.remove(loop);}
   void clean_loops(){myLoopList.clean_out();}
 
-  virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void append_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I 
     //I- 
@@ -63,7 +63,7 @@ public :
     //- attribute to the OSME. The  is attached to each of the 
     //- underlying solid model entities this one points to.
   
-  virtual void remove_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void remove_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I CubitSimpleAttrib*
     //I- A reference to a CubitSimpleAttrib object which is the object
@@ -78,9 +78,9 @@ public :
     //- The purpose of this function is to remove all simple
     //- attributes from the OSME. 
   
-  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&);
+  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&);
   virtual CubitStatus get_simple_attribute(const CubitString& name,
-                                           DLIList<CubitSimpleAttrib*>&);
+                                           DLIList<CubitSimpleAttrib>&);
     //R CubitSimpleAttrib*
     //R- the returned cubit simple attribute.
     //- The purpose of this function is to get the attributes
@@ -346,6 +346,14 @@ public :
                        DLIList<TBPoint*>&  normal_proj_points,
                        CubitBoolean closed,
                        const CubitVector* third_point);
+
+  virtual CubitStatus get_spline_params( bool &rational,
+                                         int &degree,
+                                         DLIList<CubitVector> &cntrl_pts,
+                                         DLIList<double> &cntrl_pt_weights,
+                                         DLIList<double> &knots, // There should be order+cntrl_pts.size()-2 knots
+                                         bool &spline_is_reversed
+                                       ) const;
 protected: 
   
 private:

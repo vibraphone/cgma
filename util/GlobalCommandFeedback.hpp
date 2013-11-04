@@ -10,6 +10,6 @@ namespace GlobalCommandFeedback
   CUBIT_UTIL_EXPORT void create();
   CUBIT_UTIL_EXPORT void destroy();
   CUBIT_UTIL_EXPORT ManagedPtrVector<CommandFeedback>& instance();
-}
+};
 
 #endif

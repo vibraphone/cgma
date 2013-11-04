@@ -10,6 +10,64 @@
 #include "CubitString.hpp"
 #include "CubitUtilConfigure.h"
 
+// an iterator to iterate over files in a directory
+class CUBIT_UTIL_EXPORT CubitDirIterator
+{
+public:
+  CubitDirIterator(const CubitString& path,
+                   const CubitString& pattern_match = "");
+  virtual ~CubitDirIterator();
+  void open(const CubitString& path,
+            const CubitString& pattern_match = "");
+  bool has_next();
+  CubitString next();
+protected:
+  struct Helper;
+  Helper* mHelper;
+  CubitString mPattern;
+  bool mDirs;
+  bool atEnd;
+  void cleanup();
+};
+
+// wrapper for C FILE*
+// Includes support for non-ascii filenames.
+// Automatically opens/closes the file.
+class CUBIT_UTIL_EXPORT CubitFile
+{
+public:
+  // default constructor
+  CubitFile();
+
+  // constructor that also opens the file
+  CubitFile(const CubitString& file, const char* mode);
+
+  // closes the file, if open
+  virtual ~CubitFile();
+
+  // opens a file
+  bool open(const CubitString& file, const char* mode);
+
+  // closes the file
+  void close();
+
+  // Return the FILE* handle.
+  // Returns NULL if status is not 'OK'.
+  FILE* file() const;
+
+  // returns whether FILE* is valid
+  operator bool () const;
+
+  // Return status of opening the file.
+  // For example ENOENT for non-existant file.
+  int error();
+
+protected:
+  FILE* mFile;
+  int mError;
+};
+
+
 class CUBIT_UTIL_EXPORT CubitFileUtil
 {
 public:
@@ -20,41 +78,60 @@ public:
    ~CubitFileUtil();
   //- Destructor
 
-   static CubitStatus get_files( const char *path,
-                                 char *dir,
-                                 DLIList<CubitString*> &filenames,
-                                 CubitBoolean include_dirs = CUBIT_FALSE );
-   // Gets the files in the given directory that match the given wildcard (case insensitive)
-   // specification (sent in as part of path).  Returns directory string.
-   // CubitStrings in filenames list do not include path to files, only
-   // the file names.  If directories are requested, directories will be
-   // included and will have slash (or backslash on NT) at the end.  List
-   // is currently returned unsorted.
-   // NOTE:  Be sure to free the allocated CubitStrings in filenames when 
-   //        you are done.
+   // returns platform specific path separator
+   static const char* separator();
 
-   static CubitStatus get_current_working_directory( char *wd );
-   // Get current working directory (send in char[PATH_MAX])
+   // returns whether a given path is a directory
+   static bool is_directory(const CubitString& path);
+
+   // return whether a given path (file or directory) exists
+   static bool path_exists(const CubitString& path);
+   
+   // returns whether a given path is an executable
+   static bool is_executable(const CubitString& path);
   
-   static CubitStatus add_name_to_path( char *path, const char *directory );
+   // returns whether a path is absolute 
+   static bool is_absolute(const CubitString& path);
+   
+   // returns information about a file (returns 0 on success and errno on failure)
+   static int file_info(const CubitString& path, off_t& size, time_t& modification_time, int& mode);
+
+
+   //! Find the users home directory independent of OS
+   static CubitString find_home_path(const CubitString& which_user="");
+
+   //! Get/Set current working directory
+   static CubitStatus get_current_working_directory( CubitString& wd );
+   static CubitStatus set_current_working_directory( const CubitString& wd );
+
+   //! Given a path append the name onto the path correctly 
+   //! \param path, also contains the returned value
+   //! \param name
+   static CubitString add_name_to_path( const CubitString& path, const CubitString& name);
   
-   static CubitStatus create_directory( char *wd );
+   static CubitStatus create_directory( const CubitString& wd );
    // Create a directory
+  
+   //! remove a file or directory
+   static CubitStatus remove_file( const CubitString& file );
 
-   static CubitStatus get_full_path_str( const char *part, 
+   //! rename a file
+   static CubitStatus rename_file( const CubitString& old_file, const CubitString& new_file );
+
+   static CubitStatus get_full_path_str( const CubitString& part,
                                          CubitString &full_path );
    // Given a relative path, return the full path to the filename or 
    // directory.
 
-   static void make_path_platform_compatible( char *path );
+   static CubitString make_path_platform_compatible( const CubitString& path );
    // Replaces slashes with backslashes or vice versa in the given path.
 
-   static CubitString get_nice_filename( const char *file_in );
+   static CubitString get_nice_filename( const CubitString& path );
    // Gets a nice looking filename.  All it does is return just the filename
    // without the path if the input filename is in the current working
    // directory (ie., so the filename doesn't contain the full path).
 
-   static void split_path( const char *path, char *dirpart, char *filepart );
+   static void split_path( const CubitString& path, CubitString& dirpart, CubitString& filepart );
    // Split a path string into directory and filename parts.  The function 
    // returns the directory part with a slash (or backslash for NT) on the end.
    // Note the logic is based entirely on looking for the last directory separator 
@@ -63,22 +140,23 @@ public:
    // a slash on the end of your path, otherwise the last directory in your path 
    // will be parsed out as a file.
 
-   static CubitStatus get_default_cubit_file_name( char *filename );
+   static CubitString get_default_cubit_file_name();
    // Gets the default Cubit filename, when the user doesn't specify one (ie., 
    // at Cubit startup.  Format cubitXX.cub, where XX = integer.  Returned 
    // filename does not include full path (assumed current working directory).
 
-   static int get_next_backup_filenumber( const char *basename,
-                                          int &num_backups,
-                                          int &first_backup_num );
-   // Gets the next backup filenumer (i.e., file.cub.2, if file.cub.1 already
-   // exists).  Also returns the number of current backups in the directory,
-   // and the first backup number found.  Handles cases like file.cub.3.4, etc.. 
+   static int get_next_filenumber( const CubitString& filepattern,
+                                   int &num_matches,
+                                   int &first_match );
+   // Gets the next next available number for a filename pattern (use absolute path).
+   // The '*' character can be used to denote where a number is searched for.
+   // (i.e., use a pattern of file.cub.* to return file.cub.2, if file.cub.1 already exists).
+   // Also returns the number of files that matched the file.cub.* pattern in the directory,
+   // and the first number found.  Handles cases like file.cub.3.4, etc..
    // (user started from a backup file).
    // Returns -1 if failure.
   
   static CubitString get_file_extension(const CubitString& file, bool remove_version = false /* remove .1, .2, ...*/ );
-  static CubitString get_file_extension(const char* file, bool remove_version = false );
 
 private:
   static CubitBoolean all_chars_are( char ch, const char *str );
@@ -89,36 +167,6 @@ private:
   
   static CubitBoolean contains_char( char ch, const char *str );
   // Check if the string contains the given character
-};
-
-
-// The FRegExp (Filename Regular Expression) class was adapted 
-// from an article in the April 2000 C/C++ Users Journal, by Michal 
-// Niklas.  It is used to match filenames against wildcard expressions.  
-// It handles '*' and '?'.
-class FRegExp
-{
-public:
-  
-  //- Heading: Constructors and Destructor
-  FRegExp();
-  //- Constructor
-  
-   ~FRegExp();
-  //- Destructor
-
-   static int match(const char *re, const char *text);
-   // Match text against re (regular expression) (wildcard).
-  
-private:
-
-   static int match_here(const char *re, const char *text);
-   // Search for re at beginning of text
-   static int match_star( const char *reg,  const char *txt);
-   // Omit chars until txt[j] = reg[0]
-
-   static int matchi_here( const char *reg,  const char *txt);
-   static int matchi_star( const char *reg,  const char *txt);
 };
 
 #endif

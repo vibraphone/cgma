@@ -358,6 +358,15 @@ public :
                                 double &step_size,
                                 int num_subdivisions);
 
+  CubitStatus imprint_and_merge_curves(RefEdge *curve1, 
+                                       RefEdge *curve2, 
+                                       DLIList<RefVertex*> &vert_list, 
+                                       double divergence_angle,
+                                       DLIList<DLIList<RefEdge*>*> &curves_to_merge1,
+                                       DLIList<DLIList<RefEdge*>*> &curves_to_merge2,
+                                       DLIList<DLIList<RefEdge*>*> &prev_curve_merge_lists,
+                                       DLIList<DLIList<RefFace*>*> &prev_surf_merge_lists);
+
 #ifdef CGM_KCM  
   //! \brief Convert mesh entities to ACIS geometry.
   CubitStatus mesh2brep(std::vector<double> &xvals,
@@ -580,6 +589,24 @@ public :
                                     ImprintType imprint_type = NO_IMPRINT,
                                     CubitBoolean merge = CUBIT_FALSE ,
                                     CubitBoolean preview = CUBIT_FALSE);
+
+    /*!  Webcuts the bodies in the list with a cutting cone.
+    *  The cone is created by the given parameters.  This
+    *  is done in the solid modeling engine to reduce the impact
+    *  on body ids.
+    */
+  //! \brief Webcuts bodies with a cone.
+  CubitStatus webcut_with_Cone( DLIList<Body*>& webcut_body_list,
+                                DLIList<BodySM*> &webcut_bodySM_list,
+                                double outer_radius,
+                                double top_radius,
+                                CubitVector &Axispt1,
+                                CubitVector& Axispt2,
+                                DLIList<Body*> &results_list,
+                                DLIList<Body*> &neighboring_bodies,
+                                ImprintType imprint_type = NO_IMPRINT,
+                                CubitBoolean merge = CUBIT_FALSE ,
+                                CubitBoolean preview = CUBIT_FALSE);
 
 #ifdef CAT
   CubitStatus webcut_across_translate( DLIList<Body*>& body_list,
@@ -951,6 +978,8 @@ public :
   //! \brief Imprints bodies onto one another.  Should be used when you have sloppy/out-
   //! of-tolerance geometry.
   CubitStatus tolerant_imprint( DLIList<Body*> &bodies, DLIList<Body*> &new_bodies,
+                                double overlap_tol,
+                                double imprint_tol, 
                                 bool merge = false );
 
   //! \brief Projects list RefEdges onto a list of RefFaces.
@@ -1878,6 +1907,11 @@ public :
 
 
 
+  CubitStatus unmerge_and_return_merge_partners(RefVertex *input_vertex, 
+                                                DLIList<DLIList<RefVertex*>*> &vert_merge_lists,
+                                                DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                                                DLIList<DLIList<RefFace*>*> &surf_merge_lists);
+
   //! \brief Add a geometry modify engine to the list.
   void add_gme(GeometryModifyEngine *gme_ptr);
 
@@ -1952,6 +1986,15 @@ public :
   GeometryModifyEngine* group_bodies_by_engine( DLIList<Body*>& remaining_bodies,
                                                 DLIList<Body*>& engine_bodies,
                                                 DLIList<BodySM*>& engine_body_sms ) const;
+
+  static CubitStatus prepare_for_copy( RefEntity *ref_ents,
+                                       TopologyBridge *&top_bridge );
+
+  static CubitStatus finish_copy( TopologyBridge *&new_bridge,
+                                  TopologyBridge *old_bridge );
+  
+  static CubitStatus clean_up_from_copy_failure( TopologyBridge *old_bridge );
+
 protected :
 
   GeometryModifyTool(GeometryModifyEngine* GMEPtr);
@@ -2152,6 +2195,47 @@ private :
                                          DLIList<int> &merged_surface_ids,
                                          DLIList<int> &merged_curve_ids ) const;
 
+  CubitStatus match_v1_to_c1(RefVertex *&v1,
+                                             RefVertex *&v2,
+                                             RefVertex *c1_v1,
+                                             RefVertex *c1_v2,
+                                             RefVertex *c2_v1,
+                                             RefVertex *c2_v2);
+
+  CubitStatus find_best_curves_to_merge(DLIList<RefEdge*> *&curves_from_curve1,
+                                        DLIList<RefEdge*> *&curves_from_curve2,
+                                        RefEdge *&curve1,
+                                        RefEdge *&curve2);
+
+  CubitStatus unmerge_and_return_merge_partners(RefEdge *input_curve, 
+                                                DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                                                DLIList<DLIList<RefFace*>*> &surf_merge_lists);
+
+  CubitStatus unmerge_input(RefEdge *curve1,
+                          RefEdge *curve2,
+                          DLIList<DLIList<RefEdge*>*> &curve_merge_lists,
+                          DLIList<DLIList<RefFace*>*> &surf_merge_lists);
+
+  CubitStatus calculate_split_points_for_merge(RefEdge* c1, 
+                                               RefEdge* c2,
+                                               DLIList<RefVertex*> &verts_to_merge,
+                                               double *merge_tolerance,
+                                               DLIList<CubitVector> &merge_end_points_on_curve1,
+                                               DLIList<CubitVector> &merge_end_points_on_curve2,
+                                               DLIList<bool> &split_flags_for_curve1,
+                                               DLIList<bool> &split_flags_for_curve2,
+                                               double divergence_angle);
+  CubitStatus find_overlap_region(RefEdge *c1, 
+                                            RefEdge *c2,
+                                            RefVertex *v1,
+                                            RefVertex *v2,
+                                            bool forward_c1,
+                                            bool forward_c2,
+                                            bool &full_c1,
+                                            bool &full_c2,
+                                            double &c1_stop_param,
+                                            double &c2_stop_param,
+                                            double divergence_angle);
   CubitStatus separate_body_after_webcut (DLIList<Body*> &input_list,
                                           DLIList<Body*> &output_list) const;
   /**<  Separates each body in the input list to have one volume per body,
@@ -2203,14 +2287,8 @@ private :
   void propagate_merge_tolerance(DLIList<Body*> &body_list);
   void push_tolerance_attribute(DLIList<Body*> &body_list);
 
-  static CubitStatus prepare_for_copy( RefEntity *ref_ents,
-                                       TopologyBridge *&top_bridge );
-
   CubitStatus prepare_bc_for_webcut();
   CubitStatus finish_bc_webcut();
-
-  static CubitStatus finish_copy( TopologyBridge *&new_bridge,
-                                  TopologyBridge *old_bridge );
 
   CubitStatus sweep_finish( const char* const sweep_function_name,
                             DLIList<Body*>& input_body_list,
@@ -2291,9 +2369,6 @@ private :
   /**<  Private lower level function called to unite bodies
     */
 
-
-  static CubitStatus clean_up_from_copy_failure( TopologyBridge *old_bridge );
-
   GeometryModifyEngine * pull_common_surfs( DLIList<RefFace*> &ref_face_list,
                                             DLIList<RefFace*> &common_face_list,
                                             DLIList<Surface*> &common_surf_list );
@@ -2303,6 +2378,18 @@ private :
       *  a NULL pointer if a RefFace without a modify engine is found in the
       *  input list.
       */
+
+  void remove_bodies_outside_bounding_box( DLIList<Body*> &body_list, CubitVector v1, CubitVector v2, CubitVector v3 );  
+  void remove_bodies_outside_bounding_box( DLIList<Body*> &body_list,	CubitBox &tool_bounding_box );
+  CubitVector FindExtendedEndPt(  double outer_rad , double inner_rad , CubitVector inner_AxisPt , 
+                                CubitVector Axis , double Height );
+
+  CubitVector FindExtendedStartPt(  CubitBox box ,  double outer_rad , double inner_rad , CubitVector inner_AxisPt , 
+                                CubitVector Axis , double &Height , double dTanAngle , double &dExtendedadius );
+
+  void  FindExtendedPoints( CubitVector AxisPt1 , CubitVector AxisPt2 , double outer_radius , double inner_radius , 
+                            CubitVector axis,double Height , CubitBox bounding_box , double dTanAngle , CubitVector& start , 
+                            CubitVector& end , double& dExtended_OuterRadius, double& dExtended_InnerRadius  );
 
 };
 

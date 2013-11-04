@@ -133,7 +133,7 @@ CubitStatus OCCLump::mass_properties( CubitVector& centroid,
 //
 // Creation Date : 11/21/96
 //-------------------------------------------------------------------------
-void OCCLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCLump::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
 { 
   TopoDS_Shape shape;
   if(mySheetSurface)
@@ -156,7 +156,7 @@ void OCCLump::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 //
 // Creation Date : 03/18/97
 //-------------------------------------------------------------------------
-void OCCLump::remove_simple_attribute_virt(CubitSimpleAttrib *csa )
+void OCCLump::remove_simple_attribute_virt(const CubitSimpleAttrib &csa )
 { 
   TopoDS_Shape shape;
   if(mySheetSurface)
@@ -189,7 +189,7 @@ void OCCLump::remove_all_simple_attribute_virt()
     shape = *(myShell->get_TopoDS_Shell());
   else
     shape =*myTopoDSSolid;
-  OCCAttribSet::remove_attribute(NULL, shape); 
+  OCCAttribSet::remove_attribute(CubitSimpleAttrib(), shape);
 }
 
 //-------------------------------------------------------------------------
@@ -200,7 +200,7 @@ void OCCLump::remove_all_simple_attribute_virt()
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-CubitStatus OCCLump::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
+CubitStatus OCCLump::get_simple_attribute(DLIList<CubitSimpleAttrib>& csa_list)
 { 
   TopoDS_Shape shape;
   if(mySheetSurface)
@@ -213,7 +213,7 @@ CubitStatus OCCLump::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csa_list)
 }
 
 CubitStatus OCCLump::get_simple_attribute( const CubitString& name,
-                                        DLIList<CubitSimpleAttrib*>& csa_list )
+                                        DLIList<CubitSimpleAttrib>& csa_list )
 {
   TopoDS_Shape shape;
   if(mySheetSurface)
@@ -339,7 +339,7 @@ CubitPointContainment OCCLump::point_containment( const CubitVector &point )
   TopoDS_Solid * solid = get_TopoDS_Solid();
   gp_Pnt pnt(point.x(), point.y(), point.z());
   BRepClass3d_SolidExplorer ex(*solid);
-  
+   
   //use face tolerance at the tolerence to see if the point is on.
   TopExp_Explorer Ex;
   Ex.Init(*solid, TopAbs_FACE);

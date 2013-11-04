@@ -57,9 +57,6 @@ class CUBIT_GEOM_EXPORT BodySM : public TopologyBridge
 
       virtual ~BodySM() ;
       //- The destructor
-  
-      virtual const type_info& topology_entity_type_info() const;
-   
 
       virtual CubitStatus get_transforms( CubitTransformMatrix &tfm)= 0 ;
       //R CubitStatus

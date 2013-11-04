@@ -166,6 +166,20 @@ SMD::ErrorCode ChollaMesh::get_element_normal(SMD::SMDElement elem_handle, doubl
   return SMD::STATUS_OK;
 }
 
+SMD::ErrorCode ChollaMesh::get_element_centroid(SMD::SMDElement elem_handle, double centroid[3])
+{
+  CubitFacet* f = dynamic_cast<CubitFacet*>(convert_to_facet(elem_handle));
+  if(!f)
+  {
+    return SMD::ERR_INVALID_ENTITY_HANDLE;
+  }
+
+  CubitVector c = f->center();
+  centroid[0] = c.x();
+  centroid[1] = c.y();
+  centroid[2] = c.z();
+  return SMD::STATUS_OK;
+}
 
 SMD::ErrorCode ChollaMesh::get_coords(int num_nodes, const SMD::SMDNode node_handle_array[], float coords[][3])
 {

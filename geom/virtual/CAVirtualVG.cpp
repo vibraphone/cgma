@@ -10,72 +10,58 @@
 #include "TDUniqueId.hpp"
 #include "CADeferredAttrib.hpp"
 
-CubitAttrib* CAVirtualVG_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAVirtualVG_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAVirtualVG *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAVirtualVG(entity);
-  }
-  else
-  {
-    new_attrib = new CAVirtualVG(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAVirtualVG(entity, p_csa);
 }
 
 
-CAVirtualVG::CAVirtualVG(RefEntity *owner) 
+CAVirtualVG::CAVirtualVG(RefEntity *owner, const CubitSimpleAttrib &simple_attrib)
         : CubitAttrib(owner)
 {
   numVC = 0;
   numVV = 0;
-}
 
-CAVirtualVG::CAVirtualVG(RefEntity *owner, CubitSimpleAttrib *simple_attrib) 
-        : CubitAttrib(owner)
-{
-    // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> *cs_list = simple_attrib->string_data_list();
-  DLIList<double*> *d_list = simple_attrib->double_data_list();
-  DLIList<int*> *i_list = simple_attrib->int_data_list();
+  if(!simple_attrib.isEmpty())
+  {
+     // generate a simple attribute containing the data in this CA
+    const std::vector<double> &d_list = simple_attrib.double_data_list();
+    const std::vector<int> &i_list = simple_attrib.int_data_list();
 
-  cs_list->reset();
-  d_list->reset();
-  i_list->reset();
-  
-    // (no string)
+      // (no string)
 
-    // now the integers
-    // numVV, numVC
-  numVV = *i_list->get_and_step();
-  numVC = *i_list->get_and_step();
+      // now the integers
+      // numVV, numVC
+    int offset = 0;
+    numVV = i_list[offset++];
+    numVC = i_list[offset++];
 
-    // vgUIDs
-  int i;
-  for (i = numVV+(3*numVC); i > 0; i--)
-    vgUIDs.append(*i_list->get_and_step());
+      // vgUIDs
+    int i;
+    for (i = numVV+(3*numVC); i > 0; i--)
+      vgUIDs.append(i_list[offset++]);
 
-    // numVCPoints
-  int sum = 0;
-  for (i = numVC; i > 0; i--) {
-    int temp_int = *i_list->get_and_step();
-    numVCPoints.append(temp_int);
-    sum += temp_int;
+      // numVCPoints
+    int sum = 0;
+    for (i = numVC; i > 0; i--) {
+      int temp_int = i_list[offset++];
+      numVCPoints.append(temp_int);
+      sum += temp_int;
+    }
+
+    offset = 0;
+      // pointUIDList
+    for (i = numVV+sum; i > 0; i--) {
+      double x = d_list[offset++];
+      double y = d_list[offset++];
+      double z = d_list[offset++];
+      posVector.append(new CubitVector( x, y, z ) );
+    }
+
+      // If we are constructing from a CubitSimpleAttrib,
+      // then this attrib is already written
+    has_written(CUBIT_TRUE);
   }
-  
-    // pointUIDList
-  for (i = numVV+sum; i > 0; i--) {
-    double x = *d_list->get_and_step();
-    double y = *d_list->get_and_step();
-    double z = *d_list->get_and_step();
-    posVector.append( new CubitVector( x, y, z ) );
-  }
-  
-    // If we are constructing from a CubitSimpleAttrib,
-    // then this attrib is already written 
-  has_written(CUBIT_TRUE);
 }
 
 CubitStatus CAVirtualVG::update()
@@ -181,47 +167,41 @@ CubitStatus CAVirtualVG::reset()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib *CAVirtualVG::cubit_simple_attrib()
+CubitSimpleAttrib CAVirtualVG::cubit_simple_attrib()
 {
     // generate a simple attribute containing the data in this CA
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int> i_list;
 
     // first the string
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
     // now the integers
     // numVV, numVC
-  i_list.append(numVV);
-  i_list.append(numVC);
+  i_list.push_back(numVV);
+  i_list.push_back(numVC);
 
     // vgUIDs
   int i;
   vgUIDs.reset();
   for (i = vgUIDs.size(); i > 0; i--)
-    i_list.append(vgUIDs.get_and_step());
+    i_list.push_back(vgUIDs.get_and_step());
 
     // numVCPoints
   numVCPoints.reset();
   for (i = numVCPoints.size(); i > 0; i--)
-    i_list.append(numVCPoints.get_and_step());
+    i_list.push_back(numVCPoints.get_and_step());
   
     // now the doubles
   posVector.reset();
   for (i = posVector.size(); i > 0; i--) {
-    d_list.append(posVector.get()->x());
-    d_list.append(posVector.get()->y());
-    d_list.append(posVector.get_and_step()->z());
+    d_list.push_back(posVector.get()->x());
+    d_list.push_back(posVector.get()->y());
+    d_list.push_back(posVector.get_and_step()->z());
   }
   
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-
-  for( i=cs_list.size(); i--;) delete cs_list.get_and_step();
-
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, &d_list, &i_list);
 }
 
 CubitStatus CAVirtualVG::actuate()

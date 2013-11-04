@@ -17,12 +17,6 @@
 #ifndef MODEL_ENTITY_BRIDGE_HPP
 #define MODEL_ENTITY_BRIDGE_HPP
 
-
-#include <typeinfo>
-#if !defined(WIN32)
-using std::type_info;
-#endif
-
 // ********** BEGIN CUBIT INCLUDES         **********
 #include "CubitDefines.h"
 #include "CubitGeomConfigure.h"
@@ -67,11 +61,7 @@ public:
 
   virtual ~TopologyBridge();
   
-  const type_info& generic_entity_type_info();
-  
-  virtual const type_info& topology_entity_type_info() const = 0;
-  
-  virtual void append_simple_attribute_virt(CubitSimpleAttrib*) = 0;
+  virtual void append_simple_attribute_virt(const CubitSimpleAttrib&) = 0;
     //R void
     //I name
     //I- A reference to a constant CubitString object which is the name
@@ -80,7 +70,7 @@ public:
     //- attribute to the TB. The name is attached to each 
     //- of the underlying solid model entities.
   
-  virtual void remove_simple_attribute_virt(CubitSimpleAttrib*) = 0;
+  virtual void remove_simple_attribute_virt(const CubitSimpleAttrib&) = 0;
     //R void
     //I CubitSimpleAttrib*
     //I- A reference to a CubitSimpleAttrib object which is the object
@@ -95,7 +85,7 @@ public:
     //- The purpose of this function is to remove all simple
     //- attributes from the TB. 
   
-  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&) = 0;
+  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&) = 0;
     //R CubitSimpleAttrib*
     //R- the returned cubit simple attribute.
     //- The purpose of this function is to get the attributes
@@ -111,7 +101,7 @@ public:
     //- of VGI entities will not propagate.
     
   virtual CubitStatus get_simple_attribute(const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& ) = 0;
+                                    DLIList<CubitSimpleAttrib>& ) = 0;
 
   TopologyEntity* topology_entity() const;
     //R TopologyEntity*
@@ -180,10 +170,6 @@ public:
                     bool return_hidden_entities = false,
                     int layer = MAX_TB_LAYER );
     //- get child topology bridges
-  
-  void get_related(const type_info& other_type,
-                   DLIList<TopologyBridge*> &related);
-    //- get the related entities of type other_type
   
   void bodysms(DLIList<BodySM*> &bodies,bool unique = true);
   void lumps(DLIList<Lump*> &lumps,bool unique = true);

@@ -1649,27 +1649,39 @@ CubitBoolean GeometryUtil::valid_edge( RefEdge* edge_ptr,
 
     if (periodic)
     {
+      // For a periodic curve the point perp operation could return u_start or
+      // u_end for both start_vertex and end_vertex so try to put everything
+      // in the range from u_start to u_end and recognize cases where u_start_vtx
+      // equals u_end by accident (and vice versa).
       if (period > 0.0)
       {
-        while (u_start_vtx > period)
+        // Logically, if u_start_vtx >= u_end...
+        while (u_start_vtx > u_end - CUBIT_RESABS)
           u_start_vtx -= period;
-        while (u_start > period)
-          u_start -= period;
-        while (u_end_vtx > period)
+        // Logically, if u_start_vtx < u_start...
+        while (u_start_vtx < u_start - CUBIT_RESABS)
+          u_start_vtx += period;
+        // Logically, if u_end_vtx > u_end...
+        while (u_end_vtx > u_end + CUBIT_RESABS)
           u_end_vtx -= period;
-        while (u_end > period)
-          u_end -= period;
+        // Logically, if u_end_vtx <= u_start...
+        while (u_end_vtx < u_start + CUBIT_RESABS)
+          u_end_vtx += period;
       }
       else if (period < 0.0)
       {
-        while (u_start_vtx < period)
+        // Logically, if u_start_vtx <= u_end ...
+        while (u_start_vtx < u_end + CUBIT_RESABS)
           u_start_vtx += period;
-        while (u_start < period)
-          u_start += period;
-        while (u_end_vtx < period)
+        // Logically, if u_start_vtx > u_start...
+        while (u_start_vtx > u_start + CUBIT_RESABS)
+          u_start_vtx -= period;
+        // Logically, if u_end_vtx < u_end...
+        while (u_end_vtx < u_end - CUBIT_RESABS)
           u_end_vtx += period;
-        while (u_end < period)
-          u_end += period;
+        // Logically, if u_end_vtx >= u_start...
+        while (u_end_vtx > u_start - CUBIT_RESABS)
+          u_end_vtx -= period;
       }
     }
       

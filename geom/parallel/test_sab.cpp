@@ -5,7 +5,7 @@
 // model onto the master, then loading it onto the processors
 //
 
-#include <iostream>
+#include "iostream.h"
 #include "AppUtil.hpp"
 #include "CGMApp.hpp"
 #include "CubitString.hpp"

@@ -8,11 +8,6 @@
 #ifndef CUBIT_ATTRIB_HPP
 #define CUBIT_ATTRIB_HPP
 
-#include <typeinfo>
-#if !defined(WIN32)
-using std::type_info;
-#endif
-
 #include "CubitString.hpp"
 #include "CubitDefines.h"
 #include "CubitVector.hpp"
@@ -20,6 +15,7 @@ using std::type_info;
 #include "CubitAttribManager.hpp"
 #include "CGMApp.hpp"
 #include "CubitGeomConfigure.h"
+#include "CubitSimpleAttrib.hpp"
 
 class RefEntity;
 template <class X> class DLIList;
@@ -188,7 +184,7 @@ public:
 //  static void overwrite_flag(CubitBoolean flag) {overwriteFlag = flag;}
     //- get/set overwriteFlag
   
-  virtual CubitSimpleAttrib* cubit_simple_attrib() = 0;
+  virtual CubitSimpleAttrib cubit_simple_attrib() = 0;
     //- return a cubitSimpleAttrib for this CA
 
   virtual CubitStatus actuate() = 0;
@@ -203,7 +199,7 @@ public:
   virtual CubitStatus reset() = 0;
     //- reset any lists or other info in this attribute
   
-  virtual CubitSimpleAttrib *split_owner();
+  virtual CubitSimpleAttrib split_owner();
     //- split this attrib; pass back a new simple attrib if desired
 
   virtual void merge_owner(CubitAttrib *deletable_ca_ptr);
@@ -245,17 +241,11 @@ public:
 //  static CubitAttributeType attrib_type(CubitSimpleAttrib *csa_ptr);
     //- returns the type given a simple attribute
 
-//HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const
-     { return typeid(CubitAttrib);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
-
 //  static int equivalent(CubitAttrib* first_attrib_ptr,
 //                        CubitAttrib* second_attrib_ptr);
     //- return true if the two ca's are equivalent
   
-  int equivalent(CubitSimpleAttrib* csa_ptr);
+  int equivalent(const CubitSimpleAttrib& csa_ptr);
     //- return true if the csa and this are equivalent
   
 //  static CubitBoolean attrib_exists(int attrib_type, CubitBoolean print = CUBIT_TRUE);
@@ -392,13 +382,13 @@ inline CubitStatus CubitAttrib::set_next_attrib(CubitAttrib* next_attrib_ptr)
   return CUBIT_SUCCESS;
 }
 
-inline CubitSimpleAttrib *CubitAttrib::split_owner()
+inline CubitSimpleAttrib CubitAttrib::split_owner()
 {
     //- split this attrib; pass back a new simple attrib if desired
 
     // by default, get rid of this attribute and don't copy to new entity
   deleteAttrib = CUBIT_TRUE;
-  return NULL;
+  return CubitSimpleAttrib();
 }
 
 inline void CubitAttrib::merge_owner(CubitAttrib *)

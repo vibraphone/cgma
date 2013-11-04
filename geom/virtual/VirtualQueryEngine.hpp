@@ -175,11 +175,11 @@ const char * modeler_type()
                                                GMem *&gMem) const;
   
   virtual CubitStatus get_u_isoparametric_points(Surface* ref_face_ptr,
-                                                 double v, int& n,
+                                                 double v, int &n,
                                                  GMem *&gMem) const;
   
   virtual CubitStatus get_v_isoparametric_points(Surface* ref_face_ptr,
-                                                 double u, int&n,
+                                                 double u, int &n,
                                                  GMem *&gMem) const;
   
   virtual CubitStatus transform_vec_position( 

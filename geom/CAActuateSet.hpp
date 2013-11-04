@@ -49,8 +49,7 @@ class CUBIT_GEOM_EXPORT CAActuateSet : public CubitObserver
       //- when there are no more entities.
     
     virtual CubitStatus notify_observer( CubitObservable* observable,
-                                  const CubitEvent& observer_event,
-                                  CubitBoolean from_observable );
+                                  const CubitEvent& observer_event);
       //- Update for destroyed entities.
       
   private:

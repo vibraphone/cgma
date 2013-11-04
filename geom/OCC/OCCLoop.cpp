@@ -31,6 +31,7 @@
 #include "TopoDS.hxx"
 #include "TopTools_ListIteratorOfListOfShape.hxx"
 #include "TopTools_DataMapOfShapeInteger.hxx"
+#include "TopTools_DataMapOfOrientedShapeInteger.hxx"
 #include "TopTools_IndexedDataMapOfShapeListOfShape.hxx"
 #include "BRepBuilderAPI_Transform.hxx"
 #include "BRepBuilderAPI_GTransform.hxx"
@@ -100,9 +101,10 @@ void OCCLoop::set_TopoDS_Wire(TopoDS_Wire loop)
          curve->remove_loop(this); 
      }
    }
+   TopoDS_Wire* the_wire = new TopoDS_Wire(loop);
    if(myTopoDSWire)
-     myTopoDSWire->Nullify();
-   *myTopoDSWire = loop;
+     delete (TopoDS_Wire*)myTopoDSWire;
+   myTopoDSWire = the_wire;
 }
 //-------------------------------------------------------------------------
 // Purpose       : Tear down topology
@@ -120,7 +122,9 @@ void OCCLoop::disconnect_all_curves()
 
 OCCCoEdge* OCCLoop::remove_coedge(OCCCoEdge *coedge)
 { 
-  return myCoEdgeList.remove(coedge);
+  if(myCoEdgeList.remove(coedge))
+    return coedge;
+  return NULL;
 }
 
 //-------------------------------------------------------------------------
@@ -132,7 +136,7 @@ OCCCoEdge* OCCLoop::remove_coedge(OCCCoEdge *coedge)
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-void OCCLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void OCCLoop::append_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
 }
 
@@ -144,7 +148,7 @@ void OCCLoop::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-void OCCLoop::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void OCCLoop::remove_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
 }
 
@@ -169,13 +173,13 @@ void OCCLoop::remove_all_simple_attribute_virt()
 // Special Notes :
 //
 //-------------------------------------------------------------------------
-CubitStatus OCCLoop::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus OCCLoop::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                  /*cubit_simple_attrib_list*/)
 {
   return CUBIT_FAILURE;
 }
 CubitStatus OCCLoop::get_simple_attribute(const CubitString&,
-                                          DLIList<CubitSimpleAttrib*>&)
+                                          DLIList<CubitSimpleAttrib>&)
   { return CUBIT_FAILURE; }
 
 void OCCLoop::get_parents_virt( DLIList<TopologyBridge*>& parents )

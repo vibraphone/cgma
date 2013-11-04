@@ -7,6 +7,11 @@
 #ifndef CA_ENTITY_TOL_HPP
 #define CA_ENTITY_TOL_HPP
 
+#include <typeinfo>
+#if !defined(WIN32)
+using std::type_info;
+#endif
+
 #include "CubitAttrib.hpp"
 #include "CubitDefines.h"
 #include "CADefines.hpp"
@@ -26,7 +31,7 @@ private:
 
   CAEntityTol (RefEntity*);
 
-  CAEntityTol (RefEntity*, CubitSimpleAttrib *);
+  CAEntityTol (RefEntity*, const CubitSimpleAttrib &);
     //- create a CAEID from a simple attribute
 
   //HEADER- RTTI and safe casting functions.
@@ -44,9 +49,9 @@ private:
     //- lists on this CA
   
   void merge_owner(CubitAttrib *deletable_attrib);
-  CubitSimpleAttrib *split_owner();
+  CubitSimpleAttrib split_owner();
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   int int_attrib_type() {return CA_ENTITY_TOL;}
 
@@ -56,7 +61,7 @@ private:
   
 };
 
-CubitAttrib* CAEntityTol_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAEntityTol_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

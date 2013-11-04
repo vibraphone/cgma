@@ -16,146 +16,76 @@
 
 #include "CubitString.hpp"
 #include "CubitDefines.h"
-#include "DLIList.hpp"
+#include <vector>
 #include "CubitGeomConfigure.h"
+#include <new>
 
 class CUBIT_GEOM_EXPORT CubitSimpleAttrib {
 private:
-  CubitString characterType;  // defines the attribute type 
 
-// This is the old data before the lists below were added.
-// This data will be removed and will be added into the lists
-// rather than keeping it separate.  The characterType above will
-// allow to distinguish between "NEW_SIMPLE_ATTRIB" and older types
-//   Byron 1/16/03
-//
-//  CubitString stringData;  // attribute data of type string
-//  CubitString moreStringData;  //  attribute data of type string
-//  double doubleData;  // attribute data of type double
-//  int integerData;  // attribute data of type int
+  std::vector<CubitString> stringDataList;  // List of CubitString attribute data
 
-// THE FOLLOWING MEMBERS ARE USED IF 
-// characterType IS EQUIVALENT TO "NEW_SIMPLE_ATTRIB".
-// THE ATTRIBUTE TYPE IS DEFINED BY THE FIRST
-// MEMBER OF THE stringDataList LIST.
+  std::vector<double> doubleDataList;  // List of double attribute data
 
-  DLIList<CubitString*> stringDataList;  // List of CubitString attribute data
-
-  DLIList<double*> doubleDataList;  // List of double attribute data
-
-  DLIList<int*> intDataList;  // List of int attribute data
+  std::vector<int> intDataList;  // List of int attribute data
 
   static CubitBoolean pushAttribs;
     //- if true, when saving attributes, push them to non-primary bridges
     //- on merged ref entities
   
-  void set( const DLIList<int>& int_data );
-  void set( const DLIList<double>& real_data );
-  void set( const DLIList<CubitString*>& string_data );
-    //- Keep these private.  When re-using an existing CSA,
-    //- it is too likely that the caller will forget to call
-    //- all three methods, some possibly with empty lists, 
-    //- ensuring all old data is cleared out.  Instead, force
-    //- caller to use the public 'set' method and pass all
-    //- data at once.  Also, these methods treat the passed
-    //- lists as circular: copying them beginning at the current
-    //- index NOT the reset position.
-  
 public:
-    void character_type(CubitString new_type);
-  //- sets (or resets) the attribute type
+
+  // returns whether this CSA is valid (it is invalid if the data is empty)
+  bool isEmpty() const;
 
   CubitSimpleAttrib();
   //- default constructor
 
-  CubitSimpleAttrib(CubitString new_type);
-  //- constructor use in save/restore
-  
-  CubitSimpleAttrib(const CubitString new_character_type,
-                    const CubitString new_string_data,
-                    const CubitString new_more_string_data,
-                    const int new_integer_data = 0,
-                    const double new_double_data = 0.);
+  explicit CubitSimpleAttrib(const CubitString new_character_type,
+                             const CubitString new_string_data = CubitString(),
+                             const CubitString new_more_string_data = CubitString(),
+                             const int* new_integer_data = NULL,
+                             const double* new_double_data = NULL);
   //- constructor
 
-  CubitSimpleAttrib(const char* new_character_type,
-                    const char* new_string_data = NULL,
-                    const char* new_more_string_data = NULL,
-                    const int *new_integer_data = NULL,
-                    const double *new_double_data = NULL);
+  explicit CubitSimpleAttrib(const std::vector<CubitString> *string_list,
+                             const std::vector<double> *double_list = NULL,
+                             const std::vector<int> *int_list = NULL);
   //- constructor  
 
-  CubitSimpleAttrib(DLIList<CubitString*> *string_list,
-                    DLIList<double> *double_list = NULL,
-                    DLIList<int> *int_list = NULL);
-  //- constructor  
-
-  CubitSimpleAttrib(CubitSimpleAttrib *csa_ptr);
+  CubitSimpleAttrib(const CubitSimpleAttrib& csa_ptr);
     //- copy constructor, sort of
   
   ~CubitSimpleAttrib();
    //- destructor
 
-  CubitSimpleAttrib& operator=(CubitSimpleAttrib &other);
+  CubitSimpleAttrib& operator=(const CubitSimpleAttrib &other);
 
-
-  void initialize_from_lists_of_ptrs(DLIList<CubitString*> *string_list,
-                                     DLIList<double*> *double_list,
-                                     DLIList<int*> *int_list);
-
-  void set( const CubitString&            type,
-            const DLIList<int>*           int_data    = 0,
-            const DLIList<double>*        real_data   = 0,
-            const DLIList<CubitString*>*  string_data = 0 );
-    //- Unlike the 'initialize_from_lists' method below,
-    //- this method will clear existing data from the
-    //- lists before adding the new (and reuse the 
-    //- allocated heap space.)  
-    //-
-    //- NOTE:  If one of passed list pointers is NULL, all
-    //-        data of the corresponding type will be 
-    //-        removed from this attribute.
-    //- NOTE:  Lists are treated as circular.  The copying
-    //-        of data into this attribute begins at the
-    //-        CURRENT position, NOT THE RESET position of
-    //-        the list.
-  
-  void initialize_from_lists(DLIList<CubitString*>* string_list,
-                             DLIList<double*>* double_list,
-                             DLIList<int*>* int_list);
-    //- used to copy one csa to another
-    //- This really does "append_from_lists". (i.e. It appends
-    //- to the data already in this attribute, if any.)
- 
-  void initialize_from_lists(DLIList<CubitString*> *string_list,
-                             DLIList<double> *double_list,
-                             DLIList<int> *int_list);
-    //- used to copy one csa to another
-
-  CubitString character_type(); // {return characterType;}
-  //- returns the type of attribure
-
+  CubitString character_type() const;
+  //- returns the type of attribute from the first item in the string list
   
   static void initialize_settings();
 
-  DLIList<CubitString*>* string_data_list() {return &stringDataList;} 
+  const std::vector<CubitString>& string_data_list() const {return stringDataList;}
+  std::vector<CubitString>& string_data_list() {return stringDataList;}
 
-  void string_data_list( DLIList<CubitString*>* new_list); 
+  void string_data_list( const std::vector<CubitString>& new_list);
 
-  DLIList<double*>* double_data_list() {return &doubleDataList;}
+  const std::vector<double>& double_data_list() const {return doubleDataList;}
+  std::vector<double>& double_data_list() {return doubleDataList;}
 
-  void double_data_list(const DLIList<double*>* new_list);
+  void double_data_list(const std::vector<double>& new_list);
 
-  DLIList<int*>* int_data_list() {return &intDataList;}
+  const std::vector<int>& int_data_list() const {return intDataList;}
+  std::vector<int>& int_data_list() {return intDataList;}
 
-  void int_data_list(const DLIList<int*>* new_list);
+  void int_data_list(const std::vector<int>& new_list);
 
   
-  static CubitBoolean equivalent(CubitSimpleAttrib *first_attrib_ptr,
-                                 CubitSimpleAttrib *second_attrib_ptr);
+  bool operator==(const CubitSimpleAttrib& other) const;
     //- return true if the two csa's are equivalent
 
-  void print();
+  void print() const;
     //- print the contents of this simpleattrib
 
   static CubitBoolean get_push_attribs() {return pushAttribs;};

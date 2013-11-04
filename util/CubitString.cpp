@@ -5,6 +5,7 @@
 
 #ifdef WIN32
 #pragma warning ( 4 : 4291 4244 4305 4018 4786)
+#include <windows.h>
 #endif
 
 #include <iomanip>
@@ -27,6 +28,7 @@ private:
     //- NOTE: The above function is specialized for the implementation
     //-       It USES the pointer passed to it instead of allocating and
     //-       copying.
+  CubitStringRep(int, const char*);
   
   CubitStringRep(const CubitStringRep &s);
   ~CubitStringRep();
@@ -35,30 +37,14 @@ private:
   void decrement();
   
   const CubitStringRep& operator=(const CubitStringRep &s);
-  static char initialize_empty_string_rep();
+  static CubitStringRep* empty_string_rep();
 };
 
-// This same CubitStringRep is used by all empty strings.
-// It is created in sEmptyString's constructor, then
-// deleted when static_empty_string is deleted (program end).
-static CubitStringRep* sEmptyStringRep = NULL;
-
-// This is the function that creates sEmptyStringRep.  It is
-// called twice (first time through each of two CubitString
-// constructors), then never again.
-char CubitStringRep::initialize_empty_string_rep()
+// This is the function that creates and returns the empty string rep.
+CubitStringRep* CubitStringRep::empty_string_rep()
 {
-    // Create the empty string rep
-  if (!sEmptyStringRep)
-  {
-    sEmptyStringRep = new CubitStringRep("");
-      // This variable's existence ensures that sEmptyStringRep
-      // will be around for the lifetime of the application.
-    static CubitString static_empty_string;
-  }
-  
-    // Return a dummy return value
-  return '\0';
+  static CubitStringRep empty_rep(1, "");
+  return &empty_rep;
 }
 
 CubitStringRep::CubitStringRep(const char *cp)
@@ -70,6 +56,12 @@ CubitStringRep::CubitStringRep(const char *cp)
 CubitStringRep::CubitStringRep(char *cp, int)
     : refCount(0), chars(cp)
 {}
+
+CubitStringRep::CubitStringRep(int ref, const char *cp)
+    : refCount(ref), chars(new char[strlen(cp) +1])
+{
+  strcpy(chars, cp);
+}
 
 CubitStringRep::~CubitStringRep()
 {
@@ -110,14 +102,7 @@ const CubitStringRep& CubitStringRep::operator=(const CubitStringRep &orig)
 
 CubitString::CubitString()
 {
-    // Use a static variable in order to call a function
-    // once and only once.
- // Create the empty string rep
-  if (!sEmptyStringRep)
-  {
-    CubitStringRep::initialize_empty_string_rep();
-  }
-  rep = sEmptyStringRep;
+  rep = CubitStringRep::empty_string_rep();
   rep->increment();
 }
 
@@ -135,13 +120,9 @@ CubitString::~CubitString()
 
 CubitString::CubitString(const char *s)
 {
-    // Use a static variable in order to call a function
-    // once and only once.
-  CubitStringRep::initialize_empty_string_rep();
-  
     // If it's an empty string...
   if (!s || s[0] == '\0')
-    rep = sEmptyStringRep;
+    rep = CubitStringRep::empty_string_rep();
   else
     rep = new CubitStringRep(s);
   rep->increment();
@@ -499,6 +480,36 @@ bool operator<( const CubitString& s1, const CubitString& s2 )
 bool operator>( const CubitString& s1, const CubitString& s2 )
 { return strcmp( s1.c_str(), s2.c_str() ) > 0; }
 
+#if defined(WIN32)
+
+std::wstring CubitString::toUtf16(const char* str)
+{
+  // there are other methods (e.g. C++11), but since its Windows specific to support Windows APIs, just use their API.
+  std::wstring ret;
+  int sz = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+  if(sz)
+  {
+    std::vector<wchar_t> result(sz);
+    MultiByteToWideChar(CP_UTF8, 0, str, -1, &result[0], sz);
+    ret = &result[0];
+  }
+  return ret;
+}
+
+CubitString CubitString::toUtf8(const wchar_t* str)
+{
+  CubitString ret;
+  int sz = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+  if(sz)
+  {
+    std::vector<char> result(sz);
+    WideCharToMultiByte(CP_UTF8, 0, str, -1, &result[0], sz, NULL, NULL);
+    ret = &result[0];
+  }
+  return ret;
+}
+
+#endif
 
 #ifdef TEST_STRING
 

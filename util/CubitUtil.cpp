@@ -21,17 +21,30 @@
 #include "AppUtil.hpp"
 #include <ctype.h>
 #include <time.h>
-#include <fstream>
-using std::ifstream;
+#include <sstream>
 
 
 #ifdef WIN32
-#include "Windows.h"
+#include "windows.h"
 #else
 #include <unistd.h>
+#include <sys/utsname.h>
 #endif
 
 FILE *CubitUtil::fp = NULL;
+static int displayDigits = -1;
+
+
+int CubitUtil::get_digits()
+{
+  return displayDigits;
+}
+
+void CubitUtil::set_digits(int new_digits)
+{
+  displayDigits = new_digits;
+}
+
 
 void CubitUtil::convert_string_to_lowercase(char *string)
 {
@@ -88,6 +101,96 @@ int CubitUtil::strncmp_case_insensitive (const char *s1, const char *s2,
    } while(c1 && n > 0);
    
    return 0;
+}
+
+void CubitUtil::list_ids( const char *const heading,
+                            const DLIList<CubitEntity*> &entity_list,
+                            int should_sort, int report_once,
+                            int wrap )
+{
+  if ( entity_list.size() == 0 )
+  {
+    PRINT_INFO("  No %s.\n", heading );
+    return;
+  }
+  DLIList <int> id_list( entity_list.size() );
+  for ( int j = 0; j < entity_list.size(); j++ )
+  {
+    id_list.append( entity_list[j]->id() );
+  }
+
+  if ( id_list.size() == 1 )
+  {
+    PRINT_INFO("  The 1 %s id is %d.\n", heading, id_list[0]);
+    return;
+  }
+  sort_and_print_ids( heading, id_list, should_sort, report_once, wrap );
+}
+
+void CubitUtil::sort_and_print_ids( const char *const heading,
+                                      DLIList<int> &id_list,
+                                      int should_sort, int report_once,
+                                      int wrap )
+{
+    // sort, if desired
+  if ( should_sort ) {
+    id_list.sort();
+  }
+
+  if ( report_once ) {
+    DLIList <int> id_list_2( id_list );
+    id_list_2.reset();
+    id_list.clean_out();
+    id_list.append( id_list_2.get_and_step() );
+    for ( int j = id_list_2.size()-1; j--; )
+    {
+      if ( id_list_2.get() != id_list_2.prev() )
+        id_list.append( id_list_2.get() );
+      id_list_2.step();
+    }
+  }
+
+  if( wrap == -1 )
+  {
+    // print out ranges
+    int begin = id_list.get_and_step();
+    int end = begin;
+    int current = -1;
+    PRINT_INFO("  The %d %s ids are %d", id_list.size(), heading, begin);
+    for (int i=id_list.size()-1; i > 0; i--) {
+      current = id_list.get_and_step();
+      if (current == end+1) {
+        end++;
+      }
+      else {
+        if (end == begin) {
+          PRINT_INFO(", %d", current);
+        }
+        else if (end == begin+1) {
+          PRINT_INFO(", %d, %d", end, current);
+        }
+        else {
+          PRINT_INFO(" to %d, %d", end, current);
+        }
+        begin = current;
+        end = begin;
+      }
+    }
+    if (current == begin + 1)	{
+      PRINT_INFO(", %d", current);
+    }
+    else if (current != begin) {
+      PRINT_INFO(" to %d", current);
+    }
+    PRINT_INFO(".\n");
+  }
+  else
+  {
+    char pre_string[67];
+    sprintf( pre_string, "  The %d %s ids are: ", id_list.size(),heading );
+    CubitUtil::list_entity_ids( pre_string, id_list, wrap, ".\n", CUBIT_FALSE,
+                                CUBIT_FALSE );
+  }
 }
 
 void CubitUtil::list_entity_ids( const char *pre_string, 
@@ -466,11 +569,11 @@ namespace
 
     //get a place to put the temporary file
     const DWORD buf_size = MAX_PATH;
-    char temp_path[buf_size];
-    DWORD ret_val = GetTempPath(buf_size, temp_path);
+    wchar_t temp_path[buf_size];
+    DWORD ret_val = GetTempPathW(buf_size, temp_path);
 
     // If the path is not writeable, use the current directory instead
-    DWORD atts = GetFileAttributes(temp_path);
+    DWORD atts = GetFileAttributesW(temp_path);
 #if _MSC_VER > 1200 // after VC6.0
     if (atts == INVALID_FILE_ATTRIBUTES ||      // File doesn't exist
         (atts & FILE_ATTRIBUTE_DIRECTORY) == 0 || // File isn't a directory
@@ -502,7 +605,7 @@ namespace
     }
     else
       PRINT_DEBUG_141("\nUsing GetTempPath: %s\n", temp_path);
-    return temp_path;
+    return CubitString::toUtf8(temp_path);
 
 #else
 
@@ -532,9 +635,9 @@ CubitString CubitUtil::get_temporary_filename()
   CubitString temp_path = get_temp_directory();
 
   // make an empty temporary and return the name for it
-  char temp_file_name[MAX_PATH];
-  if( GetTempFileName(temp_path.c_str(), "CBT", 0, temp_file_name) != 0 )
-    ret_str = temp_file_name; 
+  wchar_t temp_file_name[MAX_PATH];
+  if( GetTempFileNameW(CubitString::toUtf16(temp_path.c_str()).c_str(), L"CBT", 0, temp_file_name) != 0 )
+    ret_str = CubitString::toUtf8(temp_file_name); 
 
 #else
 
@@ -676,185 +779,69 @@ void CubitUtil::cubit_sleep(int duration_in_seconds)
 #endif
 }
 
-int CubitUtil::find_available_file_name(char* buffer)
-{
-  int num_files;
-      
-    // If a bell character was encountered in the string, we need to 
-    // expand it to the next available number.
-
-  char* ten_ptr = 0;  //Pointer to the tens-digit in the string
-  char* one_ptr = 0;  //Pointer to the ones-digit in the string
-  CubitBoolean file_already_exists = CUBIT_FALSE;
-    
-  char* ptr;
-  
-    // Find the tens- and ones-digit in the string.
-    // We marked them with bell characters before, so
-    // that strftime() would ignore them.
-  for( ptr = buffer; *ptr; ptr++ )
-  {
-    if( (*ptr == '\007') && (*(ptr+1) == '\007') )
-    {
-      ten_ptr = ptr;
-      one_ptr = ptr + 1;
-      *ten_ptr = '0';
-      *one_ptr = '0';
-      break;
-    }
-  }
-  assert(ten_ptr != 0);
-  
-    //Search for next available number with two digits.
-
-  //  TODO  Use file_exist() method instead
-  for(int i=0; i<10; ++i) 
-  {
-    *ten_ptr = (char)(i + '0');
-    for(int j=0; j<10; ++j) 
-    {
-      file_already_exists = CUBIT_FALSE;
-        
-      if (i==0 && j==0)
-	        continue; // Don't want cubit00.jou
-	    
-      *one_ptr = (char)(j + '0');
-      ifstream test_stream(buffer);
-        
-      if(!test_stream)
-      {
-          // File does not exist, use it
-        num_files = i*10 + j;
-         // Break out of both loops.
-        i = 10;
-        j = 10;
-                
-        file_already_exists = CUBIT_FALSE;
-      }
-      else
-          file_already_exists = CUBIT_TRUE;
-        
-      test_stream.close();  // File exists, close it and try next.
-    }
-  }
-
-    //Search for next available file with three digits
-  if(file_already_exists)
-  {
-  
-      // Find the tens- and ones-digit in the string.
-      //We should only be in here if they are both 9
-    char* ptr;
-    char* hun_ptr = 0;  //Pointer to the hundreds-digit in the string
-    char* temp_ptr = 0;
-  
-    for( ptr = buffer; *ptr; ptr++ )
-    {
-      if( (*ptr == '9') && (*(ptr+1) == '9') )
-      {
-        hun_ptr = ptr;
-        ten_ptr = ptr + 1;
-        one_ptr = ptr + 2;
-        temp_ptr = one_ptr;
-      
-        do
-        {
-          temp_ptr++;
-        }
-        while(*temp_ptr !='\0');
-
-        one_ptr = temp_ptr;
-        temp_ptr ++;
-      
-        do{
-          *temp_ptr = *one_ptr;
-          one_ptr--;
-          temp_ptr--;
-        }
-        while(one_ptr != ten_ptr);
-        one_ptr++;
-      
-        *hun_ptr = '1';
-        *ten_ptr = '0';
-        *one_ptr = '0';
-        break;
-      }
-    }
-    assert(ten_ptr != 0);
-  
-      //Search for next available number.
-    
-    for(int k = 1; k<10 ; ++k)
-    {
-      *hun_ptr = (char)(k+'0');
-    
-      for(int i=0; i<10  ; ++i) 
-      {
-        *ten_ptr = (char)(i + '0');
-        for(int j=0; j<10  ; ++j) 
-        {
-          *one_ptr = (char)(j + '0');
-          ifstream test_stream(buffer);
-          num_files = k*100 + i * 10 + j;
-          if(!test_stream)
-          {
-              // File does not exist, use it
-              //Break out of loop
-            k = 10;
-            i = 10;
-            j = 10;
-            
-          }
-          test_stream.close();  // File exists, close it and try next.
-        }
-      }
-    }
-  }
-  return num_files;
-}
-
-CubitBoolean
-CubitUtil::file_exist(
-  const char* buffer)
-{
-  CubitBoolean file_exists = CUBIT_FALSE;
-   
-  ifstream test_stream(buffer);
-  
-  if ( test_stream)
-     file_exists = CUBIT_TRUE;
-  
-  test_stream.close();
-  
-  return file_exists;
-  
-}  //  file_exist()
-
-CubitBoolean
-CubitUtil::file_exist(
-  const CubitString& buffer)
-{
-  return file_exist( buffer.c_str() );
-}
-
 CubitString CubitUtil::getenv(const CubitString& var)
 {
-  CubitString value;
-  char* c_value = ::getenv(var.c_str());
-  if(c_value)
-  {
-    value = c_value;
-  }
-  return value;
+  return CubitString(::getenv(var.c_str()));
 }
 
 void CubitUtil::setenv(const CubitString& var, const CubitString& value)
 {
 #ifdef WIN32
-  ::SetEnvironmentVariableA(var.c_str(), value.c_str());
+  ::SetEnvironmentVariableW(CubitString::toUtf16(var).c_str(), CubitString::toUtf16(value).c_str());
 #else
   ::setenv(var.c_str(), value.c_str(), 1);
 #endif
 }
 
+
+CubitString CubitUtil::get_computer_name()
+{
+  CubitString name = "unknown";
+#ifdef WIN32
+  wchar_t machine_buf[MAX_COMPUTERNAME_LENGTH + 1];
+  DWORD machine_buf_length = MAX_COMPUTERNAME_LENGTH + 1;
+  if (::GetComputerNameW(machine_buf, &machine_buf_length))
+    name = CubitString::toUtf8(machine_buf);
+#else
+  struct utsname uname_data;
+  if( uname( &uname_data ) >= 0 )
+  {
+    name = uname_data.nodename;
+  }
+#endif  
+  return name;
+}
+
+CubitString CubitUtil::get_os()
+{
+#ifdef WIN32
+  CubitString os = "Microsoft Windows";
+  OSVERSIONINFO osvi;
+  
+  ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
+  osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+  
+  if(GetVersionEx(&osvi))
+  {
+    std::stringstream str;
+    str << " ";
+    str << osvi.dwMajorVersion << "." << osvi.dwMinorVersion;
+    str << " ";
+    str << osvi.szCSDVersion;
+    DWORD build = osvi.dwBuildNumber & 0xFFFF;
+    str << " (Build " << build << ")";
+    os += str.str().c_str();
+  }
+#else
+  CubitString os = "unknown";
+  struct utsname uname_data;
+  if( uname( &uname_data ) >= 0 )
+  {
+    os = uname_data.sysname;
+    os += " ";
+    os += uname_data.release;
+  }
+#endif
+  return os;
+}
 

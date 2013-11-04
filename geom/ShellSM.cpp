@@ -69,20 +69,6 @@ ShellSM::~ShellSM()
 {
 }
 
-//-------------------------------------------------------------------------
-// Purpose       : Get type of TopologyEntity this GeometryEntity
-//                 should be attached to.
-//
-// Special Notes : 
-//
-// Creator       : Jason Kraftcheck
-//
-// Creation Date : 06/14/01
-//-------------------------------------------------------------------------
-const type_info& ShellSM::topology_entity_type_info() const
-{ return typeid(Shell); }
-
-
 // ********** END PUBLIC FUNCTIONS         **********
 
 // ********** BEGIN PROTECTED FUNCTIONS    **********

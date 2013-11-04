@@ -18,6 +18,7 @@
 #include "CubitDefines.h"
 #include "CubitString.hpp"
 #include "CubitUtilConfigure.h"
+#include "CubitEventDispatcher.hpp"
 
 #ifndef WIN32
 #include <sys/resource.h>
@@ -71,7 +72,7 @@ public:
   //-  CUBIT_FALSE: Set the signal hander for SIGINT to
   //-               the system default.
   
-  void startup(int /*argc*/, char ** /*argv*/);
+  void startup(const std::vector<CubitString>& args);
    //-  Contains startup code for cubit
 
   int shutdown();
@@ -97,6 +98,11 @@ public:
   static void initialize_settings();
     // initialize settings
 
+  CubitEventDispatcher& event_dispatcher() { return mEventDispatcher; }
+
+  //! send an event
+  void send_event(CubitObservable* observable, const CubitEvent& event);
+
 private:
 
   static CubitBoolean catching_sigint_;
@@ -111,6 +117,8 @@ private:
     //- directory of the cubit executable
 
    ProgressTool *mProgressTool;
+
+   CubitEventDispatcher mEventDispatcher;
 
    AppUtil();
 };

@@ -53,17 +53,11 @@ protected:
     //- adds data for this vcurve to this CA
 
 public:
-  CAVirtualVG(RefEntity* );
 
-  CAVirtualVG(RefEntity*, CubitSimpleAttrib*);
+  CAVirtualVG(RefEntity*, const CubitSimpleAttrib&);
     //- construct a CAPVG from a simple attribute
 
   virtual ~CAVirtualVG() {};
-
-  //HEADER- RTTI and safe casting functions.
-  virtual const type_info& entity_type_info() const { return typeid(*this);}
-  //R- The geometric modeler type
-  //- This function returns the type of the geometric modeler.
 
   CubitStatus actuate();
   
@@ -72,15 +66,15 @@ public:
   CubitStatus reset();
     //- reset info; called from CAU and also from update!
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
   
-  CubitSimpleAttrib* cubit_simple_attrib(CubitString);
+  CubitSimpleAttrib cubit_simple_attrib(CubitString);
   
   int int_attrib_type() {return CA_VIRTUAL_VG;}
     //- returns the enumerated attribute type
 
 };
 
-CubitAttrib* CAVirtualVG_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAVirtualVG_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif

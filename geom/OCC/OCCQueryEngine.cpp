@@ -131,12 +131,21 @@
 #include "gp_Lin.hxx"
 using namespace NCubitFile;
 
+#include "CGMEngineDynamicLoader.hpp"
+
+
+CGM_ENGINE_EXPORT_CREATE_GQE(OpenCascade)
+{
+  return OCCQueryEngine::instance();
+}
+
 OCCQueryEngine* OCCQueryEngine::instance_ = NULL;
 
 typedef std::map<int, TopologyBridge*>::value_type valType;
 typedef std::map<int, TDF_Label>::value_type labType;
 int OCCQueryEngine::iTotalTBCreated = 0;
 int OCCQueryEngine::total_coedges = 0;
+#define NUM_PTS_UV 30
 //================================================================================
 // Description:
 // Author     :
@@ -166,7 +175,7 @@ OCCQueryEngine::OCCQueryEngine()
   SurfaceList = new DLIList<OCCSurface*>;
   CurveList = new DLIList<OCCCurve*>;
   CubitString name("Doc");
-  TCollection_ExtendedString xString(name.c_str(), CUBIT_TRUE);
+  TCollection_ExtendedString xString((Standard_CString)name.c_str(), CUBIT_TRUE);
   MyDF = new TDocStd_Document(xString);
   mainLabel = MyDF->Main();
   EXPORT_ATTRIB = CUBIT_TRUE;
@@ -270,27 +279,37 @@ CubitStatus OCCQueryEngine::get_graphics( Surface* surface_ptr,
 
   OCCSurface *occ_surface_ptr = CAST_TO(surface_ptr, OCCSurface);
   TopoDS_Face * Topo_Face = occ_surface_ptr->get_TopoDS_Face();
-  if (!Topo_Face)
+
+  return get_graphics( Topo_Face, g_mem, normal_tolerance, distance_tolerance, max_edge_length );
+}
+
+CubitStatus OCCQueryEngine::get_graphics( TopoDS_Face* face_ptr,
+                                          GMem* g_mem,
+                                          unsigned short normal_tolerance,
+                                          double distance_tolerance,
+                                         double max_edge_length) const
+{
+  if (!face_ptr)
     return CUBIT_FAILURE;
 
   TopLoc_Location L;
-  Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*Topo_Face, L);
+  Handle_Poly_Triangulation facets = BRep_Tool::Triangulation(*face_ptr, L);
 
   gp_Trsf tf = L.Transformation();
 
   if(facets.IsNull() || facets->NbTriangles() == 0)
   {
     //do triangulation
-    if(distance_tolerance == 0.0)
+    if(distance_tolerance <= 0.0)
       distance_tolerance = 0.01;
     double angle  = CUBIT_PI * normal_tolerance/180;
-    BRepAdaptor_Surface asurface(*Topo_Face);
+    BRepAdaptor_Surface asurface(*face_ptr);
     Bnd_Box aBox;
     BndLib_AddSurface::Add(asurface, Precision::Approximation(), aBox);
     BRepMesh_FastDiscret *myMesh =
-    new BRepMesh_FastDiscret(distance_tolerance, *Topo_Face, aBox, angle, Standard_True, Standard_True);
+    new BRepMesh_FastDiscret(distance_tolerance, *face_ptr, aBox, angle, Standard_True, Standard_True);
     if (myMesh != NULL) delete myMesh;
-    facets = BRep_Tool::Triangulation(*Topo_Face, L);
+    facets = BRep_Tool::Triangulation(*face_ptr, L);
     if(facets.IsNull() || facets->NbTriangles() == 0)
     {
       PRINT_ERROR("Can't get triangulation representation for this surface.\n");
@@ -379,17 +398,29 @@ CubitStatus OCCQueryEngine::get_graphics( Curve* curve_ptr,
     PRINT_WARNING("max_edge_length argument is ignored. \n");
   }
     
-  TopoDS_Edge * Topo_Edge = occ_curve_ptr->get_TopoDS_Edge();
-  if (!Topo_Edge)
+  TopoDS_Edge *edge_ptr = occ_curve_ptr->get_TopoDS_Edge();
+
+  return get_graphics( edge_ptr, gMem, angle_tolerance, distance_tolerance, max_edge_length );  
+}
+
+
+
+CubitStatus OCCQueryEngine::get_graphics( TopoDS_Edge* edge_ptr,
+                                          GMem* gMem,
+                                          double angle_tolerance,
+                                          double distance_tolerance,
+                                          double max_edge_length ) const
+{
+  if (!edge_ptr)
     return CUBIT_FAILURE;
 
   //do tessellation
-  if(distance_tolerance == 0.0)
+  if(distance_tolerance <= 0.0)
     distance_tolerance = 0.2;
   if(angle_tolerance == 0.0)
     angle_tolerance = 5;
   double angle  = CUBIT_PI * angle_tolerance/180;
-  BRepAdaptor_Curve acurve(*Topo_Edge);
+  BRepAdaptor_Curve acurve(*edge_ptr);
   GCPnts_TangentialDeflection *myMesh = 
         new GCPnts_TangentialDeflection(acurve, angle, 
                                         distance_tolerance);
@@ -431,38 +462,42 @@ CubitStatus OCCQueryEngine::get_isoparametric_points(Surface* surface,
 {
   OCCSurface* occ_surface = CAST_TO(surface, OCCSurface);
   TopoDS_Face* Tops_face = occ_surface->get_TopoDS_Face();
-  TopoDS_Face the_face;
   if (Tops_face == NULL)
-    {
-      PRINT_ERROR("This surface is not OCCSurface.");
-      return CUBIT_FAILURE;
-    }
+  {
+    PRINT_ERROR("This surface is not OCCSurface.");
+    return CUBIT_FAILURE;
+  }
+  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(*Tops_face);
 
-  the_face = *Tops_face;
-  Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
+  double u1, u2, v1, v2;
+  BRepTools::UVBounds(*Tops_face, u1, u2, v1, v2);
 
   assert (nu > 1 && nv > 1);
-  double u1, u2, v1, v2;
-  HGeom_surface->Bounds(u1, u2, v1, v2); 
-  double interval1  = (u2 - u1)/(nu-1);
-  double interval2 = (v2 - v1)/(nv-1);
-  
+  if(nu <= 1)
+    nu = NUM_PTS_UV;
+  if(nv <= 1)
+    nv = NUM_PTS_UV;
   g_mem = new GMem[nu];
-  //nu and nv must be given to calculate the points.
-  for (int i = 0; i < nu; i++)
-    {
-      Handle_Geom_Curve HGeom_curve = HGeom_surface->UIso(u1 + i * interval1); 
-      g_mem[i].allocate_polylines(nv-1);
-      for (int j = 0; j <  nv; j++)
-	{
-	  gp_Pnt pnt = HGeom_curve->Value(v1 + j * interval2);
-	  g_mem[i].point_list()[j].x = pnt.X();
-	  g_mem[i].point_list()[j].y = pnt.Y();
-	  g_mem[i].point_list()[j].z = pnt.Z();
-	}
-      g_mem[i].pointListCount = nv;
+ 
 
-    }
+  // calculate the nu curves
+  double interval_u = (u2-u1)/double(nu-1);
+  double interval_v = (v2 - v1)/(double)(nv - 1);
+
+  for (int i = 0; i < nu; i++)
+  {
+    Handle_Geom_Curve HGeom_curve = HGeom_surface->UIso(u1 + i * interval_u); 
+    g_mem[i].allocate_polylines(nv-1);
+    for (int j = 0; j <  nv; j++)
+	  {
+	    gp_Pnt pnt = HGeom_curve->Value(v1 + j * interval_v);
+	    g_mem[i].point_list()[j].x = pnt.X();
+	    g_mem[i].point_list()[j].y = pnt.Y();
+	    g_mem[i].point_list()[j].z = pnt.Z();
+	  }
+    g_mem[i].pointListCount = nv;
+  }
+
   return CUBIT_SUCCESS;
 }
 
@@ -484,7 +519,8 @@ CubitStatus OCCQueryEngine::get_u_isoparametric_points(Surface* surface,
   Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
 
   //n must be given to calculate the points.
-  assert (n > 1);
+  if (n <= 1)
+    n = NUM_PTS_UV;
   double u1, u2, v1, v2;
   HGeom_surface->Bounds(u1, u2, v1, v2);
   double interval = (u2 - u1)/(n -1); 
@@ -521,8 +557,8 @@ CubitStatus OCCQueryEngine::get_v_isoparametric_points(Surface* surface,
 
   Handle_Geom_Surface HGeom_surface = BRep_Tool::Surface(the_face);
 
-  //n must be given to calculate the points.
-  assert (n > 1);
+  if (n <= 1)
+    n = NUM_PTS_UV;
   double u1, u2, v1, v2;
   HGeom_surface->Bounds(u1, u2, v1, v2);
   double interval = (v2 - v1)/(n -1);
@@ -1119,12 +1155,11 @@ void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
                                   BRep_Builder &B,
                                   TopoDS_Compound &Co,
                                   DLIList<OCCLump*> &single_lumps,
-                                  DLIList< DLIList<CubitSimpleAttrib*>*> &lists)
+                                  DLIList< DLIList<CubitSimpleAttrib>*> &lists)
 {
   //Add every shape to the compound
   OCCLump* lump = NULL;
-  CubitSimpleAttrib* body_csa = NULL;
-  DLIList<CubitSimpleAttrib*> body_csa_list;
+  DLIList<CubitSimpleAttrib> body_csa_list;
 
   for (int i = 0; i < OCC_bodies.size(); i++)
   {
@@ -1144,30 +1179,24 @@ void OCCQueryEngine::body_attributes_for_writing(DLIList<OCCBody*> &OCC_bodies,
          lump = CAST_TO(lumps.get(), OCCLump);
          B.Add(Co, *(lump->get_TopoDS_Solid()));
          //if body has attributes, add them to the solid.
-         DLIList<CubitSimpleAttrib*> csa_list;
+         DLIList<CubitSimpleAttrib> csa_list;
          body->get_simple_attribute(csa_list);
          body_csa_list.clean_out();
          for(int i = 0; i < csa_list.size(); i++)
          {
-           CubitSimpleAttrib* csa = csa_list.get_and_step();
+           CubitSimpleAttrib body_csa = csa_list.get_and_step();
            CubitString num_string(i);
-           CubitString* pre_fix = new CubitString("#SINGLELUMP%"+
-                                                  num_string);
+           CubitString pre_fix("#SINGLELUMP%");
+           pre_fix += num_string;
 
-           DLIList<CubitString*> *string_list = csa->string_data_list();
-           DLIList<double*> *doubles = csa->double_data_list();
-           DLIList<int*> *ints = csa->int_data_list();
-           body_csa = new CubitSimpleAttrib;
-           body_csa->initialize_from_lists_of_ptrs(string_list,
-                                                   doubles, ints);
-           body_csa->string_data_list()->insert_first(pre_fix);
+           body_csa.string_data_list().insert(body_csa.string_data_list().begin(), pre_fix);
            lump->append_simple_attribute_virt(body_csa);
            body_csa_list.append(body_csa);
          }
          if(csa_list.size() > 0)
          {
            single_lumps.append(lump);
-           lists.append(new DLIList<CubitSimpleAttrib*>(body_csa_list));
+           lists.append(new DLIList<CubitSimpleAttrib>(body_csa_list));
          }
        }
        continue;
@@ -1200,7 +1229,7 @@ OCCQueryEngine::write_topology( const char* file_name,
 
   //Add every shape to the compound
   DLIList<OCCLump*> single_lumps;
-  DLIList< DLIList<CubitSimpleAttrib*>*> lists;
+  DLIList< DLIList<CubitSimpleAttrib>*> lists;
   OCCLump* lump = NULL;
 
   if(OCC_bodies.size() > 0)
@@ -1242,12 +1271,11 @@ OCCQueryEngine::write_topology( const char* file_name,
     for (int i = 0; i < single_lumps.size(); i++)
     {
       lump = single_lumps.get_and_step();
-      DLIList<CubitSimpleAttrib*>* p_csas = lists.get_and_step();
+      DLIList<CubitSimpleAttrib>* p_csas = lists.get_and_step();
       for(int j = 0 ; j < p_csas->size(); j ++)
       {
-        CubitSimpleAttrib* csa = p_csas->get_and_step();
+        const CubitSimpleAttrib& csa = p_csas->get_and_step();
         lump->remove_simple_attribute_virt(csa);  
-        delete csa;
       }
       delete p_csas;
     }
@@ -1309,7 +1337,7 @@ OCCQueryEngine::write_topology( char*& p_buffer,
 
   //Add every shape to the compound
   DLIList<OCCLump*> single_lumps;
-  DLIList< DLIList<CubitSimpleAttrib*>*> lists;
+  DLIList< DLIList<CubitSimpleAttrib>*> lists;
   OCCLump* lump = NULL;
 
   if(OCC_bodies.size() > 0)
@@ -1353,12 +1381,11 @@ OCCQueryEngine::write_topology( char*& p_buffer,
     for (int i = 0; i < single_lumps.size(); i++)
     {
       lump = single_lumps.get_and_step();
-      DLIList<CubitSimpleAttrib*>* p_csas = lists.get_and_step();
+      DLIList<CubitSimpleAttrib>* p_csas = lists.get_and_step();
       for(int j = 0 ; j < p_csas->size(); j ++)
       {
-        CubitSimpleAttrib* csa = p_csas->get_and_step();
+        const CubitSimpleAttrib& csa = p_csas->get_and_step();
         lump->remove_simple_attribute_virt(csa);
-        delete csa;
       }
       delete p_csas;
     }
@@ -1428,7 +1455,7 @@ CubitBoolean OCCQueryEngine::Read(TopoDS_Shape& Sh,
                                   TDF_Label label)
 {
   ifstream in( File );
-  if (!in) {
+  if (in.fail()) {
     PRINT_INFO("%s: Cannot open file", File );
     return CUBIT_FAILURE;
   }
@@ -1846,20 +1873,20 @@ Lump* OCCQueryEngine::populate_topology_bridge(const TopoDS_Solid& aShape,
         current_lump_number = iTotalTBCreated;
       }
       body = new OCCBody(NULL, NULL, NULL, lump);
-      DLIList<CubitSimpleAttrib*> csa_list;
+      DLIList<CubitSimpleAttrib> csa_list;
       lump->get_simple_attribute(csa_list);
       //if there's body attribute, append it to body and delete it from lump.
       for(int i = 0; i < csa_list.size(); i++)
       {
-        CubitSimpleAttrib* csa = csa_list.get_and_step();
-        CubitString *type = csa->string_data_list()->get();
-        CubitString subtype = type->substr(0,12);
+        const CubitSimpleAttrib& csa = csa_list.get_and_step();
+        CubitString type = csa.string_data_list()[0];
+        CubitString subtype = type.substr(0,12);
         if(subtype == "#SINGLELUMP%")
         {  
           lump->remove_simple_attribute_virt(csa);
-          csa->string_data_list()->reset();
-          csa->string_data_list()->remove();
-          body->append_simple_attribute_virt(csa);
+          CubitSimpleAttrib copy = csa;
+          copy.string_data_list().erase(copy.string_data_list().begin());
+          body->append_simple_attribute_virt(copy);
         }
       }
       BodyList->append(body);
@@ -2143,13 +2170,13 @@ OCCShell* OCCQueryEngine::populate_topology_bridge(const TopoDS_Shell& aShape,
       OCCCoFace * coface = new OCCCoFace( occ_surface, shell, sense);
 
       //Add for testing, may delete later
-      CubitVector center = occ_surface->center_point();
-      CubitVector normal;
-      occ_surface->get_point_normal(center, normal);
+   /*   CubitVector center = occ_surface->center_point();
+      occ_surface->get_point_normal(center, normal);*/
 
       //number of coedges = 2 case is checked here.
       //make sure the normal get from the cross product of the two 
       //coedges are the same as the normal.
+      CubitVector normal;
       DLIList<OCCCoEdge*> codeges;
       occ_surface->get_coedges(codeges);
       if(codeges.size() == 2 && occ_surface->measure() > 0.000001)
@@ -2276,6 +2303,7 @@ Surface* OCCQueryEngine::populate_topology_bridge(const TopoDS_Face& aShape,
   for (Ex.Init(aShape, TopAbs_WIRE); Ex.More(); Ex.Next())
   {
     TopoDS_Shape sh = Ex.Current();
+
     OCCLoop* loop = populate_topology_bridge(TopoDS::Wire(sh));
 /*
     if( aShape.Orientation() == TopAbs_REVERSED )
@@ -2308,6 +2336,9 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 {
   if(aShape.IsNull())
     return (OCCLoop*)NULL;
+
+  BRepTools_WireExplorer Ex;
+
   OCCLoop *loop ;
   if (!OCCMap->IsBound(aShape) ||
       OccToCGM->find(OCCMap->Find(aShape)) == OccToCGM->end())
@@ -2339,12 +2370,14 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
 
   CubitVector v;
   //double d;
-  BRepTools_WireExplorer Ex;
+
   DLIList <OCCCoEdge*> coedges_old, coedges_new;
   coedges_old = loop->coedges();
+
   for (Ex.Init(aShape); Ex.More(); Ex.Next())
   {
     TopoDS_Shape crv = Ex.Current();
+
     Curve* curve = populate_topology_bridge(Ex.Current());
     if(!curve)
       continue;
@@ -2360,7 +2393,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
     CubitBoolean exist = CUBIT_FALSE;
     OCCCoEdge * coedge = NULL;
     int size = coedges_old.size();
-    CubitSense sense ;
+    CubitSense sense;
     if( aShape.Orientation() == TopAbs_REVERSED )
       sense = (Ex.Orientation() == TopAbs_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
     else
@@ -2376,6 +2409,7 @@ OCCLoop* OCCQueryEngine::populate_topology_bridge(const TopoDS_Wire& aShape,
       {       
         if(sense == coedge->sense())
           sense = (sense == CUBIT_FORWARD ? CUBIT_REVERSED : CUBIT_FORWARD);
+        
         break;    
       }
     }
@@ -2595,6 +2629,13 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape,
   for (Ex.Init(aShape, TopAbs_VERTEX); Ex.More(); Ex.Next())
   {
     TopoDS_Shape sh = Ex.Current();
+
+   /* bool alreadyWrapped=false;
+    if(OCCMap->IsBound(sh))
+    {
+      alreadyWrapped=true;
+    }*/
+
     TBPoint* point = populate_topology_bridge(TopoDS::Vertex(Ex.Current()));
     CAST_TO(point, OCCPoint)->add_curve(CAST_TO(curve, OCCCurve));
     TopoDS_Shape parent = aShape;
@@ -2603,6 +2644,17 @@ Curve* OCCQueryEngine::populate_topology_bridge(const TopoDS_Edge& aShape,
     if(!OCCMap->IsBound(sh) ||
      OccToCGM->find(OCCMap->Find(sh)) == OccToCGM->end())
        OccToCGM->insert(valType(current_id, (TopologyBridge*)point));
+     
+  
+   /* if(alreadyWrapped)
+       PRINT_INFO("Vertex Already Wrapped:     "); 
+    else
+       PRINT_INFO("Vertex Wrapped:     ");  
+    PRINT_INFO("     Shape ID = %d",  OCCMap->Find(sh) ); 
+    PRINT_INFO("     TBPoint Address: %p", point );  
+    PRINT_INFO("     Shape Orientation: %s\n", sh.Orientation()==TopAbs_FORWARD ? "Forward" : "Reversed" ); 
+*/
+
   }
 
   return curve;
@@ -2898,7 +2950,7 @@ OCCQueryEngine::unhook_BodySM_from_OCC( BodySM* bodysm ,
         occ_body_find = (OCCBody*)(OccToCGM->find(k))->second;
 
         if(!OccToCGM->erase(k))
-          PRINT_ERROR("The OccBody and iCreatedTotal %i  pair is not in the map!", k);
+          PRINT_ERROR("The OccBody and iCreatedTotal %i pair is not in the map!", k);
     }
   }
 
@@ -3862,12 +3914,12 @@ void OCCQueryEngine::copy_attributes(TopoDS_Shape& old_shape,
     return;
 
   //update the attribute label tree
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   OCCAttribSet::get_attributes(old_shape, list);
 
   for(int i = 0; i < list.size(); i ++)
   {
-    CubitSimpleAttrib* s_attr = list.get_and_step();
+    const CubitSimpleAttrib& s_attr = list.get_and_step();
     TopAbs_ShapeEnum type = old_shape.ShapeType();
     if(new_shape.ShapeType() < type)
     {
@@ -4013,6 +4065,7 @@ int OCCQueryEngine::update_OCC_map(TopoDS_Shape& old_shape,
     GeometryEntity* ge =  CAST_TO(tb, GeometryEntity);
     if(ge)
     {
+      //PRINT_INFO("TB: %p\n",ge);
       Lump* lump = CAST_TO(ge, Lump);
       if(lump)
       {

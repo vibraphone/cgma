@@ -162,6 +162,22 @@ void SubSurface::closest_point_trimmed( CubitVector from, CubitVector& result )
     curve->closest_point_trimmed( from, result );
 }
 
+//-------------------------------------------------------------------------
+// Purpose       : closest point trimmed
+//
+// Special Notes : 
+//
+// Creator       : Jason Kraftcheck
+//
+// Creation Date : 03/28/03
+//-------------------------------------------------------------------------
+CubitStatus SubSurface::closest_point_along_vector( CubitVector& from_point, 
+                                             CubitVector& along_vector,
+                                             CubitVector& point_on_surface)
+{
+  return partitioned_surface()->closest_point_along_vector( from_point, along_vector, point_on_surface );
+}
+
 
 //-------------------------------------------------------------------------
 // Purpose       : get the principal curvatues at a point

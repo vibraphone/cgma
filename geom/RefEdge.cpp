@@ -706,6 +706,10 @@ double RefEdge::angle_between( RefEdge *other_edge_ptr,
     {
       PRINT_ERROR("Attempted to get angle between two "
                   "RefEdges not on the same Loop.\n");
+      while(ref_edge_loop.size())
+      {
+        delete ref_edge_loop.pop();
+      }
       return 0.;
     }
 
@@ -744,6 +748,10 @@ double RefEdge::angle_between( RefEdge *other_edge_ptr,
     {
       PRINT_ERROR("Attempted to get angle between two "
                   "non-consecutive edges.\n");
+      while(ref_edge_loop.size())
+      {
+        delete ref_edge_loop.pop();
+      }
       return 0.;
     }
 
@@ -757,7 +765,11 @@ double RefEdge::angle_between( RefEdge *other_edge_ptr,
                 "where one is not found on the given face.\n");
     return_val = 0.0;
   }
-  
+  // clean up memory
+  while(ref_edge_loop.size())
+  {
+    delete ref_edge_loop.pop();
+  }
   return return_val;
 }  
 
@@ -1214,13 +1226,13 @@ CubitBoolean RefEdge::about_spatially_equal(
     //RefVertex::about_spatially_equal(..) if force_merge is true.
   if (notify_refEntity)
   {
-    this->notify(ref_edge_ptr_2, COMPARISON_FOUND);
+    this->comparison_found(ref_edge_ptr_2);
     if (this_start != edge2_start)
-      this_start->notify(edge2_start, COMPARISON_FOUND);
+      this_start->comparison_found(edge2_start);
     else
       this_start->remove_compare_data();
     if (this_end != edge2_end)
-      this_end->notify(edge2_end, COMPARISON_FOUND);
+      this_end->comparison_found(edge2_end);
     else
       this_end->remove_compare_data();
   }

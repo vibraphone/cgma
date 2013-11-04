@@ -1,8 +1,0 @@
-#DEBUG_FLAG = -O -DNDEBUG
-DEBUG_FLAG = -g 
-CC_INCLUDE = -I/opt/SUNWspro/SC5.0/include/CCios \
-	-I/opt/SUNWspro/SC5.0/include/CC
-MAKEDEPEND = makedepend -Y
-EXTRA_GEOM_LIBS = 
-FORTRAN_LIB =  -L/net/sasn232/opt/SUNWspro6.0_update2/SUNWspro/WS6U2/lib \
-		 -lF77  -lM77 -lsunmath

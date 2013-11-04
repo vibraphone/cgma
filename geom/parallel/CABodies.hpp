@@ -11,6 +11,11 @@
 #include "CubitDefines.h"
 #include "CADefines.hpp"
 
+#include <typeinfo>
+#if !defined(_MSC_VER)
+using std::type_info;
+#endif
+
 class RefEntity;
 
 class CUBIT_GEOM_EXPORT CABodies: public CubitAttrib
@@ -43,7 +48,7 @@ public:
 
   CubitStatus update();
 
-  CubitSimpleAttrib* cubit_simple_attrib();
+  CubitSimpleAttrib cubit_simple_attrib();
 
   CubitStatus reset();
   //- reset this attribute
@@ -52,7 +57,7 @@ public:
   //- returns the enumerated attribute type
 };
 
-CubitAttrib* CABodies_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CABodies_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa);
 
 #endif
 

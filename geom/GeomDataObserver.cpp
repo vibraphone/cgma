@@ -47,8 +47,7 @@ GeomDataObserver* GeomDataObserver::create( RefEntity* on_this ) {
 
 CubitStatus GeomDataObserver::notify_observer(
                                CubitObservable* watched,
-                               const CubitEvent& event,
-                               CubitBoolean )
+                               const CubitEvent& event)
 {
    assert(watched == myRefEntity);
 

@@ -300,6 +300,7 @@ public :
                           const CubitVector &point2 );
   double get_arc_length ( const CubitVector &point1, int whichEnd );
     //- Various arc length calculations, some are redundant
+    //- the length returned is always positive.
 
   double get_chord_length();
     //- Calculates and returns the straight-line distance
@@ -450,14 +451,13 @@ public :
     //I double parameter1, parameter value of one end of arc
     //I double parameter2, parameter value of the other end of arc
     //
-    //Calculates, the distance along the curve between parameters
+    // Calculates, the distance along the curve between parameters
     // parameter1 and parameter2.
     //
-    // The order of the paramters does not affect the result.
-    // That is, switching parameter1 and parameter2 will
-    // result in the same arc length.
-    //
-    // The resulting length is always non-negative.
+    // The order of the paramters does affect the result.
+    // That is, if parameter1 is closer to the start parameter,
+    // the result is positive.  If parameter1 is closer to
+    // the end parameter, the result is negative.
     //
     // For periodic curves, the length is calculated along
     // the curve in the diretion of increasing parameter value.

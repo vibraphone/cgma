@@ -27,13 +27,11 @@ class CUBIT_GEOM_EXPORT CAMergeStatus : public CubitAttrib
 
   public:
   
-  CAMergeStatus( RefEntity* attrib_owner );
-  
-  CAMergeStatus( RefEntity*, CubitSimpleAttrib* );
+  CAMergeStatus( RefEntity*, const CubitSimpleAttrib& );
 
   virtual ~CAMergeStatus();
   
-  virtual CubitSimpleAttrib* cubit_simple_attrib();
+  virtual CubitSimpleAttrib cubit_simple_attrib();
   
   virtual CubitStatus actuate();
   
@@ -43,11 +41,9 @@ class CUBIT_GEOM_EXPORT CAMergeStatus : public CubitAttrib
   
   virtual int int_attrib_type();
   
-  virtual const type_info& entity_type_info() const;
-  
 };
 
-CubitAttrib* CAMergeStatus_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CAMergeStatus_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

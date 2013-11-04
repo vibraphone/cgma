@@ -80,17 +80,22 @@ GetLongOpt::retrieve(const char * const opt) const
    return 0;
 }
 
-int GetLongOpt::parse(int argc, char *const* argv)
+int GetLongOpt::parse(const std::vector<CubitString>& args)
 {
   int this_optind = 1;
+  int argc = args.size();
   
-  pname = basename(*argv);
+  pname = basename(args[0].c_str());
   enroll_done = 1;
   if ( argc-- <= 1 ) return this_optind;
+
+  int i = 1;
   
   while ( argc >= 1 )
   {
-    char *token = *++argv; --argc;
+    const char *token = args[i++].c_str();
+    const char *next_token = i<(int)args.size() ? args[i].c_str() : NULL;
+    --argc;
     
     if ( token[0] != optmarker || token[1] == optmarker )
       break;	/* end of options */
@@ -121,11 +126,11 @@ int GetLongOpt::parse(int argc, char *const* argv)
           if (t->type == Toggle && *tmptoken == '\0' )
             tmptoken = no ? GetLongOpt::TOGGLE_OFF : GetLongOpt::TOGGLE_ON;
             
-          int stat = setcell(t, tmptoken, *(argv+1), pname);
+          int stat = setcell(t, tmptoken, next_token, pname);
           if ( stat == -1 ) return -1;
           else if ( stat == 1 )
           {
-            ++argv; --argc; ++this_optind;
+            i++; --argc; ++this_optind;
           }
           matchStatus = ExactMatch;
           break;
@@ -145,17 +150,19 @@ int GetLongOpt::parse(int argc, char *const* argv)
       if (pc->type == Toggle && *tmptoken == '\0' )
         tmptoken = toggle ? GetLongOpt::TOGGLE_ON : GetLongOpt::TOGGLE_OFF;
         
-      int stat = setcell(pc, tmptoken, *(argv+1), pname);
+      int stat = setcell(pc, tmptoken, next_token, pname);
       if ( stat == -1 ) return -1;
       else if ( stat == 1 ) 
       {
-        ++argv; --argc; ++this_optind;
+        ++i; --argc; ++this_optind;
       }
     }
     else if ( matchStatus == NoMatch )
     {
+      char* str = CubitUtil::util_strdup(token);
       PRINT_ERROR("%s: unrecognized option %c%s\n",
-                  pname, optmarker, strtok(token,"= \n") );
+                  pname, optmarker, strtok(str,"= \n") );
+      CubitUtil::util_strdup_free(str);
       return -1;		/* no match */
     }
     

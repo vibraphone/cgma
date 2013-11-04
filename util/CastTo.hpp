@@ -55,11 +55,20 @@
 #define CAST_LIST(classOneList, classTwoList, classTwo) \
    { \
       classTwo *CAST_LIST_PTR_TWO; \
-      (classOneList).reset(); \
       (classTwoList).clean_out(); \
-      for (int CAST_LIST_IT = (classOneList).size(); CAST_LIST_IT > 0; CAST_LIST_IT--) { \
-        CAST_LIST_PTR_TWO = dynamic_cast<classTwo*>( (classOneList).get_and_step() ); \
+      int CAST_LIST_IT_END = (classOneList).size(); \
+      for (int CAST_LIST_IT=0; CAST_LIST_IT<CAST_LIST_IT_END; CAST_LIST_IT++) { \
+  CAST_LIST_PTR_TWO = dynamic_cast<classTwo*>( (classOneList)[CAST_LIST_IT] ); \
         if (CAST_LIST_PTR_TWO != NULL) (classTwoList).append(CAST_LIST_PTR_TWO); \
+      } \
+   }
+
+#define CAST_LIST_TO_IDS(classOneList, idList ) \
+   { \
+      (classOneList).reset(); \
+      (idList).clean_out(); \
+      for (int i = (classOneList).size(); i > 0; i--) { \
+        (idList).append((classOneList).get_and_step()->id()); \
       } \
    }
 

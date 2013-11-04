@@ -56,6 +56,10 @@ public:
                              CubitVector* close = 0, CubitVector* norm = 0,
                              CubitVector* curv1 = 0, CubitVector* curv2 = 0);
   void closest_point_trimmed( CubitVector from, CubitVector& result );
+
+  CubitStatus closest_point_along_vector( CubitVector& from_point, 
+                                          CubitVector& along_vector,
+                                          CubitVector& point_on_surface);
                             
   CubitStatus principal_curvatures( CubitVector const& loc, 
                                     double& curv1, double& curv2,

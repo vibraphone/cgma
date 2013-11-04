@@ -109,7 +109,7 @@ GeometryQueryEngine* FacetCoEdge::get_geometry_query_engine() const
 //
 // Creation Date : 07/18/00
 //-------------------------------------------------------------------------
-void FacetCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void FacetCoEdge::append_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
   //PRINT_ERROR("FacetCoEdge::append_simple_attribute_virt not implemented\n");
   return;
@@ -127,7 +127,7 @@ void FacetCoEdge::append_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr
 //
 // Creation Date : 07/18/00
 //-------------------------------------------------------------------------
-void FacetCoEdge::remove_simple_attribute_virt(CubitSimpleAttrib* /*csattrib_ptr*/)
+void FacetCoEdge::remove_simple_attribute_virt(const CubitSimpleAttrib& /*csattrib_ptr*/)
 {
   //PRINT_ERROR("FacetCoEdge::remove_simple_attribute_virt not implemented\n");
   return;
@@ -162,14 +162,14 @@ void FacetCoEdge::remove_all_simple_attribute_virt()
 //
 // Creation Date : 07/18/00
 //-------------------------------------------------------------------------
-CubitStatus FacetCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus FacetCoEdge::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                               /*cubit_simple_attrib_list*/)
 {
   //PRINT_ERROR("FacetCoEdge::get_simple_attribute not implemented\n");
   return CUBIT_FAILURE;
 }
 CubitStatus FacetCoEdge::get_simple_attribute(const CubitString&,
-                                              DLIList<CubitSimpleAttrib*>&)
+                                              DLIList<CubitSimpleAttrib>&)
   { return CUBIT_FAILURE; }
 
 

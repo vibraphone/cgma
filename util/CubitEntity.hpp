@@ -11,7 +11,7 @@
 #include "InvalidEntity.hpp"
 
 #include <typeinfo>
-#if !defined(WIN32)
+#if !defined(_MSC_VER)
 using std::type_info;
 #endif
 
@@ -19,9 +19,6 @@ using std::type_info;
 class CubitBox;
 class CubitVector;
 class CubitString;
-#ifdef CUBIT_GUI
-class IGUIObservers;
-#endif
 #include "CubitUtilConfigure.h"
 
 class CUBIT_UTIL_EXPORT CubitEntity
@@ -29,11 +26,7 @@ class CUBIT_UTIL_EXPORT CubitEntity
 public:
   
     //- Heading: Constructors and Destructor
-  CubitEntity() : entityId(0)
-#ifdef CUBIT_GUI
-                , pGUIObservers(0)
-#endif
-    {}
+  CubitEntity() : entityId(0) {}
   
   virtual ~CubitEntity() ;
   
@@ -64,24 +57,18 @@ public:
   
   virtual const char* class_name() const = 0;
     //- return class name string.
-  
+
+  virtual CubitString entity_name() const = 0;
+    //- return the name of this entity.  If one not assigned, a default one will be generated.
+
   virtual int validate();
     //R int
     //R- number of problems detected, 0 if none (or not implemented)
-  
-#ifdef CUBIT_GUI
-    // functions to get and set GUI event notification interface pointer
-  IGUIObservers* get_GUI_observers_ptr();
-  void set_GUI_observers_ptr(IGUIObservers* observers);
-#endif
-  
+    
   
 protected:
   int entityId;
   
-#ifdef CUBIT_GUI
-  IGUIObservers* pGUIObservers;
-#endif
   
 private:
   CubitEntity( const CubitEntity& );

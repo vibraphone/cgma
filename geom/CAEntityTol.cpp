@@ -22,36 +22,27 @@
 #include "BasicTopologyEntity.hpp"
 #include "GeometryEntity.hpp"
 
-CubitAttrib* CAEntityTol_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAEntityTol_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAEntityTol *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAEntityTol(entity);
-  }
-  else
-  {
-    new_attrib = new CAEntityTol(entity, p_csa);
-  }
-
-  return new_attrib;
+    return new CAEntityTol(entity, p_csa);
 }
 
 CAEntityTol::CAEntityTol(RefEntity* new_attrib_owner,
-                       CubitSimpleAttrib *csa_ptr)
+                       const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
-  assert ( csa_ptr != 0 );
+  entityTol = 0.0;
+  if(!csa_ptr.isEmpty())
+  {
    PRINT_DEBUG_95( "Creating ENTITY_TOL attribute from CSA for %s %d\n",
       (attribOwnerEntity ? attribOwnerEntity->class_name() : "(none)"),
       (attribOwnerEntity ? attribOwnerEntity->id() : 0));
    
-   DLIList<double*> *d_list = csa_ptr->double_data_list();
+   const std::vector<double>& d_list = csa_ptr.double_data_list();
 
-   assert(d_list && d_list->size() == 1);
-   d_list->reset();
-   entityTol = *( d_list->get_and_step() );
-  
+   assert(d_list.size() == 1);
+   entityTol =  d_list[0];
+  }
 }
 
 CAEntityTol::CAEntityTol(RefEntity* new_attrib_owner)
@@ -142,21 +133,17 @@ void CAEntityTol::merge_owner(CubitAttrib *deletable_attrib)
     entityTol = other_ca_tol->tolerance();
 }
 
-CubitSimpleAttrib* CAEntityTol::cubit_simple_attrib()
+CubitSimpleAttrib CAEntityTol::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<double> d_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<double> d_list;
+  std::vector<int, std::allocator<int> > i_list;
 
-  d_list.append ( entityTol );
+  d_list.push_back ( entityTol );
 
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          &d_list,
-                                                          &i_list);
-  int i;
-  for ( i = cs_list.size(); i--;) delete cs_list.get_and_step();
+  CubitSimpleAttrib csattrib_ptr(&cs_list, &d_list, &i_list);
  
   return csattrib_ptr;
 }
@@ -171,7 +158,7 @@ void CAEntityTol::print()
 }
 
 
-CubitSimpleAttrib *CAEntityTol::split_owner()
+CubitSimpleAttrib CAEntityTol::split_owner()
 {
     // if this entity is to be split, pass back a simple attribute with
     // duplicate tol data to be put on new entity

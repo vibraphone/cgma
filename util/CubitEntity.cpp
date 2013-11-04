@@ -6,10 +6,6 @@
 //- Checked By:
 //- Version: $Id: 
 
-#ifdef CUBIT_GUI
-#include "IGUIObservers.hpp"
-#endif
-
 
 #include <cassert>
 #include <cstring>
@@ -35,13 +31,6 @@
 
 CubitEntity::~CubitEntity() 
 { 
-#ifdef CUBIT_GUI
-  if( pGUIObservers )
-  {      
-    pGUIObservers->Destroyed();
-    pGUIObservers = NULL;
-  }
-#endif
 }
 
 //- Need the following definitions for mesh entities; they should NEVER
@@ -87,20 +76,6 @@ CubitEntity::color() const
     // assert (0); 
   return -1;
 }
-
-
-#ifdef CUBIT_GUI
-IGUIObservers* CubitEntity::get_GUI_observers_ptr()
-{
-   return pGUIObservers;
-}
-
-
-void CubitEntity::set_GUI_observers_ptr(IGUIObservers* observers)
-{
-   pGUIObservers = observers;
-}
-#endif
 
 CubitVector CubitEntity::center_point()
 {

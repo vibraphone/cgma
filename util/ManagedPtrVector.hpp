@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <cstddef>
 
 //! A vector of pointers to objects that are automatically deleted when the container itself is deleted.
 /*! Loosely

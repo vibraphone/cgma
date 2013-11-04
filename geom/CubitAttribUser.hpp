@@ -12,11 +12,6 @@
 
 class RefEntity;
 
-#include <typeinfo>
-#if !defined(WIN32)
-using std::type_info;
-#endif
-
 #include "CubitDefines.h"
 #include "CubitAttrib.hpp"
 #include "DLIList.hpp"
@@ -57,15 +52,15 @@ public:
 
 private:
 //________  Change Code by DZ of Cat,  3/11/99 12:19:10 PM  ________
-  CubitStatus put_simple_attrib (CubitSimpleAttrib* cubit_simple_attrib_ptr,
+  CubitStatus put_simple_attrib (const CubitSimpleAttrib& cubit_simple_attrib_ptr,
      CubitBoolean append_it = CUBIT_TRUE);
 //________  Change End by DZ of Cat,  3/11/99 12:19:10 PM  ________
 
 public:
-  void append_simple_attribute(TopologyBridge* bridge, CubitSimpleAttrib* attrib_ptr);
-  void append_attrib_internal( TopologyBridge* bridge, CubitSimpleAttrib* attrib_ptr );
+  void append_simple_attribute(TopologyBridge* bridge, const CubitSimpleAttrib& attrib_ptr);
+  void append_attrib_internal( TopologyBridge* bridge, const CubitSimpleAttrib& attrib_ptr );
   void remove_all_simple_attribute(TopologyBridge* bridge);
-  void remove_simple_attribute(TopologyBridge* bridge, CubitSimpleAttrib* attrib_ptr);
+  void remove_simple_attribute(TopologyBridge* bridge, const CubitSimpleAttrib& attrib_ptr);
 
   CubitStatus clear_simple_attribs();
     // Remove all CubitSimpleAttrib from TopologyBridges.
@@ -96,7 +91,7 @@ public:
     //moves all cubit attributes from CUBIT to the SME
 
 public:
-  void split_owner(DLIList<CubitSimpleAttrib*> &csa_list);
+  void split_owner(DLIList<CubitSimpleAttrib> &csa_list);
     //- if owner is to be split, get simple attribs for new entity
 
   void merge_owner(RefEntity *deletable_entity);

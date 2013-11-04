@@ -37,6 +37,7 @@
 #include "CubitFacetEdgeData.hpp"
 #include "CubitFacetEdge.hpp"
 #include "CurveFacetEvalTool.hpp"
+#include "AppUtil.hpp"
 
 //-----------------------------------------------------
 // Constructor
@@ -6028,9 +6029,9 @@ RefEdge* ImprintBoundaryTool::create_virtual_edge(RefVertex *start,
   
   //if vertices are consumed....notify that they are gone.
   if( start_vertex_is_free )
-    start->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    AppUtil::instance()->send_event(start, TOP_LEVEL_ENTITY_DESTRUCTED );
   if( end_vertex_is_free )
-    end->notify_all_observers( TOP_LEVEL_ENTITY_DESTRUCTED );
+    AppUtil::instance()->send_event(end, TOP_LEVEL_ENTITY_DESTRUCTED );
   
   Curve *new_curve_ptr = (Curve*) new_facet_curve;
   return GeometryQueryTool::instance()->make_RefEdge(new_curve_ptr);

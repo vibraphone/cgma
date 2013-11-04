@@ -9,13 +9,13 @@
 DLIList<CubitAttrib*> CADeferredAttrib::unactuatedCAs;
 SDLCADeferredAttribList CADeferredAttrib::allCADeferredAttribs;
 
-CubitAttrib* CADeferredAttrib_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CADeferredAttrib_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa)
 {
   CADeferredAttrib *new_attrib = NULL;
 
   // Deferred attributes are a special case -- they should only get created
   // when restoring from a file, in which case p_csa should be non-NULL
-  if (NULL != p_csa)
+  if (!p_csa.isEmpty())
   {
     new_attrib = new CADeferredAttrib(entity, p_csa);
   }
@@ -27,18 +27,16 @@ CADeferredAttrib::~CADeferredAttrib()
 {
   while (allCADeferredAttribs.move_to(this))
     allCADeferredAttribs.remove();
-
-  delete thisCSA;
 }
 
-CADeferredAttrib::CADeferredAttrib(RefEntity *, CubitSimpleAttrib *csa_ptr) 
+CADeferredAttrib::CADeferredAttrib(RefEntity *, const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(NULL)
 {
   init_csa(csa_ptr);
   hasUpdated = CUBIT_TRUE;
 }
 
-CubitStatus CADeferredAttrib::init_csa(CubitSimpleAttrib *csa_ptr) 
+CubitStatus CADeferredAttrib::init_csa(const CubitSimpleAttrib &csa_ptr)
 {
   int csa_type = CGMApp::instance()->attrib_manager()->attrib_type(csa_ptr);
   if (CA_DEFERRED_ATTRIB != csa_type)
@@ -50,8 +48,7 @@ CubitStatus CADeferredAttrib::init_csa(CubitSimpleAttrib *csa_ptr)
     // initialize this according to csa_ptr
 
     // first get the uniqueId off the csa
-  csa_ptr->int_data_list()->reset();
-  uniqueId = *csa_ptr->int_data_list()->get();
+  uniqueId = csa_ptr.int_data_list()[0];
   assert(uniqueId > 0);
 
     // now check to see if we have this CADA alreedy; if so, set the
@@ -76,7 +73,7 @@ CubitStatus CADeferredAttrib::init_csa(CubitSimpleAttrib *csa_ptr)
     // copy the info on the csa; need a new one, since
     // we don't own the original
   thisCSA = csa_from_dcsa(csa_ptr);
-  assert(thisCSA != 0);
+  assert(!thisCSA.isEmpty());
 
     // add this to the global list
   allCADeferredAttribs.append(this);
@@ -111,9 +108,9 @@ CubitStatus CADeferredAttrib::reset()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CADeferredAttrib::cubit_simple_attrib()
+CubitSimpleAttrib CADeferredAttrib::cubit_simple_attrib()
 {
-  return new CubitSimpleAttrib(thisCSA);
+  return thisCSA;
 }
 
 CubitStatus CADeferredAttrib::assign_to_owner(CubitAttribUser *owner)
@@ -278,12 +275,12 @@ CubitBoolean CADeferredAttrib::is_match(CubitSimpleAttrib *csa_ptr,
     //- returns true if the simple attribute is deferred type and matches
     //- uid
   assert(csa_ptr && uid > 0);
-  csa_ptr->string_data_list()->reset();
-  csa_ptr->string_data_list()->step();
-  csa_ptr->int_data_list()->reset();
-  if (!strcmp(csa_ptr->string_data_list()->get()->c_str(),
+  csa_ptr.string_data_list()->reset();
+  csa_ptr.string_data_list()->step();
+  csa_ptr.int_data_list()->reset();
+  if (!strcmp(csa_ptr.string_data_list()->get()->c_str(),
               CGMApp::instance()->attrib_manager()->att_internal_name(CA_DEFERRED_ATTRIB)) &&
-      *csa_ptr->int_data_list()->get() == uid)
+      *csa_ptr.int_data_list()->get() == uid)
     return CUBIT_TRUE;
   else
     return CUBIT_FALSE;
@@ -291,36 +288,27 @@ CubitBoolean CADeferredAttrib::is_match(CubitSimpleAttrib *csa_ptr,
 */
 
 
-CubitSimpleAttrib *CADeferredAttrib::csa_from_dcsa(CubitSimpleAttrib *csa_ptr,
+CubitSimpleAttrib CADeferredAttrib::csa_from_dcsa(const CubitSimpleAttrib &csa_ptr,
                                                    const int uid)
 {
   
     //- given a deferred csa, convert it to a normal csa by removing
     //- first type string and first int; if first int doesn't match
     //- uid passed in, NULL is returned
-  assert(csa_ptr != 0);
-
-  csa_ptr->string_data_list()->reset();
-  if (strcmp(csa_ptr->string_data_list()->get()->c_str(),
-             CGMApp::instance()->attrib_manager()->att_internal_name(CA_DEFERRED_ATTRIB)))
+  if (csa_ptr.string_data_list()[0] != CGMApp::instance()->attrib_manager()->att_internal_name(CA_DEFERRED_ATTRIB))
       // csa isn't deferred type - return
-    return NULL;
+    return CubitSimpleAttrib();
 
-  csa_ptr->int_data_list()->reset();
-  if (uid != 0 && *csa_ptr->int_data_list()->get() != uid)
+  if (uid != 0 && csa_ptr.int_data_list()[0] != uid)
       // csa uid doesn't match - return
-    return NULL;
+    return CubitSimpleAttrib();
+
+  CubitSimpleAttrib c = csa_ptr;
+  c.string_data_list().erase(c.string_data_list().begin());
+  c.int_data_list().erase(c.int_data_list().begin());
 
     // else we have a match - build new csa
-  CubitSimpleAttrib *new_csa = new CubitSimpleAttrib(csa_ptr);
-  
-  new_csa->string_data_list()->reset();
-  delete new_csa->string_data_list()->remove();
-  
-  new_csa->int_data_list()->reset();
-  delete new_csa->int_data_list()->remove();
-
-  return new_csa;
+  return c;
 }
 
 bool CADeferredAttrib::add_unactuated_ca(CubitAttrib *ca_ptr) 

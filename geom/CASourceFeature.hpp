@@ -18,17 +18,10 @@ private:
 
 public:
     //! Constructor
-    CASourceFeature(RefEntity*);
-
-    //! Constructor
-    CASourceFeature(RefEntity*, CubitSimpleAttrib *);
+    CASourceFeature(RefEntity*, const CubitSimpleAttrib &);
 
     //! destructor
     virtual ~CASourceFeature();
-
-    //! Returns typeid(CASourceFeature)
-    virtual const type_info& entity_type_info() const
-    { return typeid(CASourceFeature);}
 
     //! Actuate
     CubitStatus actuate();
@@ -40,7 +33,7 @@ public:
     CubitStatus reset();
 
     //! Returns the simple cubit attribute for this attribute
-    CubitSimpleAttrib* cubit_simple_attrib();
+    CubitSimpleAttrib cubit_simple_attrib();
 
     //! Given a cubit attribute string return the FeatureType
     GeometryFeatureEngine::FeatureType 
@@ -59,7 +52,7 @@ public:
 };
 
 //! global CASourceFeature creation function
-CubitAttrib* CASourceFeature_creator(RefEntity* entity, CubitSimpleAttrib *p_csa);
+CubitAttrib* CASourceFeature_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa);
 
 #endif
 

@@ -5,24 +5,14 @@
  * code to specify what event occurred.  This allows the Observers to
  *          update themselves accordingly, if required. */
 enum CubitEventType { INVALID_EVENT_TYPE = -1,
-                 VGI_BODY_CONSTRUCTED,
-                   /* A ModelEntity was created */
                  MODEL_ENTITY_CONSTRUCTED,
                    /* A ModelEntity was created */
                  MODEL_ENTITY_MODIFIED,
                    /* A ModelEntity was changed */
                  MODEL_ENTITY_DESTRUCTED,
                    /* A ModelEntity was deleted */
-                 COMPARISON_FOUND,
-                   /* A partner entity was found (they compare successfully) */
                  DEVELOPER_COMMAND_FLAG_MODIFIED,
                   /* The 'set developer command on/off' was issued */
-                 ENTITY_SURVIVED_MERGE,
-                   /* An entity was involved in a merge and survived */
-                 MERGE_COMPLETED,
-                   /* A merge operation is completed successfully */
-                 MERGE_ABORTED,
-                   /* A merge operation was aborted */
                  MESH_DELETED,
                    /* Mesh associated with 1 or more RefEntities was deleted */
                  MESH_CREATED,
@@ -31,6 +21,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* 1 or more RefEntities had its exiting mesh modified */
                  MESH_TRANSFORMED,
                    /* Mesh nodes moved*/
+                 MESH_SETTING_MODIFIED,
+                   /* a mesh setting on a geometry entity was modified */
                  GEOMETRY_TOPOLOGY_MODIFIED,
                    /* Both geometry and topology was
                     modified. e.g. partitioned.
@@ -60,10 +52,6 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* Notifies that a regularize entity operation is done */
                  NEW_ENTITY_UNMERGED,
                    /*A surface, curve, or vertex was unmerged. */
-                 DAG_NODE_DESTRUCTED,
-                   /* A DAG Node was destructed
-                    * CHILD_TO_BE_SWAPPED
-                    * A child is about to be swapped */
                  FREE_REF_ENTITY_GENERATED,
                    /* A vertex that is not a part of a curve,
                     * or a curve that is not a part of a surface,
@@ -88,6 +76,8 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* the color for an entity changed */
                  ENTITY_VISIBILITY_CHANGED,
                   /* the visibility of an entity changed */
+                 ENTITIES_MODIFIED,
+                  /* entities was modified*/
 
                  ENTITIES_MERGED,
                    /* two entities are merged together. See MergeEvent. */
@@ -95,13 +85,6 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    /* an entity had its id set (changed). See IdSetEvent. */
                  IDS_COMPRESSED,
                    /* ids have been compressed. See model.cpp */
-                 MODEL_ENTITY_HIDDEN,
-                   /* A sub-type of MODEL_ENTITY_DESTRUCTED to indicate
-                    * that the entity in question is being hidden (VG)
-                    * rather than actually being destructed.           */
-                 MODEL_ENTITY_RESTORED,
-                   /* The reverse of MODEL_ENTITY_HIDDEN, and a sub-type
-                      of MODEL_ENTITY_CONSTRUCTED */
                  MODEL_RESET,
                    /* Indicates a 'reset' command has been issued and commpleted. */
                  GROUP_MODIFIED,
@@ -208,6 +191,12 @@ enum CubitEventType { INVALID_EVENT_TYPE = -1,
                    // Sent just after an assembly or node has one of its
                    // properties changed, and that property is a string
                    // value
+
+                 SUSPEND_ASSEMBLY_PROCESSING,
+                  //  ignore assembly events, as when reading metadata
+
+                 RESUME_ASSEMBLY_PROCESSING,
+                 //   stop ignoring assembly events
                  
                  PART_ADD_VOLUME,
                    // (get_part(), get_volume())

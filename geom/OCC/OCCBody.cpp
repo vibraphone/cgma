@@ -226,22 +226,17 @@ GeometryQueryEngine* OCCBody::get_geometry_query_engine() const
   return OCCQueryEngine::instance();
 }
 
-void OCCBody::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCBody::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
 { 
   if (myTopoDSShape != NULL)
   {
     OCCAttribSet::append_attribute(csa, *myTopoDSShape);
     return;
   }
-  DLIList<CubitString*> *string_list = csa->string_data_list();
-  DLIList<double*> *doubles = csa->double_data_list();
-  DLIList<int*> *ints = csa->int_data_list();
-  CubitSimpleAttrib* csa_new = new CubitSimpleAttrib;
-  csa_new->initialize_from_lists_of_ptrs(string_list, doubles, ints);
-  csa_list.append_unique(csa_new);
+  csa_list.append_unique(csa);
 }
   
-void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void OCCBody::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
 { 
   DLIList<Lump*> my_lumps;
   my_lumps = lumps();
@@ -259,7 +254,7 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
     OCCLump* lump = CAST_TO(my_lumps.get(), OCCLump);
     TopoDS_Solid* solid = lump->get_TopoDS_Solid();
     OCCAttribSet::remove_attribute(csa, *solid);
-    if(csa)
+    if(!csa.isEmpty())
       csa_list.remove(csa);
     else
       csa_list.clean_out();
@@ -270,7 +265,7 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
   {
     TopoDS_Shell * shell = shells.get()->get_TopoDS_Shell();
     OCCAttribSet::remove_attribute(csa, *shell);
-    if(csa)
+    if(!csa.isEmpty())
       csa_list.remove(csa);
     else
       csa_list.clean_out();
@@ -281,7 +276,7 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
   {
     TopoDS_Face* surf = surfaces.get()->get_TopoDS_Face();
     OCCAttribSet::remove_attribute(csa, *surf);
-    if(csa)
+    if(!csa.isEmpty())
       csa_list.remove(csa);
     else
       csa_list.clean_out();
@@ -291,9 +286,11 @@ void OCCBody::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
 
 
 void OCCBody::remove_all_simple_attribute_virt()
-  { remove_simple_attribute_virt(NULL); }
+{
+  remove_simple_attribute_virt(CubitSimpleAttrib());
+}
   
-CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csas)
+CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib>& csas)
 { 
   if (myTopoDSShape != NULL)
     return OCCAttribSet::get_attributes(*myTopoDSShape,csas);
@@ -304,16 +301,16 @@ CubitStatus OCCBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& csas)
 }
 
 CubitStatus OCCBody::get_simple_attribute( const CubitString& name,
-                                          DLIList<CubitSimpleAttrib*>& csas )
+                                          DLIList<CubitSimpleAttrib>& csas )
 { 
   if (myTopoDSShape != NULL)
     return OCCAttribSet::get_attributes( name, *myTopoDSShape, csa_list );
 
   for(int i = 0 ; i < csa_list.size(); i ++)
   {
-    CubitSimpleAttrib* csa = csa_list.get_and_step();
-    if(csa->string_data_list()->size() > 0)
-     if (*csa->string_data_list()->get() == name)
+    const CubitSimpleAttrib& csa = csa_list.get_and_step();
+    if(csa.string_data_list().size() > 0)
+      if (csa.string_data_list()[0] == name)
        csas.append(csa);
   }
   return CUBIT_SUCCESS;
@@ -391,36 +388,7 @@ CubitStatus OCCBody::transform(BRepBuilderAPI_Transform& aBRepTrsf)
   TopoDS_Shape * shape;
   get_TopoDS_Shape(shape);
   aBRepTrsf.Perform(*shape);
-/*
-  for(int i = 0; i < mySheetSurfaces.size(); i++)
-  {
-    OCCSurface* surface = mySheetSurfaces.get_and_step();
-    TopoDS_Face * face = surface->get_TopoDS_Face();
-    aBRepTrsf.Perform(*face);
-  }
 
-  for(int i = 0; i <myShells.size() ; i++)
-  {
-    OCCShell* occ_shell = myShells.get_and_step();
-    TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
-    aBRepTrsf.Perform(*shell);
-  }
-
-  if(myTopoDSShape != NULL)
-  {
-    aBRepTrsf.Perform(*myTopoDSShape);
-  }
-
-  else
-  {
-    for(int i = 0; i < myLumps.size(); i++)
-    {
-      OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
-      aBRepTrsf.Perform(*solid);
-    }
-  } 
-*/
   update_OCC_entity(&aBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
@@ -464,34 +432,7 @@ CubitStatus OCCBody::scale(double scale_factor_x,
   TopoDS_Shape * shape;
   get_TopoDS_Shape(shape);
   gBRepTrsf.Perform(*shape);
-/*
-  for(int i = 0; i < mySheetSurfaces.size(); i++)
-  {
-    OCCSurface* surface = mySheetSurfaces.get_and_step();
-    TopoDS_Face * face = surface->get_TopoDS_Face();
-    gBRepTrsf.Perform(*face);
-  }
 
-  for(int i = 0; i <myShells.size() ; i++)
-  {
-    OCCShell* occ_shell = myShells.get_and_step();
-    TopoDS_Shell* shell = occ_shell->get_TopoDS_Shell();
-    gBRepTrsf.Perform(*shell);
-  }
-
-  if(myTopoDSShape != NULL)
-    gBRepTrsf.Perform(*myTopoDSShape);
-
-  else
-  {
-    for(int i = 0; i < myLumps.size(); i++)
-    {
-      OCCLump* occ_lump = CAST_TO(myLumps.get_and_step(), OCCLump);
-      TopoDS_Solid* solid = occ_lump->get_TopoDS_Solid();
-      gBRepTrsf.Perform(*solid);
-    }
-  }
-*/
   update_OCC_entity(&gBRepTrsf);
   // calculate for bounding box
   update_bounding_box();
@@ -607,14 +548,13 @@ CubitStatus OCCBody::update_OCC_entity(TopoDS_Shape& old_shape,
   CubitBoolean updated = CUBIT_FALSE;	
   if(!old_shape.IsNull() && old_shape.ShapeType() == TopAbs_COMPOUND && 
      !new_shape.IsNull() && new_shape.ShapeType() == TopAbs_COMPOUND &&
-     !old_shape.IsSame(new_shape)) 
+     !old_shape.IsSame(new_shape))
   {
     //By updating underling solids, shells etc., the old_shape will get changed.
     //trying to make sure the the number of each entity in the old and new 
     //shapes are the same, which means that nothing is delete, that we can 
     //update the map here. Otherwise, when deleting solids, it'll delete the
-    //the old body and create new body. This is Ok for general boolean operation
-    //except imprint when booleans are called, usually the original body are
+    //the old body and create new body. This is Ok for general boolean operation    //except imprint when booleans are called, usually the original body are
     // supposed to be kept. 
     updated = CUBIT_TRUE;
     OCCQueryEngine::instance()->update_OCC_map(old_shape, new_shape);

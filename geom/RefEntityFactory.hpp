@@ -182,8 +182,7 @@ public:
     //- what order the entities appear in the input file.
   
   CubitStatus notify_observer(CubitObservable *observable,
-                              const CubitEvent &observer_event,
-                              CubitBoolean from_observable = CUBIT_FALSE);
+                              const CubitEvent &observer_event);
     //- handle MODEL_ENTITY_DESTRUCTED/MODEL_ENTITY_CONSTRUCTED events
 
 protected: 
@@ -232,16 +231,6 @@ private:
 #endif
 
 };
-
-inline RefEntityFactory *RefEntityFactory::instance()
-{
-  if (instance_ == NULL) {
-    instance_ = new RefEntityFactory();
-    instance_->register_static_observer(instance_); 
-  }
-  
-  return instance_;
-}
 
 #endif
 

@@ -175,7 +175,7 @@ double FacetSurface::min_dot()
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-void FacetSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetSurface::append_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.append_attribute(csa); }
 
 //-------------------------------------------------------------------------
@@ -186,7 +186,7 @@ void FacetSurface::append_simple_attribute_virt(CubitSimpleAttrib *csa)
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-void FacetSurface::remove_simple_attribute_virt(CubitSimpleAttrib *csa)
+void FacetSurface::remove_simple_attribute_virt(const CubitSimpleAttrib &csa)
   { attribSet.remove_attribute( csa ); }
 
 //-------------------------------------------------------------------------
@@ -209,11 +209,11 @@ void FacetSurface::remove_all_simple_attribute_virt()
 // Special Notes : 
 //
 //-------------------------------------------------------------------------
-CubitStatus FacetSurface::get_simple_attribute(DLIList<CubitSimpleAttrib*>&
+CubitStatus FacetSurface::get_simple_attribute(DLIList<CubitSimpleAttrib>&
                                                  csa_list)
   { return attribSet.get_attributes(csa_list); }
 CubitStatus FacetSurface::get_simple_attribute(const CubitString& name,
-                                        DLIList<CubitSimpleAttrib*>& csa_list )
+                                        DLIList<CubitSimpleAttrib>& csa_list )
   { return attribSet.get_attributes( name, csa_list ); }
 
 CubitStatus FacetSurface::save_attribs( FILE *file_ptr )
@@ -325,6 +325,48 @@ CubitStatus FacetSurface::closest_point( CubitVector const& location,
   return CUBIT_SUCCESS;
 }
 
+
+
+CubitStatus FacetSurface::closest_point_along_vector(CubitVector& from_point, 
+                                               CubitVector& along_vector,
+                                               CubitVector& point_on_surface)
+{
+  CubitVector other_point = from_point+along_vector;
+  DLIList<CubitVector*> intersection_list;
+  facetEvalTool->get_intersections( from_point, other_point, intersection_list );
+  
+  if( intersection_list.size() == 0 )
+    return CUBIT_FAILURE;
+
+  if( intersection_list.size() == 1 )
+  {
+    point_on_surface = *intersection_list.get();
+    delete intersection_list.get();
+    return CUBIT_SUCCESS;
+  }
+
+  //get the closest intersection
+  double closest_dist_sq = CUBIT_DBL_MAX;
+  for( int k=intersection_list.size(); k--; )
+  {
+    CubitVector *int_pt = intersection_list.get_and_step();
+
+    double tmp_dist_sq = from_point.distance_between_squared( *int_pt );
+
+    if( tmp_dist_sq < closest_dist_sq )
+    {
+      point_on_surface = *int_pt;
+      closest_dist_sq = tmp_dist_sq;
+    }
+
+    delete int_pt;
+  }
+
+  return CUBIT_SUCCESS;
+}
+
+
+
 //-------------------------------------------------------------------------
 // Purpose       : Computes the closest_point on the trimmed surface to the 
 //                 input location. 
@@ -367,6 +409,18 @@ CubitStatus FacetSurface::principal_curvatures(
   PRINT_ERROR("Faceted geometry currently does not support curvature requests.\n");
   return CUBIT_FAILURE;
 }
+
+
+
+CubitStatus FacetSurface::evaluate( double u, double v,
+                               CubitVector *position,                                   
+                               CubitVector *normal,
+                               CubitVector *curvature1,
+                               CubitVector *curvature2 )
+{
+  return CUBIT_FAILURE;
+}
+
 
 //-------------------------------------------------------------------------
 // Purpose       : Given values of the two parameters, get the position.

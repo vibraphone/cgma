@@ -80,7 +80,8 @@ CubitStatus InitCGMA::initialize_cgma( const char* default_engine_name )
     }
   }
 
-  CGMApp::instance()->startup( 0, NULL );
+  std::vector<CubitString> args;
+  CGMApp::instance()->startup( args );
   GeometryModifyEngine* default_engine = 0;
   bool ignore_default = false;
 

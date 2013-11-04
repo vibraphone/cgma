@@ -139,7 +139,7 @@ void CubitInstrumentation::write_keywords(std::vector<CubitString> keywords)
       *tokenUsageStream << ",";
     }
     *tokenUsageStream << lookup_keyword(keywords[0].c_str());
-    for (int i = 1; i < keywords.size(); i++)
+    for (size_t i = 1; i < keywords.size(); i++)
     {
       int debug = lookup_keyword(keywords[i].c_str());
       *tokenUsageStream << ":" << debug;

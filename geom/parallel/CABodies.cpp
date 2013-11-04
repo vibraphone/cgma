@@ -10,18 +10,11 @@
 #include "CastTo.hpp"
 #include "TDParallel.hpp"
 
-CubitAttrib* CABodies_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CABodies_creator(RefEntity* entity, const CubitSimpleAttrib& p_csa)
 {
   CABodies *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CABodies(entity);
-  }
-  else
-  {
-    new_attrib = new CABodies(entity, p_csa);
-  }
-
+  CubitSimpleAttrib csa = p_csa;
+  new_attrib = new CABodies(entity, &csa);
   return new_attrib;
 }
 
@@ -38,31 +31,43 @@ CABodies::CABodies(RefEntity* new_attrib_owner,
 		     (attribOwnerEntity ? attribOwnerEntity->id() : 0));
   }
 
-  DLIList<int*> *i_list = csa_ptr->int_data_list();
+  std::vector<int> i_list = csa_ptr->int_data_list();
 
   // first, the ints
-  i_list->reset();
-  
-  m_interface = *(i_list->get_and_step()); // is interface
+  if (i_list.size() > 0)
+  {
+    m_interface = i_list[0]; // is interface
 
-  m_uniqueID = *(i_list->get_and_step()); // unique ID
+    if (i_list.size() > 1)
+    {
+      m_uniqueID = i_list[1]; // unique ID
 
-  // shared bodies
-  int num_list = *(i_list->get_and_step());
-  for (int i = num_list; i > 0; i--) {
-    m_sharedBodies.append(*(i_list->get_and_step()));
-  }
+      if(i_list.size() > 2)
+      {
+        // shared bodies
+        int num_list = i_list[2];
+        for (int i = 0; i < num_list; i++) 
+          m_sharedBodies.append(i_list[3+i]);
 
-  // shared procs
-  num_list = *(i_list->get_and_step());
-  for (int i = num_list; i > 0; i--) {
-    m_sharedProcs.append(*(i_list->get_and_step()));
-  }
+        // shared procs
+        int new_start = 3 + num_list;
+        if(i_list.size() > new_start + 1)
+        {
+          num_list = i_list[new_start];
+          for (int i = 1; i <= num_list; i++) 
+           m_sharedProcs.append(i_list[new_start + i]);
 
-  // ghost procs
-  num_list = *(i_list->get_and_step());
-  for (int i = num_list; i > 0; i--) {
-    m_ghostProcs.append(*(i_list->get_and_step()));
+          // ghost procs
+          new_start += num_list+1;
+          if(i_list.size() > new_start + 1)
+          {
+           num_list = i_list[new_start];
+           for (int i = 1; i <= num_list; i++) 
+             m_ghostProcs.append(i_list[new_start + i]);
+          } 
+        }
+      }
+    }
   }
 }
 
@@ -140,7 +145,7 @@ CubitStatus CABodies::actuate()
       }
     }
 
-    if (par->get_unique_id() != m_uniqueID) {
+    if ((int)par->get_unique_id() != m_uniqueID) {
       PRINT_ERROR("Different unique ID found for %s %d.\n",
 		  attrib_owner()->class_name(), attrib_owner()->id());
       return CUBIT_FAILURE;
@@ -210,47 +215,42 @@ CubitStatus CABodies::update()
   return CUBIT_SUCCESS;
 }
 
-CubitSimpleAttrib* CABodies::cubit_simple_attrib()
+CubitSimpleAttrib CABodies::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<int> i_list;
 
   // attribute internal name
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
   // is interface
-  i_list.append(m_interface);
+  i_list.push_back(m_interface);
 
   // unique ID
-  i_list.append(m_uniqueID);
+  i_list.push_back(m_uniqueID);
 
   // shared bodies
-  m_sharedBodies.reset();
-  i_list.append(m_sharedBodies.size());
+  i_list.push_back(m_sharedBodies.size());
   int i;
   for (i = m_sharedBodies.size(); i > 0; i--) {
-    i_list.append(m_sharedBodies.get_and_step());
+    i_list.push_back(m_sharedBodies.get_and_step());
   }
 
   // shared procs
-  m_sharedProcs.reset();
-  i_list.append(m_sharedProcs.size());
+  i_list.push_back(m_sharedProcs.size());
   for (i = m_sharedProcs.size(); i > 0; i--) {
-    i_list.append(m_sharedProcs.get_and_step());
+    i_list.push_back(m_sharedProcs.get_and_step());
   }
 
   // ghost procs
-  m_ghostProcs.reset();
-  i_list.append(m_ghostProcs.size());
+  i_list.push_back(m_ghostProcs.size());
   for (i = m_ghostProcs.size(); i > 0; i--) {
-    i_list.append(m_ghostProcs.get_and_step());
+    i_list.push_back(m_ghostProcs.get_and_step());
   }
   
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list, NULL, &i_list);
+  CubitSimpleAttrib csattrib =  CubitSimpleAttrib(&cs_list, NULL, &i_list);
   
-  for (i = cs_list.size(); i--;) delete cs_list.get_and_step();
-
-  return csattrib_ptr;
+  return csattrib;
 }
 
 CubitStatus CABodies::reset()

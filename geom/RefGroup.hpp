@@ -63,10 +63,8 @@ public:
   virtual CubitStatus add_ref_entity(RefEntity *ref_entity, bool emit_event = false);
   virtual CubitStatus add_ref_entity(DLIList<RefEntity*>& entity_list, bool emit_event = false);
   virtual CubitStatus remove_ref_entity(RefEntity *ref_entity,
-                                        const CubitBoolean from_observable = CUBIT_FALSE, 
                                         bool emit_event = false);
   virtual CubitStatus remove_ref_entity(DLIList<RefEntity*>& entity_list,
-                                        const CubitBoolean from_observable = CUBIT_FALSE, 
                                         bool emit_event = false);
   
     //- add or remove one or more ref entities to/from this group
@@ -90,6 +88,12 @@ public:
     //- appends all immediate ref entities owned by this entity on entity_list
     //- Goes down just one dimension.
   
+  RefEntity* get_child_ref_entity_by_index(const type_info& entity_type, int index);
+    //- Gets the ref entity of type entity_type at specified index in the list.
+
+  int get_num_child_ref_entities_by_type(const type_info &entity_type);
+    //- Gets the number of ref entities of type entity_type in the list.
+
   virtual void get_child_entities(DLIList<CubitEntity*>& cub_entity_list);
     //- appends all immediate ref entities owned by this entity on entity_list
     //- Goes down just one dimension.
@@ -145,8 +149,7 @@ public:
     //-  group 2 and group 3 will be returned in the output list).
 
   CubitStatus notify_observer(CubitObservable *observable,
-                              const CubitEvent &observer_event,
-                              CubitBoolean from_observable = CUBIT_FALSE);
+                              const CubitEvent &observer_event);
     //- handle notify observer function
 
 protected:

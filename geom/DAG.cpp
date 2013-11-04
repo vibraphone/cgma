@@ -153,15 +153,11 @@ void DAG::cleanout_deactivated_DAG_nodes()
 //
 // Creation Date : 12/03/96
 //-------------------------------------------------------------------------
-void DAG::notify(ModelEntity* DAGNodePtr, CubitEventType event)
+void DAG::remove(ModelEntity* DAGNodePtr)
 {
-    // The input DAG Node was destructed.
-  if ( event == DAG_NODE_DESTRUCTED )
-  {
-      // If this input pointer exists in the deactivated DAG Node list,
-      // remove it
-    deactivatedDAGNodeList_.remove(DAGNodePtr);
-  }
+    // If this input pointer exists in the deactivated DAG Node list,
+    // remove it
+  deactivatedDAGNodeList_.remove(DAGNodePtr);
 }
 
 

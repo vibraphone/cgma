@@ -117,7 +117,7 @@ CubitStatus CompositeGeom::insert( int index, GeometryEntity* geom_ptr,
   ent.dist_sqr = ent.measure = 0.;
 
   //force 0th surface to be one that has the composite attrib on it.
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   geom_ptr->get_simple_attribute(COMPOSITE_DATA_ATTRIB_NAME,list);
   if( list.size() )
     index = 0;
@@ -490,15 +490,14 @@ CubitStatus CompositeGeom::merge( CompositeGeom& dead, bool prepend )
 
   if (entityList.size() == 1)
   {
-    DLIList<CubitSimpleAttrib*> list;
+    DLIList<CubitSimpleAttrib> list;
     entityList[0].entity->get_simple_attribute(list);
     list.reset();
     for (i = list.size(); i--; )
     {
-      CubitSimpleAttrib* csa = list.get_and_step();
-      if (csa->character_type() != COMPOSITE_DATA_ATTRIB_NAME)
+      const CubitSimpleAttrib csa = list.get_and_step();
+      if (csa.character_type() != COMPOSITE_DATA_ATTRIB_NAME)
         listHead = new CompositeAttrib(csa, listHead);
-      delete csa;
     }
   }
   
@@ -566,7 +565,7 @@ CubitStatus CompositeGeom::merge( CompositeGeom& dead, bool prepend )
 //
 // Creation Date : 06/18/02
 //-------------------------------------------------------------------------
-void CompositeGeom::add_attribute( CubitSimpleAttrib* csa )
+void CompositeGeom::add_attribute( const CubitSimpleAttrib& csa )
 {
   if (entityList.size() == 1)
     entityList[0].entity->append_simple_attribute_virt(csa);
@@ -583,7 +582,7 @@ void CompositeGeom::add_attribute( CubitSimpleAttrib* csa )
 //
 // Creation Date : 06/18/02
 //-------------------------------------------------------------------------
-void CompositeGeom::rem_attribute( CubitSimpleAttrib* csa ) 
+void CompositeGeom::rem_attribute( const CubitSimpleAttrib& csa )
 {
   while (listHead && listHead->equals(csa))
   {
@@ -646,7 +645,7 @@ void CompositeGeom::rem_all_attributes()
 //
 // Creation Date : 06/18/02
 //-------------------------------------------------------------------------
-void CompositeGeom::get_attributes( DLIList<CubitSimpleAttrib*>& list ) 
+void CompositeGeom::get_attributes( DLIList<CubitSimpleAttrib>& list )
 {
     // special case: single-entity 'composite'
   if (entityList.size() == 1)
@@ -657,17 +656,15 @@ void CompositeGeom::get_attributes( DLIList<CubitSimpleAttrib*>& list )
       // handle 8.1 attribs on single-entity 'composites'
     for (int i = list.size(); i--; )
     {
-      CubitSimpleAttrib* attrib = list.step_and_get();
-      attrib->int_data_list()->reset();
-      if (attrib->character_type() == COMPOSITE_DATA_ATTRIB_NAME &&
-          *attrib->int_data_list()->get() == 1)
+      const CubitSimpleAttrib& attrib = list.step_and_get();
+      if (attrib.character_type() == COMPOSITE_DATA_ATTRIB_NAME &&
+          attrib.int_data_list()[0] == 1)
       {
         entity->remove_simple_attribute_virt(attrib);
-        attrib->string_data_list()->reset();
-        attrib->int_data_list()->reset();
-        delete attrib->string_data_list()->remove();
-        delete attrib->int_data_list()->remove();
-        entity->append_simple_attribute_virt(attrib);
+        CubitSimpleAttrib newattrib = attrib;
+        newattrib.string_data_list().erase(newattrib.string_data_list().begin());
+        newattrib.int_data_list().erase(newattrib.int_data_list().begin());
+        entity->append_simple_attribute_virt(newattrib);
       }
     }
   }
@@ -687,7 +684,7 @@ void CompositeGeom::get_attributes( DLIList<CubitSimpleAttrib*>& list )
 // Creation Date : 03/03/03
 //-------------------------------------------------------------------------
 void CompositeGeom::get_attributes( const char* name,
-                                    DLIList<CubitSimpleAttrib*>& list ) 
+                                    DLIList<CubitSimpleAttrib>& list )
 {
   if (entityList.size() == 1)
   {
@@ -696,18 +693,15 @@ void CompositeGeom::get_attributes( const char* name,
     entityList[0].entity->get_simple_attribute(COMPOSITE_DATA_ATTRIB_NAME,list);
     while (list.size())
     {
-      CubitSimpleAttrib* attrib = list.pop();
-      attrib->int_data_list()->reset();
-      if (*attrib->int_data_list()->get() == 1)
+      CubitSimpleAttrib attrib = list.pop();
+      if (attrib.int_data_list()[0] == 1)
       {
         entityList[0].entity->remove_simple_attribute_virt(attrib);
-        attrib->string_data_list()->reset();
-        attrib->int_data_list()->reset();
-        delete attrib->string_data_list()->remove();
-        delete attrib->int_data_list()->remove();
-        entityList[0].entity->append_simple_attribute_virt(attrib);
+        std::vector<CubitString> s(attrib.string_data_list().begin()+1, attrib.string_data_list().end());
+        std::vector<int> i(attrib.int_data_list().begin()+1, attrib.int_data_list().end());
+        CubitSimpleAttrib new_attrib(&s, &attrib.double_data_list(), &i);
+        entityList[0].entity->append_simple_attribute_virt(new_attrib);
       }
-      delete attrib;
     }
     
     entityList[0].entity->get_simple_attribute(name, list);
@@ -794,7 +788,7 @@ void CompositeGeom::reverse_sense( int index )
 //-------------------------------------------------------------------------
 void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
 {
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   int i;
 
     // remove any attributes from previous read
@@ -810,17 +804,15 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
     list.reset();
     for (i = list.size(); i--; )
     {
-      CubitSimpleAttrib* attrib = list.get_and_step();
-      attrib->int_data_list()->reset();
-      assert(attrib->int_data_list()->size());
-      if (*attrib->int_data_list()->get() == entityList.size())
+      const CubitSimpleAttrib& attrib = list.get_and_step();
+      assert(attrib.int_data_list().size());
+      if (attrib.int_data_list()[0] == entityList.size())
       {
         geom_ptr->remove_simple_attribute_virt(attrib);
-        delete attrib->int_data_list()->remove();
-        attrib->string_data_list()->reset();
-        delete attrib->string_data_list()->remove();
-        listHead = new CompositeAttrib(attrib,listHead);
-        delete attrib;
+        CubitSimpleAttrib c = attrib;
+        c.int_data_list().erase(c.int_data_list().begin());
+        c.string_data_list().erase(c.string_data_list().begin());
+        listHead = new CompositeAttrib(c,listHead);
       }
     }
     
@@ -840,10 +832,9 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
     list.reset();
     for (int j = list.size(); j--; )
     {
-      CubitSimpleAttrib* attrib = list.get_and_step();
-      attrib->int_data_list()->reset();
-      assert(attrib->int_data_list()->size());
-      if (*attrib->int_data_list()->get() == entityList.size())
+      const CubitSimpleAttrib& attrib = list.get_and_step();
+      assert(attrib.int_data_list().size());
+      if (attrib.int_data_list()[0] == entityList.size())
       {
         // Take the attributes off of the current entity and put them on the first entity
         // in this list.  I believe this is ok to do because the attributes should apply to
@@ -859,11 +850,31 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
         entityList[i].entity->remove_simple_attribute_virt(attrib);
         entityList[0].entity->append_simple_attribute_virt(attrib);
 
-        delete attrib->int_data_list()->remove();
-        attrib->string_data_list()->reset();
-        delete attrib->string_data_list()->remove();
-        listHead = new CompositeAttrib(attrib,listHead);
-        delete attrib;
+        CubitSimpleAttrib c = attrib;
+        c.int_data_list().erase(c.int_data_list().begin());
+        c.string_data_list().erase(c.string_data_list().begin());      
+
+        if( NULL == listHead )
+          listHead = new CompositeAttrib(c,listHead);               
+        else //this assures that we are not adding duplicate attribs 
+        {
+          bool is_duplicate = false;
+
+          CompositeAttrib* curr_attrib = listHead;
+
+          while( curr_attrib )
+          {
+            if( curr_attrib->equals( c ) )
+            {
+              is_duplicate = true;
+              break;
+            }
+            curr_attrib = curr_attrib->next;
+          }
+
+          if( false == is_duplicate )
+            listHead = new CompositeAttrib(c,listHead);
+        }
       }
     }
   }
@@ -880,7 +891,7 @@ void CompositeGeom::read_attributes( GeometryEntity* geom_ptr )
 //-------------------------------------------------------------------------
 void CompositeGeom::write_attributes( GeometryEntity* geom_ptr )
 {
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
 
   if (geom_ptr)
   {
@@ -892,9 +903,8 @@ void CompositeGeom::write_attributes( GeometryEntity* geom_ptr )
     geom_ptr->get_simple_attribute(COMPOSITE_DATA_ATTRIB_NAME,list);
     while (list.size())
     {
-      CubitSimpleAttrib* csa = list.pop();
+      CubitSimpleAttrib csa = list.pop();
       geom_ptr->remove_simple_attribute_virt(csa);
-      delete csa;
     }
   }
   else
@@ -907,9 +917,8 @@ void CompositeGeom::write_attributes( GeometryEntity* geom_ptr )
       entityList[i].entity->get_simple_attribute(COMPOSITE_DATA_ATTRIB_NAME,list);
       while (list.size())
       {
-        CubitSimpleAttrib* csa = list.pop();
+        CubitSimpleAttrib csa = list.pop();
         entityList[i].entity->remove_simple_attribute_virt(csa);
-        delete csa;
       } 
     }
   }
@@ -921,15 +930,25 @@ void CompositeGeom::write_attributes( GeometryEntity* geom_ptr )
   
   for (CompositeAttrib* ptr = listHead; ptr; ptr = ptr->next)
   {
-    attrib.string_data_list()->append(&name);
-    attrib.int_data_list()->append(&count);
+    attrib.string_data_list().push_back(name);
+    attrib.int_data_list().push_back(count);
+  
+    ptr->append_to_csa(attrib);
     
-    ptr->append_to_csa(&attrib);
-    geom_ptr->append_simple_attribute_virt(&attrib);
+    //append the name attribute on all the rest of the entities too.  This 
+    //is so that if a one gets split, the results each get the name as well:
+    //jack --> jack and jack@A
+    if( ptr->name() == "ENTITY_NAME" )
+    {
+      for( int k=1; k<entityList.size(); k++ )
+        entityList[k].entity->append_simple_attribute_virt( attrib );
+    }
+
+    geom_ptr->append_simple_attribute_virt(attrib);    
     
-    attrib.string_data_list()->clean_out();
-    attrib.int_data_list()->clean_out();
-    attrib.double_data_list()->clean_out();
+    attrib.string_data_list().clear();
+    attrib.int_data_list().clear();
+    attrib.double_data_list().clear();
   }
 }
 
@@ -944,12 +963,11 @@ void CompositeGeom::write_attributes( GeometryEntity* geom_ptr )
 //-------------------------------------------------------------------------
 void CompositeGeom::clean_up_attribs( GeometryEntity* ent )
 {
-  DLIList<CubitSimpleAttrib*> list;
+  DLIList<CubitSimpleAttrib> list;
   ent->get_simple_attribute(COMPOSITE_DATA_ATTRIB_NAME,list);
   while (list.size())
   {
-    CubitSimpleAttrib* csa = list.pop();
+    CubitSimpleAttrib csa = list.pop();
     ent->remove_simple_attribute_virt(csa);
-    delete csa;
   }
 }

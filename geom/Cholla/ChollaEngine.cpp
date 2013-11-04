@@ -3901,6 +3901,9 @@ CubitStatus ChollaEngine::detach_point(ChollaPoint *chpt_ptr,
       ChollaCurve *new_chcurv_ptr = cmap_it->second;      
       new_chcurv_ptr->add_point(newchpt_ptr);
       newchpt_ptr->add_curve(new_chcurv_ptr);
+      
+      chpt_ptr->set_merge_partner( newchpt_ptr );
+      newchpt_ptr->set_merge_partner( chpt_ptr );
     }
     else
     {
@@ -3912,6 +3915,9 @@ CubitStatus ChollaEngine::detach_point(ChollaPoint *chpt_ptr,
         chptcurv_ptr->remove_point(chpt_ptr);
         newchpt_ptr->add_curve(chptcurv_ptr);
         chptcurv_ptr->add_point(newchpt_ptr);
+
+        chpt_ptr->set_merge_partner( newchpt_ptr );
+        newchpt_ptr->set_merge_partner( chpt_ptr );
       }
     }
   }

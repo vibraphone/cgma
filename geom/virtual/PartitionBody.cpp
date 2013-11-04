@@ -84,16 +84,16 @@ CubitStatus PartitionBody::get_transforms( CubitTransformMatrix& xforms )
 //
 // Creation Date : 02/14/03
 //-------------------------------------------------------------------------
-void PartitionBody::append_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionBody::append_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { real_body()->append_simple_attribute_virt(csa); }
-void PartitionBody::remove_simple_attribute_virt(CubitSimpleAttrib* csa)
+void PartitionBody::remove_simple_attribute_virt(const CubitSimpleAttrib& csa)
   { real_body()->remove_simple_attribute_virt(csa); }
 void PartitionBody::remove_all_simple_attribute_virt()
   { real_body()->remove_all_simple_attribute_virt(); }
-CubitStatus PartitionBody::get_simple_attribute(DLIList<CubitSimpleAttrib*>& list)
+CubitStatus PartitionBody::get_simple_attribute(DLIList<CubitSimpleAttrib>& list)
   { return real_body()->get_simple_attribute(list); }
 CubitStatus PartitionBody::get_simple_attribute(const CubitString& name,
-                                       DLIList<CubitSimpleAttrib*>& list)
+                                       DLIList<CubitSimpleAttrib>& list)
   { return real_body()->get_simple_attribute(name,list); }
 
 //-------------------------------------------------------------------------

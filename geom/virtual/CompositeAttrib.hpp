@@ -16,40 +16,35 @@
 
 class CubitSimpleAttrib;
 class CubitString;
-template <class X> class DLIList; 
+#include <vector>
 
 class CompositeAttrib
 {
   private:
   
-    int int_count;
-    int* int_array;
-    
-    int real_count;
-    double* real_array;
-    
-    int string_count;
-    CubitString* string_array;
+    std::vector<int> int_array;
+    std::vector<double> real_array;
+    std::vector<CubitString> string_array;
   
-    void append_to_lists( DLIList<CubitString*>& strings,
-                          DLIList<int*>& ints,
-                          DLIList<double*>& reals ) const;
+    void append_to_lists( std::vector<CubitString>& strings,
+                          std::vector<int>& ints,
+                          std::vector<double>& reals ) const;
   
   public:
   
-    const CubitString& name() const { return *string_array; }
+    const CubitString& name() const { return string_array[0]; }
     
     CompositeAttrib* next;
   
-    CompositeAttrib( CubitSimpleAttrib* attrib, CompositeAttrib* next_ptr );
+    CompositeAttrib( const CubitSimpleAttrib& attrib, CompositeAttrib* next_ptr );
     CompositeAttrib( const CompositeAttrib& copy );
     ~CompositeAttrib();
     
-    void append_to_csa( CubitSimpleAttrib* attrib ) const;
+    void append_to_csa( CubitSimpleAttrib& attrib ) const;
     
-    bool equals( CubitSimpleAttrib* attrib ) const;
+    bool equals( const CubitSimpleAttrib& attrib ) const;
     
-    CubitSimpleAttrib* csa( ) const;
+    CubitSimpleAttrib csa( ) const;
     
 };
     

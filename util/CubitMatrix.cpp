@@ -9,6 +9,7 @@
 #include "CubitMessage.hpp"
 #include "CubitVector.hpp"
 #include "CubitDefines.h"
+#include "CubitFileUtil.hpp"
 
 CubitMatrix::CubitMatrix()
 {
@@ -100,9 +101,9 @@ CubitMatrix::CubitMatrix(const CubitVector& vec1,
 
 CubitMatrix::CubitMatrix
 (
-  vector<int> &is,
-  vector<int> &js,
-  vector<double> &es,
+  std::vector<int> &is,
+  std::vector<int> &js,
+  std::vector<double> &es,
   int n,
   int m
 )
@@ -170,13 +171,13 @@ void CubitMatrix::print_matrix() const
   for( int row = 0; row < numRows; row++ )
   {
     for( int col = 0; col < numCols; col++ )
-       PRINT_INFO("%8.3f", matrixPtr[row][col]);
+       PRINT_INFO("%25.15f", matrixPtr[row][col]);
     PRINT_INFO("\n");
   }
 }
 void CubitMatrix::print_matrix( char *filename ) const
 {
-  FILE *fp = fopen( filename, "w" );
+  CubitFile fp( filename, "w" );
   if ( !fp )
   {
     printf( "CubitMatrix::print_matrix - Unable to open %s for writing\n",
@@ -187,10 +188,9 @@ void CubitMatrix::print_matrix( char *filename ) const
   for( int row = 0; row < numRows; row++ )
   {
     for( int col = 0; col < numCols; col++ )
-       fprintf( fp, "%20.15lf", matrixPtr[row][col] );
-    fprintf( fp, "\n" );
+       fprintf( fp.file(), "%20.15f", matrixPtr[row][col] );
+    fprintf( fp.file(), "\n" );
   }
-  fclose( fp );
 }
 
 // Sets this matrix equal to 'matrix'.  'this' is
@@ -283,7 +283,7 @@ CubitVector CubitMatrix::operator* (const CubitVector& vector ) const
 std::vector<double> CubitMatrix::operator* (const std::vector<double> & vector) const
 {
     // Check that we can multiply them.
-  if(numCols != vector.size())
+  if(numCols != (int) vector.size())
     throw std::invalid_argument ("Columns of Matrix do not match vector size");
   //assert( numCols == vector.size() );
   
@@ -634,15 +634,15 @@ CubitMatrix CubitMatrix::sub_matrix( const int row, const int col ) const
 // rows_to_include and cols_to_include.
 void CubitMatrix::sub_matrix
 (
-  const vector<bool> &rows_to_include,
-  const vector<bool> &cols_to_include,
+  const std::vector<bool> &rows_to_include,
+  const std::vector<bool> &cols_to_include,
   CubitMatrix &submatrix
 )
 {
-  if(numRows != rows_to_include.size())
+  if(numRows != (int) rows_to_include.size())
     throw std::invalid_argument ("rows_to_include size must match numRows");
   //assert( numRows == rows_to_include.size() );
-  if(numCols != cols_to_include.size())
+  if(numCols != (int) cols_to_include.size())
     throw std::invalid_argument ("cols_to_include size must match numCols");
   //assert( numCols == cols_to_include.size() );
 
@@ -1057,9 +1057,9 @@ CubitStatus CubitMatrix::solveNxN( CubitMatrix& rhs, CubitMatrix& coef )
   return status;
 }
 
-CubitStatus CubitMatrix::solveNxN( const vector<double> &rhs, vector<double> &coef )
+CubitStatus CubitMatrix::solveNxN( const std::vector<double> &rhs, std::vector<double> &coef )
 {
-  if (numRows != rhs.size() ||
+  if (numRows != (int) rhs.size() ||
     numRows != numCols) {
     return CUBIT_FAILURE;
   }
@@ -1197,7 +1197,7 @@ CubitStatus CubitMatrix::lubksb( double *indx, double *b )
   return CUBIT_SUCCESS;
 }
 
-bool CubitMatrix::is_identity() const
+bool CubitMatrix::is_identity( double tol ) const
 {
   bool ident = true;
 
@@ -1207,18 +1207,35 @@ bool CubitMatrix::is_identity() const
     {
       if (i == j)
       {
-        if(matrixPtr[i][j] != 1.0)
+        if( fabs(matrixPtr[i][j] - 1.0) > tol)
           ident = false;
       }
       else
       {
-        if(matrixPtr[i][j] != 0.0)
+        if(matrixPtr[i][j] > tol)
           ident = false;
       }
     }
   }
 
   return ident;
+}
+
+bool CubitMatrix::is_equal( const CubitMatrix &other, double tol ) const
+{
+  if ( numRows != other.numRows ) return false;
+  if ( numCols != other.numCols ) return false;
+
+  for (int i=0; i<numRows; i++)
+  {
+    for (int j=0; j<numCols; j++)
+    {
+      double diff = fabs(matrixPtr[i][j] - other.matrixPtr[i][j]);
+      if(diff > tol)
+        return false;
+    }
+  }
+  return true;
 }
 
 void CubitMatrix::plus_identity()

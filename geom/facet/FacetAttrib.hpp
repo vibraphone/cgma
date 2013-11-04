@@ -10,13 +10,13 @@ class FacetAttrib
 {
 public:
 
-  FacetAttrib( CubitSimpleAttrib* );
+  FacetAttrib( const CubitSimpleAttrib& );
   
   ~FacetAttrib();
   
-  CubitSimpleAttrib* get_CSA() const;
+  CubitSimpleAttrib get_CSA() const;
   
-  bool equals( CubitSimpleAttrib* ) const;
+  bool equals( const CubitSimpleAttrib& ) const;
   
   CubitStatus save( FILE* file ) const;
   

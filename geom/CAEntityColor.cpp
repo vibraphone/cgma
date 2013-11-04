@@ -9,38 +9,23 @@
 #include "RefVolume.hpp"
 #include "CastTo.hpp"
 
-CubitAttrib* CAEntityColor_creator(RefEntity* entity, CubitSimpleAttrib *p_csa)
+CubitAttrib* CAEntityColor_creator(RefEntity* entity, const CubitSimpleAttrib &p_csa)
 {
-  CAEntityColor *new_attrib = NULL;
-  if (NULL == p_csa)
-  {
-    new_attrib = new CAEntityColor(entity);
-  }
-  else
-  {
-    new_attrib = new CAEntityColor(entity, p_csa);
-  }
-
-  return new_attrib;
+  return new CAEntityColor(entity, p_csa);
 }
 
 CAEntityColor::CAEntityColor(RefEntity* new_attrib_owner,
-                       CubitSimpleAttrib *csa_ptr)
-        : CubitAttrib(new_attrib_owner)
-{
-   assert ( csa_ptr != 0 );
-   
-   DLIList<int*> *i_list = csa_ptr->int_data_list();
-   
-   assert(i_list && i_list->size() > 0);
-   i_list->reset();
-   entityColor = *( i_list->get_and_step() );
-}
-
-CAEntityColor::CAEntityColor(RefEntity* new_attrib_owner)
+                       const CubitSimpleAttrib &csa_ptr)
         : CubitAttrib(new_attrib_owner)
 {
   entityColor = 0;
+
+  if(!csa_ptr.isEmpty())
+  {
+    const std::vector<int>& i_list = csa_ptr.int_data_list();
+    assert(i_list.size() > 0);
+    entityColor = i_list[0];
+  }
 }
 
 CAEntityColor::~CAEntityColor()
@@ -105,22 +90,16 @@ void CAEntityColor::merge_owner(CubitAttrib *deletable_attrib)
     entityColor = other_caecolor->color();
 }
 
-CubitSimpleAttrib* CAEntityColor::cubit_simple_attrib()
+CubitSimpleAttrib CAEntityColor::cubit_simple_attrib()
 {
-  DLIList<CubitString*> cs_list;
-  DLIList<int> i_list;
+  std::vector<CubitString> cs_list;
+  std::vector<int> i_list;
 
-  i_list.append ( entityColor );
+  i_list.push_back ( entityColor );
     
-  cs_list.append(new CubitString(att_internal_name()));
+  cs_list.push_back(att_internal_name());
 
-  CubitSimpleAttrib* csattrib_ptr = new CubitSimpleAttrib(&cs_list,
-                                                          NULL,
-                                                          &i_list);
-  int i;
-  for ( i = cs_list.size(); i--;) delete cs_list.get_and_step();
-  
-  return csattrib_ptr;
+  return CubitSimpleAttrib(&cs_list, NULL, &i_list);
 }
 
 void CAEntityColor::print()

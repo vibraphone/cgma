@@ -58,7 +58,7 @@ public:
     //- This function returns a pointer to the geometric modeling engine
     //- associated with the object.
   
-  virtual void append_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void append_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I 
     //I- 
@@ -67,7 +67,7 @@ public:
     //- attribute to the OSME. The  is attached to each of the 
     //- underlying solid model entities this one points to.
   
-  virtual void remove_simple_attribute_virt(CubitSimpleAttrib*);
+  virtual void remove_simple_attribute_virt(const CubitSimpleAttrib&);
     //R void
     //I CubitSimpleAttrib*
     //I- A reference to a CubitSimpleAttrib object which is the object
@@ -82,9 +82,9 @@ public:
     //- The purpose of this function is to remove all simple
     //- attributes from the OSME.
   
-  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib*>&);
+  virtual CubitStatus get_simple_attribute(DLIList<CubitSimpleAttrib>&);
   virtual CubitStatus get_simple_attribute(const CubitString& name,
-                                           DLIList<CubitSimpleAttrib*>&);
+                                           DLIList<CubitSimpleAttrib>&);
     //R CubitSimpleAttrib*
     //R- the returned cubit simple attribute.
     //- The purpose of this function is to get the attributes

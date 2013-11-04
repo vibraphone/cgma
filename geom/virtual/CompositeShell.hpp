@@ -47,12 +47,12 @@ public:
   CubitSense find_sense( const CompositeSurface* surface ) const;
     // returns CUBIT_UNKNOWN if multiple CoSurfs
 
-  void append_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
-  void remove_simple_attribute_virt( CubitSimpleAttrib* simple_attrib_ptr );
+  void append_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
+  void remove_simple_attribute_virt( const CubitSimpleAttrib& simple_attrib_ptr );
   void remove_all_simple_attribute_virt();
-  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib*>& attrib_list );
+  CubitStatus get_simple_attribute( DLIList<CubitSimpleAttrib>& attrib_list );
   CubitStatus get_simple_attribute( const CubitString& name,
-                                    DLIList<CubitSimpleAttrib*>& attrib_list );
+                                    DLIList<CubitSimpleAttrib>& attrib_list );
   
   void get_parents_virt( DLIList<TopologyBridge*>& parents );
   void get_children_virt( DLIList<TopologyBridge*>& children );

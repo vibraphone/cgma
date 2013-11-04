@@ -108,6 +108,22 @@ public:
   size_t length() const;
   const char *c_str() const;
   //- Miscellaneous
+
+  // UTF-16/UTF-8 unicode conversions to support using Unicode aware Windows APIs.
+  // Note: wchar_t on non-Windows platforms is UTF-32
+#if defined(WIN32)
+  static std::wstring toUtf16(const char* str);
+  static std::wstring toUtf16(const CubitString& str) { return toUtf16(str.c_str()); }
+  static std::wstring toUtf16(const std::string& str) { return toUtf16(str.c_str()); }
+  static CubitString toUtf8(const wchar_t* str);
+  static std::wstring toNative(const char* str) { return toUtf16(str); }
+  static std::wstring toNative(const std::string& str) { return toUtf16(str); }
+  static std::wstring toNative(const CubitString& str) { return toUtf16(str); }
+#else
+  static std::string toNative(const char* str) { return str; }
+  static std::string toNative(const std::string& str) { return str; }
+  static std::string toNative(const CubitString& str) { return str.c_str(); }
+#endif
   
 private:
   CubitStringRep *rep;

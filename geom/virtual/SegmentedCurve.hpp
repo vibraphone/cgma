@@ -29,7 +29,7 @@ public:
   PartitionCurve* split( double param );
   CubitStatus combine( PartitionCurve* dead_curve );
   
-  static SegmentedCurve* construct( CubitSimpleAttrib* attrib,
+  static SegmentedCurve* construct( const CubitSimpleAttrib& attrib,
                                     PartitionEntity* parent );
   
   SegmentedCurve( PartitionSurface* owning_surf, DLIList<CubitVector*>& segments );
@@ -111,12 +111,14 @@ public:
   //O- the degree of this spline
   //O- the control points
   //O- If rational, weight for each control point
-  //O- the knots
+  //O- whether underlying spline is reversed
   virtual CubitStatus get_spline_params( bool &rational,
                                          int &degree,
                                          DLIList<CubitVector> &cntrl_pts,
                                          DLIList<double> &cntrl_pt_weights,
-                                         DLIList<double> &knots ) const;
+                                         DLIList<double> &knots,
+                                         bool &spline_is_reversed
+                                       ) const;
   //R CubitStatus
   //O- center - ellipse center point
   //O- normal - normal of the plane of the ellipse
@@ -161,7 +163,7 @@ protected:
   
 private:
   SegmentedCurve( PartitionEntity* owning_vol, 
-                  CubitSimpleAttrib& attrib,
+                  const CubitSimpleAttrib& attrib,
                   DLIList<int>& pass_back_vertex_conn );
 
   SegmentedCurve( SegmentedCurve* split_from, int num_points );

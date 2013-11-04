@@ -12,12 +12,7 @@
 #include "CubitDefines.h"
 #include "CubitUtilConfigure.h"
 
-#ifdef WIN32
-class __single_inheritance ToolData;
-#else
 class ToolData;
-#endif
-
 
 typedef int (*IdentityFn)(const ToolData* td);
 template <class X> class DLIList;

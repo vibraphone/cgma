@@ -118,15 +118,12 @@ void CubitAttrib::add_attribute()
   attribOwnerEntity->add_cubit_attrib(this);
 }
 
-int CubitAttrib::equivalent(CubitSimpleAttrib* csa_ptr)
+int CubitAttrib::equivalent(const CubitSimpleAttrib& csa_ptr)
 {
     //- return true if the csa and this are equivalent
-   CubitSimpleAttrib* this_csa_ptr = cubit_simple_attrib();
+   CubitSimpleAttrib this_csa_ptr = cubit_simple_attrib();
 
-   CubitBoolean equivalent =
-       CubitSimpleAttrib::equivalent(csa_ptr, this_csa_ptr);
-   delete this_csa_ptr;
-   return equivalent;
+   return this_csa_ptr == csa_ptr;
 }
 
 void CubitAttrib::print()

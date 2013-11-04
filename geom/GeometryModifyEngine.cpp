@@ -4,7 +4,6 @@
 
 #include "GeometryModifyEngine.hpp"
 
-
 CubitStatus GeometryModifyEngine::split_free_curve( Curve *curve, 
                                                     DLIList<CubitVector*> &split_locations,
                                                     DLIList<Curve*> &new_curves )
@@ -99,5 +98,4 @@ CubitStatus GeometryModifyEngine::sweep_helical(DLIList<GeometryEntity*>& ref_en
 {
  return CUBIT_FAILURE;
 }
-
 

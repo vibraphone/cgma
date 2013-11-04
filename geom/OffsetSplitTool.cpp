@@ -656,7 +656,8 @@ BodySM* OffsetSplitTool::create_sweep_body(
     DLIList<Curve*> path_list;
     path_list.append(path);
 
-    gme->sweep_along_curve(ent_list,body_list,path_list);
+    gme->sweep_along_curve(ent_list,body_list,path_list, 0.0, 0, 
+		                       CUBIT_FALSE, CUBIT_FALSE, CUBIT_FALSE);
 
     if(body_list.size())
         return body_list.get();
