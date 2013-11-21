@@ -587,19 +587,19 @@ DLIList<X>& DLIList<X>::operator=(const DLIListIterator<X>& from_iter)
 }
 
 template <class X> inline
-typename DLIList<X>::const_reference DLIList<X>::operator[](int index) const
+typename DLIList<X>::const_reference DLIList<X>::operator[](int indexIn) const
 {
-  if(index < 0 || index >= (int)listArray.size())
+  if(indexIn < 0 || indexIn >= (int)listArray.size())
     throw std::out_of_range("Index out of Bounds\n");
-  return listArray[index];
+  return listArray[indexIn];
 }
 
 template <class X> inline
-typename DLIList<X>::reference DLIList<X>::operator[](int index)
+typename DLIList<X>::reference DLIList<X>::operator[](int indexIn)
 {
-  if(index < 0 || index >= (int)listArray.size())
+  if(indexIn < 0 || indexIn >= (int)listArray.size())
     throw std::out_of_range("Index out of Bounds\n");
-  return listArray[index];
+  return listArray[indexIn];
 }
 
 template <class X> inline
@@ -769,7 +769,7 @@ template <class X> inline X DLIList<X>::next() const
     throw std::out_of_range("Attempted next of empty DLIList\n");
     /*PRINT_WARNING("Attempted next of empty DLIList\n");*/
   }
-  else if (index == listArray.size()-1)
+  else if ((unsigned int)index == listArray.size()-1)
     return listArray[0];
   else
     return listArray[index+1];
@@ -922,10 +922,10 @@ template <class X> inline X DLIList<X>::pop()
 //- will be grown by {increment} each time it is filled. Memory for the
 //- list is not allocated until the first element is inserted using
 //- {insertLink}.
-template <class X> inline DLIList<X>::DLIList (int size)
+template <class X> inline DLIList<X>::DLIList (int sizeIn)
 {
    index      = 0;
-   listArray.reserve(size);
+   listArray.reserve(sizeIn);
 }
 
 //- Copy Constructor
@@ -1009,7 +1009,7 @@ template <class X> inline void DLIList<X>::intersect_unordered(
   typename std::vector<X>::iterator end1 = listArray.end();               // end of this array
   typename std::vector<X>::iterator iter2 = intersect_list.listArray.begin();       // iterstor for other array
   typename std::vector<X>::iterator end2 = intersect_list.listArray.end();// end of other array
-  typename std::vector<X>::iterator insert;                     // location of last insert
+  typename std::vector<X>::iterator insertIt;                     // location of last insert
   bool first = true;
 
   for ( ; iter1 < end1; ++iter1 )
@@ -1027,13 +1027,13 @@ template <class X> inline void DLIList<X>::intersect_unordered(
       if(first)
       {
         first = false;
-        insert = listArray.begin();
-        *insert = *iter1;
+        insertIt = listArray.begin();
+        *insertIt = *iter1;
       }
       // is not the same as the previous item
-      else if(*iter1 != *insert)
+      else if(*iter1 != *insertIt)
       {
-        *++insert = *iter1;
+        *++insertIt = *iter1;
       }
     }
   }
@@ -1045,7 +1045,7 @@ template <class X> inline void DLIList<X>::intersect_unordered(
   }
   else
   {
-    listArray.resize(insert - listArray.begin() + 1);
+    listArray.resize(insertIt - listArray.begin() + 1);
   }
   reset();
 }
@@ -1144,7 +1144,7 @@ template <class X> inline X DLIList<X>::extract ()
 //- Returns CUBIT_TRUE if the item was found and deleted, CUBIT_FALSE if not.
 template <class X> inline CubitBoolean DLIList<X>::omit(const_reference old_val)
 {
-   int scan_index;
+   unsigned int scan_index;
    int squeeze_index = 0;
    CubitBoolean found = CUBIT_FALSE;
    for(scan_index = 0; scan_index < listArray.size(); ++scan_index)
@@ -1152,15 +1152,15 @@ template <class X> inline CubitBoolean DLIList<X>::omit(const_reference old_val)
       if(listArray[scan_index] == old_val)
       {
          found = CUBIT_TRUE;
-         if(index == scan_index)
+         if(index == (int)scan_index)
             index = squeeze_index - 1;
       }
       else
       {
-         if(scan_index != squeeze_index)
+         if((int)scan_index != squeeze_index)
          {
             listArray[squeeze_index] = listArray[scan_index];
-            if(index == scan_index) index = squeeze_index;
+            if(index == (int)scan_index) index = squeeze_index;
          }
          ++squeeze_index;
       }
@@ -1392,14 +1392,14 @@ template <class X> inline int DLIList<X>::memory_use(CubitBoolean verbose_boolea
 {
    // report amount of memory allocated
 
-   int size = listArray.capacity() * sizeof(X);
+   int sizeIn = listArray.capacity() * sizeof(X);
 
    if (verbose_boolean)
    {
-      PRINT_INFO("      DLIList: %d bytes\n",size);
+      PRINT_INFO("      DLIList: %d bytes\n",sizeIn);
    }
 
-   return size;
+   return sizeIn;
 }
 
 template <class X> inline void DLIList<X>::copy_to(X *other_array)
@@ -1558,7 +1558,7 @@ template <class X> inline void DLIList<X>::uniquify_unordered()
   int j = 1;
   int i = 0;
 
-  while (j < itemCount)
+  while ((unsigned int) j < itemCount)
   {
     if (listArray[i] != listArray[j])
       listArray[++i] = listArray[j++];

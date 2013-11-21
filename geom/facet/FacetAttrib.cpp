@@ -72,9 +72,9 @@ CubitSimpleAttrib FacetAttrib::get_CSA() const
 bool FacetAttrib::equals( const CubitSimpleAttrib& csa ) const
 {
   // compare counts
-  if( csa.int_data_list().size() != numIntegers ||
-      csa.double_data_list().size() != numDoubles ||
-      csa.string_data_list().size() != numStrings )
+  if( csa.int_data_list().size() != (int)numIntegers ||
+      csa.double_data_list().size() != (int)numDoubles ||
+      csa.string_data_list().size() != (int)numStrings )
     return false;
 
     // compare strings first because most likely the

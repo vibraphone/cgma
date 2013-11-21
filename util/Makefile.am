@@ -35,6 +35,7 @@ libcubit_util_la_SOURCES = \
   CubitObservable.cpp \
   CubitObserver.cpp \
   CubitPlane.cpp \
+  CubitSparseMatrix.cpp \
   CubitStack.cpp \
   CubitString.cpp \
   CubitTransformMatrix.cpp \
@@ -97,6 +98,7 @@ libcubit_util_la_include_HEADERS = \
   CubitFileIOWrapper.hpp \
   CubitFileMetaData.hpp \
   CubitFileSimModel.hpp \
+  CubitLoops.hpp \
   CubitUndo.hpp \
   CubitFileUtil.hpp \
   CubitInputFile.hpp \
@@ -106,6 +108,7 @@ libcubit_util_la_include_HEADERS = \
   CubitObserver.hpp \
   CubitPlane.hpp \
   CubitPlaneStruct.h \
+  CubitSparseMatrix.hpp \
   CubitStack.hpp \
   CubitString.hpp \
   CubitTransformMatrix.hpp \
@@ -126,6 +129,7 @@ libcubit_util_la_include_HEADERS = \
   DynamicDLIIterator.hpp \
   DynamicTreeIterator.hpp \
   ElementType.h \
+  FacetShapeDefs.hpp \
   GMem.hpp \
   GeometryDefines.h \
   GetLongOpt.hpp \
@@ -138,6 +142,7 @@ libcubit_util_la_include_HEADERS = \
   KDDTree.hpp \
   KDDTreeNode.hpp \
   LocalStart.h \
+  ManagedPtrVector.hpp \
   MemoryBlock.hpp \
   MemoryManager.hpp \
   MergeEvent.hpp \

@@ -25,6 +25,7 @@ libCholla_la_SOURCES = \
     ChollaPoint.cpp \
     ChollaSkinTool.cpp \
     ChollaSurface.cpp \
+    ChollaVolume.cpp \
     ChordalAxis.cpp \
     CubitFacet.cpp \
     CubitFacetData.cpp \
@@ -61,6 +62,7 @@ libCholla_la_include_HEADERS = \
     ChollaPoint.hpp \
     ChollaSkinTool.hpp \
     ChollaSurface.hpp \
+    ChollaVolume.hpp \
     ChordalAxis.hpp \
     CubitFacet.hpp \
     CubitFacetData.hpp \
@@ -75,18 +77,18 @@ libCholla_la_include_HEADERS = \
     FacetEntity.hpp \
     FacetEvalTool.hpp \
     FacetorTool.hpp \
+    FacetorUtil.hpp \
     GeoNode.hpp \
     GeoTet.hpp \
     LoopParamTool.hpp \
     PointGridSearch.hpp \
     PointLoopFacetor.hpp \
     TDChordal.hpp \
-    TDDelaunay.hpp \
     TDFacetBoundaryEdge.hpp \
     TDFacetBoundaryPoint.hpp \
     TDFacetboolData.hpp \
     TDGeomFacet.hpp \
-    TDInterpNode.hpp \
+    TDDelaunay.hpp \
     TetFacetorTool.hpp \
     debug.hpp 
 
@@ -98,12 +100,14 @@ if INCLUDE_TEMPLATE_DEFS
     BoundaryConstrainTool.cpp \
     FacetorTool.cpp \
     TetFacetorTool.cpp \
+    FacetorUtil.cpp \
     TDDelaunay.cpp 
 else
   libCholla_la_SOURCES += \
     BoundaryConstrainTool.cpp \
     FacetorTool.cpp \
     TetFacetorTool.cpp \
+    FacetorUtil.cpp \
     TDDelaunay.cpp 
 endif
 

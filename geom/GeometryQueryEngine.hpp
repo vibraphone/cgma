@@ -353,8 +353,8 @@ public:
     //O vector showning transform.
     //O-Computes the transform from the transformed body.
 
-  virtual int curve_is_on_ignored_surface(Curve *curve,
-                    Surface *surf) { return 0; }
+  virtual int curve_is_on_ignored_surface(Curve */*curve*/,
+                    Surface */*surf*/) { return 0; }
 
   virtual const char* modeler_type() = 0;
   virtual int get_major_version() = 0;
@@ -459,7 +459,7 @@ public:
 
   virtual CubitBoolean volumes_overlap (Lump *lump1, Lump *lump2 ) const = 0; 
 
-  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* hidden_tb, CubitVector* point){return NULL;};
+  virtual TopologyBridge* get_visible_entity_at_point(TopologyBridge* /*hidden_tb*/, CubitVector* /*point*/){return NULL;};
 
   virtual CubitStatus get_visible_entities( TopologyBridge *hidden_tb, DLIList<TopologyBridge*> &real_tbs );
 

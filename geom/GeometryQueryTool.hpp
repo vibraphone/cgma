@@ -1113,9 +1113,6 @@ private :
   int maxPersistentRefEdgeId;
   int maxPersistentRefVertexId;
 
-  static const int CGM_MAJOR_VERSION;
-  static const int CGM_MINOR_VERSION;
-
   CGMHistory mHistory;
 };
 

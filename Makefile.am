@@ -11,6 +11,7 @@ cfg_DATA = cgm.make
 
 lib_LTLIBRARIES = libcgm.la
 
+libcgm_la_includedir = $(includedir)
 if ENABLE_igeom
   igeom_DIR = itaps
 else
@@ -40,7 +41,7 @@ if BUILD_CGM
                   $(CGM_ll_LIB) \
                   geom/virtual/libcubit_virtual.la \
                   geom/facet/libcubit_facet.la \
-		  geom/Cholla/libCholla.la \
+                  geom/Cholla/libCholla.la \
                   geom/facetbool/libcubit_facetbool.la \
                   geom/libcubit_geom.la \
                   util/libcubit_util.la 
@@ -55,6 +56,7 @@ libcgm_la_LIBADD = init/libcgma_init.la $(CORE_CGM_LIBS) $(CGM_EXT_LIBS) $(CUBIT
 
 libcgm_la_SOURCES = 
 
+libcgm_la_include_HEADERS = cgm_version.h
 # By default, cmg.make will define these to $(srcdir).  We
 # want to override that during the INSTALL of the file so
 # that the correct values are set (e.g. if someone does 

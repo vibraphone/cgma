@@ -93,9 +93,6 @@ CubitBoolean GeometryQueryTool::clearUidMapBeforeImport = CUBIT_TRUE;
 DLIList<int> GeometryQueryTool::uidsOfImportingEnts;
 int GeometryQueryTool::entitiesMergedAway = 0;
 
-const int GeometryQueryTool::CGM_MAJOR_VERSION = 13;
-const int GeometryQueryTool::CGM_MINOR_VERSION = 1;
-
 #ifndef CAT
   // Keep checking bounding box and use internal surf check for Sandia
   CubitBoolean GeometryQueryTool::bboxMergeTest = CUBIT_TRUE;

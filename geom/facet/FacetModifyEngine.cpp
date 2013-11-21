@@ -715,7 +715,7 @@ BodySM* FacetModifyEngine::brick( double wid, double dep, double hi ) const
   DLIList <CubitPoint *>point_list;
   CubitPoint *new_point;
   CubitFacet *facet_ptr;
-  int i, numpoints, numtris;
+  int i, numpoints;
   double feature_angle;
   int interp_order;
   CubitBoolean smooth_non_manifold, split_surfaces;
@@ -723,7 +723,7 @@ BodySM* FacetModifyEngine::brick( double wid, double dep, double hi ) const
   std::vector<CubitPoint *> points;
   
   numpoints = 14;
-  numtris = 24;
+  //numtris = 24;
   
   xmin = -0.5*wid;
   xmax = 0.5*wid;
@@ -5674,7 +5674,7 @@ void FacetModifyEngine::process_topology(CurveFacets* curve,
     DLIList<CubitFacetEdge*>& edge_list = facet_edge_map[curve];
     DLIList<CubitPoint*> point_list;
 
-    for(size_t k=0; k<edge_list.size(); k++)
+    for(int k=0; k<edge_list.size(); k++)
     {
       point_list.append(edge_list[k]->point(0));
     }
