@@ -358,7 +358,7 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
 
 int RefEntityName::get_refentity_name(const RefEntity *entity,
                                       DLIList<CubitString> &names,
-                                      CubitBoolean get_only_one)
+                                      int get_only_one)
 {
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
     //       access all of them. 
@@ -374,7 +374,7 @@ int RefEntityName::get_refentity_name(const RefEntity *entity,
 
 int RefEntityName::get_refentity_name(const RefEntity *entity,
                                       RefEntityNameMapList &names,
-                                      CubitBoolean get_only_one)
+                                      int get_only_one)
 {
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
     //       access all of them. 

@@ -18,6 +18,7 @@ endif
 libcubit_virtual_la_includedir = $(includedir)
 
 #libcubit_virtual_la_LIBADD = ../Cholla/libCholla.la
+libcubit_virtual_la_LIBADD = ${CGM_EXT_LDFLAGS}
 
 # The non-template sources
 libcubit_virtual_la_SOURCES = \

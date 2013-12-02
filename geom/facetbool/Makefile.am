@@ -42,3 +42,4 @@ libcubit_facetbool_la_include_HEADERS = \
     IntegerHash.hpp \
     KdTree.hpp 
 
+libcubit_facetbool_la_LIBADD=${CGM_EXT_LDFLAGS}

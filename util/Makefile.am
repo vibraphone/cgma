@@ -214,4 +214,4 @@ else
       RStarTreeNode.cpp
 endif
 
-libcubit_util_la_LIBADD = -ldl 
+libcubit_util_la_LIBADD = ${CGM_EXT_LDFLAGS} -ldl 

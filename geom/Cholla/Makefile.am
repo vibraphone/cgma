@@ -111,3 +111,4 @@ else
     TDDelaunay.cpp 
 endif
 
+libCholla_la_LIBADD=${CGM_EXT_LDFLAGS}
