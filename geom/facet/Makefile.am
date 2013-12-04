@@ -12,7 +12,7 @@ endif
 #libcubit_facet_la_LIBADD = ../Cholla/libCholla.la ../facetbool/libcubit_facetbool.la
 
 # The directory where headers will be installed
-libcubit_facet_la_includedir = $(includedir) 
+libcubit_facet_la_includedir = $(includedir)
 
 # The non-template sources
 libcubit_facet_la_SOURCES = \
