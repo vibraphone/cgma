@@ -64,14 +64,12 @@ public:
                                  bool check_name_validity = true);
     //- add multiple names to the name map for this entity
   
-  int        get_refentity_name(const RefEntity *entity, DLIList<CubitString> &names,
-                                int get_only_one_name = CUBIT_FALSE);
+  int        get_refentity_name(const RefEntity *entity, DLIList<CubitString> &names);
   //- Get the list of names corresponding to this RefEntity.
   //- Returns the number of names found for this RefEntity.
 
   int        get_refentity_name(const RefEntity *entity,
-                                RefEntityNameMapList &names,
-                                int get_only_one_name = CUBIT_FALSE);
+                                RefEntityNameMapList &names);
   //- Get the list of names corresponding to this RefEntity.
   //- Returns the number of names found for this RefEntity.
 

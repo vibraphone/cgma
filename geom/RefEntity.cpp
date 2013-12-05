@@ -111,7 +111,7 @@ CubitString RefEntity::entity_name() const
   DLIList<CubitString> names;
   
     // Get the name(s) associated with this RefEntity.
-  RefEntityName::instance()->get_refentity_name(this, names, CUBIT_TRUE);
+  RefEntityName::instance()->get_refentity_name(this, names);
   
   CubitString name;
   

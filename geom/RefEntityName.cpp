@@ -357,14 +357,13 @@ CubitStatus RefEntityName::add_refentity_name(RefEntity *entity,
 }
 
 int RefEntityName::get_refentity_name(const RefEntity *entity,
-                                      DLIList<CubitString> &names,
-                                      int get_only_one)
+                                      DLIList<CubitString> &names)
 {
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
     //       access all of them. 
 
   RefEntityNameMapList temp_list;
-  int found_match = get_refentity_name(entity, temp_list, get_only_one);
+  int found_match = get_refentity_name(entity, temp_list);
   
   for (int i=temp_list.size(); i > 0; i--)
     names.append(temp_list.get_and_step()->key());
@@ -373,8 +372,7 @@ int RefEntityName::get_refentity_name(const RefEntity *entity,
 }
 
 int RefEntityName::get_refentity_name(const RefEntity *entity,
-                                      RefEntityNameMapList &names,
-                                      int get_only_one)
+                                      RefEntityNameMapList &names)
 {
     // NOTE: There may be multiple names for one RefEntity. Make sure to 
     //       access all of them. 
@@ -387,8 +385,6 @@ int RefEntityName::get_refentity_name(const RefEntity *entity,
     {
       names.append(nameEntityList.get());
       found_match++;
-      if (get_only_one)
-        return found_match;
     }
     nameEntityList.step();
   }
