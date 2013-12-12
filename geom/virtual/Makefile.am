@@ -9,15 +9,14 @@ AM_CPPFLAGS = -I$(top_srcdir)/util \
            -I$(top_srcdir)/geom/Cholla
 
 # The name of the library to build
-lib_LTLIBRARIES = 
+noinst_LTLIBRARIES = 
 if BUILD_CGM
-  lib_LTLIBRARIES += libcubit_virtual.la
+  noinst_LTLIBRARIES += libcubit_virtual.la
 endif
 
 # The directory where headers will be installed
 libcubit_virtual_la_includedir = $(includedir)
 
-#libcubit_virtual_la_LIBADD = ../Cholla/libCholla.la
 libcubit_virtual_la_LIBADD = ${CGM_EXT_LDFLAGS}
 
 # The non-template sources
