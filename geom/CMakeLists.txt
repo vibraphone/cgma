@@ -219,6 +219,12 @@ CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
                ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
                @ONLY)
 
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/CubitCompat.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/CubitCompat.h"
+  @ONLY
+)
+
 #x3d directory
 FIND_PATH(X3D_DIR "" DOC "X3D directory.")
 

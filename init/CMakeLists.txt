@@ -8,6 +8,7 @@ include_directories(
   ${cubit_geom_SOURCE_DIR}/facet
   ${cubit_geom_SOURCE_DIR}/cholla
   ${cgma_init_SOURCE_DIR}
+  ${cubit_geom_BINARY_DIR}
 )
 
 add_library( cgma_init
