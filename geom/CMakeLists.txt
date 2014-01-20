@@ -155,6 +155,23 @@ SET(EXTRA_GEOM_SRCS
 # Create a list of header-only files:
 set(GEOM_HEADERS
   CADefines.hpp
+  CompositeCombineEvent.hpp
+  CubitCompat.hpp
+  "${CMAKE_CURRENT_BINARY_DIR}/CubitCompat.h" # Generated
+  CubitEvaluator.hpp
+  CubitGeomConfigure.h
+  DagType.hpp
+  GeomPoint.hpp
+  GeomSeg.hpp
+  GeometryFeatureEngine.hpp
+  GeometryHealerEngine.hpp
+  IntermediateGeomEngine.hpp
+  MidPlaneTool.hpp
+  RefEntityNameMap.hpp
+  TBOwner.hpp
+  TBOwnerSet.hpp
+  TDCompare.hpp
+  UnMergeEvent.hpp
 )
 # Now algorithmically generate header names
 # from implementation filenames:

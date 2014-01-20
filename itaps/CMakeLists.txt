@@ -1,4 +1,23 @@
-project( cgma_init )
+option(ITAPS_USE_BABEL "Should ITAPS use Babel to generate C and FORTRAN clients?" "OFF")
+
+if (ITAPS_USE_BABEL)
+  add_subdirectory(SIDL)
+endif()
+
+set(CGMA_IGEOM_SRCS
+	CATag.cpp
+	iGeom_CGMA.cc
+	iGeomError.cc
+)
+
+set(CGMA_IGEOM_HDRS
+  iBase.h
+  iBase_f.h
+  iGeom.h
+  iGeom_FCDefs.h
+  iGeom_f.h
+  #iGeom_protos.h
+)
 
 include_directories(
   ${cubit_geom_SOURCE_DIR}
@@ -11,31 +30,20 @@ include_directories(
   ${cubit_geom_BINARY_DIR}
 )
 
-set(CGMA_INIT_SRCS
-  InitCGMA.cpp
-)
-set(CGMA_INIT_HDRS
-  InitCGMA.hpp
-)
-
-add_library( cgma_init
-  ${CGMA_INIT_SRCS}
-)
-
-target_link_libraries(cgma_init
+add_library(iGeom ${CGMA_IGEOM_SRCS})
+target_link_libraries(iGeom 
   LINK_PUBLIC
-    cubit_geom
-    cubit_util
+    cgm
 )
 
 install(
-  TARGETS cgma_init
+  TARGETS iGeom
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
   LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
   ARCHIVE DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Development
 )
 install(
-  FILES ${CGMA_INIT_HDRS}
+  FILES ${CGMA_IGEOM_HDRS}
   DESTINATION include
   COMPONENT Development
 )

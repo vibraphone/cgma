@@ -38,14 +38,17 @@ SET(CHOLLA_SRCS
 )
 
 SET(CHOLLA_HEADERS
-  ChollaCurve.hpp
-  ChollaEngine.hpp
-  ChollaEntity.hpp
+  BoundaryConstrainTool.cpp
+  BoundaryConstrainTool.hpp
+  Cholla.h
   ChollaPoint.hpp
   ChollaSkinTool.hpp
   ChollaSurface.hpp
   ChollaVolume.hpp
   ChordalAxis.hpp
+  ChollaCurve.hpp
+  ChollaEngine.hpp
+  ChollaEntity.hpp
   CubitFacet.hpp
   CubitFacetData.hpp
   CubitFacetEdge.hpp
@@ -59,6 +62,10 @@ SET(CHOLLA_HEADERS
   FacetDataUtil.hpp
   FacetEntity.hpp
   FacetEvalTool.hpp
+  FacetorTool.cpp
+  FacetorTool.hpp
+  FacetorUtil.hpp
+  FacetorUtil.cpp
   GeoNode.hpp
   GeoTet.hpp
   LoopParamTool.hpp
@@ -69,6 +76,11 @@ SET(CHOLLA_HEADERS
   TDFacetBoundaryEdge.hpp
   TDFacetBoundaryPoint.hpp
   TDGeomFacet.hpp
+  TDDelaunay.cpp
+  TDDelaunay.hpp
+  TDInterpNode.hpp
+  TetFacetorTool.cpp
+  TetFacetorTool.hpp
 )
 
 #INCLUDE_DIRECTORIES(${Cholla_SOURCE_DIR})

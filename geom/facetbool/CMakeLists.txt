@@ -1,23 +1,37 @@
 
 PROJECT(cubit_facetbool)
 
-SET(FACETBOOL_SRCS
-    FBClassify.cpp
-    FBDataUtil.cpp
-    FBImprint.cpp
-    FBIntersect.cpp
-    FBPolyhedron.cpp
-    FBRetriangulate.cpp
-    FBTiler.cpp
-    IntegerHash.cpp
-    KdTree.cpp
-    )
-    
-IF(WIN32)
-  FOREACH(var ${FACETBOOL_SRCS})
-    STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
-    SET(FACETBOOL_HEADERS ${FACETBOOL_HEADERS} ${header})
-  ENDFOREACH(var ${FACETBOOL_SRCS})
-ENDIF(WIN32)
+set(FACETBOOL_SRCS
+  FBClassify.cpp
+  FBDataUtil.cpp
+  FBImprint.cpp
+  FBIntersect.cpp
+  FBPolyhedron.cpp
+  FBRetriangulate.cpp
+  FBTiler.cpp
+  IntegerHash.cpp
+  KdTree.cpp
+)
 
-ADD_LIBRARY(cubit_facetboolstub STATIC ${FACETBOOL_SRCS} ${FACETBOOL_HEADERS})
+set(FACETBOOL_HEADERS
+  FBDefines.hpp
+  FBStructs.hpp
+)
+foreach(var ${FACETBOOL_SRCS})
+  string(REGEX REPLACE ".cpp" ".hpp" header ${var})
+  set(FACETBOOL_HEADERS ${FACETBOOL_HEADERS} ${header})
+endforeach(var ${FACETBOOL_SRCS})
+
+add_library(cubit_facetboolstub STATIC ${FACETBOOL_SRCS})
+
+install(
+  TARGETS cubit_facetboolstub
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+  LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Development
+)
+install(
+  FILES ${FACETBOOL_HEADERS}
+  DESTINATION include
+  COMPONENT Development
+)
