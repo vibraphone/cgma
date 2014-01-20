@@ -1,0 +1,6 @@
+# CGMA: The Common Geometry Module, Argonne
+
+This repository is a git mirror of
+[the canonical Trac/SVN repository at Argonne](http://trac.mcs.anl.gov/projects/ITAPS/wiki/CGM).
+This branch contains fixes and support for the [CMake build system](http://cmake.org).
+For information on CGMA, see the Trac website above.
