@@ -1,5 +1,3 @@
-
-
 PROJECT(cubit_geom)
 
 OPTION(CGM_FACET "Build CGM with Facet support" ON)
@@ -154,14 +152,18 @@ SET(EXTRA_GEOM_SRCS
     AllocMemManagersGeom.cpp
     )
 
-IF(WIN32)
-  FOREACH(var ${GEOM_SRCS})
-    STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
-    SET(GEOM_HEADERS ${GEOM_HEADERS} ${header})
-  ENDFOREACH(var ${GEOM_SRCS})
-ENDIF(WIN32)
+# Create a list of header-only files:
+set(GEOM_HEADERS
+  CADefines.hpp
+)
+# Now algorithmically generate header names
+# from implementation filenames:
+FOREACH(var ${GEOM_SRCS})
+  STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
+  SET(GEOM_HEADERS ${GEOM_HEADERS} ${header})
+ENDFOREACH(var ${GEOM_SRCS})
 
-ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS} ${GEOM_HEADERS})
+ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS})
 TARGET_LINK_LIBRARIES(cubit_geom cubit_util)
 
 IF(CUBIT_LIBRARY_PROPERTIES)
@@ -170,6 +172,7 @@ IF(CUBIT_LIBRARY_PROPERTIES)
 ENDIF(CUBIT_LIBRARY_PROPERTIES)
 
 SET(CMAKE_INSTALL_BINARY_DIR "bin" CACHE PATH "Install directory for binaries")
+SET(CMAKE_INSTALL_INCLUDE_DIR "include" CACHE PATH "Install directory for headers")
 
 IF(BUILD_SHARED_LIBS)
   INSTALL(TARGETS cubit_geom  ${CUBIT_GEOM_EXPORT_GROUP}
@@ -225,6 +228,11 @@ configure_file(
   @ONLY
 )
 
+install(
+  FILES ${GEOM_HEADERS}
+  DESTINATION ${CMAKE_INSTALL_INCLUDE_DIR}
+  COMPONENT Development)
+
 #x3d directory
 FIND_PATH(X3D_DIR "" DOC "X3D directory.")
 
@@ -232,4 +240,3 @@ FIND_PATH(X3D_DIR "" DOC "X3D directory.")
 IF(BUILD_TESTING)
   #ADD_SUBDIRECTORY(testing)
 ENDIF(BUILD_TESTING)
-

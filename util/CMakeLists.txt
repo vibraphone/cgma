@@ -133,6 +133,61 @@ SET(UTIL_HDRS
     TtyProgressTool.hpp
     VariableArray.hpp
     ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
+
+    AbstractTree.hpp
+    CastTo.hpp
+    CubitBoxStruct.h
+    CubitColorConstants.hpp
+    CubitPlaneStruct.h
+    CubitVectorStruct.h
+    DMRefFaceArray.hpp
+    DRefEdgeArray.hpp
+    DRefFaceArray.hpp
+    DRefVertexArray.hpp
+    DoubleListItem.hpp
+    DrawingToolDefines.h
+    DynamicDLIIterator.hpp
+    DynamicTreeIterator.hpp
+    ElementType.h
+    GeometryDefines.h
+    IGUIObservers.hpp
+    IdSetEvent.hpp
+    IndexedDouble.hpp
+    InvalidEntity.hpp
+    KDDTree.cpp
+    KDDTree.hpp
+    KDDTreeNode.cpp
+    KDDTreeNode.hpp
+    LocalStart.h
+    ManagedPtrVector.hpp
+    MergeEvent.hpp
+    OctTree.cpp
+    OctTree.hpp
+    OctTreeCell.cpp
+    OctTreeCell.hpp
+    ParamTool.hpp
+    PriorityQueue.cpp
+    PriorityQueue.hpp
+    ProgressTool.hpp
+    RStarTree.cpp
+    RStarTree.hpp
+    RStarTreeNode.cpp
+    RStarTreeNode.hpp
+    RTree.cpp
+    RTree.hpp
+    RTreeNode.cpp
+    RTreeNode.hpp
+    SDLCADeferredAttribList.hpp
+    SDLCAMergePartnerList.hpp
+    SDLCubitAttribList.hpp
+    SDLDoubleList.hpp
+    SDLHexList.hpp
+    SDLIndexedDoubleList.hpp
+    SDLMRefEdgeLengthList.hpp
+    SDLTDAutoDetailList.hpp
+    TDCellIndex.hpp
+    TDVector.hpp
+    database.hpp
   )
 
 IF(BUILD_WITH_CONCURRENT_SUPPORT)
@@ -158,7 +213,7 @@ CONFIGURE_FILE(${cubit_util_SOURCE_DIR}/CubitUtilConfigure.h.in
                ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
                @ONLY)
 
-ADD_LIBRARY(cubit_util ${UTIL_SRCS} ${UTIL_HDRS})
+ADD_LIBRARY(cubit_util ${UTIL_SRCS})
 TARGET_LINK_LIBRARIES(cubit_util ${CMAKE_DL_LIBS})
 
 if(CUBIT_UTIL_NAME)
