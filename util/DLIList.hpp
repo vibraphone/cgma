@@ -40,7 +40,7 @@ public:
   friend class DLIListIterator<X>;
 
   typedef typename std::vector<X>::reference reference;
-  typedef typename std::vector<X>::const_reference const_reference;
+  typedef const typename std::vector<X>::value_type& const_reference;
   typedef typename std::vector<X>::pointer pointer;
   typedef typename std::vector<X>::const_pointer const_pointer;
   
