@@ -16,7 +16,7 @@ if build_ACIS
   TESTS += webcut hollow_acis brick_acis merge_acis AngleCalc_acis CreateGeometry_acis GraphicsData_acis 
 else
 if WITH_CUBIT
-  TESTS += webcut merge_acis brick_acis spheres cylinders
+  TESTS += webcut merge_acis brick_acis spheres cylinders multifaceted_works multifaceted_2trisPerSurface_works multifaceted
 else
   TESTS += brick_facet merge_facet
 if DEV
@@ -25,7 +25,7 @@ endif
 endif
 endif
 if build_OCC
-  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres cylinders
+  TESTS += attribute_to_file loft offset_curves point_project imprint_bug subtract test_occ brick_occ merge_occ r_w operation section AngleCalc_occ  CreateGeometry_occ GraphicsData_occ brick_facet merge_facet spheres cylinders multifaceted_works multifaceted_2trisPerSurface_works multifaceted
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -45,6 +45,9 @@ endif
 libcgm_test_la_SOURCES = TestUtilities.hpp \
                          TestUtilities.cpp
 
+multifaceted_2trisPerSurface_works_SOURCES = multifaceted-2trisPerSurface-works.cxx
+multifaceted_works_SOURCES = multifaceted-works.cxx
+multifaceted_SOURCES = multifaceted.cpp
 cylinders_SOURCES = cylinders.cpp
 spheres_SOURCES = spheres.cpp
 webcut_SOURCES = webcut.cpp
@@ -167,6 +170,9 @@ MOSTLYCLEANFILES = \
         fillet.occ \
         curves.brep \
         spheres.sat \
+        multifaceted-2trisPerSurface-works.stl \
+        multifaceted-works.stl \
+        multifaceted.stl \
 	mmgr.log
  
 
