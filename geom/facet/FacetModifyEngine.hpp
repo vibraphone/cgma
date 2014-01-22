@@ -966,6 +966,14 @@ virtual Curve* create_arc_radius(const CubitVector &center,
     //- order entities.  Use an optional feature_angle to break
     //- surface
 
+    //- Define separate CubitPoint* for the CubitFacet list and CubitQuadFacet 
+    //- list if they are going to create different surfaces.
+    //- Facets sharing the same CubitPoint* will be created into one surfaces.
+    //- Separate call of build_facet_surface will try to build different
+    //- surfaces, and won't be able to use shared CubitPoint* from other 
+    //- build_facet_surface call.
+    //- As long as facets are defined, the CubitPoint list should be left empty
+    
   CubitStatus smooth_facets( RefFace *ref_face_ptr, int niter, CubitBoolean free_laplacian );
     //- attempt to clean up facets by smoothing the points on the surface
   CubitStatus create_shell_offset( BodySM *bodysm_ptr, BodySM *&new_bodysm, double offset );
