@@ -1,52 +1,50 @@
-PROJECT(cubit_geom)
+project(cubit_geom)
 
-OPTION(CGM_FACET "Build CGM with Facet support" ON)
-OPTION(CGM_VIRTUAL "Build CGM with Virtual support" ON)
+option(CGM_FACET "Build CGM with Facet support" ON)
+option(CGM_VIRTUAL "Build CGM with Virtual support" ON)
 # build cgm with acis support, default to off
-OPTION(CGM_ACIS "Build CGM with ACIS support" OFF)
+option(CGM_ACIS "Build CGM with ACIS support" OFF)
 
 #turn CGM_KCM on by default on windows systems
 if(CMAKE_SYSTEM MATCHES "Windows")
-  OPTION(CGM_KCM "Build and use the KCM modeler capabilities" ON)
+  option(CGM_KCM "Build and use the KCM modeler capabilities" ON)
 else()
-  OPTION(CGM_KCM "Build and use the KCM modeler capabilities" OFF)
+  option(CGM_KCM "Build and use the KCM modeler capabilities" OFF)
 endif()
 
-OPTION(CGM_SMLIB "Build CGM with SMLIB support" OFF)
+option(CGM_SMLIB "Build CGM with SMLIB support" OFF)
 
-OPTION(CGM_OCC "Build CGM with Open Cascade support" OFF)
+option(CGM_OCC "Build CGM with Open Cascade support" OFF)
 
 # build cgm with granite support, default to off
-IF(CAT_BUILD)
-  OPTION(CGM_GRANITE "Build CGM with Granite support" ON)
-ELSE(CAT_BUILD)
-  OPTION(CGM_GRANITE "Build CGM with Granite support" OFF)
-ENDIF(CAT_BUILD)
+if(CAT_BUILD)
+  option(CGM_GRANITE "Build CGM with Granite support" ON)
+else(CAT_BUILD)
+  option(CGM_GRANITE "Build CGM with Granite support" OFF)
+endif(CAT_BUILD)
 
-OPTION(CGM_CATIA "Build CGM with CATIA support" OFF)
-IF(CGM_CATIA)
-  SET(BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
-ENDIF(CGM_CATIA)
-
-
+option(CGM_CATIA "Build CGM with CATIA support" OFF)
+if(CGM_CATIA)
+  set(BUILD_SHARED_LIBS ON CACHE BOOL "GEOM_LIBS need to be shared when CATIA is used" FORCE)
+endif(CGM_CATIA)
 
 # all parts of CGM need util
 include_directories(
-          ${cubit_util_SOURCE_DIR} 
-          ${cubit_util_BINARY_DIR} 
-          )
+  ${cubit_util_SOURCE_DIR}
+  ${cubit_util_BINARY_DIR}
+)
 
-IF(CGM_FACET)
-  ADD_SUBDIRECTORY(Cholla)
-ENDIF()
+if(CGM_FACET)
+  add_subdirectory(Cholla)
+endif()
 
 # all remaining parts need geom
 include_directories(
-          ${cubit_geom_SOURCE_DIR} 
-          ${cubit_geom_BINARY_DIR} 
-          )
+  ${cubit_geom_SOURCE_DIR}
+  ${cubit_geom_BINARY_DIR}
+)
 
-SET(GEOM_SRCS
+set(GEOM_SRCS
     AnalyticGeometryTool.cpp
     AutoMidsurfaceTool.cpp
     BasicTopologyEntity.cpp
@@ -56,7 +54,7 @@ SET(GEOM_SRCS
     BridgeManager.cpp
     CAActuateSet.cpp
     CAEntitySense.cpp
-    CADeferredAttrib.cpp    
+    CADeferredAttrib.cpp
     CAEntityColor.cpp
     CAEntityId.cpp
     CAEntityName.cpp
@@ -113,7 +111,6 @@ SET(GEOM_SRCS
     ModelQueryEngine.cpp
     OffsetSplitTool.cpp
     OldUnmergeCode.cpp
-    PeriodicParamTool.cpp
     Point.cpp
     PointSM.cpp
     RefCollection.cpp
@@ -144,11 +141,11 @@ SET(GEOM_SRCS
     TopologyEntity.cpp
     )
 
-IF(CAT_BUILD)
-  SET(GEOM_SRCS ${GEOM_SRCS} CAProWeld.cpp TDProWeld.cpp)
-ENDIF(CAT_BUILD)
+if(CAT_BUILD)
+  set(GEOM_SRCS ${GEOM_SRCS} CAProWeld.cpp TDProWeld.cpp)
+endif(CAT_BUILD)
 
-SET(EXTRA_GEOM_SRCS
+set(EXTRA_GEOM_SRCS
     AllocMemManagersGeom.cpp
     )
 
@@ -175,69 +172,71 @@ set(GEOM_HEADERS
 )
 # Now algorithmically generate header names
 # from implementation filenames:
-FOREACH(var ${GEOM_SRCS})
-  STRING(REGEX REPLACE ".cpp" ".hpp" header ${var})
-  SET(GEOM_HEADERS ${GEOM_HEADERS} ${header})
-ENDFOREACH(var ${GEOM_SRCS})
+foreach(var ${GEOM_SRCS})
+  string(REGEX REPLACE ".cpp" ".hpp" header ${var})
+  set(GEOM_HEADERS ${GEOM_HEADERS} ${header})
+endforeach(var ${GEOM_SRCS})
 
-ADD_LIBRARY(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS})
-TARGET_LINK_LIBRARIES(cubit_geom cubit_util)
+add_library(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS})
+target_link_libraries(cubit_geom cubit_util)
 
-IF(CUBIT_LIBRARY_PROPERTIES)
-  SET_TARGET_PROPERTIES(cubit_geom
-                        PROPERTIES ${CUBIT_LIBRARY_PROPERTIES})
-ENDIF(CUBIT_LIBRARY_PROPERTIES)
+if(CUBIT_LIBRARY_PROPERTIES)
+  set_target_properties(cubit_geom
+    PROPERTIES ${CUBIT_LIBRARY_PROPERTIES}
+  )
+endif(CUBIT_LIBRARY_PROPERTIES)
 
-SET(CMAKE_INSTALL_BINARY_DIR "bin" CACHE PATH "Install directory for binaries")
-SET(CMAKE_INSTALL_INCLUDE_DIR "include" CACHE PATH "Install directory for headers")
+set(CMAKE_INSTALL_BINARY_DIR "lib" CACHE PATH "Install directory for binaries")
+set(CMAKE_INSTALL_INCLUDE_DIR "include" CACHE PATH "Install directory for headers")
 
-IF(BUILD_SHARED_LIBS)
-  INSTALL(TARGETS cubit_geom  ${CUBIT_GEOM_EXPORT_GROUP}
-          RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
-          LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
-          )
-ENDIF(BUILD_SHARED_LIBS)
+install(
+  TARGETS cubit_geom  ${CUBIT_GEOM_EXPORT_GROUP}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+  LIBRARY DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Runtime
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_BINARY_DIR} COMPONENT Development
+)
 
+if(CGM_FACET)
+  add_subdirectory(facetbool)
+  add_subdirectory(facet)
+endif(CGM_FACET)
 
-IF(CGM_FACET)
-  ADD_SUBDIRECTORY(facetbool)
-  ADD_SUBDIRECTORY(facet)
-ENDIF(CGM_FACET)
+if(CGM_VIRTUAL)
+  add_subdirectory(virtual)
+endif(CGM_VIRTUAL)
 
-IF(CGM_VIRTUAL)
-  ADD_SUBDIRECTORY(virtual)
-ENDIF(CGM_VIRTUAL)
+if(CGM_ACIS)
+  add_subdirectory(ACIS)
+endif(CGM_ACIS)
 
-IF(CGM_ACIS)
-  ADD_SUBDIRECTORY(ACIS)
-ENDIF(CGM_ACIS)
+if(CGM_SMLIB)
+  add_subdirectory(smlib)
+endif(CGM_SMLIB)
 
-IF(CGM_SMLIB)
-  ADD_SUBDIRECTORY(smlib)
-ENDIF(CGM_SMLIB)
+if(CGM_OCC)
+  add_subdirectory(OCC)
+endif(CGM_OCC)
 
-IF(CGM_OCC)
-  ADD_SUBDIRECTORY(OCC)
-ENDIF(CGM_OCC)
+if(CGM_GRANITE)
+  add_subdirectory(granite)
+endif(CGM_GRANITE)
 
-IF(CGM_GRANITE)
-  ADD_SUBDIRECTORY(granite)
-ENDIF(CGM_GRANITE) 
+if(CGM_CATIA)
+  add_subdirectory(catia)
+endif(CGM_CATIA)
 
-IF(CGM_CATIA)
-  ADD_SUBDIRECTORY(catia)
-ENDIF(CGM_CATIA)
+if(CGM_KCM)
+  add_subdirectory(KCM)
+endif(CGM_KCM)
 
-IF(CGM_KCM)
-  ADD_SUBDIRECTORY(KCM)
-ENDIF(CGM_KCM)
+configure_file(CGMConfigure.h.in "${CMAKE_CURRENT_BINARY_DIR}/CGMConfigure.h")
 
-CONFIGURE_FILE(CGMConfigure.h.in "${CMAKE_CURRENT_BINARY_DIR}/CGMConfigure.h")
-
-SET(CUBIT_GEOM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
-CONFIGURE_FILE(${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
-               ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
-               @ONLY)
+set(CUBIT_GEOM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+configure_file(
+  ${cubit_geom_SOURCE_DIR}/CubitGeomConfigure.h.in
+  ${cubit_geom_BINARY_DIR}/CubitGeomConfigure.h
+  @ONLY
+)
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/CubitCompat.h.in"
@@ -251,9 +250,9 @@ install(
   COMPONENT Development)
 
 #x3d directory
-FIND_PATH(X3D_DIR "" DOC "X3D directory.")
+find_path(X3D_DIR "" DOC "X3D directory.")
 
 
-IF(BUILD_TESTING)
-  #ADD_SUBDIRECTORY(testing)
-ENDIF(BUILD_TESTING)
+if(BUILD_TESTING)
+  #add_subdirectory(testing)
+endif(BUILD_TESTING)

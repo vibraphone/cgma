@@ -63,19 +63,22 @@ set(CGMA_UTIL_SRCS
 )
 
 set(CGMA_UTIL_HDRS
+  AbstractTree.hpp
   AppUtil.hpp
   ArrayBasedContainer.hpp
-  CpuTimer.hpp
+  CastTo.hpp
   CommandFeedback.hpp
+  CpuTimer.hpp
   Cubit2DPoint.hpp
   CubitBox.hpp
+  CubitBoxStruct.h
   CubitCollection.hpp
+  CubitColorConstants.hpp
   CubitContainer.hpp
   CubitCoordinateSystem.hpp
   CubitDefines.h
   CubitDynamicLoader.hpp
   CubitEntity.hpp
-  CubitEquation.hpp
   CubitEvent.hpp
   CubitEventDefines.h
   CubitEventDispatcher.hpp
@@ -93,6 +96,7 @@ set(CGMA_UTIL_HDRS
   CubitObservable.hpp
   CubitObserver.hpp
   CubitPlane.hpp
+  CubitPlaneStruct.h
   CubitProcess.hpp
   CubitSparseMatrix.hpp
   CubitStack.hpp
@@ -101,57 +105,30 @@ set(CGMA_UTIL_HDRS
   CubitUndo.hpp
   CubitUtil.hpp
   CubitVector.hpp
+  CubitVectorStruct.h
   DIntArray.hpp
   DLIList.hpp
   DLList.hpp
-  DynamicArray.hpp
-  FacetShapeDefs.hpp
-  GetLongOpt.hpp
-  GfxDebug.hpp
-  GlobalCommandFeedback.hpp
-  GMem.hpp
-  IdHasher.hpp
-  IntersectionTool.hpp
-  MemoryBlock.hpp
-  MemoryManager.hpp
-  OrderedSet.hpp
-  OrderedMap.hpp
-  ParamCubitPlane.hpp
-  PlanarParamTool.hpp
-  Queue.hpp
-  RandomMersenne.hpp
-  SDLList.hpp
-  SettingHandler.hpp
-  SettingHolder.hpp
-  StubProgressTool.hpp
-  TDUPtr.hpp
-  TextProgressTool.hpp
-  ToolData.hpp
-  ToolDataUser.hpp
-  Tree.hpp
-  TtyProgressTool.hpp
-  VariableArray.hpp
-  ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
-
-  AbstractTree.hpp
-  CastTo.hpp
-  CubitBoxStruct.h
-  CubitColorConstants.hpp
-  CubitPlaneStruct.h
-  CubitVectorStruct.h
   DMRefFaceArray.hpp
   DRefEdgeArray.hpp
   DRefFaceArray.hpp
   DRefVertexArray.hpp
   DoubleListItem.hpp
   DrawingToolDefines.h
+  DynamicArray.hpp
   DynamicDLIIterator.hpp
   DynamicTreeIterator.hpp
   ElementType.h
+  FacetShapeDefs.hpp
+  GMem.hpp
   GeometryDefines.h
+  GetLongOpt.hpp
+  GfxDebug.hpp
+  GlobalCommandFeedback.hpp
   IGUIObservers.hpp
   IdSetEvent.hpp
   IndexedDouble.hpp
+  IntersectionTool.hpp
   InvalidEntity.hpp
   KDDTree.cpp
   KDDTree.hpp
@@ -159,15 +136,20 @@ set(CGMA_UTIL_HDRS
   KDDTreeNode.hpp
   LocalStart.h
   ManagedPtrVector.hpp
+  MemoryBlock.hpp
+  MemoryManager.hpp
   MergeEvent.hpp
   OctTree.cpp
   OctTree.hpp
   OctTreeCell.cpp
   OctTreeCell.hpp
+  ParamCubitPlane.hpp
   ParamTool.hpp
+  PlanarParamTool.hpp
   PriorityQueue.cpp
   PriorityQueue.hpp
   ProgressTool.hpp
+  Queue.hpp
   RStarTree.cpp
   RStarTree.hpp
   RStarTreeNode.cpp
@@ -176,17 +158,30 @@ set(CGMA_UTIL_HDRS
   RTree.hpp
   RTreeNode.cpp
   RTreeNode.hpp
+  RandomMersenne.hpp
   SDLCADeferredAttribList.hpp
   SDLCAMergePartnerList.hpp
   SDLCubitAttribList.hpp
   SDLDoubleList.hpp
   SDLHexList.hpp
   SDLIndexedDoubleList.hpp
+  SDLList.hpp
   SDLMRefEdgeLengthList.hpp
   SDLTDAutoDetailList.hpp
+  SettingHandler.hpp
+  SettingHolder.hpp
+  StubProgressTool.hpp
   TDCellIndex.hpp
+  TDUPtr.hpp
   TDVector.hpp
+  TextProgressTool.hpp
+  ToolData.hpp
+  ToolDataUser.hpp
+  Tree.hpp
+  TtyProgressTool.hpp
   database.hpp
+  # Generated files:
+  ${cubit_util_BINARY_DIR}/CubitUtilConfigure.h
 )
 
 if(BUILD_WITH_CONCURRENT_SUPPORT)
@@ -235,7 +230,7 @@ if(BUILD_WITH_CONCURRENT_SUPPORT)
 endif(BUILD_WITH_CONCURRENT_SUPPORT)
 
 if(NOT CMAKE_INSTALL_BINARY_DIR)
-  set(CMAKE_INSTALL_BINARY_DIR bin)
+  set(CMAKE_INSTALL_BINARY_DIR lib)
 endif(NOT CMAKE_INSTALL_BINARY_DIR)
 
 if(NOT CMAKE_INSTALL_INCLUDE_DIR)
