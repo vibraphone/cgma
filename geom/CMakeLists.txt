@@ -77,6 +77,7 @@ set(GEOM_SRCS
     CubitAttrib.cpp
     CubitAttribManager.cpp
     CubitAttribUser.cpp
+    CubitCompat.cpp
     CubitPolygon.cpp
     CubitSimpleAttrib.cpp
     Curve.cpp
@@ -179,6 +180,7 @@ endforeach(var ${GEOM_SRCS})
 
 add_library(cubit_geom ${GEOM_SRCS} ${EXTRA_GEOM_SRCS})
 target_link_libraries(cubit_geom cubit_util)
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_geom)
 
 if(CUBIT_LIBRARY_PROPERTIES)
   set_target_properties(cubit_geom
@@ -243,6 +245,15 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/CubitCompat.h"
   @ONLY
 )
+
+# Pass to parent environment
+set(CGMA_LIBS "${CGMA_LIBS}" PARENT_SCOPE)
+set(CGMA_DEPLIBS ${CGMA_DEPLIBS} ${CGMA_OCC_DEPLIBS} ${CGMA_ACIS_DEPLIBS} PARENT_SCOPE)
+set(CGMA_ACIS_DEFINES "${CGMA_ACIS_DEFINES}" PARENT_SCOPE)
+set(CGMA_OCC_DEFINES "${CGMA_OCC_DEFINES}" PARENT_SCOPE)
+set(OCE_INCLUDE_DIRS ${OCE_INCLUDE_DIRS} PARENT_SCOPE)
+
+add_definitions(${CGMA_ACIS_DEFINES} ${CGMA_OCC_DEFINES})
 
 install(
   FILES ${GEOM_HEADERS}

@@ -23,6 +23,7 @@ foreach(var ${FACETBOOL_SRCS})
 endforeach(var ${FACETBOOL_SRCS})
 
 add_library(cubit_facetboolstub STATIC ${FACETBOOL_SRCS})
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_facetboolstub PARENT_SCOPE)
 
 install(
   TARGETS cubit_facetboolstub

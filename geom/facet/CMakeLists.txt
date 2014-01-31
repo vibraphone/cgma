@@ -39,10 +39,13 @@ set(FACET_HEADERS
   GridSearchTreeNode.hpp
 )
 
-INCLUDE_DIRECTORIES(${cubit_geom_SOURCE_DIR}/facetbool
-                    ${cubit_geom_SOURCE_DIR}/Cholla)
+include_directories(
+  ${cubit_geom_SOURCE_DIR}/facetbool
+  ${cubit_geom_SOURCE_DIR}/Cholla
+)
 
-ADD_LIBRARY(cubit_facet STATIC ${FACET_SRCS} ${FACET_HEADERS})
+add_library(cubit_facet STATIC ${FACET_SRCS} ${FACET_HEADERS})
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_facet PARENT_SCOPE)
 
 install(
   TARGETS cubit_facet

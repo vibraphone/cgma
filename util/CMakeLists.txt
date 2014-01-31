@@ -210,6 +210,7 @@ configure_file(
 
 add_library(cubit_util ${CGMA_UTIL_SRCS})
 target_link_libraries(cubit_util ${CMAKE_DL_LIBS})
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_util PARENT_SCOPE)
 
 if(CUBIT_UTIL_NAME)
   set_target_properties(cubit_util
@@ -218,6 +219,7 @@ endif()
 
 if(WIN32)
   target_link_libraries(cubit_util shlwapi)
+  set(CGMA_DEPLIBS "${CGMA_DEPLIBS}" shlwapi PARENT_SCOPE)
 endif(WIN32)
 
 if(CUBIT_LIBRARY_PROPERTIES)
@@ -227,6 +229,7 @@ endif(CUBIT_LIBRARY_PROPERTIES)
 
 if(BUILD_WITH_CONCURRENT_SUPPORT)
   target_link_libraries(cubit_util ${QT_LIBRARIES})
+  set(CGMA_DEPLIBS "${CGMA_DEPLIBS}" "${QT_LIBRARIES}" PARENT_SCOPE)
 endif(BUILD_WITH_CONCURRENT_SUPPORT)
 
 if(NOT CMAKE_INSTALL_BINARY_DIR)

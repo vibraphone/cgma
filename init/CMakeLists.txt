@@ -7,8 +7,10 @@ include_directories(
   ${cubit_geom_SOURCE_DIR}/virtual
   ${cubit_geom_SOURCE_DIR}/facet
   ${cubit_geom_SOURCE_DIR}/cholla
+  ${cubit_geom_SOURCE_DIR}/OCC
   ${cgma_init_SOURCE_DIR}
   ${cubit_geom_BINARY_DIR}
+  ${OCE_INCLUDE_DIRS}
 )
 
 set(CGMA_INIT_SRCS
@@ -24,9 +26,13 @@ add_library( cgma_init
 
 target_link_libraries(cgma_init
   LINK_PUBLIC
-    cubit_geom
-    cubit_util
+    ${CGMA_LIBS}
+  LINK_PRIVATE
+    ${CGMA_DEPLIBS}
 )
+set(CGMA_LIBS "${CGMA_LIBS}" cgma_init PARENT_SCOPE)
+set(CGMA_DEPLIBS "${CGMA_DEPLIBS}" PARENT_SCOPE)
+add_definitions(${CGMA_ACIS_DEFINES} ${CGMA_OCC_DEFINES})
 
 install(
   TARGETS cgma_init

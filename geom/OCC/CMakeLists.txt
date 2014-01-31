@@ -23,6 +23,7 @@ endif()
 find_package(OCE CONFIG HINTS ${OCE_MODULE_HINTS})
 
 include_directories(${OCE_INCLUDE_DIRS})
+set(OCE_INCLUDE_DIRS ${OCE_INCLUDE_DIRS} PARENT_SCOPE)
 
 SET(OCC_SRCS
   OCCAttribSet.cpp
@@ -76,10 +77,9 @@ set(OCC_HEADERS
   OCCSurface.hpp
 )
 
-ADD_DEFINITIONS(
-  -DHAVE_OCC_IGES
-  -DHAVE_OCC_STEP
-  )
+# FIXME: Detect presence of OCC libraries for IGES and STEP
+set(CGMA_OCC_DEFINES "-DHAVE_OCC -DHAVE_OCC_IGES -DHAVE_OCC_STEP -DHAVE_OCC_STL" PARENT_SCOPE)
+add_definitions(${CGMA_OCC_DEFINES})
 
 if(WIN32)
   ADD_DEFINITIONS(
@@ -90,38 +90,31 @@ if(WIN32)
   )
 endif()
 
+include(${OCE_DIR}/OCEConfig.cmake)
+include(${OCE_DIR}/OCE-libraries.cmake)
 # build cubit occ library from sources
-ADD_LIBRARY(cubit_occ MODULE ${OCC_SRCS})
-TARGET_LINK_LIBRARIES(cubit_occ
+set(CGMA_OCC_DEPLIBS
+  #TKShHealing TKBinL TKBin TKLCAF TKCAF TKCDF
+  #TKPShape TKFillet TKOffset TKMesh TKBool TKBO TKFeat
+  #TKG2d TKG3d TKXSBase TKTopAlgo TKPrim TKGeomAlgo TKBRep TKGeomBase
+  #TKernel TKMath TKAdvTools TKIGES TKSTEP TKSTL
+
+  #TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep TKGeomAlgo TKTopAlgo TKMesh TKPrim TKBO TKBool TKFeat TKFillet
+  #TKShHealing TKOffset TKHLR TKCAF TKCDF TKLCAF TKBinL TKXSBase TKIGES TKXSBase TKSTEPBase TKSTEPAttr TKSTEP209
+  #TKSTEP TKSTL
+
+  #${OCE_LIBRARIES}
+
+  PARENT_SCOPE
+)
+add_library(cubit_occ SHARED ${OCC_SRCS})
+target_link_libraries(cubit_occ
   cubit_geom
   cubit_util
-  TKShHealing
-  TKBinL
-  TKBin
-  TKLCAF
-  TKCAF
-  TKCDF
-  TKPShape
-  TKFillet
-  TKOffset
-  TKMesh
-  TKBool
-  TKBO
-  TKFeat
-  TKG2d
-  TKG3d
-  TKXSBase
-  TKTopAlgo
-  TKPrim
-  TKGeomAlgo
-  TKBRep
-  TKGeomBase
-  TKernel
-  TKMath
-  TKAdvTools
-  TKIGES
-  TKSTEP)
-
+  ${OCE_LIBRARIES}
+)
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_occ)
+set(CGMA_LIBS "${CGMA_LIBS}" PARENT_SCOPE)
 
 install(
   TARGETS cubit_occ ${CUBIT_GEOM_EXPORT_GROUP}

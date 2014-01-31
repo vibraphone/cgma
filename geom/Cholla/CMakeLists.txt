@@ -1,7 +1,6 @@
+project(Cholla)
 
-PROJECT(Cholla)
-
-SET(CHOLLA_SRCS
+set(CHOLLA_SRCS
   AllocMemManagersCholla.cpp
   Cholla.cpp
   ChollaCurve.cpp
@@ -37,7 +36,7 @@ SET(CHOLLA_SRCS
   TDGeomFacet.cpp
 )
 
-SET(CHOLLA_HEADERS
+set(CHOLLA_HEADERS
   BoundaryConstrainTool.cpp
   BoundaryConstrainTool.hpp
   Cholla.h
@@ -83,11 +82,16 @@ SET(CHOLLA_HEADERS
   TetFacetorTool.hpp
 )
 
-#INCLUDE_DIRECTORIES(${Cholla_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${cubit_util_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${cubit_util_BINARY_DIR})
+#include_directories(${Cholla_SOURCE_DIR})
+include_directories(
+  ${cubit_util_SOURCE_DIR}
+  ${cubit_util_BINARY_DIR}
+)
 
-ADD_LIBRARY(cholla STATIC ${CHOLLA_SRCS})
+add_library(cholla
+  STATIC ${CHOLLA_SRCS}
+)
+set(CGMA_LIBS "${CGMA_LIBS}" cholla PARENT_SCOPE)
 
 install(
   FILES ${CHOLLA_HEADERS}

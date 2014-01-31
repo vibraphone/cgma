@@ -31,9 +31,9 @@ include_directories(
 )
 
 add_library(iGeom ${CGMA_IGEOM_SRCS})
-target_link_libraries(iGeom 
+target_link_libraries(iGeom
   LINK_PUBLIC
-    cgm
+    ${CGMA_LIBS}
 )
 
 install(

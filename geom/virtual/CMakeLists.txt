@@ -130,6 +130,7 @@ include_directories(
   ${cubit_geom_SOURCE_DIR}/Cholla)
 
 add_library(cubit_virtual STATIC ${VIRTUAL_SRCS} ${EXTRA_VIRTUAL_SRCS})
+set(CGMA_LIBS "${CGMA_LIBS}" cubit_virtual PARENT_SCOPE)
 
 install(
   TARGETS cubit_virtual
